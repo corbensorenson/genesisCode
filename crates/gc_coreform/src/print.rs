@@ -96,19 +96,22 @@ fn single_line(t: &Term) -> Option<String> {
         }
         Term::Pair(_, _) => {
             let items = t.as_proper_list()?;
-            if items.len() <= 3 && items.iter().all(|x| is_atom(x)) {
+            let parts: Option<Vec<String>> = items.iter().map(|x| single_line(x)).collect();
+            parts.and_then(|ps| {
                 let mut s = String::from("(");
-                for (i, x) in items.iter().enumerate() {
+                for (i, p) in ps.iter().enumerate() {
                     if i != 0 {
                         s.push(' ');
                     }
-                    s.push_str(&atom_repr(x)?);
+                    s.push_str(p);
                 }
                 s.push(')');
-                Some(s)
-            } else {
-                None
-            }
+                if s.len() <= MAX_WIDTH {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
         }
         _ => None,
     }
@@ -116,7 +119,12 @@ fn single_line(t: &Term) -> Option<String> {
 
 fn fmt_term(t: &Term, indent: usize) -> Vec<String> {
     if let Some(s) = single_line(t) {
-        return vec![format!("{}{}", spaces(indent), s)];
+        if indent + s.len() <= MAX_WIDTH {
+            return vec![format!("{}{}", spaces(indent), s)];
+        }
+    }
+    if let Some(a) = atom_repr(t) {
+        return vec![format!("{}{}", spaces(indent), a)];
     }
 
     match t {
@@ -162,9 +170,9 @@ fn fmt_list(t: &Term, indent: usize) -> Vec<String> {
 
     let mut out: Vec<String> = Vec::new();
     if items.is_empty() {
-    out.push(format!("{}()", spaces(indent)));
-    return out;
-}
+        out.push(format!("{}()", spaces(indent)));
+        return out;
+    }
 
     // Multi-line: if the head can't be single-lined, put the opening paren on its own line
     // and render all elements one-per-line. This avoids emitting placeholders like "<form>".
@@ -252,7 +260,13 @@ fn fmt_map(m: &BTreeMap<TermOrdKey, Term>, indent: usize) -> Vec<String> {
         let ks = single_line(k);
         let vs = single_line(v);
         if let (Some(ks), Some(vs)) = (ks, vs) {
-            out.push(format!("{}{} {}", spaces(indent + INDENT), ks, vs));
+            let line = format!("{}{} {}", spaces(indent + INDENT), ks, vs);
+            if line.len() <= MAX_WIDTH {
+                out.push(line);
+            } else {
+                out.extend(fmt_term(k, indent + INDENT));
+                out.extend(fmt_term(v, indent + INDENT * 2));
+            }
         } else {
             out.extend(fmt_term(k, indent + INDENT));
             out.extend(fmt_term(v, indent + INDENT * 2));
