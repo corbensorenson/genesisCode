@@ -33,9 +33,27 @@ pub struct EvalCtx {
 
 impl EvalCtx {
     pub fn new() -> Self {
+        // Reserve protocol seal tokens at runtime init so:
+        // - kernel primitives can always return sealed ERROR values
+        // - protocol constructors can be installed without relying on a separate init step
+        // - user-visible (seal) IDs are deterministic (start after the reserved tokens)
+        let mut state = EvalState::new();
+        let unhandled = SealId(state.next_seal_id);
+        state.next_seal_id = state.next_seal_id.saturating_add(1);
+        let effect = SealId(state.next_seal_id);
+        state.next_seal_id = state.next_seal_id.saturating_add(1);
+        let error = SealId(state.next_seal_id);
+        state.next_seal_id = state.next_seal_id.saturating_add(1);
+
+        let protocol = ProtocolTokens {
+            unhandled,
+            effect,
+            error,
+        };
+
         Self {
-            state: EvalState::new(),
-            protocol: None,
+            state,
+            protocol: Some(protocol),
             steps: 0,
             step_limit: Some(5_000_000),
         }

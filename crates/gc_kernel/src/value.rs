@@ -75,7 +75,18 @@ impl NativeFn {
                 func: self.func,
             }))
         } else if collected.len() == self.arity {
-            (self.func)(ctx, collected)
+            // Native functions are required to be total and panic-free; this is a
+            // hardening boundary so a bug can't crash the whole evaluator.
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                (self.func)(ctx, collected)
+            }));
+            match r {
+                Ok(v) => v,
+                Err(_) => Err(KernelError::new(
+                    KernelErrorKind::Internal,
+                    format!("native fn {} panicked", self.name),
+                )),
+            }
         } else {
             Err(KernelError::new(
                 KernelErrorKind::BadForm,

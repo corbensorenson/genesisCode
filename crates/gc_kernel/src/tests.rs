@@ -1,23 +1,7 @@
 use gc_coreform::{parse_module, Term};
 use num_bigint::BigInt;
 
-use crate::{eval_module, EvalCtx, Env, ProtocolTokens, SealId, Value};
-
-fn with_protocol(ctx: &mut EvalCtx) -> ProtocolTokens {
-    let unhandled = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let effect = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let error = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let p = ProtocolTokens {
-        unhandled,
-        effect,
-        error,
-    };
-    ctx.protocol = Some(p);
-    p
-}
+use crate::{eval_module, EvalCtx, Env, Value};
 
 #[test]
 fn seal_unseal_roundtrip() {
@@ -51,7 +35,7 @@ fn prim_type_error_is_sealed_error_with_protocol() {
     let src = r#"(prim int/add 1 "x")"#;
     let forms = parse_module(src).unwrap();
     let mut ctx = EvalCtx::new();
-    let p = with_protocol(&mut ctx);
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
     let mut env = Env::empty();
     let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
     match v {
@@ -73,10 +57,8 @@ fn application_sugar_left_associates() {
 
     for forms in [parse_module(src).unwrap(), forms2] {
         let mut ctx = EvalCtx::new();
-        with_protocol(&mut ctx);
         let mut env = Env::empty();
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
         assert_eq!(v.as_data(), Some(&Term::Int(BigInt::from(3))));
     }
 }
-

@@ -15,19 +15,26 @@ pub struct Prelude {
 }
 
 pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
-    // Allocate protocol seal IDs from the kernel's deterministic counter.
-    let unhandled = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let effect = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let error = SealId(ctx.state.next_seal_id);
-    ctx.state.next_seal_id += 1;
-    let protocol = ProtocolTokens {
-        unhandled,
-        effect,
-        error,
+    // Protocol tokens are reserved by default in EvalCtx::new(); keep this total as a
+    // defense-in-depth fallback if a caller constructed an EvalCtx differently.
+    let protocol = match ctx.protocol {
+        Some(p) => p,
+        None => {
+            let unhandled = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let effect = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let error = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let p = ProtocolTokens {
+                unhandled,
+                effect,
+                error,
+            };
+            ctx.protocol = Some(p);
+            p
+        }
     };
-    ctx.protocol = Some(protocol);
 
     let mut env = Env::empty();
 
@@ -155,17 +162,35 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     );
 
     // Create core/contract::genesis as a base contract that always returns UNHANDLED.
-    let genesis = make_genesis(ctx);
+    let genesis = make_genesis();
     env = Env::with_binding(&env, "core/contract::genesis", genesis);
 
     Prelude { env, protocol }
 }
 
-fn proto(ctx: &EvalCtx) -> ProtocolTokens {
-    ctx.protocol.expect("prelude must set protocol tokens")
+fn proto(ctx: &mut EvalCtx) -> ProtocolTokens {
+    match ctx.protocol {
+        Some(p) => p,
+        None => {
+            // Mirror build_prelude's fallback; this should only happen if called without init.
+            let unhandled = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let effect = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let error = SealId(ctx.state.next_seal_id);
+            ctx.state.next_seal_id = ctx.state.next_seal_id.saturating_add(1);
+            let p = ProtocolTokens {
+                unhandled,
+                effect,
+                error,
+            };
+            ctx.protocol = Some(p);
+            p
+        }
+    }
 }
 
-fn mk_error(ctx: &EvalCtx, msg: impl Into<String>) -> Value {
+fn mk_error(ctx: &mut EvalCtx, msg: impl Into<String>) -> Value {
     let p = proto(ctx);
     let mut m = BTreeMap::new();
     m.insert(
@@ -182,7 +207,7 @@ fn mk_error(ctx: &EvalCtx, msg: impl Into<String>) -> Value {
     }
 }
 
-fn mk_unhandled(ctx: &EvalCtx, msg_term: Term) -> Value {
+fn mk_unhandled(ctx: &mut EvalCtx, msg_term: Term) -> Value {
     let p = proto(ctx);
     let payload = Term::list(vec![Term::Symbol("unhandled".to_string()), msg_term]);
     Value::Sealed {
@@ -241,16 +266,16 @@ fn parse_msg_term(t: &Term) -> Result<(Term, Term), KernelError> {
     Ok((op, payload))
 }
 
-fn make_genesis(ctx: &mut EvalCtx) -> Value {
+fn make_genesis() -> Value {
     let empty_overrides = Value::Map(BTreeMap::new());
-    let handler = {
-        let f = Value::NativeFn(NativeFn::new(
-            "core/contract::internal-override-handler",
-            2,
-            nf_internal_override_handler,
-        ));
-        f.apply(ctx, empty_overrides).expect("partial apply")
-    };
+    // Avoid any fallible/alloc-heavy path during runtime init: construct the
+    // partially-applied native function directly.
+    let handler = Value::NativeFn(NativeFn {
+        name: "core/contract::internal-override-handler",
+        arity: 2,
+        collected: vec![empty_overrides.clone()],
+        func: nf_internal_override_handler,
+    });
 
     let meta = Value::Map(
         [(

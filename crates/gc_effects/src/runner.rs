@@ -56,7 +56,7 @@ pub fn run(
                 let req_h = hash_request(&req.op, payload_h, cont_h);
 
                 let (decision, cap_term, resp_val, resp_logged) = if !policy.is_allowed(&req.op) {
-                    let resp = mk_caps_denied(ctx, &req.op);
+                    let resp = mk_caps_denied(proto.error, &req.op);
                     (
                         Decision::Deny,
                         Term::Nil,
@@ -66,7 +66,7 @@ pub fn run(
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = cap_term(&req.op, pol)?;
-                    let resp = call_capability(ctx, &req.op, &req.payload, pol, proto.error)?;
+                    let resp = call_capability(&req.op, &req.payload, pol, proto.error)?;
                     (
                         Decision::Allow,
                         cap_term,
@@ -215,12 +215,16 @@ fn hash_request(op: &str, payload_h: [u8; 32], cont_h: [u8; 32]) -> [u8; 32] {
     *h.finalize().as_bytes()
 }
 
-fn mk_caps_denied(ctx: &EvalCtx, op: &str) -> Value {
-    mk_error(ctx, "core/caps/denied", format!("capability denied: {op}"), Some(op))
+fn mk_caps_denied(error_tok: SealId, op: &str) -> Value {
+    mk_error(
+        error_tok,
+        "core/caps/denied",
+        format!("capability denied: {op}"),
+        Some(op),
+    )
 }
 
-fn mk_error(ctx: &EvalCtx, code: &str, msg: String, op: Option<&str>) -> Value {
-    let proto = ctx.protocol.expect("caller ensured protocol");
+fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Value {
     let mut m = BTreeMap::new();
     m.insert(
         TermOrdKey(Term::Symbol(":error/code".to_string())),
@@ -237,7 +241,7 @@ fn mk_error(ctx: &EvalCtx, code: &str, msg: String, op: Option<&str>) -> Value {
         );
     }
     Value::Sealed {
-        token: proto.error,
+        token: error_tok,
         payload: Box::new(Value::Data(Term::Map(m))),
     }
 }
@@ -284,7 +288,6 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
 }
 
 fn call_capability(
-    ctx: &EvalCtx,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -341,7 +344,7 @@ fn call_capability(
             }
         }
         _ => Ok(mk_error(
-            ctx,
+            error_tok,
             "core/caps/unknown-op",
             format!("unknown capability op: {op}"),
             Some(op),
