@@ -1,0 +1,29 @@
+{
+  :version 1
+  :intent "Make pkg_basic tests pure + remove caps"
+  :provenance {}
+  :ops
+    [
+      {
+        :op :replace-node
+        :module-path "basic.gc"
+        :path [[:form 0]]
+        :new
+          (def ::meta
+            '{
+              :exports [pkg/basic::tests]
+              :caps []
+              :types {pkg/basic::tests ?}})
+      }
+      {
+        :op :replace-node
+        :module-path "basic.gc"
+        :path [[:form 1]]
+        :new
+          (def pkg/basic::tests
+            {
+              "now" { :body (fn (_) (core/effect::pure (prim int/add 1 2))) :expect 3 }
+            })
+      }
+    ]
+}

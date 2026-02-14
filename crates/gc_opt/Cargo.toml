@@ -1,0 +1,17 @@
+[package]
+name = "gc_opt"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+egg.workspace = true
+num-bigint.workspace = true
+num-traits.workspace = true
+thiserror.workspace = true
+
+# local
+gc_coreform = { path = "../gc_coreform" }
+gc_kernel = { path = "../gc_kernel" }
+gc_prelude = { path = "../gc_prelude" }

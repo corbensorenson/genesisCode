@@ -1,0 +1,17 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_basic"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::determinism",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+    "core/obligation::typecheck",
+    "core/obligation::translation-validation",
+]
+tests = ["pkg/basic::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "a4534aee8eddd31ef7c173d7c155757be33330c51903f9708391fee9271b9953"
+path = "basic.gc"

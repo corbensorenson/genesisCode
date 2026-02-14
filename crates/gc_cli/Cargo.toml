@@ -1,0 +1,23 @@
+[package]
+name = "gc_cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "genesis"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+
+# local
+gc_coreform = { path = "../gc_coreform" }
+gc_kernel = { path = "../gc_kernel" }
+gc_prelude = { path = "../gc_prelude" }
+gc_effects = { path = "../gc_effects" }
+gc_obligations = { path = "../gc_obligations" }
+gc_patches = { path = "../gc_patches" }
+gc_types = { path = "../gc_types" }
+gc_opt = { path = "../gc_opt" }

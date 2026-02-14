@@ -1,0 +1,18 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/basic::tests]
+      :types {pkg/basic::tests ?}}))
+
+(def pkg/basic::tests
+  {
+    "now"
+      {
+        :body
+          (fn (_)
+            (core/effect::pure
+              (prim int/add 1 2)))
+        :expect 3}})
+
+pkg/basic::tests

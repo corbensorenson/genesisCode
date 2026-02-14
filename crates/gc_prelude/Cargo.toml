@@ -1,0 +1,15 @@
+[package]
+name = "gc_prelude"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+once_cell.workspace = true
+thiserror.workspace = true
+
+# local
+gc_coreform = { path = "../gc_coreform" }
+gc_kernel = { path = "../gc_kernel" }
