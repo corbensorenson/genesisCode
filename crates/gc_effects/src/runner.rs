@@ -234,12 +234,25 @@ fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Val
         TermOrdKey(Term::Symbol(":error/message".to_string())),
         Term::Str(msg),
     );
+    let mut ctxm = BTreeMap::new();
+    ctxm.insert(
+        TermOrdKey(Term::Symbol(":subsystem".to_string())),
+        Term::Str("effects".to_string()),
+    );
     if let Some(op) = op {
         m.insert(
             TermOrdKey(Term::Symbol(":error/op".to_string())),
             Term::Symbol(op.to_string()),
         );
+        ctxm.insert(
+            TermOrdKey(Term::Symbol(":op".to_string())),
+            Term::Symbol(op.to_string()),
+        );
     }
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/context".to_string())),
+        Term::Map(ctxm),
+    );
     Value::Sealed {
         token: error_tok,
         payload: Box::new(Value::Data(Term::Map(m))),
@@ -361,8 +374,25 @@ fn io_error_payload(op: &str, path: &Path, e: &std::io::Error) -> Term {
         Term::Symbol(op.to_string()),
     );
     m.insert(
-        TermOrdKey(Term::Symbol(":path".to_string())),
-        Term::Str(path.display().to_string()),
+        TermOrdKey(Term::Symbol(":error/context".to_string())),
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::Symbol(":subsystem".to_string())),
+                    Term::Str("effects".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::Symbol(":op".to_string())),
+                    Term::Symbol(op.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::Symbol(":path".to_string())),
+                    Term::Str(path.display().to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ),
     );
     Term::Map(m)
 }

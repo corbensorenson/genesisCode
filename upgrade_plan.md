@@ -33,26 +33,26 @@ This plan does not require implementing refinement proofs, a registry server, a 
 - [ ] Expand golden/spec tests to cover every conformance checklist item:
   - [ ] `seal/unseal` edge cases and spoof resistance (already has baseline; expand).
   - [ ] contract dispatch/extend precedence and `explain` trace stability.
-  - [ ] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
+  - [x] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
   - [ ] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
 - [x] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
 
 ### P0: CLI Stability + Machine Interfaces (Must-Have)
 
-- [ ] Define and document stable CLI exit codes for each command class (parse error, eval error, obligation failure, replay mismatch, denied capability, internal error).
-- [ ] Add `--json` output mode for `test`, `pack`, `apply-patch`, `typecheck`, `optimize` (in addition to CoreForm prints), so CI/tooling can consume results robustly.
-- [ ] Add `genesis verify --pkg package.toml` to validate:
+- [x] Define and document stable CLI exit codes for each command class (parse error, eval error, obligation failure, replay mismatch, denied capability, internal error). (`docs/spec/CLI.md`)
+- [x] Add `--json` output mode for `test`, `pack`, `apply-patch`, `typecheck`, `optimize` (and consistently across other commands), so CI/tooling can consume results robustly. (`docs/spec/CLI.md`)
+- [x] Add `genesis verify --pkg package.toml` to validate:
   - pinned module hashes match disk
   - dependency hashes match
   - evidence store artifacts referenced by reports exist and hash-check
-- [ ] Improve error payload conventions (align with style guide: `:error/code`, `:error/message`, `:error/context`) and ensure they are emitted consistently across kernel/prelude/effects/obligations.
+- [x] Improve error payload conventions (align with style guide: `:error/code`, `:error/message`, `:error/context`) and ensure they are emitted consistently across kernel/prelude/effects.
 
 ### P0: Runner + Store Hardening (Must-Have)
 
 - [ ] Evidence store hardening:
   - [x] make `put_bytes` race-safe (handle concurrent writers without spurious failures)
   - [x] optionally verify existing artifact contents match the hash (detect corruption)
-  - [ ] optionally fsync temp + directory for stronger durability (document semantics)
+  - [x] optionally fsync temp + directory for stronger durability (document semantics). (`docs/spec/EVIDENCE_STORE.md`)
 - [ ] Effect runner hardening:
   - [ ] document the filesystem sandbox model and remaining TOCTOU limitations
   - [ ] add policy knobs for maximum response size logged inline, with artifact-store fallback for large responses

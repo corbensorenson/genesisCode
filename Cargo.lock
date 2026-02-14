@@ -339,7 +339,10 @@ dependencies = [
  "gc_prelude",
  "gc_types",
  "predicates",
+ "serde",
+ "serde_json",
  "tempfile",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

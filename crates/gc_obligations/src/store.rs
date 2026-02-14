@@ -23,6 +23,10 @@ impl EvidenceStore {
         self.root.join(hex)
     }
 
+    pub fn root_dir(&self) -> &Path {
+        &self.root
+    }
+
     fn hash_bytes(bytes: &[u8]) -> String {
         let mut h = Hasher::new();
         h.update(bytes);
@@ -42,6 +46,10 @@ impl EvidenceStore {
             )));
         }
         Ok(())
+    }
+
+    pub fn verify_hex(&self, hex: &str) -> Result<(), ObligationError> {
+        self.verify_existing(hex)
     }
 
     pub fn put_bytes(&self, bytes: &[u8]) -> Result<String, ObligationError> {

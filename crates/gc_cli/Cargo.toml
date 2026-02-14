@@ -11,6 +11,9 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }

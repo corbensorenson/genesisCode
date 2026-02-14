@@ -197,6 +197,17 @@ fn mk_error(ctx: &mut EvalCtx, msg: impl Into<String>) -> Value {
         TermOrdKey(Term::Symbol(":error/message".to_string())),
         Term::Str(msg.into()),
     );
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/context".to_string())),
+        Term::Map(
+            [(
+                TermOrdKey(Term::Symbol(":subsystem".to_string())),
+                Term::Str("prelude".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        ),
+    );
     Value::Sealed {
         token: p.error,
         payload: Box::new(Value::Data(Term::Map(m))),

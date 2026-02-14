@@ -1,6 +1,7 @@
 mod error;
 mod manifest;
 mod store;
+mod verify;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -13,6 +14,7 @@ use gc_prelude::build_prelude;
 pub use crate::error::ObligationError;
 pub use crate::manifest::{DepEntry, ModuleEntry, PackageManifest};
 pub use crate::store::EvidenceStore;
+pub use crate::verify::{PackageVerifyResult, verify_package};
 
 #[derive(Debug, Clone)]
 pub struct ObligationResult {
@@ -169,6 +171,7 @@ pub fn test_package(
         };
         let acceptance = acceptance_term(&manifest, false, std::slice::from_ref(&ob));
         let acceptance_artifact = store.put_term(&acceptance)?;
+        write_last_acceptance(&pkg_dir, &acceptance_artifact)?;
         return Ok(PackageTestResult {
             ok: false,
             acceptance_artifact,
@@ -222,12 +225,49 @@ pub fn test_package(
 
     let acceptance = acceptance_term(&manifest, ok_all, &obligation_results);
     let acceptance_artifact = store.put_term(&acceptance)?;
+    write_last_acceptance(&pkg_dir, &acceptance_artifact)?;
 
     Ok(PackageTestResult {
         ok: ok_all,
         acceptance_artifact,
         obligation_results,
     })
+}
+
+fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationError> {
+    let genesis_dir = pkg_dir.join(".genesis");
+    std::fs::create_dir_all(&genesis_dir)?;
+    let path = genesis_dir.join("last_acceptance");
+    let mut i: u64 = 0;
+    let tmp = loop {
+        let cand = genesis_dir.join(format!(
+            ".tmp-last_acceptance-{}-{}",
+            std::process::id(),
+            i
+        ));
+        i = i.saturating_add(1);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&cand)
+        {
+            Ok(mut f) => {
+                use std::io::Write;
+                f.write_all(format!("{hex}\n").as_bytes())?;
+                let _ = f.sync_all();
+                break cand;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    };
+    std::fs::rename(&tmp, &path)?;
+    #[cfg(unix)]
+    {
+        let d = std::fs::File::open(&genesis_dir)?;
+        let _ = d.sync_all();
+    }
+    Ok(())
 }
 
 fn pin_manifest_hashes(

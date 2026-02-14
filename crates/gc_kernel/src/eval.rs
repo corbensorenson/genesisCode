@@ -681,12 +681,23 @@ fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
     if let Some(p) = ctx.protocol {
         let mut m = BTreeMap::new();
         m.insert(
-            TermOrdKey(Term::Symbol(":error/kind".to_string())),
-            Term::Str("type".to_string()),
+            TermOrdKey(Term::Symbol(":error/code".to_string())),
+            Term::Str("core/type-error".to_string()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":error/message".to_string())),
             Term::Str(msg.to_string()),
+        );
+        m.insert(
+            TermOrdKey(Term::Symbol(":error/context".to_string())),
+            Term::Map(
+                [(
+                    TermOrdKey(Term::Symbol(":kind".to_string())),
+                    Term::Str("type".to_string()),
+                )]
+                .into_iter()
+                .collect(),
+            ),
         );
         return Ok(Value::Sealed {
             token: p.error,

@@ -2,7 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use predicates::prelude::*;
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
@@ -92,6 +91,7 @@ fn unit_tests_failure_is_recorded_in_acceptance_artifact() {
         .arg(&pkg)
         .assert()
         .failure()
+        .code(30)
         .get_output()
         .stdout
         .clone();
@@ -119,6 +119,7 @@ fn determinism_failure_is_recorded_in_acceptance_artifact() {
         .arg(&pkg)
         .assert()
         .failure()
+        .code(30)
         .get_output()
         .stdout
         .clone();
@@ -146,6 +147,7 @@ fn capabilities_declared_failure_is_recorded_in_acceptance_artifact() {
         .arg(&pkg)
         .assert()
         .failure()
+        .code(30)
         .get_output()
         .stdout
         .clone();
@@ -173,6 +175,7 @@ fn typecheck_failure_is_recorded_in_acceptance_artifact() {
         .arg(&pkg)
         .assert()
         .failure()
+        .code(30)
         .get_output()
         .stdout
         .clone();
@@ -199,7 +202,8 @@ fn hash_mismatch_is_captured_as_preflight_acceptance() {
         .args(["test", "--pkg"])
         .arg(&pkg)
         .assert()
-        .failure();
+        .failure()
+        .code(30);
 
     // Ensure we didn't regress to "no artifact on failure" for preflight checks.
     let out = assert.get_output().stdout.clone();
@@ -212,5 +216,5 @@ fn hash_mismatch_is_captured_as_preflight_acceptance() {
     ));
 
     // Also ensure stderr indicates failure, but avoid relying on exact wording.
-    assert.stderr(predicate::str::contains("failed").or(predicate::str::contains("Error")));
+    // Stderr is intentionally not part of the stable interface for expected obligation failures.
 }
