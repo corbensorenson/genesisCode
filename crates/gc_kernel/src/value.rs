@@ -133,101 +133,139 @@ impl Apply for Value {
 }
 
 pub fn value_hash(v: &Value) -> [u8; 32] {
-    let mut h = Hasher::new();
-    hash_value_into(&mut h, v);
-    *h.finalize().as_bytes()
+    ValueHasher::new().hash(v)
 }
 
-fn hash_value_into(h: &mut Hasher, v: &Value) {
-    match v {
-        Value::Data(t) => {
-            h.update(b"V:data\0");
-            h.update(&hash_term(t));
-        }
-        Value::Vector(xs) => {
-            h.update(b"V:vec\0");
-            h.update(&(xs.len() as u64).to_le_bytes());
-            for x in xs {
-                hash_value_into(h, x);
-            }
-        }
-        Value::Map(m) => {
-            h.update(b"V:map\0");
-            h.update(&(m.len() as u64).to_le_bytes());
-            for (k, v) in m {
-                h.update(&hash_term(&k.0));
-                hash_value_into(h, v);
-            }
-        }
-        Value::Closure { param, body, env } => {
-            h.update(b"V:closure\0");
-            h.update(param.as_bytes());
-            h.update(b"\0");
-            // Body is a CoreForm term; hash via canonical printing.
-            h.update(print_term(body).as_bytes());
-            h.update(b"\0");
-            hash_env_into(h, env);
-        }
-        Value::SealToken(SealId(id)) => {
-            h.update(b"V:seal-token\0");
-            h.update(&id.to_le_bytes());
-        }
-        Value::Sealed {
-            token: SealId(id),
-            payload,
-        } => {
-            h.update(b"V:sealed\0");
-            h.update(&id.to_le_bytes());
-            hash_value_into(h, payload);
-        }
-        Value::NativeFn(f) => {
-            h.update(b"V:native\0");
-            h.update(f.name.as_bytes());
-            h.update(b"\0");
-            h.update(&(f.arity as u64).to_le_bytes());
-            for a in &f.collected {
-                hash_value_into(h, a);
-            }
-        }
-        Value::Contract(c) => {
-            h.update(b"V:contract\0");
-            h.update(&c.contract_id);
-        }
-        Value::EffectProgram(p) => {
-            h.update(b"V:effect-program\0");
-            match p.as_ref() {
-                EffectProgram::Pure(v) => {
-                    h.update(b"pure\0");
-                    hash_value_into(h, v);
-                }
-                EffectProgram::Perform { request } => {
-                    h.update(b"perform\0");
-                    hash_value_into(h, request);
-                }
-            }
-        }
-        Value::EffectRequest(r) => {
-            h.update(b"V:effect-req\0");
-            h.update(r.op.as_bytes());
-            h.update(b"\0");
-            h.update(&hash_term(&r.payload));
-            hash_value_into(h, &r.k);
+struct ValueHasher {
+    env_cache: std::collections::HashMap<*const crate::env::EnvFrame, [u8; 32]>,
+}
+
+impl ValueHasher {
+    fn new() -> Self {
+        Self {
+            env_cache: std::collections::HashMap::new(),
         }
     }
-}
 
-fn hash_env_into(h: &mut Hasher, env: &Env) {
-    // Hash as a chain of frames, each with sorted bindings.
-    h.update(b"env\0");
-    let mut cur: Option<&crate::env::EnvFrame> = Some(env.0.as_ref());
-    while let Some(frame) = cur {
-        h.update(b"frame\0");
-        for (k, v) in &frame.binds {
+    fn hash(&mut self, v: &Value) -> [u8; 32] {
+        let mut h = Hasher::new();
+        self.hash_into(&mut h, v);
+        *h.finalize().as_bytes()
+    }
+
+    fn hash_into(&mut self, h: &mut Hasher, v: &Value) {
+        h.update(b"GCv0.2\0value\0");
+        match v {
+            Value::Data(t) => {
+                h.update(b"data\0");
+                h.update(&hash_term(t));
+            }
+            Value::Vector(xs) => {
+                h.update(b"vec\0");
+                h.update(&(xs.len() as u64).to_le_bytes());
+                for x in xs {
+                    let hx = self.hash(x);
+                    h.update(&hx);
+                }
+            }
+            Value::Map(m) => {
+                h.update(b"map\0");
+                h.update(&(m.len() as u64).to_le_bytes());
+                for (k, v) in m {
+                    h.update(&hash_term(&k.0));
+                    let hv = self.hash(v);
+                    h.update(&hv);
+                }
+            }
+            Value::Closure { param, body, env } => {
+                h.update(b"closure\0");
+                h.update(param.as_bytes());
+                h.update(b"\0");
+                h.update(&hash_term(body));
+                let he = self.hash_env(env);
+                h.update(&he);
+            }
+            Value::SealToken(SealId(id)) => {
+                h.update(b"seal-token\0");
+                h.update(&id.to_le_bytes());
+            }
+            Value::Sealed { token, payload } => {
+                h.update(b"sealed\0");
+                h.update(&token.0.to_le_bytes());
+                let hp = self.hash(payload);
+                h.update(&hp);
+            }
+            Value::NativeFn(f) => {
+                h.update(b"native\0");
+                h.update(f.name.as_bytes());
+                h.update(b"\0");
+                h.update(&(f.arity as u64).to_le_bytes());
+                h.update(&(f.collected.len() as u64).to_le_bytes());
+                for a in &f.collected {
+                    let ha = self.hash(a);
+                    h.update(&ha);
+                }
+            }
+            Value::Contract(c) => {
+                h.update(b"contract\0");
+                h.update(&c.contract_id);
+            }
+            Value::EffectProgram(p) => {
+                h.update(b"effect-program\0");
+                match p.as_ref() {
+                    EffectProgram::Pure(v) => {
+                        h.update(b"pure\0");
+                        let hv = self.hash(v);
+                        h.update(&hv);
+                    }
+                    EffectProgram::Perform { request } => {
+                        h.update(b"perform\0");
+                        let hr = self.hash(request);
+                        h.update(&hr);
+                    }
+                }
+            }
+            Value::EffectRequest(r) => {
+                h.update(b"effect-req\0");
+                h.update(r.op.as_bytes());
+                h.update(b"\0");
+                h.update(&hash_term(&r.payload));
+                let hk = self.hash(&r.k);
+                h.update(&hk);
+            }
+        }
+    }
+
+    fn hash_env(&mut self, env: &Env) -> [u8; 32] {
+        let ptr = env.0.as_ref() as *const crate::env::EnvFrame;
+        if let Some(h) = self.env_cache.get(&ptr) {
+            return *h;
+        }
+
+        let mut h = Hasher::new();
+        h.update(b"GCv0.2\0env\0");
+
+        // Parent hash first to preserve a stable chain structure.
+        if let Some(parent) = &env.0.parent {
+            let hp = self.hash_env(parent);
+            h.update(b"parent\0");
+            h.update(&hp);
+        } else {
+            h.update(b"parent\0nil\0");
+        }
+
+        h.update(b"binds\0");
+        h.update(&(env.0.binds.len() as u64).to_le_bytes());
+        for (k, v) in &env.0.binds {
             h.update(k.as_bytes());
             h.update(b"\0");
-            hash_value_into(h, v);
+            let hv = self.hash(v);
+            h.update(&hv);
         }
-        cur = frame.parent.as_ref().map(|e| e.0.as_ref());
+
+        let out = *h.finalize().as_bytes();
+        self.env_cache.insert(ptr, out);
+        out
     }
 }
 

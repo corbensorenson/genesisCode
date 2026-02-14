@@ -65,7 +65,12 @@ impl EffectLog {
         let Term::Map(m) = t else {
             return Err(EffectsError::Log("gclog must be a map".to_string()));
         };
-        let version = get_int(m, ":version")?.unwrap_or(1);
+        let version = get_int(m, ":version")?.unwrap_or(2);
+        if version != 2 {
+            return Err(EffectsError::Log(format!(
+                "unsupported gclog :version {version} (expected 2)"
+            )));
+        }
         let program_hash = get_bytes32(m, ":program-hash")?;
         let toolchain = get_str(m, ":toolchain")?.unwrap_or_else(|| "unknown".to_string());
         let entries_t = map_get(m, ":entries")

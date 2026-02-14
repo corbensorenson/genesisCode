@@ -210,4 +210,18 @@ mod tests {
             assert!(matches!(res, Term::Int(i) if i == &expect_result.into()));
         }
     }
+
+    #[test]
+    fn embedded_prelude_wrappers_work() {
+        let src = r#"
+            (core/int::add 1 2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+        assert!(matches!(v, Value::Data(Term::Int(i)) if i == 3.into()));
+    }
 }

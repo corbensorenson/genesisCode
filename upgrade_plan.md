@@ -62,11 +62,11 @@ This plan does not require implementing refinement proofs, a registry server, a 
 
 Style guide expects a stable set of names and helpers. Today, many helpers exist as `prim` ops rather than `core/*` functions.
 
-- [ ] Implement a real `prelude/prelude.gc` with CoreForm-level wrappers and helpers:
+- [x] Implement a real `prelude/prelude.gc` with CoreForm-level wrappers and helpers:
   - message helpers (already exist as native fns; expose stable wrappers if desired)
-  - `core/error::*` helpers (aliases for protocol error predicates/unsealing)
-  - convenience wrappers for common primitives (map, vec, list) with consistent error behavior
-- [ ] Add a minimal test DSL in CoreForm (or a stable test schema extension) so style-guide examples are representable without verbose boilerplate.
+  - `core/error::*` helpers (aliases + standardized payload constructor)
+  - convenience wrappers for common primitives (map, vec, list, int, etc.)
+- [x] Add a minimal test DSL in CoreForm (stable `core/test::case` and `core/test::case0`) so style-guide examples are representable without verbose boilerplate.
 
 ### P1: Reliability (Fuzzing, Limits, Portability)
 

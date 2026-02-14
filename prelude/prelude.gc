@@ -1,2 +1,73 @@
-; Prelude placeholder. In early versions we wire most prelude via Rust native functions.
-; This file is kept so the project has a stable place for CoreForm-level helpers later.
+; GenesisCode v0.2 Core Prelude (CoreForm-level helpers)
+;
+; This file is embedded into the toolchain and evaluated during prelude initialization.
+; Keep definitions deterministic and side-effect free.
+
+; ----------------
+; Error Convention
+; ----------------
+;
+; Standard error payload schema:
+; { :error/code <sym|str> :error/message <str> :error/context <map> }
+
+(def core/error::make
+  (fn (code msg ctx)
+    (core/protocol::error
+      {
+        :error/code code
+        :error/message msg
+        :error/context ctx
+      })))
+
+(def core/error::make2
+  (fn (code msg)
+    (core/error::make code msg {})))
+
+(def core/error::is? core/protocol::is-error)
+(def core/error::payload core/protocol::unerror)
+
+; -----------------
+; Primitive Wrappers
+; -----------------
+;
+; These provide stable names under core/* for the kernel `prim` surface.
+
+(def core/eq? (fn (a b) (prim core/eq? a b)))
+
+(def core/int::add (fn (a b) (prim int/add a b)))
+(def core/int::sub (fn (a b) (prim int/sub a b)))
+(def core/int::mul (fn (a b) (prim int/mul a b)))
+(def core/int::eq? (fn (a b) (prim int/eq? a b)))
+(def core/int::lt? (fn (a b) (prim int/lt? a b)))
+
+(def core/pair::cons (fn (a d) (prim pair/cons a d)))
+(def core/pair::car (fn (p) (prim pair/car p)))
+(def core/pair::cdr (fn (p) (prim pair/cdr p)))
+(def core/list::is-nil? (fn (x) (prim list/is-nil? x)))
+
+(def core/map::get (fn (m k) (prim map/get m k)))
+(def core/map::put (fn (m k v) (prim map/put m k v)))
+(def core/map::merge (fn (a b) (prim map/merge a b)))
+
+(def core/vec::get (fn (v i) (prim vec/get v i)))
+(def core/vec::push (fn (v x) (prim vec/push v x)))
+
+(def core/sym::eq? (fn (a b) (prim sym/eq? a b)))
+(def core/str::concat (fn (a b) (prim str/concat a b)))
+(def core/bytes::len (fn (b) (prim bytes/len b)))
+(def core/bytes::concat (fn (a b) (prim bytes/concat a b)))
+
+; ---------
+; Test DSL
+; ---------
+;
+; Package tests are expressed as a suite map:
+; { "name" <callable> } OR { "name" { :body <callable> :expect <datum> } }
+
+(def core/test::case
+  (fn (body expect)
+    { :body body :expect expect }))
+
+(def core/test::case0
+  (fn (body)
+    { :body body }))

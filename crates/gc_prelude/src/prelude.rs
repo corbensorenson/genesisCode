@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use blake3::Hasher;
 
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::{
     Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
     NativeFn, ProtocolTokens, SealId, Value, value_hash,
@@ -160,6 +160,15 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     // Create core/contract::genesis as a base contract that always returns UNHANDLED.
     let genesis = make_genesis();
     env = Env::with_binding(&env, "core/contract::genesis", genesis);
+
+    // Evaluate the embedded CoreForm prelude for stable convenience wrappers and helpers.
+    // This is considered part of the toolchain; parse/canon/eval failures are internal bugs.
+    {
+        const PRELUDE_SRC: &str = include_str!("../../../prelude/prelude.gc");
+        let forms = parse_module(PRELUDE_SRC).expect("embedded prelude must parse");
+        let forms = canonicalize_module(forms).expect("embedded prelude must canonicalize");
+        let _ = gc_kernel::eval_module(ctx, &mut env, &forms).expect("embedded prelude must eval");
+    }
 
     Prelude { env, protocol }
 }

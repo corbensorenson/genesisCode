@@ -35,7 +35,7 @@ pub fn run(
         match p.as_ref() {
             EffectProgram::Pure(v) => {
                 let log = EffectLog {
-                    version: 1,
+                    version: 2,
                     program_hash,
                     toolchain,
                     entries,

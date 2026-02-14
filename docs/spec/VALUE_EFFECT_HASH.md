@@ -4,12 +4,14 @@ This document is **normative** for GenesisCode v0.2 because effect logs and repl
 
 ## Value Hash (`gc_kernel::value_hash`)
 
-`value_hash(v)` is BLAKE3 over a structured tagged encoding. Each variant contributes a tag and then its fields.
+`value_hash(v)` is BLAKE3 over a structured tagged encoding. Each variant contributes a domain tag and then its fields.
 
 Important properties:
 - Hashing is stable and deterministic.
 - Hashing is total for all runtime values.
 - Hashing of closures includes the closure body and the captured environment so that continuation hashes are replayable.
+
+This version (v0.2) uses an encoding that is amenable to caching of shared environment prefixes; this does not change the output semantics, but avoids pathological blowups when many closures capture large shared environments.
 
 ### Data Values
 
@@ -20,12 +22,12 @@ Important properties:
 - Hash includes:
   - tag `V:closure`
   - parameter name bytes
-  - the closure body as canonical-printed CoreForm bytes
+  - the closure body as `hash_term(body)` (canonical CoreForm hash)
   - the captured environment hash
 
 Environment hashing:
-- hashed as a chain of frames from inner to outer
-- each frame hashes its bindings in stable key order (by symbol string)
+- hashed as a persistent chain of frames (parent-first)
+- each frame hashes its bindings in stable key order (by binding name string)
 - values inside the environment are hashed recursively by `value_hash`
 
 ### Seal Tokens and Sealed Values
@@ -67,3 +69,6 @@ This hash is recorded in logs and must match during replay.
 - Any change to `value_hash` or request hashing is a compatibility break for `.gclog` replay.
 - If such a change is required, bump log version and/or the version tag prefix so mixed logs are rejected deterministically.
 
+## Log Version Note
+
+GenesisCode v0.2 uses `.gclog :version = 2` for the current `value_hash` encoding.
