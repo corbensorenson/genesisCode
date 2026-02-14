@@ -113,7 +113,7 @@ fn main() -> anyhow::Result<()> {
             contract,
             msg,
         } => cmd_explain(&file, &contract, &msg),
-        Cmd::Run { file, caps, log } => cmd_run(&file, &caps, log.as_ref()),
+        Cmd::Run { file, caps, log } => cmd_run(&file, &caps, log.as_deref()),
         Cmd::Replay { file, log } => cmd_replay(&file, &log),
         Cmd::Test { pkg, caps } => cmd_test(&pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(&pkg),
@@ -185,7 +185,11 @@ fn cmd_explain(file: &PathBuf, contract_src: &str, msg_src: &str) -> anyhow::Res
     Ok(())
 }
 
-fn cmd_run(file: &PathBuf, caps: &PathBuf, log: Option<&PathBuf>) -> anyhow::Result<()> {
+fn cmd_run(
+    file: &std::path::Path,
+    caps: &std::path::Path,
+    log: Option<&std::path::Path>,
+) -> anyhow::Result<()> {
     let src = std::fs::read_to_string(file).with_context(|| format!("read {}", file.display()))?;
     let forms = parse_module(&src).map_err(|e| anyhow!(e))?;
     let forms = canonicalize_module(forms)?;
@@ -203,7 +207,9 @@ fn cmd_run(file: &PathBuf, caps: &PathBuf, log: Option<&PathBuf>) -> anyhow::Res
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| anyhow!("run failed: {e}"))?;
 
-    let log_path = log.cloned().unwrap_or_else(|| file.with_extension("gclog"));
+    let log_path = log
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| file.with_extension("gclog"));
     std::fs::write(&log_path, r.log.to_string_canonical() + "\n")
         .with_context(|| format!("write {}", log_path.display()))?;
 
@@ -237,7 +243,7 @@ fn cmd_replay(file: &PathBuf, log_path: &PathBuf) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn cmd_test(pkg: &PathBuf, caps: Option<&std::path::Path>) -> anyhow::Result<()> {
+fn cmd_test(pkg: &std::path::Path, caps: Option<&std::path::Path>) -> anyhow::Result<()> {
     let r = gc_obligations::test_package(pkg, caps).map_err(|e| anyhow!("{e}"))?;
     println!("{}", r.acceptance_artifact);
     if !r.ok {
@@ -246,13 +252,13 @@ fn cmd_test(pkg: &PathBuf, caps: Option<&std::path::Path>) -> anyhow::Result<()>
     Ok(())
 }
 
-fn cmd_pack(pkg: &PathBuf) -> anyhow::Result<()> {
+fn cmd_pack(pkg: &std::path::Path) -> anyhow::Result<()> {
     let h = gc_obligations::pack(pkg).map_err(|e| anyhow!("{e}"))?;
     println!("{h}");
     Ok(())
 }
 
-fn cmd_typecheck(pkg: &PathBuf) -> anyhow::Result<()> {
+fn cmd_typecheck(pkg: &std::path::Path) -> anyhow::Result<()> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| anyhow!("{e}"))?;
 
     let mut mods = Vec::new();
@@ -293,8 +299,8 @@ fn cmd_optimize(file: &PathBuf, out: Option<&PathBuf>) -> anyhow::Result<()> {
 }
 
 fn cmd_apply_patch(
-    patch: &PathBuf,
-    pkg: &PathBuf,
+    patch: &std::path::Path,
+    pkg: &std::path::Path,
     caps: Option<&std::path::Path>,
 ) -> anyhow::Result<()> {
     let r = gc_patches::apply_patch(patch, pkg, caps).map_err(|e| anyhow!("{e}"))?;
@@ -334,10 +340,11 @@ fn extract_meta_static(forms: &[Term]) -> Option<Term> {
         let Some(q) = items[2].as_proper_list() else {
             continue;
         };
-        if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote") {
-            if let Term::Map(m) = q[1] {
-                return Some(Term::Map(m.clone()));
-            }
+        if q.len() == 2
+            && matches!(q[0], Term::Symbol(s) if s == "quote")
+            && let Term::Map(m) = q[1]
+        {
+            return Some(Term::Map(m.clone()));
         }
     }
     None

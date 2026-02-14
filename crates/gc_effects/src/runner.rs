@@ -189,7 +189,10 @@ pub fn replay(ctx: &mut EvalCtx, program: Value, log: &EffectLog) -> Result<Valu
     }
 }
 
-fn unseal_effect_request(v: &Value, effect_tok: SealId) -> Result<(EffectRequest, SealId), EffectsError> {
+fn unseal_effect_request(
+    v: &Value,
+    effect_tok: SealId,
+) -> Result<(EffectRequest, SealId), EffectsError> {
     let Value::Sealed { token, payload } = v else {
         return Err(EffectsError::BadEffectSeal);
     };
@@ -322,11 +325,7 @@ fn call_capability(
                     let e = std::io::Error::other("refusing to write through symlink");
                     return Ok(Value::Sealed {
                         token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(
-                            op,
-                            &path,
-                            &e,
-                        ))),
+                        payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
                     });
                 }
             }

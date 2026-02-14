@@ -589,9 +589,7 @@ fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ker
             .collect(),
         ));
 
-        if unhandled
-            && let Some(proto) = &cur.proto
-        {
+        if unhandled && let Some(proto) = &cur.proto {
             cur = proto.clone();
             continue;
         }

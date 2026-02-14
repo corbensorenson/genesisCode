@@ -77,7 +77,6 @@ impl EvalCtx {
         }
         Ok(())
     }
-
 }
 
 impl Default for EvalCtx {

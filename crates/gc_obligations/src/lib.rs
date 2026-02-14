@@ -695,18 +695,16 @@ fn obligation_determinism(
     for m in modules {
         let inf = gc_types::infer_effects(&m.forms);
         let meta = extract_meta_static(&m.forms);
-        if let Some(meta) = meta {
-            if let Some(caps) = meta_caps(&meta) {
-                if caps.is_empty() {
-                    if inf.unknown || !inf.ops.is_empty() {
-                        ok = false;
-                        errors.push(format!(
-                            "{} declares :caps [] but has inferred effects (unknown={}, ops={:?})",
-                            m.entry.path, inf.unknown, inf.ops
-                        ));
-                    }
-                }
-            }
+        if let Some(meta) = meta
+            && let Some(caps) = meta_caps(&meta)
+            && caps.is_empty()
+            && (inf.unknown || !inf.ops.is_empty())
+        {
+            ok = false;
+            errors.push(format!(
+                "{} declares :caps [] but has inferred effects (unknown={}, ops={:?})",
+                m.entry.path, inf.unknown, inf.ops
+            ));
         }
     }
 
@@ -714,19 +712,17 @@ fn obligation_determinism(
     // We approximate by mapping suite symbol -> module (static def scan).
     let suite_to_mod = suite_to_module(modules);
     for t in tests {
-        if let Some(mod_i) = suite_to_mod.get(&t.id.suite_sym) {
-            if let Some(meta) = extract_meta_static(&modules[*mod_i].forms) {
-                if let Some(caps) = meta_caps(&meta) {
-                    let observed_effects =
-                        t.effect_log.as_ref().is_some_and(|l| !l.entries.is_empty());
-                    if caps.is_empty() && observed_effects {
-                        ok = false;
-                        errors.push(format!(
-                            "test {} in {} performed effects but module declares :caps []",
-                            t.id.test_name, t.id.suite_sym
-                        ));
-                    }
-                }
+        if let Some(mod_i) = suite_to_mod.get(&t.id.suite_sym)
+            && let Some(meta) = extract_meta_static(&modules[*mod_i].forms)
+            && let Some(caps) = meta_caps(&meta)
+        {
+            let observed_effects = t.effect_log.as_ref().is_some_and(|l| !l.entries.is_empty());
+            if caps.is_empty() && observed_effects {
+                ok = false;
+                errors.push(format!(
+                    "test {} in {} performed effects but module declares :caps []",
+                    t.id.test_name, t.id.suite_sym
+                ));
             }
         }
     }
@@ -1202,10 +1198,7 @@ fn eval_one_module(
             )));
         }
     };
-    let exports = meta
-        .as_ref()
-        .and_then(|m| meta_exports(m))
-        .unwrap_or_default();
+    let exports = meta.as_ref().and_then(meta_exports).unwrap_or_default();
     Ok(ModuleEval {
         path: path.to_path_buf(),
         env,
@@ -1215,9 +1208,7 @@ fn eval_one_module(
 }
 
 fn parse_def(t: &Term) -> Option<(String, Term)> {
-    let Some(items) = t.as_proper_list() else {
-        return None;
-    };
+    let items = t.as_proper_list()?;
     if items.len() != 3 {
         return None;
     }
@@ -1242,10 +1233,11 @@ fn extract_meta_static(forms: &[Term]) -> Option<Term> {
         let Some(items) = expr.as_proper_list() else {
             continue;
         };
-        if items.len() == 2 && matches!(items[0], Term::Symbol(s) if s == "quote") {
-            if let Term::Map(m) = items[1] {
-                return Some(Term::Map(m.clone()));
-            }
+        if items.len() == 2
+            && matches!(items[0], Term::Symbol(s) if s == "quote")
+            && let Term::Map(m) = items[1]
+        {
+            return Some(Term::Map(m.clone()));
         }
     }
     None
