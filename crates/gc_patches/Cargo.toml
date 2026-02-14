@@ -16,6 +16,7 @@ base64 = "0.22"
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_obligations = { path = "../gc_obligations" }
+gc_kernel = { path = "../gc_kernel" }
 
 [dev-dependencies]
 proptest = "1"

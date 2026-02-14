@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_term};
 use gc_effects::{CapsPolicy, EffectLog};
-use gc_kernel::{Apply, Env, EvalCtx, Value, eval_term, value_hash};
+use gc_kernel::{Apply, Env, EvalCtx, StepLimit, Value, eval_term, value_hash};
 use gc_prelude::build_prelude;
 
 pub use crate::error::ObligationError;
@@ -81,6 +81,14 @@ pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
 pub fn test_package(
     pkg_toml: &Path,
     caps_override: Option<&Path>,
+) -> Result<PackageTestResult, ObligationError> {
+    test_package_with_step_limit(pkg_toml, caps_override, StepLimit::Default)
+}
+
+pub fn test_package_with_step_limit(
+    pkg_toml: &Path,
+    caps_override: Option<&Path>,
+    step_limit: StepLimit,
 ) -> Result<PackageTestResult, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let store = EvidenceStore::open(&pkg_dir)?;
@@ -180,7 +188,7 @@ pub fn test_package(
     }
 
     // Discover test ids (suite_sym + test_name) once.
-    let test_ids = discover_tests(&pkg_dir, &manifest, &modules)?;
+    let test_ids = discover_tests(&pkg_dir, &manifest, &modules, step_limit)?;
 
     // Execute tests (each test gets a fresh ctx/env build).
     let mut test_runs = Vec::new();
@@ -191,6 +199,7 @@ pub fn test_package(
             &modules,
             &caps,
             id.clone(),
+            step_limit,
         )?);
     }
 
@@ -206,11 +215,11 @@ pub fn test_package(
                 obligation_caps_declared(&store, &manifest, &modules, &test_runs)
             }
             "core/obligation::replayable-tests" => {
-                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs)
+                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, step_limit)
             }
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
             "core/obligation::translation-validation" => obligation_translation_validation(
-                &store, &pkg_dir, &manifest, &modules, &caps, &test_ids,
+                &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, step_limit,
             ),
             other => Ok(ObligationResult {
                 name: other.to_string(),
@@ -581,12 +590,13 @@ fn discover_tests(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
+    step_limit: StepLimit,
 ) -> Result<Vec<TestId>, ObligationError> {
     if manifest.tests.is_empty() {
         return Ok(Vec::new());
     }
 
-    let eval = eval_package_once(pkg_dir, manifest, modules)?;
+    let eval = eval_package_once(pkg_dir, manifest, modules, step_limit)?;
     let mut ids = Vec::new();
     for suite in &manifest.tests {
         let v = eval
@@ -620,8 +630,9 @@ fn run_one_test(
     modules: &[LoadedModule],
     caps: &CapsPolicy,
     id: TestId,
+    step_limit: StepLimit,
 ) -> Result<TestRun, ObligationError> {
-    let mut ctx = EvalCtx::new();
+    let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
 
@@ -934,6 +945,7 @@ fn obligation_replayable(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
+    step_limit: StepLimit,
 ) -> Result<ObligationResult, ObligationError> {
     let mut ok = true;
     let mut errors = Vec::new();
@@ -943,7 +955,7 @@ fn obligation_replayable(
         let Some(log) = &t.effect_log else { continue };
 
         // Re-evaluate and replay.
-        let mut ctx = EvalCtx::new();
+        let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
         let prelude = build_prelude(&mut ctx);
         let mut base = prelude.env;
         base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
@@ -1053,6 +1065,7 @@ fn obligation_translation_validation(
     modules: &[LoadedModule],
     caps: &CapsPolicy,
     test_ids: &[TestId],
+    step_limit: StepLimit,
 ) -> Result<ObligationResult, ObligationError> {
     // Conservative v0.2: we only validate optimization by re-running the *whole package*
     // tests against an optimized copy of each module and comparing per-test hashes.
@@ -1089,7 +1102,7 @@ fn obligation_translation_validation(
 
     for id in test_ids {
         // original
-        let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone())?;
+        let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone(), step_limit)?;
 
         // optimized modules: optimize pure subsets and re-run.
         let mut opt_modules = Vec::new();
@@ -1102,7 +1115,7 @@ fn obligation_translation_validation(
                 forms: opt_forms,
             });
         }
-        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone())?;
+        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone(), step_limit)?;
 
         if orig.value_hash != opt.value_hash {
             ok = false;
@@ -1207,8 +1220,9 @@ fn eval_package_once(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
+    step_limit: StepLimit,
 ) -> Result<PackageEval, ObligationError> {
-    let mut ctx = EvalCtx::new();
+    let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
     base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;

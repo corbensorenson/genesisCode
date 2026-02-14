@@ -77,7 +77,9 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
   - patch parser/validator: malformed `.gcpatch` must not panic
 - [ ] Address recursion depth risk in evaluator and printer:
   - either implement a trampoline/CEK-style evaluator or document hard limits and provide mitigation.
-- [ ] Add configurable step limits and (optional) memory limits via CLI flags and package policy.
+- [x] Add CLI-configurable kernel step limits (`--step-limit N`, `--no-step-limit`) and plumb them through all evaluation entrypoints (`eval`, `explain`, `run`, `replay`, `test`, `apply-patch`).
+- [ ] Add package-level policy for evaluation limits (so CI can enforce step limits independent of operator CLI flags).
+- [ ] Add (optional) memory limits (allocator-based or RSS budget) with deterministic failure reporting.
 - [ ] Cross-platform determinism review (path normalization in logs, line endings, OS-specific capability behavior).
 
 ### P1: Obligation Stack Expansion (From Paper/Style Guide)

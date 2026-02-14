@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use gc_coreform::{Term, canonicalize_module, hash_module, parse_module, parse_term, print_module};
 use gc_effects::{CapsPolicy, Decision, EffectLog};
-use gc_kernel::{Apply, EvalCtx, SealId, Value, eval_module, eval_term};
+use gc_kernel::{Apply, EvalCtx, SealId, StepLimit, Value, eval_module, eval_term};
 use gc_obligations::PackageManifest;
 use gc_prelude::build_prelude;
 
@@ -27,6 +27,14 @@ struct Cli {
     /// Emit machine-readable JSON on stdout.
     #[arg(long, global = true)]
     json: bool,
+
+    /// Kernel evaluation step limit (default is toolchain-defined).
+    #[arg(long, global = true, value_name = "N")]
+    step_limit: Option<u64>,
+
+    /// Disable the kernel evaluation step limit.
+    #[arg(long, global = true, conflicts_with = "step_limit")]
+    no_step_limit: bool,
 
     #[command(subcommand)]
     cmd: Cmd,
@@ -233,6 +241,20 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
     }
 }
 
+fn resolved_step_limit(cli: &Cli) -> StepLimit {
+    if cli.no_step_limit {
+        return StepLimit::Unlimited;
+    }
+    if let Some(n) = cli.step_limit {
+        return StepLimit::Limit(n);
+    }
+    StepLimit::Default
+}
+
+fn mk_ctx(cli: &Cli) -> EvalCtx {
+    EvalCtx::with_step_limit(resolved_step_limit(cli).resolve())
+}
+
 fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> CliError {
     CliError {
         exit_code,
@@ -308,7 +330,7 @@ fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
-    let mut ctx = EvalCtx::new();
+    let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
@@ -341,7 +363,7 @@ fn cmd_explain(cli: &Cli, file: &PathBuf, contract_src: &str, msg_src: &str) -> 
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
-    let mut ctx = EvalCtx::new();
+    let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
@@ -399,7 +421,7 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
-    let mut ctx = EvalCtx::new();
+    let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
@@ -468,7 +490,7 @@ fn cmd_replay(
         ));
     }
 
-    let mut ctx = EvalCtx::new();
+    let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
@@ -510,7 +532,8 @@ fn cmd_replay(
 }
 
 fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
-    let r = gc_obligations::test_package(pkg, caps).map_err(obligation_err)?;
+    let r = gc_obligations::test_package_with_step_limit(pkg, caps, resolved_step_limit(cli))
+        .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
 
     let obligations: Vec<serde_json::Value> = r
@@ -658,7 +681,8 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
 }
 
 fn cmd_apply_patch(cli: &Cli, patch: &Path, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
-    let r = gc_patches::apply_patch(patch, pkg, caps).map_err(|e| {
+    let r = gc_patches::apply_patch_with_step_limit(patch, pkg, caps, resolved_step_limit(cli))
+        .map_err(|e| {
         match e {
             gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
                 cli_err(EX_PARSE, "patch/invalid", format!("{e}"))

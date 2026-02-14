@@ -5,6 +5,32 @@ use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
 use gc_coreform::{Term, TermOrdKey};
 
+/// Toolchain default evaluation step limit.
+///
+/// This is a DoS safety valve, not a semantic constraint. Tooling may allow
+/// overriding or disabling it for trusted inputs.
+pub const DEFAULT_STEP_LIMIT: u64 = 5_000_000;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StepLimit {
+    /// Use the toolchain default (`DEFAULT_STEP_LIMIT`).
+    Default,
+    /// Disable the step limit.
+    Unlimited,
+    /// Use an explicit limit.
+    Limit(u64),
+}
+
+impl StepLimit {
+    pub fn resolve(self) -> Option<u64> {
+        match self {
+            StepLimit::Default => Some(DEFAULT_STEP_LIMIT),
+            StepLimit::Unlimited => None,
+            StepLimit::Limit(n) => Some(n),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct EvalState {
     pub next_seal_id: u64,
@@ -39,6 +65,10 @@ pub struct EvalCtx {
 
 impl EvalCtx {
     pub fn new() -> Self {
+        Self::with_step_limit(Some(DEFAULT_STEP_LIMIT))
+    }
+
+    pub fn with_step_limit(step_limit: Option<u64>) -> Self {
         // Reserve protocol seal tokens at runtime init so:
         // - kernel primitives can always return sealed ERROR values
         // - protocol constructors can be installed without relying on a separate init step
@@ -61,7 +91,7 @@ impl EvalCtx {
             state,
             protocol: Some(protocol),
             steps: 0,
-            step_limit: Some(5_000_000),
+            step_limit,
         }
     }
 

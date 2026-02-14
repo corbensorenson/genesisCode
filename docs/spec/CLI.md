@@ -6,6 +6,11 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 
 - `--json`: emit exactly one JSON object on stdout for all subcommands.
   - In JSON mode, stderr is reserved for unexpected process-level failures (it should usually be empty).
+- `--step-limit <N>`: set the kernel evaluation step limit for commands that evaluate CoreForm.
+  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`.
+  - The step limit also applies to prelude initialization for that command.
+  - The v0.2 toolchain default is `5_000_000` steps.
+- `--no-step-limit`: disable the kernel evaluation step limit (for trusted inputs only).
 
 ## Exit Codes (Stable)
 
