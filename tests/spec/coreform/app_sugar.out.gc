@@ -1,0 +1,3 @@
+(def main (fn (x) (fn (y) ((f x) y))))
+
+((main 1) 2)

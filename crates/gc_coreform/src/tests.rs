@@ -1,4 +1,5 @@
-use crate::{parse_module, parse_term, print_module, print_term, Term};
+use crate::{canonicalize_module, parse_module, parse_term, print_module, print_term, Term};
+use std::path::PathBuf;
 
 #[test]
 fn parse_print_idempotent_simple() {
@@ -36,3 +37,27 @@ fn proper_list_recognition() {
     assert_eq!(xs.len(), 2);
 }
 
+#[test]
+fn golden_coreform_canonicalization_and_printing() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/spec/coreform");
+
+    for case in ["app_sugar", "map_order"] {
+        let inp = std::fs::read_to_string(root.join(format!("{case}.in.gc"))).unwrap();
+        let want = std::fs::read_to_string(root.join(format!("{case}.out.gc"))).unwrap();
+
+        let forms = parse_module(&inp).unwrap();
+        let canon = canonicalize_module(forms).unwrap();
+        let got = print_module(&canon);
+
+        assert_eq!(
+            normalize(&got),
+            normalize(&want),
+            "golden mismatch for {case}"
+        );
+    }
+}
+
+fn normalize(s: &str) -> String {
+    s.replace("\r\n", "\n").trim().to_string()
+}
