@@ -72,6 +72,41 @@ fn test_pkg_basic_obligations_succeed() {
 }
 
 #[test]
+fn pack_is_stable_independent_of_invocation_path() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_basic");
+    let dst = td.path().join("pkg_basic");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg_abs = dst.join("package.toml");
+
+    let out_abs = cargo_bin_cmd!("genesis")
+        .args(["pack", "--pkg"])
+        .arg(&pkg_abs)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let h_abs = String::from_utf8(out_abs).unwrap();
+    let h_abs = h_abs.trim().to_string();
+
+    let out_rel = cargo_bin_cmd!("genesis")
+        .current_dir(&dst)
+        .args(["pack", "--pkg"])
+        .arg("package.toml")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let h_rel = String::from_utf8(out_rel).unwrap();
+    let h_rel = h_rel.trim().to_string();
+
+    assert_eq!(h_abs, h_rel);
+}
+
+#[test]
 fn run_and_replay_roundtrip_effect_program() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

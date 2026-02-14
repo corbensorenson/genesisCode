@@ -24,7 +24,7 @@ This file defines a package, its modules, dependencies, and required obligations
 ## Module Table
 
 Each entry:
-- `path` (string): module file path (relative to the manifest directory)
+- `path` (string): module file path (relative to the manifest directory, using `/` separators; must not contain `.` or `..`)
 - `hash` (string): BLAKE3 hex of the module *canonical printed bytes* with the `GCv0.2` tag
 
 `genesis pack --pkg package.toml` computes and writes module hashes.
@@ -33,7 +33,7 @@ Each entry:
 
 Each entry:
 - `name` (string)
-- `path` (string): local path to dependency package directory
+- `path` (string): local path to dependency package directory (relative, using `/` separators; must not contain `.` or `..`)
 - `hash` (string): BLAKE3 hex of the dependency package artifact hash (as produced by `genesis pack`)
 
 ## Normative Behavior

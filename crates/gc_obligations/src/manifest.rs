@@ -56,9 +56,95 @@ impl PackageManifest {
         let s = std::fs::read_to_string(path)?;
         let m: PackageManifest = toml::from_str(&s)
             .map_err(|e| ObligationError::Manifest(format!("{}: {e}", path.display())))?;
+        validate_manifest_paths(path, &m)?;
         let dir = path.parent().map(PathBuf::from).ok_or_else(|| {
             ObligationError::Manifest("package.toml has no parent dir".to_string())
         })?;
         Ok((m, dir))
+    }
+}
+
+fn validate_manifest_paths(pkg_toml: &Path, m: &PackageManifest) -> Result<(), ObligationError> {
+    for (i, me) in m.modules.iter().enumerate() {
+        validate_rel_path_str(
+            &me.path,
+            &format!("modules[{i}].path"),
+            pkg_toml,
+        )?;
+    }
+    for (i, de) in m.dependencies.iter().enumerate() {
+        validate_rel_path_str(
+            &de.path,
+            &format!("dependencies[{i}].path"),
+            pkg_toml,
+        )?;
+    }
+    if let Some(p) = &m.caps_policy {
+        validate_rel_path_str(p, "caps_policy", pkg_toml)?;
+    }
+    Ok(())
+}
+
+fn validate_rel_path_str(s: &str, field: &str, pkg_toml: &Path) -> Result<(), ObligationError> {
+    if s.is_empty() {
+        return Err(ObligationError::Manifest(format!(
+            "{}: {field} must be non-empty",
+            pkg_toml.display()
+        )));
+    }
+    if s.contains('\\') {
+        return Err(ObligationError::Manifest(format!(
+            "{}: {field} must use '/' path separators (got backslash)",
+            pkg_toml.display()
+        )));
+    }
+    let p = Path::new(s);
+    if p.is_absolute() {
+        return Err(ObligationError::Manifest(format!(
+            "{}: {field} must be a relative path, got {s}",
+            pkg_toml.display()
+        )));
+    }
+    for c in p.components() {
+        match c {
+            std::path::Component::Normal(_) => {}
+            // Disallow '.', '..', Windows prefixes, and root dirs to avoid non-portable and unsafe paths.
+            _ => {
+                return Err(ObligationError::Manifest(format!(
+                    "{}: {field} must not contain '.', '..', or absolute/prefix components: {s}",
+                    pkg_toml.display()
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PackageManifest;
+
+    #[test]
+    fn rejects_parent_dir_in_module_path() {
+        let td = tempfile::tempdir().unwrap();
+        let pkg = td.path().join("package.toml");
+        std::fs::write(
+            &pkg,
+            r#"
+name = "x"
+version = "0.0.1"
+obligations = []
+dependencies = []
+
+[[modules]]
+path = "../escape.gc"
+hash = ""
+"#,
+        )
+        .unwrap();
+
+        let e = PackageManifest::load(&pkg).unwrap_err();
+        let s = format!("{e}");
+        assert!(s.contains("must not contain"), "{s}");
     }
 }

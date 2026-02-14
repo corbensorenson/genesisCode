@@ -73,7 +73,7 @@ pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
     pin_manifest_hashes(pkg_toml, &manifest, &modules, &deps)?;
 
     // Create a canonical package record artifact and return its content hash.
-    let record = package_record_term(&manifest, &modules, &deps, pkg_toml);
+    let record = package_record_term(&manifest, &modules, &deps);
     let store = EvidenceStore::open(&pkg_dir)?;
     store.put_term(&record)
 }
@@ -474,7 +474,7 @@ fn compute_package_artifact_hash(
         deps_out.push((d.name.clone(), d.path.clone(), dep_hash));
     }
 
-    let record = package_record_term(&manifest, &modules, &deps_out, pkg_toml);
+    let record = package_record_term(&manifest, &modules, &deps_out);
     let bytes = gc_coreform::print_term(&record).into_bytes();
     let hex = blake3::hash(&bytes).to_hex().to_string();
     visited.remove(&canon);
@@ -485,7 +485,6 @@ fn package_record_term(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     deps: &[(String, String, String)],
-    pkg_path: &Path,
 ) -> Term {
     let mut m = BTreeMap::new();
     m.insert(
@@ -499,10 +498,6 @@ fn package_record_term(
     m.insert(
         TermOrdKey(Term::symbol(":version")),
         Term::Str(manifest.version.clone()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":manifest-path")),
-        Term::Str(pkg_path.display().to_string()),
     );
 
     let mods: Vec<Term> = modules
