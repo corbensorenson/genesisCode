@@ -15,12 +15,12 @@ This version (v0.2) uses an encoding that is amenable to caching of shared envir
 
 ### Data Values
 
-- `Value::Data(t)` hashes as `hash_term(t)` tagged with `V:data`.
+- `Value::Data(t)` hashes as `BLAKE3("GCv0.2\\0value\\0data\\0" || hash_term(t))`.
 
 ### Closures
 
 - Hash includes:
-  - tag `V:closure`
+  - tag `GCv0.2\0value\0closure\0`
   - parameter name bytes
   - the closure body as `hash_term(body)` (canonical CoreForm hash)
   - the captured environment hash
@@ -33,7 +33,7 @@ Environment hashing:
 ### Seal Tokens and Sealed Values
 
 - Tokens hash by identity (`SealId`).
-- Sealed values hash as tag `V:sealed`, token id, and payload hash.
+- Sealed values hash as tag `GCv0.2\0value\0sealed\0`, token id, and payload hash.
 
 ### Native Functions
 

@@ -937,6 +937,8 @@ fn obligation_replayable(
 ) -> Result<ObligationResult, ObligationError> {
     let mut ok = true;
     let mut errors = Vec::new();
+    let effect_store = gc_effects::ArtifactStore::open(&pkg_dir.join(".genesis").join("store"))
+        .map_err(|e| ObligationError::Test(format!("artifact store open failed: {e}")))?;
     for t in tests {
         let Some(log) = &t.effect_log else { continue };
 
@@ -976,7 +978,7 @@ fn obligation_replayable(
             ));
             continue;
         };
-        let v2 = gc_effects::replay(&mut ctx, value, log)
+        let v2 = gc_effects::replay_with_store(&mut ctx, value, log, Some(&effect_store))
             .map_err(|e| ObligationError::Test(format!("replay failed: {e}")))?;
         let h2 = value_hash(&v2);
         if h2 != t.value_hash {

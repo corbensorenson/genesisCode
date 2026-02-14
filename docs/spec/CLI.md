@@ -27,6 +27,7 @@ The CLI uses stable exit codes for automation and CI.
 Notes:
 - `clap` argument/usage errors are handled by `clap` itself and may exit with its own code.
 - `run` exits `41` if any capability request is denied, even if the program later handles the error as data.
+- `replay` may require `--store <dir>` if the `.gclog` externalizes large responses into an artifact store.
 
 ## JSON Output (Stable Envelope)
 
@@ -57,4 +58,3 @@ On failure:
 ```
 
 `error.context` is optional and may be omitted or `null`.
-

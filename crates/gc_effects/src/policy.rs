@@ -6,12 +6,28 @@ use crate::error::EffectsError;
 #[derive(Debug, Clone)]
 pub struct CapsPolicy {
     ops: BTreeMap<String, OpPolicy>,
+    pub log: LogPolicy,
+}
+
+#[derive(Debug, Clone)]
+pub struct LogPolicy {
+    /// Maximum number of bytes to inline inside `.gclog` `:resp`.
+    ///
+    /// When set and a response exceeds the limit, the runner stores the response in the
+    /// content-addressed store and records an artifact reference in the log.
+    pub inline_max_bytes: Option<usize>,
+
+    /// Directory containing content-addressed artifacts for logs (defaults to `<caps-dir>/.genesis/store`
+    /// when `inline_max_bytes` is set and `store_dir` is omitted).
+    pub store_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
     pub create_dirs: bool,
+    pub timeout_ms: Option<u64>,
+    pub log_inline_max_bytes: Option<usize>,
     pub extra: BTreeMap<String, toml::Value>,
 }
 
@@ -19,6 +35,10 @@ impl CapsPolicy {
     pub fn empty() -> Self {
         Self {
             ops: BTreeMap::new(),
+            log: LogPolicy {
+                inline_max_bytes: None,
+                store_dir: None,
+            },
         }
     }
 
@@ -28,6 +48,19 @@ impl CapsPolicy {
 
     pub fn op_policy(&self, op: &str) -> Option<&OpPolicy> {
         self.ops.get(op)
+    }
+
+    pub fn inline_max_bytes_for(&self, op: &str) -> Option<usize> {
+        if let Some(p) = self.ops.get(op)
+            && let Some(x) = p.log_inline_max_bytes
+        {
+            return Some(x);
+        }
+        self.log.inline_max_bytes
+    }
+
+    pub fn store_dir(&self) -> Option<&Path> {
+        self.log.store_dir.as_deref()
     }
 
     pub fn from_toml_str(s: &str) -> Result<Self, EffectsError> {
@@ -40,6 +73,7 @@ impl CapsPolicy {
         let _version = tbl.get("version").and_then(|v| v.as_integer()).unwrap_or(1);
 
         let mut ops: BTreeMap<String, OpPolicy> = BTreeMap::new();
+        let log = parse_log_policy(tbl)?;
 
         // Baseline allowlist.
         if let Some(arr) = tbl.get("allow").and_then(|v| v.as_array()) {
@@ -52,6 +86,8 @@ impl CapsPolicy {
                     OpPolicy {
                         base_dir: None,
                         create_dirs: false,
+                        timeout_ms: None,
+                        log_inline_max_bytes: None,
                         extra: BTreeMap::new(),
                     },
                 );
@@ -70,7 +106,7 @@ impl CapsPolicy {
         }
 
         for (k, v) in tbl {
-            if k == "version" || k == "allow" || k == "op" {
+            if k == "version" || k == "allow" || k == "op" || k == "log" {
                 continue;
             }
             if let Some(_cfg_tbl) = v.as_table() {
@@ -78,17 +114,26 @@ impl CapsPolicy {
             }
         }
 
-        Ok(Self { ops })
+        Ok(Self { ops, log })
     }
 
     pub fn load(path: &Path) -> Result<Self, EffectsError> {
         let s = std::fs::read_to_string(path)?;
         let mut pol = Self::from_toml_str(&s)?;
-        pol.resolve_relative_paths(path.parent().unwrap_or_else(|| Path::new(".")));
+        let base = path.parent().unwrap_or_else(|| Path::new("."));
+        pol.resolve_relative_paths(base);
+        if pol.log.inline_max_bytes.is_some() && pol.log.store_dir.is_none() {
+            pol.log.store_dir = Some(base.join(".genesis").join("store"));
+        }
         Ok(pol)
     }
 
     fn resolve_relative_paths(&mut self, base: &Path) {
+        if let Some(sd) = &self.log.store_dir
+            && sd.is_relative()
+        {
+            self.log.store_dir = Some(base.join(sd));
+        }
         for p in self.ops.values_mut() {
             if let Some(bd) = &p.base_dir
                 && bd.is_relative()
@@ -97,6 +142,38 @@ impl CapsPolicy {
             }
         }
     }
+}
+
+fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError> {
+    let Some(v) = tbl.get("log") else {
+        return Ok(LogPolicy {
+            inline_max_bytes: None,
+            store_dir: None,
+        });
+    };
+    let log_tbl = v.as_table().ok_or_else(|| {
+        EffectsError::Log("caps.toml: log must be a table".to_string())
+    })?;
+
+    let inline_max_bytes = match log_tbl.get("inline_max_bytes") {
+        None => None,
+        Some(x) => {
+            let n = x.as_integer().ok_or_else(|| {
+                EffectsError::Log("caps.toml: log.inline_max_bytes must be an integer".to_string())
+            })?;
+            if n <= 0 {
+                None
+            } else {
+                Some(n as usize)
+            }
+        }
+    };
+    let store_dir = log_tbl.get("store_dir").and_then(|x| x.as_str()).map(PathBuf::from);
+
+    Ok(LogPolicy {
+        inline_max_bytes,
+        store_dir,
+    })
 }
 
 fn apply_op_cfg(
@@ -122,10 +199,40 @@ fn apply_op_cfg(
         .get("create_dirs")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+    let timeout_ms = match tbl.get("timeout_ms") {
+        None => None,
+        Some(v) => Some(
+            v.as_integer()
+                .ok_or_else(|| {
+                    EffectsError::Log(format!("caps.toml: op {op} timeout_ms must be integer"))
+                })?
+                .max(0) as u64,
+        ),
+    };
+    let log_inline_max_bytes = match tbl.get("log_inline_max_bytes") {
+        None => None,
+        Some(x) => {
+            let n = x.as_integer().ok_or_else(|| {
+                EffectsError::Log(format!(
+                    "caps.toml: op {op} log_inline_max_bytes must be integer"
+                ))
+            })?;
+            if n <= 0 {
+                None
+            } else {
+                Some(n as usize)
+            }
+        }
+    };
 
     let mut extra = BTreeMap::new();
     for (k, v) in tbl {
-        if k == "allow" || k == "base_dir" || k == "create_dirs" {
+        if k == "allow"
+            || k == "base_dir"
+            || k == "create_dirs"
+            || k == "timeout_ms"
+            || k == "log_inline_max_bytes"
+        {
             continue;
         }
         extra.insert(k.clone(), v.clone());
@@ -136,6 +243,8 @@ fn apply_op_cfg(
         OpPolicy {
             base_dir,
             create_dirs,
+            timeout_ms,
+            log_inline_max_bytes,
             extra,
         },
     );
@@ -174,5 +283,38 @@ base_dir = "./x"
         .unwrap();
         assert!(p.is_allowed("io/fs::read"));
         assert!(p.op_policy("io/fs::read").unwrap().base_dir.is_some());
+    }
+
+    #[test]
+    fn parses_log_policy_and_resolves_defaults() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/time::now"]
+
+[log]
+inline_max_bytes = 123
+store_dir = "./s"
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.log.inline_max_bytes, Some(123));
+        assert!(p.log.store_dir.is_some());
+    }
+
+    #[test]
+    fn per_op_inline_max_overrides_global() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/time::now"]
+
+[log]
+inline_max_bytes = 10
+
+[op."sys/time::now"]
+log_inline_max_bytes = 5
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.inline_max_bytes_for("sys/time::now"), Some(5));
     }
 }

@@ -2,11 +2,13 @@ mod error;
 mod log;
 mod policy;
 mod runner;
+mod store;
 
 pub use crate::error::EffectsError;
 pub use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 pub use crate::policy::{CapsPolicy, OpPolicy};
-pub use crate::runner::{RunResult, replay, run};
+pub use crate::runner::{RunResult, replay, replay_with_store, run};
+pub use crate::store::ArtifactStore;
 
 #[cfg(test)]
 mod tests {
@@ -210,6 +212,81 @@ mod tests {
         let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
 
         let err = replay(&mut ctx2, prog2, &r1.log).unwrap_err();
+        assert!(
+            matches!(err, EffectsError::ReplayMismatch(_)),
+            "expected replay mismatch, got {err}"
+        );
+    }
+
+    #[test]
+    fn large_byte_responses_are_externalized_to_artifact_store_and_replay_loads_them() {
+        let td = tempfile::tempdir().unwrap();
+        let base = td.path().join("sandbox");
+        std::fs::create_dir_all(&base).unwrap();
+        std::fs::write(base.join("in.bin"), vec![7u8; 128]).unwrap();
+
+        let caps_path = td.path().join("caps.toml");
+        std::fs::write(
+            &caps_path,
+            r#"
+allow = ["io/fs::read"]
+
+[log]
+inline_max_bytes = 8
+store_dir = "./.genesis/store"
+
+[op."io/fs::read"]
+base_dir = "./sandbox"
+"#,
+        )
+        .unwrap();
+        let pol = CapsPolicy::load(&caps_path).unwrap();
+
+        let src = r#"
+            (def prog
+              (core/effect::perform
+                'io/fs::read
+                {:path "in.bin"}
+                (fn (b) (core/effect::pure b))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+        let r1 = run(
+            &mut ctx1,
+            &pol,
+            prog1,
+            h,
+            "gc_effects-test".to_string(),
+        )
+        .expect("run");
+
+        assert!(matches!(
+            r1.log.entries[0].resp,
+            LoggedResp::OkBytesArtifact { .. }
+        ));
+
+        let store = ArtifactStore::open(pol.store_dir().unwrap()).unwrap();
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+
+        let v2 = replay_with_store(&mut ctx2, prog2, &r1.log, Some(&store)).expect("replay");
+        assert_eq!(value_hash(&r1.value), value_hash(&v2));
+
+        // Without a store, replay must fail deterministically.
+        let mut ctx3 = EvalCtx::new();
+        let prelude3 = build_prelude(&mut ctx3);
+        let mut env3 = prelude3.env;
+        let prog3 = eval_module(&mut ctx3, &mut env3, &forms).expect("eval3");
+        let err = replay(&mut ctx3, prog3, &r1.log).unwrap_err();
         assert!(
             matches!(err, EffectsError::ReplayMismatch(_)),
             "expected replay mismatch, got {err}"

@@ -49,14 +49,14 @@ This plan does not require implementing refinement proofs, a registry server, a 
 
 ### P0: Runner + Store Hardening (Must-Have)
 
-- [ ] Evidence store hardening:
+- [x] Evidence store hardening:
   - [x] make `put_bytes` race-safe (handle concurrent writers without spurious failures)
   - [x] optionally verify existing artifact contents match the hash (detect corruption)
   - [x] optionally fsync temp + directory for stronger durability (document semantics). (`docs/spec/EVIDENCE_STORE.md`)
-- [ ] Effect runner hardening:
-  - [ ] document the filesystem sandbox model and remaining TOCTOU limitations
-  - [ ] add policy knobs for maximum response size logged inline, with artifact-store fallback for large responses
-  - [ ] add per-op timeouts (runner-side) for capabilities that can block
+- [x] Effect runner hardening:
+  - [x] document the filesystem sandbox model and remaining TOCTOU limitations. (`docs/spec/FS_SANDBOX.md`)
+  - [x] add policy knobs for maximum response size logged inline, with artifact-store fallback for large responses (`[log].inline_max_bytes` + store). (`docs/spec/CAPS_TOML.md`)
+  - [x] add per-op timeouts (runner-side) for capabilities that can block (`timeout_ms`, supported for non-mutating ops like `io/fs::read`). (`docs/spec/CAPS_TOML.md`)
 
 ### P0: Prelude / “Core Stdlib” (Must-Have For Usability)
 

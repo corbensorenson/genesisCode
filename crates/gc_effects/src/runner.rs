@@ -9,6 +9,7 @@ use num_bigint::BigInt;
 use crate::error::EffectsError;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
+use crate::store::ArtifactStore;
 
 pub struct RunResult {
     pub value: Value,
@@ -23,6 +24,11 @@ pub fn run(
     toolchain: String,
 ) -> Result<RunResult, EffectsError> {
     let proto = ctx.protocol.ok_or(EffectsError::MissingProtocol)?;
+
+    let store = match policy.store_dir() {
+        Some(sd) => Some(ArtifactStore::open(sd)?),
+        None => None,
+    };
 
     let mut entries = Vec::new();
     let mut i: u64 = 0;
@@ -61,7 +67,7 @@ pub fn run(
                         Decision::Deny,
                         Term::Nil,
                         resp.clone(),
-                        logged_resp(&resp, proto.error)?,
+                        logged_resp(policy, &req.op, &store, &resp, proto.error)?,
                     )
                 } else {
                     let pol = policy.op_policy(&req.op);
@@ -71,7 +77,7 @@ pub fn run(
                         Decision::Allow,
                         cap_term,
                         resp.clone(),
-                        logged_resp(&resp, proto.error)?,
+                        logged_resp(policy, &req.op, &store, &resp, proto.error)?,
                     )
                 };
 
@@ -103,6 +109,15 @@ pub fn run(
 }
 
 pub fn replay(ctx: &mut EvalCtx, program: Value, log: &EffectLog) -> Result<Value, EffectsError> {
+    replay_with_store(ctx, program, log, None)
+}
+
+pub fn replay_with_store(
+    ctx: &mut EvalCtx,
+    program: Value,
+    log: &EffectLog,
+    store: Option<&ArtifactStore>,
+) -> Result<Value, EffectsError> {
     let proto = ctx.protocol.ok_or(EffectsError::MissingProtocol)?;
     let mut cur = program;
     let mut idx: usize = 0;
@@ -161,13 +176,7 @@ pub fn replay(ctx: &mut EvalCtx, program: Value, log: &EffectLog) -> Result<Valu
                     )));
                 }
 
-                let resp_val = match &entry.resp {
-                    LoggedResp::Ok(t) => Value::Data(t.clone()),
-                    LoggedResp::Error(payload) => Value::Sealed {
-                        token: proto.error,
-                        payload: Box::new(Value::Data(payload.clone())),
-                    },
-                };
+                let resp_val = resp_from_log(&entry.resp, store, proto.error)?;
 
                 let resp_h = value_hash(&resp_val);
                 if entry.resp_h != resp_h {
@@ -259,7 +268,18 @@ fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Val
     }
 }
 
-fn logged_resp(v: &Value, error_tok: SealId) -> Result<LoggedResp, EffectsError> {
+fn logged_resp(
+    policy: &CapsPolicy,
+    op: &str,
+    store: &Option<ArtifactStore>,
+    v: &Value,
+    error_tok: SealId,
+) -> Result<LoggedResp, EffectsError> {
+    let resp = logged_resp_inline(v, error_tok)?;
+    externalize_resp(policy, op, store.as_ref(), resp)
+}
+
+fn logged_resp_inline(v: &Value, error_tok: SealId) -> Result<LoggedResp, EffectsError> {
     match v {
         Value::Data(t) => Ok(LoggedResp::Ok(t.clone())),
         Value::Sealed { token, payload } if *token == error_tok => {
@@ -274,6 +294,124 @@ fn logged_resp(v: &Value, error_tok: SealId) -> Result<LoggedResp, EffectsError>
             "response not serializable: {}",
             v.debug_repr()
         ))),
+    }
+}
+
+fn externalize_resp(
+    policy: &CapsPolicy,
+    op: &str,
+    store: Option<&ArtifactStore>,
+    resp: LoggedResp,
+) -> Result<LoggedResp, EffectsError> {
+    let Some(max_inline) = policy.inline_max_bytes_for(op) else {
+        return Ok(resp);
+    };
+    let Some(store) = store else {
+        return Err(EffectsError::Log(
+            "caps.toml sets log inline_max_bytes but no store_dir is configured".to_string(),
+        ));
+    };
+
+    match resp {
+        LoggedResp::Ok(Term::Bytes(b)) => {
+            if b.len() <= max_inline {
+                Ok(LoggedResp::Ok(Term::Bytes(b)))
+            } else {
+                let hex = store.put_bytes(&b)?;
+                Ok(LoggedResp::OkBytesArtifact { artifact: hex })
+            }
+        }
+        LoggedResp::Error(Term::Bytes(b)) => {
+            if b.len() <= max_inline {
+                Ok(LoggedResp::Error(Term::Bytes(b)))
+            } else {
+                let hex = store.put_bytes(&b)?;
+                Ok(LoggedResp::ErrorBytesArtifact { artifact: hex })
+            }
+        }
+        LoggedResp::Ok(t) => {
+            let s = print_term(&t);
+            if s.len() <= max_inline {
+                Ok(LoggedResp::Ok(t))
+            } else {
+                let hex = store.put_bytes(s.as_bytes())?;
+                Ok(LoggedResp::OkArtifact { artifact: hex })
+            }
+        }
+        LoggedResp::Error(t) => {
+            let s = print_term(&t);
+            if s.len() <= max_inline {
+                Ok(LoggedResp::Error(t))
+            } else {
+                let hex = store.put_bytes(s.as_bytes())?;
+                Ok(LoggedResp::ErrorArtifact { artifact: hex })
+            }
+        }
+        other => Ok(other),
+    }
+}
+
+fn resp_from_log(
+    resp: &LoggedResp,
+    store: Option<&ArtifactStore>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    match resp {
+        LoggedResp::Ok(t) => Ok(Value::Data(t.clone())),
+        LoggedResp::Error(payload) => Ok(Value::Sealed {
+            token: error_tok,
+            payload: Box::new(Value::Data(payload.clone())),
+        }),
+        LoggedResp::OkArtifact { artifact } => {
+            let store = store.ok_or_else(|| {
+                EffectsError::ReplayMismatch("missing artifact store for :ok-artifact".to_string())
+            })?;
+            let bytes = store.get_bytes(artifact)?;
+            let s = String::from_utf8(bytes).map_err(|_| {
+                EffectsError::ReplayMismatch("artifact bytes are not utf-8 term".to_string())
+            })?;
+            let t = gc_coreform::parse_term(&s)
+                .map_err(|e| EffectsError::ReplayMismatch(format!("bad artifact term: {e}")))?;
+            Ok(Value::Data(t))
+        }
+        LoggedResp::ErrorArtifact { artifact } => {
+            let store = store.ok_or_else(|| {
+                EffectsError::ReplayMismatch(
+                    "missing artifact store for :error-artifact".to_string(),
+                )
+            })?;
+            let bytes = store.get_bytes(artifact)?;
+            let s = String::from_utf8(bytes).map_err(|_| {
+                EffectsError::ReplayMismatch("artifact bytes are not utf-8 term".to_string())
+            })?;
+            let t = gc_coreform::parse_term(&s)
+                .map_err(|e| EffectsError::ReplayMismatch(format!("bad artifact term: {e}")))?;
+            Ok(Value::Sealed {
+                token: error_tok,
+                payload: Box::new(Value::Data(t)),
+            })
+        }
+        LoggedResp::OkBytesArtifact { artifact } => {
+            let store = store.ok_or_else(|| {
+                EffectsError::ReplayMismatch(
+                    "missing artifact store for :ok-bytes-artifact".to_string(),
+                )
+            })?;
+            let bytes = store.get_bytes(artifact)?;
+            Ok(Value::Data(Term::Bytes(bytes)))
+        }
+        LoggedResp::ErrorBytesArtifact { artifact } => {
+            let store = store.ok_or_else(|| {
+                EffectsError::ReplayMismatch(
+                    "missing artifact store for :error-bytes-artifact".to_string(),
+                )
+            })?;
+            let bytes = store.get_bytes(artifact)?;
+            Ok(Value::Sealed {
+                token: error_tok,
+                payload: Box::new(Value::Data(Term::Bytes(bytes))),
+            })
+        }
     }
 }
 
@@ -296,6 +434,18 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
                 Term::Bool(true),
             );
         }
+        if let Some(ms) = pol.timeout_ms {
+            m.insert(
+                TermOrdKey(Term::Symbol(":timeout-ms".to_string())),
+                Term::Int((ms as i64).into()),
+            );
+        }
+        if let Some(n) = pol.log_inline_max_bytes {
+            m.insert(
+                TermOrdKey(Term::Symbol(":log-inline-max-bytes".to_string())),
+                Term::Int((n as i64).into()),
+            );
+        }
     }
     Ok(Term::Map(m))
 }
@@ -306,17 +456,67 @@ fn call_capability(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
+    let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
+    if timeout_ms.is_some() && op == "io/fs::write" {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            "timeout_ms is not supported for io/fs::write (mutating op)".to_string(),
+            Some(op),
+        ));
+    }
     match op {
         "sys/time::now" => {
-            let ms = std::time::SystemTime::now()
+            if let Some(ms) = timeout_ms {
+                let r = with_timeout(ms, || {
+                    Ok(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis(),
+                    )
+                })?;
+                return Ok(match r {
+                    Some(t) => Value::Data(Term::Int(BigInt::from(t))),
+                    None => mk_error(
+                        error_tok,
+                        "core/caps/timeout",
+                        format!("capability timed out after {ms}ms: sys/time::now"),
+                        Some(op),
+                    ),
+                });
+            }
+            let t = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis();
-            Ok(Value::Data(Term::Int(BigInt::from(ms))))
+            Ok(Value::Data(Term::Int(BigInt::from(t))))
         }
         "io/fs::read" => {
             let path_s = payload_path(payload)?;
             let base_dir = effective_base_dir(pol)?;
+            if let Some(ms) = timeout_ms {
+                let base_dir2 = base_dir.clone();
+                let path_s2 = path_s.clone();
+                let r = with_timeout(ms, move || {
+                    let path = sandbox_path_read(&base_dir2, &path_s2)?;
+                    let bytes = std::fs::read(&path);
+                    Ok((path, bytes))
+                })?;
+                return Ok(match r {
+                    Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes)),
+                    Some((path, Err(e))) => Value::Sealed {
+                        token: error_tok,
+                        payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
+                    },
+                    None => mk_error(
+                        error_tok,
+                        "core/caps/timeout",
+                        format!("capability timed out after {ms}ms: io/fs::read"),
+                        Some(op),
+                    ),
+                });
+            }
             let path = sandbox_path_read(&base_dir, &path_s)?;
             match std::fs::read(&path) {
                 Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes))),
@@ -355,6 +555,29 @@ fn call_capability(
             "core/caps/unknown-op",
             format!("unknown capability op: {op}"),
             Some(op),
+        )),
+    }
+}
+
+fn with_timeout<T, F>(
+    timeout_ms: u64,
+    f: F,
+) -> Result<Option<T>, EffectsError>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, EffectsError> + Send + 'static,
+{
+    use std::sync::mpsc;
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let r = f();
+        let _ = tx.send(r);
+    });
+    match rx.recv_timeout(std::time::Duration::from_millis(timeout_ms)) {
+        Ok(r) => r.map(Some),
+        Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
+        Err(mpsc::RecvTimeoutError::Disconnected) => Err(EffectsError::Log(
+            "capability thread disconnected".to_string(),
         )),
     }
 }

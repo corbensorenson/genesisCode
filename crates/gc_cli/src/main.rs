@@ -73,6 +73,9 @@ enum Cmd {
         /// Input effect log path (.gclog).
         #[arg(long)]
         log: PathBuf,
+        /// Artifact store directory for logs that externalize large responses.
+        #[arg(long)]
+        store: Option<PathBuf>,
     },
 
     /// Run package obligations (unit tests, determinism, replay checks, etc.) and write evidence into .genesis/store.
@@ -216,7 +219,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             msg,
         } => cmd_explain(cli, file, contract, msg),
         Cmd::Run { file, caps, log } => cmd_run(cli, file, caps, log.as_deref()),
-        Cmd::Replay { file, log } => cmd_replay(cli, file, log),
+        Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store.as_deref()),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
         Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg),
@@ -438,7 +441,12 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
     })
 }
 
-fn cmd_replay(cli: &Cli, file: &PathBuf, log_path: &PathBuf) -> Result<CmdOut, CliError> {
+fn cmd_replay(
+    cli: &Cli,
+    file: &PathBuf,
+    log_path: &PathBuf,
+    store_dir: Option<&Path>,
+) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
@@ -466,7 +474,14 @@ fn cmd_replay(cli: &Cli, file: &PathBuf, log_path: &PathBuf) -> Result<CmdOut, C
 
     let prog = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
-    let v = gc_effects::replay(&mut ctx, prog, &log).map_err(|e| {
+    let store = match store_dir {
+        Some(p) => Some(
+            gc_effects::ArtifactStore::open(p)
+                .map_err(|e| cli_err(EX_IO, "io/store", format!("{e}")))?,
+        ),
+        None => None,
+    };
+    let v = gc_effects::replay_with_store(&mut ctx, prog, &log, store.as_ref()).map_err(|e| {
         let code = match e {
             gc_effects::EffectsError::ReplayMismatch(_) => "replay/mismatch",
             _ => "replay/error",
@@ -481,6 +496,7 @@ fn cmd_replay(cli: &Cli, file: &PathBuf, log_path: &PathBuf) -> Result<CmdOut, C
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
             "log": log_path.display().to_string(),
+            "store": store_dir.map(|p| p.display().to_string()),
             "value": value,
             "value_format": value_format,
         })),

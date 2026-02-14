@@ -15,6 +15,10 @@ pub enum Decision {
 pub enum LoggedResp {
     Ok(Term),
     Error(Term),
+    OkArtifact { artifact: String },
+    ErrorArtifact { artifact: String },
+    OkBytesArtifact { artifact: String },
+    ErrorBytesArtifact { artifact: String },
 }
 
 #[derive(Debug, Clone)]
@@ -134,6 +138,16 @@ impl EffectLogEntry {
             match &self.resp {
                 LoggedResp::Ok(v) => resp_tag("ok", v),
                 LoggedResp::Error(v) => resp_tag("error", v),
+                LoggedResp::OkArtifact { artifact } => resp_artifact_tag("ok-artifact", artifact),
+                LoggedResp::ErrorArtifact { artifact } => {
+                    resp_artifact_tag("error-artifact", artifact)
+                }
+                LoggedResp::OkBytesArtifact { artifact } => {
+                    resp_artifact_tag("ok-bytes-artifact", artifact)
+                }
+                LoggedResp::ErrorBytesArtifact { artifact } => {
+                    resp_artifact_tag("error-bytes-artifact", artifact)
+                }
             },
         );
         m.insert(
@@ -205,6 +219,19 @@ fn resp_tag(kind: &str, value: &Term) -> Term {
     Term::Map(m)
 }
 
+fn resp_artifact_tag(kind: &str, artifact: &str) -> Term {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::Symbol(":kind".to_string())),
+        Term::Symbol(format!(":{kind}")),
+    );
+    m.insert(
+        TermOrdKey(Term::Symbol(":artifact".to_string())),
+        Term::Str(artifact.to_string()),
+    );
+    Term::Map(m)
+}
+
 fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
     let Term::Map(m) = t else {
         return Err(EffectsError::Log(":resp must be a map".to_string()));
@@ -219,12 +246,45 @@ fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
         }
         None => return Err(EffectsError::Log(":resp missing :kind".to_string())),
     };
-    let value = map_get(m, ":value")
-        .ok_or_else(|| EffectsError::Log(":resp missing :value".to_string()))?
-        .clone();
     match kind {
-        ":ok" => Ok(LoggedResp::Ok(value)),
-        ":error" => Ok(LoggedResp::Error(value)),
+        ":ok" | ":error" => {
+            let value = map_get(m, ":value")
+                .ok_or_else(|| EffectsError::Log(":resp missing :value".to_string()))?
+                .clone();
+            match kind {
+                ":ok" => Ok(LoggedResp::Ok(value)),
+                ":error" => Ok(LoggedResp::Error(value)),
+                _ => unreachable!(),
+            }
+        }
+        ":ok-artifact"
+        | ":error-artifact"
+        | ":ok-bytes-artifact"
+        | ":error-bytes-artifact" => {
+            let artifact = map_get(m, ":artifact")
+                .ok_or_else(|| EffectsError::Log(":resp missing :artifact".to_string()))?;
+            let Term::Str(hex) = artifact else {
+                return Err(EffectsError::Log(format!(
+                    ":resp :artifact must be string, got {}",
+                    print_term(artifact)
+                )));
+            };
+            match kind {
+                ":ok-artifact" => Ok(LoggedResp::OkArtifact {
+                    artifact: hex.clone(),
+                }),
+                ":error-artifact" => Ok(LoggedResp::ErrorArtifact {
+                    artifact: hex.clone(),
+                }),
+                ":ok-bytes-artifact" => Ok(LoggedResp::OkBytesArtifact {
+                    artifact: hex.clone(),
+                }),
+                ":error-bytes-artifact" => Ok(LoggedResp::ErrorBytesArtifact {
+                    artifact: hex.clone(),
+                }),
+                _ => unreachable!(),
+            }
+        }
         _ => Err(EffectsError::Log(format!("unknown resp kind {kind}"))),
     }
 }
