@@ -346,6 +346,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_term(&mut self) -> Result<Term, ParseError> {
+        // Parser is structurally recursive on nested CoreForm terms; grow stack as needed.
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || self.parse_term_impl())
+    }
+
+    fn parse_term_impl(&mut self) -> Result<Term, ParseError> {
         let (t, at) = self.bump()?;
         match t {
             Tok::Eof => Err(ParseError::Eof),

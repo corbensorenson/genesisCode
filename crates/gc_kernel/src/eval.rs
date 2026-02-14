@@ -144,6 +144,11 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
 }
 
 pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
+    // Evaluator is structurally recursive; grow stack as needed.
+    stacker::maybe_grow(32 * 1024, 1024 * 1024, || eval_term_impl(ctx, env, term))
+}
+
+fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
     ctx.tick()?;
 
     match term {

@@ -57,6 +57,23 @@ fn golden_coreform_canonicalization_and_printing() {
     }
 }
 
+#[test]
+fn deep_nesting_parse_print_roundtrip_is_stable() {
+    // This is a regression guard against stack overflows in parser/printer.
+    // Keep this comfortably below pathological runtime for the current printer heuristic.
+    let depth = 1000usize;
+    let mut src = String::new();
+    src.extend(std::iter::repeat_n('(', depth));
+    src.push_str("nil");
+    src.extend(std::iter::repeat_n(')', depth));
+
+    let t1 = parse_term(&src).expect("parse deep term");
+    let s1 = print_term(&t1);
+    let t2 = parse_term(&s1).expect("parse printed deep term");
+    let s2 = print_term(&t2);
+    assert_eq!(s1, s2);
+}
+
 fn normalize(s: &str) -> String {
     s.replace("\r\n", "\n").trim().to_string()
 }

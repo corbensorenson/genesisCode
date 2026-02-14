@@ -75,8 +75,8 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
   - canonicalization: idempotence
   - log parser: malformed `.gclog` inputs must not panic
   - patch parser/validator: malformed `.gcpatch` must not panic
-- [ ] Address recursion depth risk in evaluator and printer:
-  - either implement a trampoline/CEK-style evaluator or document hard limits and provide mitigation.
+- [x] Address recursion depth risk in evaluator and printer:
+  - implemented stack-growth mitigation (`stacker`) for CoreForm parser/printer/term ordering and kernel evaluator; documented in `docs/spec/LIMITS.md`.
 - [x] Add CLI-configurable kernel step limits (`--step-limit N`, `--no-step-limit`) and plumb them through all evaluation entrypoints (`eval`, `explain`, `run`, `replay`, `test`, `apply-patch`).
 - [ ] Add package-level policy for evaluation limits (so CI can enforce step limits independent of operator CLI flags).
 - [ ] Add (optional) memory limits (allocator-based or RSS budget) with deterministic failure reporting.
