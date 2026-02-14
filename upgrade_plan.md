@@ -80,6 +80,7 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 - [x] Add CLI-configurable kernel step limits (`--step-limit N`, `--no-step-limit`) and plumb them through all evaluation entrypoints (`eval`, `explain`, `run`, `replay`, `test`, `apply-patch`).
 - [x] Add package-level policy for evaluation limits (so CI can enforce step limits independent of operator CLI flags).
 - [ ] Add (optional) memory limits (allocator-based or RSS budget) with deterministic failure reporting.
+- [x] Reduce OS-specific nondeterminism/leakage in effect error payloads (log FS paths as base-relative with `/` separators, not absolute `Path::display()` output).
 - [ ] Cross-platform determinism review (path normalization in logs, line endings, OS-specific capability behavior).
 
 ### P1: Obligation Stack Expansion (From Paper/Style Guide)

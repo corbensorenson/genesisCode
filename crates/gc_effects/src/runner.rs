@@ -507,7 +507,7 @@ fn call_capability(
                     Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes)),
                     Some((path, Err(e))) => Value::Sealed {
                         token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
+                        payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                     },
                     None => mk_error(
                         error_tok,
@@ -522,7 +522,7 @@ fn call_capability(
                 Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes))),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
+                    payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                 }),
             }
         }
@@ -538,7 +538,7 @@ fn call_capability(
                     let e = std::io::Error::other("refusing to write through symlink");
                     return Ok(Value::Sealed {
                         token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
+                        payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                     });
                 }
             }
@@ -546,7 +546,7 @@ fn call_capability(
                 Ok(()) => Ok(Value::Data(Term::Nil)),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,
-                    payload: Box::new(Value::Data(io_error_payload(op, &path, &e))),
+                    payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                 }),
             }
         }
@@ -582,7 +582,9 @@ where
     }
 }
 
-fn io_error_payload(op: &str, path: &Path, e: &std::io::Error) -> Term {
+fn io_error_payload(op: &str, base_dir: &Path, path: &Path, e: &std::io::Error) -> Term {
+    // Avoid leaking absolute paths and normalize separators for stability.
+    let rel = path.strip_prefix(base_dir).unwrap_or(path);
     let mut m = BTreeMap::new();
     m.insert(
         TermOrdKey(Term::Symbol(":error/code".to_string())),
@@ -610,7 +612,7 @@ fn io_error_payload(op: &str, path: &Path, e: &std::io::Error) -> Term {
                 ),
                 (
                     TermOrdKey(Term::Symbol(":path".to_string())),
-                    Term::Str(path.display().to_string()),
+                    Term::Str(path_to_slash(rel)),
                 ),
             ]
             .into_iter()
@@ -618,6 +620,17 @@ fn io_error_payload(op: &str, path: &Path, e: &std::io::Error) -> Term {
         ),
     );
     Term::Map(m)
+}
+
+fn path_to_slash(p: &Path) -> String {
+    let mut out = String::new();
+    for (i, c) in p.components().enumerate() {
+        if i != 0 {
+            out.push('/');
+        }
+        out.push_str(&c.as_os_str().to_string_lossy());
+    }
+    out
 }
 
 fn payload_path(payload: &Term) -> Result<String, EffectsError> {
