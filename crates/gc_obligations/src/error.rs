@@ -17,6 +17,9 @@ pub enum ObligationError {
     #[error("opt error: {0}")]
     Opt(String),
 
+    #[error("store error: {0}")]
+    Store(String),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }

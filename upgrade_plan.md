@@ -28,8 +28,8 @@ This plan does not require implementing refinement proofs, a registry server, a 
 
 ### P0: Spec Closure + Correctness Harness (Must-Have)
 
-- [ ] Write a normative spec for CoreForm canonical printing and hashing (version tags, map key ordering, application printing, width/indent rules) and link it from `docs/spec/`.
-- [ ] Write a normative spec for value hashing used in effect logs (`value_hash`) and for effect request hashing (`req_h`), including what data is included/excluded.
+- [x] Write a normative spec for CoreForm canonical printing and hashing (version tags, map key ordering, application printing, width/indent rules) and link it from `docs/spec/`. (`docs/spec/COREFORM_CANON_HASH.md`)
+- [x] Write a normative spec for value hashing used in effect logs (`value_hash`) and for effect request hashing (`req_h`), including what data is included/excluded. (`docs/spec/VALUE_EFFECT_HASH.md`)
 - [ ] Expand golden/spec tests to cover every conformance checklist item:
   - [ ] `seal/unseal` edge cases and spoof resistance (already has baseline; expand).
   - [ ] contract dispatch/extend precedence and `explain` trace stability.
@@ -50,8 +50,8 @@ This plan does not require implementing refinement proofs, a registry server, a 
 ### P0: Runner + Store Hardening (Must-Have)
 
 - [ ] Evidence store hardening:
-  - [ ] make `put_bytes` race-safe (handle concurrent writers without spurious failures)
-  - [ ] optionally verify existing artifact contents match the hash (detect corruption)
+  - [x] make `put_bytes` race-safe (handle concurrent writers without spurious failures)
+  - [x] optionally verify existing artifact contents match the hash (detect corruption)
   - [ ] optionally fsync temp + directory for stronger durability (document semantics)
 - [ ] Effect runner hardening:
   - [ ] document the filesystem sandbox model and remaining TOCTOU limitations
@@ -115,4 +115,3 @@ Total: 8-14 weeks
 
 If you include P2 supply-chain signing + policy enforcement: +3-6 weeks.
 If you include “advanced stacks” (row-polymorphic typing + real e-graph optimizer + WASM): +8-16+ weeks.
-
