@@ -169,7 +169,9 @@ impl<'a> Lexer<'a> {
             ) {
                 break;
             }
-            self.i += 1;
+            // Advance by one UTF-8 scalar to keep `self.i` on a char boundary.
+            let ch = self.s[self.i..].chars().next().expect("peek_byte implies non-empty");
+            self.i += ch.len_utf8();
         }
         self.s[start..self.i].to_owned()
     }
@@ -191,11 +193,18 @@ impl<'a> Lexer<'a> {
 
     fn read_string(&mut self, at: usize) -> Result<String, ParseError> {
         let mut out = String::new();
-        while let Some(b) = self.bump() {
+        loop {
+            let Some(b) = self.peek_byte() else {
+                break;
+            };
             match b {
-                b'"' => return Ok(out),
+                b'"' => {
+                    self.i += 1;
+                    return Ok(out);
+                }
                 b'\\' => {
-                    let esc_at = self.i.saturating_sub(1);
+                    let esc_at = self.i;
+                    self.i += 1; // consume backslash
                     let Some(e) = self.bump() else {
                         return Err(ParseError::Escape {
                             at: esc_at,
@@ -230,7 +239,14 @@ impl<'a> Lexer<'a> {
                         }
                     }
                 }
-                _ => out.push(b as char),
+                _ => {
+                    let ch = self.s[self.i..]
+                        .chars()
+                        .next()
+                        .expect("peek_byte implies non-empty");
+                    out.push(ch);
+                    self.i += ch.len_utf8();
+                }
             }
         }
         Err(ParseError::Unexpected {
