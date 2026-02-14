@@ -34,7 +34,7 @@ This plan does not require implementing refinement proofs, a registry server, a 
   - [ ] `seal/unseal` edge cases and spoof resistance (already has baseline; expand).
   - [ ] contract dispatch/extend precedence and `explain` trace stability.
   - [x] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
-  - [ ] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
+  - [x] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
 - [x] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
 
 ### P0: CLI Stability + Machine Interfaces (Must-Have)

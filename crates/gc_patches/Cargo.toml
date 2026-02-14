@@ -16,3 +16,6 @@ base64 = "0.22"
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_obligations = { path = "../gc_obligations" }
+
+[dev-dependencies]
+tempfile = "3"
