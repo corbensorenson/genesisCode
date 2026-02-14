@@ -91,6 +91,7 @@ pub fn test_package_with_step_limit(
     step_limit: StepLimit,
 ) -> Result<PackageTestResult, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
+    let step_limit = effective_step_limit(&manifest, step_limit)?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
     let mut preflight_errors: Vec<String> = Vec::new();
@@ -241,6 +242,30 @@ pub fn test_package_with_step_limit(
         acceptance_artifact,
         obligation_results,
     })
+}
+
+fn effective_step_limit(manifest: &PackageManifest, cli: StepLimit) -> Result<StepLimit, ObligationError> {
+    let pkg = manifest
+        .limits
+        .step_limit
+        .map(StepLimit::Limit)
+        .unwrap_or(StepLimit::Default);
+
+    if cli == StepLimit::Unlimited && !manifest.limits.allow_unlimited {
+        return Err(ObligationError::Manifest(
+            "package policy forbids --no-step-limit (set [limits].allow_unlimited = true to permit)"
+                .to_string(),
+        ));
+    }
+
+    if cli == StepLimit::Unlimited {
+        return Ok(StepLimit::Unlimited);
+    }
+
+    // Both are finite (Default or explicit Limit).
+    let cli_n = cli.resolve().expect("finite step limit");
+    let pkg_n = pkg.resolve().expect("finite step limit");
+    Ok(StepLimit::Limit(cli_n.min(pkg_n)))
 }
 
 fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationError> {

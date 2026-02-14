@@ -1,0 +1,22 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_limits_policy"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::determinism",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+    "core/obligation::typecheck",
+    "core/obligation::translation-validation",
+]
+tests = ["pkg/basic::tests"]
+version = "0.0.1"
+
+[limits]
+step_limit = 100000
+allow_unlimited = false
+
+[[modules]]
+hash = "61c2cde6a61862ebafb28515d8789c74ab8cc7669c1cea411f7e10d5a090bfc9"
+path = "basic.gc"
+

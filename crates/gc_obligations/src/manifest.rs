@@ -19,6 +19,23 @@ pub struct PackageManifest {
     pub tests: Vec<String>,
 
     pub caps_policy: Option<String>,
+
+    #[serde(default)]
+    pub limits: Limits,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct Limits {
+    /// Kernel evaluation step limit for package evaluation and tests.
+    ///
+    /// If omitted, the toolchain default is used.
+    pub step_limit: Option<u64>,
+
+    /// Allow disabling the step limit via CLI (`--no-step-limit`).
+    ///
+    /// Default is deny (false).
+    #[serde(default)]
+    pub allow_unlimited: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

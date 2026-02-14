@@ -11,6 +11,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - The step limit also applies to prelude initialization for that command.
   - The v0.2 toolchain default is `5_000_000` steps.
 - `--no-step-limit`: disable the kernel evaluation step limit (for trusted inputs only).
+  - For package commands (`test`, `apply-patch`), `package.toml` may reject this via `[limits].allow_unlimited = false` (default).
 
 ## Exit Codes (Stable)
 

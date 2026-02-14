@@ -218,3 +218,21 @@ fn hash_mismatch_is_captured_as_preflight_acceptance() {
     // Also ensure stderr indicates failure, but avoid relying on exact wording.
     // Stderr is intentionally not part of the stable interface for expected obligation failures.
 }
+
+#[test]
+fn package_policy_rejects_no_step_limit_by_default() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_limits_policy");
+    let dst = td.path().join("pkg_limits_policy");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+
+    cargo_bin_cmd!("genesis")
+        .arg("--no-step-limit")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(10);
+}

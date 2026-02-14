@@ -14,6 +14,12 @@ This file defines a package, its modules, dependencies, and required obligations
 
 - `tests` (array of strings): suite symbols to execute as unit tests
 - `caps_policy` (string): path to a `caps.toml` relative to the manifest directory
+- `limits` (table): evaluation limits enforced for package evaluation and tests
+
+`limits` keys:
+- `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
+  - If omitted, the v0.2 toolchain default is used.
+- `allow_unlimited` (bool, default `false`): if `true`, permits disabling the step limit via `genesis test --no-step-limit`.
 
 ## Module Table
 
@@ -35,4 +41,6 @@ Each entry:
 - `genesis test` must verify that each module’s current hash matches the pinned `hash` field.
 - Dependencies must be hash-checked before use (local path deps are allowed but must match pinned hashes).
 - Package acceptance is granted only if all listed `obligations` succeed.
-
+- Package evaluation limits are enforced for `genesis test` and `genesis apply-patch`:
+  - if `limits.allow_unlimited = false` (default), `--no-step-limit` must be rejected as a manifest policy error
+  - the effective step limit is the minimum of the CLI request (if any) and `limits.step_limit` (or the toolchain default when omitted)
