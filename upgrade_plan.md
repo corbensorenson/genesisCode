@@ -31,8 +31,8 @@ This plan does not require implementing refinement proofs, a registry server, a 
 - [x] Write a normative spec for CoreForm canonical printing and hashing (version tags, map key ordering, application printing, width/indent rules) and link it from `docs/spec/`. (`docs/spec/COREFORM_CANON_HASH.md`)
 - [x] Write a normative spec for value hashing used in effect logs (`value_hash`) and for effect request hashing (`req_h`), including what data is included/excluded. (`docs/spec/VALUE_EFFECT_HASH.md`)
 - [ ] Expand golden/spec tests to cover every conformance checklist item:
-  - [ ] `seal/unseal` edge cases and spoof resistance (already has baseline; expand).
-  - [ ] contract dispatch/extend precedence and `explain` trace stability.
+  - [x] `seal/unseal` edge cases and spoof resistance (baseline + non-token mismatch errors + protocol spoof tests).
+  - [x] contract dispatch/extend precedence and `explain` trace stability.
   - [x] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
   - [x] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
 - [x] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
