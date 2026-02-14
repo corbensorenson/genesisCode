@@ -18,4 +18,5 @@ gc_coreform = { path = "../gc_coreform" }
 gc_obligations = { path = "../gc_obligations" }
 
 [dev-dependencies]
+proptest = "1"
 tempfile = "3"

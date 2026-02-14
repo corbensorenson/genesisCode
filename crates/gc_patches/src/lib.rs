@@ -125,6 +125,12 @@ pub fn apply_patch(
     })
 }
 
+/// Validate a patch artifact term without performing any I/O.
+pub fn validate_patch_term(t: &Term) -> Result<(), PatchError> {
+    let _ = Patch::from_term(t)?;
+    Ok(())
+}
+
 fn report_term(
     patch: &Patch,
     ok: bool,

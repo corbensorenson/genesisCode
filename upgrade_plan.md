@@ -70,7 +70,7 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 
 ### P1: Reliability (Fuzzing, Limits, Portability)
 
-- [ ] Add fuzz harnesses (as suggested in `docs/TECH_HANDOFF.md`):
+- [x] Add fuzz/property-test harnesses (as suggested in `docs/TECH_HANDOFF.md`), using `proptest`:
   - parser: parse/print/parse invariants
   - canonicalization: idempotence
   - log parser: malformed `.gclog` inputs must not panic
