@@ -6,12 +6,12 @@ mod runner;
 pub use crate::error::EffectsError;
 pub use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 pub use crate::policy::{CapsPolicy, OpPolicy};
-pub use crate::runner::{replay, run, RunResult};
+pub use crate::runner::{RunResult, replay, run};
 
 #[cfg(test)]
 mod tests {
-    use gc_coreform::{hash_module, parse_module, Term};
-    use gc_kernel::{eval_module, value_hash, EvalCtx, Value};
+    use gc_coreform::{Term, hash_module, parse_module};
+    use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
     use gc_prelude::build_prelude;
 
     use super::*;
@@ -40,14 +40,7 @@ mod tests {
         let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
 
         let pol = CapsPolicy::empty();
-        let r = run(
-            &mut ctx,
-            &pol,
-            prog,
-            h,
-            "gc_effects-test".to_string(),
-        )
-        .expect("run");
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
 
         // Expect final value is a sealed ERROR.
         match r.value {
@@ -72,14 +65,7 @@ mod tests {
         let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
 
         let pol = CapsPolicy::from_toml_str(r#"allow = ["sys/time::now"]"#).unwrap();
-        let r1 = run(
-            &mut ctx1,
-            &pol,
-            prog1,
-            h,
-            "gc_effects-test".to_string(),
-        )
-        .expect("run");
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
         let v1_h = value_hash(&r1.value);
 
@@ -107,14 +93,7 @@ mod tests {
         let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
 
         let pol = CapsPolicy::from_toml_str(r#"allow = ["sys/time::now"]"#).unwrap();
-        let mut r1 = run(
-            &mut ctx1,
-            &pol,
-            prog1,
-            h,
-            "gc_effects-test".to_string(),
-        )
-        .expect("run");
+        let mut r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
         // Tamper.
         if let LoggedResp::Ok(t) = &mut r1.log.entries[0].resp {

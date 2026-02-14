@@ -28,12 +28,7 @@ fn spaces(n: usize) -> String {
 fn is_atom(t: &Term) -> bool {
     matches!(
         t,
-        Term::Nil
-            | Term::Bool(_)
-            | Term::Int(_)
-            | Term::Str(_)
-            | Term::Bytes(_)
-            | Term::Symbol(_)
+        Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Str(_) | Term::Bytes(_) | Term::Symbol(_)
     )
 }
 
@@ -57,7 +52,7 @@ fn single_line(t: &Term) -> Option<String> {
 
     match t {
         Term::Vector(xs) => {
-            if xs.len() <= 3 && xs.iter().all(|x| is_atom(x)) {
+            if xs.len() <= 3 && xs.iter().all(is_atom) {
                 let mut s = String::from("[");
                 for (i, x) in xs.iter().enumerate() {
                     if i != 0 {
@@ -75,10 +70,7 @@ fn single_line(t: &Term) -> Option<String> {
             if m.is_empty() {
                 return Some("{}".to_string());
             }
-            if m.len() <= 2
-                && m.iter()
-                    .all(|(k, v)| is_atom(&k.0) && is_atom(v))
-            {
+            if m.len() <= 2 && m.iter().all(|(k, v)| is_atom(&k.0) && is_atom(v)) {
                 let mut s = String::from("{");
                 for (i, (k, v)) in m.iter().enumerate() {
                     if i != 0 {
@@ -106,11 +98,7 @@ fn single_line(t: &Term) -> Option<String> {
                     s.push_str(p);
                 }
                 s.push(')');
-                if s.len() <= MAX_WIDTH {
-                    Some(s)
-                } else {
-                    None
-                }
+                if s.len() <= MAX_WIDTH { Some(s) } else { None }
             })
         }
         _ => None,
@@ -118,10 +106,10 @@ fn single_line(t: &Term) -> Option<String> {
 }
 
 fn fmt_term(t: &Term, indent: usize) -> Vec<String> {
-    if let Some(s) = single_line(t) {
-        if indent + s.len() <= MAX_WIDTH {
-            return vec![format!("{}{}", spaces(indent), s)];
-        }
+    if let Some(s) = single_line(t)
+        && indent + s.len() <= MAX_WIDTH
+    {
+        return vec![format!("{}{}", spaces(indent), s)];
     }
     if let Some(a) = atom_repr(t) {
         return vec![format!("{}{}", spaces(indent), a)];
@@ -196,14 +184,13 @@ fn fmt_list(t: &Term, indent: usize) -> Vec<String> {
     let mut head_count = 1usize;
     let mut first = format!("{}({}", spaces(indent), head0);
 
-    if items.len() >= 2 {
-        if let Some(h1) = single_line(items[1]) {
-            if indent + first.len() + 1 + h1.len() <= MAX_WIDTH {
-                first.push(' ');
-                first.push_str(&h1);
-                head_count = 2;
-            }
-        }
+    if items.len() >= 2
+        && let Some(h1) = single_line(items[1])
+        && first.len() + 1 + h1.len() <= MAX_WIDTH
+    {
+        first.push(' ');
+        first.push_str(&h1);
+        head_count = 2;
     }
     out.push(first);
 

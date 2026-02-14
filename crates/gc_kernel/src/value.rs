@@ -6,7 +6,7 @@ use blake3::Hasher;
 
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
-use gc_coreform::{hash_term, print_term, Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SealId(pub u64);
@@ -16,16 +16,9 @@ pub enum Value {
     Data(Term),
     Vector(Vec<Value>),
     Map(BTreeMap<TermOrdKey, Value>),
-    Closure {
-        param: String,
-        body: Term,
-        env: Env,
-    },
+    Closure { param: String, body: Term, env: Env },
     SealToken(SealId),
-    Sealed {
-        token: SealId,
-        payload: Box<Value>,
-    },
+    Sealed { token: SealId, payload: Box<Value> },
     NativeFn(NativeFn),
     Contract(Rc<Contract>),
     EffectProgram(Box<EffectProgram>),
@@ -179,7 +172,10 @@ fn hash_value_into(h: &mut Hasher, v: &Value) {
             h.update(b"V:seal-token\0");
             h.update(&id.to_le_bytes());
         }
-        Value::Sealed { token: SealId(id), payload } => {
+        Value::Sealed {
+            token: SealId(id),
+            payload,
+        } => {
             h.update(b"V:sealed\0");
             h.update(&id.to_le_bytes());
             hash_value_into(h, payload);
@@ -244,11 +240,10 @@ impl Value {
     }
 
     pub fn truthy(&self) -> bool {
-        match self {
-            Value::Data(Term::Nil) => false,
-            Value::Data(Term::Bool(false)) => false,
-            _ => true,
-        }
+        !matches!(
+            self,
+            Value::Data(Term::Nil) | Value::Data(Term::Bool(false))
+        )
     }
 
     pub fn as_data(&self) -> Option<&Term> {
@@ -283,14 +278,14 @@ impl Value {
                 format!("(closure {} {})", param, print_term(body))
             }
             Value::SealToken(SealId(id)) => format!("#<seal-token {}>", id),
-            Value::Sealed { token: SealId(id), payload } => {
+            Value::Sealed {
+                token: SealId(id),
+                payload,
+            } => {
                 format!("#<sealed {} {}>", id, payload.debug_repr())
             }
             Value::NativeFn(f) => format!("#<native {} {}/{}>", f.name, f.collected.len(), f.arity),
-            Value::Contract(c) => format!(
-                "#<contract {}>",
-                hex_prefix(&c.contract_id, 8)
-            ),
+            Value::Contract(c) => format!("#<contract {}>", hex_prefix(&c.contract_id, 8)),
             Value::EffectProgram(_) => "#<effect-program>".to_string(),
             Value::EffectRequest(r) => format!("#<effect-req {}>", r.op),
         }
@@ -306,12 +301,7 @@ impl Value {
             ),
             Value::Map(m) => Term::Map(
                 m.iter()
-                    .map(|(k, v)| {
-                        (
-                            TermOrdKey(k.0.clone()),
-                            v.to_term_for_log(protocol_error),
-                        )
-                    })
+                    .map(|(k, v)| (TermOrdKey(k.0.clone()), v.to_term_for_log(protocol_error)))
                     .collect(),
             ),
             Value::Sealed { token, payload } => {

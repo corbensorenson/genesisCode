@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use gc_coreform::{print_term, Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, print_term};
 use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
@@ -142,15 +142,15 @@ impl EffectLogEntry {
         let Term::Map(m) = t else {
             return Err(EffectsError::Log("entry must be a map".to_string()));
         };
-        let i = get_int(m, ":i")?
-            .ok_or_else(|| EffectsError::Log("entry missing :i".to_string()))?;
+        let i =
+            get_int(m, ":i")?.ok_or_else(|| EffectsError::Log("entry missing :i".to_string()))?;
         let op = match map_get(m, ":op") {
             Some(Term::Symbol(s)) => s.clone(),
             Some(x) => {
                 return Err(EffectsError::Log(format!(
                     ":op must be symbol, got {}",
                     print_term(x)
-                )))
+                )));
             }
             None => return Err(EffectsError::Log("entry missing :op".to_string())),
         };
@@ -164,7 +164,7 @@ impl EffectLogEntry {
                 return Err(EffectsError::Log(format!(
                     ":decision must be :allow or :deny, got {}",
                     print_term(x)
-                )))
+                )));
             }
             None => return Err(EffectsError::Log("entry missing :decision".to_string())),
         };
@@ -210,7 +210,7 @@ fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
             return Err(EffectsError::Log(format!(
                 ":resp :kind must be symbol, got {}",
                 print_term(x)
-            )))
+            )));
         }
         None => return Err(EffectsError::Log(":resp missing :kind".to_string())),
     };
@@ -231,10 +231,11 @@ fn map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
 fn get_int(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<u64>, EffectsError> {
     match map_get(m, k) {
         None => Ok(None),
-        Some(Term::Int(i)) => Ok(Some(
-            i.to_u64()
-                .ok_or_else(|| EffectsError::Log(format!("{k} out of range")))?,
-        )),
+        Some(Term::Int(i)) => {
+            Ok(Some(i.to_u64().ok_or_else(|| {
+                EffectsError::Log(format!("{k} out of range"))
+            })?))
+        }
         Some(x) => Err(EffectsError::Log(format!(
             "{k} must be int, got {}",
             print_term(x)

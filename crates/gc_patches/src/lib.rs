@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use gc_coreform::{canonicalize_module, parse_module, parse_term, print_module, print_term, Term, TermOrdKey};
-use gc_obligations::{pack, test_package, EvidenceStore, ObligationError, PackageTestResult};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, parse_module, parse_term, print_module, print_term,
+};
+use gc_obligations::{EvidenceStore, ObligationError, PackageTestResult, pack, test_package};
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
@@ -172,15 +174,20 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
             let abs = pkg_dir.join(module_path);
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_module(&src).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mut forms = canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let mut forms =
+                canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
 
             apply_replace(&mut forms, path, new_term.clone())?;
-            let forms = canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let forms =
+                canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
             let out = print_module(&forms);
             std::fs::write(&abs, out)?;
             Ok(())
         }
-        PatchOp::AddModule { module_path, content } => {
+        PatchOp::AddModule {
+            module_path,
+            content,
+        } => {
             let abs = pkg_dir.join(module_path);
             if abs.exists() {
                 return Err(PatchError::Validate(format!(
@@ -196,19 +203,22 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
                     let forms = parse_module(s).map_err(|e| PatchError::Parse(e.to_string()))?;
                     canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?
                 }
-                ModuleContent::Forms(fs) => {
-                    canonicalize_module(fs.clone()).map_err(|e| PatchError::Validate(e.to_string()))?
-                }
+                ModuleContent::Forms(fs) => canonicalize_module(fs.clone())
+                    .map_err(|e| PatchError::Validate(e.to_string()))?,
             };
             let out = print_module(&forms);
             std::fs::write(&abs, out)?;
 
             // Update manifest modules list by appending; pack will pin hashes.
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value = toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mods = v.get_mut("modules").and_then(|x| x.as_array_mut()).ok_or_else(|| {
-                PatchError::Validate("manifest missing modules array".to_string())
-            })?;
+            let mut v: toml::Value =
+                toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+            let mods = v
+                .get_mut("modules")
+                .and_then(|x| x.as_array_mut())
+                .ok_or_else(|| {
+                    PatchError::Validate("manifest missing modules array".to_string())
+                })?;
             mods.push(toml::Value::Table(
                 [
                     ("path".to_string(), toml::Value::String(module_path.clone())),
@@ -228,10 +238,14 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
             }
             // Remove from manifest modules array.
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value = toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mods = v.get_mut("modules").and_then(|x| x.as_array_mut()).ok_or_else(|| {
-                PatchError::Validate("manifest missing modules array".to_string())
-            })?;
+            let mut v: toml::Value =
+                toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+            let mods = v
+                .get_mut("modules")
+                .and_then(|x| x.as_array_mut())
+                .ok_or_else(|| {
+                    PatchError::Validate("manifest missing modules array".to_string())
+                })?;
             mods.retain(|m| m.get("path").and_then(|p| p.as_str()) != Some(module_path.as_str()));
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
@@ -246,7 +260,8 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
             caps_policy,
         } => {
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value = toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+            let mut v: toml::Value =
+                toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
             if let Some(set) = set {
                 apply_manifest_set(&mut v, set)?;
             }
@@ -305,7 +320,9 @@ fn apply_manifest_set(v: &mut toml::Value, set: &Term) -> Result<(), PatchError>
         .ok_or_else(|| PatchError::Validate("manifest must be a table".to_string()))?;
     for (k, vv) in m {
         let Term::Symbol(key) = &k.0 else {
-            return Err(PatchError::Validate("manifest :set keys must be symbols".to_string()));
+            return Err(PatchError::Validate(
+                "manifest :set keys must be symbols".to_string(),
+            ));
         };
         // Strip leading ':' for convenience.
         let key = key.strip_prefix(':').unwrap_or(key.as_str()).to_string();
@@ -319,9 +336,11 @@ fn coreform_to_toml(t: &Term) -> Result<toml::Value, PatchError> {
     match t {
         Term::Nil => Ok(toml::Value::String("nil".to_string())),
         Term::Bool(b) => Ok(toml::Value::Boolean(*b)),
-        Term::Int(i) => Ok(toml::Value::Integer(
-            i.to_i64().ok_or_else(|| PatchError::Validate("int out of range".to_string()))?,
-        )),
+        Term::Int(i) => {
+            Ok(toml::Value::Integer(i.to_i64().ok_or_else(|| {
+                PatchError::Validate("int out of range".to_string())
+            })?))
+        }
         Term::Str(s) => Ok(toml::Value::String(s.clone())),
         Term::Bytes(b) => Ok(toml::Value::String(
             base64::engine::general_purpose::STANDARD.encode(b),
@@ -366,7 +385,12 @@ enum ReplaceTarget<'a> {
 }
 
 impl<'a> ReplaceTarget<'a> {
-    fn step(self, s: &PathStep, is_last: bool, new_term: Term) -> Result<ReplaceTarget<'a>, PatchError> {
+    fn step(
+        self,
+        s: &PathStep,
+        is_last: bool,
+        new_term: Term,
+    ) -> Result<ReplaceTarget<'a>, PatchError> {
         match self {
             ReplaceTarget::Module(forms) => match s {
                 PathStep::Form(idx) => {
@@ -380,7 +404,9 @@ impl<'a> ReplaceTarget<'a> {
                         Ok(ReplaceTarget::Term(t))
                     }
                 }
-                _ => Err(PatchError::Validate("path must start with [:form i]".to_string())),
+                _ => Err(PatchError::Validate(
+                    "path must start with [:form i]".to_string(),
+                )),
             },
             ReplaceTarget::Term(t) => {
                 if is_last {
@@ -422,17 +448,16 @@ impl<'a> ReplaceTarget<'a> {
                             return Err(PatchError::Validate("expected map".to_string()));
                         };
                         let elt = m.get_mut(&TermOrdKey(key.clone())).ok_or_else(|| {
-                            PatchError::Validate(format!(
-                                "missing map key {}",
-                                print_term(key)
-                            ))
+                            PatchError::Validate(format!("missing map key {}", print_term(key)))
                         })?;
                         if is_last {
                             *elt = new_term;
                         }
                         Ok(ReplaceTarget::Term(elt))
                     }
-                    PathStep::Form(_) => Err(PatchError::Validate("unexpected :form step".to_string())),
+                    PathStep::Form(_) => {
+                        Err(PatchError::Validate("unexpected :form step".to_string()))
+                    }
                 }
             }
         }
@@ -479,7 +504,7 @@ fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             return Err(PatchError::Validate(format!(
                 ":op must be symbol, got {}",
                 print_term(x)
-            )))
+            )));
         }
         None => return Err(PatchError::Validate("missing :op".to_string())),
     };
@@ -488,28 +513,40 @@ fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
                 PatchError::Validate("replace-node missing :module-path".to_string())
             })?;
-            let path_t = m.get(&TermOrdKey(Term::Symbol(":path".to_string()))).ok_or_else(|| {
-                PatchError::Validate("replace-node missing :path".to_string())
-            })?;
+            let path_t = m
+                .get(&TermOrdKey(Term::Symbol(":path".to_string())))
+                .ok_or_else(|| PatchError::Validate("replace-node missing :path".to_string()))?;
             let path = parse_path(path_t)?;
-            let new_term = m.get(&TermOrdKey(Term::Symbol(":new".to_string()))).ok_or_else(|| {
-                PatchError::Validate("replace-node missing :new".to_string())
-            })?.clone();
-            Ok(PatchOp::ReplaceNode { module_path, path, new_term })
+            let new_term = m
+                .get(&TermOrdKey(Term::Symbol(":new".to_string())))
+                .ok_or_else(|| PatchError::Validate("replace-node missing :new".to_string()))?
+                .clone();
+            Ok(PatchOp::ReplaceNode {
+                module_path,
+                path,
+                new_term,
+            })
         }
         ":add-module" => {
             let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
                 PatchError::Validate("add-module missing :module-path".to_string())
             })?;
-            let content_t = m.get(&TermOrdKey(Term::Symbol(":content".to_string()))).ok_or_else(|| {
-                PatchError::Validate("add-module missing :content".to_string())
-            })?;
+            let content_t = m
+                .get(&TermOrdKey(Term::Symbol(":content".to_string())))
+                .ok_or_else(|| PatchError::Validate("add-module missing :content".to_string()))?;
             let content = match content_t {
                 Term::Str(s) => ModuleContent::Source(s.clone()),
                 Term::Vector(xs) => ModuleContent::Forms(xs.clone()),
-                _ => return Err(PatchError::Validate(":content must be string or vector".to_string())),
+                _ => {
+                    return Err(PatchError::Validate(
+                        ":content must be string or vector".to_string(),
+                    ));
+                }
             };
-            Ok(PatchOp::AddModule { module_path, content })
+            Ok(PatchOp::AddModule {
+                module_path,
+                content,
+            })
         }
         ":remove-module" => {
             let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
@@ -518,7 +555,9 @@ fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             Ok(PatchOp::RemoveModule { module_path })
         }
         ":update-manifest" => {
-            let set = m.get(&TermOrdKey(Term::Symbol(":set".to_string()))).cloned();
+            let set = m
+                .get(&TermOrdKey(Term::Symbol(":set".to_string())))
+                .cloned();
             let obligations_add = get_sym_vec(m, ":obligations-add")?;
             let obligations_remove = get_sym_vec(m, ":obligations-remove")?;
             let tests_add = get_sym_vec(m, ":tests-add")?;
@@ -544,14 +583,21 @@ fn parse_path(t: &Term) -> Result<Vec<PathStep>, PatchError> {
     let mut out = Vec::new();
     for s in steps {
         let Term::Vector(items) = s else {
-            return Err(PatchError::Validate("path step must be a vector".to_string()));
+            return Err(PatchError::Validate(
+                "path step must be a vector".to_string(),
+            ));
         };
         if items.is_empty() {
             return Err(PatchError::Validate("empty path step".to_string()));
         }
         let tag = match &items[0] {
             Term::Symbol(x) => x.as_str(),
-            other => return Err(PatchError::Validate(format!("bad path tag {}", print_term(other)))),
+            other => {
+                return Err(PatchError::Validate(format!(
+                    "bad path tag {}",
+                    print_term(other)
+                )));
+            }
         };
         match tag {
             ":form" => {
@@ -593,8 +639,15 @@ fn term_to_usize(t: &Term) -> Result<usize, PatchError> {
 fn get_int(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<u64>, PatchError> {
     match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
         None => Ok(None),
-        Some(Term::Int(i)) => Ok(Some(i.to_u64().ok_or_else(|| PatchError::Validate(format!("{k} out of range")))?)),
-        Some(x) => Err(PatchError::Validate(format!("{k} must be int, got {}", print_term(x)))),
+        Some(Term::Int(i)) => {
+            Ok(Some(i.to_u64().ok_or_else(|| {
+                PatchError::Validate(format!("{k} out of range"))
+            })?))
+        }
+        Some(x) => Err(PatchError::Validate(format!(
+            "{k} must be int, got {}",
+            print_term(x)
+        ))),
     }
 }
 
@@ -602,14 +655,26 @@ fn get_str(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<String>, Pa
     match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
         None => Ok(None),
         Some(Term::Str(s)) => Ok(Some(s.clone())),
-        Some(x) => Err(PatchError::Validate(format!("{k} must be string, got {}", print_term(x)))),
+        Some(x) => Err(PatchError::Validate(format!(
+            "{k} must be string, got {}",
+            print_term(x)
+        ))),
     }
 }
 
 fn get_sym_vec(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Vec<String>, PatchError> {
     match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
         None => Ok(Vec::new()),
-        Some(Term::Vector(xs)) => Ok(xs.iter().filter_map(|t| match t { Term::Symbol(s) => Some(s.clone()), _ => None }).collect()),
-        Some(x) => Err(PatchError::Validate(format!("{k} must be vector, got {}", print_term(x)))),
+        Some(Term::Vector(xs)) => Ok(xs
+            .iter()
+            .filter_map(|t| match t {
+                Term::Symbol(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect()),
+        Some(x) => Err(PatchError::Validate(format!(
+            "{k} must be vector, got {}",
+            print_term(x)
+        ))),
     }
 }

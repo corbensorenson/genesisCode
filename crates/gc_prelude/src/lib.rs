@@ -1,11 +1,11 @@
 mod prelude;
 
-pub use prelude::{build_prelude, Prelude};
+pub use prelude::{Prelude, build_prelude};
 
 #[cfg(test)]
 mod tests {
-    use gc_coreform::{canonicalize_module, parse_module, Term, TermOrdKey};
-    use gc_kernel::{eval_module, EvalCtx, Value};
+    use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
+    use gc_kernel::{EvalCtx, Value, eval_module};
 
     use super::build_prelude;
 
@@ -86,19 +86,13 @@ mod tests {
         let Value::Map(m) = v else {
             panic!("expected map, got {}", v.debug_repr());
         };
-        let r1 = m
-            .get(&TermOrdKey(Term::Symbol(":r1".to_string())))
-            .unwrap();
+        let r1 = m.get(&TermOrdKey(Term::Symbol(":r1".to_string()))).unwrap();
         assert!(matches!(r1, Value::Data(Term::Int(i)) if i == &10.into()));
 
-        let r2 = m
-            .get(&TermOrdKey(Term::Symbol(":r2".to_string())))
-            .unwrap();
+        let r2 = m.get(&TermOrdKey(Term::Symbol(":r2".to_string()))).unwrap();
         assert!(matches!(r2, Value::Data(Term::Int(i)) if i == &20.into()));
 
-        let tr = m
-            .get(&TermOrdKey(Term::Symbol(":tr".to_string())))
-            .unwrap();
+        let tr = m.get(&TermOrdKey(Term::Symbol(":tr".to_string()))).unwrap();
         let Value::Data(Term::Map(tm)) = tr else {
             panic!("expected trace map datum, got {}", tr.debug_repr());
         };

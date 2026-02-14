@@ -95,4 +95,3 @@ impl CapsPolicy {
         Self::from_toml_str(&s)
     }
 }
-

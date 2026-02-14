@@ -138,4 +138,3 @@ pub fn hash_module(forms: &[Term]) -> [u8; 32] {
     h.update(s.as_bytes());
     *h.finalize().as_bytes()
 }
-

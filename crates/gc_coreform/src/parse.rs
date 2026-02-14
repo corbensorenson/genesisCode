@@ -132,7 +132,11 @@ impl<'a> Lexer<'a> {
                 Tok::Str(v)
             }
             b'-' => {
-                if self.bytes.get(self.i + 1).is_some_and(|c| c.is_ascii_digit()) {
+                if self
+                    .bytes
+                    .get(self.i + 1)
+                    .is_some_and(|c| c.is_ascii_digit())
+                {
                     Tok::Int(self.read_int(at)?)
                 } else {
                     Tok::Symbol(self.read_symbol())
@@ -148,8 +152,21 @@ impl<'a> Lexer<'a> {
     fn read_symbol(&mut self) -> String {
         let start = self.i;
         while let Some(b) = self.peek_byte() {
-            if matches!(b, b' ' | b'\t' | b'\n' | b'\r' | b'(' | b')' | b'[' | b']' | b'{' | b'}' | b'\'' | b'"' | b';')
-            {
+            if matches!(
+                b,
+                b' ' | b'\t'
+                    | b'\n'
+                    | b'\r'
+                    | b'('
+                    | b')'
+                    | b'['
+                    | b']'
+                    | b'{'
+                    | b'}'
+                    | b'\''
+                    | b'"'
+                    | b';'
+            ) {
                 break;
             }
             self.i += 1;
@@ -209,7 +226,7 @@ impl<'a> Lexer<'a> {
                             return Err(ParseError::Escape {
                                 at: esc_at,
                                 msg: format!("unknown escape: {}", e as char),
-                            })
+                            });
                         }
                     }
                 }
@@ -262,7 +279,7 @@ impl<'a> Lexer<'a> {
                             return Err(ParseError::Escape {
                                 at: esc_at,
                                 msg: format!("unknown escape: {}", e as char),
-                            })
+                            });
                         }
                     }
                 }
@@ -292,7 +309,7 @@ impl<'a> Lexer<'a> {
                     return Err(ParseError::Escape {
                         at,
                         msg: "invalid hex digit".to_string(),
-                    })
+                    });
                 }
             };
             v = (v << 4) | d;

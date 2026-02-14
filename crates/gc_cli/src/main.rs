@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use clap::{Parser, Subcommand};
 
-use gc_coreform::{canonicalize_module, parse_module, parse_term, print_module, print_term, Term};
+use gc_coreform::{Term, canonicalize_module, parse_module, parse_term, print_module, print_term};
 use gc_effects::{CapsPolicy, EffectLog};
-use gc_kernel::{eval_module, eval_term, Apply, EvalCtx, Value};
+use gc_kernel::{Apply, EvalCtx, Value, eval_module, eval_term};
 use gc_obligations::PackageManifest;
 use gc_prelude::build_prelude;
 
@@ -108,7 +108,11 @@ fn main() -> anyhow::Result<()> {
     match cli.cmd {
         Cmd::Fmt { file, check } => cmd_fmt(&file, check),
         Cmd::Eval { file } => cmd_eval(&file),
-        Cmd::Explain { file, contract, msg } => cmd_explain(&file, &contract, &msg),
+        Cmd::Explain {
+            file,
+            contract,
+            msg,
+        } => cmd_explain(&file, &contract, &msg),
         Cmd::Run { file, caps, log } => cmd_run(&file, &caps, log.as_ref()),
         Cmd::Replay { file, log } => cmd_replay(&file, &log),
         Cmd::Test { pkg, caps } => cmd_test(&pkg, caps.as_deref()),
@@ -145,8 +149,7 @@ fn cmd_eval(file: &PathBuf) -> anyhow::Result<()> {
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let v = eval_module(&mut ctx, &mut env, &forms)
-        .map_err(|e| anyhow!("eval error: {}", e))?;
+    let v = eval_module(&mut ctx, &mut env, &forms).map_err(|e| anyhow!("eval error: {}", e))?;
     println!("{}", render_value(&v));
     Ok(())
 }
@@ -163,10 +166,9 @@ fn cmd_explain(file: &PathBuf, contract_src: &str, msg_src: &str) -> anyhow::Res
     // Evaluate the module to populate env.
     eval_module(&mut ctx, &mut env, &forms).map_err(|e| anyhow!("eval error: {}", e))?;
 
-    let contract_term =
-        parse_term(contract_src).map_err(|e| anyhow!("parse --contract: {e}"))?;
-    let contract = eval_term(&mut ctx, &env, &contract_term)
-        .map_err(|e| anyhow!("eval --contract: {e}"))?;
+    let contract_term = parse_term(contract_src).map_err(|e| anyhow!("parse --contract: {e}"))?;
+    let contract =
+        eval_term(&mut ctx, &env, &contract_term).map_err(|e| anyhow!("eval --contract: {e}"))?;
 
     let msg_term = parse_term(msg_src).map_err(|e| anyhow!("parse --msg: {e}"))?;
     let msg_val = Value::Data(msg_term);
@@ -195,8 +197,7 @@ fn cmd_run(file: &PathBuf, caps: &PathBuf, log: Option<&PathBuf>) -> anyhow::Res
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let prog = eval_module(&mut ctx, &mut env, &forms)
-        .map_err(|e| anyhow!("eval error: {}", e))?;
+    let prog = eval_module(&mut ctx, &mut env, &forms).map_err(|e| anyhow!("eval error: {}", e))?;
 
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
@@ -216,8 +217,8 @@ fn cmd_replay(file: &PathBuf, log_path: &PathBuf) -> anyhow::Result<()> {
     let forms = canonicalize_module(forms)?;
     let program_hash = gc_coreform::hash_module(&forms);
 
-    let log_src =
-        std::fs::read_to_string(log_path).with_context(|| format!("read {}", log_path.display()))?;
+    let log_src = std::fs::read_to_string(log_path)
+        .with_context(|| format!("read {}", log_path.display()))?;
     let log_term = gc_coreform::parse_term(&log_src).map_err(|e| anyhow!("parse log: {e}"))?;
     let log = EffectLog::from_term(&log_term).map_err(|e| anyhow!("bad log: {e}"))?;
     if log.program_hash != program_hash {
@@ -230,8 +231,7 @@ fn cmd_replay(file: &PathBuf, log_path: &PathBuf) -> anyhow::Result<()> {
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let prog = eval_module(&mut ctx, &mut env, &forms)
-        .map_err(|e| anyhow!("eval error: {}", e))?;
+    let prog = eval_module(&mut ctx, &mut env, &forms).map_err(|e| anyhow!("eval error: {}", e))?;
     let v = gc_effects::replay(&mut ctx, prog, &log).map_err(|e| anyhow!("replay failed: {e}"))?;
     println!("{}", render_value(&v));
     Ok(())
@@ -258,7 +258,8 @@ fn cmd_typecheck(pkg: &PathBuf) -> anyhow::Result<()> {
     let mut mods = Vec::new();
     for m in &manifest.modules {
         let abs = pkg_dir.join(&m.path);
-        let src = std::fs::read_to_string(&abs).with_context(|| format!("read {}", abs.display()))?;
+        let src =
+            std::fs::read_to_string(&abs).with_context(|| format!("read {}", abs.display()))?;
         let forms = parse_module(&src).map_err(|e| anyhow!(e))?;
         let forms = canonicalize_module(forms)?;
         let meta = extract_meta_static(&forms);
@@ -291,7 +292,11 @@ fn cmd_optimize(file: &PathBuf, out: Option<&PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn cmd_apply_patch(patch: &PathBuf, pkg: &PathBuf, caps: Option<&std::path::Path>) -> anyhow::Result<()> {
+fn cmd_apply_patch(
+    patch: &PathBuf,
+    pkg: &PathBuf,
+    caps: Option<&std::path::Path>,
+) -> anyhow::Result<()> {
     let r = gc_patches::apply_patch(patch, pkg, caps).map_err(|e| anyhow!("{e}"))?;
     println!("{}", r.report_artifact);
     if !r.ok {
@@ -314,7 +319,9 @@ fn render_value(v: &Value) -> String {
 
 fn extract_meta_static(forms: &[Term]) -> Option<Term> {
     for f in forms {
-        let Some(items) = f.as_proper_list() else { continue };
+        let Some(items) = f.as_proper_list() else {
+            continue;
+        };
         if items.len() != 3 {
             continue;
         }
@@ -324,7 +331,9 @@ fn extract_meta_static(forms: &[Term]) -> Option<Term> {
         if !matches!(items[1], Term::Symbol(s) if s == "::meta") {
             continue;
         }
-        let Some(q) = items[2].as_proper_list() else { continue };
+        let Some(q) = items[2].as_proper_list() else {
+            continue;
+        };
         if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote") {
             if let Term::Map(m) = q[1] {
                 return Some(Term::Map(m.clone()));

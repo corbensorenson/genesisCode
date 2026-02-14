@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context};
+use anyhow::{Context, anyhow, bail};
 
 use crate::term::Term;
 
@@ -180,7 +180,10 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
             if !matches!(pair[0], Term::Symbol(_)) {
                 bail!("(let ...) binding name must be symbol");
             }
-            canon_bindings.push(Term::list(vec![pair[0].clone(), canon_code(pair[1].clone())?]));
+            canon_bindings.push(Term::list(vec![
+                pair[0].clone(),
+                canon_code(pair[1].clone())?,
+            ]));
         }
 
         let body_terms: Vec<Term> = items.into_iter().skip(1).collect();

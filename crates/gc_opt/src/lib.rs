@@ -19,14 +19,15 @@ fn optimize_topform(t: &Term) -> Term {
     let Some(items) = t.as_proper_list() else {
         return optimize_term(t);
     };
-    if items.len() == 3 && matches!(items[0], Term::Symbol(s) if s == "def") {
-        if let Term::Symbol(name) = items[1] {
-            return Term::list(vec![
-                Term::Symbol("def".to_string()),
-                Term::Symbol(name.clone()),
-                optimize_term(items[2]),
-            ]);
-        }
+    if items.len() == 3
+        && matches!(items[0], Term::Symbol(s) if s == "def")
+        && let Term::Symbol(name) = items[1]
+    {
+        return Term::list(vec![
+            Term::Symbol("def".to_string()),
+            Term::Symbol(name.clone()),
+            optimize_term(items[2]),
+        ]);
     }
     optimize_term(t)
 }
@@ -86,12 +87,7 @@ fn optimize_term(t: &Term) -> Term {
                     if is_truthy_literal(&c) {
                         return tt;
                     }
-                    return Term::list(vec![
-                        Term::Symbol("if".to_string()),
-                        c,
-                        tt,
-                        ee,
-                    ]);
+                    return Term::list(vec![Term::Symbol("if".to_string()), c, tt, ee]);
                 }
                 return t.clone();
             }
@@ -130,14 +126,14 @@ fn optimize_term(t: &Term) -> Term {
     }
 
     // Treat `core/effect::*` and `core/contract::*` as opaque calls.
-    if let Some((head, _args)) = flatten_app(t) {
-        if matches!(
+    if let Some((head, _args)) = flatten_app(t)
+        && matches!(
             head,
             Term::Symbol(ref s)
                 if s.starts_with("core/effect::") || s.starts_with("core/contract::")
-        ) {
-            return t.clone();
-        }
+        )
+    {
+        return t.clone();
     }
 
     // General application: optimize children.
@@ -278,7 +274,7 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
         }
         return Some((f, vec![x]));
     }
-    if items.len() >= 1 {
+    if !items.is_empty() {
         let head = items[0].clone();
         let args = items.into_iter().skip(1).cloned().collect();
         return Some((head, args));
@@ -288,7 +284,7 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
 
 #[cfg(test)]
 mod tests {
-    use gc_coreform::{canonicalize_module, parse_module, Term};
+    use gc_coreform::{Term, canonicalize_module, parse_module};
 
     use super::optimize_module;
 
@@ -306,8 +302,11 @@ mod tests {
         let def = opt
             .iter()
             .find(|t| {
-                t.as_proper_list()
-                    .is_some_and(|xs| xs.len() == 3 && matches!(xs[0], Term::Symbol(s) if s == "def") && matches!(xs[1], Term::Symbol(s) if s == "x"))
+                t.as_proper_list().is_some_and(|xs| {
+                    xs.len() == 3
+                        && matches!(xs[0], Term::Symbol(s) if s == "def")
+                        && matches!(xs[1], Term::Symbol(s) if s == "x")
+                })
             })
             .expect("def x");
         let xs = def.as_proper_list().unwrap();
@@ -327,12 +326,17 @@ mod tests {
         let def = opt
             .iter()
             .find(|t| {
-                t.as_proper_list()
-                    .is_some_and(|xs| xs.len() == 3 && matches!(xs[0], Term::Symbol(s) if s == "def") && matches!(xs[1], Term::Symbol(s) if s == "x"))
+                t.as_proper_list().is_some_and(|xs| {
+                    xs.len() == 3
+                        && matches!(xs[0], Term::Symbol(s) if s == "def")
+                        && matches!(xs[1], Term::Symbol(s) if s == "x")
+                })
             })
             .expect("def x");
         let xs = def.as_proper_list().unwrap();
         // Still a (quote ...) term, not folded to 3.
-        assert!(matches!(xs[2].as_proper_list(), Some(q) if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote")));
+        assert!(
+            matches!(xs[2].as_proper_list(), Some(q) if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote"))
+        );
     }
 }

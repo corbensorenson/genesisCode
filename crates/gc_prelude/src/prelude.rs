@@ -5,8 +5,8 @@ use blake3::Hasher;
 
 use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{
-    value_hash, Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError,
-    KernelErrorKind, NativeFn, ProtocolTokens, SealId, Value,
+    Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
+    NativeFn, ProtocolTokens, SealId, Value, value_hash,
 };
 
 pub struct Prelude {
@@ -88,7 +88,11 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/contract::extend",
-        Value::NativeFn(NativeFn::new("core/contract::extend", 3, nf_contract_extend)),
+        Value::NativeFn(NativeFn::new(
+            "core/contract::extend",
+            3,
+            nf_contract_extend,
+        )),
     );
     env = Env::with_binding(
         &env,
@@ -138,11 +142,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/msg::payload",
-        Value::NativeFn(NativeFn::new(
-            "core/msg::payload",
-            1,
-            nf_msg_payload,
-        )),
+        Value::NativeFn(NativeFn::new("core/msg::payload", 1, nf_msg_payload)),
     );
 
     // Effects.
@@ -154,11 +154,7 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
     env = Env::with_binding(
         &env,
         "core/effect::perform",
-        Value::NativeFn(NativeFn::new(
-            "core/effect::perform",
-            3,
-            nf_effect_perform,
-        )),
+        Value::NativeFn(NativeFn::new("core/effect::perform", 3, nf_effect_perform)),
     );
 
     // Create core/contract::genesis as a base contract that always returns UNHANDLED.
@@ -228,7 +224,7 @@ fn value_to_data_term(v: &Value) -> Result<Term, KernelError> {
         Value::Data(t) => Ok(t.clone()),
         Value::Vector(xs) => Ok(Term::Vector(
             xs.iter()
-                .map(|x| value_to_data_term(x))
+                .map(value_to_data_term)
                 .collect::<Result<Vec<_>, _>>()?,
         )),
         Value::Map(m) => {
@@ -247,7 +243,10 @@ fn value_to_data_term(v: &Value) -> Result<Term, KernelError> {
 
 fn parse_msg_term(t: &Term) -> Result<(Term, Term), KernelError> {
     let Some(items) = t.as_proper_list() else {
-        return Err(KernelError::new(KernelErrorKind::BadForm, "msg must be a list"));
+        return Err(KernelError::new(
+            KernelErrorKind::BadForm,
+            "msg must be a list",
+        ));
     };
     if items.len() != 3 {
         return Err(KernelError::new(
@@ -494,10 +493,12 @@ fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
     };
     let (op, _payload) = match parse_msg_term(&msg_term) {
         Ok(x) => x,
-        Err(e) => return Ok(Value::Sealed {
-            token: p.error,
-            payload: Box::new(Value::Data(Term::Str(e.msg))),
-        }),
+        Err(e) => {
+            return Ok(Value::Sealed {
+                token: p.error,
+                payload: Box::new(Value::Data(Term::Str(e.msg))),
+            });
+        }
     };
     let Term::Symbol(op_s) = op else {
         return Ok(mk_error(ctx, "msg op must be a symbol"));
@@ -518,12 +519,15 @@ fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ke
     let msg_term = value_to_data_term(&msg).map_err(|e| KernelError::new(e.kind, e.msg))?;
 
     loop {
-        let r = cur.handler.clone().apply(ctx, Value::Data(msg_term.clone()))?;
-        if sealed_matches(&r, p.unhandled).is_some() {
-            if let Some(proto) = &cur.proto {
-                cur = proto.clone();
-                continue;
-            }
+        let r = cur
+            .handler
+            .clone()
+            .apply(ctx, Value::Data(msg_term.clone()))?;
+        if sealed_matches(&r, p.unhandled).is_some()
+            && let Some(proto) = &cur.proto
+        {
+            cur = proto.clone();
+            continue;
         }
         return Ok(r);
     }
@@ -552,7 +556,10 @@ fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ker
     let mut steps: Vec<Term> = Vec::new();
     let result: Value = loop {
         let override_matched = cur.overrides.contains_key(&op_sym);
-        let r = cur.handler.clone().apply(ctx, Value::Data(msg_term.clone()))?;
+        let r = cur
+            .handler
+            .clone()
+            .apply(ctx, Value::Data(msg_term.clone()))?;
         let unhandled = sealed_matches(&r, p.unhandled).is_some();
 
         steps.push(Term::Map(
@@ -582,11 +589,11 @@ fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ker
             .collect(),
         ));
 
-        if unhandled {
-            if let Some(proto) = &cur.proto {
-                cur = proto.clone();
-                continue;
-            }
+        if unhandled
+            && let Some(proto) = &cur.proto
+        {
+            cur = proto.clone();
+            continue;
         }
         break r;
     };
@@ -674,9 +681,9 @@ fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelEr
 }
 
 fn nf_effect_pure(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    Ok(Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(
-        args[0].clone(),
-    )))))
+    Ok(Value::EffectProgram(Box::new(EffectProgram::Pure(
+        Box::new(args[0].clone()),
+    ))))
 }
 
 fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {

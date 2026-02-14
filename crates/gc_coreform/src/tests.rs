@@ -1,4 +1,4 @@
-use crate::{canonicalize_module, parse_module, parse_term, print_module, print_term, Term};
+use crate::{Term, canonicalize_module, parse_module, parse_term, print_module, print_term};
 use std::path::PathBuf;
 
 #[test]
@@ -39,8 +39,7 @@ fn proper_list_recognition() {
 
 #[test]
 fn golden_coreform_canonicalization_and_printing() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/spec/coreform");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/spec/coreform");
 
     for case in ["app_sugar", "map_order"] {
         let inp = std::fs::read_to_string(root.join(format!("{case}.in.gc"))).unwrap();

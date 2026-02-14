@@ -37,14 +37,11 @@ pub struct DepEntry {
 impl PackageManifest {
     pub fn load(path: &Path) -> Result<(Self, PathBuf), ObligationError> {
         let s = std::fs::read_to_string(path)?;
-        let m: PackageManifest = toml::from_str(&s).map_err(|e| {
-            ObligationError::Manifest(format!("{}: {e}", path.display()))
+        let m: PackageManifest = toml::from_str(&s)
+            .map_err(|e| ObligationError::Manifest(format!("{}: {e}", path.display())))?;
+        let dir = path.parent().map(PathBuf::from).ok_or_else(|| {
+            ObligationError::Manifest("package.toml has no parent dir".to_string())
         })?;
-        let dir = path
-            .parent()
-            .map(PathBuf::from)
-            .ok_or_else(|| ObligationError::Manifest("package.toml has no parent dir".to_string()))?;
         Ok((m, dir))
     }
 }
-

@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use gc_coreform::{print_term, Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, print_term};
 
 #[derive(Debug, Clone)]
 pub struct ModuleForTypecheck {
@@ -102,10 +102,10 @@ fn infer_effects_term(out: &mut InferredEffects, t: &Term) {
                 // (let ((x e) ...) body...)
                 if let Some(binds) = items[1].as_proper_list() {
                     for b in binds {
-                        if let Some(pair) = b.as_proper_list() {
-                            if pair.len() == 2 {
-                                infer_effects_term(out, pair[1]);
-                            }
+                        if let Some(pair) = b.as_proper_list()
+                            && pair.len() == 2
+                        {
+                            infer_effects_term(out, pair[1]);
                         }
                     }
                 }
@@ -184,7 +184,7 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
         }
         return Some((f, vec![x]));
     }
-    if items.len() >= 1 {
+    if !items.is_empty() {
         let head = items[0].clone();
         let args = items.into_iter().skip(1).cloned().collect();
         return Some((head, args));
@@ -194,10 +194,11 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
 
 fn literal_op_symbol(t: &Term) -> Option<String> {
     let items = t.as_proper_list()?;
-    if items.len() == 2 && matches!(items[0], Term::Symbol(s) if s == "quote") {
-        if let Term::Symbol(s) = items[1] {
-            return Some(s.clone());
-        }
+    if items.len() == 2
+        && matches!(items[0], Term::Symbol(s) if s == "quote")
+        && let Term::Symbol(s) = items[1]
+    {
+        return Some(s.clone());
     }
     None
 }
@@ -407,7 +408,10 @@ impl TypecheckReport {
 impl ModuleReport {
     pub fn to_term(&self) -> Term {
         let mut m = BTreeMap::new();
-        m.insert(TermOrdKey(Term::symbol(":path")), Term::Str(self.path.clone()));
+        m.insert(
+            TermOrdKey(Term::symbol(":path")),
+            Term::Str(self.path.clone()),
+        );
         m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(self.ok));
         m.insert(
             TermOrdKey(Term::symbol(":errors")),
@@ -419,7 +423,14 @@ impl ModuleReport {
         );
         m.insert(
             TermOrdKey(Term::symbol(":inferred-ops")),
-            Term::Vector(self.inferred_effects.ops.iter().cloned().map(Term::Symbol).collect()),
+            Term::Vector(
+                self.inferred_effects
+                    .ops
+                    .iter()
+                    .cloned()
+                    .map(Term::Symbol)
+                    .collect(),
+            ),
         );
         m.insert(
             TermOrdKey(Term::symbol(":unknown-ops")),
@@ -478,7 +489,7 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
 
 #[cfg(test)]
 mod tests {
-    use gc_coreform::{canonicalize_module, parse_module, Term};
+    use gc_coreform::{Term, canonicalize_module, parse_module};
 
     use super::*;
 
@@ -538,9 +549,10 @@ mod tests {
         };
         let r = typecheck_package(&[m]);
         assert!(!r.ok);
-        assert!(r
-            .errors
-            .iter()
-            .any(|e| e.contains("exported symbol m::x has no type")));
+        assert!(
+            r.errors
+                .iter()
+                .any(|e| e.contains("exported symbol m::x has no type"))
+        );
     }
 }

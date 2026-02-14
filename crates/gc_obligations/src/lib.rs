@@ -5,9 +5,9 @@ mod store;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use gc_coreform::{canonicalize_module, hash_module, parse_module, print_term, Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_term};
 use gc_effects::{CapsPolicy, EffectLog};
-use gc_kernel::{eval_term, value_hash, Apply, Env, EvalCtx, Value};
+use gc_kernel::{Apply, Env, EvalCtx, Value, eval_term, value_hash};
 use gc_prelude::build_prelude;
 
 pub use crate::error::ObligationError;
@@ -76,7 +76,10 @@ pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
     store.put_term(&record)
 }
 
-pub fn test_package(pkg_toml: &Path, caps_override: Option<&Path>) -> Result<PackageTestResult, ObligationError> {
+pub fn test_package(
+    pkg_toml: &Path,
+    caps_override: Option<&Path>,
+) -> Result<PackageTestResult, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
@@ -119,7 +122,13 @@ pub fn test_package(pkg_toml: &Path, caps_override: Option<&Path>) -> Result<Pac
     // Execute tests (each test gets a fresh ctx/env build).
     let mut test_runs = Vec::new();
     for id in &test_ids {
-        test_runs.push(run_one_test(&pkg_dir, &manifest, &modules, &caps, id.clone())?);
+        test_runs.push(run_one_test(
+            &pkg_dir,
+            &manifest,
+            &modules,
+            &caps,
+            id.clone(),
+        )?);
     }
 
     let mut obligation_results = Vec::new();
@@ -127,11 +136,19 @@ pub fn test_package(pkg_toml: &Path, caps_override: Option<&Path>) -> Result<Pac
     for ob in &manifest.obligations {
         let r = match ob.as_str() {
             "core/obligation::unit-tests" => obligation_unit_tests(&store, &manifest, &test_runs),
-            "core/obligation::determinism" => obligation_determinism(&store, &manifest, &modules, &test_runs),
-            "core/obligation::capabilities-declared" => obligation_caps_declared(&store, &manifest, &modules, &test_runs),
-            "core/obligation::replayable-tests" => obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs),
+            "core/obligation::determinism" => {
+                obligation_determinism(&store, &manifest, &modules, &test_runs)
+            }
+            "core/obligation::capabilities-declared" => {
+                obligation_caps_declared(&store, &manifest, &modules, &test_runs)
+            }
+            "core/obligation::replayable-tests" => {
+                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs)
+            }
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
-            "core/obligation::translation-validation" => obligation_translation_validation(&store, &pkg_dir, &manifest, &modules, &caps, &test_ids),
+            "core/obligation::translation-validation" => obligation_translation_validation(
+                &store, &pkg_dir, &manifest, &modules, &caps, &test_ids,
+            ),
             other => Ok(ObligationResult {
                 name: other.to_string(),
                 ok: false,
@@ -159,21 +176,17 @@ fn pin_manifest_hashes(
     modules: &[LoadedModule],
     deps: &[(String, String, String)],
 ) -> Result<(), ObligationError> {
-    let mut doc: toml::Value = toml::from_str(&std::fs::read_to_string(pkg_toml)?).map_err(|e| {
-        ObligationError::Manifest(format!("{}: {e}", pkg_toml.display()))
-    })?;
-    let tbl = doc.as_table_mut().ok_or_else(|| {
-        ObligationError::Manifest("package.toml must be a table".to_string())
-    })?;
+    let mut doc: toml::Value = toml::from_str(&std::fs::read_to_string(pkg_toml)?)
+        .map_err(|e| ObligationError::Manifest(format!("{}: {e}", pkg_toml.display())))?;
+    let tbl = doc
+        .as_table_mut()
+        .ok_or_else(|| ObligationError::Manifest("package.toml must be a table".to_string()))?;
 
     // modules = [{ path, hash }, ...]
     if let Some(arr) = tbl.get_mut("modules").and_then(|v| v.as_array_mut()) {
         for (i, m) in modules.iter().enumerate() {
             if let Some(entry) = arr.get_mut(i).and_then(|v| v.as_table_mut()) {
-                entry.insert(
-                    "hash".to_string(),
-                    toml::Value::String(hex32(m.hash)),
-                );
+                entry.insert("hash".to_string(), toml::Value::String(hex32(m.hash)));
             }
         }
     }
@@ -183,32 +196,34 @@ fn pin_manifest_hashes(
         for dep in deps {
             let (name, _path, hash_hex) = dep;
             for item in arr.iter_mut() {
-                let Some(t) = item.as_table_mut() else { continue };
+                let Some(t) = item.as_table_mut() else {
+                    continue;
+                };
                 if t.get("name").and_then(|v| v.as_str()) == Some(name.as_str()) {
-                    t.insert(
-                        "hash".to_string(),
-                        toml::Value::String(hash_hex.clone()),
-                    );
+                    t.insert("hash".to_string(), toml::Value::String(hash_hex.clone()));
                 }
             }
         }
     }
 
-    let out = toml::to_string_pretty(&doc).map_err(|e| {
-        ObligationError::Manifest(format!("cannot write manifest: {e}"))
-    })?;
+    let out = toml::to_string_pretty(&doc)
+        .map_err(|e| ObligationError::Manifest(format!("cannot write manifest: {e}")))?;
     std::fs::write(pkg_toml, out)?;
     let _ = manifest;
     Ok(())
 }
 
-fn load_modules(pkg_dir: &Path, entries: &[ModuleEntry]) -> Result<Vec<LoadedModule>, ObligationError> {
+fn load_modules(
+    pkg_dir: &Path,
+    entries: &[ModuleEntry],
+) -> Result<Vec<LoadedModule>, ObligationError> {
     let mut out = Vec::new();
     for e in entries {
         let abs = pkg_dir.join(&e.path);
         let src = std::fs::read_to_string(&abs)?;
         let forms = parse_module(&src).map_err(|pe| ObligationError::Module(format!("{pe}")))?;
-        let forms = canonicalize_module(forms).map_err(|e| ObligationError::Module(e.to_string()))?;
+        let forms =
+            canonicalize_module(forms).map_err(|e| ObligationError::Module(e.to_string()))?;
         let h = hash_module(&forms);
         out.push(LoadedModule {
             entry: e.clone(),
@@ -360,7 +375,10 @@ fn package_record_term(
         .iter()
         .map(|x| {
             let mut mm = BTreeMap::new();
-            mm.insert(TermOrdKey(Term::symbol(":path")), Term::Str(x.entry.path.clone()));
+            mm.insert(
+                TermOrdKey(Term::symbol(":path")),
+                Term::Str(x.entry.path.clone()),
+            );
             mm.insert(
                 TermOrdKey(Term::symbol(":hash")),
                 Term::Bytes(x.hash.to_vec()),
@@ -376,7 +394,10 @@ fn package_record_term(
             let mut dm = BTreeMap::new();
             dm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
             dm.insert(TermOrdKey(Term::symbol(":path")), Term::Str(path.clone()));
-            dm.insert(TermOrdKey(Term::symbol(":hash")), Term::Str(hash_hex.clone()));
+            dm.insert(
+                TermOrdKey(Term::symbol(":hash")),
+                Term::Str(hash_hex.clone()),
+            );
             Term::Map(dm)
         })
         .collect();
@@ -387,7 +408,14 @@ fn package_record_term(
 
     m.insert(
         TermOrdKey(Term::symbol(":obligations")),
-        Term::Vector(manifest.obligations.iter().cloned().map(Term::Symbol).collect()),
+        Term::Vector(
+            manifest
+                .obligations
+                .iter()
+                .cloned()
+                .map(Term::Symbol)
+                .collect(),
+        ),
     );
     m.insert(
         TermOrdKey(Term::symbol(":tests")),
@@ -408,7 +436,10 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
         TermOrdKey(Term::symbol(":package")),
         Term::Map(
             [
-                (TermOrdKey(Term::symbol(":name")), Term::Str(manifest.name.clone())),
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str(manifest.name.clone()),
+                ),
                 (
                     TermOrdKey(Term::symbol(":version")),
                     Term::Str(manifest.version.clone()),
@@ -422,7 +453,10 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
         .iter()
         .map(|r| {
             let mut rm = BTreeMap::new();
-            rm.insert(TermOrdKey(Term::symbol(":name")), Term::Symbol(r.name.clone()));
+            rm.insert(
+                TermOrdKey(Term::symbol(":name")),
+                Term::Symbol(r.name.clone()),
+            );
             rm.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(r.ok));
             if let Some(a) = &r.artifact {
                 rm.insert(TermOrdKey(Term::symbol(":artifact")), Term::Str(a.clone()));
@@ -436,7 +470,10 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
             Term::Map(rm)
         })
         .collect();
-    m.insert(TermOrdKey(Term::symbol(":obligations")), Term::Vector(entries));
+    m.insert(
+        TermOrdKey(Term::symbol(":obligations")),
+        Term::Vector(entries),
+    );
     Term::Map(m)
 }
 
@@ -455,9 +492,8 @@ fn discover_tests(
         let v = eval
             .lookup_any(suite)
             .ok_or_else(|| ObligationError::Test(format!("missing test suite symbol {suite}")))?;
-        let suite_map = value_as_map(&v).ok_or_else(|| {
-            ObligationError::Test(format!("test suite {suite} must be a map"))
-        })?;
+        let suite_map = value_as_map(&v)
+            .ok_or_else(|| ObligationError::Test(format!("test suite {suite} must be a map")))?;
         for (k, _vv) in suite_map.iter() {
             let name = match &k.0 {
                 Term::Str(s) => s.clone(),
@@ -466,7 +502,7 @@ fn discover_tests(
                     return Err(ObligationError::Test(format!(
                         "test key must be string/symbol, got {}",
                         print_term(other)
-                    )))
+                    )));
                 }
             };
             ids.push(TestId {
@@ -547,7 +583,11 @@ fn run_one_test(
         ok,
         effect_log,
         value_hash: fv_hash,
-        error: if ok { None } else { Some("test failed".to_string()) },
+        error: if ok {
+            None
+        } else {
+            Some("test failed".to_string())
+        },
     })
 }
 
@@ -572,7 +612,7 @@ fn parse_test_entry(v: &Value) -> Result<(Value, Option<Term>), ObligationError>
                 return Err(ObligationError::Test(format!(
                     "test :expect must be a datum, got {}",
                     other.debug_repr()
-                )))
+                )));
             }
         };
         return Ok((body.clone(), expect));
@@ -611,10 +651,7 @@ fn obligation_unit_tests(
         }
         if let Some(log) = &t.effect_log {
             let log_h = store.put_term(&log.to_term())?;
-            m.insert(
-                TermOrdKey(Term::symbol(":log-artifact")),
-                Term::Str(log_h),
-            );
+            m.insert(TermOrdKey(Term::symbol(":log-artifact")), Term::Str(log_h));
         }
         test_terms.push(Term::Map(m));
     }
@@ -680,10 +717,8 @@ fn obligation_determinism(
         if let Some(mod_i) = suite_to_mod.get(&t.id.suite_sym) {
             if let Some(meta) = extract_meta_static(&modules[*mod_i].forms) {
                 if let Some(caps) = meta_caps(&meta) {
-                    let observed_effects = t
-                        .effect_log
-                        .as_ref()
-                        .is_some_and(|l| !l.entries.is_empty());
+                    let observed_effects =
+                        t.effect_log.as_ref().is_some_and(|l| !l.entries.is_empty());
                     if caps.is_empty() && observed_effects {
                         ok = false;
                         errors.push(format!(
@@ -889,7 +924,10 @@ fn obligation_replayable(
     })
 }
 
-fn obligation_typecheck(store: &EvidenceStore, modules: &[LoadedModule]) -> Result<ObligationResult, ObligationError> {
+fn obligation_typecheck(
+    store: &EvidenceStore,
+    modules: &[LoadedModule],
+) -> Result<ObligationResult, ObligationError> {
     let mut mods = Vec::new();
     for m in modules {
         let meta = extract_meta_static(&m.forms);
@@ -1006,10 +1044,7 @@ fn obligation_translation_validation(
                 Term::Str(manifest.name.clone()),
             ),
             (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (
-                TermOrdKey(Term::symbol(":tests")),
-                Term::Vector(per_test),
-            ),
+            (TermOrdKey(Term::symbol(":tests")), Term::Vector(per_test)),
             (
                 TermOrdKey(Term::symbol(":errors")),
                 Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
@@ -1108,7 +1143,11 @@ fn eval_dependencies(
     Ok(cur)
 }
 
-fn eval_modules(ctx: &mut EvalCtx, base: &Env, modules: &[LoadedModule]) -> Result<Vec<ModuleEval>, ObligationError> {
+fn eval_modules(
+    ctx: &mut EvalCtx,
+    base: &Env,
+    modules: &[LoadedModule],
+) -> Result<Vec<ModuleEval>, ObligationError> {
     let mut out = Vec::new();
     let mut cur_base = base.clone();
     for m in modules {
@@ -1160,7 +1199,7 @@ fn eval_one_module(
                 "{}: ::meta must be a quoted map datum, got {}",
                 path.display(),
                 other.debug_repr()
-            )))
+            )));
         }
     };
     let exports = meta
@@ -1194,11 +1233,15 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
 fn extract_meta_static(forms: &[Term]) -> Option<Term> {
     // Look for (def ::meta (quote <map>)) or (def ::meta '<map>)
     for f in forms {
-        let Some((name, expr)) = parse_def(f) else { continue };
+        let Some((name, expr)) = parse_def(f) else {
+            continue;
+        };
         if name != "::meta" {
             continue;
         }
-        let Some(items) = expr.as_proper_list() else { continue };
+        let Some(items) = expr.as_proper_list() else {
+            continue;
+        };
         if items.len() == 2 && matches!(items[0], Term::Symbol(s) if s == "quote") {
             if let Term::Map(m) = items[1] {
                 return Some(Term::Map(m.clone()));

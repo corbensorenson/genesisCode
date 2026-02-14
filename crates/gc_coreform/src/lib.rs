@@ -1,12 +1,12 @@
+mod canon;
 mod parse;
 mod print;
 mod term;
-mod canon;
 
 pub use canon::{canonicalize_form, canonicalize_module};
-pub use parse::{parse_module, parse_term, ParseError};
+pub use parse::{ParseError, parse_module, parse_term};
 pub use print::{print_module, print_term};
-pub use term::{hash_module, hash_term, Term, TermOrdKey};
+pub use term::{Term, TermOrdKey, hash_module, hash_term};
 
 #[cfg(test)]
 mod tests;

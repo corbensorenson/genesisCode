@@ -1,7 +1,7 @@
-use gc_coreform::{parse_module, Term};
+use gc_coreform::{Term, parse_module};
 use num_bigint::BigInt;
 
-use crate::{eval_module, EvalCtx, Env, Value};
+use crate::{Env, EvalCtx, Value, eval_module};
 
 #[test]
 fn seal_unseal_roundtrip() {

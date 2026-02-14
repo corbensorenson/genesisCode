@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
-use gc_coreform::{hash_term, print_term, Term, TermOrdKey};
-use gc_kernel::{value_hash, Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value};
+use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
+use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use num_bigint::BigInt;
 
 use crate::error::EffectsError;
@@ -189,10 +189,7 @@ pub fn replay(ctx: &mut EvalCtx, program: Value, log: &EffectLog) -> Result<Valu
     }
 }
 
-fn unseal_effect_request<'a>(
-    v: &'a Value,
-    effect_tok: SealId,
-) -> Result<(EffectRequest, SealId), EffectsError> {
+fn unseal_effect_request(v: &Value, effect_tok: SealId) -> Result<(EffectRequest, SealId), EffectsError> {
     let Value::Sealed { token, payload } = v else {
         return Err(EffectsError::BadEffectSeal);
     };
@@ -322,15 +319,13 @@ fn call_capability(
             if path.exists() {
                 let md = std::fs::symlink_metadata(&path)?;
                 if md.file_type().is_symlink() {
+                    let e = std::io::Error::other("refusing to write through symlink");
                     return Ok(Value::Sealed {
                         token: error_tok,
                         payload: Box::new(Value::Data(io_error_payload(
                             op,
                             &path,
-                            &std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                "refusing to write through symlink",
-                            ),
+                            &e,
                         ))),
                     });
                 }
@@ -375,7 +370,9 @@ fn io_error_payload(op: &str, path: &Path, e: &std::io::Error) -> Term {
 
 fn payload_path(payload: &Term) -> Result<String, EffectsError> {
     let Term::Map(m) = payload else {
-        return Err(EffectsError::BadPayload("payload must be a map".to_string()));
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
     };
     let v = m
         .get(&TermOrdKey(Term::Symbol(":path".to_string())))
@@ -391,7 +388,9 @@ fn payload_path(payload: &Term) -> Result<String, EffectsError> {
 
 fn payload_data(payload: &Term) -> Result<Vec<u8>, EffectsError> {
     let Term::Map(m) = payload else {
-        return Err(EffectsError::BadPayload("payload must be a map".to_string()));
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
     };
     let v = m
         .get(&TermOrdKey(Term::Symbol(":data".to_string())))
@@ -407,10 +406,10 @@ fn payload_data(payload: &Term) -> Result<Vec<u8>, EffectsError> {
 }
 
 fn effective_base_dir(pol: Option<&OpPolicy>) -> Result<PathBuf, EffectsError> {
-    if let Some(pol) = pol {
-        if let Some(base) = &pol.base_dir {
-            return Ok(base.clone());
-        }
+    if let Some(pol) = pol
+        && let Some(base) = &pol.base_dir
+    {
+        return Ok(base.clone());
     }
     Ok(std::env::current_dir()?)
 }
@@ -438,7 +437,11 @@ fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf, EffectsErr
     Ok(resolved)
 }
 
-fn sandbox_path_write(base_dir: &Path, input: &str, create_dirs: bool) -> Result<PathBuf, EffectsError> {
+fn sandbox_path_write(
+    base_dir: &Path,
+    input: &str,
+    create_dirs: bool,
+) -> Result<PathBuf, EffectsError> {
     let base = std::fs::canonicalize(base_dir)?;
     let p = PathBuf::from(input);
     for c in p.components() {

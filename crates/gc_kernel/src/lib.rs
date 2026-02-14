@@ -5,13 +5,12 @@ mod value;
 
 pub use env::{Env, EnvFrame};
 pub use error::{KernelError, KernelErrorKind};
-pub use eval::{eval_module, eval_term, EvalCtx, EvalState, ProtocolTokens};
+pub use eval::{EvalCtx, EvalState, ProtocolTokens, eval_module, eval_term};
 pub use value::{
-    value_hash, Apply, Contract, EffectProgram, EffectRequest, NativeFn, SealId, Value,
+    Apply, Contract, EffectProgram, EffectRequest, NativeFn, SealId, Value, value_hash,
 };
 
 pub use gc_coreform::Term;
 
 #[cfg(test)]
 mod tests;
-

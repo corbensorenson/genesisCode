@@ -16,6 +16,12 @@ impl EvalState {
     }
 }
 
+impl Default for EvalState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct ProtocolTokens {
     pub unhandled: SealId,
@@ -59,17 +65,24 @@ impl EvalCtx {
         }
     }
 
-    fn tick(&mut self) -> Result<(), KernelError> {
+    pub fn tick(&mut self) -> Result<(), KernelError> {
         self.steps = self.steps.saturating_add(1);
-        if let Some(limit) = self.step_limit {
-            if self.steps > limit {
-                return Err(KernelError::new(
-                    KernelErrorKind::StepLimit,
-                    "step limit exceeded",
-                ));
-            }
+        if let Some(limit) = self.step_limit
+            && self.steps > limit
+        {
+            return Err(KernelError::new(
+                KernelErrorKind::StepLimit,
+                "step limit exceeded",
+            ));
         }
         Ok(())
+    }
+
+}
+
+impl Default for EvalCtx {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -88,10 +101,7 @@ pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<V
 }
 
 fn parse_def(t: &Term) -> Option<(String, Term)> {
-    let Some(items) = t.as_proper_list() else {
-        return None;
-    };
-    let items: Vec<&Term> = items;
+    let items = t.as_proper_list()?;
     if items.len() != 3 {
         return None;
     }
@@ -161,11 +171,11 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
                         "(if c t e) expects exactly 3 arguments",
                     ));
                 }
-                let c = eval_term(ctx, env, &items[1])?;
+                let c = eval_term(ctx, env, items[1])?;
                 if c.truthy() {
-                    return eval_term(ctx, env, &items[2]);
+                    return eval_term(ctx, env, items[2]);
                 }
-                return eval_term(ctx, env, &items[3]);
+                return eval_term(ctx, env, items[3]);
             }
             "begin" => {
                 if items.len() < 2 {
@@ -203,7 +213,7 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
     }
 
     // General application (supports sugar forms with more than one argument).
-    let f = eval_term(ctx, env, &items[0])?;
+    let f = eval_term(ctx, env, items[0])?;
     let mut acc = f;
     for a in items.iter().skip(1) {
         let av = eval_term(ctx, env, a)?;
@@ -256,7 +266,9 @@ fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, Ke
     // Desugar multi-arg lambda into nested unary closures.
     let mut out = body_term;
     for p in ps.into_iter().rev() {
-        let Term::Symbol(name) = p else { unreachable!() };
+        let Term::Symbol(name) = p else {
+            unreachable!()
+        };
         out = Term::list(vec![
             Term::Symbol("fn".to_string()),
             Term::list(vec![Term::Symbol(name.clone())]),
@@ -338,7 +350,7 @@ fn eval_let(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, Ke
                 "(let ...) binding name must be a symbol",
             ));
         };
-        let v = eval_term(ctx, &cur_env, &pair[1])?;
+        let v = eval_term(ctx, &cur_env, pair[1])?;
         cur_env = Env::with_binding(&cur_env, name.clone(), v);
     }
 
@@ -363,8 +375,8 @@ fn eval_seal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, K
             Ok(Value::SealToken(SealId(id)))
         }
         3 => {
-            let v = eval_term(ctx, env, &items[1])?;
-            let tok = eval_term(ctx, env, &items[2])?;
+            let v = eval_term(ctx, env, items[1])?;
+            let tok = eval_term(ctx, env, items[2])?;
             let Value::SealToken(id) = tok else {
                 return type_err(ctx, "seal expects a seal token as second argument");
             };
@@ -387,15 +399,15 @@ fn eval_unseal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value,
             "(unseal w tok) expects exactly 2 arguments",
         ));
     }
-    let w = eval_term(ctx, env, &items[1])?;
-    let tok = eval_term(ctx, env, &items[2])?;
+    let w = eval_term(ctx, env, items[1])?;
+    let tok = eval_term(ctx, env, items[2])?;
     let Value::SealToken(id) = tok else {
         return type_err(ctx, "unseal expects a seal token as second argument");
     };
-    if let Value::Sealed { token, payload } = w {
-        if token == id {
-            return Ok(*payload);
-        }
+    if let Value::Sealed { token, payload } = w
+        && token == id
+    {
+        return Ok(*payload);
     }
     Ok(Value::Data(Term::Nil))
 }
@@ -482,7 +494,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 return type_err(ctx, "map/get expects data key");
             };
             match &args[0] {
-                Value::Map(m) => Ok(m.get(&TermOrdKey(k.clone()))
+                Value::Map(m) => Ok(m
+                    .get(&TermOrdKey(k.clone()))
                     .cloned()
                     .unwrap_or(Value::Data(Term::Nil))),
                 Value::Data(Term::Map(m)) => {
@@ -697,14 +710,24 @@ fn eq_value(a: &Value, b: &Value) -> bool {
                     .all(|((ak, av), (bk, bv))| ak == bk && eq_value(av, bv))
         }
         (Value::SealToken(x), Value::SealToken(y)) => x == y,
-        (Value::Sealed { token: xt, payload: xp }, Value::Sealed { token: yt, payload: yp }) => {
-            xt == yt && eq_value(xp, yp)
-        }
+        (
+            Value::Sealed {
+                token: xt,
+                payload: xp,
+            },
+            Value::Sealed {
+                token: yt,
+                payload: yp,
+            },
+        ) => xt == yt && eq_value(xp, yp),
         (Value::NativeFn(x), Value::NativeFn(y)) => {
             x.name == y.name
                 && x.arity == y.arity
                 && x.collected.len() == y.collected.len()
-                && x.collected.iter().zip(y.collected.iter()).all(|(a, b)| eq_value(a, b))
+                && x.collected
+                    .iter()
+                    .zip(y.collected.iter())
+                    .all(|(a, b)| eq_value(a, b))
         }
         (Value::Contract(x), Value::Contract(y)) => x.contract_id == y.contract_id,
         _ => false,

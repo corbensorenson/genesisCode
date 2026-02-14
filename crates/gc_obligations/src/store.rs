@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use blake3::Hasher;
 
 use crate::error::ObligationError;
-use gc_coreform::{print_term, Term};
+use gc_coreform::{Term, print_term};
 
 #[derive(Debug, Clone)]
 pub struct EvidenceStore {
@@ -29,7 +29,9 @@ impl EvidenceStore {
         if path.exists() {
             return Ok(hex);
         }
-        let tmp = self.root.join(format!(".tmp-{}-{}", hex, std::process::id()));
+        let tmp = self
+            .root
+            .join(format!(".tmp-{}-{}", hex, std::process::id()));
         std::fs::write(&tmp, bytes)?;
         std::fs::rename(&tmp, &path)?;
         Ok(hex)
@@ -40,4 +42,3 @@ impl EvidenceStore {
         self.put_bytes(s.as_bytes())
     }
 }
-
