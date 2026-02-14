@@ -1,0 +1,16 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_fail_budgets"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::budgets",
+]
+tests = ["pkg/budget::tests"]
+version = "0.0.1"
+
+[budgets]
+max_steps_per_test = 1000
+
+[[modules]]
+hash = "53a9c3f737fbe6ade4ce153ee8a13e87548de23a9c272c90c2a14b1b861b82eb"
+path = "budget.gc"

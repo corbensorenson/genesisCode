@@ -88,7 +88,7 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 
 - [ ] Add `core/obligation::property-tests` with recorded seeds as evidence artifacts.
 - [ ] Add `core/obligation::coverage` (tooling obligation; define what coverage means for GenesisCode code and how it is measured).
-- [ ] Add `core/obligation::budgets` (time/memory budget evidence for selected tests/benchmarks).
+- [x] Add `core/obligation::budgets` (deterministic per-test step/effect-log budgets with evidence artifacts; see `docs/spec/BUDGETS.md`).
 
 ### P2: Supply Chain + Registry Policy (Paper Direction)
 

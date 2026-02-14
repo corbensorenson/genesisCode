@@ -22,6 +22,9 @@ pub struct PackageManifest {
 
     #[serde(default)]
     pub limits: Limits,
+
+    #[serde(default)]
+    pub budgets: Budgets,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -36,6 +39,18 @@ pub struct Limits {
     /// Default is deny (false).
     #[serde(default)]
     pub allow_unlimited: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct Budgets {
+    /// If set, each unit test must complete within this many kernel evaluation steps.
+    pub max_steps_per_test: Option<u64>,
+
+    /// If set, each effectful test must produce no more than this many effect log entries.
+    pub max_effect_entries_per_test: Option<u64>,
+
+    /// If set, each effect log must serialize to at most this many bytes in canonical CoreForm.
+    pub max_effect_log_bytes_per_test: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

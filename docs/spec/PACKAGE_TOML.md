@@ -15,11 +15,17 @@ This file defines a package, its modules, dependencies, and required obligations
 - `tests` (array of strings): suite symbols to execute as unit tests
 - `caps_policy` (string): path to a `caps.toml` relative to the manifest directory
 - `limits` (table): evaluation limits enforced for package evaluation and tests
+- `budgets` (table): per-test budgets enforced by the `core/obligation::budgets` obligation
 
 `limits` keys:
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
   - If omitted, the v0.2 toolchain default is used.
 - `allow_unlimited` (bool, default `false`): if `true`, permits disabling the step limit via `genesis test --no-step-limit`.
+
+`budgets` keys (all optional):
+- `max_steps_per_test` (integer): maximum kernel evaluation steps for each unit test
+- `max_effect_entries_per_test` (integer): maximum effect log entries for each effectful test
+- `max_effect_log_bytes_per_test` (integer): maximum canonical `.gclog` byte length for each effectful test
 
 ## Module Table
 

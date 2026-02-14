@@ -236,3 +236,27 @@ fn package_policy_rejects_no_step_limit_by_default() {
         .failure()
         .code(10);
 }
+
+#[test]
+fn budgets_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_budgets");
+    let dst = td.path().join("pkg_fail_budgets");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(&acc, "core/obligation::budgets"));
+}

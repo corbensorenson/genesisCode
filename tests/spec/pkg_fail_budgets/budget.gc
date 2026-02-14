@@ -1,0 +1,30 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/budget::tests]
+      :types {pkg/budget::tests ?}}))
+
+(def pkg/budget::fix
+  (fn (f)
+    ((fn (x) (f (fn (v) ((x x) v))))
+     (fn (x) (f (fn (v) ((x x) v)))))))
+
+(def pkg/budget::countdown
+  (pkg/budget::fix
+    (fn (rec)
+      (fn (n)
+        (if (prim int/eq? n 0)
+          0
+          (rec (prim int/sub n 1)))))))
+
+(def pkg/budget::tests
+  {
+    "steps"
+      {
+        :body
+          (fn (_)
+            (pkg/budget::countdown 5000))
+        :expect 0}})
+
+pkg/budget::tests
