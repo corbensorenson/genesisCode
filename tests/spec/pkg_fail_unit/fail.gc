@@ -1,0 +1,15 @@
+(def ::meta
+  '{
+     :caps []
+     :exports [pkg/fail-unit::tests]
+     :types {pkg/fail-unit::tests ?}})
+
+(def pkg/fail-unit::tests
+  {
+    "unit fails"
+      {
+        :body (fn (_) (core/effect::pure 1))
+        :expect 2}})
+
+pkg/fail-unit::tests
+

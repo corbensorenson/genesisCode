@@ -1,0 +1,5 @@
+allow = ["io/fs::write"]
+
+[op."io/fs::write"]
+base_dir = "."
+

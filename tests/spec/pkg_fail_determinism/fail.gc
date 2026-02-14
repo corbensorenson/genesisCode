@@ -1,0 +1,22 @@
+(def ::meta
+  '{
+     ; Declares pure, but tests will perform effects: determinism obligation must fail.
+     :caps []
+     :exports [pkg/fail-det::tests]
+     :types {pkg/fail-det::tests ?}})
+
+(def pkg/fail-det::tests
+  {
+    "determinism fails"
+      {
+        :body
+          (fn (_)
+            (core/effect::perform
+              'io/fs::write
+              {:path "out.txt" :data "x"}
+              (fn (_)
+                (core/effect::pure nil))))
+        :expect nil}})
+
+pkg/fail-det::tests
+

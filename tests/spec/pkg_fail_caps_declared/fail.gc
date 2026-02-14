@@ -1,0 +1,22 @@
+(def ::meta
+  '{
+     ; Declares a different capability than the one actually used in tests.
+     :caps ['sys/time::now]
+     :exports [pkg/fail-caps::tests]
+     :types {pkg/fail-caps::tests ?}})
+
+(def pkg/fail-caps::tests
+  {
+    "caps declared fails"
+      {
+        :body
+          (fn (_)
+            (core/effect::perform
+              'io/fs::write
+              {:path "out.txt" :data "x"}
+              (fn (_)
+                (core/effect::pure nil))))
+        :expect nil}})
+
+pkg/fail-caps::tests
+

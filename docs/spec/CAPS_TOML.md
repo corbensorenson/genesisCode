@@ -23,10 +23,10 @@ Example:
 ```toml
 allow = ["io/fs::read", "io/fs::write"]
 
-["io/fs::read"]
+[op."io/fs::read"]
 base_dir = "./sandbox"
 
-["io/fs::write"]
+[op."io/fs::write"]
 base_dir = "./sandbox"
 create_dirs = true
 ```
@@ -37,3 +37,6 @@ create_dirs = true
 - Denied ops must be recorded in the effect log with decision `:deny`.
 - Allowed ops must be recorded with decision `:allow` and include a stable `:cap` term capturing the policy fields used.
 
+## Path Resolution
+
+When loaded from disk, relative `base_dir` paths are resolved relative to the directory containing the `caps.toml` file.

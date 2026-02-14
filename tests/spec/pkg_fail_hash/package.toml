@@ -1,0 +1,10 @@
+name = "pkg_fail_hash"
+version = "0.0.1"
+dependencies = []
+obligations = ["core/obligation::unit-tests"]
+tests = ["pkg/fail-hash::tests"]
+
+[[modules]]
+path = "fail.gc"
+hash = "0000000000000000000000000000000000000000000000000000000000000000"
+

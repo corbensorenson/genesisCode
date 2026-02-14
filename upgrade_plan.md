@@ -35,7 +35,7 @@ This plan does not require implementing refinement proofs, a registry server, a 
   - [ ] contract dispatch/extend precedence and `explain` trace stability.
   - [ ] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
   - [ ] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
-- [ ] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
+- [x] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
 
 ### P0: CLI Stability + Machine Interfaces (Must-Have)
 

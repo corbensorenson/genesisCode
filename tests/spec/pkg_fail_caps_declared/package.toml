@@ -1,0 +1,13 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_fail_caps_declared"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+]
+tests = ["pkg/fail-caps::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "9337dc541bd0e5fd56a3dd832eb8335885272c5aa83100e4e2e187cf53bde88e"
+path = "fail.gc"

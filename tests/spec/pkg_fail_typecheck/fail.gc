@@ -1,0 +1,9 @@
+(def ::meta
+  '{
+     :caps []
+     :exports [pkg/fail-type::x]
+     ; Missing type for exported symbol pkg/fail-type::x: typecheck must fail.
+     :types {}})
+
+(def pkg/fail-type::x 1)
+

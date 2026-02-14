@@ -1,0 +1,11 @@
+(def ::meta
+  '{
+     :caps []
+     :exports [pkg/fail-hash::tests]
+     :types {pkg/fail-hash::tests ?}})
+
+(def pkg/fail-hash::tests
+  {"ok" {:body (fn (_) (core/effect::pure 1)) :expect 1}})
+
+pkg/fail-hash::tests
+

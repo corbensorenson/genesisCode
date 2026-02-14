@@ -1,0 +1,9 @@
+dependencies = []
+name = "pkg_fail_typecheck"
+obligations = ["core/obligation::typecheck"]
+tests = []
+version = "0.0.1"
+
+[[modules]]
+hash = "a5f56d997040de3c8b0cb9d036326e2b16736006c6047ac3184dc0b949d9ec40"
+path = "fail.gc"

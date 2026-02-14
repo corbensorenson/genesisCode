@@ -10,6 +10,9 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
         let entry = entry?;
         let ty = entry.file_type()?;
         let from = entry.path();
+        if from.file_name().is_some_and(|n| n == ".genesis") {
+            continue;
+        }
         let to = dst.join(entry.file_name());
         if ty.is_dir() {
             copy_dir_all(&from, &to)?;

@@ -83,38 +83,98 @@ pub fn test_package(
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
+    let mut preflight_errors: Vec<String> = Vec::new();
+
     // Load & hash modules (also validates pinned module hashes if present).
-    let modules = load_modules(&pkg_dir, &manifest.modules)?;
-    for m in &modules {
-        let want = m.entry.hash.as_deref().unwrap_or("");
-        if want.is_empty() {
-            return Err(ObligationError::Manifest(format!(
-                "module {} is missing pinned hash; run `genesis pack --pkg {}`",
-                m.entry.path,
-                pkg_toml.display()
-            )));
+    let modules = match load_modules(&pkg_dir, &manifest.modules) {
+        Ok(ms) => ms,
+        Err(e) => {
+            preflight_errors.push(format!("{e}"));
+            Vec::new()
         }
-        let got_hex = hex32(m.hash);
-        if want != got_hex {
-            return Err(ObligationError::Manifest(format!(
-                "module hash mismatch for {}: manifest has {}, computed {}",
-                m.entry.path, want, got_hex
-            )));
+    };
+    if preflight_errors.is_empty() {
+        for m in &modules {
+            let want = m.entry.hash.as_deref().unwrap_or("");
+            if want.is_empty() {
+                preflight_errors.push(format!(
+                    "module {} is missing pinned hash; run `genesis pack --pkg {}`",
+                    m.entry.path,
+                    pkg_toml.display()
+                ));
+                continue;
+            }
+            let got_hex = hex32(m.hash);
+            if want != got_hex {
+                preflight_errors.push(format!(
+                    "module hash mismatch for {}: manifest has {}, computed {}",
+                    m.entry.path, want, got_hex
+                ));
+            }
         }
     }
 
     // Validate dependency hashes too.
-    check_dep_hashes(&pkg_dir, &manifest.dependencies)?;
+    if preflight_errors.is_empty()
+        && let Err(e) = check_dep_hashes(&pkg_dir, &manifest.dependencies)
+    {
+        preflight_errors.push(format!("{e}"));
+    }
 
     // Load capability policy for effect runs.
     let policy_path = caps_override
         .map(PathBuf::from)
         .or_else(|| manifest.caps_policy.as_ref().map(|p| pkg_dir.join(p)));
-    let caps = if let Some(p) = policy_path.as_ref() {
-        CapsPolicy::load(p).map_err(|e| ObligationError::Manifest(format!("{e}")))?
+    let caps = if preflight_errors.is_empty() {
+        if let Some(p) = policy_path.as_ref() {
+            match CapsPolicy::load(p) {
+                Ok(c) => c,
+                Err(e) => {
+                    preflight_errors.push(format!("{e}"));
+                    CapsPolicy::empty()
+                }
+            }
+        } else {
+            CapsPolicy::empty()
+        }
     } else {
         CapsPolicy::empty()
     };
+
+    if !preflight_errors.is_empty() {
+        let report = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/preflight-v0.2".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str(manifest.name.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(preflight_errors.iter().cloned().map(Term::Str).collect()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let artifact = store.put_term(&report)?;
+        let ob = ObligationResult {
+            name: "core/obligation::preflight".to_string(),
+            ok: false,
+            artifact: Some(artifact),
+            errors: preflight_errors,
+        };
+        let acceptance = acceptance_term(&manifest, false, std::slice::from_ref(&ob));
+        let acceptance_artifact = store.put_term(&acceptance)?;
+        return Ok(PackageTestResult {
+            ok: false,
+            acceptance_artifact,
+            obligation_results: vec![ob],
+        });
+    }
 
     // Discover test ids (suite_sym + test_name) once.
     let test_ids = discover_tests(&pkg_dir, &manifest, &modules)?;

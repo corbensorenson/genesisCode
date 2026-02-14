@@ -1,0 +1,13 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_fail_determinism"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::determinism",
+]
+tests = ["pkg/fail-det::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "b5deb20f6301fdfc9956ab79cd0f8756612051fe391ca246ede3c1b71e60b7cf"
+path = "fail.gc"
