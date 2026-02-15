@@ -86,7 +86,7 @@ Key docs to treat as authoritative:
   - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
   - [x] CoreForm printer equivalence tests against Rust (see `selfhost/printer.gc` + `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`)
-  - [ ] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form)
+  - [x] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form) (see `selfhost/canon.gc` + `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`)
   - module loader and package resolver on GenesisGraph objects
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)

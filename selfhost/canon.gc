@@ -1,0 +1,376 @@
+(def selfhost/canon::error
+  (fn (msg) (core/protocol::error {:error/code "core/bad-form" :error/message msg})))
+
+(def selfhost/canon::is-error (fn (v) (core/protocol::is-error v)))
+
+(def selfhost/canon::vec-fold
+  (fn (xs)
+    (fn (i)
+      (fn (f)
+        (fn (acc)
+          (if ((core/int::lt? i) (core/vec::len xs))
+            ((((selfhost/canon::vec-fold xs) ((core/int::add i) 1)) f)
+              ((f acc) ((core/vec::get xs) i)))
+            acc))))))
+
+(def selfhost/canon::vec-fold-err
+  (fn (xs)
+    (fn (i)
+      (fn (f)
+        (fn (acc)
+          (if (selfhost/canon::is-error acc)
+            acc
+            (if ((core/int::lt? i) (core/vec::len xs))
+              ((((selfhost/canon::vec-fold-err xs) ((core/int::add i) 1)) f)
+                ((f acc) ((core/vec::get xs) i)))
+              acc)))))))
+
+(def selfhost/canon::list-from-vec
+  (fn (xs) (((selfhost/canon::list-from-vec2 xs) (core/vec::len xs)) nil)))
+
+(def selfhost/canon::list-from-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (acc)
+        (if ((core/int::eq? n) 0)
+          acc
+          (let ((i ((core/int::sub n) 1)))
+            (((selfhost/canon::list-from-vec2 xs) i) ((core/pair::cons ((core/vec::get xs) i)) acc))))))))
+
+(def selfhost/canon::is-sym
+  (fn (t)
+    (fn (name)
+      (if ((core/sym::eq? (core/data::tag t)) (quote :sym)) ((core/sym::eq? t) name) false))))
+
+(def selfhost/canon::canon-data
+  (fn (t)
+    (let ((tag (core/data::tag t)))
+      (if ((core/sym::eq? tag) (quote :pair))
+        (let ((items (core/pair::as-proper-list t)))
+          (if (core/list::is-nil? items)
+            t
+            (selfhost/canon::list-from-vec
+              (
+                (((selfhost/canon::vec-fold items) 0)
+                  (fn (acc) (fn (x) ((core/vec::push acc) (selfhost/canon::canon-data x)))))
+                (quote [])))))
+        (if ((core/sym::eq? tag) (quote :vec))
+          (
+            (((selfhost/canon::vec-fold t) 0)
+              (fn (acc) (fn (x) ((core/vec::push acc) (selfhost/canon::canon-data x)))))
+            (quote []))
+          (if ((core/sym::eq? tag) (quote :map)) t t))))))
+
+(def selfhost/canon::canon-code
+  (fn (t)
+    (let ((tag (core/data::tag t)))
+      (if ((core/sym::eq? tag) (quote :pair))
+        (let ((items (core/pair::as-proper-list t)))
+          (if (core/list::is-nil? items)
+            (selfhost/canon::error "improper list in source form")
+            (selfhost/canon::canon-list-code items)))
+        (if ((core/sym::eq? tag) (quote :vec))
+          (
+            (((selfhost/canon::vec-fold t) 0)
+              (fn (acc) (fn (x) ((core/vec::push acc) (selfhost/canon::canon-data x)))))
+            (quote []))
+          (if ((core/sym::eq? tag) (quote :map)) (selfhost/canon::canon-map-code t) t))))))
+
+(def selfhost/canon::canon-map-code
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (
+        (((selfhost/canon::vec-fold-err entries) 0)
+          (fn (acc)
+            (fn (e)
+              (let ((k ((core/vec::get e) 0)))
+                (let ((v ((core/vec::get e) 1)))
+                  (let ((vv (selfhost/canon::canon-code v)))
+                    (if (selfhost/canon::is-error vv)
+                      vv
+                      (((core/map::put acc) (selfhost/canon::canon-data k)) vv))))))))
+        (quote {})))))
+
+(def selfhost/canon::canon-quote
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 2)
+      (selfhost/canon::list-from-vec
+        ((core/vec::push ((core/vec::push (quote [])) (quote quote)))
+          (selfhost/canon::canon-data ((core/vec::get items) 1))))
+      (selfhost/canon::error "(quote ...) expects exactly 1 argument"))))
+
+(def selfhost/canon::canon-def
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 3)
+      (let ((name ((core/vec::get items) 1)))
+        (if ((core/sym::eq? (core/data::tag name)) (quote :sym))
+          (let ((rhs (selfhost/canon::canon-code ((core/vec::get items) 2))))
+            (if (selfhost/canon::is-error rhs)
+              rhs
+              (selfhost/canon::list-from-vec
+                ((core/vec::push ((core/vec::push ((core/vec::push (quote [])) (quote def))) name))
+                  rhs))))
+          (selfhost/canon::error "(def ...) name must be a symbol")))
+      (selfhost/canon::error "(def name expr) expects exactly 2 arguments"))))
+
+(def selfhost/canon::canon-list-code
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 0)
+      nil
+      (let ((head ((core/vec::get items) 0)))
+        (if ((selfhost/canon::is-sym head) (quote quote))
+          (selfhost/canon::canon-quote items)
+          (if ((selfhost/canon::is-sym head) (quote def))
+            (selfhost/canon::canon-def items)
+            (if ((selfhost/canon::is-sym head) (quote fn))
+              (selfhost/canon::canon-fn items)
+              (if ((selfhost/canon::is-sym head) (quote if))
+                (selfhost/canon::canon-if items)
+                (if ((selfhost/canon::is-sym head) (quote begin))
+                  (selfhost/canon::canon-begin items)
+                  (if ((selfhost/canon::is-sym head) (quote let))
+                    (selfhost/canon::canon-let items)
+                    (if ((selfhost/canon::is-sym head) (quote prim))
+                      (selfhost/canon::canon-prim items)
+                      (if ((selfhost/canon::is-sym head) (quote seal))
+                        (selfhost/canon::canon-seal items)
+                        (if ((selfhost/canon::is-sym head) (quote unseal))
+                          (selfhost/canon::canon-unseal items)
+                          (selfhost/canon::canon-apply items))))))))))))))
+
+(def selfhost/canon::canon-fn
+  (fn (items)
+    (let ((n (core/vec::len items)))
+      (if ((core/int::lt? n) 3)
+        (selfhost/canon::error "(fn (x) body) expects at least 2 arguments")
+        (let ((params ((core/vec::get items) 1)))
+          (let
+            (
+              (body_terms
+                ((((selfhost/canon::vec-fold items) 2) (fn (acc) (fn (x) ((core/vec::push acc) x))))
+                  (quote []))))
+            (let
+              (
+                (body
+                  (if ((core/int::eq? (core/vec::len body_terms)) 1)
+                    (selfhost/canon::canon-code ((core/vec::get body_terms) 0))
+                    (selfhost/canon::canon-begin
+                      ((((selfhost/canon::vec-fold body_terms) 0) (fn (acc) (fn (x) ((core/vec::push acc) x))))
+                        ((core/vec::push (quote [])) (quote begin)))))))
+              (if (selfhost/canon::is-error body)
+                body
+                (let ((ps (core/pair::as-proper-list params)))
+                  (if (core/list::is-nil? ps)
+                    (selfhost/canon::error "(fn ...) parameter list must be a list")
+                    (if ((core/int::eq? (core/vec::len ps)) 0)
+                      (selfhost/canon::error "(fn ...) requires at least 1 parameter")
+                      ((selfhost/canon::canon-fn-params ps) body))))))))))))
+
+(def selfhost/canon::canon-fn-params
+  (fn (ps) (fn (body) (((selfhost/canon::canon-fn-params2 ps) (core/vec::len ps)) body))))
+
+(def selfhost/canon::canon-fn-params2
+  (fn (ps)
+    (fn (n)
+      (fn (out)
+        (if (selfhost/canon::is-error out)
+          out
+          (if ((core/int::eq? n) 0)
+            out
+            (let ((i ((core/int::sub n) 1)))
+              (let ((p ((core/vec::get ps) i)))
+                (if ((core/sym::eq? (core/data::tag p)) (quote :sym))
+                  (((selfhost/canon::canon-fn-params2 ps) i)
+                    (selfhost/canon::list-from-vec
+                      (
+                        (core/vec::push
+                          ((core/vec::push ((core/vec::push (quote [])) (quote fn)))
+                            (selfhost/canon::list-from-vec ((core/vec::push (quote [])) p))))
+                        out)))
+                  (selfhost/canon::error "(fn ...) parameters must be symbols"))))))))))
+
+(def selfhost/canon::canon-if
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 4)
+      (let ((c (selfhost/canon::canon-code ((core/vec::get items) 1))))
+        (if (selfhost/canon::is-error c)
+          c
+          (let ((t (selfhost/canon::canon-code ((core/vec::get items) 2))))
+            (if (selfhost/canon::is-error t)
+              t
+              (let ((e (selfhost/canon::canon-code ((core/vec::get items) 3))))
+                (if (selfhost/canon::is-error e)
+                  e
+                  (selfhost/canon::list-from-vec
+                    ((core/vec::push ((core/vec::push ((core/vec::push ((core/vec::push (quote [])) (quote if))) c)) t))
+                      e))))))))
+      (selfhost/canon::error "(if cond then else) expects exactly 3 arguments"))))
+
+(def selfhost/canon::canon-begin
+  (fn (items)
+    (if ((core/int::lt? (core/vec::len items)) 2)
+      (selfhost/canon::error "(begin ...) expects at least 1 argument")
+      (let
+        (
+          (out
+            (
+              (((selfhost/canon::vec-fold-err items) 0)
+                (fn (acc)
+                  (fn (x)
+                    (if ((core/int::eq? (core/vec::len acc)) 0)
+                      ((core/vec::push acc) (quote begin))
+                      (let ((cx (selfhost/canon::canon-code x)))
+                        (if (selfhost/canon::is-error cx) cx ((core/vec::push acc) cx)))))))
+              (quote []))))
+        (if (selfhost/canon::is-error out) out (selfhost/canon::list-from-vec out))))))
+
+(def selfhost/canon::canon-let
+  (fn (items)
+    (if ((core/int::lt? (core/vec::len items)) 3)
+      (selfhost/canon::error "(let ((x e) ...) body...) expects bindings and body")
+      (let ((bindings ((core/vec::get items) 1)))
+        (let ((bs (core/pair::as-proper-list bindings)))
+          (if (core/list::is-nil? bs)
+            (selfhost/canon::error "(let ...) bindings must be a list")
+            (let
+              (
+                (canon_bindings
+                  (
+                    (((selfhost/canon::vec-fold-err bs) 0)
+                      (fn (acc)
+                        (fn (b)
+                          (let ((pair (core/pair::as-proper-list b)))
+                            (if (core/list::is-nil? pair)
+                              (selfhost/canon::error "(let ...) binding must be a list (name expr)")
+                              (if ((core/int::eq? (core/vec::len pair)) 2)
+                                (let ((name ((core/vec::get pair) 0)))
+                                  (if ((core/sym::eq? (core/data::tag name)) (quote :sym))
+                                    (let
+                                      ((rhs (selfhost/canon::canon-code ((core/vec::get pair) 1))))
+                                      (if (selfhost/canon::is-error rhs)
+                                        rhs
+                                        ((core/vec::push acc)
+                                          (selfhost/canon::list-from-vec
+                                            ((core/vec::push ((core/vec::push (quote [])) name)) rhs)))))
+                                    (selfhost/canon::error "(let ...) binding name must be symbol")))
+                                (selfhost/canon::error "(let ...) binding must have exactly 2 forms")))))))
+                    (quote []))))
+              (if (selfhost/canon::is-error canon_bindings)
+                canon_bindings
+                (let
+                  (
+                    (body_terms
+                      ((((selfhost/canon::vec-fold items) 2) (fn (acc) (fn (x) ((core/vec::push acc) x))))
+                        (quote []))))
+                  (let
+                    (
+                      (body
+                        (if ((core/int::eq? (core/vec::len body_terms)) 1)
+                          (selfhost/canon::canon-code ((core/vec::get body_terms) 0))
+                          (selfhost/canon::canon-begin
+                            ((((selfhost/canon::vec-fold body_terms) 0) (fn (acc) (fn (x) ((core/vec::push acc) x))))
+                              ((core/vec::push (quote [])) (quote begin)))))))
+                    (if (selfhost/canon::is-error body)
+                      body
+                      (selfhost/canon::list-from-vec
+                        (
+                          (core/vec::push
+                            ((core/vec::push ((core/vec::push (quote [])) (quote let)))
+                              (selfhost/canon::list-from-vec canon_bindings)))
+                          body)))))))))))))
+
+(def selfhost/canon::canon-prim
+  (fn (items)
+    (if ((core/int::lt? (core/vec::len items)) 2)
+      (selfhost/canon::error "(prim op ...) expects op")
+      (let ((op ((core/vec::get items) 1)))
+        (if ((core/sym::eq? (core/data::tag op)) (quote :sym))
+          (selfhost/canon::list-from-vec
+            (
+              (((selfhost/canon::vec-fold-err items) 2)
+                (fn (acc)
+                  (fn (x)
+                    (let ((cx (selfhost/canon::canon-code x)))
+                      (if (selfhost/canon::is-error cx) cx ((core/vec::push acc) cx))))))
+              ((core/vec::push ((core/vec::push (quote [])) (quote prim))) op)))
+          (selfhost/canon::error "(prim ...) op must be a symbol"))))))
+
+(def selfhost/canon::canon-seal
+  (fn (items)
+    (let ((n (core/vec::len items)))
+      (if ((core/int::eq? n) 1)
+        (selfhost/canon::list-from-vec ((core/vec::push (quote [])) (quote seal)))
+        (if ((core/int::eq? n) 3)
+          (let ((v (selfhost/canon::canon-code ((core/vec::get items) 1))))
+            (if (selfhost/canon::is-error v)
+              v
+              (let ((tok (selfhost/canon::canon-code ((core/vec::get items) 2))))
+                (if (selfhost/canon::is-error tok)
+                  tok
+                  (selfhost/canon::list-from-vec
+                    ((core/vec::push ((core/vec::push ((core/vec::push (quote [])) (quote seal))) v))
+                      tok))))))
+          (selfhost/canon::error "(seal) or (seal v tok)"))))))
+
+(def selfhost/canon::canon-unseal
+  (fn (items)
+    (if ((core/int::eq? (core/vec::len items)) 3)
+      (let ((w (selfhost/canon::canon-code ((core/vec::get items) 1))))
+        (if (selfhost/canon::is-error w)
+          w
+          (let ((tok (selfhost/canon::canon-code ((core/vec::get items) 2))))
+            (if (selfhost/canon::is-error tok)
+              tok
+              (selfhost/canon::list-from-vec
+                ((core/vec::push ((core/vec::push ((core/vec::push (quote [])) (quote unseal))) w))
+                  tok))))))
+      (selfhost/canon::error "(unseal w tok) expects exactly 2 arguments"))))
+
+(def selfhost/canon::canon-apply
+  (fn (items)
+    (let
+      (
+        (canon_items
+          (
+            (((selfhost/canon::vec-fold-err items) 0)
+              (fn (acc)
+                (fn (x)
+                  (let ((cx (selfhost/canon::canon-code x)))
+                    (if (selfhost/canon::is-error cx) cx ((core/vec::push acc) cx))))))
+            (quote []))))
+      (if (selfhost/canon::is-error canon_items)
+        canon_items
+        (let ((n (core/vec::len canon_items)))
+          (if ((selfhost/canon::int::le? n) 2)
+            (selfhost/canon::list-from-vec canon_items)
+            (let
+              (
+                (acc
+                  (selfhost/canon::list-from-vec
+                    ((core/vec::push ((core/vec::push (quote [])) ((core/vec::get canon_items) 0)))
+                      ((core/vec::get canon_items) 1)))))
+              (((selfhost/canon::canon-apply2 canon_items) 2) acc))))))))
+
+(def selfhost/canon::int::le?
+  (fn (a) (fn (b) (if ((core/int::lt? a) b) true ((core/int::eq? a) b)))))
+
+(def selfhost/canon::canon-apply2
+  (fn (canon_items)
+    (fn (i)
+      (fn (acc)
+        (if (selfhost/canon::is-error acc)
+          acc
+          (if ((core/int::lt? i) (core/vec::len canon_items))
+            (((selfhost/canon::canon-apply2 canon_items) ((core/int::add i) 1))
+              (selfhost/canon::list-from-vec
+                ((core/vec::push ((core/vec::push (quote [])) acc)) ((core/vec::get canon_items) i))))
+            acc))))))
+
+(def selfhost/canon::canonicalize-form (fn (form) (selfhost/canon::canon-code form)))
+
+(def selfhost/canon::canonicalize-module
+  (fn (forms)
+    (
+      (((selfhost/canon::vec-fold-err forms) 0)
+        (fn (acc) (fn (f) ((core/vec::push acc) (selfhost/canon::canonicalize-form f)))))
+      (quote []))))
