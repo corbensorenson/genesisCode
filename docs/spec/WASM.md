@@ -4,6 +4,7 @@ GenesisCode keeps the kernel pure. The WASM target builds the **parser + canonic
 so CoreForm can be formatted, hashed, and evaluated in browser or other WASM hosts without effects.
 
 Effectful programs are supported via a host bridge step/resume protocol; see `docs/spec/WASM_HOST_BRIDGE.md`.
+For wasm-first CLI tooling (WASI), see `docs/spec/WASI.md`.
 
 ## Crate
 

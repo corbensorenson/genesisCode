@@ -54,9 +54,10 @@ Focus docs:
 
 Goal: “Rust bootstrap on top of WASM” in practice: run the toolchain on WASI everywhere.
 
-- [ ] Add a WASI CLI target that runs `fmt/hash/eval` on top of the WASM kernel.
-  - Preferred: compile a small WASI wrapper that hosts the kernel and prints results exactly like native `genesis`.
-- [ ] Add `wasmtime` CI smoke tests to prove “tooling runs on wasm”.
+- [x] Add a WASI CLI target that runs `fmt/hash/eval` on top of the WASM kernel.
+  - Implemented as `crates/gc_wasi_cli` (`genesis_wasi.wasm`) with `fmt/eval/vcs hash`.
+  - Doc: `docs/spec/WASI.md`
+- [x] Add `wasmtime` CI smoke tests to prove “tooling runs on wasm”.
 - [ ] Specify/implement WASI capability bridging policy:
   - filesystem sandboxing (`docs/spec/FS_SANDBOX.md`)
   - deterministic time via effect logs (no ambient time in kernel)

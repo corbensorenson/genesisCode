@@ -809,6 +809,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "gc_wasi_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "gc_coreform",
+ "gc_kernel",
+ "gc_prelude",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "gc_wasm"
 version = "0.1.0"
 dependencies = [

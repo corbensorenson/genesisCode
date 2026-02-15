@@ -48,3 +48,12 @@ jobs:
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
+
+      - name: Install wasmtime
+        uses: bytecodealliance/wasmtime-action@v1
+
+      - name: WASI Build + Smoke (genesis_wasi.wasm)
+        run: |
+          rustup target add wasm32-wasip1
+          cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
+          bash scripts/wasi_smoke.sh target/wasm32-wasip1/release/genesis_wasi.wasm
