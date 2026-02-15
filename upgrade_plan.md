@@ -116,6 +116,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Self-hosted CoreForm tooling v0 (still uses Rust parser bootstrap API):
   - `selfhost/tool_coreform_v0.gc` implements `selfhost/tool::{fmt-module,hash-module-src}`
   - Equivalence against Rust bootstrap API: `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
+- [x] Self-hosted CoreForm parser v1 (frontend) matching the Rust parser for terms/modules:
+  - `selfhost/parse.gc`
+  - Equivalence tests: `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)

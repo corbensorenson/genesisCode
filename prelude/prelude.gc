@@ -169,6 +169,8 @@
 
 (def core/sym::to-str (fn (s) (prim sym/to-str s)))
 
+(def core/sym::from-str (fn (s) (prim sym/from-str s)))
+
 (def core/str::concat (fn (a) (fn (b) (prim str/concat a b))))
 
 (def core/str::len (fn (s) (prim str/len s)))
@@ -194,6 +196,8 @@
 (def core/bytes::from-hex (fn (s) (prim bytes/from-hex s)))
 
 (def core/crypto::blake3 (fn (b) (prim crypto/blake3 b)))
+
+(def core/utf8::encode-codepoint (fn (cp) (prim utf8/encode-codepoint cp)))
 
 (def core/coreform::escape-str (fn (s) (prim coreform/escape-str s)))
 

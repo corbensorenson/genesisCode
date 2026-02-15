@@ -5,6 +5,7 @@ use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
 use gc_coreform::{Term, TermOrdKey};
+use num_traits::ToPrimitive;
 
 /// Toolchain default evaluation step limit.
 ///
@@ -868,7 +869,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "vec/get expects int index");
             };
-            let idx: usize = match i.to_usize() {
+            let idx: usize = match ToUsize::to_usize(i) {
                 Some(x) => x,
                 None => return type_err(ctx, "vec/get index out of range"),
             };
@@ -899,7 +900,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "vec/set expects int index");
             };
-            let idx: usize = match i.to_usize() {
+            let idx: usize = match ToUsize::to_usize(i) {
                 Some(x) => x,
                 None => return type_err(ctx, "vec/set index out of range"),
             };
@@ -973,6 +974,40 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             ctx.mem_observe_string_len(s.len())?;
             Ok(Value::Data(Term::Str(s.clone())))
         }
+        "sym/from-str" => {
+            if args.len() != 1 {
+                return type_err(ctx, "sym/from-str expects 1 arg");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "sym/from-str expects string");
+            };
+            if s.is_empty() {
+                return type_err(ctx, "sym/from-str expects non-empty string");
+            }
+            // Match lexer delimiter constraints: symbols may not contain whitespace or delimiters.
+            let bs = s.as_bytes();
+            for &b in bs {
+                if matches!(
+                    b,
+                    b' ' | b'\t'
+                        | b'\n'
+                        | b'\r'
+                        | b'('
+                        | b')'
+                        | b'['
+                        | b']'
+                        | b'{'
+                        | b'}'
+                        | b'\''
+                        | b'"'
+                        | b';'
+                ) {
+                    return type_err(ctx, "sym/from-str invalid symbol text");
+                }
+            }
+            ctx.mem_observe_string_len(s.len())?;
+            Ok(Value::Data(Term::Symbol(s.clone())))
+        }
         "str/concat" => {
             if args.len() != 2 {
                 return type_err(ctx, "str/concat expects 2 args");
@@ -1017,7 +1052,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Int(n)) = args[1].as_data() else {
                 return type_err(ctx, "str/repeat expects int count");
             };
-            let n: usize = match n.to_usize() {
+            let n: usize = match ToUsize::to_usize(n) {
                 Some(x) => x,
                 None => return type_err(ctx, "str/repeat count out of range"),
             };
@@ -1101,7 +1136,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "bytes/get expects int index");
             };
-            let idx: usize = match i.to_usize() {
+            let idx: usize = match ToUsize::to_usize(i) {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/get index out of range"),
             };
@@ -1123,11 +1158,11 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Int(len_i)) = args[2].as_data() else {
                 return type_err(ctx, "bytes/slice expects int len");
             };
-            let start: usize = match start_i.to_usize() {
+            let start: usize = match ToUsize::to_usize(start_i) {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/slice start out of range"),
             };
-            let len: usize = match len_i.to_usize() {
+            let len: usize = match ToUsize::to_usize(len_i) {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/slice len out of range"),
             };
@@ -1213,6 +1248,27 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             }
             ctx.mem_observe_bytes_len(out.len())?;
             Ok(Value::Data(Term::Bytes(out)))
+        }
+        "utf8/encode-codepoint" => {
+            if args.len() != 1 {
+                return type_err(ctx, "utf8/encode-codepoint expects 1 arg");
+            }
+            let Some(Term::Int(i)) = args[0].as_data() else {
+                return type_err(ctx, "utf8/encode-codepoint expects int");
+            };
+            let Some(cp) = i.to_u32() else {
+                return type_err(ctx, "utf8/encode-codepoint codepoint out of range");
+            };
+            if cp > 0x10FFFF || (0xD800..=0xDFFF).contains(&cp) {
+                return type_err(ctx, "utf8/encode-codepoint invalid unicode codepoint");
+            }
+            let Some(ch) = char::from_u32(cp) else {
+                return type_err(ctx, "utf8/encode-codepoint invalid unicode codepoint");
+            };
+            let mut buf = [0u8; 4];
+            let s = ch.encode_utf8(&mut buf);
+            ctx.mem_observe_bytes_len(s.len())?;
+            Ok(Value::Data(Term::Bytes(s.as_bytes().to_vec())))
         }
         "crypto/blake3" => {
             if args.len() != 1 {

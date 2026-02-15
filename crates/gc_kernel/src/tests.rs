@@ -279,6 +279,43 @@ fn bytes_from_hex_invalid_is_sealed_type_error() {
 }
 
 #[test]
+fn utf8_encode_codepoint_produces_expected_bytes_and_rejects_invalid() {
+    let forms = parse_module(
+        r#"
+        {
+          :a (prim utf8/encode-codepoint 36)        ; '$'
+          :b (prim utf8/encode-codepoint 128)       ; U+0080 -> C2 80
+          :c (prim utf8/encode-codepoint 128512)    ; U+1F600 -> F0 9F 98 80
+          :bad (prim utf8/encode-codepoint 1114112) ; 0x110000 (out of range)
+        }
+        "#,
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+
+    let m = match v {
+        Value::Map(m) => m,
+        _ => panic!("expected map, got {}", v.debug_repr()),
+    };
+    let a = m.get(&gc_coreform::TermOrdKey(Term::symbol(":a"))).unwrap();
+    assert!(matches!(a, Value::Data(Term::Bytes(bs)) if bs == b"$"));
+    let b = m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))).unwrap();
+    assert!(matches!(b, Value::Data(Term::Bytes(bs)) if bs == &[0xC2, 0x80]));
+    let c = m.get(&gc_coreform::TermOrdKey(Term::symbol(":c"))).unwrap();
+    assert!(matches!(c, Value::Data(Term::Bytes(bs)) if bs == &[0xF0, 0x9F, 0x98, 0x80]));
+    let bad = m
+        .get(&gc_coreform::TermOrdKey(Term::symbol(":bad")))
+        .unwrap();
+    match bad {
+        Value::Sealed { token, .. } => assert_eq!(*token, p.error),
+        _ => panic!("expected sealed error, got {}", bad.debug_repr()),
+    }
+}
+
+#[test]
 fn term_introspection_and_escape_prims_work() {
     let forms = parse_module(
         r#"
