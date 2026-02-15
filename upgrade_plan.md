@@ -68,9 +68,7 @@ Key docs to treat as authoritative:
 
 ## P3: Self-Host Boundary And Cutover
 
-- [ ] Write `docs/spec/SELF_HOST_BOUNDARY.md`:
-  - minimal subset to self-host parsing/printing/canonicalization and a compiler pipeline
-  - bootstrapping stages and how translation validation reduces risk
+- [x] Write `docs/spec/SELF_HOST_BOUNDARY.md` (bootstrapping stages + translation validation plan).
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
   - CoreForm printer/canonicalizer equivalence tests against Rust
   - module loader and package resolver on GenesisGraph objects
