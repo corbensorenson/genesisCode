@@ -20,6 +20,15 @@ allow = [
 
 [store]
 dir = "./.genesis/store"
+
+[op."core/vcs::merge3"]
+base_dir = "."
+
+[op."core/vcs::resolve-conflict"]
+base_dir = "."
+
+[op."core/vcs::apply"]
+base_dir = "."
 "#,
     )
     .unwrap();
@@ -128,6 +137,7 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
     );
 
     // Clean merge should pick left's op1+op2 and right's op3.
+    let out_file = dir.join("merged-out.gc");
     let out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
         .arg("--json")
@@ -136,6 +146,7 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         .args([
             "merge3", "--base", &base, "--left", &left, "--right", &right,
         ])
+        .args(["--out", "merged-out.gc"])
         .assert()
         .success()
         .get_output()
@@ -185,6 +196,18 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         Some(&Term::Str(hd.clone()))
     );
 
+    // `--out` should contain the merged snapshot term (not the result map).
+    assert!(out_file.exists());
+    let out_s = fs::read_to_string(&out_file).unwrap();
+    let out_t = parse_term(&out_s).unwrap();
+    let Term::Map(out_m) = out_t else {
+        panic!("out must be a map");
+    };
+    assert_eq!(
+        out_m.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol(":contract"))
+    );
+
     // Divergent change on same op: right changes op1 too -> conflict.
     let right2 = store_put(
         dir,
@@ -201,6 +224,7 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         "right2.gc",
     );
 
+    let conf_out = dir.join("conflict-out.gc");
     let out2 = cargo_bin_cmd!("genesis")
         .current_dir(dir)
         .arg("--json")
@@ -209,6 +233,7 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         .args([
             "merge3", "--base", &base, "--left", &left, "--right", &right2,
         ])
+        .args(["--out", "conflict-out.gc"])
         .assert()
         .code(3)
         .get_output()
@@ -236,6 +261,18 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
     };
     assert_eq!(
         cm.get(&TermOrdKey(Term::symbol(":type"))),
+        Some(&Term::symbol(":vcs/conflict"))
+    );
+
+    // `--out` should contain the conflict artifact term.
+    assert!(conf_out.exists());
+    let conf_s = fs::read_to_string(&conf_out).unwrap();
+    let conf_out_t = parse_term(&conf_s).unwrap();
+    let Term::Map(conf_out_m) = conf_out_t else {
+        panic!("conflict out must be map");
+    };
+    assert_eq!(
+        conf_out_m.get(&TermOrdKey(Term::symbol(":type"))),
         Some(&Term::symbol(":vcs/conflict"))
     );
     let Term::Vector(xs) = cm

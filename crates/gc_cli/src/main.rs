@@ -729,6 +729,10 @@ enum VcsCmd {
         /// Right snapshot hash (hex).
         #[arg(long)]
         right: String,
+
+        /// Optional output path for the merged snapshot or conflict term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 
     /// Resolve a `:vcs/conflict` artifact (currently supports `:kind :contract`) into a merged snapshot and patch.
@@ -2138,8 +2142,13 @@ fn cmd_vcs(
             "genesis/vcs-log-v0.1",
             "vcs-log",
         ),
-        VcsCmd::Merge3 { base, left, right } => (
-            mk_vcs_merge3_program(base, left, right),
+        VcsCmd::Merge3 {
+            base,
+            left,
+            right,
+            out,
+        } => (
+            mk_vcs_merge3_program(base, left, right, out.as_deref()),
             "genesis/vcs-merge3-v0.1",
             "vcs-merge3",
         ),
@@ -3409,29 +3418,31 @@ fn mk_vcs_apply_program(base: &str, patch: &str, out: Option<&Path>, store: bool
     ]
 }
 
-fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
+fn mk_vcs_merge3_program(base: &str, left: &str, right: &str, out: Option<&Path>) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/vcs::merge3"),
     ]);
-    let payload = Term::Map(
-        [
-            (
-                gc_coreform::TermOrdKey(Term::symbol(":base")),
-                Term::Str(base.to_string()),
-            ),
-            (
-                gc_coreform::TermOrdKey(Term::symbol(":left")),
-                Term::Str(left.to_string()),
-            ),
-            (
-                gc_coreform::TermOrdKey(Term::symbol(":right")),
-                Term::Str(right.to_string()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
     );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":left")),
+        Term::Str(left.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":right")),
+        Term::Str(right.to_string()),
+    );
+    if let Some(out) = out {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    let payload = Term::Map(m);
     let k = Term::list(vec![
         Term::symbol("fn"),
         Term::list(vec![Term::symbol("r")]),

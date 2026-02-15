@@ -2703,6 +2703,18 @@ fn call_capability(
                 EffectsError::Log("missing artifact store for core/vcs::merge3".to_string())
             })?;
 
+            let out_s = match payload_vcs_out(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
             let base_h = match payload_vcs_hash(payload, ":base") {
                 Ok(h) => h,
                 Err(e) => {
@@ -2765,34 +2777,52 @@ fn call_capability(
 
             // Proto must be stable across all three snapshots for contract merge.
             if base.proto != left.proto || base.proto != right.proto {
-                let conflict_h = store.put_bytes(
-                    print_term(&mk_conflict_artifact(
-                        ":contract-snapshot-merge3",
-                        &base_h,
-                        &left_h,
-                        &right_h,
-                        vec![Term::Map(
-                            [
-                                (TermOrdKey(Term::symbol(":op")), Term::symbol(":proto")),
-                                (
-                                    TermOrdKey(Term::symbol(":base")),
-                                    base.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":left")),
-                                    left.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":right")),
-                                    right.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                ),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        )],
-                    ))
-                    .as_bytes(),
-                )?;
+                let conflict_term = mk_conflict_artifact(
+                    ":contract-snapshot-merge3",
+                    &base_h,
+                    &left_h,
+                    &right_h,
+                    vec![Term::Map(
+                        [
+                            (TermOrdKey(Term::symbol(":op")), Term::symbol(":proto")),
+                            (
+                                TermOrdKey(Term::symbol(":base")),
+                                base.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":left")),
+                                left.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":right")),
+                                right.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    )],
+                );
+                let conflict_bytes = print_term(&conflict_term);
+                let conflict_h = store.put_bytes(conflict_bytes.as_bytes())?;
+
+                if let Some(out_s) = &out_s {
+                    let base_dir = effective_base_dir(pol)?;
+                    let out_path = sandbox_path_write(
+                        &base_dir,
+                        out_s,
+                        pol.map(|p| p.create_dirs).unwrap_or(false),
+                    )?;
+                    if let Err(e) = atomic_write_text(&out_path, (conflict_bytes + "\n").as_bytes())
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
                 m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
@@ -2862,7 +2892,27 @@ fn call_capability(
                     &right_h,
                     conflicts,
                 );
-                let conflict_h = store.put_bytes(print_term(&conflict_term).as_bytes())?;
+                let conflict_bytes = print_term(&conflict_term);
+                let conflict_h = store.put_bytes(conflict_bytes.as_bytes())?;
+
+                if let Some(out_s) = &out_s {
+                    let base_dir = effective_base_dir(pol)?;
+                    let out_path = sandbox_path_write(
+                        &base_dir,
+                        out_s,
+                        pol.map(|p| p.create_dirs).unwrap_or(false),
+                    )?;
+                    if let Err(e) = atomic_write_text(&out_path, (conflict_bytes + "\n").as_bytes())
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
                 m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
@@ -2874,7 +2924,26 @@ fn call_capability(
                 overrides: merged,
             }
             .to_term();
-            let merged_h = store.put_bytes(print_term(&merged_snapshot).as_bytes())?;
+            let merged_bytes = print_term(&merged_snapshot);
+            let merged_h = store.put_bytes(merged_bytes.as_bytes())?;
+
+            if let Some(out_s) = &out_s {
+                let base_dir = effective_base_dir(pol)?;
+                let out_path = sandbox_path_write(
+                    &base_dir,
+                    out_s,
+                    pol.map(|p| p.create_dirs).unwrap_or(false),
+                )?;
+                if let Err(e) = atomic_write_text(&out_path, (merged_bytes + "\n").as_bytes()) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            }
+
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
