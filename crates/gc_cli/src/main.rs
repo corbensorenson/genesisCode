@@ -275,6 +275,20 @@ enum Cmd {
         #[command(subcommand)]
         cmd: GcCmd,
     },
+
+    /// GenesisGraph commit DAG operations.
+    Vcs {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: VcsCmd,
+    },
 }
 
 #[derive(Subcommand)]
@@ -603,6 +617,19 @@ enum GcCmd {
     },
 }
 
+#[derive(Subcommand)]
+enum VcsCmd {
+    /// Walk the commit DAG starting from a commit hash or ref name and print the visited commits.
+    Log {
+        /// Commit hash (hex) or ref name (refs/...).
+        root: String,
+
+        /// Maximum number of commits to emit before truncating.
+        #[arg(long, default_value_t = 1000)]
+        max: u64,
+    },
+}
+
 fn main() -> std::process::ExitCode {
     let cli = Cli::parse();
     match dispatch(&cli) {
@@ -718,6 +745,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps, log.as_deref(), cmd),
+        Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps, log.as_deref(), cmd),
     }
 }
 
@@ -1700,6 +1728,92 @@ fn cmd_gc(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &GcCmd) -> Result<Cmd
     })
 }
 
+fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        VcsCmd::Log { root, max } => (
+            mk_vcs_log_program(root, *max),
+            "genesis/vcs-log-v0.1",
+            "vcs-log",
+        ),
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = log
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_log_path(log_op));
+    std::fs::write(&log_path, r.log.to_string_canonical() + "\n")
+        .with_context(|| format!("write {}", log_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENIED;
+        }
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        format!("{value}\n")
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "vcs/error",
+                message: "vcs operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn mk_store_put_program(artifact: &Term) -> Vec<Term> {
     // (def prog (core/effect::perform 'core/store::put {:artifact (quote <artifact>)} (fn (r) (core/effect::pure r)))) prog
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::put")]);
@@ -2623,6 +2737,34 @@ fn mk_gc_purge_program(ttl_days: u64, quarantine_dir: Option<&Path>) -> Vec<Term
         );
     }
     let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::log")]);
+    let payload = Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":root")),
+                Term::Str(root.to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":max")),
+                Term::Int((max as i64).into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
     let k = Term::list(vec![
         Term::symbol("fn"),
         Term::list(vec![Term::symbol("r")]),
