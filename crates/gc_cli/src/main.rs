@@ -530,6 +530,16 @@ enum PkgCmd {
         /// Input bundle path (relative to capability base_dir).
         #[arg(long)]
         input: PathBuf,
+
+        /// Update local refs after import.
+        ///
+        /// Format: `<refname>=<commit-hash>` (hash may be `nil` to delete).
+        #[arg(long = "set-ref")]
+        set_refs: Vec<String>,
+
+        /// Policy artifact hash (hex) used by the local refs/set gate (required when using --set-ref).
+        #[arg(long)]
+        policy: Option<String>,
     },
 
     /// Publish a commit to a remote registry and advance a remote ref (policy-gated).
@@ -1497,11 +1507,18 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             "genesis/pkg-export-v0.1",
             "pkg-export",
         ),
-        PkgCmd::Import { input } => (
-            mk_gpk_import_program(input),
-            "genesis/pkg-import-v0.1",
-            "pkg-import",
-        ),
+        PkgCmd::Import {
+            input,
+            set_refs,
+            policy,
+        } => {
+            let parsed = parse_local_set_refs(set_refs, policy.as_deref())?;
+            (
+                mk_gpk_import_program(input, &parsed),
+                "genesis/pkg-import-v0.1",
+                "pkg-import",
+            )
+        }
         PkgCmd::Publish {
             remote,
             refname,
@@ -2549,6 +2566,112 @@ fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
     })
 }
 
+fn is_hex64(s: &str) -> bool {
+    if s.len() != 64 {
+        return false;
+    }
+    s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
+}
+
+fn parse_local_set_refs(
+    specs: &[String],
+    policy: Option<&str>,
+) -> Result<Vec<SetRefSpec>, CliError> {
+    if specs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let Some(pol) = policy else {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/import",
+            "--set-ref requires --policy <policy-hash>".to_string(),
+        ));
+    };
+    if !is_hex64(pol) {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/import",
+            "--policy must be 64-hex".to_string(),
+        ));
+    }
+
+    let mut out = Vec::new();
+    for s in specs {
+        let (name, hash) = s.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref must be <refname>=<commit-hash|nil>".to_string(),
+            )
+        })?;
+        let name = name.trim();
+        let hash = hash.trim();
+        if name.is_empty() || hash.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref fields must be non-empty".to_string(),
+            ));
+        }
+        if hash != "nil" && !is_hex64(hash) {
+            return Err(cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref hash must be 64-hex or `nil`".to_string(),
+            ));
+        }
+        out.push(SetRefSpec {
+            name: name.to_string(),
+            hash: hash.to_string(),
+            policy: pol.to_string(),
+            expected_old: None,
+        });
+    }
+    Ok(out)
+}
+
+fn mk_local_set_refs_chain(set_refs: &[SetRefSpec], imp: Term) -> Term {
+    let mut body = Term::list(vec![Term::symbol("core/effect::pure"), imp.clone()]);
+    for sr in set_refs.iter().rev() {
+        let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/refs::set")]);
+        let mut m = std::collections::BTreeMap::new();
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":name")),
+            Term::Str(sr.name.clone()),
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":hash")),
+            if sr.hash == "nil" {
+                Term::Nil
+            } else {
+                Term::Str(sr.hash.clone())
+            },
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":policy")),
+            Term::Str(sr.policy.clone()),
+        );
+        if let Some(exp) = &sr.expected_old {
+            m.insert(
+                gc_coreform::TermOrdKey(Term::symbol(":expected-old")),
+                if exp == "nil" {
+                    Term::Nil
+                } else {
+                    Term::Str(exp.clone())
+                },
+            );
+        }
+        let payload = Term::Map(m);
+        let k = Term::list(vec![
+            Term::symbol("fn"),
+            Term::list(vec![Term::symbol("_")]),
+            body,
+        ]);
+        body = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    }
+    body
+}
+
 fn mk_pkg_init_program(
     workspace: &str,
     lock: &Path,
@@ -2870,7 +2993,7 @@ fn mk_gpk_export_program(
     ]
 }
 
-fn mk_gpk_import_program(input: &Path) -> Vec<Term> {
+fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/gpk::import"),
@@ -2883,10 +3006,11 @@ fn mk_gpk_import_program(input: &Path) -> Vec<Term> {
         .into_iter()
         .collect(),
     );
+    let k_body = mk_local_set_refs_chain(set_refs, Term::symbol("imp"));
     let k = Term::list(vec![
         Term::symbol("fn"),
-        Term::list(vec![Term::symbol("r")]),
-        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+        Term::list(vec![Term::symbol("imp")]),
+        k_body,
     ]);
     let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
     vec![
