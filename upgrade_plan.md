@@ -121,7 +121,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
   - [x] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
   - [x] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
-- [ ] Store capability (`core/store::*`) as runner effects:
+- [x] Store capability (`core/store::*`) as runner effects:
   - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
   - [x] Optional remote-backed store adapter using the minimal registry protocol.
 - [x] Refs capability (`core/refs::*`) as runner effects:
