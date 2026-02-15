@@ -1999,6 +1999,9 @@ fn call_capability(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gpk::export".to_string())
             })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/gpk::export".to_string())
+            });
             let root_hex = match payload_gpk_root(payload) {
                 Ok(s) => s,
                 Err(e) => {
@@ -2025,7 +2028,31 @@ fn call_capability(
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
             let out_path = sandbox_path_write(&base_dir, &out_path_s, create_dirs)?;
 
-            // Root must be a snapshot.
+            let mode = match payload_gpk_mode(payload) {
+                Ok(Some(m)) => m,
+                Ok(None) => ":shallow".to_string(),
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let depth = payload_gpk_depth(payload).unwrap_or(0);
+            let embed_refnames = match payload_gpk_refs(payload) {
+                Ok(xs) => xs,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
             let root_term = match store_get_term(store, &root_hex) {
                 Ok(t) => t,
                 Err(_) => {
@@ -2037,23 +2064,41 @@ fn call_capability(
                     ));
                 }
             };
-            let snap = match gc_vcs::Snapshot::from_term(&root_term) {
-                Ok(s) => s,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/gpk/bad-root",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
 
-            let mut hashes: Vec<String> = Vec::new();
-            hashes.push(root_hex.clone());
-            hashes.extend(snap.shallow_refs());
-            hashes.sort();
-            hashes.dedup();
+            let hashes: Vec<String> = if mode == ":shallow" {
+                // Root must be a snapshot.
+                let snap = match gc_vcs::Snapshot::from_term(&root_term) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/gpk/bad-root",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                let mut hs: Vec<String> = Vec::new();
+                hs.push(root_hex.clone());
+                hs.extend(snap.shallow_refs());
+                hs.sort();
+                hs.dedup();
+                hs
+            } else if mode == ":full" {
+                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+                match sync_closure_local(store, &root_hex, depth, &mut all, error_tok, op) {
+                    Ok(()) => {}
+                    Err(v) => return Ok(v),
+                }
+                all.into_iter().collect()
+            } else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/gpk/bad-payload",
+                    format!("unsupported :mode {mode}"),
+                    Some(op),
+                ));
+            };
 
             let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
             for h in &hashes {
@@ -2094,6 +2139,46 @@ fn call_capability(
                 }
             };
 
+            let mut refs_section: Vec<(String, String)> = Vec::new();
+            let bundle_version: u32 = if embed_refnames.is_empty() { 1 } else { 2 };
+            if bundle_version == 2 {
+                let refs = match refs {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/gpk/missing-refs-db",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                for name in &embed_refnames {
+                    let cur = match refs.get(name) {
+                        Ok(h) => h,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/gpk/refs-io-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let Some(h) = cur else {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/gpk/ref-not-found",
+                            format!("ref not found: {name}"),
+                            Some(op),
+                        ));
+                    };
+                    refs_section.push((name.clone(), h));
+                }
+                refs_section.sort_by(|a, b| a.0.cmp(&b.0));
+                refs_section.dedup_by(|a, b| a.0 == b.0);
+            }
+
             let mut file = match std::fs::File::create(&out_path) {
                 Ok(f) => f,
                 Err(e) => {
@@ -2107,7 +2192,12 @@ fn call_capability(
             };
             let bundle_h = {
                 let mut hw = HashingWriter::new(&mut file);
-                if let Err(e) = gc_vcs::write_bundle(&mut hw, root_b, &entries) {
+                let refs_opt = if bundle_version == 2 {
+                    Some(refs_section.as_slice())
+                } else {
+                    None
+                };
+                if let Err(e) = gc_vcs::write_bundle(&mut hw, bundle_version, root_b, &entries, refs_opt) {
                     return Ok(mk_error(
                         error_tok,
                         "core/gpk/write-error",
@@ -2135,6 +2225,10 @@ fn call_capability(
                 Term::Str(bundle_h),
             );
             m.insert(
+                TermOrdKey(Term::Symbol(":bundle-v".to_string())),
+                Term::Int((bundle_version as i64).into()),
+            );
+            m.insert(
                 TermOrdKey(Term::Symbol(":root".to_string())),
                 Term::Str(root_hex),
             );
@@ -2142,6 +2236,22 @@ fn call_capability(
                 TermOrdKey(Term::Symbol(":count".to_string())),
                 Term::Int((hashes.len() as i64).into()),
             );
+            if bundle_version == 2 {
+                let out_refs: Vec<Term> = refs_section
+                    .iter()
+                    .map(|(n, h)| {
+                        Term::Map(
+                            [
+                                (TermOrdKey(Term::symbol(":name")), Term::Str(n.clone())),
+                                (TermOrdKey(Term::symbol(":hash")), Term::Str(h.clone())),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )
+                    })
+                    .collect();
+                m.insert(TermOrdKey(Term::symbol(":refs")), Term::Vector(out_refs));
+            }
             Ok(Value::Data(Term::Map(m)))
         }
         "core/gpk::import" => {
@@ -2218,9 +2328,30 @@ fn call_capability(
                 Term::Str(root_hex),
             );
             m.insert(
+                TermOrdKey(Term::Symbol(":bundle-v".to_string())),
+                Term::Int((bundle.version as i64).into()),
+            );
+            m.insert(
                 TermOrdKey(Term::Symbol(":count".to_string())),
                 Term::Int((bundle.entries.len() as i64).into()),
             );
+            if !bundle.refs.is_empty() {
+                let mut rs: Vec<Term> = Vec::new();
+                for rr in &bundle.refs {
+                    rs.push(Term::Map(
+                        [
+                            (TermOrdKey(Term::symbol(":name")), Term::Str(rr.name.clone())),
+                            (
+                                TermOrdKey(Term::symbol(":hash")),
+                                Term::Str(gc_vcs::bytes32_to_hex(&rr.hash)),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ));
+                }
+                m.insert(TermOrdKey(Term::symbol(":refs")), Term::Vector(rs));
+            }
             Ok(Value::Data(Term::Map(m)))
         }
         "core/refs::get" => {
@@ -2962,6 +3093,62 @@ fn payload_gpk_in(payload: &Term) -> Result<String, EffectsError> {
             print_term(v)
         ))),
     }
+}
+
+fn payload_gpk_mode(payload: &Term) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::symbol(":mode"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Symbol(s)) => Ok(Some(s.clone())),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(other) => Err(EffectsError::BadPayload(format!(
+            ":mode must be symbol/string or nil, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+fn payload_gpk_depth(payload: &Term) -> Option<u64> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":depth"))) {
+        Some(Term::Int(i)) => i.to_u64(),
+        _ => None,
+    }
+}
+
+fn payload_gpk_refs(payload: &Term) -> Result<Vec<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(":refs"))) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(EffectsError::BadPayload(format!(
+            ":refs must be vector, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        match x {
+            Term::Str(s) => out.push(s.clone()),
+            Term::Symbol(s) => out.push(s.clone()),
+            other => {
+                return Err(EffectsError::BadPayload(format!(
+                    ":refs entries must be strings/symbols, got {}",
+                    print_term(other)
+                )));
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn payload_data(payload: &Term) -> Result<Vec<u8>, EffectsError> {

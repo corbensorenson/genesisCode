@@ -475,12 +475,24 @@ enum PkgCmd {
 
     /// Export a shallow `.gpk` bundle from a snapshot hash.
     Export {
-        /// Snapshot hash (hex).
+        /// Root hash (hex). For shallow bundles this is a snapshot hash; for full bundles this is usually a commit hash.
         #[arg(long)]
         snapshot: String,
         /// Output bundle path (relative to capability base_dir).
         #[arg(long)]
         out: PathBuf,
+
+        /// Export a full-history bundle from the root hash (commit closure + snapshots + patches + evidence).
+        #[arg(long)]
+        full: bool,
+
+        /// Parent depth when the root is a commit hash (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Include named refs in the bundle (requires `.gpk` v2).
+        #[arg(long = "include-ref")]
+        include_refs: Vec<String>,
     },
 
     /// Import a `.gpk` bundle into the local store.
@@ -1229,8 +1241,14 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             "genesis/pkg-snapshot-v0.1",
             "pkg-snapshot",
         ),
-        PkgCmd::Export { snapshot, out } => (
-            mk_gpk_export_program(snapshot, out),
+        PkgCmd::Export {
+            snapshot,
+            out,
+            full,
+            depth,
+            include_refs,
+        } => (
+            mk_gpk_export_program(snapshot, out, *full, *depth, include_refs),
             "genesis/pkg-export-v0.1",
             "pkg-export",
         ),
@@ -2020,25 +2038,50 @@ fn mk_pkg_snapshot_program(pkg: &Path) -> Vec<Term> {
     ]
 }
 
-fn mk_gpk_export_program(snapshot: &str, out: &Path) -> Vec<Term> {
+fn mk_gpk_export_program(
+    root: &str,
+    out: &Path,
+    full: bool,
+    depth: u64,
+    include_refs: &[String],
+) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/gpk::export"),
     ]);
-    let payload = Term::Map(
-        [
-            (
-                gc_coreform::TermOrdKey(Term::symbol(":root")),
-                Term::Str(snapshot.to_string()),
-            ),
-            (
-                gc_coreform::TermOrdKey(Term::symbol(":out")),
-                Term::Str(out.display().to_string()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":root")),
+        Term::Str(root.to_string()),
     );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":out")),
+        Term::Str(out.display().to_string()),
+    );
+    if full {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":mode")),
+            Term::Str(":full".to_string()),
+        );
+    } else {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":mode")),
+            Term::Str(":shallow".to_string()),
+        );
+    }
+    if depth > 0 {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":depth")),
+            Term::Int((depth as i64).into()),
+        );
+    }
+    if !include_refs.is_empty() {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":refs")),
+            Term::Vector(include_refs.iter().cloned().map(Term::Str).collect()),
+        );
+    }
+    let payload = Term::Map(m);
     let k = Term::list(vec![
         Term::symbol("fn"),
         Term::list(vec![Term::symbol("r")]),

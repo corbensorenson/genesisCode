@@ -6,7 +6,8 @@ use thiserror::Error;
 use crate::schema::{bytes32_to_hex, hex_to_bytes32};
 
 const MAGIC: &[u8; 4] = b"GPK\0";
-const VERSION: u32 = 1;
+const VERSION_V1: u32 = 1;
+const VERSION_V2: u32 = 2;
 const KIND_RAW_CANONICAL: u8 = 0;
 const INDEX_ENTRY_BYTES: usize = 32 + 1 + 7 + 8 + 8;
 
@@ -36,19 +37,36 @@ pub struct GpkEntry {
 }
 
 #[derive(Debug, Clone)]
+pub struct GpkRef {
+    pub name: String,
+    pub hash: [u8; 32],
+}
+
+#[derive(Debug, Clone)]
 pub struct GpkBundle {
     pub version: u32,
     pub root: [u8; 32],
     pub entries: Vec<GpkEntry>,
+    pub refs: Vec<GpkRef>,
 }
 
 pub fn write_bundle<W: Write>(
     mut w: W,
+    version: u32,
     root: [u8; 32],
     entries: &[(String, Vec<u8>)],
+    refs: Option<&[(String, String)]>,
 ) -> Result<(), GpkError> {
     w.write_all(MAGIC)?;
-    w.write_all(&VERSION.to_le_bytes())?;
+    if version != VERSION_V1 && version != VERSION_V2 {
+        return Err(GpkError::BadVersion(version));
+    }
+    if version == VERSION_V1 && refs.is_some() {
+        return Err(GpkError::BadIndex(
+            "v1 bundle cannot contain refs section".to_string(),
+        ));
+    }
+    w.write_all(&version.to_le_bytes())?;
     w.write_all(&root)?;
 
     let mut seen: BTreeSet<String> = BTreeSet::new();
@@ -93,6 +111,37 @@ pub fn write_bundle<W: Write>(
     for (_, bytes) in entries {
         w.write_all(bytes)?;
     }
+    if version == VERSION_V2 {
+        let mut refs_vec: Vec<(String, [u8; 32])> = Vec::new();
+        if let Some(rs) = refs {
+            let mut seen_names: BTreeSet<String> = BTreeSet::new();
+            for (name, hex) in rs {
+                let nm = name.trim().to_string();
+                if nm.is_empty() {
+                    return Err(GpkError::BadIndex("empty ref name".to_string()));
+                }
+                if !seen_names.insert(nm.clone()) {
+                    return Err(GpkError::BadIndex(format!("duplicate ref name {nm}")));
+                }
+                let hb = hex_to_bytes32(hex).map_err(GpkError::Hash)?;
+                refs_vec.push((nm, hb));
+            }
+        }
+        refs_vec.sort_by(|a, b| a.0.cmp(&b.0));
+        w.write_all(&(refs_vec.len() as u64).to_le_bytes())?;
+        for (name, h) in refs_vec {
+            let nb = name.as_bytes();
+            if nb.len() > (u16::MAX as usize) {
+                return Err(GpkError::BadIndex(format!(
+                    "ref name too long ({} bytes)",
+                    nb.len()
+                )));
+            }
+            w.write_all(&(nb.len() as u16).to_le_bytes())?;
+            w.write_all(nb)?;
+            w.write_all(&h)?;
+        }
+    }
     Ok(())
 }
 
@@ -105,7 +154,7 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
     let mut ver = [0u8; 4];
     r.read_exact(&mut ver).map_err(|_| GpkError::Truncated)?;
     let version = u32::from_le_bytes(ver);
-    if version != VERSION {
+    if version != VERSION_V1 && version != VERSION_V2 {
         return Err(GpkError::BadVersion(version));
     }
     let mut root = [0u8; 32];
@@ -173,17 +222,52 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
         });
     }
 
-    // v1 has no extra sections; trailing bytes are treated as corruption.
-    let mut extra = [0u8; 1];
-    match r.read(&mut extra) {
-        Ok(0) => {}
-        Ok(_) => return Err(GpkError::BadIndex("trailing bytes".to_string())),
-        Err(e) => return Err(GpkError::Io(e)),
+    let mut refs: Vec<GpkRef> = Vec::new();
+    if version == VERSION_V1 {
+        // v1 has no extra sections; trailing bytes are treated as corruption.
+        let mut extra = [0u8; 1];
+        match r.read(&mut extra) {
+            Ok(0) => {}
+            Ok(_) => return Err(GpkError::BadIndex("trailing bytes".to_string())),
+            Err(e) => return Err(GpkError::Io(e)),
+        }
+    } else {
+        // v2 refs section: u64 count, then entries (u16 name len, name bytes, 32-byte hash).
+        let mut cntb = [0u8; 8];
+        r.read_exact(&mut cntb).map_err(|_| GpkError::Truncated)?;
+        let rcnt = u64::from_le_bytes(cntb);
+        let mut seen_names: BTreeSet<String> = BTreeSet::new();
+        for _ in 0..rcnt {
+            let mut nlb = [0u8; 2];
+            r.read_exact(&mut nlb).map_err(|_| GpkError::Truncated)?;
+            let nlen = u16::from_le_bytes(nlb) as usize;
+            let mut nb = vec![0u8; nlen];
+            r.read_exact(&mut nb).map_err(|_| GpkError::Truncated)?;
+            let name = String::from_utf8(nb).map_err(|_| GpkError::BadIndex("bad ref name".to_string()))?;
+            if name.trim().is_empty() {
+                return Err(GpkError::BadIndex("empty ref name".to_string()));
+            }
+            if !seen_names.insert(name.clone()) {
+                return Err(GpkError::BadIndex(format!("duplicate ref name {name}")));
+            }
+            let mut h = [0u8; 32];
+            r.read_exact(&mut h).map_err(|_| GpkError::Truncated)?;
+            refs.push(GpkRef { name, hash: h });
+        }
+        refs.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let mut extra = [0u8; 1];
+        match r.read(&mut extra) {
+            Ok(0) => {}
+            Ok(_) => return Err(GpkError::BadIndex("trailing bytes".to_string())),
+            Err(e) => return Err(GpkError::Io(e)),
+        }
     }
 
     Ok(GpkBundle {
         version,
         root,
         entries,
+        refs,
     })
 }

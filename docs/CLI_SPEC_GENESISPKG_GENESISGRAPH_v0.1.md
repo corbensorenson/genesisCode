@@ -392,12 +392,12 @@ See `docs/LOCK_GENERATOR_RULESET_v0.1.md` for invariants and generation rules.
 
 ## 5.0 `.gpk` bundle format (minimal spec)
 
-v0.1 tooling ships `.gpk` **v1** bundles with a simple binary format:
+Tooling supports `.gpk` **v1** (shallow) and **v2** (optional embedded refs) bundles with a simple binary format:
 
 - header:
   - magic bytes `GPK\\0`
-  - `version` (u32 little-endian) = `1`
-  - `root` (32-byte BLAKE3 hash of the root snapshot)
+  - `version` (u32 little-endian) = `1` or `2`
+  - `root` (32-byte BLAKE3 hash of the root artifact; snapshot or commit)
   - `count` (u64 little-endian)
 - index: `count` fixed-size entries, in the same order as payload:
   - `hash` (32 bytes)
@@ -410,8 +410,15 @@ v0.1 tooling ships `.gpk` **v1** bundles with a simple binary format:
 
 Notes:
 
-- v1 has no trailing sections (no embedded refs/attestations). Extra trailing bytes are treated as corruption.
-- Future extensions (embedded refs, attestations, compression) must bump `version`.
+- v1 has no trailing sections. Extra trailing bytes are treated as corruption.
+- v2 adds a refs section after payload:
+  - `ref_count` (u64 little-endian)
+  - repeated entries:
+    - `name_len` (u16 little-endian)
+    - `name` bytes (UTF-8)
+    - `hash` (32 bytes)
+  - trailing bytes after the refs section are treated as corruption.
+- Attestations are content-addressed artifacts and are included in a full bundle via reachability closure (not a special section).
 
 ## 6.0 Exit codes (for scripting)
 
@@ -440,6 +447,6 @@ Notes:
 2. `refs get/set/list`
 3. `vcs diff/apply/merge3/log`
 4. `pkg init/add/lock/install`
-5. `pkg export/import` (shallow only)
+5. `pkg export/import` (shallow + full-history)
 6. `policy show/list/set-default`
 7. `pkg publish` + `sync push/pull` (remote later)

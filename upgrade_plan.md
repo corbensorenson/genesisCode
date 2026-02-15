@@ -135,8 +135,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
 - [ ] `.gpk` bundle format:
   - [x] Shallow export/import (snapshot closure) and required verification checks.
-  - [ ] Full export/import (commit DAG closure) with depth control.
-  - [ ] Include optional embedded refs and attestations.
+  - [x] Full export/import (commit DAG closure) with depth control.
+  - [x] Include optional embedded refs and attestations.
 - [ ] Contract-level branching/merging:
   - [ ] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
   - [ ] 3-way merge for contract snapshots (op-table keyed merge).
