@@ -1,17 +1,18 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
 use gc_coreform::{canonicalize_module, hash_module, parse_module, parse_term, print_module};
 use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
-use gc_kernel::{EvalCtx, MemLimits, StepLimit, Value, eval_module};
-use gc_prelude::build_prelude;
+use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module};
+use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
 
 const EX_OK: u8 = 0;
+const EX_INTERNAL: u8 = 1;
 const EX_PARSE: u8 = 10;
 const EX_FMT: u8 = 11;
 const EX_EVAL: u8 = 20;
@@ -68,6 +69,10 @@ enum Cmd {
         /// Fail if the file is not already canonically formatted.
         #[arg(long)]
         check: bool,
+        /// Formatting engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm toolchain inside the kernel.
+        #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
+        engine: FmtEngine,
     },
 
     /// Evaluate a CoreForm program/module (pure).
@@ -379,6 +384,12 @@ enum PkgCmd {
     },
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum FmtEngine {
+    Rust,
+    Selfhost,
+}
+
 fn resolved_step_limit(cli: &Cli) -> StepLimit {
     if cli.no_step_limit {
         StepLimit::Unlimited
@@ -517,15 +528,59 @@ fn write_effect_log(path: &PathBuf, log: &EffectLog) -> Result<(), CliError> {
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))
 }
 
-fn cmd_fmt(_cli: &Cli, file: &PathBuf, check: bool) -> Result<CmdOut, CliError> {
+fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms =
-        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-    let canon = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-    let out = print_module(&canon);
+
+    let out = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let canon = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            print_module(&canon)
+        }
+        FmtEngine::Selfhost => {
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+
+            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
+                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+
+            let f = env.get("selfhost/tool::fmt-module").ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "selfhost/missing",
+                    "missing binding selfhost/tool::fmt-module",
+                )
+            })?;
+            let r = f
+                .apply(&mut ctx, Value::Data(gc_coreform::Term::Str(src.clone())))
+                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost fmt failed: {e}")))?;
+
+            if let Some((code, message, payload)) = extract_protocol_error(&ctx, &r) {
+                return Err(CliError {
+                    exit_code: EX_PARSE,
+                    json: JsonError {
+                        code: "selfhost/error",
+                        message: format!("{code}: {message}"),
+                        context: payload.map(serde_json::Value::String),
+                    },
+                });
+            }
+
+            let Some(gc_coreform::Term::Str(s)) = r.as_data() else {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "selfhost/bad-return",
+                    format!("selfhost fmt returned non-string: {}", r.debug_repr()),
+                ));
+            };
+            s.clone()
+        }
+    };
 
     let changed = normalize_newlines(&src) != normalize_newlines(&out);
     let ok = if check { !changed } else { true };
@@ -544,6 +599,10 @@ fn cmd_fmt(_cli: &Cli, file: &PathBuf, check: bool) -> Result<CmdOut, CliError> 
             "file": file.display().to_string(),
             "check": check,
             "changed": changed,
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
         })),
         error: if ok {
             None
@@ -561,6 +620,43 @@ fn cmd_fmt(_cli: &Cli, file: &PathBuf, check: bool) -> Result<CmdOut, CliError> 
         stdout: String::new(),
         json: serde_json::to_value(env).expect("json"),
     })
+}
+
+fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<(String, String, Option<String>)> {
+    let tok = ctx.protocol?.error;
+    let Value::Sealed { token, payload } = v else {
+        return None;
+    };
+    if *token != tok {
+        return None;
+    }
+
+    let payload_term = payload.to_term_for_log(Some(tok));
+    let (code, msg) = match &payload_term {
+        gc_coreform::Term::Map(m) => {
+            let code = m
+                .get(&gc_coreform::TermOrdKey(gc_coreform::Term::Symbol(
+                    ":error/code".to_string(),
+                )))
+                .and_then(|t| match t {
+                    gc_coreform::Term::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| "core/error".to_string());
+            let msg = m
+                .get(&gc_coreform::TermOrdKey(gc_coreform::Term::Symbol(
+                    ":error/message".to_string(),
+                )))
+                .and_then(|t| match t {
+                    gc_coreform::Term::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| "error".to_string());
+            (code, msg)
+        }
+        _ => ("core/error".to_string(), "error".to_string()),
+    };
+    Some((code, msg, Some(gc_coreform::print_term(&payload_term))))
 }
 
 fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
@@ -2407,7 +2503,11 @@ fn cmd_vcs_hash(cli: &Cli, input: &PathBuf) -> Result<CmdOut, CliError> {
 
 fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
     match &cli.cmd {
-        Cmd::Fmt { file, check } => cmd_fmt(cli, file, *check),
+        Cmd::Fmt {
+            file,
+            check,
+            engine,
+        } => cmd_fmt(cli, file, *check, *engine),
         Cmd::Eval { file } => cmd_eval(cli, file),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),

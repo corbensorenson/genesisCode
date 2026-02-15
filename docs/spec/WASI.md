@@ -10,7 +10,7 @@ print results, but kernel evaluation remains pure.
 
 - `crates/gc_wasi_cli` builds a WASI CLI binary: `genesis_wasi.wasm`.
 - Current command surface is intentionally minimal (WASI bootstrap):
-  - `genesis fmt <file> [--check]`
+  - `genesis fmt <file> [--check] [--engine rust|selfhost]`
   - `genesis eval <file>`
   - `genesis pack --pkg <package.toml>`
   - `genesis test --pkg <package.toml> [--caps <caps.toml>]`
