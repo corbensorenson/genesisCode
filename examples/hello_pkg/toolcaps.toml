@@ -1,0 +1,28 @@
+allow = [
+  "core/store::put",
+  "core/store::get",
+  "core/store::has",
+  "core/refs::get",
+  "core/refs::list",
+  "core/refs::set",
+  "core/refs::delete",
+  "core/pkg::snapshot",
+  "core/gpk::export",
+  "core/gpk::import"
+]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/pkg::snapshot"]
+base_dir = "."
+
+[op."core/gpk::export"]
+base_dir = "."
+
+[op."core/gpk::import"]
+base_dir = "."
+

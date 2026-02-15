@@ -1,0 +1,4 @@
+(def prog
+  (((core/effect::perform (quote io/fs::read)) {:path "data.txt"}) (fn (b) (core/effect::pure b))))
+
+prog

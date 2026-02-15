@@ -18,30 +18,30 @@ cargo build --workspace
 
 Format a CoreForm file:
 ```sh
-cargo run -p gc_cli -- genesis fmt path/to/file.gc
-cargo run -p gc_cli -- genesis fmt --check path/to/file.gc
+cargo run -p gc_cli -- fmt path/to/file.gc
+cargo run -p gc_cli -- fmt --check path/to/file.gc
 ```
 
 Evaluate a pure program/module:
 ```sh
-cargo run -p gc_cli -- genesis eval path/to/file.gc
+cargo run -p gc_cli -- eval path/to/file.gc
 ```
 
 Run effects (deny-by-default unless allowed in `caps.toml`) and produce a deterministic `.gclog`:
 ```sh
-cargo run -p gc_cli -- genesis run path/to/file.gc --caps caps.toml --log out.gclog
-cargo run -p gc_cli -- genesis replay path/to/file.gc --log out.gclog
+cargo run -p gc_cli -- run path/to/file.gc --caps caps.toml --log out.gclog
+cargo run -p gc_cli -- replay path/to/file.gc --log out.gclog
 ```
 
 Run package obligations (writes artifacts into `.genesis/store/` under the package directory):
 ```sh
-cargo run -p gc_cli -- genesis test --pkg path/to/package.toml --caps path/to/caps.toml
-cargo run -p gc_cli -- genesis pack --pkg path/to/package.toml
+cargo run -p gc_cli -- test --pkg path/to/package.toml --caps path/to/caps.toml
+cargo run -p gc_cli -- pack --pkg path/to/package.toml
 ```
 
 Apply a semantic patch:
 ```sh
-cargo run -p gc_cli -- genesis apply-patch path/to/change.gcpatch --pkg path/to/package.toml --caps path/to/caps.toml
+cargo run -p gc_cli -- apply-patch path/to/change.gcpatch --pkg path/to/package.toml --caps path/to/caps.toml
 ```
 
 ## Normative Spec
@@ -59,4 +59,3 @@ Additional schemas:
 ## License
 
 Dual-licensed under Apache-2.0 OR MIT.
-

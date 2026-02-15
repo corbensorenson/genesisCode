@@ -1,0 +1,17 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "hello_pkg"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::determinism",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+    "core/obligation::typecheck",
+    "core/obligation::translation-validation",
+]
+tests = ["hello/pkg::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "1c29661e2da4cbfbda7b197bc03dee82594afca679d51685f66970eb361d0b32"
+path = "hello.gc"

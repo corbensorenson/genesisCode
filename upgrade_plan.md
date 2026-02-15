@@ -22,9 +22,9 @@ Key docs to treat as authoritative:
 
 ## P0: "Useful Today" (Native)
 
-- [ ] Write a short "getting started" program and tutorial that uses real features:
+- [x] Write a short "getting started" program and tutorial that uses real features:
   - canonical formatting, eval, contracts, effects, run/replay, package snapshot + gpk export/import
-  - Acceptance: a new user can run it end-to-end with `genesis` and understand outputs.
+  - See `docs/GETTING_STARTED.md` and `examples/hello_pkg/`.
 
 ---
 

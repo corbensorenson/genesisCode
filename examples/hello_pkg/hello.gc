@@ -1,0 +1,38 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [hello/pkg::main hello/pkg::contract-demo hello/pkg::tests]
+      :types
+        {
+          hello/pkg::contract-demo ?
+          hello/pkg::main ?
+          hello/pkg::tests ?}}))
+
+(def hello/pkg::main (fn (_) ((core/int::add 40) 2)))
+
+(def hello/pkg::contract-demo
+  (fn (_)
+    (let ((msg ((core/msg::make (quote hello/pkg::op)) nil)))
+      (let
+        (
+          (c
+            (
+              ((core/contract::extend core/contract::genesis)
+                {
+                  hello/pkg::op (fn (_m) 42)})
+              {})))
+        ((core/contract::dispatch c) msg)))))
+
+(def hello/pkg::tests
+  {
+    "arith"
+      {
+        :body (fn (_) (core/effect::pure ((core/int::add 1) 2)))
+        :expect 3}
+    "contracts"
+      {
+        :body (fn (_) (core/effect::pure (hello/pkg::contract-demo nil)))
+        :expect 42}})
+
+hello/pkg::tests
