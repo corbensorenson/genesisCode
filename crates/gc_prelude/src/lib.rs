@@ -361,4 +361,120 @@ mod tests {
         };
         assert!(matches!(v.as_ref(), Value::Data(Term::Int(i)) if i == &4.into()));
     }
+
+    #[test]
+    fn foundation_list_utilities_work_and_validate_proper_lists() {
+        let src = r#"
+            (def xs (quote (1 2 3)))
+            (def ys (quote (4 5)))
+            (def imp (prim pair/cons 1 2))
+
+            {
+              :len (core/list::len xs)
+              :rev (core/list::reverse xs)
+              :app (core/list::append xs ys)
+              :map (core/list::map xs (fn (x) (core/int::add x 1)))
+              :fil (core/list::filter xs (fn (x) (core/int::lt? 1 x)))
+              :sum (core/list::foldl xs 0 (fn (acc x) (core/int::add acc x)))
+              :bad (core/list::len imp)
+            }
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+        let Value::Map(m) = v else {
+            panic!("expected map, got {}", v.debug_repr());
+        };
+
+        assert!(matches!(
+            m.get(&TermOrdKey(Term::symbol(":len"))),
+            Some(Value::Data(Term::Int(i))) if i == &3.into()
+        ));
+        assert!(matches!(
+            m.get(&TermOrdKey(Term::symbol(":sum"))),
+            Some(Value::Data(Term::Int(i))) if i == &6.into()
+        ));
+
+        let want_rev = parse_module("(quote (3 2 1))").unwrap();
+        let want_rev = want_rev[0].clone();
+        let want_rev = eval_module(&mut ctx, &mut env, &[want_rev]).unwrap();
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":rev")))
+                .unwrap()
+                .debug_repr(),
+            want_rev.debug_repr()
+        );
+
+        let want_app = parse_module("(quote (1 2 3 4 5))").unwrap();
+        let want_app = want_app[0].clone();
+        let want_app = eval_module(&mut ctx, &mut env, &[want_app]).unwrap();
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":app")))
+                .unwrap()
+                .debug_repr(),
+            want_app.debug_repr()
+        );
+
+        let want_map = parse_module("(quote (2 3 4))").unwrap();
+        let want_map = want_map[0].clone();
+        let want_map = eval_module(&mut ctx, &mut env, &[want_map]).unwrap();
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":map")))
+                .unwrap()
+                .debug_repr(),
+            want_map.debug_repr()
+        );
+
+        let want_fil = parse_module("(quote (2 3))").unwrap();
+        let want_fil = want_fil[0].clone();
+        let want_fil = eval_module(&mut ctx, &mut env, &[want_fil]).unwrap();
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":fil")))
+                .unwrap()
+                .debug_repr(),
+            want_fil.debug_repr()
+        );
+
+        let bad = m.get(&TermOrdKey(Term::symbol(":bad"))).unwrap();
+        let p = ctx.protocol.expect("protocol tokens reserved");
+        match bad {
+            Value::Sealed { token, payload } => {
+                assert_eq!(*token, p.error);
+                let Value::Data(Term::Map(pm)) = payload.as_ref() else {
+                    panic!("expected error payload map");
+                };
+                assert!(matches!(
+                    pm.get(&TermOrdKey(Term::symbol(":error/code"))),
+                    Some(Term::Str(s)) if s == "core/type-error"
+                ));
+            }
+            other => panic!("expected sealed error, got {}", other.debug_repr()),
+        }
+    }
+
+    #[test]
+    fn effect_catch_handles_error_values() {
+        let src = r#"
+            (def e (core/error::make2 "my-lib/boom" "boom"))
+            (def p (core/effect::pure e))
+            (def q (core/effect::catch p (fn (_err) (core/effect::pure 42))))
+            q
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+        let Value::EffectProgram(p) = v else {
+            panic!("expected effect program, got {}", v.debug_repr());
+        };
+        let EffectProgram::Pure(v) = p.as_ref() else {
+            panic!("expected pure");
+        };
+        assert!(matches!(v.as_ref(), Value::Data(Term::Int(i)) if i == &42.into()));
+    }
 }

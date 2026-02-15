@@ -49,6 +49,126 @@
 (def core/pair::as-proper-list (fn (p) (prim pair/as-proper-list p)))
 (def core/list::is-nil? (fn (x) (prim list/is-nil? x)))
 
+(def core/list::cons core/pair::cons)
+(def core/list::car core/pair::car)
+(def core/list::cdr core/pair::cdr)
+
+(def core/list::is-pair?
+  (fn (x)
+    (core/sym::eq? (core/data::tag x) ':pair)))
+
+(def core/list::type-error
+  (fn (msg)
+    (core/error::make2 "core/type-error" msg)))
+
+(def core/list::len
+  (fn (xs)
+    (let ((tag (core/data::tag xs)))
+      (if (core/sym::eq? tag ':nil)
+        0
+        (if (core/sym::eq? tag ':pair)
+          (core/int::add 1 (core/list::len (core/list::cdr xs)))
+          (core/list::type-error "core/list::len expects a proper list"))))))
+
+(def core/list::reverse
+  (fn (xs)
+    (core/list::reverse2 xs nil)))
+
+(def core/list::reverse2
+  (fn (xs acc)
+    (let ((tag (core/data::tag xs)))
+      (if (core/sym::eq? tag ':nil)
+        acc
+        (if (core/sym::eq? tag ':pair)
+          (core/list::reverse2
+            (core/list::cdr xs)
+            (core/list::cons (core/list::car xs) acc))
+          (core/list::type-error "core/list::reverse expects a proper list"))))))
+
+(def core/list::append
+  (fn (a b)
+    (let ((ra (core/list::reverse a)))
+      (if (core/error::is? ra)
+        ra
+        (core/list::append2 ra b)))))
+
+(def core/list::append2
+  (fn (ra b)
+    (let ((tag (core/data::tag ra)))
+      (if (core/sym::eq? tag ':nil)
+        b
+        (if (core/sym::eq? tag ':pair)
+          (core/list::append2
+            (core/list::cdr ra)
+            (core/list::cons (core/list::car ra) b))
+          (core/list::type-error "core/list::append expects proper lists"))))))
+
+(def core/list::map
+  (fn (xs f)
+    (let ((r (core/list::map-rev xs f nil)))
+      (if (core/error::is? r)
+        r
+        (core/list::reverse r)))))
+
+(def core/list::map-rev
+  (fn (xs f acc)
+    (let ((tag (core/data::tag xs)))
+      (if (core/sym::eq? tag ':nil)
+        acc
+        (if (core/sym::eq? tag ':pair)
+          (let ((y (f (core/list::car xs))))
+            (if (core/error::is? y)
+              y
+              (core/list::map-rev
+                (core/list::cdr xs)
+                f
+                (core/list::cons y acc))))
+          (core/list::type-error "core/list::map expects a proper list"))))))
+
+(def core/list::filter
+  (fn (xs pred)
+    (let ((r (core/list::filter-rev xs pred nil)))
+      (if (core/error::is? r)
+        r
+        (core/list::reverse r)))))
+
+(def core/list::filter-rev
+  (fn (xs pred acc)
+    (let ((tag (core/data::tag xs)))
+      (if (core/sym::eq? tag ':nil)
+        acc
+        (if (core/sym::eq? tag ':pair)
+          (let ((x (core/list::car xs)))
+            (let ((p (pred x)))
+              (if (core/error::is? p)
+                p
+                (let ((ptag (core/data::tag p)))
+                  (if (core/sym::eq? ptag ':bool)
+                    (if p
+                      (core/list::filter-rev
+                        (core/list::cdr xs)
+                        pred
+                        (core/list::cons x acc))
+                      (core/list::filter-rev (core/list::cdr xs) pred acc))
+                    (core/list::type-error "core/list::filter predicate must return bool"))))))
+          (core/list::type-error "core/list::filter expects a proper list"))))))
+
+(def core/list::foldl
+  (fn (xs init f)
+    (core/list::foldl2 xs init f)))
+
+(def core/list::foldl2
+  (fn (xs acc f)
+    (let ((tag (core/data::tag xs)))
+      (if (core/sym::eq? tag ':nil)
+        acc
+        (if (core/sym::eq? tag ':pair)
+          (let ((acc2 (f acc (core/list::car xs))))
+            (if (core/error::is? acc2)
+              acc2
+              (core/list::foldl2 (core/list::cdr xs) acc2 f)))
+          (core/list::type-error "core/list::foldl expects a proper list"))))))
+
 (def core/map::get (fn (m k) (prim map/get m k)))
 (def core/map::put (fn (m k v) (prim map/put m k v)))
 (def core/map::merge (fn (a b) (prim map/merge a b)))
@@ -107,3 +227,20 @@
 (def core/effect::then
   (fn (p q)
     (core/effect::bind p (fn (_) q))))
+
+(def core/effect::catch
+  (fn (p handler)
+    (core/effect::bind
+      p
+      (fn (x)
+        (if (core/error::is? x)
+          (handler x)
+          (core/effect::pure x))))))
+
+(def core/effect::catch-payload
+  (fn (p handler)
+    (core/effect::catch p (fn (err) (handler (core/error::payload err))))))
+
+(def core/contract::call
+  (fn (c op payload)
+    (core/contract::dispatch c (core/msg::make op payload))))

@@ -15,6 +15,7 @@ Key docs to treat as authoritative:
 - `docs/spec/WASM.md`, `docs/spec/WASI.md`, `docs/spec/WASM_HOST_BRIDGE.md`
 - `docs/spec/MODULE_SCOPE.md`, `docs/spec/VALUE_EFFECT_HASH.md`
 - `docs/spec/CLI.md`, `docs/GENESISGRAPH_GENESISPKG_v0.2.md`
+- Design guidance: `docs/STACKS_v0.2.md`, `docs/FOUNDATION_STDLIB_v0.2.md`
 - `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md`, `docs/POLICY_DEFAULTS_v0.1.md`
 - `docs/LOCK_GENERATOR_RULESET_v0.1.md`, `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md`
 - `docs/REACHABILITY_RULES_v0.1.md`, `docs/GARBAGE_COLLECTION_RULES_v0.1.md`
@@ -29,6 +30,25 @@ Key docs to treat as authoritative:
 - [x] Provide standard effect program combinators used in docs/style-guide:
   - `core/effect::bind` intrinsic (chains effect programs deterministically)
   - `core/effect::map` and `core/effect::then` helpers (in `prelude/prelude.gc`)
+
+---
+
+## P0.5: Level 1 Foundation Stack (Canonical Libraries + Conventions)
+
+Goal: "complete enough" day-to-day programming without Level 2 subsystems.
+
+- [x] Standard data layer utilities in `prelude/prelude.gc`:
+  - `core/list::{len,reverse,append,map,filter,foldl}` with proper-list validation
+  - add tests in `gc_prelude` for the list utilities
+- [x] Message/contract convenience helpers:
+  - `core/contract::call` wrapper (dispatch + msg make)
+  - optional aliases for protocol predicates under `core/contract::*`
+- [x] Effect programming toolkit:
+  - `core/effect::{catch,catch-payload}` (error-as-value) + tests
+  - document canonical effect payload shapes (maps with keyword keys)
+- [ ] In-language convenience wrappers for GenesisGraph/GenesisPkg capability ops (pure constructors):
+  - `core/store::*`, `core/refs::*`, `core/vcs::*`, `core/pkg::*`, `core/sync::*`, `core/gc::*`
+  - wrappers should only construct effect programs; runners remain capability-gated
 
 ---
 
