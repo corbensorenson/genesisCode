@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{Term, TermOrdKey, parse_term};
 
 fn fixture(path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -26,6 +27,10 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn map_get<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
+    m.get(&TermOrdKey(Term::symbol(k)))
 }
 
 #[test]
@@ -61,6 +66,146 @@ fn test_json_output_is_valid_and_exit_code_is_stable() {
         .and_then(|x| x.as_str())
         .expect("acceptance_artifact");
     assert_eq!(acc.len(), 64);
+}
+
+#[test]
+fn optimize_json_includes_egg_stats() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let prog = dir.join("prog.gc");
+    fs::write(
+        &prog,
+        r#"
+          (def id (fn (x) (prim int/add x 0)))
+          (id 5)
+        "#,
+    )
+    .unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args(["--json", "optimize"])
+        .arg(&prog)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let v: serde_json::Value = serde_json::from_slice(&out).expect("valid json");
+    assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(true));
+    assert_eq!(
+        v.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/optimize-v0.2")
+    );
+    let data = v.get("data").expect("data");
+    assert!(
+        data.get("changed")
+            .and_then(|x| x.as_bool())
+            .unwrap_or(false)
+    );
+    assert_eq!(
+        data.get("original_hash")
+            .and_then(|x| x.as_str())
+            .unwrap()
+            .len(),
+        64
+    );
+    assert_eq!(
+        data.get("optimized_hash")
+            .and_then(|x| x.as_str())
+            .unwrap()
+            .len(),
+        64
+    );
+    assert!(data.get("egg_runs").and_then(|x| x.as_u64()).unwrap() > 0);
+    assert!(
+        data.get("egg_rewrites_applied")
+            .and_then(|x| x.as_object())
+            .is_some()
+    );
+    let opt_src = data
+        .get("optimized_coreform")
+        .and_then(|x| x.as_str())
+        .unwrap();
+    assert!(opt_src.contains("(def id"));
+    assert!(opt_src.contains("(fn (x) x)"));
+}
+
+#[test]
+fn translation_validation_artifact_includes_optimizer_summary() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_basic");
+    let dst = td.path().join("pkg_basic");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let caps = dst.join("caps.toml");
+
+    let out = cargo_bin_cmd!("genesis")
+        .args(["--json", "test", "--pkg"])
+        .arg(&pkg)
+        .args(["--caps"])
+        .arg(&caps)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).expect("valid json");
+    let obs = v
+        .get("data")
+        .and_then(|d| d.get("obligations"))
+        .and_then(|x| x.as_array())
+        .expect("obligations");
+    let tv = obs
+        .iter()
+        .find(|o| {
+            o.get("name").and_then(|x| x.as_str())
+                == Some("core/obligation::translation-validation")
+        })
+        .expect("translation-validation obligation result");
+    assert_eq!(tv.get("ok").and_then(|x| x.as_bool()), Some(true));
+    let art = tv
+        .get("artifact")
+        .and_then(|x| x.as_str())
+        .expect("translation-validation artifact hash");
+    assert_eq!(art.len(), 64);
+
+    let store_path = dst.join(".genesis/store").join(art);
+    let bytes = fs::read(&store_path).expect("read translation-validation artifact bytes");
+    let s = std::str::from_utf8(&bytes).expect("artifact utf-8");
+    let term = parse_term(s).expect("parse artifact term");
+
+    let Term::Map(m) = term else {
+        panic!("translation-validation artifact must be a map term");
+    };
+    assert!(
+        matches!(
+            map_get(&m, ":kind"),
+            Some(Term::Str(k)) if k == "genesis/translation-validation-v0.2"
+        ),
+        "artifact :kind mismatch"
+    );
+    let Some(Term::Map(opt)) = map_get(&m, ":optimizer") else {
+        panic!("artifact missing :optimizer map");
+    };
+    for k in [
+        ":egg-runs",
+        ":egg-iterations",
+        ":egg-eclasses",
+        ":egg-enodes",
+        ":egg-rewrites",
+    ] {
+        assert!(
+            opt.contains_key(&TermOrdKey(Term::symbol(k))),
+            "missing {k}"
+        );
+    }
+    let Some(Term::Vector(mods)) = map_get(&m, ":modules") else {
+        panic!("artifact missing :modules vector");
+    };
+    assert!(!mods.is_empty(), ":modules should be non-empty");
 }
 
 #[test]

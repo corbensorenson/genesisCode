@@ -1,6 +1,25 @@
+use std::collections::BTreeMap;
+
+use egg::{CostFunction, EGraph, Extractor, Id, RecExpr, Rewrite, Runner, Symbol, rewrite};
 use gc_coreform::Term;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
+
+/// Aggregate statistics from optimizer runs.
+#[derive(Debug, Clone, Default)]
+pub struct OptimizeStats {
+    pub egg_runs: u64,
+    pub iterations: u64,
+    pub eclasses: u64,
+    pub enodes: u64,
+    pub rewrites_applied: BTreeMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct OptimizeReport {
+    pub changed: bool,
+    pub stats: OptimizeStats,
+}
 
 /// Optimize a CoreForm module by rewriting only conservative pure fragments.
 ///
@@ -9,15 +28,22 @@ use num_traits::ToPrimitive;
 /// - `core/effect::*`
 /// - `core/contract::*`
 ///
-/// It performs constant folding and a few algebraic identities for `prim int/*`
-/// and constant-folds `if` when the condition is a literal.
+/// It uses an e-graph optimizer for a small pure subset (integer prim ops + `if`),
+/// and falls back to structural recursion elsewhere. Extraction is deterministic.
 pub fn optimize_module(forms: &[Term]) -> Vec<Term> {
-    forms.iter().map(optimize_topform).collect()
+    optimize_module_with_report(forms).0
 }
 
-fn optimize_topform(t: &Term) -> Term {
+pub fn optimize_module_with_report(forms: &[Term]) -> (Vec<Term>, OptimizeReport) {
+    let mut r = OptimizeReport::default();
+    let out: Vec<Term> = forms.iter().map(|t| optimize_topform(t, &mut r)).collect();
+    r.changed = out != forms;
+    (out, r)
+}
+
+fn optimize_topform(t: &Term, report: &mut OptimizeReport) -> Term {
     let Some(items) = t.as_proper_list() else {
-        return optimize_term(t);
+        return optimize_term(t, report);
     };
     if items.len() == 3
         && matches!(items[0], Term::Symbol(s) if s == "def")
@@ -26,13 +52,18 @@ fn optimize_topform(t: &Term) -> Term {
         return Term::list(vec![
             Term::Symbol("def".to_string()),
             Term::Symbol(name.clone()),
-            optimize_term(items[2]),
+            optimize_term(items[2], report),
         ]);
     }
-    optimize_term(t)
+    optimize_term(t, report)
 }
 
-fn optimize_term(t: &Term) -> Term {
+fn optimize_term(t: &Term, report: &mut OptimizeReport) -> Term {
+    // Fast path: try the e-graph optimizer on pure fragments.
+    if let Some(out) = optimize_pure_fragment_egg(t, report) {
+        return out;
+    }
+
     // Atoms
     match t {
         Term::Nil
@@ -46,7 +77,7 @@ fn optimize_term(t: &Term) -> Term {
             // map keys are data, map values are code
             let mut out = std::collections::BTreeMap::new();
             for (k, v) in m.iter() {
-                out.insert(k.clone(), optimize_term(v));
+                out.insert(k.clone(), optimize_term(v, report));
             }
             return Term::Map(out);
         }
@@ -70,7 +101,7 @@ fn optimize_term(t: &Term) -> Term {
                     xs.push(Term::Symbol("fn".to_string()));
                     xs.push(items[1].clone()); // params list is data-ish
                     for b in items.iter().skip(2) {
-                        xs.push(optimize_term(b));
+                        xs.push(optimize_term(b, report));
                     }
                     return Term::list(xs);
                 }
@@ -78,9 +109,9 @@ fn optimize_term(t: &Term) -> Term {
             }
             "if" => {
                 if items.len() == 4 {
-                    let c = optimize_term(items[1]);
-                    let tt = optimize_term(items[2]);
-                    let ee = optimize_term(items[3]);
+                    let c = optimize_term(items[1], report);
+                    let tt = optimize_term(items[2], report);
+                    let ee = optimize_term(items[3], report);
                     if is_falsey(&c) {
                         return ee;
                     }
@@ -93,12 +124,12 @@ fn optimize_term(t: &Term) -> Term {
             }
             "begin" => {
                 if items.len() == 2 {
-                    return optimize_term(items[1]);
+                    return optimize_term(items[1], report);
                 }
                 let mut xs = Vec::new();
                 xs.push(Term::Symbol("begin".to_string()));
                 for e in items.iter().skip(1) {
-                    xs.push(optimize_term(e));
+                    xs.push(optimize_term(e, report));
                 }
                 return Term::list(xs);
             }
@@ -106,19 +137,19 @@ fn optimize_term(t: &Term) -> Term {
                 // Keep bindings, optimize RHS and body.
                 if items.len() >= 3 {
                     let binds = items[1].clone();
-                    let binds_opt = optimize_let_binds(&binds);
+                    let binds_opt = optimize_let_binds(&binds, report);
                     let mut xs = Vec::new();
                     xs.push(Term::Symbol("let".to_string()));
                     xs.push(binds_opt);
                     for b in items.iter().skip(2) {
-                        xs.push(optimize_term(b));
+                        xs.push(optimize_term(b, report));
                     }
                     return Term::list(xs);
                 }
                 return t.clone();
             }
             "prim" => {
-                return optimize_prim(items);
+                return optimize_prim(items, report);
             }
             "seal" | "unseal" => return t.clone(), // opaque
             _ => {}
@@ -139,12 +170,12 @@ fn optimize_term(t: &Term) -> Term {
     // General application: optimize children.
     let mut xs = Vec::new();
     for it in items {
-        xs.push(optimize_term(it));
+        xs.push(optimize_term(it, report));
     }
     Term::list(xs)
 }
 
-fn optimize_let_binds(binds: &Term) -> Term {
+fn optimize_let_binds(binds: &Term, report: &mut OptimizeReport) -> Term {
     let Some(items) = binds.as_proper_list() else {
         return binds.clone();
     };
@@ -159,13 +190,13 @@ fn optimize_let_binds(binds: &Term) -> Term {
             continue;
         }
         let name = pair[0].clone();
-        let rhs = optimize_term(pair[1]);
+        let rhs = optimize_term(pair[1], report);
         out.push(Term::list(vec![name, rhs]));
     }
     Term::list(out)
 }
 
-fn optimize_prim(items: Vec<&Term>) -> Term {
+fn optimize_prim(items: Vec<&Term>, report: &mut OptimizeReport) -> Term {
     if items.len() < 2 {
         return Term::list(items.into_iter().cloned().collect());
     }
@@ -174,13 +205,17 @@ fn optimize_prim(items: Vec<&Term>) -> Term {
         let mut xs = Vec::new();
         xs.push(Term::Symbol("prim".to_string()));
         for a in items.iter().skip(1) {
-            xs.push(optimize_term(a));
+            xs.push(optimize_term(a, report));
         }
         return Term::list(xs);
     };
-    let mut args: Vec<Term> = items.iter().skip(2).map(|a| optimize_term(a)).collect();
+    let mut args: Vec<Term> = items
+        .iter()
+        .skip(2)
+        .map(|a| optimize_term(a, report))
+        .collect();
 
-    // Constant folding: only int/* and only when args are literal ints.
+    // Local constant folding: only int/* and only when args are literal ints.
     match (op.as_str(), args.as_slice()) {
         ("int/add", [a, b]) => {
             if let (Some(x), Some(y)) = (as_int(a), as_int(b)) {
@@ -235,6 +270,339 @@ fn optimize_prim(items: Vec<&Term>) -> Term {
     Term::list(out)
 }
 
+fn optimize_pure_fragment_egg(t: &Term, report: &mut OptimizeReport) -> Option<Term> {
+    let expr = term_to_pure_expr(t)?;
+    let rules = pure_rules();
+    let runner = Runner::default()
+        .with_expr(&expr)
+        .with_iter_limit(8)
+        .with_node_limit(50_000);
+    let runner = runner.run(&rules);
+
+    let root = runner.roots[0];
+    let egraph = runner.egraph;
+    let (best_cost, best_expr) = Extractor::new(&egraph, DetCostFn).find_best(root);
+    let _ = best_cost;
+
+    let out = pure_expr_to_term(&best_expr)?;
+
+    // Stats (deterministic aggregates).
+    report.stats.egg_runs = report.stats.egg_runs.saturating_add(1);
+    report.stats.iterations = report
+        .stats
+        .iterations
+        .saturating_add(runner.iterations.len() as u64);
+    report.stats.eclasses = report
+        .stats
+        .eclasses
+        .saturating_add(egraph.number_of_classes() as u64);
+    report.stats.enodes = report
+        .stats
+        .enodes
+        .saturating_add(egraph.total_size() as u64);
+    for it in &runner.iterations {
+        for (name, n) in &it.applied {
+            *report
+                .stats
+                .rewrites_applied
+                .entry(name.to_string())
+                .or_insert(0) += *n as u64;
+        }
+    }
+
+    Some(out)
+}
+
+egg::define_language! {
+    enum PureLang {
+        Num(BigInt),
+        "true" = True,
+        "false" = False,
+        Var(Symbol),
+        "+" = Add([Id; 2]),
+        "-" = Sub([Id; 2]),
+        "*" = Mul([Id; 2]),
+        "==" = Eq([Id; 2]),
+        "<" = Lt([Id; 2]),
+        "if" = If([Id; 3]),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ConstVal {
+    Int(BigInt),
+    Bool(bool),
+}
+
+#[derive(Default)]
+struct ConstAnalysis;
+
+impl egg::Analysis<PureLang> for ConstAnalysis {
+    type Data = Option<ConstVal>;
+
+    fn make(egraph: &mut EGraph<PureLang, Self>, enode: &PureLang) -> Self::Data {
+        match enode {
+            PureLang::Num(n) => Some(ConstVal::Int(n.clone())),
+            PureLang::True => Some(ConstVal::Bool(true)),
+            PureLang::False => Some(ConstVal::Bool(false)),
+            PureLang::Var(_) => None,
+            PureLang::Add([a, b]) => match (&egraph[*a].data, &egraph[*b].data) {
+                (Some(ConstVal::Int(x)), Some(ConstVal::Int(y))) => Some(ConstVal::Int(x + y)),
+                _ => None,
+            },
+            PureLang::Sub([a, b]) => match (&egraph[*a].data, &egraph[*b].data) {
+                (Some(ConstVal::Int(x)), Some(ConstVal::Int(y))) => Some(ConstVal::Int(x - y)),
+                _ => None,
+            },
+            PureLang::Mul([a, b]) => match (&egraph[*a].data, &egraph[*b].data) {
+                (Some(ConstVal::Int(x)), Some(ConstVal::Int(y))) => Some(ConstVal::Int(x * y)),
+                _ => None,
+            },
+            PureLang::Eq([a, b]) => match (&egraph[*a].data, &egraph[*b].data) {
+                (Some(ConstVal::Int(x)), Some(ConstVal::Int(y))) => Some(ConstVal::Bool(x == y)),
+                _ => None,
+            },
+            PureLang::Lt([a, b]) => match (&egraph[*a].data, &egraph[*b].data) {
+                (Some(ConstVal::Int(x)), Some(ConstVal::Int(y))) => Some(ConstVal::Bool(x < y)),
+                _ => None,
+            },
+            PureLang::If([c, t, e]) => match &egraph[*c].data {
+                Some(ConstVal::Bool(true)) => egraph[*t].data.clone(),
+                Some(ConstVal::Bool(false)) => egraph[*e].data.clone(),
+                _ => None,
+            },
+        }
+    }
+
+    fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> egg::DidMerge {
+        let before = to.clone();
+        *to = match (&before, from) {
+            (None, x) => x,
+            (Some(x), None) => Some(x.clone()),
+            (Some(a), Some(b)) if a == &b => Some(a.clone()),
+            (Some(_), Some(_)) => None,
+        };
+        egg::DidMerge(before != *to, false)
+    }
+
+    fn modify(egraph: &mut EGraph<PureLang, Self>, id: Id) {
+        let Some(c) = egraph[id].data.clone() else {
+            return;
+        };
+        match c {
+            ConstVal::Int(n) => {
+                let cid = egraph.add(PureLang::Num(n));
+                egraph.union(id, cid);
+            }
+            ConstVal::Bool(true) => {
+                let cid = egraph.add(PureLang::True);
+                egraph.union(id, cid);
+            }
+            ConstVal::Bool(false) => {
+                let cid = egraph.add(PureLang::False);
+                egraph.union(id, cid);
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct DetCost {
+    nodes: usize,
+    repr: String,
+}
+
+impl Ord for DetCost {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.nodes
+            .cmp(&other.nodes)
+            .then_with(|| self.repr.cmp(&other.repr))
+    }
+}
+
+impl PartialOrd for DetCost {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+struct DetCostFn;
+
+impl CostFunction<PureLang> for DetCostFn {
+    type Cost = DetCost;
+
+    fn cost<C>(&mut self, enode: &PureLang, mut costs: C) -> Self::Cost
+    where
+        C: FnMut(Id) -> Self::Cost,
+    {
+        let mut nodes = 1usize;
+        let repr = match enode {
+            PureLang::Num(n) => n.to_string(),
+            PureLang::True => "true".to_string(),
+            PureLang::False => "false".to_string(),
+            PureLang::Var(s) => s.to_string(),
+            PureLang::Add([a, b]) => {
+                let ca = costs(*a);
+                let cb = costs(*b);
+                nodes += ca.nodes + cb.nodes;
+                format!("(+ {} {})", ca.repr, cb.repr)
+            }
+            PureLang::Sub([a, b]) => {
+                let ca = costs(*a);
+                let cb = costs(*b);
+                nodes += ca.nodes + cb.nodes;
+                format!("(- {} {})", ca.repr, cb.repr)
+            }
+            PureLang::Mul([a, b]) => {
+                let ca = costs(*a);
+                let cb = costs(*b);
+                nodes += ca.nodes + cb.nodes;
+                format!("(* {} {})", ca.repr, cb.repr)
+            }
+            PureLang::Eq([a, b]) => {
+                let ca = costs(*a);
+                let cb = costs(*b);
+                nodes += ca.nodes + cb.nodes;
+                format!("(== {} {})", ca.repr, cb.repr)
+            }
+            PureLang::Lt([a, b]) => {
+                let ca = costs(*a);
+                let cb = costs(*b);
+                nodes += ca.nodes + cb.nodes;
+                format!("(< {} {})", ca.repr, cb.repr)
+            }
+            PureLang::If([c, t, e]) => {
+                let cc = costs(*c);
+                let ct = costs(*t);
+                let ce = costs(*e);
+                nodes += cc.nodes + ct.nodes + ce.nodes;
+                format!("(if {} {} {})", cc.repr, ct.repr, ce.repr)
+            }
+        };
+        DetCost { nodes, repr }
+    }
+}
+
+fn pure_rules() -> Vec<Rewrite<PureLang, ConstAnalysis>> {
+    vec![
+        rewrite!("add-comm"; "(+ ?a ?b)" => "(+ ?b ?a)"),
+        rewrite!("mul-comm"; "(* ?a ?b)" => "(* ?b ?a)"),
+        rewrite!("add-zero-l"; "(+ 0 ?a)" => "?a"),
+        rewrite!("add-zero-r"; "(+ ?a 0)" => "?a"),
+        rewrite!("mul-one-l"; "(* 1 ?a)" => "?a"),
+        rewrite!("mul-one-r"; "(* ?a 1)" => "?a"),
+        rewrite!("mul-zero-l"; "(* 0 ?a)" => "0"),
+        rewrite!("mul-zero-r"; "(* ?a 0)" => "0"),
+        rewrite!("sub-zero"; "(- ?a 0)" => "?a"),
+        rewrite!("sub-self"; "(- ?a ?a)" => "0"),
+        rewrite!("if-true"; "(if true ?t ?e)" => "?t"),
+        rewrite!("if-false"; "(if false ?t ?e)" => "?e"),
+        rewrite!("eq-self"; "(== ?a ?a)" => "true"),
+        rewrite!("lt-self"; "(< ?a ?a)" => "false"),
+    ]
+}
+
+fn term_to_pure_expr(t: &Term) -> Option<RecExpr<PureLang>> {
+    let mut expr = RecExpr::<PureLang>::default();
+    let _root = build_pure(t, &mut expr)?;
+    Some(expr)
+}
+
+fn build_pure(t: &Term, expr: &mut RecExpr<PureLang>) -> Option<Id> {
+    match t {
+        Term::Int(i) => Some(expr.add(PureLang::Num(i.clone()))),
+        Term::Bool(true) => Some(expr.add(PureLang::True)),
+        Term::Bool(false) => Some(expr.add(PureLang::False)),
+        Term::Symbol(s) => Some(expr.add(PureLang::Var(Symbol::from(s.as_str())))),
+        Term::Nil | Term::Str(_) | Term::Bytes(_) | Term::Vector(_) | Term::Map(_) => None,
+        Term::Pair(_, _) => {
+            let items = t.as_proper_list()?;
+            if items.is_empty() {
+                return None;
+            }
+            if let Term::Symbol(h) = items[0] {
+                match h.as_str() {
+                    "if" if items.len() == 4 => {
+                        let c = build_pure(items[1], expr)?;
+                        let tt = build_pure(items[2], expr)?;
+                        let ee = build_pure(items[3], expr)?;
+                        return Some(expr.add(PureLang::If([c, tt, ee])));
+                    }
+                    "prim" if items.len() == 4 => {
+                        let Term::Symbol(op) = items[1] else {
+                            return None;
+                        };
+                        let a = build_pure(items[2], expr)?;
+                        let b = build_pure(items[3], expr)?;
+                        let n = match op.as_str() {
+                            "int/add" => PureLang::Add([a, b]),
+                            "int/sub" => PureLang::Sub([a, b]),
+                            "int/mul" => PureLang::Mul([a, b]),
+                            "int/eq?" => PureLang::Eq([a, b]),
+                            "int/lt?" => PureLang::Lt([a, b]),
+                            _ => return None,
+                        };
+                        return Some(expr.add(n));
+                    }
+                    _ => {}
+                }
+            }
+            None
+        }
+    }
+}
+
+fn pure_expr_to_term(expr: &RecExpr<PureLang>) -> Option<Term> {
+    // RecExpr stores nodes in post-order; the last node is the root.
+    let mut terms: Vec<Term> = Vec::with_capacity(expr.as_ref().len());
+    for n in expr.as_ref() {
+        let t = match n {
+            PureLang::Num(x) => Term::Int(x.clone()),
+            PureLang::True => Term::Bool(true),
+            PureLang::False => Term::Bool(false),
+            PureLang::Var(s) => Term::Symbol(s.to_string()),
+            PureLang::Add([a, b]) => Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("int/add".to_string()),
+                terms[usize::from(*a)].clone(),
+                terms[usize::from(*b)].clone(),
+            ]),
+            PureLang::Sub([a, b]) => Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("int/sub".to_string()),
+                terms[usize::from(*a)].clone(),
+                terms[usize::from(*b)].clone(),
+            ]),
+            PureLang::Mul([a, b]) => Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("int/mul".to_string()),
+                terms[usize::from(*a)].clone(),
+                terms[usize::from(*b)].clone(),
+            ]),
+            PureLang::Eq([a, b]) => Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("int/eq?".to_string()),
+                terms[usize::from(*a)].clone(),
+                terms[usize::from(*b)].clone(),
+            ]),
+            PureLang::Lt([a, b]) => Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("int/lt?".to_string()),
+                terms[usize::from(*a)].clone(),
+                terms[usize::from(*b)].clone(),
+            ]),
+            PureLang::If([c, t, e]) => Term::list(vec![
+                Term::Symbol("if".to_string()),
+                terms[usize::from(*c)].clone(),
+                terms[usize::from(*t)].clone(),
+                terms[usize::from(*e)].clone(),
+            ]),
+        };
+        terms.push(t);
+    }
+    terms.pop()
+}
+
 fn as_int(t: &Term) -> Option<BigInt> {
     match t {
         Term::Int(i) => Some(i.clone()),
@@ -284,9 +652,9 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
 
 #[cfg(test)]
 mod tests {
-    use gc_coreform::{Term, canonicalize_module, parse_module};
+    use gc_coreform::{Term, canonicalize_module, parse_module, print_module};
 
-    use super::optimize_module;
+    use super::{optimize_module, optimize_module_with_report};
 
     #[test]
     fn folds_int_prim_constants() {
@@ -338,5 +706,36 @@ mod tests {
         assert!(
             matches!(xs[2].as_proper_list(), Some(q) if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote"))
         );
+    }
+
+    #[test]
+    fn egg_optimizer_eliminates_identities_deterministically() {
+        let src = r#"
+          (def x (prim int/add 0 (prim int/add y 0)))
+          x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let (opt1, r1) = optimize_module_with_report(&forms);
+        let (opt2, r2) = optimize_module_with_report(&forms);
+        assert_eq!(
+            print_module(&canonicalize_module(opt1.clone()).unwrap()),
+            print_module(&canonicalize_module(opt2.clone()).unwrap())
+        );
+        assert!(r1.stats.egg_runs > 0);
+        assert_eq!(r1.stats.egg_runs, r2.stats.egg_runs);
+
+        let opt = canonicalize_module(opt1).unwrap();
+        let def = opt
+            .iter()
+            .find(|t| {
+                t.as_proper_list().is_some_and(|xs| {
+                    xs.len() == 3
+                        && matches!(xs[0], Term::Symbol(s) if s == "def")
+                        && matches!(xs[1], Term::Symbol(s) if s == "x")
+                })
+            })
+            .expect("def x");
+        let xs = def.as_proper_list().unwrap();
+        assert!(matches!(xs[2], Term::Symbol(s) if s == "y"));
     }
 }

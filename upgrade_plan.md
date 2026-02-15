@@ -101,8 +101,8 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 
 - [ ] Type stack completion:
   - row-polymorphic contract typing with effect rows (current checker is partial/lightweight).
-- [ ] Optimizer completion:
-  - real e-graph (`egg`) optimizer for the pure subset, with rewrite statistics and stronger translation-validation evidence.
+- [x] Optimizer completion:
+  - real e-graph (`egg`) optimizer for the pure subset, with rewrite statistics and stronger translation-validation evidence. (`docs/spec/OPTIMIZER.md`, `docs/spec/TRANSLATION_VALIDATION.md`)
 - [ ] WASM target:
   - compile kernel + pure evaluator to WASM; keep runner as host bridge; keep logs identical.
 

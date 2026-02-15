@@ -918,7 +918,7 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let orig_h = hash_module(&forms);
 
-    let opt = gc_opt::optimize_module(&forms);
+    let (opt, opt_report) = gc_opt::optimize_module_with_report(&forms);
     let opt =
         canonicalize_module(opt).map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let opt_h = hash_module(&opt);
@@ -946,6 +946,11 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
             "changed": changed,
             "original_hash": hex32(orig_h),
             "optimized_hash": hex32(opt_h),
+            "egg_runs": opt_report.stats.egg_runs,
+            "egg_iterations": opt_report.stats.iterations,
+            "egg_eclasses": opt_report.stats.eclasses,
+            "egg_enodes": opt_report.stats.enodes,
+            "egg_rewrites_applied": opt_report.stats.rewrites_applied,
             "optimized_coreform": out_s,
         })),
         error: None,

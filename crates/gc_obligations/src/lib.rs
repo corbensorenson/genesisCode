@@ -1870,21 +1870,55 @@ fn obligation_translation_validation(
     let mut errors = Vec::new();
     let mut per_test = Vec::new();
 
+    // Optimize modules once and record optimizer statistics as evidence.
+    let mut opt_modules = Vec::new();
+    let mut opt_stats = gc_opt::OptimizeStats::default();
+    let mut mod_terms: Vec<Term> = Vec::new();
+    for m in modules {
+        let orig_h = hash_module(&m.forms);
+        let (opt_forms, rep) = gc_opt::optimize_module_with_report(&m.forms);
+        opt_stats.egg_runs = opt_stats.egg_runs.saturating_add(rep.stats.egg_runs);
+        opt_stats.iterations = opt_stats.iterations.saturating_add(rep.stats.iterations);
+        opt_stats.eclasses = opt_stats.eclasses.saturating_add(rep.stats.eclasses);
+        opt_stats.enodes = opt_stats.enodes.saturating_add(rep.stats.enodes);
+        for (k, v) in rep.stats.rewrites_applied {
+            *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
+        }
+        let opt_h = hash_module(&opt_forms);
+        mod_terms.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str(m.entry.path.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":orig-h")),
+                    Term::Bytes(orig_h.to_vec()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":opt-h")),
+                    Term::Bytes(opt_h.to_vec()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":changed")),
+                    Term::Bool(orig_h != opt_h),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+        opt_modules.push(LoadedModule {
+            entry: m.entry.clone(),
+            abs_path: m.abs_path.clone(),
+            hash: opt_h,
+            forms: opt_forms,
+        });
+    }
+
     for id in test_ids {
         // original
         let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone(), limits)?;
-
-        // optimized modules: optimize pure subsets and re-run.
-        let mut opt_modules = Vec::new();
-        for m in modules {
-            let opt_forms = gc_opt::optimize_module(&m.forms);
-            opt_modules.push(LoadedModule {
-                entry: m.entry.clone(),
-                abs_path: m.abs_path.clone(),
-                hash: hash_module(&opt_forms),
-                forms: opt_forms,
-            });
-        }
+        // optimized
         let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone(), limits)?;
 
         if orig.value_hash != opt.value_hash {
@@ -1925,6 +1959,60 @@ fn obligation_translation_validation(
                 Term::Str(manifest.name.clone()),
             ),
             (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (
+                TermOrdKey(Term::symbol(":optimizer")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":egg-runs")),
+                            Term::Int((opt_stats.egg_runs as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":egg-iterations")),
+                            Term::Int((opt_stats.iterations as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":egg-eclasses")),
+                            Term::Int((opt_stats.eclasses as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":egg-enodes")),
+                            Term::Int((opt_stats.enodes as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":egg-rewrites")),
+                            Term::Vector(
+                                opt_stats
+                                    .rewrites_applied
+                                    .iter()
+                                    .map(|(k, v)| {
+                                        Term::Map(
+                                            [
+                                                (
+                                                    TermOrdKey(Term::symbol(":name")),
+                                                    Term::Str(k.clone()),
+                                                ),
+                                                (
+                                                    TermOrdKey(Term::symbol(":n")),
+                                                    Term::Int((*v as i64).into()),
+                                                ),
+                                            ]
+                                            .into_iter()
+                                            .collect(),
+                                        )
+                                    })
+                                    .collect(),
+                            ),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":modules")),
+                Term::Vector(mod_terms),
+            ),
             (TermOrdKey(Term::symbol(":tests")), Term::Vector(per_test)),
             (
                 TermOrdKey(Term::symbol(":errors")),
