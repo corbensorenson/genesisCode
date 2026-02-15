@@ -17,8 +17,14 @@ The WASM module exports these functions via `wasm-bindgen`:
 
 - `fmt_coreform_module(src: &str) -> Result<String, JsValue>`
   - Parse, canonicalize, and return canonical `.gc` bytes with a trailing newline.
+- `fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Run the self-hosted CoreForm toolchain inside the kernel to format a module.
+  - `step_limit=0` means “no limit”.
 - `hash_coreform_module(src: &str) -> Result<String, JsValue>`
   - Parse, canonicalize, and return the 32-byte module hash as 64-hex.
+- `hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Run the self-hosted CoreForm toolchain inside the kernel to hash a module.
+  - `step_limit=0` means “no limit”.
 - `eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Pure evaluation (no effects runner). `step_limit=0` means “no limit”.
   - If evaluation produces an effect program, returns an error telling the caller to use the host runner.

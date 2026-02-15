@@ -119,6 +119,10 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Self-hosted CoreForm parser v1 (frontend) matching the Rust parser for terms/modules:
   - `selfhost/parse.gc`
   - Equivalence tests: `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
+- [x] Cutover tooling entrypoints to support a self-host toolchain engine (opt-in):
+  - CLI: `genesis fmt --engine selfhost` uses `selfhost/tool::fmt-module` (honors `--step-limit/--no-step-limit`)
+  - wasm-bindgen: expose `fmt_coreform_module_selfhost` and `hash_coreform_module_selfhost`
+  - tests: assert `--engine selfhost` output matches Rust engine on fixtures
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)
@@ -181,6 +185,10 @@ and plugin/agent-friendly from day 1.
   - CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
   - GenesisGraph-native UX: commit/log/blame/why/evidence views
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
+- [ ] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
+  - fast, incremental lint for CoreForm and higher-level “Level 1 Foundation” conventions
+  - includes deterministic autofix patches (semantic patch artifacts) where safe
+  - lints are obligation-producible evidence artifacts (so they can gate refs/publish)
 - [ ] Plugin + agent architecture (GenesisCode-only):
   - plugin API as contracts; sandboxed capabilities per plugin
   - agent actions as semantic patches + obligation-gated acceptance pipeline

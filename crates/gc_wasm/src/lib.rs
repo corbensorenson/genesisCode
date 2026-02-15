@@ -11,17 +11,49 @@ use gc_coreform::{
 use gc_kernel::{
     Apply, EffectProgram, EffectRequest, Env, EvalCtx, SealId, Value, eval_module, value_hash,
 };
-use gc_prelude::build_prelude;
+use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
 
 fn js_err(code: &str, msg: impl ToString) -> JsValue {
     JsValue::from_str(&format!("{code}: {}", msg.to_string()))
+}
+
+fn extract_protocol_error_string(ctx: &EvalCtx, v: &Value) -> Option<String> {
+    let tok = ctx.protocol?.error;
+    let Value::Sealed { token, payload } = v else {
+        return None;
+    };
+    if *token != tok {
+        return None;
+    }
+
+    let payload_term = payload.to_term_for_log(Some(tok));
+    match &payload_term {
+        Term::Map(m) => {
+            let code = m
+                .get(&TermOrdKey(Term::Symbol(":error/code".to_string())))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("core/error");
+            let msg = m
+                .get(&TermOrdKey(Term::Symbol(":error/message".to_string())))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("error");
+            Some(format!("{code}: {msg}"))
+        }
+        _ => Some(print_term(&payload_term)),
+    }
 }
 
 #[wasm_bindgen]
 pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
-    Ok(print_module(&forms) + "\n")
+    Ok(print_module(&forms))
 }
 
 #[wasm_bindgen]
@@ -29,6 +61,70 @@ pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     Ok(hex::encode(hash_module(&forms)))
+}
+
+#[wasm_bindgen]
+pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    let mut ctx = if step_limit == 0 {
+        EvalCtx::with_step_limit(None)
+    } else {
+        EvalCtx::with_step_limit(Some(step_limit as u64))
+    };
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+
+    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
+        .map_err(|e| js_err("selfhost/init", e))?;
+
+    let f = env
+        .get("selfhost/tool::fmt-module")
+        .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::fmt-module"))?;
+    let r = f
+        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
+
+    if let Some(s) = extract_protocol_error_string(&ctx, &r) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Str(out)) = r.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!("expected string, got {}", r.debug_repr()),
+        ));
+    };
+    Ok(out.clone())
+}
+
+#[wasm_bindgen]
+pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    let mut ctx = if step_limit == 0 {
+        EvalCtx::with_step_limit(None)
+    } else {
+        EvalCtx::with_step_limit(Some(step_limit as u64))
+    };
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+
+    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
+        .map_err(|e| js_err("selfhost/init", e))?;
+
+    let f = env
+        .get("selfhost/tool::hash-module-src")
+        .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::hash-module-src"))?;
+    let r = f
+        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
+
+    if let Some(s) = extract_protocol_error_string(&ctx, &r) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Str(out)) = r.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!("expected string, got {}", r.debug_repr()),
+        ));
+    };
+    Ok(out.clone())
 }
 
 #[wasm_bindgen]

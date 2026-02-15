@@ -1,0 +1,63 @@
+use assert_cmd::cargo::cargo_bin_cmd;
+use tempfile::tempdir;
+
+fn run_ok(args: &[&str]) {
+    cargo_bin_cmd!("genesis").args(args).assert().success();
+}
+
+#[test]
+fn fmt_selfhost_engine_matches_rust_engine_output() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+
+    let src = r#"
+      ; intentionally messy spacing
+      (def  x   1)
+      (def y (prim int/add x 2))
+      (  y   )
+    "#;
+    std::fs::write(&file, src).unwrap();
+
+    run_ok(&["fmt", file.to_str().unwrap(), "--engine", "rust"]);
+    let rust_out = std::fs::read_to_string(&file).unwrap();
+
+    std::fs::write(&file, src).unwrap();
+    run_ok(&[
+        "--no-step-limit",
+        "fmt",
+        file.to_str().unwrap(),
+        "--engine",
+        "selfhost",
+    ]);
+    let selfhost_out = std::fs::read_to_string(&file).unwrap();
+
+    assert_eq!(rust_out, selfhost_out);
+}
+
+#[test]
+fn fmt_selfhost_check_agrees_with_rust_check() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+
+    let noncanon = "(def x 1)   (def y 2)\n";
+    std::fs::write(&file, noncanon).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args(["fmt", file.to_str().unwrap(), "--check", "--engine", "rust"])
+        .assert()
+        .failure()
+        .code(11);
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--no-step-limit",
+            "fmt",
+            file.to_str().unwrap(),
+            "--check",
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .failure()
+        .code(11);
+}

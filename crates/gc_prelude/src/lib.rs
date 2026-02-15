@@ -1,6 +1,8 @@
 mod prelude;
+mod selfhost_coreform_v1;
 
 pub use prelude::{Prelude, build_prelude};
+pub use selfhost_coreform_v1::load_selfhost_coreform_toolchain_v1;
 
 #[cfg(test)]
 mod tests {
