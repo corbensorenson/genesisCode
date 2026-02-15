@@ -21,7 +21,7 @@ Non-negotiables:
   - `scripts/wasm_bindgen_node.sh`
   - `scripts/wasm_node_smoke.mjs`
   - CI runs Node smoke in `.github/workflows/ci.yml`
-- [ ] Cross-host determinism: native runner vs Node(WASM) must match for:
+- [x] Cross-host determinism: native runner vs Node(WASM) must match for:
   - canonical formatting bytes (module + term)
   - module hash
   - effect request/response hashes for a deterministic deny-by-default run
@@ -85,4 +85,3 @@ Goal: “Rust bootstrap on top of WASM” in practice: run the toolchain on WASI
 ## Notes
 
 If this file reaches “all checked”, we should delete it and replace with a release checklist plus a long-term roadmap doc.
-

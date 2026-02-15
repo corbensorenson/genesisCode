@@ -43,3 +43,8 @@ jobs:
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_node_smoke.mjs
+
+      - name: WASM Cross-Host Determinism (Native vs Node)
+        run: |
+          bash scripts/wasm_bindgen_node.sh >/dev/null
+          node scripts/wasm_cross_host_determinism.mjs
