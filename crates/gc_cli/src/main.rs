@@ -279,8 +279,10 @@ enum Cmd {
     /// GenesisGraph commit DAG operations.
     Vcs {
         /// Capability policy TOML (deny-by-default allowlist).
+        ///
+        /// Required for effectful VCS operations; omitted for pure ops like `vcs hash`.
         #[arg(long)]
-        caps: PathBuf,
+        caps: Option<PathBuf>,
 
         /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
         #[arg(long)]
@@ -296,7 +298,7 @@ enum StoreCmd {
     /// Store a CoreForm artifact datum and return its content hash.
     Put {
         /// Input file containing a single CoreForm term.
-        #[arg(long)]
+        #[arg(long = "in", alias = "input")]
         input: PathBuf,
     },
     /// Fetch an artifact datum by hash.
@@ -649,6 +651,13 @@ enum GcCmd {
 
 #[derive(Subcommand)]
 enum VcsCmd {
+    /// Hash a CoreForm term (or module) without mutating the store.
+    Hash {
+        /// Input file containing a single CoreForm term or a CoreForm module.
+        #[arg(long = "in", alias = "input")]
+        input: PathBuf,
+    },
+
     /// Compute a semantic patch between two snapshot hashes.
     Diff {
         /// Base snapshot hash (hex).
@@ -852,7 +861,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps, log.as_deref(), cmd),
-        Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps, log.as_deref(), cmd),
+        Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps.as_deref(), log.as_deref(), cmd),
     }
 }
 
@@ -2030,12 +2039,63 @@ fn cmd_gc(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &GcCmd) -> Result<Cmd
     })
 }
 
-fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<CmdOut, CliError> {
+fn cmd_vcs(
+    cli: &Cli,
+    caps: Option<&Path>,
+    log: Option<&Path>,
+    cmd: &VcsCmd,
+) -> Result<CmdOut, CliError> {
+    if let VcsCmd::Hash { input } = cmd {
+        let src = std::fs::read_to_string(input)
+            .with_context(|| format!("read {}", input.display()))
+            .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+        let (h, hk) = match parse_term(&src) {
+            Ok(t) => (gc_coreform::hash_term(&t), "term"),
+            Err(_) => {
+                let forms = parse_module(&src)
+                    .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+                let forms = canonicalize_module(forms)
+                    .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+                (hash_module(&forms), "module")
+            }
+        };
+        let hash_hex = gc_vcs::bytes32_to_hex(&h);
+
+        let env = JsonEnvelope {
+            ok: true,
+            kind: "genesis/vcs-hash-v0.1",
+            data: Some(serde_json::json!({
+                "input": input.display().to_string(),
+                "hash": hash_hex,
+                "hash_kind": hk,
+            })),
+            error: None,
+        };
+        return Ok(CmdOut {
+            exit_code: EX_OK,
+            stdout: if cli.json {
+                String::new()
+            } else {
+                format!("{hash_hex}\n")
+            },
+            json: serde_json::to_value(env).expect("json"),
+        });
+    }
+
+    let caps = caps.ok_or_else(|| {
+        cli_err(
+            EX_PARSE,
+            "caps/missing",
+            "missing --caps (required for effectful vcs operations)",
+        )
+    })?;
+
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
     let (forms, kind, log_op) = match cmd {
+        VcsCmd::Hash { .. } => unreachable!("handled above"),
         VcsCmd::Diff {
             base,
             to,
