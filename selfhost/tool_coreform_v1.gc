@@ -2,7 +2,7 @@
 
 (def selfhost/tool::fmt-module
   (fn (src)
-    (let ((forms (core/coreform::parse-module src)))
+    (let ((forms (selfhost/parse::parse-module src)))
       (if (selfhost/tool::is-error forms)
         forms
         (let ((canon (selfhost/canon::canonicalize-module forms)))
@@ -10,7 +10,7 @@
 
 (def selfhost/tool::hash-module-src
   (fn (src)
-    (let ((forms (core/coreform::parse-module src)))
+    (let ((forms (selfhost/parse::parse-module src)))
       (if (selfhost/tool::is-error forms)
         forms
         (let ((canon (selfhost/canon::canonicalize-module forms)))

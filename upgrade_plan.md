@@ -113,8 +113,8 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - module loader + package resolver over commit/snapshot/module artifacts:
     - `selfhost/frontend_v0.gc`
     - `crates/gc_prelude/tests/selfhost_frontend_loader.rs`
-- [x] Self-hosted CoreForm tooling v0 (still uses Rust parser bootstrap API):
-  - `selfhost/tool_coreform_v0.gc` implements `selfhost/tool::{fmt-module,hash-module-src}`
+- [x] Self-hosted CoreForm tooling v1 (no Rust parser dependency):
+  - `selfhost/tool_coreform_v1.gc` implements `selfhost/tool::{fmt-module,hash-module-src}`
   - Equivalence against Rust bootstrap API: `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
 - [x] Self-hosted CoreForm parser v1 (frontend) matching the Rust parser for terms/modules:
   - `selfhost/parse.gc`

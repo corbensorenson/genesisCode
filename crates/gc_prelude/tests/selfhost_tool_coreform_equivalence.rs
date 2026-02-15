@@ -4,14 +4,17 @@ use gc_prelude::build_prelude;
 
 #[test]
 fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
+    let parse_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/parse.gc");
     let printer_path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/printer.gc");
     let canon_path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/canon.gc");
     let hash_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/hash.gc");
     let tool_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/tool_coreform_v0.gc");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/tool_coreform_v1.gc");
 
+    let parse_src = std::fs::read_to_string(&parse_path).expect("read parse");
     let printer_src = std::fs::read_to_string(&printer_path).expect("read printer");
     let canon_src = std::fs::read_to_string(&canon_path).expect("read canon");
     let hash_src = std::fs::read_to_string(&hash_path).expect("read hash");
@@ -29,6 +32,7 @@ fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
 
     let src = format!(
         r#"
+{parse}
 {printer}
 {canon}
 {hash}
@@ -41,6 +45,7 @@ fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
   :hash_sh (selfhost/tool::hash-module-src "{s}")
 }}
         "#,
+        parse = parse_src,
         printer = printer_src,
         canon = canon_src,
         hash = hash_src,
