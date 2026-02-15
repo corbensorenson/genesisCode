@@ -30,6 +30,19 @@ Environment hashing:
 - each frame hashes its bindings in stable key order (by binding name string)
 - values inside the environment are hashed recursively by `value_hash`
 
+### Recursive Environments (Cycle Handling)
+
+Top-level `def` bindings are evaluated in a *recursive module scope*: later `def`s become visible to earlier closures,
+and mutual recursion is supported. This can introduce cycles in the runtime graph (e.g., a function bound in a scope
+closes over that same scope).
+
+`value_hash` remains total by defining a cycle break rule:
+- While hashing an environment frame, if hashing re-enters the *same* frame before completing, the re-entrant
+  `hash_env` call returns `BLAKE3("GCv0.2\\0env-cycle\\0")`.
+
+This rule is stable and deterministic and prevents stack overflows during hashing. Implementations may cache
+environment hashes keyed by `(frame_identity, revision)` but must respect this cycle break rule.
+
 ### Seal Tokens and Sealed Values
 
 - Tokens hash by identity (`SealId`).

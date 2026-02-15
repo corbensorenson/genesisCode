@@ -1,0 +1,423 @@
+(def selfhost/printer::INDENT 2)
+
+(def selfhost/printer::MAX_WIDTH 100)
+
+(def selfhost/printer::bool::not (fn (b) (if b false true)))
+
+(def selfhost/printer::int::le?
+  (fn (a) (fn (b) (if ((core/int::lt? a) b) true ((core/int::eq? a) b)))))
+
+(def selfhost/printer::spaces (fn (n) ((core/str::repeat " ") n)))
+
+(def selfhost/printer::is-atom
+  (fn (t)
+    (let ((tag (core/data::tag t)))
+      (if ((core/sym::eq? tag) (quote :nil))
+        true
+        (if ((core/sym::eq? tag) (quote :bool))
+          true
+          (if ((core/sym::eq? tag) (quote :int))
+            true
+            (if ((core/sym::eq? tag) (quote :str))
+              true
+              (if ((core/sym::eq? tag) (quote :bytes))
+                true
+                (if ((core/sym::eq? tag) (quote :sym)) true false)))))))))
+
+(def selfhost/printer::atom-repr
+  (fn (t)
+    (let ((tag (core/data::tag t)))
+      (if ((core/sym::eq? tag) (quote :nil))
+        "nil"
+        (if ((core/sym::eq? tag) (quote :bool))
+          (if ((core/eq? t) true) "true" "false")
+          (if ((core/sym::eq? tag) (quote :int))
+            (core/int::to-str t)
+            (if ((core/sym::eq? tag) (quote :str))
+              ((core/str::concat "\"") ((core/str::concat (core/coreform::escape-str t)) "\""))
+              (if ((core/sym::eq? tag) (quote :bytes))
+                ((core/str::concat "b\"") ((core/str::concat (core/coreform::escape-bytes t)) "\""))
+                (if ((core/sym::eq? tag) (quote :sym)) (core/sym::to-str t) nil)))))))))
+
+(def selfhost/printer::vec-all?
+  (fn (xs)
+    (fn (i)
+      (fn (pred)
+        (if ((core/int::lt? i) (core/vec::len xs))
+          (if (pred ((core/vec::get xs) i))
+            (((selfhost/printer::vec-all? xs) ((core/int::add i) 1)) pred)
+            false)
+          true)))))
+
+(def selfhost/printer::vec-map
+  (fn (xs)
+    (fn (i)
+      (fn (f)
+        (fn (acc)
+          (if ((core/int::lt? i) (core/vec::len xs))
+            ((((selfhost/printer::vec-map xs) ((core/int::add i) 1)) f)
+              ((core/vec::push acc) (f ((core/vec::get xs) i))))
+            acc))))))
+
+(def selfhost/printer::vec-map-maybe
+  (fn (xs)
+    (fn (i)
+      (fn (f)
+        (fn (acc)
+          (if ((core/int::lt? i) (core/vec::len xs))
+            (let ((y (f ((core/vec::get xs) i))))
+              (if (core/list::is-nil? y)
+                nil
+                ((((selfhost/printer::vec-map-maybe xs) ((core/int::add i) 1)) f)
+                  ((core/vec::push acc) y))))
+            acc))))))
+
+(def selfhost/printer::append-last
+  (fn (lines)
+    (fn (suffix)
+      (let ((n (core/vec::len lines)))
+        (if ((core/int::eq? n) 0)
+          lines
+          (let ((i ((core/int::sub n) 1)))
+            (let ((last ((core/vec::get lines) i)))
+              (((core/vec::set lines) i) ((core/str::concat last) suffix)))))))))
+
+(def selfhost/printer::vec-append (fn (a) (fn (b) (((selfhost/printer::vec-append2 a) b) 0))))
+
+(def selfhost/printer::vec-append2
+  (fn (a)
+    (fn (b)
+      (fn (i)
+        (if ((core/int::lt? i) (core/vec::len b))
+          (((selfhost/printer::vec-append2 ((core/vec::push a) ((core/vec::get b) i))) b)
+            ((core/int::add i) 1))
+          a)))))
+
+(def selfhost/printer::vec1 (fn (x) ((core/vec::push []) x)))
+
+(def selfhost/printer::single-line
+  (fn (t)
+    (let ((a (selfhost/printer::atom-repr t)))
+      (if (core/list::is-nil? a)
+        (let ((tag (core/data::tag t)))
+          (if ((core/sym::eq? tag) (quote :vec))
+            (selfhost/printer::single-line-vec t)
+            (if ((core/sym::eq? tag) (quote :map))
+              (selfhost/printer::single-line-map t)
+              (if ((core/sym::eq? tag) (quote :pair)) (selfhost/printer::single-line-list t) nil))))
+        a))))
+
+(def selfhost/printer::single-line-vec
+  (fn (t)
+    (let ((xs t))
+      (let ((n (core/vec::len xs)))
+        (if ((selfhost/printer::int::le? n) 3)
+          (if (((selfhost/printer::vec-all? xs) 0) selfhost/printer::is-atom)
+            (let ((parts ((((selfhost/printer::vec-map xs) 0) selfhost/printer::atom-repr) [])))
+              ((core/str::concat "[") ((core/str::concat ((core/str::join parts) " ")) "]")))
+            nil)
+          nil)))))
+
+(def selfhost/printer::single-line-map
+  (fn (t)
+    (let ((tag (core/data::tag t)))
+      (if ((core/sym::eq? tag) (quote :map))
+        (let ((entries (core/map::entries t)))
+          (let ((n (core/vec::len entries)))
+            (if ((core/int::eq? n) 0)
+              "{}"
+              (if ((selfhost/printer::int::le? n) 2)
+                (let ((ok ((selfhost/printer::entries-all-atoms? entries) 0)))
+                  (if ok
+                    (let ((parts (((selfhost/printer::entries->atom-parts entries) 0) [])))
+                      ((core/str::concat "{") ((core/str::concat ((core/str::join parts) " ")) "}")))
+                    nil))
+                nil))))
+        nil))))
+
+(def selfhost/printer::entries-all-atoms?
+  (fn (entries)
+    (fn (i)
+      (if ((core/int::lt? i) (core/vec::len entries))
+        (let ((e ((core/vec::get entries) i)))
+          (let ((k ((core/vec::get e) 0)))
+            (let ((v ((core/vec::get e) 1)))
+              (if (selfhost/printer::is-atom k)
+                (if (selfhost/printer::is-atom v)
+                  ((selfhost/printer::entries-all-atoms? entries) ((core/int::add i) 1))
+                  false)
+                false))))
+        true))))
+
+(def selfhost/printer::entries->atom-parts
+  (fn (entries)
+    (fn (i)
+      (fn (acc)
+        (if ((core/int::lt? i) (core/vec::len entries))
+          (let ((e ((core/vec::get entries) i)))
+            (let ((k ((core/vec::get e) 0)))
+              (let ((v ((core/vec::get e) 1)))
+                (((selfhost/printer::entries->atom-parts entries) ((core/int::add i) 1))
+                  ((core/vec::push ((core/vec::push acc) (selfhost/printer::atom-repr k)))
+                    (selfhost/printer::atom-repr v))))))
+          acc)))))
+
+(def selfhost/printer::single-line-list
+  (fn (t)
+    (let ((items (core/pair::as-proper-list t)))
+      (if (core/list::is-nil? items)
+        nil
+        (let
+          ((parts ((((selfhost/printer::vec-map-maybe items) 0) selfhost/printer::single-line) [])))
+          (if (core/list::is-nil? parts)
+            nil
+            (let ((inner ((core/str::join parts) " ")))
+              (let ((s ((core/str::concat "(") ((core/str::concat inner) ")"))))
+                (if ((selfhost/printer::int::le? (core/str::len s)) selfhost/printer::MAX_WIDTH)
+                  s
+                  nil)))))))))
+
+(def selfhost/printer::fmt-term
+  (fn (t)
+    (fn (indent)
+      (let ((sl (selfhost/printer::single-line t)))
+        (if (core/list::is-nil? sl)
+          ((selfhost/printer::fmt-term-non-single t) indent)
+          (if
+            ((selfhost/printer::int::le? ((core/int::add indent) (core/str::len sl)))
+              selfhost/printer::MAX_WIDTH)
+            (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) sl))
+            ((selfhost/printer::fmt-term-non-single t) indent)))))))
+
+(def selfhost/printer::fmt-term-non-single
+  (fn (t)
+    (fn (indent)
+      (let ((a (selfhost/printer::atom-repr t)))
+        (if (core/list::is-nil? a)
+          (let ((tag (core/data::tag t)))
+            (if ((core/sym::eq? tag) (quote :vec))
+              ((selfhost/printer::fmt-vector t) indent)
+              (if ((core/sym::eq? tag) (quote :map))
+                ((selfhost/printer::fmt-map t) indent)
+                (if ((core/sym::eq? tag) (quote :pair))
+                  ((selfhost/printer::fmt-list t) indent)
+                  (selfhost/printer::vec1
+                    ((core/str::concat (selfhost/printer::spaces indent)) "<unknown>"))))))
+          (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) a)))))))
+
+(def selfhost/printer::fmt-list
+  (fn (t)
+    (fn (indent)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/list::is-nil? items)
+          (selfhost/printer::vec1
+            ((core/str::concat (selfhost/printer::spaces indent)) "(pair <improper>)"))
+          ((selfhost/printer::fmt-list-proper items) indent))))))
+
+(def selfhost/printer::fmt-list-proper
+  (fn (items)
+    (fn (indent)
+      (let
+        ((parts ((((selfhost/printer::vec-map-maybe items) 0) selfhost/printer::single-line) [])))
+        (let
+          (
+            (s
+              (if (core/list::is-nil? parts)
+                nil
+                ((core/str::concat "(") ((core/str::concat ((core/str::join parts) " ")) ")")))))
+          (if (core/list::is-nil? s)
+            ((selfhost/printer::fmt-list-multi items) indent)
+            (if
+              ((selfhost/printer::int::le? ((core/int::add indent) (core/str::len s)))
+                selfhost/printer::MAX_WIDTH)
+              (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) s))
+              ((selfhost/printer::fmt-list-multi items) indent))))))))
+
+(def selfhost/printer::fmt-list-multi
+  (fn (items)
+    (fn (indent)
+      (let ((n (core/vec::len items)))
+        (if ((core/int::eq? n) 0)
+          (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "()"))
+          (let ((head0 (selfhost/printer::single-line ((core/vec::get items) 0))))
+            (if (core/list::is-nil? head0)
+              ((selfhost/printer::fmt-list-multi-head-hard items) indent)
+              (((selfhost/printer::fmt-list-multi-head-soft items) indent) head0))))))))
+
+(def selfhost/printer::fmt-list-multi-head-hard
+  (fn (items)
+    (fn (indent)
+      ((((selfhost/printer::fmt-list-multi-head-hard2 items) indent) 0)
+        (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "("))))))
+
+(def selfhost/printer::fmt-list-multi-head-hard2
+  (fn (items)
+    (fn (indent)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::lt? i) (core/vec::len items))
+            (let
+              (
+                (lines
+                  ((selfhost/printer::fmt-term ((core/vec::get items) i))
+                    ((core/int::add indent) selfhost/printer::INDENT))))
+              (let ((out2 ((selfhost/printer::vec-append out) lines)))
+                (if ((core/int::eq? ((core/int::add i) 1)) (core/vec::len items))
+                  ((selfhost/printer::append-last out2) ")")
+                  ((((selfhost/printer::fmt-list-multi-head-hard2 items) indent) ((core/int::add i) 1))
+                    out2))))
+            out))))))
+
+(def selfhost/printer::fmt-list-multi-head-soft
+  (fn (items)
+    (fn (indent)
+      (fn (head0)
+        (let ((head_count 1))
+          (let
+            ((first ((core/str::concat (selfhost/printer::spaces indent)) ((core/str::concat "(") head0))))
+            (let ((hc (if ((selfhost/printer::fmt-list-can-take-second? items) first) 2 1)))
+              (let
+                (
+                  (first2
+                    (if ((core/int::eq? hc) 2)
+                      ((selfhost/printer::fmt-list-first-with-second items) first)
+                      first)))
+                (let ((out (selfhost/printer::vec1 first2)))
+                  (if ((core/int::eq? (core/vec::len items)) hc)
+                    ((selfhost/printer::append-last out) ")")
+                    ((((selfhost/printer::fmt-list-soft-tail items) indent) hc) out)))))))))))
+
+(def selfhost/printer::fmt-list-can-take-second?
+  (fn (items)
+    (fn (first)
+      (if ((selfhost/printer::int::le? (core/vec::len items)) 1)
+        false
+        (let ((h1 (selfhost/printer::single-line ((core/vec::get items) 1))))
+          (if (core/list::is-nil? h1)
+            false
+            (
+              (selfhost/printer::int::le?
+                ((core/int::add (core/str::len first)) ((core/int::add 1) (core/str::len h1))))
+              selfhost/printer::MAX_WIDTH)))))))
+
+(def selfhost/printer::fmt-list-first-with-second
+  (fn (items)
+    (fn (first)
+      (let ((h1 (selfhost/printer::single-line ((core/vec::get items) 1))))
+        ((core/str::concat first) ((core/str::concat " ") h1))))))
+
+(def selfhost/printer::fmt-list-soft-tail
+  (fn (items)
+    (fn (indent)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::lt? i) (core/vec::len items))
+            (let
+              (
+                (lines
+                  ((selfhost/printer::fmt-term ((core/vec::get items) i))
+                    ((core/int::add indent) selfhost/printer::INDENT))))
+              (let ((out2 ((selfhost/printer::vec-append out) lines)))
+                (if ((core/int::eq? ((core/int::add i) 1)) (core/vec::len items))
+                  ((selfhost/printer::append-last out2) ")")
+                  ((((selfhost/printer::fmt-list-soft-tail items) indent) ((core/int::add i) 1))
+                    out2))))
+            out))))))
+
+(def selfhost/printer::fmt-vector
+  (fn (xs)
+    (fn (indent)
+      (let ((n (core/vec::len xs)))
+        (if ((core/int::eq? n) 0)
+          (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "[]"))
+          ((((selfhost/printer::fmt-vector2 xs) indent) 0)
+            (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "["))))))))
+
+(def selfhost/printer::fmt-vector2
+  (fn (xs)
+    (fn (indent)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::lt? i) (core/vec::len xs))
+            (let
+              (
+                (lines
+                  ((selfhost/printer::fmt-term ((core/vec::get xs) i))
+                    ((core/int::add indent) selfhost/printer::INDENT))))
+              (let ((out2 ((selfhost/printer::vec-append out) lines)))
+                (if ((core/int::eq? ((core/int::add i) 1)) (core/vec::len xs))
+                  ((selfhost/printer::append-last out2) "]")
+                  ((((selfhost/printer::fmt-vector2 xs) indent) ((core/int::add i) 1)) out2))))
+            out))))))
+
+(def selfhost/printer::fmt-map
+  (fn (m)
+    (fn (indent)
+      (let ((entries (core/map::entries m)))
+        (let ((n (core/vec::len entries)))
+          (if ((core/int::eq? n) 0)
+            (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "{}"))
+            ((((selfhost/printer::fmt-map2 entries) indent) 0)
+              (selfhost/printer::vec1 ((core/str::concat (selfhost/printer::spaces indent)) "{")))))))))
+
+(def selfhost/printer::fmt-map-kv
+  (fn (out)
+    (fn (k)
+      (fn (v)
+        (fn (indent)
+          (let ((ks (selfhost/printer::single-line k)))
+            (let ((vs (selfhost/printer::single-line v)))
+              (if (core/list::is-nil? ks)
+                ((((selfhost/printer::fmt-map-kv-multi out) k) v) indent)
+                (if (core/list::is-nil? vs)
+                  ((((selfhost/printer::fmt-map-kv-multi out) k) v) indent)
+                  (let
+                    (
+                      (line
+                        ((core/str::concat (selfhost/printer::spaces ((core/int::add indent) selfhost/printer::INDENT)))
+                          ((core/str::concat ks) ((core/str::concat " ") vs)))))
+                    (if
+                      ((selfhost/printer::int::le? (core/str::len line)) selfhost/printer::MAX_WIDTH)
+                      ((core/vec::push out) line)
+                      ((((selfhost/printer::fmt-map-kv-multi out) k) v) indent))))))))))))
+
+(def selfhost/printer::fmt-map2
+  (fn (entries)
+    (fn (indent)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::lt? i) (core/vec::len entries))
+            (let ((e ((core/vec::get entries) i)))
+              (let ((k ((core/vec::get e) 0)))
+                (let ((v ((core/vec::get e) 1)))
+                  (let ((out2 ((((selfhost/printer::fmt-map-kv out) k) v) indent)))
+                    (if ((core/int::eq? ((core/int::add i) 1)) (core/vec::len entries))
+                      ((selfhost/printer::append-last out2) "}")
+                      ((((selfhost/printer::fmt-map2 entries) indent) ((core/int::add i) 1)) out2))))))
+            out))))))
+
+(def selfhost/printer::fmt-map-kv-multi
+  (fn (out)
+    (fn (k)
+      (fn (v)
+        (fn (indent)
+          (let
+            ((k_lines ((selfhost/printer::fmt-term k) ((core/int::add indent) selfhost/printer::INDENT))))
+            (let ((out2 ((selfhost/printer::vec-append out) k_lines)))
+              (let
+                (
+                  (v_lines
+                    ((selfhost/printer::fmt-term v)
+                      ((core/int::add indent) ((core/int::mul selfhost/printer::INDENT) 2)))))
+                ((selfhost/printer::vec-append out2) v_lines)))))))))
+
+(def selfhost/printer::print-term
+  (fn (t) ((core/str::join ((selfhost/printer::fmt-term t) 0)) "\n")))
+
+(def selfhost/printer::print-module
+  (fn (forms)
+    (let ((n (core/vec::len forms)))
+      (if ((core/int::eq? n) 0)
+        ""
+        (let ((terms ((((selfhost/printer::vec-map forms) 0) selfhost/printer::print-term) [])))
+          ((core/str::concat ((core/str::join terms) "\n\n")) "\n"))))))

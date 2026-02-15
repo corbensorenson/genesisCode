@@ -13,6 +13,7 @@ Non-negotiables:
 
 Key docs to treat as authoritative:
 - `docs/spec/WASM.md`, `docs/spec/WASI.md`, `docs/spec/WASM_HOST_BRIDGE.md`
+- `docs/spec/MODULE_SCOPE.md`, `docs/spec/VALUE_EFFECT_HASH.md`
 - `docs/spec/CLI.md`, `docs/GENESISGRAPH_GENESISPKG_v0.2.md`
 - `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md`, `docs/POLICY_DEFAULTS_v0.1.md`
 - `docs/LOCK_GENERATOR_RULESET_v0.1.md`, `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md`
@@ -84,12 +85,13 @@ Key docs to treat as authoritative:
   - `str/repeat`, `str/join`
   - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
-  - CoreForm printer/canonicalizer equivalence tests against Rust
+  - [x] CoreForm printer equivalence tests against Rust (see `selfhost/printer.gc` + `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`)
+  - [ ] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form)
   - module loader and package resolver on GenesisGraph objects
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)
-- [ ] Cutover plan:
+  - [ ] Cutover plan:
   - Rust produces the self-host toolchain artifact
   - then runtime uses the self-host toolchain under obligations
   - Rust becomes optional tooling only

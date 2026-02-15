@@ -137,13 +137,15 @@ pub fn value_hash(v: &Value) -> [u8; 32] {
 }
 
 struct ValueHasher {
-    env_cache: std::collections::HashMap<*const crate::env::EnvFrame, [u8; 32]>,
+    env_cache: std::collections::HashMap<*const crate::env::EnvFrame, (u64, [u8; 32])>,
+    env_in_progress: std::collections::HashSet<*const crate::env::EnvFrame>,
 }
 
 impl ValueHasher {
     fn new() -> Self {
         Self {
             env_cache: std::collections::HashMap::new(),
+            env_in_progress: std::collections::HashSet::new(),
         }
     }
 
@@ -238,7 +240,20 @@ impl ValueHasher {
 
     fn hash_env(&mut self, env: &Env) -> [u8; 32] {
         let ptr = env.0.as_ref() as *const crate::env::EnvFrame;
-        if let Some(h) = self.env_cache.get(&ptr) {
+        let rev = env.0.rev.get();
+
+        // Recursive module scopes can create cyclic env graphs (e.g., a function bound in the env
+        // closes over the env that binds the function). We define a total hash by breaking cycles
+        // with a stable marker.
+        if !self.env_in_progress.insert(ptr) {
+            let mut h = Hasher::new();
+            h.update(b"GCv0.2\0env-cycle\0");
+            return *h.finalize().as_bytes();
+        }
+        if let Some((cached_rev, h)) = self.env_cache.get(&ptr)
+            && *cached_rev == rev
+        {
+            self.env_in_progress.remove(&ptr);
             return *h;
         }
 
@@ -255,8 +270,9 @@ impl ValueHasher {
         }
 
         h.update(b"binds\0");
-        h.update(&(env.0.binds.len() as u64).to_le_bytes());
-        for (k, v) in &env.0.binds {
+        let binds = env.0.binds.borrow();
+        h.update(&(binds.len() as u64).to_le_bytes());
+        for (k, v) in binds.iter() {
             h.update(k.as_bytes());
             h.update(b"\0");
             let hv = self.hash(v);
@@ -264,7 +280,8 @@ impl ValueHasher {
         }
 
         let out = *h.finalize().as_bytes();
-        self.env_cache.insert(ptr, out);
+        self.env_cache.insert(ptr, (rev, out));
+        self.env_in_progress.remove(&ptr);
         out
     }
 }

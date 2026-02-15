@@ -1,3 +1,4 @@
+use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -9,14 +10,18 @@ pub struct Env(pub(crate) Rc<EnvFrame>);
 #[derive(Debug)]
 pub struct EnvFrame {
     pub parent: Option<Env>,
-    pub binds: BTreeMap<String, Value>,
+    // Interior mutability allows top-level `def` to behave like a recursive module scope:
+    // closures capture an `Env`, and later defs become visible without rebuilding env chains.
+    pub binds: RefCell<BTreeMap<String, Value>>,
+    pub rev: Cell<u64>,
 }
 
 impl Env {
     pub fn empty() -> Self {
         Self(Rc::new(EnvFrame {
             parent: None,
-            binds: BTreeMap::new(),
+            binds: RefCell::new(BTreeMap::new()),
+            rev: Cell::new(0),
         }))
     }
 
@@ -25,21 +30,28 @@ impl Env {
         binds.insert(name.into(), val);
         Self(Rc::new(EnvFrame {
             parent: Some(parent.clone()),
-            binds,
+            binds: RefCell::new(binds),
+            rev: Cell::new(0),
         }))
     }
 
     pub fn with_bindings(parent: &Env, new_binds: BTreeMap<String, Value>) -> Self {
         Self(Rc::new(EnvFrame {
             parent: Some(parent.clone()),
-            binds: new_binds,
+            binds: RefCell::new(new_binds),
+            rev: Cell::new(0),
         }))
+    }
+
+    pub fn set_local(&mut self, name: impl Into<String>, val: Value) {
+        self.0.binds.borrow_mut().insert(name.into(), val);
+        self.0.rev.set(self.0.rev.get().wrapping_add(1));
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
         let mut cur: Option<&EnvFrame> = Some(self.0.as_ref());
         while let Some(frame) = cur {
-            if let Some(v) = frame.binds.get(name) {
+            if let Some(v) = frame.binds.borrow().get(name) {
                 return Some(v.clone());
             }
             cur = frame.parent.as_ref().map(|e| e.0.as_ref());

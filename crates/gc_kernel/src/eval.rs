@@ -301,7 +301,7 @@ pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<V
     for form in forms {
         if let Some((name, expr)) = parse_def(form) {
             let v = eval_term(ctx, env, &expr)?;
-            *env = Env::with_binding(env, name, v);
+            env.set_local(name, v);
             last = Value::Data(Term::Nil);
             continue;
         }
@@ -729,16 +729,17 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(t) = args[0].as_data() else {
                 return type_err(ctx, "data/tag expects datum");
             };
+            // Tags must be source-representable symbols (avoid the reserved reader token `nil`).
             let tag = match t {
-                Term::Nil => "nil",
-                Term::Bool(_) => "bool",
-                Term::Int(_) => "int",
-                Term::Str(_) => "str",
-                Term::Bytes(_) => "bytes",
-                Term::Symbol(_) => "sym",
-                Term::Pair(_, _) => "pair",
-                Term::Vector(_) => "vec",
-                Term::Map(_) => "map",
+                Term::Nil => ":nil",
+                Term::Bool(_) => ":bool",
+                Term::Int(_) => ":int",
+                Term::Str(_) => ":str",
+                Term::Bytes(_) => ":bytes",
+                Term::Symbol(_) => ":sym",
+                Term::Pair(_, _) => ":pair",
+                Term::Vector(_) => ":vec",
+                Term::Map(_) => ":map",
             };
             Ok(Value::Data(Term::Symbol(tag.to_string())))
         }
@@ -890,6 +891,40 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 _ => return type_err(ctx, "vec/len expects vector"),
             };
             Ok(Value::Data(Term::Int((n as i64).into())))
+        }
+        "vec/set" => {
+            if args.len() != 3 {
+                return type_err(ctx, "vec/set expects 3 args");
+            }
+            let Some(Term::Int(i)) = args[1].as_data() else {
+                return type_err(ctx, "vec/set expects int index");
+            };
+            let idx: usize = match i.to_usize() {
+                Some(x) => x,
+                None => return type_err(ctx, "vec/set index out of range"),
+            };
+            match &args[0] {
+                Value::Vector(xs) => {
+                    if idx >= xs.len() {
+                        return type_err(ctx, "vec/set index out of range");
+                    }
+                    let mut out = xs.clone();
+                    out[idx] = args[2].clone();
+                    Ok(Value::Vector(out))
+                }
+                Value::Data(Term::Vector(xs)) => {
+                    if idx >= xs.len() {
+                        return type_err(ctx, "vec/set index out of range");
+                    }
+                    let Some(v) = args[2].as_data() else {
+                        return type_err(ctx, "vec/set expects data when vector is data");
+                    };
+                    let mut out = xs.clone();
+                    out[idx] = v.clone();
+                    Ok(Value::Data(Term::Vector(out)))
+                }
+                _ => type_err(ctx, "vec/set expects vector"),
+            }
         }
         "vec/push" => {
             if args.len() != 2 {

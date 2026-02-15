@@ -312,11 +312,11 @@ fn term_introspection_and_escape_prims_work() {
 
     assert!(matches!(
         m.get(&gc_coreform::TermOrdKey(Term::symbol(":t_nil"))),
-        Some(Term::Symbol(s)) if s == "nil"
+        Some(Term::Symbol(s)) if s == ":nil"
     ));
     assert!(matches!(
         m.get(&gc_coreform::TermOrdKey(Term::symbol(":t_int"))),
-        Some(Term::Symbol(s)) if s == "int"
+        Some(Term::Symbol(s)) if s == ":int"
     ));
     assert!(matches!(
         m.get(&gc_coreform::TermOrdKey(Term::symbol(":pl_bad"))),
@@ -363,4 +363,13 @@ fn term_introspection_and_escape_prims_work() {
         m.get(&gc_coreform::TermOrdKey(Term::symbol(":join"))),
         Some(Term::Str(s)) if s == "a,b"
     ));
+}
+
+#[test]
+fn vec_set_replaces_elements() {
+    let forms = parse_module(r#"(prim vec/get (prim vec/set [1 2] 1 9) 1)"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    assert_eq!(v.as_data(), Some(&Term::Int(9.into())));
 }

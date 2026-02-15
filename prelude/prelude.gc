@@ -58,6 +58,7 @@
 (def core/vec::get (fn (v i) (prim vec/get v i)))
 (def core/vec::push (fn (v x) (prim vec/push v x)))
 (def core/vec::len (fn (v) (prim vec/len v)))
+(def core/vec::set (fn (v i x) (prim vec/set v i x)))
 
 (def core/sym::eq? (fn (a b) (prim sym/eq? a b)))
 (def core/sym::to-str (fn (s) (prim sym/to-str s)))
