@@ -136,3 +136,144 @@ fn memory_limit_on_pair_cells_is_a_kernel_error() {
     assert!(matches!(e.kind, KernelErrorKind::MemoryLimit), "{e}");
     assert!(e.msg.contains("pair-cells"), "msg={}", e.msg);
 }
+
+#[test]
+fn vec_len_and_map_len_work() {
+    let forms = parse_module(
+        r#"
+      {
+        :vl (prim vec/len [1 2 3])
+        :ml (prim map/len {:a 1 :b 2})
+      }
+    "#,
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    match v {
+        Value::Map(m) => {
+            let vl = m
+                .get(&gc_coreform::TermOrdKey(Term::symbol(":vl")))
+                .unwrap();
+            assert!(matches!(vl, Value::Data(Term::Int(i)) if i == &3.into()));
+            let ml = m
+                .get(&gc_coreform::TermOrdKey(Term::symbol(":ml")))
+                .unwrap();
+            assert!(matches!(ml, Value::Data(Term::Int(i)) if i == &2.into()));
+        }
+        Value::Data(Term::Map(m)) => {
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":vl"))),
+                Some(Term::Int(i)) if i == &3.into()
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":ml"))),
+                Some(Term::Int(i)) if i == &2.into()
+            ));
+        }
+        _ => panic!("expected map, got {}", v.debug_repr()),
+    }
+}
+
+#[test]
+fn bytes_get_slice_utf8_hex_and_blake3_work() {
+    let forms = parse_module(
+        r#"
+      {
+        :g (prim bytes/get b"\x01\x02\xff" 2)
+        :s (prim bytes/slice b"abcd" 1 2)
+        :u (prim bytes/to-str-utf8 b"hi")
+        :b (prim str/to-bytes-utf8 "hi")
+        :hx (prim bytes/to-hex b"\x00\xff")
+        :bh (prim bytes/from-hex "00ff")
+        :h (prim crypto/blake3 b"")
+      }
+    "#,
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let want = blake3::hash(&[]).as_bytes().to_vec();
+
+    match v {
+        Value::Map(m) => {
+            let g = m.get(&gc_coreform::TermOrdKey(Term::symbol(":g"))).unwrap();
+            assert!(matches!(g, Value::Data(Term::Int(i)) if i == &255.into()));
+            let s = m.get(&gc_coreform::TermOrdKey(Term::symbol(":s"))).unwrap();
+            assert!(matches!(s, Value::Data(Term::Bytes(bs)) if bs == b"bc"));
+            let u = m.get(&gc_coreform::TermOrdKey(Term::symbol(":u"))).unwrap();
+            assert!(matches!(u, Value::Data(Term::Str(s)) if s == "hi"));
+            let b = m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))).unwrap();
+            assert!(matches!(b, Value::Data(Term::Bytes(bs)) if bs == b"hi"));
+            let hx = m
+                .get(&gc_coreform::TermOrdKey(Term::symbol(":hx")))
+                .unwrap();
+            assert!(matches!(hx, Value::Data(Term::Str(s)) if s == "00ff"));
+            let bh = m
+                .get(&gc_coreform::TermOrdKey(Term::symbol(":bh")))
+                .unwrap();
+            assert!(matches!(bh, Value::Data(Term::Bytes(bs)) if bs == b"\x00\xff"));
+            let h = m.get(&gc_coreform::TermOrdKey(Term::symbol(":h"))).unwrap();
+            assert!(matches!(h, Value::Data(Term::Bytes(bs)) if bs == &want));
+        }
+        Value::Data(Term::Map(m)) => {
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":g"))),
+                Some(Term::Int(i)) if i == &255.into()
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":s"))),
+                Some(Term::Bytes(bs)) if bs == b"bc"
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":u"))),
+                Some(Term::Str(s)) if s == "hi"
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))),
+                Some(Term::Bytes(bs)) if bs == b"hi"
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":hx"))),
+                Some(Term::Str(s)) if s == "00ff"
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":bh"))),
+                Some(Term::Bytes(bs)) if bs == b"\x00\xff"
+            ));
+            assert!(matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":h"))),
+                Some(Term::Bytes(bs)) if bs == &want
+            ));
+        }
+        _ => panic!("expected map, got {}", v.debug_repr()),
+    }
+}
+
+#[test]
+fn bytes_to_str_utf8_invalid_is_sealed_type_error() {
+    let forms = parse_module(r#"(prim bytes/to-str-utf8 b"\xff")"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    match v {
+        Value::Sealed { token, .. } => assert_eq!(token, p.error),
+        _ => panic!("expected sealed error, got {}", v.debug_repr()),
+    }
+}
+
+#[test]
+fn bytes_from_hex_invalid_is_sealed_type_error() {
+    let forms = parse_module(r#"(prim bytes/from-hex "0g")"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    match v {
+        Value::Sealed { token, .. } => assert_eq!(token, p.error),
+        _ => panic!("expected sealed error, got {}", v.debug_repr()),
+    }
+}

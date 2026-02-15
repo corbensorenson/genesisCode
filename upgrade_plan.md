@@ -75,6 +75,10 @@ Key docs to treat as authoritative:
 - [x] Add a pure CoreForm bootstrap API to the prelude so GenesisCode tooling can be written in GenesisCode:
   - `core/coreform::{parse-term,parse-module,canonicalize-module,print-term,print-module,fmt-module,hash-term,hash-module,hash-module-src}`
   - Spec: `docs/spec/SELF_HOST_BOOTSTRAP_API.md`
+- [x] Add pure primitives needed for a self-hosted printer/hash in GenesisCode:
+  - UTF-8 conversions, string length, integer formatting
+  - bytes indexing/slicing and hex conversion
+  - raw `crypto/blake3` (bytes -> 32-byte digest)
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
   - CoreForm printer/canonicalizer equivalence tests against Rust
   - module loader and package resolver on GenesisGraph objects

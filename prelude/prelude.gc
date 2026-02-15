@@ -39,6 +39,7 @@
 (def core/int::mul (fn (a b) (prim int/mul a b)))
 (def core/int::eq? (fn (a b) (prim int/eq? a b)))
 (def core/int::lt? (fn (a b) (prim int/lt? a b)))
+(def core/int::to-str (fn (i) (prim int/to-str i)))
 
 (def core/pair::cons (fn (a d) (prim pair/cons a d)))
 (def core/pair::car (fn (p) (prim pair/car p)))
@@ -48,14 +49,24 @@
 (def core/map::get (fn (m k) (prim map/get m k)))
 (def core/map::put (fn (m k v) (prim map/put m k v)))
 (def core/map::merge (fn (a b) (prim map/merge a b)))
+(def core/map::len (fn (m) (prim map/len m)))
 
 (def core/vec::get (fn (v i) (prim vec/get v i)))
 (def core/vec::push (fn (v x) (prim vec/push v x)))
+(def core/vec::len (fn (v) (prim vec/len v)))
 
 (def core/sym::eq? (fn (a b) (prim sym/eq? a b)))
 (def core/str::concat (fn (a b) (prim str/concat a b)))
+(def core/str::len (fn (s) (prim str/len s)))
+(def core/str::to-utf8 (fn (s) (prim str/to-bytes-utf8 s)))
+(def core/str::from-utf8 (fn (b) (prim bytes/to-str-utf8 b)))
 (def core/bytes::len (fn (b) (prim bytes/len b)))
 (def core/bytes::concat (fn (a b) (prim bytes/concat a b)))
+(def core/bytes::get (fn (b i) (prim bytes/get b i)))
+(def core/bytes::slice (fn (b start len) (prim bytes/slice b start len)))
+(def core/bytes::to-hex (fn (b) (prim bytes/to-hex b)))
+(def core/bytes::from-hex (fn (s) (prim bytes/from-hex s)))
+(def core/crypto::blake3 (fn (b) (prim crypto/blake3 b)))
 
 ; ---------
 ; Test DSL

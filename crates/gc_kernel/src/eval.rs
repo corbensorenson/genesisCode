@@ -795,6 +795,17 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 _ => type_err(ctx, "map/merge expects maps of the same kind"),
             }
         }
+        "map/len" => {
+            if args.len() != 1 {
+                return type_err(ctx, "map/len expects 1 arg");
+            }
+            let n: usize = match &args[0] {
+                Value::Map(m) => m.len(),
+                Value::Data(Term::Map(m)) => m.len(),
+                _ => return type_err(ctx, "map/len expects map"),
+            };
+            Ok(Value::Data(Term::Int((n as i64).into())))
+        }
         "vec/get" => {
             if args.len() != 2 {
                 return type_err(ctx, "vec/get expects 2 args");
@@ -814,6 +825,17 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 }
                 _ => type_err(ctx, "vec/get expects vector"),
             }
+        }
+        "vec/len" => {
+            if args.len() != 1 {
+                return type_err(ctx, "vec/len expects 1 arg");
+            }
+            let n: usize = match &args[0] {
+                Value::Vector(xs) => xs.len(),
+                Value::Data(Term::Vector(xs)) => xs.len(),
+                _ => return type_err(ctx, "vec/len expects vector"),
+            };
+            Ok(Value::Data(Term::Int((n as i64).into())))
         }
         "vec/push" => {
             if args.len() != 2 {
@@ -866,6 +888,26 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             ctx.mem_observe_string_len(new_len)?;
             Ok(Value::Data(Term::Str(format!("{a}{b}"))))
         }
+        "str/len" => {
+            if args.len() != 1 {
+                return type_err(ctx, "str/len expects 1 arg");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "str/len expects string");
+            };
+            Ok(Value::Data(Term::Int((s.len() as i64).into())))
+        }
+        "str/to-bytes-utf8" => {
+            if args.len() != 1 {
+                return type_err(ctx, "str/to-bytes-utf8 expects 1 arg");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "str/to-bytes-utf8 expects string");
+            };
+            let bytes = s.as_bytes().to_vec();
+            ctx.mem_observe_bytes_len(bytes.len())?;
+            Ok(Value::Data(Term::Bytes(bytes)))
+        }
         "bytes/len" => {
             if args.len() != 1 {
                 return type_err(ctx, "bytes/len expects 1 arg");
@@ -874,6 +916,141 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 return type_err(ctx, "bytes/len expects bytes");
             };
             Ok(Value::Data(Term::Int((b.len() as i64).into())))
+        }
+        "bytes/get" => {
+            if args.len() != 2 {
+                return type_err(ctx, "bytes/get expects 2 args");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "bytes/get expects bytes");
+            };
+            let Some(Term::Int(i)) = args[1].as_data() else {
+                return type_err(ctx, "bytes/get expects int index");
+            };
+            let idx: usize = match i.to_usize() {
+                Some(x) => x,
+                None => return type_err(ctx, "bytes/get index out of range"),
+            };
+            let Some(x) = b.get(idx) else {
+                return type_err(ctx, "bytes/get index out of range");
+            };
+            Ok(Value::Data(Term::Int(num_bigint::BigInt::from(*x))))
+        }
+        "bytes/slice" => {
+            if args.len() != 3 {
+                return type_err(ctx, "bytes/slice expects 3 args");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "bytes/slice expects bytes");
+            };
+            let Some(Term::Int(start_i)) = args[1].as_data() else {
+                return type_err(ctx, "bytes/slice expects int start");
+            };
+            let Some(Term::Int(len_i)) = args[2].as_data() else {
+                return type_err(ctx, "bytes/slice expects int len");
+            };
+            let start: usize = match start_i.to_usize() {
+                Some(x) => x,
+                None => return type_err(ctx, "bytes/slice start out of range"),
+            };
+            let len: usize = match len_i.to_usize() {
+                Some(x) => x,
+                None => return type_err(ctx, "bytes/slice len out of range"),
+            };
+            let end = start.saturating_add(len);
+            if start > b.len() || end > b.len() {
+                return type_err(ctx, "bytes/slice out of range");
+            }
+            let out = b[start..end].to_vec();
+            ctx.mem_observe_bytes_len(out.len())?;
+            Ok(Value::Data(Term::Bytes(out)))
+        }
+        "bytes/to-str-utf8" => {
+            if args.len() != 1 {
+                return type_err(ctx, "bytes/to-str-utf8 expects 1 arg");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "bytes/to-str-utf8 expects bytes");
+            };
+            let s = match std::str::from_utf8(b) {
+                Ok(x) => x,
+                Err(_) => return type_err(ctx, "bytes/to-str-utf8 invalid utf8"),
+            };
+            ctx.mem_observe_string_len(s.len())?;
+            Ok(Value::Data(Term::Str(s.to_string())))
+        }
+        "int/to-str" => {
+            if args.len() != 1 {
+                return type_err(ctx, "int/to-str expects 1 arg");
+            }
+            let Some(Term::Int(i)) = args[0].as_data() else {
+                return type_err(ctx, "int/to-str expects int");
+            };
+            let s = i.to_string();
+            ctx.mem_observe_string_len(s.len())?;
+            Ok(Value::Data(Term::Str(s)))
+        }
+        "bytes/to-hex" => {
+            if args.len() != 1 {
+                return type_err(ctx, "bytes/to-hex expects 1 arg");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "bytes/to-hex expects bytes");
+            };
+            const LUT: &[u8; 16] = b"0123456789abcdef";
+            let mut out = String::with_capacity(b.len().saturating_mul(2));
+            for x in b {
+                out.push(LUT[(x >> 4) as usize] as char);
+                out.push(LUT[(x & 0x0f) as usize] as char);
+            }
+            ctx.mem_observe_string_len(out.len())?;
+            Ok(Value::Data(Term::Str(out)))
+        }
+        "bytes/from-hex" => {
+            if args.len() != 1 {
+                return type_err(ctx, "bytes/from-hex expects 1 arg");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "bytes/from-hex expects string");
+            };
+            let bs = s.as_bytes();
+            if bs.len() % 2 != 0 {
+                return type_err(ctx, "bytes/from-hex expects even-length hex string");
+            }
+            fn nybble(b: u8) -> Option<u8> {
+                match b {
+                    b'0'..=b'9' => Some(b - b'0'),
+                    b'a'..=b'f' => Some(b - b'a' + 10),
+                    b'A'..=b'F' => Some(b - b'A' + 10),
+                    _ => None,
+                }
+            }
+            let mut out = Vec::with_capacity(bs.len() / 2);
+            let mut i = 0usize;
+            while i < bs.len() {
+                let Some(hi) = nybble(bs[i]) else {
+                    return type_err(ctx, "bytes/from-hex invalid hex digit");
+                };
+                let Some(lo) = nybble(bs[i + 1]) else {
+                    return type_err(ctx, "bytes/from-hex invalid hex digit");
+                };
+                out.push((hi << 4) | lo);
+                i = i.saturating_add(2);
+            }
+            ctx.mem_observe_bytes_len(out.len())?;
+            Ok(Value::Data(Term::Bytes(out)))
+        }
+        "crypto/blake3" => {
+            if args.len() != 1 {
+                return type_err(ctx, "crypto/blake3 expects 1 arg");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "crypto/blake3 expects bytes");
+            };
+            let h = blake3::hash(b);
+            let out = h.as_bytes().to_vec();
+            ctx.mem_observe_bytes_len(out.len())?;
+            Ok(Value::Data(Term::Bytes(out)))
         }
         "bytes/concat" => {
             if args.len() != 2 {
