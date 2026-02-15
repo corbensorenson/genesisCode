@@ -126,6 +126,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - Rust produces the self-host toolchain artifact
   - then runtime uses the self-host toolchain under obligations
   - Rust becomes optional tooling only
+- [ ] Make self-hosted tooling fast/practical under the kernel step limit:
+  - add a compiled execution path (bytecode or WASM) for toolchain-grade workloads
+  - re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
 
 ---
 
