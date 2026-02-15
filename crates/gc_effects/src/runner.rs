@@ -2147,6 +2147,527 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":commits")), Term::Vector(out));
             Ok(Value::Data(Term::Map(m)))
         }
+        "core/vcs::diff" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/vcs::diff".to_string())
+            })?;
+
+            let base_h = match payload_vcs_hash(payload, ":base") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let to_h = match payload_vcs_hash(payload, ":to") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let out_s = match payload_vcs_out(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let store_patch = payload_vcs_store(payload).unwrap_or(true);
+
+            let base_t = match store_get_term(store, &base_h) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/store-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let to_t = match store_get_term(store, &to_h) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/store-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+
+            fn store_value(store: &ArtifactStore, v: &Term) -> Result<String, EffectsError> {
+                store.put_bytes(print_term(v).as_bytes())
+            }
+
+            fn mk_op(op_sym: &str, path: &[gc_vcs::PathStep], value: Option<&str>) -> Term {
+                let mut m = BTreeMap::new();
+                m.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op_sym));
+                m.insert(
+                    TermOrdKey(Term::symbol(":path")),
+                    gc_vcs::path_to_term(path),
+                );
+                if let Some(vh) = value {
+                    m.insert(
+                        TermOrdKey(Term::symbol(":value")),
+                        Term::Str(vh.to_string()),
+                    );
+                }
+                Term::Map(m)
+            }
+
+            fn diff_rec(
+                store: &ArtifactStore,
+                path: &mut Vec<gc_vcs::PathStep>,
+                a: &Term,
+                b: &Term,
+                ops: &mut Vec<Term>,
+                values: &mut Vec<String>,
+            ) -> Result<(), EffectsError> {
+                if a == b {
+                    return Ok(());
+                }
+                match (a, b) {
+                    (Term::Map(ma), Term::Map(mb)) => {
+                        let mut keys: std::collections::BTreeSet<TermOrdKey> =
+                            std::collections::BTreeSet::new();
+                        keys.extend(ma.keys().cloned());
+                        keys.extend(mb.keys().cloned());
+                        for k in keys {
+                            let av = ma.get(&k);
+                            let bv = mb.get(&k);
+                            match (av, bv) {
+                                (Some(x), Some(y)) => {
+                                    path.push(gc_vcs::PathStep::Map(k.0.clone()));
+                                    diff_rec(store, path, x, y, ops, values)?;
+                                    path.pop();
+                                }
+                                (None, Some(y)) => {
+                                    let vh = store_value(store, y)?;
+                                    values.push(vh.clone());
+                                    let mut p2 = path.clone();
+                                    p2.push(gc_vcs::PathStep::Map(k.0.clone()));
+                                    ops.push(mk_op(":insert", &p2, Some(&vh)));
+                                }
+                                (Some(_), None) => {
+                                    let mut p2 = path.clone();
+                                    p2.push(gc_vcs::PathStep::Map(k.0.clone()));
+                                    ops.push(mk_op(":delete", &p2, None));
+                                }
+                                (None, None) => {}
+                            }
+                        }
+                        Ok(())
+                    }
+                    (Term::Vector(_), Term::Vector(_))
+                    | (Term::Pair(_, _), Term::Pair(_, _))
+                    | (Term::Vector(_), _)
+                    | (_, Term::Vector(_))
+                    | (Term::Pair(_, _), _)
+                    | (_, Term::Pair(_, _)) => {
+                        // Conservative: replace whole node when shape differs or container contents differ.
+                        let vh = store_value(store, b)?;
+                        values.push(vh.clone());
+                        ops.push(mk_op(":replace", path, Some(&vh)));
+                        Ok(())
+                    }
+                    _ => {
+                        let vh = store_value(store, b)?;
+                        values.push(vh.clone());
+                        ops.push(mk_op(":replace", path, Some(&vh)));
+                        Ok(())
+                    }
+                }
+            }
+
+            let mut ops: Vec<Term> = Vec::new();
+            let mut values: Vec<String> = Vec::new();
+            let mut path: Vec<gc_vcs::PathStep> = Vec::new();
+            if let Err(e) = diff_rec(store, &mut path, &base_t, &to_t, &mut ops, &mut values) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/diff-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+            ops.sort_by_cached_key(print_term);
+
+            let patch_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/patch"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (TermOrdKey(Term::symbol(":ops")), Term::Vector(ops)),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let patch_bytes = print_term(&patch_term);
+            let patch_h = if store_patch {
+                match store.put_bytes(patch_bytes.as_bytes()) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+            } else {
+                hash_bytes_hex(patch_bytes.as_bytes())
+            };
+
+            if let Some(out_s) = out_s {
+                let base_dir = effective_base_dir(pol)?;
+                let out_path = sandbox_path_write(
+                    &base_dir,
+                    &out_s,
+                    pol.map(|p| p.create_dirs).unwrap_or(false),
+                )?;
+                if let Err(e) =
+                    atomic_write_text(&out_path, (patch_bytes.clone() + "\n").as_bytes())
+                {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":patch")), Term::Str(patch_h));
+            m.insert(
+                TermOrdKey(Term::symbol(":values")),
+                Term::Vector(values.into_iter().map(Term::Str).collect()),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/vcs::apply" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/vcs::apply".to_string())
+            })?;
+
+            let base_h = match payload_vcs_hash(payload, ":base") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let patch_s = match payload_vcs_patch(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let out_s = match payload_vcs_out(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let store_result = payload_vcs_store(payload).unwrap_or(true);
+
+            let base_t = match store_get_term(store, &base_h) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/store-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let base_dir = effective_base_dir(pol)?;
+            let patch_term = if gc_vcs::validate_hex_hash(&patch_s).is_ok() {
+                match store_get_term(store, &patch_s) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-found",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+            } else {
+                let patch_path = match sandbox_path_read(&base_dir, &patch_s) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/caps/path-escape",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                let s = match std::fs::read_to_string(&patch_path) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                match gc_coreform::parse_term(&s) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/parse-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+            };
+
+            let patch = match gc_vcs::Patch::from_term(&patch_term) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-patch",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+
+            fn update_at(
+                t: &Term,
+                path: &[gc_vcs::PathStep],
+                f: &dyn Fn(&Term) -> Result<Term, String>,
+            ) -> Result<Term, String> {
+                if path.is_empty() {
+                    return f(t);
+                }
+                match &path[0] {
+                    gc_vcs::PathStep::Map(k) => {
+                        let Term::Map(m) = t else {
+                            return Err("expected map".to_string());
+                        };
+                        let kk = TermOrdKey(k.clone());
+                        let child = m
+                            .get(&kk)
+                            .ok_or_else(|| format!("missing map key {}", print_term(k)))?;
+                        let new_child = update_at(child, &path[1..], f)?;
+                        let mut mm = m.clone();
+                        mm.insert(kk, new_child);
+                        Ok(Term::Map(mm))
+                    }
+                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                        let Term::Vector(xs) = t else {
+                            return Err("expected vector".to_string());
+                        };
+                        if *i >= xs.len() {
+                            return Err(format!("vector index out of range: {i}"));
+                        }
+                        let mut ys = xs.clone();
+                        let new_child = update_at(&ys[*i], &path[1..], f)?;
+                        ys[*i] = new_child;
+                        Ok(Term::Vector(ys))
+                    }
+                    gc_vcs::PathStep::PairCar => {
+                        let Term::Pair(a, d) = t else {
+                            return Err("expected pair".to_string());
+                        };
+                        let new_a = update_at(a, &path[1..], f)?;
+                        Ok(Term::Pair(Box::new(new_a), d.clone()))
+                    }
+                    gc_vcs::PathStep::PairCdr => {
+                        let Term::Pair(a, d) = t else {
+                            return Err("expected pair".to_string());
+                        };
+                        let new_d = update_at(d, &path[1..], f)?;
+                        Ok(Term::Pair(a.clone(), Box::new(new_d)))
+                    }
+                }
+            }
+
+            fn replace_at(
+                t: &Term,
+                path: &[gc_vcs::PathStep],
+                new_term: Term,
+            ) -> Result<Term, String> {
+                update_at(t, path, &|_cur| Ok(new_term.clone()))
+            }
+
+            fn insert_at(
+                t: &Term,
+                path: &[gc_vcs::PathStep],
+                new_term: Term,
+            ) -> Result<Term, String> {
+                let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
+                update_at(t, parent, &|cur| match last {
+                    gc_vcs::PathStep::Map(k) => {
+                        let Term::Map(m) = cur else {
+                            return Err("expected map".to_string());
+                        };
+                        let kk = TermOrdKey(k.clone());
+                        if m.contains_key(&kk) {
+                            return Err(format!("map key already present {}", print_term(k)));
+                        }
+                        let mut mm = m.clone();
+                        mm.insert(kk, new_term.clone());
+                        Ok(Term::Map(mm))
+                    }
+                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                        let Term::Vector(xs) = cur else {
+                            return Err("expected vector".to_string());
+                        };
+                        if *i > xs.len() {
+                            return Err(format!("vector insert index out of range: {i}"));
+                        }
+                        let mut ys = xs.clone();
+                        ys.insert(*i, new_term.clone());
+                        Ok(Term::Vector(ys))
+                    }
+                    _ => Err("insert requires :map or :vec/:form final step".to_string()),
+                })
+            }
+
+            fn delete_at(t: &Term, path: &[gc_vcs::PathStep]) -> Result<Term, String> {
+                let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
+                update_at(t, parent, &|cur| match last {
+                    gc_vcs::PathStep::Map(k) => {
+                        let Term::Map(m) = cur else {
+                            return Err("expected map".to_string());
+                        };
+                        let kk = TermOrdKey(k.clone());
+                        if !m.contains_key(&kk) {
+                            return Err(format!("missing map key {}", print_term(k)));
+                        }
+                        let mut mm = m.clone();
+                        mm.remove(&kk);
+                        Ok(Term::Map(mm))
+                    }
+                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                        let Term::Vector(xs) = cur else {
+                            return Err("expected vector".to_string());
+                        };
+                        if *i >= xs.len() {
+                            return Err(format!("vector index out of range: {i}"));
+                        }
+                        let mut ys = xs.clone();
+                        ys.remove(*i);
+                        Ok(Term::Vector(ys))
+                    }
+                    _ => Err("delete requires :map or :vec/:form final step".to_string()),
+                })
+            }
+
+            let mut cur = base_t;
+            for opx in &patch.ops {
+                match opx {
+                    gc_vcs::PatchOp::Replace { path, value } => {
+                        let vterm = store_get_term(store, value).map_err(|e| {
+                            EffectsError::Log(format!("patch value read error: {e}"))
+                        })?;
+                        cur = replace_at(&cur, path, vterm).map_err(EffectsError::Log)?;
+                    }
+                    gc_vcs::PatchOp::Insert { path, value } => {
+                        let vterm = store_get_term(store, value).map_err(|e| {
+                            EffectsError::Log(format!("patch value read error: {e}"))
+                        })?;
+                        cur = insert_at(&cur, path, vterm).map_err(EffectsError::Log)?;
+                    }
+                    gc_vcs::PatchOp::Delete { path } => {
+                        cur = delete_at(&cur, path).map_err(EffectsError::Log)?;
+                    }
+                    gc_vcs::PatchOp::Rename { .. } => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/unsupported",
+                            "patch op :rename is not supported yet".to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+            }
+
+            let snap_bytes = print_term(&cur);
+            let snap_h = if store_result {
+                match store.put_bytes(snap_bytes.as_bytes()) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+            } else {
+                hash_bytes_hex(snap_bytes.as_bytes())
+            };
+
+            if let Some(out_s) = out_s {
+                let out_path = sandbox_path_write(
+                    &base_dir,
+                    &out_s,
+                    pol.map(|p| p.create_dirs).unwrap_or(false),
+                )?;
+                if let Err(e) = atomic_write_text(&out_path, (snap_bytes.clone() + "\n").as_bytes())
+                {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(snap_h));
+            Ok(Value::Data(Term::Map(m)))
+        }
         "core/vcs::merge3" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::merge3".to_string())
@@ -4060,6 +4581,49 @@ fn payload_vcs_max(payload: &Term) -> Option<u64> {
     }
 }
 
+fn payload_vcs_out(payload: &Term) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::symbol(":out"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(other) => Err(EffectsError::BadPayload(format!(
+            ":out must be string or nil, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+fn payload_vcs_store(payload: &Term) -> Option<bool> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":store"))) {
+        Some(Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+fn payload_vcs_patch(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::symbol(":patch")))
+        .ok_or_else(|| EffectsError::BadPayload("missing :patch".to_string()))?;
+    match v {
+        Term::Str(s) => Ok(s.clone()),
+        Term::Symbol(s) => Ok(s.clone()),
+        other => Err(EffectsError::BadPayload(format!(
+            ":patch must be string/symbol, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
 fn payload_vcs_hash(payload: &Term, key: &str) -> Result<String, EffectsError> {
     let Term::Map(m) = payload else {
         return Err(EffectsError::BadPayload(
@@ -4085,6 +4649,12 @@ fn payload_vcs_hash(payload: &Term, key: &str) -> Result<String, EffectsError> {
 // -----------------------------------------------------------------------------
 // VCS merge3 (contract snapshots)
 // -----------------------------------------------------------------------------
+
+fn hash_bytes_hex(bytes: &[u8]) -> String {
+    let mut h = blake3::Hasher::new();
+    h.update(bytes);
+    h.finalize().to_hex().to_string()
+}
 
 #[derive(Debug, Clone)]
 struct ContractSnapshotView {

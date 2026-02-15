@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use gc_coreform::{Term, TermOrdKey, print_term};
+use num_traits::ToPrimitive;
 use thiserror::Error;
 
 use crate::schema::{SchemaError, validate_hex_hash};
@@ -11,15 +12,100 @@ pub enum PatchError {
     Schema(#[from] SchemaError),
 }
 
-#[derive(Debug, Clone)]
-pub enum PatchOp {
-    Replace { value: String },
-    Insert { value: String },
-    Delete,
-    Rename,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PathStep {
+    Form(usize),
+    PairCar,
+    PairCdr,
+    Vec(usize),
+    Map(Term),
 }
 
-#[derive(Debug, Clone)]
+pub fn path_from_term(t: &Term) -> Result<Vec<PathStep>, SchemaError> {
+    let Term::Vector(steps) = t else {
+        return Err(SchemaError::Bad(format!(
+            "patch: :path must be a vector, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out = Vec::new();
+    for s in steps {
+        let Term::Vector(items) = s else {
+            return Err(SchemaError::Bad(format!(
+                "patch: path step must be a vector, got {}",
+                print_term(s)
+            )));
+        };
+        if items.is_empty() {
+            return Err(SchemaError::Bad("patch: empty path step".to_string()));
+        }
+        let tag = match &items[0] {
+            Term::Symbol(x) => x.as_str(),
+            other => {
+                return Err(SchemaError::Bad(format!(
+                    "patch: bad path tag {}",
+                    print_term(other)
+                )));
+            }
+        };
+        match tag {
+            ":form" => {
+                if items.len() != 2 {
+                    return Err(SchemaError::Bad("patch: :form expects 1 arg".to_string()));
+                }
+                out.push(PathStep::Form(term_to_usize(&items[1])?));
+            }
+            ":pair-car" => out.push(PathStep::PairCar),
+            ":pair-cdr" => out.push(PathStep::PairCdr),
+            ":vec" => {
+                if items.len() != 2 {
+                    return Err(SchemaError::Bad("patch: :vec expects 1 arg".to_string()));
+                }
+                out.push(PathStep::Vec(term_to_usize(&items[1])?));
+            }
+            ":map" => {
+                if items.len() != 2 {
+                    return Err(SchemaError::Bad("patch: :map expects 1 arg".to_string()));
+                }
+                out.push(PathStep::Map(items[1].clone()));
+            }
+            other => {
+                return Err(SchemaError::Bad(format!(
+                    "patch: unknown path step {other}"
+                )));
+            }
+        }
+    }
+    Ok(out)
+}
+
+pub fn path_to_term(path: &[PathStep]) -> Term {
+    Term::Vector(
+        path.iter()
+            .map(|s| match s {
+                PathStep::Form(i) => {
+                    Term::Vector(vec![Term::symbol(":form"), Term::Int((*i as i64).into())])
+                }
+                PathStep::PairCar => Term::Vector(vec![Term::symbol(":pair-car")]),
+                PathStep::PairCdr => Term::Vector(vec![Term::symbol(":pair-cdr")]),
+                PathStep::Vec(i) => {
+                    Term::Vector(vec![Term::symbol(":vec"), Term::Int((*i as i64).into())])
+                }
+                PathStep::Map(k) => Term::Vector(vec![Term::symbol(":map"), k.clone()]),
+            })
+            .collect(),
+    )
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PatchOp {
+    Replace { path: Vec<PathStep>, value: String },
+    Insert { path: Vec<PathStep>, value: String },
+    Delete { path: Vec<PathStep> },
+    Rename { from: String, to: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Patch {
     pub ops: Vec<PatchOp>,
 }
@@ -29,7 +115,7 @@ impl Patch {
         let Term::Map(m) = t else {
             return Err(SchemaError::Bad("patch must be a map".to_string()));
         };
-        let ty = req_sym(m, ":type", "patch")?;
+        let ty = req_sym_or_str(m, ":type", "patch")?;
         if ty != ":vcs/patch" {
             return Err(SchemaError::Bad(format!("patch: wrong :type {ty}")));
         }
@@ -54,9 +140,13 @@ impl Patch {
                     print_term(x)
                 )));
             };
-            let op = req_sym(mm, ":op", "patch op")?;
+            let op = req_sym_or_str(mm, ":op", "patch op")?;
             match op.as_str() {
                 ":replace" | ":insert" => {
+                    let path_t = mm.get(&TermOrdKey(Term::symbol(":path"))).ok_or_else(|| {
+                        SchemaError::Bad(format!("patch: missing :path for {op}"))
+                    })?;
+                    let path = path_from_term(path_t)?;
                     let v = match mm.get(&TermOrdKey(Term::symbol(":value"))) {
                         Some(Term::Str(s)) => {
                             validate_hex_hash(s)
@@ -70,22 +160,28 @@ impl Patch {
                             )));
                         }
                         None => {
-                            return Err(SchemaError::Bad(
-                                "patch: missing :value for replace/insert".to_string(),
-                            ));
+                            return Err(SchemaError::Bad(format!(
+                                "patch: missing :value for {op}"
+                            )));
                         }
                     };
                     if op == ":replace" {
-                        ops.push(PatchOp::Replace { value: v });
+                        ops.push(PatchOp::Replace { path, value: v });
                     } else {
-                        ops.push(PatchOp::Insert { value: v });
+                        ops.push(PatchOp::Insert { path, value: v });
                     }
                 }
                 ":delete" => {
-                    ops.push(PatchOp::Delete);
+                    let path_t = mm.get(&TermOrdKey(Term::symbol(":path"))).ok_or_else(|| {
+                        SchemaError::Bad("patch: missing :path for :delete".to_string())
+                    })?;
+                    let path = path_from_term(path_t)?;
+                    ops.push(PatchOp::Delete { path });
                 }
                 ":rename" => {
-                    ops.push(PatchOp::Rename);
+                    let from = req_sym_or_str(mm, ":from", "patch op")?;
+                    let to = req_sym_or_str(mm, ":to", "patch op")?;
+                    ops.push(PatchOp::Rename { from, to });
                 }
                 other => {
                     return Err(SchemaError::Bad(format!("patch: unknown op {other}")));
@@ -99,20 +195,38 @@ impl Patch {
         let mut out = Vec::new();
         for op in &self.ops {
             match op {
-                PatchOp::Replace { value } | PatchOp::Insert { value } => out.push(value.clone()),
-                PatchOp::Delete | PatchOp::Rename => {}
+                PatchOp::Replace { value, .. } | PatchOp::Insert { value, .. } => {
+                    out.push(value.clone())
+                }
+                PatchOp::Delete { .. } | PatchOp::Rename { .. } => {}
             }
         }
         out
     }
 }
 
-fn req_sym(m: &BTreeMap<TermOrdKey, Term>, k: &str, what: &str) -> Result<String, SchemaError> {
+fn term_to_usize(t: &Term) -> Result<usize, SchemaError> {
+    match t {
+        Term::Int(i) => i
+            .to_usize()
+            .ok_or_else(|| SchemaError::Bad("index out of range".to_string())),
+        _ => Err(SchemaError::Bad(format!(
+            "index must be int, got {}",
+            print_term(t)
+        ))),
+    }
+}
+
+fn req_sym_or_str(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+    what: &str,
+) -> Result<String, SchemaError> {
     match m.get(&TermOrdKey(Term::symbol(k))) {
         Some(Term::Symbol(s)) => Ok(s.clone()),
         Some(Term::Str(s)) => Ok(s.clone()),
         Some(other) => Err(SchemaError::Bad(format!(
-            "{what}: {k} must be symbol, got {}",
+            "{what}: {k} must be symbol/string, got {}",
             print_term(other)
         ))),
         None => Err(SchemaError::Bad(format!("{what}: missing {k}"))),

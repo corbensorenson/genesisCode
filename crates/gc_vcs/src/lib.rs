@@ -6,7 +6,7 @@ mod signing;
 mod snapshot;
 
 pub use crate::gpk::{GpkBundle, GpkEntry, GpkError, GpkRef, read_bundle, write_bundle};
-pub use crate::patch::{Patch, PatchError, PatchOp};
+pub use crate::patch::{Patch, PatchError, PatchOp, PathStep, path_from_term, path_to_term};
 pub use crate::policy::{Policy, PolicyClass, PolicyError};
 pub use crate::schema::{
     Attestation, Commit, Conflict, ConflictEntry, Evidence, SchemaError, bytes32_to_hex,

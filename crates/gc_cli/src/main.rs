@@ -649,6 +649,44 @@ enum GcCmd {
 
 #[derive(Subcommand)]
 enum VcsCmd {
+    /// Compute a semantic patch between two snapshot hashes.
+    Diff {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Target snapshot hash (hex).
+        #[arg(long)]
+        to: String,
+
+        /// Optional output path for the patch term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// If set, do not store the patch artifact (value artifacts may still be stored).
+        #[arg(long)]
+        no_store: bool,
+    },
+
+    /// Apply a patch to a base snapshot.
+    Apply {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Patch hash (hex) or a patch file path (relative to capability base_dir).
+        #[arg(long)]
+        patch: String,
+
+        /// Optional output path for the resulting snapshot term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// If set, do not store the resulting snapshot artifact.
+        #[arg(long)]
+        no_store: bool,
+    },
+
     /// Walk the commit DAG starting from a commit hash or ref name and print the visited commits.
     Log {
         /// Commit hash (hex) or ref name (refs/...).
@@ -1974,6 +2012,26 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
     let (forms, kind, log_op) = match cmd {
+        VcsCmd::Diff {
+            base,
+            to,
+            out,
+            no_store,
+        } => (
+            mk_vcs_diff_program(base, to, out.as_deref(), !*no_store),
+            "genesis/vcs-diff-v0.1",
+            "vcs-diff",
+        ),
+        VcsCmd::Apply {
+            base,
+            patch,
+            out,
+            no_store,
+        } => (
+            mk_vcs_apply_program(base, patch, out.as_deref(), !*no_store),
+            "genesis/vcs-apply-v0.1",
+            "vcs-apply",
+        ),
         VcsCmd::Log { root, max } => (
             mk_vcs_log_program(root, *max),
             "genesis/vcs-log-v0.1",
@@ -2043,7 +2101,15 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
     let stdout = if cli.json {
         String::new()
     } else {
-        format!("{value}\n")
+        match cmd {
+            VcsCmd::Diff { .. } => extract_vcs_patch_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            VcsCmd::Apply { .. } => extract_vcs_snapshot_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            _ => format!("{value}\n"),
+        }
     };
 
     let env = JsonEnvelope {
@@ -3050,6 +3116,74 @@ fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
     ]
 }
 
+fn mk_vcs_diff_program(base: &str, to: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::diff")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":to")),
+        Term::Str(to.to_string()),
+    );
+    if let Some(out) = out {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":store")),
+        Term::Bool(store),
+    );
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_apply_program(base: &str, patch: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::apply")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":patch")),
+        Term::Str(patch.to_string()),
+    );
+    if let Some(out) = out {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":store")),
+        Term::Bool(store),
+    );
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
 fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
@@ -3083,6 +3217,24 @@ fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
         Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
         Term::symbol("prog"),
     ]
+}
+
+fn extract_vcs_patch_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":patch"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_vcs_snapshot_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":snapshot"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
 }
 
 fn extract_pkg_snapshot_hash(v: &Value) -> Option<String> {
