@@ -62,7 +62,7 @@ struct PendingEffect {
     k: Value,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum StepResult {
     Done {
@@ -80,7 +80,7 @@ enum StepResult {
     },
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct ResumeResult {
     resp_h: String,
     next: StepResult,
@@ -266,6 +266,11 @@ impl Runtime {
     }
 
     fn respond_value(&mut self, resp_val: Value) -> Result<JsValue, JsValue> {
+        let out = self.respond_value_internal(resp_val)?;
+        serde_wasm_bindgen::to_value(&out).map_err(|e| js_err("serde", e))
+    }
+
+    fn respond_value_internal(&mut self, resp_val: Value) -> Result<ResumeResult, JsValue> {
         let PendingEffect { k, .. } = self
             .pending
             .take()
@@ -283,11 +288,10 @@ impl Runtime {
         self.cur = Some(next);
 
         let next_step = self.step_internal()?;
-        let out = ResumeResult {
+        Ok(ResumeResult {
             resp_h: hex::encode(resp_h),
             next: next_step,
-        };
-        serde_wasm_bindgen::to_value(&out).map_err(|e| js_err("serde", e))
+        })
     }
 }
 
@@ -369,5 +373,116 @@ mod hex {
             out.push(HEX[(b & 0x0f) as usize] as char);
         }
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn eval_to_first_step(rt: &mut Runtime, src: &str) -> StepResult {
+        rt.ctx = EvalCtx::with_step_limit(rt.step_limit);
+        let prelude = build_prelude(&mut rt.ctx);
+        rt.env = prelude.env;
+        rt.cur = None;
+        rt.pending = None;
+
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        rt.module_h = Some(hash_module(&forms));
+        let v = eval_module(&mut rt.ctx, &mut rt.env, &forms).unwrap();
+        rt.cur = Some(v);
+        rt.step_internal().unwrap()
+    }
+
+    #[test]
+    fn runtime_steps_pure_program_to_done() {
+        let mut rt = Runtime::new(0);
+        let step = eval_to_first_step(
+            &mut rt,
+            r#"
+              (def m::x 1)
+              m::x
+            "#,
+        );
+        let StepResult::Done { value, .. } = step else {
+            panic!("expected done, got {:?}", step);
+        };
+        assert_eq!(value, "1");
+    }
+
+    #[test]
+    fn runtime_steps_effect_program_and_resumes_with_data() {
+        let mut rt = Runtime::new(0);
+        let step = eval_to_first_step(
+            &mut rt,
+            r#"
+              (core/effect::perform
+                'sys/time::now
+                nil
+                (fn (t) (core/effect::pure t)))
+            "#,
+        );
+        let StepResult::Effect {
+            op,
+            payload,
+            payload_h,
+            cont_h,
+            req_h,
+            ..
+        } = step
+        else {
+            panic!("expected effect, got {:?}", step);
+        };
+        assert_eq!(op, "sys/time::now");
+        assert_eq!(payload, "nil");
+
+        let pending_k = rt.pending.as_ref().unwrap().k.clone();
+        let expected_payload_h = hex::encode(hash_term(&Term::Nil));
+        let expected_cont_h = hex::encode(value_hash(&pending_k));
+        let expected_req_h = hex::encode(hash_request(
+            "sys/time::now",
+            hash_term(&Term::Nil),
+            value_hash(&pending_k),
+        ));
+        assert_eq!(payload_h, expected_payload_h);
+        assert_eq!(cont_h, expected_cont_h);
+        assert_eq!(req_h, expected_req_h);
+
+        let resp = Value::Data(parse_term("123").unwrap());
+        let resumed = rt.respond_value_internal(resp).unwrap();
+        assert_eq!(
+            resumed.resp_h,
+            hex::encode(value_hash(&Value::Data(Term::Int(123.into()))))
+        );
+        match resumed.next {
+            StepResult::Done { value, .. } => assert_eq!(value, "123"),
+            other => panic!("expected done after resume, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn runtime_can_resume_with_denied_error() {
+        let mut rt = Runtime::new(0);
+        let step = eval_to_first_step(
+            &mut rt,
+            r#"
+              (core/effect::perform
+                'sys/time::now
+                nil
+                (fn (t) (core/effect::pure t)))
+            "#,
+        );
+        assert!(matches!(step, StepResult::Effect { .. }));
+        let error_tok = rt.ctx.protocol.unwrap().error;
+        let resumed = rt
+            .respond_value_internal(mk_caps_denied(error_tok, "sys/time::now"))
+            .unwrap();
+        match resumed.next {
+            StepResult::Done { value, .. } => {
+                assert!(value.contains(":error/code"));
+                assert!(value.contains("core/caps/denied"));
+            }
+            other => panic!("expected done after denied, got {:?}", other),
+        }
     }
 }
