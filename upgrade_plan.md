@@ -86,7 +86,7 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 
 ### P1: Obligation Stack Expansion (From Paper/Style Guide)
 
-- [ ] Add `core/obligation::property-tests` with recorded seeds as evidence artifacts.
+- [x] Add `core/obligation::property-tests` with recorded seeds as evidence artifacts. (`docs/spec/PROPERTY_TESTS.md`)
 - [ ] Add `core/obligation::coverage` (tooling obligation; define what coverage means for GenesisCode code and how it is measured).
 - [x] Add `core/obligation::budgets` (deterministic per-test step/effect-log budgets with evidence artifacts; see `docs/spec/BUDGETS.md`).
 

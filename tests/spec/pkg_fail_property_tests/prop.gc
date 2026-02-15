@@ -1,0 +1,18 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/prop::properties]
+      :types {pkg/prop::properties ?}}))
+
+(def pkg/prop::properties
+  {
+    "always-fails"
+      {
+        :body (fn (seed) false)
+        :cases 4
+      }
+  })
+
+pkg/prop::properties
+

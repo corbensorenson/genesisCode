@@ -1,0 +1,12 @@
+dependencies = []
+name = "pkg_fail_property_tests"
+obligations = ["core/obligation::property-tests"]
+property_tests = ["pkg/prop::properties"]
+version = "0.0.1"
+
+[[modules]]
+hash = "e050c996e2c7cd6eae1a3f813aa3990fcd935645cfdb33af37c2fab17d085257"
+path = "prop.gc"
+
+[property]
+cases_per_test = 16

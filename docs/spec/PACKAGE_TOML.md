@@ -13,9 +13,11 @@ This file defines a package, its modules, dependencies, and required obligations
 ## Optional Keys
 
 - `tests` (array of strings): suite symbols to execute as unit tests
+- `property_tests` (array of strings): suite symbols to execute as property tests (used by `core/obligation::property-tests`)
 - `caps_policy` (string): path to a `caps.toml` relative to the manifest directory
 - `limits` (table): evaluation limits enforced for package evaluation and tests
 - `budgets` (table): per-test budgets enforced by the `core/obligation::budgets` obligation
+- `property` (table): configuration for property tests
 
 `limits` keys:
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
@@ -26,6 +28,9 @@ This file defines a package, its modules, dependencies, and required obligations
 - `max_steps_per_test` (integer): maximum kernel evaluation steps for each unit test
 - `max_effect_entries_per_test` (integer): maximum effect log entries for each effectful test
 - `max_effect_log_bytes_per_test` (integer): maximum canonical `.gclog` byte length for each effectful test
+
+`property` keys:
+- `cases_per_test` (integer, optional): default cases per property test when not specified by the test entry
 
 ## Module Table
 

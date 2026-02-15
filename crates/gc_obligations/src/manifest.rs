@@ -18,6 +18,9 @@ pub struct PackageManifest {
     #[serde(default)]
     pub tests: Vec<String>,
 
+    #[serde(default)]
+    pub property_tests: Vec<String>,
+
     pub caps_policy: Option<String>,
 
     #[serde(default)]
@@ -25,6 +28,9 @@ pub struct PackageManifest {
 
     #[serde(default)]
     pub budgets: Budgets,
+
+    #[serde(default)]
+    pub property: PropertyConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -51,6 +57,12 @@ pub struct Budgets {
 
     /// If set, each effect log must serialize to at most this many bytes in canonical CoreForm.
     pub max_effect_log_bytes_per_test: Option<u64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PropertyConfig {
+    /// Default number of cases per property test, if the test entry does not specify `:cases`.
+    pub cases_per_test: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
