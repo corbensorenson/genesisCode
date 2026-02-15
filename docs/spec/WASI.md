@@ -12,10 +12,13 @@ print results, but kernel evaluation remains pure.
 - Current command surface is intentionally minimal (WASI bootstrap):
   - `genesis fmt <file> [--check]`
   - `genesis eval <file>`
+  - `genesis pack --pkg <package.toml>`
+  - `genesis test --pkg <package.toml> [--caps <caps.toml>]`
   - `genesis run <file> --caps <caps.toml> [--log <out.gclog>]` (local effects only)
   - `genesis replay <file> --log <log.gclog> [--store <dir>]`
   - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has} ...` (local store only)
   - `genesis refs --caps <caps.toml> [--log <out.gclog>] {get|list|set|delete} ...` (local refs only)
+  - `genesis pkg --caps <caps.toml> [--log <out.gclog>] {init|add|lock|update|install|verify|list|info|snapshot|export|import} ...` (local-only; no sync)
   - `genesis vcs hash --in <file>`
 
 The interface mirrors the native `genesis` CLI for these commands:

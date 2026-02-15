@@ -12,8 +12,8 @@ Non-negotiables:
 - No mock/simulated product behavior.
 
 Key docs to treat as authoritative:
-- `docs/WASM.md`, `docs/WASI.md`, `docs/WASM_HOST_BRIDGE.md`
-- `docs/CLI.md`, `docs/GENESISGRAPH_GENESISPKG_v0.2.md`
+- `docs/spec/WASM.md`, `docs/spec/WASI.md`, `docs/spec/WASM_HOST_BRIDGE.md`
+- `docs/spec/CLI.md`, `docs/GENESISGRAPH_GENESISPKG_v0.2.md`
 - `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md`, `docs/POLICY_DEFAULTS_v0.1.md`
 - `docs/LOCK_GENERATOR_RULESET_v0.1.md`, `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md`
 - `docs/REACHABILITY_RULES_v0.1.md`, `docs/GARBAGE_COLLECTION_RULES_v0.1.md`
@@ -40,7 +40,7 @@ Key docs to treat as authoritative:
   - [x] `store put/get/has` (local `.genesis/store`)
   - [x] `refs get/set/list/delete` (local refs db)
   - Acceptance: WASI outputs match native for the same inputs and logs.
- - [x] Add WASI smoke tests for `run` and `replay` (compare native vs wasmtime) in CI.
+- [x] Add WASI smoke tests for `run` and `replay` (compare native vs wasmtime) in CI.
 
 ### P1.2 wasm-bindgen hosts (Node and browser)
 
@@ -58,8 +58,11 @@ Key docs to treat as authoritative:
   - network denied by default (explicit capability only)
   - deterministic time only via effect logs (no ambient time in kernel)
 - [ ] Make the WASI CLI support package workflows without network:
-  - `pkg init/add/lock/install/export/import/verify` using local store and refs
-  - Acceptance: a workspace can be built and tested inside wasmtime.
+  - [x] `genesis pkg init/add/lock/update/install/verify/list/info` using local store and refs.
+  - [x] `genesis pkg export/import` using `.gpk` bundles (shallow/full), local-only.
+  - [x] WASI smoke asserts native vs WASI equivalence for `pkg init/add/lock/install` (plus store+refs).
+  - [x] WASI supports `genesis pack` and `genesis test` for local workspaces.
+  - [x] Acceptance: a workspace can be built and tested inside wasmtime (smoke covers `pack` + `test`).
 
 ---
 

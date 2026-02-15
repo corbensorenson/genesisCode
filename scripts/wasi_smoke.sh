@@ -194,4 +194,123 @@ if [[ "$WASI_GET_AFTER_DEL" != "nil" ]]; then
   exit 1
 fi
 
+# pkg workflows (local-only) should match native genesis for lock/init/add/lock/install.
+cat >"$TMP_DIR/caps_pkg.toml" <<'TOML'
+allow = [
+  "core/store::put",
+  "core/store::get",
+  "core/store::has",
+  "core/refs::get",
+  "core/refs::list",
+  "core/refs::set",
+  "core/refs::delete",
+  "core/pkg::init",
+  "core/pkg::add",
+  "core/pkg::lock",
+  "core/pkg::install",
+  "core/pkg::verify",
+  "core/pkg::list",
+  "core/pkg::info",
+  "core/gpk::export",
+  "core/gpk::import"
+]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/pkg::init"]
+base_dir = "."
+
+[op."core/pkg::add"]
+base_dir = "."
+
+[op."core/pkg::lock"]
+base_dir = "."
+
+[op."core/pkg::install"]
+base_dir = "."
+
+[op."core/pkg::verify"]
+base_dir = "."
+
+[op."core/pkg::list"]
+base_dir = "."
+
+[op."core/pkg::info"]
+base_dir = "."
+
+[op."core/gpk::export"]
+base_dir = "."
+
+[op."core/gpk::import"]
+base_dir = "."
+TOML
+
+cat >"$TMP_DIR/snap.gc" <<'GC'
+{
+  :type :vcs/snapshot
+  :v 1
+  :kind :package
+  :pkg/name "mini"
+  :pkg/version "0.0.0"
+  :modules []
+  :obligations []
+}
+GC
+
+SNAP_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-snap-put.gclog" put --in "$TMP_DIR/snap.gc" | tr -d '\n')"
+SNAP_H_WASI="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-snap-put.gclog" put --in "$TMP_DIR/snap.gc" | tr -d '\n')"
+if [[ "$SNAP_H_NATIVE" != "$SNAP_H_WASI" ]]; then
+  echo "snapshot hash mismatch native=$SNAP_H_NATIVE wasi=$SNAP_H_WASI" >&2
+  exit 1
+fi
+
+N_INIT="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-init.gclog" init --workspace "wasi-smoke" --lock genesis.lock | tr -d '\n')"
+W_INIT="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-init.gclog" init --workspace "wasi-smoke" --lock genesis.lock | tr -d '\n')"
+if [[ "$N_INIT" != "$W_INIT" ]]; then
+  echo "pkg init mismatch native=$N_INIT wasi=$W_INIT" >&2
+  exit 1
+fi
+
+SPEC="mini@snapshot:$SNAP_H_NATIVE"
+N_ADD="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-add.gclog" add "$SPEC" --lock genesis.lock --update-policy manual | tr -d '\n')"
+W_ADD="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-add.gclog" add "$SPEC" --lock genesis.lock --update-policy manual | tr -d '\n')"
+if [[ "$N_ADD" != "$W_ADD" ]]; then
+  echo "pkg add mismatch native=$N_ADD wasi=$W_ADD" >&2
+  exit 1
+fi
+
+N_LOCK="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-lock.gclog" lock --lock genesis.lock | tr -d '\n')"
+W_LOCK="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-lock.gclog" lock --lock genesis.lock | tr -d '\n')"
+if [[ "$N_LOCK" != "$W_LOCK" ]]; then
+  echo "pkg lock mismatch native=$N_LOCK wasi=$W_LOCK" >&2
+  exit 1
+fi
+
+N_INSTALL="$(cargo run -p gc_cli --quiet -- pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/native-pkg-install.gclog" install --lock genesis.lock --frozen | tr -d '\n')"
+W_INSTALL="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pkg --caps "$TMP_DIR/caps_pkg.toml" --log "$TMP_DIR/wasi-pkg-install.gclog" install --lock genesis.lock --frozen | tr -d '\n')"
+if [[ "$N_INSTALL" != "$W_INSTALL" ]]; then
+  echo "pkg install mismatch native=$N_INSTALL wasi=$W_INSTALL" >&2
+  exit 1
+fi
+
+# pack/test should work under WASI and match native for the same package fixture (no ambient nondeterminism).
+cp -R tests/spec/pkg_basic "$TMP_DIR/pkg_basic"
+N_PACK="$(cargo run -p gc_cli --quiet -- pack --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+W_PACK="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" pack --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+if [[ "$N_PACK" != "$W_PACK" ]]; then
+  echo "pack mismatch native=$N_PACK wasi=$W_PACK" >&2
+  exit 1
+fi
+
+N_TEST="$(cargo run -p gc_cli --quiet -- test --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+W_TEST="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" test --pkg "$TMP_DIR/pkg_basic/package.toml" | tr -d '\n')"
+if [[ "$N_TEST" != "$W_TEST" ]]; then
+  echo "test mismatch native=$N_TEST wasi=$W_TEST" >&2
+  exit 1
+fi
+
 echo "ok"

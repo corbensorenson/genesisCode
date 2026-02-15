@@ -15,8 +15,10 @@ const EX_OK: u8 = 0;
 const EX_PARSE: u8 = 10;
 const EX_FMT: u8 = 11;
 const EX_EVAL: u8 = 20;
+const EX_OBLIGATIONS: u8 = 30;
 const EX_REPLAY: u8 = 40;
 const EX_CAPS_DENY: u8 = 41;
+const EX_VERIFY: u8 = 50;
 const EX_IO: u8 = 70;
 
 #[derive(Parser)]
@@ -71,6 +73,24 @@ enum Cmd {
     /// Evaluate a CoreForm program/module (pure).
     Eval { file: PathBuf },
 
+    /// Run package obligations (unit tests, determinism, replay checks, etc.) and write evidence into `.genesis/store`.
+    Test {
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+
+        /// Override capability policy TOML for effectful tests.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+    },
+
+    /// Compute and store a content-addressed package artifact record.
+    Pack {
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
     /// Run an effect program with a deny-by-default capability policy.
     Run {
         file: PathBuf,
@@ -118,6 +138,23 @@ enum Cmd {
 
         #[command(subcommand)]
         cmd: RefsCmd,
+    },
+
+    /// Package workflows (GenesisPkg) as effectful operations (policy-gated).
+    ///
+    /// Under the WASI bootstrap, networking is denied; these commands support local-only flows
+    /// (lockfiles, local store/refs, `.gpk` import/export).
+    Pkg {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<pid>-<seq>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: PkgCmd,
     },
 
     /// GenesisGraph pure ops subset.
@@ -201,6 +238,147 @@ enum RefsCmd {
     },
 }
 
+#[derive(Subcommand)]
+enum PkgCmd {
+    /// Initialize a `genesis.lock` workspace lock file.
+    Init {
+        /// Workspace name.
+        #[arg(long)]
+        workspace: String,
+
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Workspace policy alias (stored in lock; not resolved here).
+        #[arg(long, default_value = "policy:default-v0.1")]
+        policy: String,
+
+        /// Default registry remote spec (stored in lock; unused under WASI without sync).
+        #[arg(long)]
+        registry_default: Option<String>,
+    },
+
+    /// Add or update a dependency requirement in `genesis.lock`.
+    ///
+    /// Spec format: `<name>@<selector>` where selector is `commit:<hex>`, `snapshot:<hex>`,
+    /// or `refs/...` (or `ref:refs/...`).
+    Add {
+        spec: String,
+
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Update policy for ref-tracking dependencies.
+        #[arg(long, default_value = "manual", value_parser = ["manual", "auto"])]
+        update_policy: String,
+
+        /// Registry name from `[registries]` (default is `default`).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+
+    /// Resolve requirements into pinned commits/snapshots in `genesis.lock` (local-only).
+    Lock {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// Update locked entries for tracked refs (`update_policy=auto`) (local-only).
+    Update {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
+    Install {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Fail if any requirement is missing a locked entry.
+        #[arg(long)]
+        frozen: bool,
+
+        /// Perform strict checks: validate commit/evidence artifacts when present.
+        #[arg(long)]
+        strict: bool,
+    },
+
+    /// Verify locked entries and referenced artifacts (strict checks).
+    Verify {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// List requirements and locked entries from `genesis.lock`.
+    List {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// Show info for a single dependency from `genesis.lock`.
+    Info {
+        name: String,
+
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// Build and store a `:vcs/snapshot` for a `package.toml`.
+    Snapshot {
+        /// Path to package.toml (relative to the capability base_dir).
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
+    /// Export a `.gpk` bundle from a root hash.
+    Export {
+        /// Root hash (hex). For shallow bundles this is a snapshot hash; for full bundles this is usually a commit hash.
+        #[arg(long)]
+        snapshot: String,
+
+        /// Output bundle path (relative to capability base_dir).
+        #[arg(long)]
+        out: PathBuf,
+
+        /// Export a full-history bundle from the root hash (commit closure + snapshots + patches + evidence).
+        #[arg(long)]
+        full: bool,
+
+        /// Parent depth when the root is a commit hash (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Include named refs in the bundle (requires `.gpk` v2).
+        #[arg(long = "include-ref")]
+        include_refs: Vec<String>,
+    },
+
+    /// Import a `.gpk` bundle into the local store.
+    Import {
+        /// Input bundle path (relative to capability base_dir).
+        #[arg(long)]
+        input: PathBuf,
+
+        /// Update local refs after import.
+        ///
+        /// Format: `<refname>=<commit-hash>` (hash may be `nil` to delete).
+        #[arg(long = "set-ref")]
+        set_refs: Vec<String>,
+
+        /// Policy artifact hash (hex) used by the local refs/set gate (required when using --set-ref).
+        #[arg(long)]
+        policy: Option<String>,
+    },
+}
+
 fn resolved_step_limit(cli: &Cli) -> StepLimit {
     if cli.no_step_limit {
         StepLimit::Unlimited
@@ -276,6 +454,16 @@ fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> Cli
             message: message.into(),
             context: None,
         },
+    }
+}
+
+fn obligation_err(e: gc_obligations::ObligationError) -> CliError {
+    match e {
+        gc_obligations::ObligationError::Manifest(s) => cli_err(EX_PARSE, "manifest/error", s),
+        gc_obligations::ObligationError::Module(s) => cli_err(EX_PARSE, "module/error", s),
+        gc_obligations::ObligationError::Store(s) => cli_err(EX_IO, "store/error", s),
+        gc_obligations::ObligationError::Io(e) => cli_err(EX_IO, "io/error", e.to_string()),
+        other => cli_err(EX_EVAL, "obligation/error", other.to_string()),
     }
 }
 
@@ -408,6 +596,74 @@ fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
             String::new()
         } else {
             format!("{value}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
+    let r = gc_obligations::test_package_with_step_limit(
+        pkg,
+        caps,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+    )
+    .map_err(obligation_err)?;
+    let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
+
+    let obligations: Vec<serde_json::Value> = r
+        .obligation_results
+        .iter()
+        .map(|o| {
+            serde_json::json!({
+                "name": o.name,
+                "ok": o.ok,
+                "artifact": o.artifact,
+                "errors": o.errors,
+            })
+        })
+        .collect();
+
+    let env = JsonEnvelope {
+        ok: r.ok,
+        kind: "genesis/test-v0.2",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "caps": caps.map(|p| p.display().to_string()),
+            "acceptance_artifact": r.acceptance_artifact,
+            "obligations": obligations,
+        })),
+        error: None,
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", r.acceptance_artifact)
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
+    let h = gc_obligations::pack(pkg).map_err(obligation_err)?;
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/pack-v0.2",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "package_artifact": h,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{h}\n")
         },
         json: serde_json::to_value(env).expect("json"),
     })
@@ -935,6 +1191,894 @@ fn extract_refs_list_pairs(v: &Value) -> Option<Vec<(String, String)>> {
     Some(out)
 }
 
+fn parse_pkg_spec(spec: &str) -> Result<(String, String), String> {
+    let (name, sel) = spec
+        .split_once('@')
+        .ok_or_else(|| "spec must be <name>@<selector>".to_string())?;
+    let name = name.trim();
+    let sel = sel.trim();
+    if name.is_empty() || sel.is_empty() {
+        return Err("spec must be <name>@<selector> (both non-empty)".to_string());
+    }
+    Ok((name.to_string(), sel.to_string()))
+}
+
+#[derive(Debug, Clone)]
+struct SetRefSpec {
+    name: String,
+    hash: String,
+    policy: String,
+    expected_old: Option<String>,
+}
+
+fn is_hex64(s: &str) -> bool {
+    if s.len() != 64 {
+        return false;
+    }
+    s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
+}
+
+fn parse_local_set_refs(
+    specs: &[String],
+    policy: Option<&str>,
+) -> Result<Vec<SetRefSpec>, CliError> {
+    if specs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let Some(pol) = policy else {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/import",
+            "--set-ref requires --policy <policy-hash>".to_string(),
+        ));
+    };
+    if !is_hex64(pol) {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/import",
+            "--policy must be 64-hex".to_string(),
+        ));
+    }
+
+    let mut out = Vec::new();
+    for s in specs {
+        let (name, hash) = s.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref must be <refname>=<commit-hash|nil>".to_string(),
+            )
+        })?;
+        let name = name.trim();
+        let hash = hash.trim();
+        if name.is_empty() || hash.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref fields must be non-empty".to_string(),
+            ));
+        }
+        if hash != "nil" && !is_hex64(hash) {
+            return Err(cli_err(
+                EX_PARSE,
+                "pkg/import",
+                "set-ref hash must be 64-hex or `nil`".to_string(),
+            ));
+        }
+        out.push(SetRefSpec {
+            name: name.to_string(),
+            hash: hash.to_string(),
+            policy: pol.to_string(),
+            expected_old: None,
+        });
+    }
+    Ok(out)
+}
+
+fn mk_local_set_refs_chain(set_refs: &[SetRefSpec], imp: gc_coreform::Term) -> gc_coreform::Term {
+    let mut body = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::pure"),
+        imp.clone(),
+    ]);
+    for sr in set_refs.iter().rev() {
+        let op = gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("quote"),
+            gc_coreform::Term::symbol("core/refs::set"),
+        ]);
+        let mut m = std::collections::BTreeMap::new();
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
+            gc_coreform::Term::Str(sr.name.clone()),
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":hash")),
+            if sr.hash == "nil" {
+                gc_coreform::Term::Nil
+            } else {
+                gc_coreform::Term::Str(sr.hash.clone())
+            },
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
+            gc_coreform::Term::Str(sr.policy.clone()),
+        );
+        if let Some(exp) = &sr.expected_old {
+            m.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":expected-old")),
+                if exp == "nil" {
+                    gc_coreform::Term::Nil
+                } else {
+                    gc_coreform::Term::Str(exp.clone())
+                },
+            );
+        }
+        let payload = gc_coreform::Term::Map(m);
+        let k = gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("fn"),
+            gc_coreform::Term::list(vec![gc_coreform::Term::symbol("_")]),
+            body,
+        ]);
+        body = gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::perform"),
+            op,
+            payload,
+            k,
+        ]);
+    }
+    body
+}
+
+fn mk_pkg_init_program(
+    workspace: &str,
+    lock: &Path,
+    policy: &str,
+    registry_default: Option<&str>,
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::init"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":workspace")),
+        gc_coreform::Term::Str(workspace.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+        gc_coreform::Term::Str(lock.display().to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
+        gc_coreform::Term::Str(policy.to_string()),
+    );
+    if let Some(rd) = registry_default {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":registry-default")),
+            gc_coreform::Term::Str(rd.to_string()),
+        );
+    }
+    let payload = gc_coreform::Term::Map(m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_add_program(
+    lock: &Path,
+    name: &str,
+    selector: &str,
+    update_policy: &str,
+    registry: Option<&str>,
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::add"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+        gc_coreform::Term::Str(lock.display().to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
+        gc_coreform::Term::Str(name.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":selector")),
+        gc_coreform::Term::Str(selector.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":update-policy")),
+        gc_coreform::Term::Str(update_policy.to_string()),
+    );
+    if let Some(r) = registry {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":registry")),
+            gc_coreform::Term::Str(r.to_string()),
+        );
+    }
+    let payload = gc_coreform::Term::Map(m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_lock_program(lock: &Path) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::lock"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+            gc_coreform::Term::Str(lock.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_update_program(lock: &Path) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::update"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+            gc_coreform::Term::Str(lock.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_install_program(lock: &Path, frozen: bool, strict: bool) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::install"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+                gc_coreform::Term::Str(lock.display().to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":frozen")),
+                gc_coreform::Term::Bool(frozen),
+            ),
+            (
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":strict")),
+                gc_coreform::Term::Bool(strict),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_verify_program(lock: &Path) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::verify"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+            gc_coreform::Term::Str(lock.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_list_program(lock: &Path) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::list"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+            gc_coreform::Term::Str(lock.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_info_program(lock: &Path, name: &str) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::info"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":lock")),
+                gc_coreform::Term::Str(lock.display().to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
+                gc_coreform::Term::Str(name.to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_pkg_snapshot_program(pkg: &Path) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::snapshot"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":pkg")),
+            gc_coreform::Term::Str(pkg.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_gpk_export_program(
+    root: &str,
+    out: &Path,
+    full: bool,
+    depth: u64,
+    include_refs: &[String],
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/gpk::export"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":root")),
+        gc_coreform::Term::Str(root.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":out")),
+        gc_coreform::Term::Str(out.display().to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":mode")),
+        gc_coreform::Term::Str(if full { ":full" } else { ":shallow" }.to_string()),
+    );
+    if depth > 0 {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":depth")),
+            gc_coreform::Term::Int((depth as i64).into()),
+        );
+    }
+    if !include_refs.is_empty() {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":refs")),
+            gc_coreform::Term::Vector(
+                include_refs
+                    .iter()
+                    .cloned()
+                    .map(gc_coreform::Term::Str)
+                    .collect(),
+            ),
+        );
+    }
+    let payload = gc_coreform::Term::Map(m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/gpk::import"),
+    ]);
+    let payload = gc_coreform::Term::Map(
+        [(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":in")),
+            gc_coreform::Term::Str(input.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k_body = mk_local_set_refs_chain(set_refs, gc_coreform::Term::symbol("imp"));
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("imp")]),
+        k_body,
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn extract_pkg_snapshot_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+        ":snapshot",
+    ))) {
+        Some(gc_coreform::Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_export_bundle_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+        ":bundle-h",
+    ))) {
+        Some(gc_coreform::Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_import_root(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":root"))) {
+        Some(gc_coreform::Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_lock_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+        ":lock-h",
+    ))) {
+        Some(gc_coreform::Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_ok_bool(v: &Value) -> Option<bool> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":ok"))) {
+        Some(gc_coreform::Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+fn cmd_pkg(
+    cli: &Cli,
+    caps: &Path,
+    log: &Option<PathBuf>,
+    cmd: &PkgCmd,
+) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        PkgCmd::Init {
+            workspace,
+            lock,
+            policy,
+            registry_default,
+        } => (
+            mk_pkg_init_program(workspace, lock, policy, registry_default.as_deref()),
+            "genesis/pkg-init-v0.1",
+            "pkg-init",
+        ),
+        PkgCmd::Add {
+            spec,
+            lock,
+            update_policy,
+            registry,
+        } => {
+            let (name, selector) =
+                parse_pkg_spec(spec).map_err(|e| cli_err(EX_PARSE, "pkg/spec", e.to_string()))?;
+            (
+                mk_pkg_add_program(lock, &name, &selector, update_policy, registry.as_deref()),
+                "genesis/pkg-add-v0.1",
+                "pkg-add",
+            )
+        }
+        PkgCmd::Lock { lock } => (
+            mk_pkg_lock_program(lock),
+            "genesis/pkg-lock-v0.1",
+            "pkg-lock",
+        ),
+        PkgCmd::Update { lock } => (
+            mk_pkg_update_program(lock),
+            "genesis/pkg-update-v0.1",
+            "pkg-update",
+        ),
+        PkgCmd::Install {
+            lock,
+            frozen,
+            strict,
+        } => (
+            mk_pkg_install_program(lock, *frozen, *strict),
+            "genesis/pkg-install-v0.1",
+            "pkg-install",
+        ),
+        PkgCmd::Verify { lock } => (
+            mk_pkg_verify_program(lock),
+            "genesis/pkg-verify-v0.1",
+            "pkg-verify",
+        ),
+        PkgCmd::List { lock } => (
+            mk_pkg_list_program(lock),
+            "genesis/pkg-list-v0.1",
+            "pkg-list",
+        ),
+        PkgCmd::Info { name, lock } => (
+            mk_pkg_info_program(lock, name),
+            "genesis/pkg-info-v0.1",
+            "pkg-info",
+        ),
+        PkgCmd::Snapshot { pkg } => (
+            mk_pkg_snapshot_program(pkg),
+            "genesis/pkg-snapshot-v0.1",
+            "pkg-snapshot",
+        ),
+        PkgCmd::Export {
+            snapshot,
+            out,
+            full,
+            depth,
+            include_refs,
+        } => (
+            mk_gpk_export_program(snapshot, out, *full, *depth, include_refs),
+            "genesis/pkg-export-v0.1",
+            "pkg-export",
+        ),
+        PkgCmd::Import {
+            input,
+            set_refs,
+            policy,
+        } => {
+            let parsed = parse_local_set_refs(set_refs, policy.as_deref())?;
+            (
+                mk_gpk_import_program(input, &parsed),
+                "genesis/pkg-import-v0.1",
+                "pkg-import",
+            )
+        }
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis_wasi/{} (wasi)", env!("CARGO_PKG_VERSION"));
+    let r = run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = match log {
+        Some(p) => p.clone(),
+        None => default_effect_log_path(log_op)?,
+    };
+    write_effect_log(&log_path, &r.log)?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(gc_coreform::Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":error/code"))),
+                Some(gc_coreform::Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENY;
+        }
+    } else if matches!(cmd, PkgCmd::Install { .. } | PkgCmd::Verify { .. })
+        && let Some(false) = extract_pkg_ok_bool(&r.value)
+    {
+        ok = false;
+        exit_code = EX_VERIFY;
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        match cmd {
+            PkgCmd::Init { .. }
+            | PkgCmd::Add { .. }
+            | PkgCmd::Lock { .. }
+            | PkgCmd::Update { .. } => extract_pkg_lock_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Install { .. } | PkgCmd::Verify { .. } => {
+                if ok {
+                    "ok\n".to_string()
+                } else {
+                    format!("{value}\n")
+                }
+            }
+            PkgCmd::List { .. } | PkgCmd::Info { .. } => format!("{value}\n"),
+            PkgCmd::Snapshot { .. } => extract_pkg_snapshot_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Export { .. } => extract_pkg_export_bundle_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Import { .. } => extract_pkg_import_root(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+        }
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "pkg/error",
+                message: "pkg operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn cmd_store(
     cli: &Cli,
     caps: &Path,
@@ -1265,10 +2409,13 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
     match &cli.cmd {
         Cmd::Fmt { file, check } => cmd_fmt(cli, file, *check),
         Cmd::Eval { file } => cmd_eval(cli, file),
+        Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
+        Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
         Cmd::Run { file, caps, log } => cmd_run(cli, file, caps.as_path(), log),
         Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store),
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps.as_path(), log, cmd),
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps.as_path(), log, cmd),
+        Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps.as_path(), log, cmd),
         Cmd::Vcs { cmd } => match cmd {
             VcsCmd::Hash { input } => cmd_vcs_hash(cli, input),
         },
