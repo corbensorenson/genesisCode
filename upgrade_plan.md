@@ -44,10 +44,10 @@ Key docs to treat as authoritative:
 
 ### P1.2 wasm-bindgen hosts (Node and browser)
 
-- [x] Node wasm-bindgen smoke for stepping interface (`docs/WASM_HOST_BRIDGE.md`).
-- [ ] Browser build + harness:
-  - produce `wasm-bindgen --target web` artifacts
-  - headless browser CI runs deterministic golden tests
+- [x] Node wasm-bindgen smoke for stepping interface (`docs/spec/WASM_HOST_BRIDGE.md`).
+- [x] Browser build + harness:
+  - `wasm-bindgen --target web` artifacts via `scripts/wasm_bindgen_web.sh`
+  - headless browser CI smoke via Playwright (`scripts/wasm_web_smoke.mjs`) asserting cross-host hash equivalence
 
 ---
 

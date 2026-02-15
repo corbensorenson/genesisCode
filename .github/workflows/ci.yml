@@ -49,6 +49,17 @@ jobs:
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
 
+      - name: Install JS Deps (Playwright)
+        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: WASM Bindings (Web) + Headless Browser Smoke
+        run: |
+          bash scripts/wasm_bindgen_web.sh >/dev/null
+          node scripts/wasm_web_smoke.mjs
+
       - name: Install wasmtime
         uses: bytecodealliance/wasmtime-action@v1
 

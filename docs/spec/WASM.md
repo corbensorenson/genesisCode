@@ -58,3 +58,17 @@ cargo install wasm-bindgen-cli --version 0.2.108 --locked
 bash scripts/wasm_bindgen_node.sh
 node scripts/wasm_node_smoke.mjs
 ```
+
+## Browser (wasm-bindgen) Smoke
+
+To generate Web bindings and run a headless browser determinism smoke test:
+
+```bash
+cargo install wasm-bindgen-cli --version 0.2.108 --locked
+bash scripts/wasm_bindgen_web.sh
+
+# JS deps for headless browser (Playwright)
+npm ci
+npx playwright install chromium
+node scripts/wasm_web_smoke.mjs
+```
