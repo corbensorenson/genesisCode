@@ -62,6 +62,11 @@ Rust is the source of truth for:
 - effect request/response hashing
 - obligations and policy enforcement
 
+Bootstrap note:
+- To enable writing tooling logic in GenesisCode before the frontend is fully self-hosted, the
+  prelude exposes a minimal **pure** CoreForm bootstrap API (parser/printer/hash) described in
+  `docs/spec/SELF_HOST_BOOTSTRAP_API.md`.
+
 ### Phase 1: Self-Hosted Canonical Printer + Hash (frontend v0)
 
 Deliverables:
@@ -116,4 +121,3 @@ During early self-hosting:
 - validate selfhost outputs directly against Rust (same fixtures, same hashes).
 Later:
 - validate against the last accepted selfhost release (bootstrapping chain).
-

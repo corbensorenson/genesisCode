@@ -763,8 +763,10 @@ dependencies = [
  "anyhow",
  "blake3",
  "gc_coreform",
+ "gc_effects",
  "gc_kernel",
  "once_cell",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 

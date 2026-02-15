@@ -69,6 +69,9 @@ Key docs to treat as authoritative:
 ## P3: Self-Host Boundary And Cutover
 
 - [x] Write `docs/spec/SELF_HOST_BOUNDARY.md` (bootstrapping stages + translation validation plan).
+- [x] Add a pure CoreForm bootstrap API to the prelude so GenesisCode tooling can be written in GenesisCode:
+  - `core/coreform::{parse-term,parse-module,canonicalize-module,print-term,print-module,fmt-module,hash-term,hash-module,hash-module-src}`
+  - Spec: `docs/spec/SELF_HOST_BOOTSTRAP_API.md`
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
   - CoreForm printer/canonicalizer equivalence tests against Rust
   - module loader and package resolver on GenesisGraph objects

@@ -1,0 +1,9 @@
+allow = ["io/fs::read", "io/fs::write"]
+
+[op."io/fs::read"]
+base_dir = "."
+
+[op."io/fs::write"]
+base_dir = "."
+create_dirs = true
+

@@ -1,0 +1,4 @@
+(def  x   1)
+(def y   (fn (a b) a))
+(y x 2)
+

@@ -223,4 +223,95 @@ mod tests {
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
         assert!(matches!(v, Value::Data(Term::Int(i)) if i == 3.into()));
     }
+
+    #[test]
+    fn coreform_bootstrap_api_fmt_and_hash_match_rust() {
+        let src = r#"
+            (def t (quote {:b 2 :a 1}))
+            {
+              :ht (core/coreform::hash-term t)
+              :pt (core/coreform::print-term t)
+            }
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+        let Value::Map(m) = v else {
+            panic!("expected map, got {}", v.debug_repr());
+        };
+
+        let ht = match m.get(&TermOrdKey(Term::Symbol(":ht".to_string()))).unwrap() {
+            Value::Data(Term::Str(s)) => s.clone(),
+            other => panic!("expected :ht string, got {}", other.debug_repr()),
+        };
+        let pt = match m.get(&TermOrdKey(Term::Symbol(":pt".to_string()))).unwrap() {
+            Value::Data(Term::Str(s)) => s.clone(),
+            other => panic!("expected :pt string, got {}", other.debug_repr()),
+        };
+
+        let t = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::Symbol(":a".to_string())),
+                    Term::Int(1.into()),
+                ),
+                (
+                    TermOrdKey(Term::Symbol(":b".to_string())),
+                    Term::Int(2.into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let want_ht = {
+            let h = gc_coreform::hash_term(&t);
+            let mut s = String::new();
+            for b in h {
+                s.push_str(&format!("{b:02x}"));
+            }
+            s
+        };
+        let want_pt = gc_coreform::print_term(&t);
+        assert_eq!(ht, want_ht);
+        assert_eq!(pt, want_pt);
+    }
+
+    #[test]
+    fn coreform_bootstrap_api_fmt_module_matches_rust() {
+        let messy = r#"
+            (def x   1)
+            (def y (fn (a b) a))
+            (y x 2)
+        "#;
+        let src = format!(
+            r#"
+            (core/coreform::fmt-module "{s}")
+        "#,
+            // Keep the test source simple: embed as a CoreForm string literal.
+            s = messy
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"")
+                .replace('\n', "\\n")
+        );
+        let forms = canonicalize_module(parse_module(&src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+        let got = match v {
+            Value::Data(Term::Str(s)) => s,
+            other => panic!("expected string, got {}", other.debug_repr()),
+        };
+
+        let want = {
+            let p = gc_coreform::parse_module(messy).unwrap();
+            let c = gc_coreform::canonicalize_module(p).unwrap();
+            gc_coreform::print_module(&c)
+        };
+        assert_eq!(got, want);
+    }
 }

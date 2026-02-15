@@ -3,7 +3,10 @@ use std::rc::Rc;
 
 use blake3::Hasher;
 
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, parse_term,
+    print_module, print_term,
+};
 use gc_kernel::{
     Apply, Contract, EffectProgram, EffectRequest, Env, EvalCtx, KernelError, KernelErrorKind,
     NativeFn, ProtocolTokens, SealId, Value, value_hash,
@@ -157,6 +160,93 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
         Value::NativeFn(NativeFn::new("core/effect::perform", 3, nf_effect_perform)),
     );
 
+    // Bootstrap CoreForm API (pure, deterministic).
+    //
+    // These are used for wasm-first and self-host bootstrap stages. They intentionally expose
+    // parser/printer/canonicalizer operations as pure functions inside the language so GenesisCode
+    // tooling can be written in GenesisCode and hosted under WASM without a second bootstrap.
+    env = Env::with_binding(
+        &env,
+        "core/coreform::parse-term",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::parse-term",
+            1,
+            nf_coreform_parse_term,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::parse-module",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::parse-module",
+            1,
+            nf_coreform_parse_module,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::canonicalize-module",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::canonicalize-module",
+            1,
+            nf_coreform_canonicalize_module,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::print-term",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::print-term",
+            1,
+            nf_coreform_print_term,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::print-module",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::print-module",
+            1,
+            nf_coreform_print_module,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::fmt-module",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::fmt-module",
+            1,
+            nf_coreform_fmt_module,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::hash-term",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::hash-term",
+            1,
+            nf_coreform_hash_term,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::hash-module",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::hash-module",
+            1,
+            nf_coreform_hash_module,
+        )),
+    );
+    env = Env::with_binding(
+        &env,
+        "core/coreform::hash-module-src",
+        Value::NativeFn(NativeFn::new(
+            "core/coreform::hash-module-src",
+            1,
+            nf_coreform_hash_module_src,
+        )),
+    );
+
     // Create core/contract::genesis as a base contract that always returns UNHANDLED.
     let genesis = make_genesis();
     env = Env::with_binding(&env, "core/contract::genesis", genesis);
@@ -259,6 +349,124 @@ fn value_to_data_term(v: &Value) -> Result<Term, KernelError> {
             "expected immutable datum",
         )),
     }
+}
+
+fn hex32(h: [u8; 32]) -> String {
+    const LUT: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(64);
+    for b in h {
+        out.push(LUT[(b >> 4) as usize] as char);
+        out.push(LUT[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn arg_utf8_src(args: &[Value], idx: usize) -> Result<String, KernelError> {
+    match args.get(idx) {
+        Some(Value::Data(Term::Str(s))) => Ok(s.clone()),
+        Some(Value::Data(Term::Bytes(bs))) => std::str::from_utf8(bs)
+            .map(str::to_owned)
+            .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string())),
+        Some(other) => Err(KernelError::new(
+            KernelErrorKind::Type,
+            format!("expected utf8 string or bytes, got {}", other.debug_repr()),
+        )),
+        None => Err(KernelError::new(
+            KernelErrorKind::BadForm,
+            "missing argument".to_string(),
+        )),
+    }
+}
+
+fn term_vec_from_value(v: &Value) -> Result<Vec<Term>, KernelError> {
+    match v {
+        Value::Vector(xs) => xs
+            .iter()
+            .map(value_to_data_term)
+            .collect::<Result<Vec<_>, _>>(),
+        Value::Data(Term::Vector(xs)) => Ok(xs.clone()),
+        other => Err(KernelError::new(
+            KernelErrorKind::Type,
+            format!("expected vector of terms, got {}", other.debug_repr()),
+        )),
+    }
+}
+
+fn nf_coreform_parse_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = arg_utf8_src(&args, 0)?;
+    let t =
+        parse_term(&src).map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    Ok(Value::Data(t))
+}
+
+fn nf_coreform_parse_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = arg_utf8_src(&args, 0)?;
+    let forms = parse_module(&src)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    Ok(Value::Data(Term::Vector(forms)))
+}
+
+fn nf_coreform_canonicalize_module(
+    _ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
+    let forms = term_vec_from_value(
+        args.first()
+            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
+    )?;
+    let canon = canonicalize_module(forms)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    Ok(Value::Data(Term::Vector(canon)))
+}
+
+fn nf_coreform_print_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let t = value_to_data_term(
+        args.first()
+            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
+    )?;
+    Ok(Value::Data(Term::Str(print_term(&t))))
+}
+
+fn nf_coreform_print_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let forms = term_vec_from_value(
+        args.first()
+            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
+    )?;
+    Ok(Value::Data(Term::Str(print_module(&forms))))
+}
+
+fn nf_coreform_fmt_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = arg_utf8_src(&args, 0)?;
+    let forms = parse_module(&src)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    let canon = canonicalize_module(forms)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    Ok(Value::Data(Term::Str(print_module(&canon))))
+}
+
+fn nf_coreform_hash_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let t = value_to_data_term(
+        args.first()
+            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
+    )?;
+    Ok(Value::Data(Term::Str(hex32(hash_term(&t)))))
+}
+
+fn nf_coreform_hash_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let forms = term_vec_from_value(
+        args.first()
+            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
+    )?;
+    Ok(Value::Data(Term::Str(hex32(hash_module(&forms)))))
+}
+
+fn nf_coreform_hash_module_src(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = arg_utf8_src(&args, 0)?;
+    let forms = parse_module(&src)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    let canon = canonicalize_module(forms)
+        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+    Ok(Value::Data(Term::Str(hex32(hash_module(&canon)))))
 }
 
 fn parse_msg_term(t: &Term) -> Result<(Term, Term), KernelError> {

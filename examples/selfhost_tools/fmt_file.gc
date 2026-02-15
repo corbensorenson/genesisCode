@@ -1,0 +1,27 @@
+; Self-hosted (GenesisCode) formatter tool.
+;
+; This program uses the pure bootstrap CoreForm API from the prelude:
+; - core/coreform::fmt-module
+;
+; It performs real I/O via effects:
+; - io/fs::read
+; - io/fs::write
+;
+; Run:
+;   cargo run -p gc_cli -- run examples/selfhost_tools/fmt_file.gc --caps examples/selfhost_tools/caps.toml --log examples/selfhost_tools/fmt_file.gclog
+;
+; The tool formats `input.gc` into `output.gc` under this directory.
+
+(def prog
+  (core/effect::perform
+    'io/fs::read
+    {:path "input.gc"}
+    (fn (src)
+      (core/effect::perform
+        'io/fs::write
+        {:path "output.gc" :data (core/coreform::fmt-module src)}
+        (fn (_)
+          (core/effect::pure true))))))
+
+prog
+
