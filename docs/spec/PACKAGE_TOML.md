@@ -13,6 +13,7 @@ This file defines a package, its modules, dependencies, and required obligations
 ## Optional Keys
 
 - `tests` (array of strings): suite symbols to execute as unit tests
+- `core/obligation::coverage` measures coverage over non-test exports using these unit tests.
 - `property_tests` (array of strings): suite symbols to execute as property tests (used by `core/obligation::property-tests`)
 - `caps_policy` (string): path to a `caps.toml` relative to the manifest directory
 - `limits` (table): evaluation limits enforced for package evaluation and tests

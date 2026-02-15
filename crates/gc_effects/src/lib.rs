@@ -12,10 +12,10 @@ pub use crate::store::ArtifactStore;
 
 #[cfg(test)]
 mod tests {
+    use gc_coreform::TermOrdKey;
     use gc_coreform::{Term, hash_module, parse_module};
     use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
     use gc_prelude::build_prelude;
-    use gc_coreform::TermOrdKey;
 
     use super::*;
 
@@ -259,14 +259,7 @@ base_dir = "./sandbox"
         let mut env1 = prelude1.env;
         let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
 
-        let r1 = run(
-            &mut ctx1,
-            &pol,
-            prog1,
-            h,
-            "gc_effects-test".to_string(),
-        )
-        .expect("run");
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
 
         assert!(matches!(
             r1.log.entries[0].resp,

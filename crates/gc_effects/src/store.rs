@@ -106,4 +106,3 @@ impl ArtifactStore {
         Ok(std::fs::read(self.path_for(hex))?)
     }
 }
-

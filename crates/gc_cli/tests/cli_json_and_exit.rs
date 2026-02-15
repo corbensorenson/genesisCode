@@ -122,4 +122,3 @@ fn fmt_check_failure_has_exit_code_11() {
         .failure()
         .code(11);
 }
-

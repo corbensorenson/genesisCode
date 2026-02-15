@@ -1,0 +1,12 @@
+dependencies = []
+name = "pkg_fail_coverage"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::coverage",
+]
+tests = ["pkg/fail-coverage::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "73dd1fed9953eb56d3e0e827875048bc152b61c212dd0df994b8d12446a46eb8"
+path = "fail.gc"

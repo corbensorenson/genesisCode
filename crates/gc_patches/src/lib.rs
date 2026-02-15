@@ -4,10 +4,10 @@ use std::path::Path;
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, parse_module, parse_term, print_module, print_term,
 };
+use gc_kernel::StepLimit;
 use gc_obligations::{
     EvidenceStore, ObligationError, PackageTestResult, pack, test_package_with_step_limit,
 };
-use gc_kernel::StepLimit;
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
@@ -121,7 +121,11 @@ pub fn apply_patch_with_step_limit(
     let package_artifact = Some(pack(pkg_toml)?);
 
     // Re-run obligations using updated manifest.
-    let acceptance = Some(test_package_with_step_limit(pkg_toml, caps_override, step_limit)?);
+    let acceptance = Some(test_package_with_step_limit(
+        pkg_toml,
+        caps_override,
+        step_limit,
+    )?);
 
     let ok = acceptance.as_ref().is_some_and(|r| r.ok);
 

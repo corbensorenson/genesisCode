@@ -282,7 +282,8 @@ fn cmd_fmt(_cli: &Cli, file: &PathBuf, check: bool) -> Result<CmdOut, CliError> 
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let canon = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let out = print_module(&canon);
@@ -326,7 +327,8 @@ fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
@@ -350,16 +352,26 @@ fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
     };
     Ok(CmdOut {
         exit_code: EX_OK,
-        stdout: if cli.json { String::new() } else { format!("{value}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{value}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
 
-fn cmd_explain(cli: &Cli, file: &PathBuf, contract_src: &str, msg_src: &str) -> Result<CmdOut, CliError> {
+fn cmd_explain(
+    cli: &Cli,
+    file: &PathBuf,
+    contract_src: &str,
+    msg_src: &str,
+) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
@@ -370,18 +382,22 @@ fn cmd_explain(cli: &Cli, file: &PathBuf, contract_src: &str, msg_src: &str) -> 
     eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
 
-    let contract_term =
-        parse_term(contract_src).map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--contract: {e}")))?;
-    let contract =
-        eval_term(&mut ctx, &env, &contract_term).map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
+    let contract_term = parse_term(contract_src)
+        .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--contract: {e}")))?;
+    let contract = eval_term(&mut ctx, &env, &contract_term)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
 
     let msg_term =
         parse_term(msg_src).map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--msg: {e}")))?;
     let msg_val = Value::Data(msg_term);
 
-    let explain = env
-        .get("core/contract::explain")
-        .ok_or_else(|| cli_err(EX_INTERNAL, "prelude/missing", "missing prelude binding core/contract::explain"))?;
+    let explain = env.get("core/contract::explain").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "prelude/missing",
+            "missing prelude binding core/contract::explain",
+        )
+    })?;
     let r = explain
         .apply(&mut ctx, contract)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("apply contract: {e}")))?
@@ -403,7 +419,11 @@ fn cmd_explain(cli: &Cli, file: &PathBuf, contract_src: &str, msg_src: &str) -> 
     };
     Ok(CmdOut {
         exit_code: EX_OK,
-        stdout: if cli.json { String::new() } else { format!("{value}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{value}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -412,7 +432,8 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let program_hash = hash_module(&forms);
@@ -458,7 +479,11 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
     };
     Ok(CmdOut {
         exit_code,
-        stdout: if cli.json { String::new() } else { format!("{value}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{value}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -472,7 +497,8 @@ fn cmd_replay(
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let program_hash = hash_module(&forms);
@@ -480,8 +506,10 @@ fn cmd_replay(
     let log_src = std::fs::read_to_string(log_path)
         .with_context(|| format!("read {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let log_term = parse_term(&log_src).map_err(|e| cli_err(EX_PARSE, "parse/log", e.to_string()))?;
-    let log = EffectLog::from_term(&log_term).map_err(|e| cli_err(EX_PARSE, "parse/log", format!("{e}")))?;
+    let log_term =
+        parse_term(&log_src).map_err(|e| cli_err(EX_PARSE, "parse/log", e.to_string()))?;
+    let log = EffectLog::from_term(&log_term)
+        .map_err(|e| cli_err(EX_PARSE, "parse/log", format!("{e}")))?;
     if log.program_hash != program_hash {
         return Err(cli_err(
             EX_REPLAY_MISMATCH,
@@ -526,7 +554,11 @@ fn cmd_replay(
     };
     Ok(CmdOut {
         exit_code: EX_OK,
-        stdout: if cli.json { String::new() } else { format!("{value}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{value}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -585,14 +617,18 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     };
     Ok(CmdOut {
         exit_code: EX_OK,
-        stdout: if cli.json { String::new() } else { format!("{h}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{h}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
 
 fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg).map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
+    let (manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
 
     let mut mods = Vec::new();
     for m in &manifest.modules {
@@ -600,7 +636,8 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         let src = std::fs::read_to_string(&abs)
             .with_context(|| format!("read {}", abs.display()))
             .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-        let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+        let forms =
+            parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
         let forms = canonicalize_module(forms)
             .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
         let meta = extract_meta_static(&forms);
@@ -627,7 +664,11 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     };
     Ok(CmdOut {
         exit_code,
-        stdout: if cli.json { String::new() } else { format!("{report_s}\n") },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{report_s}\n")
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -636,14 +677,15 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms = parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+    let forms =
+        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
     let forms = canonicalize_module(forms)
         .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let orig_h = hash_module(&forms);
 
     let opt = gc_opt::optimize_module(&forms);
-    let opt = canonicalize_module(opt)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let opt =
+        canonicalize_module(opt).map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let opt_h = hash_module(&opt);
     let out_s = print_module(&opt);
     let changed = orig_h != opt_h;
@@ -680,17 +722,20 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
     })
 }
 
-fn cmd_apply_patch(cli: &Cli, patch: &Path, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
+fn cmd_apply_patch(
+    cli: &Cli,
+    patch: &Path,
+    pkg: &Path,
+    caps: Option<&Path>,
+) -> Result<CmdOut, CliError> {
     let r = gc_patches::apply_patch_with_step_limit(patch, pkg, caps, resolved_step_limit(cli))
-        .map_err(|e| {
-        match e {
+        .map_err(|e| match e {
             gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
                 cli_err(EX_PARSE, "patch/invalid", format!("{e}"))
             }
             gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
             gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
-        }
-    })?;
+        })?;
 
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
     let env = JsonEnvelope {
@@ -709,14 +754,22 @@ fn cmd_apply_patch(cli: &Cli, patch: &Path, pkg: &Path, caps: Option<&Path>) -> 
     };
     Ok(CmdOut {
         exit_code,
-        stdout: if cli.json { String::new() } else { format!("{}\n", r.report_artifact) },
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", r.report_artifact)
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
 
-fn cmd_verify(cli: &Cli, pkg: &Path, acceptance: Option<&str>, scan_store: bool) -> Result<CmdOut, CliError> {
-    let r = gc_obligations::verify_package(pkg, acceptance, scan_store)
-        .map_err(obligation_err)?;
+fn cmd_verify(
+    cli: &Cli,
+    pkg: &Path,
+    acceptance: Option<&str>,
+    scan_store: bool,
+) -> Result<CmdOut, CliError> {
+    let r = gc_obligations::verify_package(pkg, acceptance, scan_store).map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_VERIFY };
 
     let env = JsonEnvelope {

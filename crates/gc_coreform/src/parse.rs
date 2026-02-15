@@ -170,7 +170,10 @@ impl<'a> Lexer<'a> {
                 break;
             }
             // Advance by one UTF-8 scalar to keep `self.i` on a char boundary.
-            let ch = self.s[self.i..].chars().next().expect("peek_byte implies non-empty");
+            let ch = self.s[self.i..]
+                .chars()
+                .next()
+                .expect("peek_byte implies non-empty");
             self.i += ch.len_utf8();
         }
         self.s[start..self.i].to_owned()

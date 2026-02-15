@@ -294,3 +294,27 @@ fn property_tests_failure_is_recorded_in_acceptance_artifact() {
         "core/obligation::property-tests"
     ));
 }
+
+#[test]
+fn coverage_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_coverage");
+    let dst = td.path().join("pkg_fail_coverage");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(&acc, "core/obligation::coverage"));
+}

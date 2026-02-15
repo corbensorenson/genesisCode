@@ -18,4 +18,3 @@ proptest! {
         let _ = EffectLog::from_term(&t);
     }
 }
-

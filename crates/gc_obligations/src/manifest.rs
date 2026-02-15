@@ -93,18 +93,10 @@ impl PackageManifest {
 
 fn validate_manifest_paths(pkg_toml: &Path, m: &PackageManifest) -> Result<(), ObligationError> {
     for (i, me) in m.modules.iter().enumerate() {
-        validate_rel_path_str(
-            &me.path,
-            &format!("modules[{i}].path"),
-            pkg_toml,
-        )?;
+        validate_rel_path_str(&me.path, &format!("modules[{i}].path"), pkg_toml)?;
     }
     for (i, de) in m.dependencies.iter().enumerate() {
-        validate_rel_path_str(
-            &de.path,
-            &format!("dependencies[{i}].path"),
-            pkg_toml,
-        )?;
+        validate_rel_path_str(&de.path, &format!("dependencies[{i}].path"), pkg_toml)?;
     }
     if let Some(p) = &m.caps_policy {
         validate_rel_path_str(p, "caps_policy", pkg_toml)?;

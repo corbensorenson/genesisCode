@@ -151,9 +151,9 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
             store_dir: None,
         });
     };
-    let log_tbl = v.as_table().ok_or_else(|| {
-        EffectsError::Log("caps.toml: log must be a table".to_string())
-    })?;
+    let log_tbl = v
+        .as_table()
+        .ok_or_else(|| EffectsError::Log("caps.toml: log must be a table".to_string()))?;
 
     let inline_max_bytes = match log_tbl.get("inline_max_bytes") {
         None => None,
@@ -161,14 +161,13 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
             let n = x.as_integer().ok_or_else(|| {
                 EffectsError::Log("caps.toml: log.inline_max_bytes must be an integer".to_string())
             })?;
-            if n <= 0 {
-                None
-            } else {
-                Some(n as usize)
-            }
+            if n <= 0 { None } else { Some(n as usize) }
         }
     };
-    let store_dir = log_tbl.get("store_dir").and_then(|x| x.as_str()).map(PathBuf::from);
+    let store_dir = log_tbl
+        .get("store_dir")
+        .and_then(|x| x.as_str())
+        .map(PathBuf::from);
 
     Ok(LogPolicy {
         inline_max_bytes,
@@ -217,11 +216,7 @@ fn apply_op_cfg(
                     "caps.toml: op {op} log_inline_max_bytes must be integer"
                 ))
             })?;
-            if n <= 0 {
-                None
-            } else {
-                Some(n as usize)
-            }
+            if n <= 0 { None } else { Some(n as usize) }
         }
     };
 

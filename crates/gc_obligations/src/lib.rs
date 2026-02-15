@@ -218,15 +218,18 @@ pub fn test_package_with_step_limit(
             "core/obligation::property-tests" => {
                 obligation_property_tests(&store, &pkg_dir, &manifest, &modules, step_limit)
             }
+            "core/obligation::coverage" => obligation_coverage(
+                &store, &pkg_dir, &manifest, &modules, &test_runs, step_limit,
+            ),
             "core/obligation::determinism" => {
                 obligation_determinism(&store, &manifest, &modules, &test_runs)
             }
             "core/obligation::capabilities-declared" => {
                 obligation_caps_declared(&store, &manifest, &modules, &test_runs)
             }
-            "core/obligation::replayable-tests" => {
-                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, step_limit)
-            }
+            "core/obligation::replayable-tests" => obligation_replayable(
+                &store, &pkg_dir, &manifest, &modules, &test_runs, step_limit,
+            ),
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
             "core/obligation::translation-validation" => obligation_translation_validation(
                 &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, step_limit,
@@ -253,7 +256,10 @@ pub fn test_package_with_step_limit(
     })
 }
 
-fn effective_step_limit(manifest: &PackageManifest, cli: StepLimit) -> Result<StepLimit, ObligationError> {
+fn effective_step_limit(
+    manifest: &PackageManifest,
+    cli: StepLimit,
+) -> Result<StepLimit, ObligationError> {
     let pkg = manifest
         .limits
         .step_limit
@@ -283,11 +289,7 @@ fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationErro
     let path = genesis_dir.join("last_acceptance");
     let mut i: u64 = 0;
     let tmp = loop {
-        let cand = genesis_dir.join(format!(
-            ".tmp-last_acceptance-{}-{}",
-            std::process::id(),
-            i
-        ));
+        let cand = genesis_dir.join(format!(".tmp-last_acceptance-{}-{}", std::process::id(), i));
         i = i.saturating_add(1);
         match std::fs::OpenOptions::new()
             .write(true)
@@ -842,14 +844,8 @@ fn obligation_budgets(
         Term::Str(manifest.name.clone()),
     );
     report.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
-    report.insert(
-        TermOrdKey(Term::symbol(":limits")),
-        Term::Map(limits),
-    );
-    report.insert(
-        TermOrdKey(Term::symbol(":tests")),
-        Term::Vector(test_terms),
-    );
+    report.insert(TermOrdKey(Term::symbol(":limits")), Term::Map(limits));
+    report.insert(TermOrdKey(Term::symbol(":tests")), Term::Vector(test_terms));
     if !errors.is_empty() {
         report.insert(
             TermOrdKey(Term::symbol(":errors")),
@@ -861,6 +857,233 @@ fn obligation_budgets(
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::budgets".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
+fn obligation_coverage(
+    store: &EvidenceStore,
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    tests: &[TestRun],
+    step_limit: StepLimit,
+) -> Result<ObligationResult, ObligationError> {
+    // Coverage definition (v0.2): each non-test exported symbol must be *looked up as a variable*
+    // at least once during the package unit tests.
+    //
+    // "Non-test export" means: exports listed in module ::meta :exports, excluding any suite
+    // symbols configured in package.toml `tests` or `property_tests`.
+    let mut exports: BTreeSet<String> = BTreeSet::new();
+    for m in modules {
+        let Some(meta) = extract_meta_static(&m.forms) else {
+            continue;
+        };
+        let Some(es) = meta_exports(&meta) else {
+            continue;
+        };
+        exports.extend(es);
+    }
+
+    let mut excluded: BTreeSet<String> = BTreeSet::new();
+    excluded.extend(manifest.tests.iter().cloned());
+    excluded.extend(manifest.property_tests.iter().cloned());
+
+    let tracked: BTreeSet<String> = exports.difference(&excluded).cloned().collect();
+    if tracked.is_empty() {
+        let report = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/coverage-v0.2".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str(manifest.name.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":note")),
+                    Term::Str("no non-test exports".to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let artifact = store.put_term(&report)?;
+        return Ok(ObligationResult {
+            name: "core/obligation::coverage".to_string(),
+            ok: true,
+            artifact: Some(artifact),
+            errors: Vec::new(),
+        });
+    }
+
+    let mut ok = true;
+    let mut errors: Vec<String> = Vec::new();
+
+    if tests.is_empty() {
+        ok = false;
+        errors.push("coverage requires unit tests (package.toml `tests` is empty)".to_string());
+    }
+
+    // Used for replaying effectful tests without re-running capabilities.
+    let effect_store = gc_effects::ArtifactStore::open(&pkg_dir.join(".genesis").join("store"))
+        .map_err(|e| ObligationError::Test(format!("artifact store open failed: {e}")))?;
+
+    let mut total_hits: BTreeMap<String, u64> = BTreeMap::new();
+    let mut test_terms: Vec<Term> = Vec::new();
+
+    for t in tests {
+        let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+        ctx.enable_coverage(tracked.clone());
+
+        let prelude = build_prelude(&mut ctx);
+        let mut base = prelude.env;
+        base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
+        let evals = eval_modules(&mut ctx, &base, modules)?;
+        let pkg = PackageEval::from_modules(base, evals)?;
+
+        let suite_v = pkg.lookup_any(&t.id.suite_sym).ok_or_else(|| {
+            ObligationError::Test(format!("missing test suite symbol {}", t.id.suite_sym))
+        })?;
+        let suite_map = value_as_map(&suite_v).ok_or_else(|| {
+            ObligationError::Test(format!("test suite {} must be a map", t.id.suite_sym))
+        })?;
+        let (test_body, _expect) = parse_test_entry(
+            suite_map
+                .get(&TermOrdKey(Term::Str(t.id.test_name.clone())))
+                .or_else(|| suite_map.get(&TermOrdKey(Term::Symbol(t.id.test_name.clone()))))
+                .ok_or_else(|| {
+                    ObligationError::Test(format!(
+                        "missing test {} in suite {}",
+                        t.id.test_name, t.id.suite_sym
+                    ))
+                })?,
+        )?;
+
+        let value = test_body
+            .apply(&mut ctx, Value::Data(Term::Nil))
+            .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
+
+        match (value, &t.effect_log) {
+            (v @ Value::EffectProgram(_), Some(log)) => {
+                let _ = gc_effects::replay_with_store(&mut ctx, v, log, Some(&effect_store))
+                    .map_err(|e| ObligationError::Test(format!("replay failed: {e}")))?;
+            }
+            (Value::EffectProgram(_), None) => {
+                ok = false;
+                errors.push(format!(
+                    "coverage: test {} returned effect program but no effect log was recorded",
+                    t.id.test_name
+                ));
+            }
+            _ => {}
+        }
+
+        let mut hits_vec: Vec<Term> = Vec::new();
+        if let Some(hits) = ctx.coverage_hits() {
+            for (sym, c) in hits {
+                if *c == 0 {
+                    continue;
+                }
+                *total_hits.entry(sym.clone()).or_insert(0) += *c;
+                hits_vec.push(Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":sym")), Term::Symbol(sym.clone())),
+                        (
+                            TermOrdKey(Term::symbol(":hits")),
+                            Term::Int((*c as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ));
+            }
+        }
+
+        test_terms.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":suite")),
+                    Term::Symbol(t.id.suite_sym.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str(t.id.test_name.clone()),
+                ),
+                (TermOrdKey(Term::symbol(":hits")), Term::Vector(hits_vec)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let mut missing: Vec<Term> = Vec::new();
+    let mut export_terms: Vec<Term> = Vec::new();
+    for sym in &tracked {
+        let c = *total_hits.get(sym).unwrap_or(&0);
+        if c == 0 {
+            ok = false;
+            missing.push(Term::Symbol(sym.clone()));
+            errors.push(format!("export not covered: {sym}"));
+        }
+        export_terms.push(Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":sym")), Term::Symbol(sym.clone())),
+                (
+                    TermOrdKey(Term::symbol(":hits")),
+                    Term::Int((c as i64).into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/coverage-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (
+                TermOrdKey(Term::symbol(":definition")),
+                Term::Str("exports minus (tests, property_tests)".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":exports")),
+                Term::Vector(export_terms),
+            ),
+            (TermOrdKey(Term::symbol(":missing")), Term::Vector(missing)),
+            (TermOrdKey(Term::symbol(":tests")), Term::Vector(test_terms)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let report = if errors.is_empty() {
+        report
+    } else {
+        let Term::Map(mut m) = report else {
+            unreachable!()
+        };
+        m.insert(
+            TermOrdKey(Term::symbol(":errors")),
+            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+        );
+        Term::Map(m)
+    };
+
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::coverage".to_string(),
         ok,
         artifact: Some(artifact),
         errors,
@@ -963,7 +1186,12 @@ fn obligation_property_tests(
     for p in &props {
         let mut seeds: Vec<u64> = Vec::with_capacity(p.cases as usize);
         for i in 0..p.cases {
-            seeds.push(seed_for_case(&manifest.name, &p.id.suite_sym, &p.id.test_name, i));
+            seeds.push(seed_for_case(
+                &manifest.name,
+                &p.id.suite_sym,
+                &p.id.test_name,
+                i,
+            ));
         }
 
         let mut t_ok = true;
@@ -979,7 +1207,10 @@ fn obligation_property_tests(
                     first_failure = Some(Term::Map(
                         [
                             (TermOrdKey(Term::symbol(":i")), Term::Int((i as i64).into())),
-                            (TermOrdKey(Term::symbol(":seed")), Term::Int(BigInt::from(seed))),
+                            (
+                                TermOrdKey(Term::symbol(":seed")),
+                                Term::Int(BigInt::from(seed)),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":result")),
                                 Term::Str(format!("apply failed: {e}")),
@@ -1000,17 +1231,16 @@ fn obligation_property_tests(
                 t_ok = false;
                 first_failure = Some(Term::Map(
                     [
-                        (
-                            TermOrdKey(Term::symbol(":i")),
-                            Term::Int((i as i64).into()),
-                        ),
+                        (TermOrdKey(Term::symbol(":i")), Term::Int((i as i64).into())),
                         (
                             TermOrdKey(Term::symbol(":seed")),
                             Term::Int(BigInt::from(seed)),
                         ),
                         (
                             TermOrdKey(Term::symbol(":result")),
-                            Term::Str("effect program returned (property tests must be pure)".to_string()),
+                            Term::Str(
+                                "effect program returned (property tests must be pure)".to_string(),
+                            ),
                         ),
                     ]
                     .into_iter()
@@ -1034,10 +1264,7 @@ fn obligation_property_tests(
                 let rt = r.to_term_for_log(proto_err);
                 first_failure = Some(Term::Map(
                     [
-                        (
-                            TermOrdKey(Term::symbol(":i")),
-                            Term::Int((i as i64).into()),
-                        ),
+                        (TermOrdKey(Term::symbol(":i")), Term::Int((i as i64).into())),
                         (
                             TermOrdKey(Term::symbol(":seed")),
                             Term::Int(BigInt::from(seed)),
@@ -1117,7 +1344,9 @@ fn obligation_property_tests(
     let report = if errors.is_empty() {
         report
     } else {
-        let Term::Map(mut m) = report else { unreachable!() };
+        let Term::Map(mut m) = report else {
+            unreachable!()
+        };
         m.insert(
             TermOrdKey(Term::symbol(":errors")),
             Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
@@ -1138,7 +1367,10 @@ fn parse_property_entry(v: &Value, default_cases: u64) -> Result<(Value, u64), O
         return Ok((v.clone(), default_cases));
     }
     let Some(m) = value_as_map(v) else {
-        return Err(ObligationError::Test(format!("invalid property entry: {}", v.debug_repr())));
+        return Err(ObligationError::Test(format!(
+            "invalid property entry: {}",
+            v.debug_repr()
+        )));
     };
     let body = m
         .get(&TermOrdKey(Term::Symbol(":body".to_string())))
@@ -1592,7 +1824,14 @@ fn obligation_translation_validation(
                 forms: opt_forms,
             });
         }
-        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone(), step_limit)?;
+        let opt = run_one_test(
+            pkg_dir,
+            manifest,
+            &opt_modules,
+            caps,
+            id.clone(),
+            step_limit,
+        )?;
 
         if orig.value_hash != opt.value_hash {
             ok = false;

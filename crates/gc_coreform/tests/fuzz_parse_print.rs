@@ -36,4 +36,3 @@ proptest! {
         prop_assert_eq!(out1, out2);
     }
 }
-

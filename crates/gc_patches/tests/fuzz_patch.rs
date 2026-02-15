@@ -17,4 +17,3 @@ proptest! {
         let _ = gc_patches::validate_patch_term(&t);
     }
 }
-

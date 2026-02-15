@@ -65,10 +65,7 @@ fn patch_replace_form0(new_form_src: &str) -> String {
 fn patch_schema_missing_ops_is_rejected() {
     let td = tempfile::tempdir().unwrap();
     let pkg = write_pkg(td.path());
-    let patch = write_patch(
-        td.path(),
-        r#"{ :version 1 :intent "bad" :provenance {} }"#,
-    );
+    let patch = write_patch(td.path(), r#"{ :version 1 :intent "bad" :provenance {} }"#);
 
     let err = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
     assert!(
@@ -128,4 +125,3 @@ fn patch_obligation_rerun_failure_is_reported_ok_false() {
     assert!(r.package_artifact.is_some());
     assert!(!r.report_artifact.is_empty());
 }
-

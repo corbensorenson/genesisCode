@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
@@ -61,6 +62,13 @@ pub struct EvalCtx {
     pub protocol: Option<ProtocolTokens>,
     pub steps: u64,
     pub step_limit: Option<u64>,
+    coverage: Option<CoverageState>,
+}
+
+#[derive(Debug, Clone)]
+struct CoverageState {
+    tracked: BTreeSet<String>,
+    hits: BTreeMap<String, u64>,
 }
 
 impl EvalCtx {
@@ -92,7 +100,27 @@ impl EvalCtx {
             protocol: Some(protocol),
             steps: 0,
             step_limit,
+            coverage: None,
         }
+    }
+
+    pub fn enable_coverage(&mut self, tracked: BTreeSet<String>) {
+        self.coverage = Some(CoverageState {
+            tracked,
+            hits: BTreeMap::new(),
+        });
+    }
+
+    pub fn coverage_hits(&self) -> Option<&BTreeMap<String, u64>> {
+        self.coverage.as_ref().map(|c| &c.hits)
+    }
+
+    fn coverage_hit(&mut self, sym: &str) {
+        let Some(c) = &mut self.coverage else { return };
+        if !c.tracked.contains(sym) {
+            return;
+        }
+        *c.hits.entry(sym.to_string()).or_insert(0) += 1;
     }
 
     pub fn tick(&mut self) -> Result<(), KernelError> {
@@ -165,9 +193,12 @@ fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, Ke
             }
             Ok(Value::Map(out))
         }
-        Term::Symbol(s) => env.get(s).ok_or_else(|| {
-            KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {s}"))
-        }),
+        Term::Symbol(s) => {
+            ctx.coverage_hit(s);
+            env.get(s).ok_or_else(|| {
+                KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {s}"))
+            })
+        }
         Term::Pair(_, _) => eval_list(ctx, env, term),
     }
 }

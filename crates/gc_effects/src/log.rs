@@ -257,10 +257,7 @@ fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
                 _ => unreachable!(),
             }
         }
-        ":ok-artifact"
-        | ":error-artifact"
-        | ":ok-bytes-artifact"
-        | ":error-bytes-artifact" => {
+        ":ok-artifact" | ":error-artifact" | ":ok-bytes-artifact" | ":error-bytes-artifact" => {
             let artifact = map_get(m, ":artifact")
                 .ok_or_else(|| EffectsError::Log(":resp missing :artifact".to_string()))?;
             let Term::Str(hex) = artifact else {

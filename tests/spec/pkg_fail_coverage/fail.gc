@@ -1,0 +1,28 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/fail-coverage::foo pkg/fail-coverage::bar pkg/fail-coverage::tests]
+      :types
+        {
+          pkg/fail-coverage::bar ?
+          pkg/fail-coverage::foo ?
+          pkg/fail-coverage::tests ?}}))
+
+(def pkg/fail-coverage::foo
+  (fn (_)
+    (prim int/add 1 1)))
+
+(def pkg/fail-coverage::bar
+  (fn (_)
+    (prim int/add 40 2)))
+
+(def pkg/fail-coverage::tests
+  {
+    "covers-foo"
+      {
+        :body (fn (_) (pkg/fail-coverage::foo nil))
+        :expect 2}})
+
+pkg/fail-coverage::tests
+

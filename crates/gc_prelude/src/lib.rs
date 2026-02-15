@@ -138,10 +138,7 @@ mod tests {
             panic!("expected map, got {}", v.debug_repr());
         };
 
-        for (k, expect_steps, expect_result) in [
-            (":tr1", 2usize, 10i64),
-            (":tr2", 1usize, 20i64),
-        ] {
+        for (k, expect_steps, expect_result) in [(":tr1", 2usize, 10i64), (":tr2", 1usize, 20i64)] {
             let tr = m.get(&TermOrdKey(Term::Symbol(k.to_string()))).unwrap();
             let Value::Data(Term::Map(tm)) = tr else {
                 panic!("expected trace map datum, got {}", tr.debug_repr());
@@ -160,7 +157,9 @@ mod tests {
             assert_eq!(steps.len(), expect_steps);
 
             for (i, st) in steps.iter().enumerate() {
-                let Term::Map(sm) = st else { panic!("step must be map") };
+                let Term::Map(sm) = st else {
+                    panic!("step must be map")
+                };
                 let cid = match sm.get(&TermOrdKey(Term::Symbol(":contract-id".to_string()))) {
                     Some(Term::Str(s)) => s.as_str(),
                     _ => panic!("step missing :contract-id"),

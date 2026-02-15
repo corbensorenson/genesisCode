@@ -463,12 +463,10 @@ fn call_capability(
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
                 let r = with_timeout(ms, || {
-                    Ok(
-                        std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_millis(),
-                    )
+                    Ok(std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis())
                 })?;
                 return Ok(match r {
                     Some(t) => Value::Data(Term::Int(BigInt::from(t))),
@@ -553,10 +551,7 @@ fn call_capability(
     }
 }
 
-fn with_timeout<T, F>(
-    timeout_ms: u64,
-    f: F,
-) -> Result<Option<T>, EffectsError>
+fn with_timeout<T, F>(timeout_ms: u64, f: F) -> Result<Option<T>, EffectsError>
 where
     T: Send + 'static,
     F: FnOnce() -> Result<T, EffectsError> + Send + 'static,
