@@ -205,6 +205,43 @@ enum Cmd {
         #[arg(long)]
         scan_store: bool,
     },
+
+    /// Content-addressed store operations (effectful; policy-gated).
+    Store {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: StoreCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum StoreCmd {
+    /// Store a CoreForm artifact datum and return its content hash.
+    Put {
+        /// Input file containing a single CoreForm term.
+        #[arg(long)]
+        input: PathBuf,
+    },
+    /// Fetch an artifact datum by hash.
+    Get {
+        /// Content hash (hex).
+        hash: String,
+        /// Optional output path (writes the canonical CoreForm term bytes).
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Check presence of an artifact hash.
+    Has {
+        /// Content hash (hex).
+        hash: String,
+    },
 }
 
 fn main() -> std::process::ExitCode {
@@ -317,6 +354,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             signatures.as_deref(),
             *scan_store,
         ),
+        Cmd::Store { caps, log, cmd } => cmd_store(cli, caps, log.as_deref(), cmd),
     }
 }
 
@@ -577,6 +615,249 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
         },
         json: serde_json::to_value(env).expect("json"),
     })
+}
+
+fn default_log_path(op: &str) -> PathBuf {
+    let dir = PathBuf::from(".genesis").join("logs");
+    let _ = std::fs::create_dir_all(&dir);
+    let stamp = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+    dir.join(format!("{op}-{stamp}.gclog"))
+}
+
+fn cmd_store(
+    cli: &Cli,
+    caps: &Path,
+    log: Option<&Path>,
+    cmd: &StoreCmd,
+) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        StoreCmd::Put { input } => {
+            let src = std::fs::read_to_string(input)
+                .with_context(|| format!("read {}", input.display()))
+                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+            let art =
+                parse_term(&src).map_err(|e| cli_err(EX_PARSE, "parse/term", e.to_string()))?;
+            (
+                mk_store_put_program(&art),
+                "genesis/store-put-v0.2",
+                "store-put",
+            )
+        }
+        StoreCmd::Get { hash, .. } => (
+            mk_store_get_program(hash),
+            "genesis/store-get-v0.2",
+            "store-get",
+        ),
+        StoreCmd::Has { hash } => (
+            mk_store_has_program(hash),
+            "genesis/store-has-v0.2",
+            "store-has",
+        ),
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = log
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_log_path(log_op));
+    std::fs::write(&log_path, r.log.to_string_canonical() + "\n")
+        .with_context(|| format!("write {}", log_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENIED;
+        }
+    }
+
+    // Extract a stable stdout payload.
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        match cmd {
+            StoreCmd::Put { .. } => extract_store_put_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            StoreCmd::Has { .. } => extract_store_has_present(&r.value)
+                .map(|b| format!("{}\n", if b { "true" } else { "false" }))
+                .unwrap_or_else(|| format!("{value}\n")),
+            StoreCmd::Get { out, .. } => {
+                if !ok {
+                    format!("{value}\n")
+                } else if let Some(p) = out {
+                    let art = extract_store_get_artifact(&r.value).ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "store/error",
+                            "store get returned unexpected value",
+                        )
+                    })?;
+                    std::fs::write(p, gc_coreform::print_term(&art) + "\n")
+                        .with_context(|| format!("write {}", p.display()))
+                        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+                    String::new()
+                } else {
+                    extract_store_get_artifact(&r.value)
+                        .map(|t| format!("{}\n", gc_coreform::print_term(&t)))
+                        .unwrap_or_else(|| format!("{value}\n"))
+                }
+            }
+        }
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "store/error",
+                message: "store operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn mk_store_put_program(artifact: &Term) -> Vec<Term> {
+    // (def prog (core/effect::perform 'core/store::put {:artifact (quote <artifact>)} (fn (r) (core/effect::pure r)))) prog
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::put")]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":artifact")),
+            Term::list(vec![Term::symbol("quote"), artifact.clone()]),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_store_get_program(hash: &str) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::get")]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":hash")),
+            Term::Str(hash.to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_store_has_program(hash: &str) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::has")]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":hash")),
+            Term::Str(hash.to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn extract_store_put_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":hash"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_store_has_present(v: &Value) -> Option<bool> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":present"))) {
+        Some(Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+fn extract_store_get_artifact(v: &Value) -> Option<Term> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    m.get(&gc_coreform::TermOrdKey(Term::symbol(":artifact")))
+        .cloned()
 }
 
 fn cmd_replay(

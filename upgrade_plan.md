@@ -118,7 +118,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [ ] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
   - [ ] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
 - [ ] Store capability (`core/store::*`) as runner effects:
-  - [ ] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
+  - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
   - [ ] Optional remote-backed store adapter using the minimal registry protocol.
 - [ ] Refs capability (`core/refs::*`) as runner effects:
   - [ ] Local refs database with atomic CAS-style `set` and stable serialization.

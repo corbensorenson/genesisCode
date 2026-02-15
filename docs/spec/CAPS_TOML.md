@@ -6,10 +6,23 @@ This file defines the *deny-by-default* capability policy used by `genesis run` 
 
 - `allow` (required): array of strings. Each string is a fully-qualified op symbol, e.g. `"sys/time::now"`.
 - `log` (optional): table controlling effect log behavior (see below).
+- `store` (optional): table controlling the artifact store used by `core/store::*` capabilities (see below).
 
 Example:
 ```toml
 allow = ["sys/time::now", "io/fs::read"]
+```
+
+## Store Policy (`[store]`)
+
+Supported keys:
+- `dir` (string): directory used for content-addressed artifacts for `core/store::*`.
+  - If omitted, defaults to `<caps.toml directory>/.genesis/store`.
+
+Example:
+```toml
+[store]
+dir = "./.genesis/store"
 ```
 
 ## Log Policy (`[log]`)

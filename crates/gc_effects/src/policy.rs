@@ -7,6 +7,7 @@ use crate::error::EffectsError;
 pub struct CapsPolicy {
     ops: BTreeMap<String, OpPolicy>,
     pub log: LogPolicy,
+    pub store: StorePolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -20,6 +21,12 @@ pub struct LogPolicy {
     /// Directory containing content-addressed artifacts for logs (defaults to `<caps-dir>/.genesis/store`
     /// when `inline_max_bytes` is set and `store_dir` is omitted).
     pub store_dir: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StorePolicy {
+    /// Content-addressed store directory used by `core/store::*` capabilities.
+    pub dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +46,7 @@ impl CapsPolicy {
                 inline_max_bytes: None,
                 store_dir: None,
             },
+            store: StorePolicy { dir: None },
         }
     }
 
@@ -63,6 +71,10 @@ impl CapsPolicy {
         self.log.store_dir.as_deref()
     }
 
+    pub fn artifact_store_dir(&self) -> Option<&Path> {
+        self.store.dir.as_deref().or(self.log.store_dir.as_deref())
+    }
+
     pub fn from_toml_str(s: &str) -> Result<Self, EffectsError> {
         let v: toml::Value =
             toml::from_str(s).map_err(|e| EffectsError::Log(format!("caps.toml: {e}")))?;
@@ -74,6 +86,7 @@ impl CapsPolicy {
 
         let mut ops: BTreeMap<String, OpPolicy> = BTreeMap::new();
         let log = parse_log_policy(tbl)?;
+        let store = parse_store_policy(tbl)?;
 
         // Baseline allowlist.
         if let Some(arr) = tbl.get("allow").and_then(|v| v.as_array()) {
@@ -114,7 +127,7 @@ impl CapsPolicy {
             }
         }
 
-        Ok(Self { ops, log })
+        Ok(Self { ops, log, store })
     }
 
     pub fn load(path: &Path) -> Result<Self, EffectsError> {
@@ -125,6 +138,9 @@ impl CapsPolicy {
         if pol.log.inline_max_bytes.is_some() && pol.log.store_dir.is_none() {
             pol.log.store_dir = Some(base.join(".genesis").join("store"));
         }
+        if pol.store.dir.is_none() {
+            pol.store.dir = Some(base.join(".genesis").join("store"));
+        }
         Ok(pol)
     }
 
@@ -133,6 +149,11 @@ impl CapsPolicy {
             && sd.is_relative()
         {
             self.log.store_dir = Some(base.join(sd));
+        }
+        if let Some(sd) = &self.store.dir
+            && sd.is_relative()
+        {
+            self.store.dir = Some(base.join(sd));
         }
         for p in self.ops.values_mut() {
             if let Some(bd) = &p.base_dir
@@ -173,6 +194,20 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
         inline_max_bytes,
         store_dir,
     })
+}
+
+fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsError> {
+    let Some(v) = tbl.get("store") else {
+        return Ok(StorePolicy { dir: None });
+    };
+    let store_tbl = v
+        .as_table()
+        .ok_or_else(|| EffectsError::Log("caps.toml: store must be a table".to_string()))?;
+    let dir = store_tbl
+        .get("dir")
+        .and_then(|x| x.as_str())
+        .map(PathBuf::from);
+    Ok(StorePolicy { dir })
 }
 
 fn apply_op_cfg(

@@ -25,7 +25,7 @@ pub fn run(
 ) -> Result<RunResult, EffectsError> {
     let proto = ctx.protocol.ok_or(EffectsError::MissingProtocol)?;
 
-    let store = match policy.store_dir() {
+    let store = match policy.artifact_store_dir() {
         Some(sd) => Some(ArtifactStore::open(sd)?),
         None => None,
     };
@@ -72,7 +72,8 @@ pub fn run(
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = cap_term(&req.op, pol)?;
-                    let resp = call_capability(&req.op, &req.payload, pol, proto.error)?;
+                    let resp =
+                        call_capability(&req.op, &req.payload, pol, store.as_ref(), proto.error)?;
                     (
                         Decision::Allow,
                         cap_term,
@@ -448,6 +449,7 @@ fn call_capability(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
+    store: Option<&ArtifactStore>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
@@ -460,6 +462,59 @@ fn call_capability(
         ));
     }
     match op {
+        "core/store::put" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/store::put".to_string())
+            })?;
+            let art = payload_store_artifact(payload)?;
+            let bytes = print_term(&art);
+            let h = store.put_bytes(bytes.as_bytes())?;
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::Symbol(":hash".to_string())), Term::Str(h));
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/store::has" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/store::has".to_string())
+            })?;
+            let h = payload_store_hash(payload)?;
+            let p = store.path_for(&h);
+            let present = if p.exists() {
+                store.verify_hex(&h)?;
+                true
+            } else {
+                false
+            };
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":present".to_string())),
+                Term::Bool(present),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/store::get" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/store::get".to_string())
+            })?;
+            let h = payload_store_hash(payload)?;
+            let p = store.path_for(&h);
+            if !p.exists() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/store/not-found",
+                    format!("artifact not found: {h}"),
+                    Some(op),
+                ));
+            }
+            let bytes = store.get_bytes(&h)?;
+            let s = String::from_utf8(bytes)
+                .map_err(|_| EffectsError::Log("artifact bytes are not utf-8 term".to_string()))?;
+            let t = gc_coreform::parse_term(&s)
+                .map_err(|e| EffectsError::Log(format!("bad artifact term: {e}")))?;
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
+            Ok(Value::Data(Term::Map(m)))
+        }
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
                 let r = with_timeout(ms, || {
@@ -549,6 +604,34 @@ fn call_capability(
             Some(op),
         )),
     }
+}
+
+fn payload_store_hash(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/store payload must be a map".to_string(),
+        ));
+    };
+    let Some(Term::Str(h)) = m.get(&TermOrdKey(Term::Symbol(":hash".to_string()))) else {
+        return Err(EffectsError::Log(
+            "core/store payload missing :hash string".to_string(),
+        ));
+    };
+    Ok(h.clone())
+}
+
+fn payload_store_artifact(payload: &Term) -> Result<Term, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/store payload must be a map".to_string(),
+        ));
+    };
+    let Some(t) = m.get(&TermOrdKey(Term::Symbol(":artifact".to_string()))) else {
+        return Err(EffectsError::Log(
+            "core/store payload missing :artifact".to_string(),
+        ));
+    };
+    Ok(t.clone())
 }
 
 fn with_timeout<T, F>(timeout_ms: u64, f: F) -> Result<Option<T>, EffectsError>
