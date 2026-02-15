@@ -2,17 +2,19 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
-use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
+use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetResult};
 use crate::store::ArtifactStore;
+
+type GcStoreLock = ExclusiveLock;
 
 struct HashingWriter<'a, W: std::io::Write> {
     inner: &'a mut W,
@@ -543,91 +545,76 @@ fn call_capability(
     }
     match op {
         "core/sync::pull" => {
-            let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/sync::pull".to_string())
-            })?;
-            let refs = refs.ok_or_else(|| {
-                EffectsError::Log("missing refs db for core/sync::pull".to_string())
-            })?;
-
-            let remote_s = match payload_sync_remote(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
-            let depth = payload_sync_depth(payload).unwrap_or(0);
-            let force = payload_sync_force(payload).unwrap_or(false);
-            let refnames = match payload_sync_refs(payload) {
-                Ok(rs) => rs,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
-            let roots = match payload_sync_roots(payload) {
-                Ok(rs) => rs,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
-            if refnames.is_empty() && roots.is_empty() {
+            #[cfg(target_os = "wasi")]
+            {
+                let _ = payload;
+                let _ = pol;
+                let _ = policy;
+                let _ = store;
+                let _ = refs;
                 return Ok(mk_error(
                     error_tok,
-                    "core/sync/bad-payload",
-                    "pull requires :refs and/or :roots".to_string(),
+                    "core/sync/not-supported",
+                    "core/sync is not supported on WASI (no networking in the bootstrap)"
+                        .to_string(),
                     Some(op),
                 ));
             }
+            #[cfg(not(target_os = "wasi"))]
+            {
+                let store = store.ok_or_else(|| {
+                    EffectsError::Log("missing artifact store for core/sync::pull".to_string())
+                })?;
+                let refs = refs.ok_or_else(|| {
+                    EffectsError::Log("missing refs db for core/sync::pull".to_string())
+                })?;
 
-            let sp = match sync_policy_from_op(pol) {
-                Ok(p) => p,
-                Err(e) => {
-                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                }
-            };
-            let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
-                Ok(b) => b,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op))),
-            };
-            let client = match gc_registry::RegistryClient::new(
-                &base,
-                timeout_ms.map(std::time::Duration::from_millis),
-            ) {
-                Ok(c) => c,
-                Err(e) => {
+                let remote_s = match payload_sync_remote(payload) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+                    }
+                };
+                let depth = payload_sync_depth(payload).unwrap_or(0);
+                let force = payload_sync_force(payload).unwrap_or(false);
+                let refnames = match payload_sync_refs(payload) {
+                    Ok(rs) => rs,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+                    }
+                };
+                let roots = match payload_sync_roots(payload) {
+                    Ok(rs) => rs,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+                    }
+                };
+                if refnames.is_empty() && roots.is_empty() {
                     return Ok(mk_error(
                         error_tok,
-                        "core/sync/remote-error",
-                        format!("{e}"),
+                        "core/sync/bad-payload",
+                        "pull requires :refs and/or :roots".to_string(),
                         Some(op),
                     ));
                 }
-            };
 
-            let mut pulled: u64 = 0;
-            let mut already: u64 = 0;
-            let mut heads: Vec<Term> = Vec::new();
-
-            // Pull by roots (hashes) first.
-            for h in &roots {
-                let mut stats = SyncPullStats {
-                    pulled: &mut pulled,
-                    already: &mut already,
-                    error_tok,
-                    op,
-                };
-                match sync_pull_closure(&client, store, h, depth, &mut stats) {
-                    Ok(()) => {}
-                    Err(v) => return Ok(v),
-                }
-            }
-
-            // Pull and update refs.
-            for rname in &refnames {
-                let h = match client.refs_get(rname) {
-                    Ok(Some(h)) => h,
-                    Ok(None) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/sync/ref-not-found",
-                            format!("remote ref not found: {rname}"),
-                            Some(op),
-                        ));
+                let sp = match sync_policy_from_op(pol) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
                     }
+                };
+                let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
+                    }
+                };
+                let client = match gc_registry::RegistryClient::new(
+                    &base,
+                    timeout_ms.map(std::time::Duration::from_millis),
+                ) {
+                    Ok(c) => c,
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
@@ -637,178 +624,185 @@ fn call_capability(
                         ));
                     }
                 };
-                let mut stats = SyncPullStats {
-                    pulled: &mut pulled,
-                    already: &mut already,
-                    error_tok,
-                    op,
-                };
-                match sync_pull_closure(&client, store, &h, depth, &mut stats) {
-                    Ok(()) => {}
-                    Err(v) => return Ok(v),
+
+                let mut pulled: u64 = 0;
+                let mut already: u64 = 0;
+                let mut heads: Vec<Term> = Vec::new();
+
+                // Pull by roots (hashes) first.
+                for h in &roots {
+                    let mut stats = SyncPullStats {
+                        pulled: &mut pulled,
+                        already: &mut already,
+                        error_tok,
+                        op,
+                    };
+                    match sync_pull_closure(&client, store, h, depth, &mut stats) {
+                        Ok(()) => {}
+                        Err(v) => return Ok(v),
+                    }
                 }
 
-                // Update local refs unless it would clobber a different value.
-                let cur = refs.get(rname)?;
-                if !force
-                    && let Some(curh) = &cur
-                    && curh != &h
-                {
-                    return Ok(mk_error_with_ctx(
+                // Pull and update refs.
+                for rname in &refnames {
+                    let h = match client.refs_get(rname) {
+                        Ok(Some(h)) => h,
+                        Ok(None) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/sync/ref-not-found",
+                                format!("remote ref not found: {rname}"),
+                                Some(op),
+                            ));
+                        }
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/sync/remote-error",
+                                format!("{e}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let mut stats = SyncPullStats {
+                        pulled: &mut pulled,
+                        already: &mut already,
                         error_tok,
-                        "core/refs/conflict",
-                        "local ref differs; use force to overwrite".to_string(),
-                        Some(op),
-                        Term::Map(
-                            [
-                                (
-                                    TermOrdKey(Term::symbol(":refs/name")),
-                                    Term::Str(rname.clone()),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":refs/current")),
-                                    cur.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":refs/remote")),
-                                    Term::Str(h.clone()),
-                                ),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        ),
+                        op,
+                    };
+                    match sync_pull_closure(&client, store, &h, depth, &mut stats) {
+                        Ok(()) => {}
+                        Err(v) => return Ok(v),
+                    }
+
+                    // Update local refs unless it would clobber a different value.
+                    let cur = refs.get(rname)?;
+                    if !force
+                        && let Some(curh) = &cur
+                        && curh != &h
+                    {
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/refs/conflict",
+                            "local ref differs; use force to overwrite".to_string(),
+                            Some(op),
+                            Term::Map(
+                                [
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/name")),
+                                        Term::Str(rname.clone()),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/current")),
+                                        cur.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/remote")),
+                                        Term::Str(h.clone()),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ));
+                    }
+                    let _ = refs.set(rname, Some(&h), None)?;
+
+                    heads.push(Term::Map(
+                        [
+                            (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
+                            (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+                        ]
+                        .into_iter()
+                        .collect(),
                     ));
                 }
-                let _ = refs.set(rname, Some(&h), None)?;
 
-                heads.push(Term::Map(
-                    [
-                        (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ));
+                heads.sort_by_cached_key(print_term);
+
+                let mut m = BTreeMap::new();
+                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+                m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+                m.insert(
+                    TermOrdKey(Term::symbol(":pulled")),
+                    Term::Int((pulled as i64).into()),
+                );
+                m.insert(
+                    TermOrdKey(Term::symbol(":present")),
+                    Term::Int((already as i64).into()),
+                );
+                m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
+                Ok(Value::Data(Term::Map(m)))
             }
-
-            heads.sort_by_cached_key(print_term);
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
-            m.insert(
-                TermOrdKey(Term::symbol(":pulled")),
-                Term::Int((pulled as i64).into()),
-            );
-            m.insert(
-                TermOrdKey(Term::symbol(":present")),
-                Term::Int((already as i64).into()),
-            );
-            m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
-            Ok(Value::Data(Term::Map(m)))
         }
 
         "core/sync::push" => {
-            let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/sync::push".to_string())
-            })?;
-
-            let remote_s = match payload_sync_remote(payload) {
-                Ok(s) => s,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
-            let depth = payload_sync_depth(payload).unwrap_or(0);
-            let roots = match payload_sync_roots(payload) {
-                Ok(rs) => rs,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
-            if roots.is_empty() {
+            #[cfg(target_os = "wasi")]
+            {
+                let _ = payload;
+                let _ = pol;
+                let _ = policy;
+                let _ = store;
+                let _ = refs;
                 return Ok(mk_error(
                     error_tok,
-                    "core/sync/bad-payload",
-                    "push requires :roots".to_string(),
+                    "core/sync/not-supported",
+                    "core/sync is not supported on WASI (no networking in the bootstrap)"
+                        .to_string(),
                     Some(op),
                 ));
             }
-            let set_refs = match payload_sync_set_refs(payload) {
-                Ok(v) => v,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
-            };
+            #[cfg(not(target_os = "wasi"))]
+            {
+                let store = store.ok_or_else(|| {
+                    EffectsError::Log("missing artifact store for core/sync::push".to_string())
+                })?;
 
-            let sp = match sync_policy_from_op(pol) {
-                Ok(p) => p,
-                Err(e) => {
-                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                }
-            };
-            let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
-                Ok(b) => b,
-                Err(e) => return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op))),
-            };
-            let client = match gc_registry::RegistryClient::new(
-                &base,
-                timeout_ms.map(std::time::Duration::from_millis),
-            ) {
-                Ok(c) => c,
-                Err(e) => {
+                let remote_s = match payload_sync_remote(payload) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+                    }
+                };
+                let depth = payload_sync_depth(payload).unwrap_or(0);
+                let roots = match payload_sync_roots(payload) {
+                    Ok(rs) => rs,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+                    }
+                };
+                if roots.is_empty() {
                     return Ok(mk_error(
                         error_tok,
-                        "core/sync/remote-error",
-                        format!("{e}"),
+                        "core/sync/bad-payload",
+                        "push requires :roots".to_string(),
                         Some(op),
                     ));
                 }
-            };
-
-            let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-            for h in &roots {
-                match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
-                    Ok(()) => {}
-                    Err(v) => return Ok(v),
-                }
-            }
-            let hashes: Vec<String> = all.into_iter().collect();
-
-            let mut missing: Vec<String> = Vec::new();
-            let mut present: u64 = 0;
-            for chunk in hashes.chunks(512) {
-                let chunk_vec: Vec<String> = chunk.to_vec();
-                let mp = match client.store_has(&chunk_vec) {
-                    Ok(m) => m,
+                let set_refs = match payload_sync_set_refs(payload) {
+                    Ok(v) => v,
                     Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/sync/remote-error",
-                            format!("{e}"),
-                            Some(op),
-                        ));
+                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
                     }
                 };
-                for h in chunk {
-                    match mp.get(h) {
-                        Some(true) => present = present.saturating_add(1),
-                        _ => missing.push(h.clone()),
-                    }
-                }
-            }
-            missing.sort();
-            missing.dedup();
 
-            let mut uploaded: u64 = 0;
-            for h in &missing {
-                let bytes = match store.get_bytes(h) {
+                let sp = match sync_policy_from_op(pol) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                    }
+                };
+                let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
                     Ok(b) => b,
                     Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/not-found",
-                            format!("{e}"),
-                            Some(op),
-                        ));
+                        return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
                     }
                 };
-                match client.store_put(h, &bytes) {
-                    Ok(()) => uploaded = uploaded.saturating_add(1),
+                let client = match gc_registry::RegistryClient::new(
+                    &base,
+                    timeout_ms.map(std::time::Duration::from_millis),
+                ) {
+                    Ok(c) => c,
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
@@ -817,32 +811,57 @@ fn call_capability(
                             Some(op),
                         ));
                     }
-                }
-            }
+                };
 
-            let mut refs_updated: u64 = 0;
-            if !set_refs.is_empty() {
-                let mut set_refs_sorted = set_refs;
-                set_refs_sorted.sort_by(|a, b| a.name.cmp(&b.name));
-                for sr in &set_refs_sorted {
-                    let req = gc_registry::RefsSetReq {
-                        name: &sr.name,
-                        hash: &sr.hash,
-                        policy: &sr.policy,
-                        expected_old: sr.expected_old.as_deref(),
-                    };
-                    match client.refs_set(&req) {
-                        Ok(r) => {
-                            if !r.ok {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/sync/refs-set-failed",
-                                    "remote refs/set returned ok=false".to_string(),
-                                    Some(op),
-                                ));
-                            }
-                            refs_updated = refs_updated.saturating_add(1);
+                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+                for h in &roots {
+                    match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
+                        Ok(()) => {}
+                        Err(v) => return Ok(v),
+                    }
+                }
+                let hashes: Vec<String> = all.into_iter().collect();
+
+                let mut missing: Vec<String> = Vec::new();
+                let mut present: u64 = 0;
+                for chunk in hashes.chunks(512) {
+                    let chunk_vec: Vec<String> = chunk.to_vec();
+                    let mp = match client.store_has(&chunk_vec) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/sync/remote-error",
+                                format!("{e}"),
+                                Some(op),
+                            ));
                         }
+                    };
+                    for h in chunk {
+                        match mp.get(h) {
+                            Some(true) => present = present.saturating_add(1),
+                            _ => missing.push(h.clone()),
+                        }
+                    }
+                }
+                missing.sort();
+                missing.dedup();
+
+                let mut uploaded: u64 = 0;
+                for h in &missing {
+                    let bytes = match store.get_bytes(h) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("{e}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    match client.store_put(h, &bytes) {
+                        Ok(()) => uploaded = uploaded.saturating_add(1),
                         Err(e) => {
                             return Ok(mk_error(
                                 error_tok,
@@ -853,28 +872,63 @@ fn call_capability(
                         }
                     }
                 }
-            }
 
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
-            m.insert(
-                TermOrdKey(Term::symbol(":total")),
-                Term::Int((hashes.len() as i64).into()),
-            );
-            m.insert(
-                TermOrdKey(Term::symbol(":present")),
-                Term::Int((present as i64).into()),
-            );
-            m.insert(
-                TermOrdKey(Term::symbol(":uploaded")),
-                Term::Int((uploaded as i64).into()),
-            );
-            m.insert(
-                TermOrdKey(Term::symbol(":refs-updated")),
-                Term::Int((refs_updated as i64).into()),
-            );
-            Ok(Value::Data(Term::Map(m)))
+                let mut refs_updated: u64 = 0;
+                if !set_refs.is_empty() {
+                    let mut set_refs_sorted = set_refs;
+                    set_refs_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+                    for sr in &set_refs_sorted {
+                        let req = gc_registry::RefsSetReq {
+                            name: &sr.name,
+                            hash: &sr.hash,
+                            policy: &sr.policy,
+                            expected_old: sr.expected_old.as_deref(),
+                        };
+                        match client.refs_set(&req) {
+                            Ok(r) => {
+                                if !r.ok {
+                                    return Ok(mk_error(
+                                        error_tok,
+                                        "core/sync/refs-set-failed",
+                                        "remote refs/set returned ok=false".to_string(),
+                                        Some(op),
+                                    ));
+                                }
+                                refs_updated = refs_updated.saturating_add(1);
+                            }
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/sync/remote-error",
+                                    format!("{e}"),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                let mut m = BTreeMap::new();
+                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+                m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+                m.insert(
+                    TermOrdKey(Term::symbol(":total")),
+                    Term::Int((hashes.len() as i64).into()),
+                );
+                m.insert(
+                    TermOrdKey(Term::symbol(":present")),
+                    Term::Int((present as i64).into()),
+                );
+                m.insert(
+                    TermOrdKey(Term::symbol(":uploaded")),
+                    Term::Int((uploaded as i64).into()),
+                );
+                m.insert(
+                    TermOrdKey(Term::symbol(":refs-updated")),
+                    Term::Int((refs_updated as i64).into()),
+                );
+                Ok(Value::Data(Term::Map(m)))
+            }
         }
 
         "core/pkg::init" => {
@@ -1984,6 +2038,18 @@ fn call_capability(
                 }
                 present = true;
             } else {
+                #[cfg(target_os = "wasi")]
+                {
+                    if policy.store.remote.is_some() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-supported",
+                            "remote store is not supported on WASI bootstrap".to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+                #[cfg(not(target_os = "wasi"))]
                 match store_remote_client(policy, timeout_ms, error_tok, op) {
                     Ok(Some((client, _base))) => {
                         let mp = match client.store_has(std::slice::from_ref(&h)) {
@@ -2017,6 +2083,18 @@ fn call_capability(
             let h = payload_store_hash(payload)?;
             let p = store.path_for(&h);
             if !p.exists() {
+                #[cfg(target_os = "wasi")]
+                {
+                    if policy.store.remote.is_some() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-supported",
+                            "remote store is not supported on WASI bootstrap".to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+                #[cfg(not(target_os = "wasi"))]
                 match store_remote_client(policy, timeout_ms, error_tok, op) {
                     Ok(Some((client, _base))) => {
                         let bytes = match client.store_get_opt(&h) {
@@ -5648,12 +5726,14 @@ fn payload_pkg_bool(payload: &Term, key: &str) -> Option<bool> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone)]
 struct SyncPolicy {
     remote_allow: Vec<String>,
     allow_http: bool,
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
@@ -5686,6 +5766,7 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     })
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
     if base.scheme() == "http" && !sp.allow_http {
@@ -5700,6 +5781,7 @@ fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<Stri
     Err("remote is not in policy remote_allow allowlist".to_string())
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
     if base.scheme() == "http" && !policy.store.allow_http {
@@ -5717,6 +5799,7 @@ fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result
     Err("store remote is not in policy store.remote_allow allowlist".to_string())
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn store_remote_client(
     policy: &CapsPolicy,
     timeout_ms: Option<u64>,
@@ -5749,6 +5832,7 @@ fn store_remote_client(
     Ok(Some((client, base)))
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_remote(payload: &Term) -> Result<String, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -5759,6 +5843,7 @@ fn payload_sync_remote(payload: &Term) -> Result<String, String> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_refs(payload: &Term) -> Result<Vec<String>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -5784,6 +5869,7 @@ fn payload_sync_refs(payload: &Term) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_roots(payload: &Term) -> Result<Vec<String>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -5809,6 +5895,7 @@ fn payload_sync_roots(payload: &Term) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_depth(payload: &Term) -> Option<u64> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":depth"))) {
@@ -5817,6 +5904,7 @@ fn payload_sync_depth(payload: &Term) -> Option<u64> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_force(payload: &Term) -> Option<bool> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":force"))) {
@@ -5825,6 +5913,7 @@ fn payload_sync_force(payload: &Term) -> Option<bool> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone)]
 struct SyncSetRef {
     name: String,
@@ -5833,6 +5922,7 @@ struct SyncSetRef {
     expected_old: Option<String>,
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -5883,6 +5973,7 @@ fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
     Ok(out)
 }
 
+#[cfg(not(target_os = "wasi"))]
 struct SyncPullStats<'a> {
     pulled: &'a mut u64,
     already: &'a mut u64,
@@ -5890,6 +5981,7 @@ struct SyncPullStats<'a> {
     op: &'a str,
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn sync_pull_closure(
     client: &gc_registry::RegistryClient,
     store: &ArtifactStore,
@@ -6234,29 +6326,10 @@ fn gc_pins_write(path: &Path, pins: &GcPins) -> Result<(), EffectsError> {
     atomic_write_text(path, out.as_bytes()).map_err(EffectsError::Io)
 }
 
-struct GcStoreLock(std::fs::File);
-
-impl Drop for GcStoreLock {
-    fn drop(&mut self) {
-        // Best-effort unlock. Even if this fails, dropping the file descriptor releases the lock
-        // on platforms where advisory locks are fd-scoped.
-        let _ = self.0.unlock();
-    }
-}
-
 fn gc_store_lock(store_dir: &Path) -> Result<GcStoreLock, EffectsError> {
-    use std::fs::OpenOptions;
     std::fs::create_dir_all(store_dir)?;
     let lock_path = store_dir.join(".gc.lock");
-    let f = OpenOptions::new()
-        .create(true)
-        .read(true)
-        .write(true)
-        .truncate(false)
-        .open(lock_path)?;
-    f.lock_exclusive()
-        .map_err(|e| EffectsError::Log(format!("store lock failed: {e}")))?;
-    Ok(GcStoreLock(f))
+    ExclusiveLock::acquire(&lock_path)
 }
 
 type GcDeadSet = (Vec<String>, u64, Vec<(String, u64)>);

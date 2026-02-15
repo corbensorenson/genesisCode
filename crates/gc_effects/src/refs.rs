@@ -3,10 +3,10 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
 use crate::error::EffectsError;
+use crate::lock::ExclusiveLock;
 
 #[derive(Debug, Clone)]
 pub struct RefsDb {
@@ -98,15 +98,8 @@ impl RefsDb {
         Ok(SetResult::Updated)
     }
 
-    fn lock_exclusive(&self) -> Result<std::fs::File, EffectsError> {
-        let f = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .open(&self.lock_path)?;
-        f.lock_exclusive()?;
-        Ok(f)
+    fn lock_exclusive(&self) -> Result<ExclusiveLock, EffectsError> {
+        ExclusiveLock::acquire(&self.lock_path)
     }
 
     fn load_locked(&self) -> Result<BTreeMap<String, String>, EffectsError> {
@@ -170,24 +163,38 @@ impl RefsDb {
         );
         let s = print_term(&t) + "\n";
 
-        let tmp = self
-            .path
-            .with_extension(format!("tmp-{}", std::process::id()));
-        let mut f = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&tmp)?;
-        f.write_all(s.as_bytes())?;
-        f.sync_all()?;
-        std::fs::rename(&tmp, &self.path)?;
-        #[cfg(unix)]
-        {
-            if let Some(parent) = self.path.parent() {
-                let dir = std::fs::File::open(parent)?;
-                dir.sync_all()?;
+        // Atomic write with a collision-safe temp file (no randomness).
+        let dir = self.path.parent().unwrap_or_else(|| Path::new("."));
+        let mut tmp_i: u64 = 0;
+        let tmp_path = loop {
+            let cand = dir.join(format!(".tmp-refs-{}-{}", std::process::id(), tmp_i));
+            tmp_i = tmp_i.saturating_add(1);
+            match OpenOptions::new().write(true).create_new(true).open(&cand) {
+                Ok(mut f) => {
+                    f.write_all(s.as_bytes())?;
+                    f.sync_all()?;
+                    break cand;
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => return Err(e.into()),
+            }
+        };
+
+        match std::fs::rename(&tmp_path, &self.path) {
+            Ok(()) => {
+                #[cfg(unix)]
+                {
+                    if let Some(parent) = self.path.parent() {
+                        let dir = std::fs::File::open(parent)?;
+                        dir.sync_all()?;
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => {
+                let _ = std::fs::remove_file(&tmp_path);
+                Err(e.into())
             }
         }
-        Ok(())
     }
 }

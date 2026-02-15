@@ -1,4 +1,5 @@
 mod error;
+mod lock;
 mod log;
 mod policy;
 mod refs;
