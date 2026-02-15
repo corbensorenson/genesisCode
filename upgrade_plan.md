@@ -97,6 +97,56 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 - [x] Define a minimal “registry policy” spec (local policy format first) and implement a verifier that enforces it. (`docs/spec/REGISTRY_POLICY.md`)
 - [x] Optional: transparency log integration (append-only log of published package hashes + signatures). (`docs/spec/TRANSPARENCY_LOG.md`)
 
+### P3: GenesisGraph + GenesisPkg (Integrated VCS + Package Sharing, No Git)
+
+Docs (addendum spec set):
+
+- [x] Addendum overview and architecture constraints. (`docs/GENESISGRAPH_GENESISPKG_v0.2.md`)
+- [x] CLI + file format spec (store/refs/vcs/commit/pkg/policy + `genesis.lock` + `.gpk`). (`docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md`)
+- [x] Policy defaults for ref protection and obligation gating. (`docs/POLICY_DEFAULTS_v0.1.md`)
+- [x] Lock generator ruleset and invariants. (`docs/LOCK_GENERATOR_RULESET_v0.1.md`)
+- [x] Remote registry minimal protocol. (`docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md`)
+- [x] Object reachability closure rules for export/publish/GC. (`docs/REACHABILITY_RULES_v0.1.md`)
+- [x] Garbage collection rules for the local store. (`docs/GARBAGE_COLLECTION_RULES_v0.1.md`)
+
+Implementation (phased, all capabilities are effects; kernel remains pure):
+
+- [ ] GenesisGraph object model:
+  - [ ] Implement `:vcs/snapshot` (package/module/contract/workspace) artifact schemas and canonical hashing.
+  - [ ] Implement `:vcs/patch` artifacts (semantic ops over canonical AST paths) plus `vcs diff/apply`.
+  - [ ] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
+  - [ ] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
+  - [ ] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
+- [ ] Store capability (`core/store::*`) as runner effects:
+  - [ ] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
+  - [ ] Optional remote-backed store adapter using the minimal registry protocol.
+- [ ] Refs capability (`core/refs::*`) as runner effects:
+  - [ ] Local refs database with atomic CAS-style `set` and stable serialization.
+  - [ ] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.
+- [ ] Sync capability (`core/sync::*`) as runner effects:
+  - [ ] `push/pull` artifact transfer using reachability closure planning.
+  - [ ] Remote refs updates via registry `refs/set` with CAS.
+- [ ] Workspace lock (`genesis.lock`) and package install flow:
+  - [ ] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
+  - [ ] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
+- [ ] `.gpk` bundle format:
+  - [ ] Shallow export/import (snapshot closure) and required verification checks.
+  - [ ] Full export/import (commit DAG closure) with depth control.
+  - [ ] Include optional embedded refs and attestations.
+- [ ] Contract-level branching/merging:
+  - [ ] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
+  - [ ] 3-way merge for contract snapshots (op-table keyed merge).
+  - [ ] Conflict artifacts + resolution pipeline via semantic patches.
+- [ ] Acceptance tests (must be added early):
+  - [ ] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
+  - [ ] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
+  - [ ] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
+  - [ ] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
+  - [ ] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
+- [ ] Garbage collection:
+  - [ ] Implement `genesis gc plan/run/pin/unpin` using reachability closure from roots (refs + locks + pins).
+  - [ ] Quarantine mode + TTL purge.
+
 ### P2: Advanced Stacks (Not Required For Initial Production, But v0.2-Vision Complete)
 
 - [ ] Type stack completion:
