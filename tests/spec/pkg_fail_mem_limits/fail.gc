@@ -1,0 +1,15 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/fail-mem::tests]
+      :types {pkg/fail-mem::tests ?}}))
+
+(def pkg/fail-mem::tests
+  {
+    "alloc"
+      {
+        :body (fn (_) (prim pair/cons 1 nil))}})
+
+pkg/fail-mem::tests
+

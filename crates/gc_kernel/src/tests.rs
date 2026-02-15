@@ -1,7 +1,7 @@
 use gc_coreform::{Term, parse_module};
 use num_bigint::BigInt;
 
-use crate::{Env, EvalCtx, Value, eval_module};
+use crate::{Env, EvalCtx, KernelErrorKind, MemLimits, Value, eval_module};
 
 #[test]
 fn seal_unseal_roundtrip() {
@@ -107,4 +107,32 @@ fn application_sugar_left_associates() {
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
         assert_eq!(v.as_data(), Some(&Term::Int(BigInt::from(3))));
     }
+}
+
+#[test]
+fn memory_limit_on_string_len_is_a_kernel_error() {
+    let forms = parse_module(r#""ab""#).unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.set_mem_limits(MemLimits {
+        max_string_len: Some(1),
+        ..MemLimits::default()
+    });
+    let mut env = Env::empty();
+    let e = eval_module(&mut ctx, &mut env, &forms).unwrap_err();
+    assert!(matches!(e.kind, KernelErrorKind::MemoryLimit), "{e}");
+    assert!(e.msg.contains("string-len"), "msg={}", e.msg);
+}
+
+#[test]
+fn memory_limit_on_pair_cells_is_a_kernel_error() {
+    let forms = parse_module(r#"(prim pair/cons 1 nil)"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.set_mem_limits(MemLimits {
+        max_pair_cells: Some(0),
+        ..MemLimits::default()
+    });
+    let mut env = Env::empty();
+    let e = eval_module(&mut ctx, &mut env, &forms).unwrap_err();
+    assert!(matches!(e.kind, KernelErrorKind::MemoryLimit), "{e}");
+    assert!(e.msg.contains("pair-cells"), "msg={}", e.msg);
 }

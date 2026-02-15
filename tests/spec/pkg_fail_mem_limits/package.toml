@@ -1,0 +1,12 @@
+dependencies = []
+name = "pkg_fail_mem_limits"
+obligations = ["core/obligation::unit-tests"]
+tests = ["pkg/fail-mem::tests"]
+version = "0.0.1"
+
+[limits]
+max_pair_cells = 0
+
+[[modules]]
+hash = "8f5af31562878caa1f7c47bea3327b86a9b9d0219fa4e60a920fefcf17366b59"
+path = "fail.gc"

@@ -24,6 +24,11 @@ This file defines a package, its modules, dependencies, and required obligations
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
   - If omitted, the v0.2 toolchain default is used.
 - `allow_unlimited` (bool, default `false`): if `true`, permits disabling the step limit via `genesis test --no-step-limit`.
+- `max_pair_cells` (integer, optional): maximum total number of `pair/cons` cells allocated during evaluation
+- `max_vec_len` (integer, optional): maximum observed vector length (vector literals and `vec/push`)
+- `max_map_len` (integer, optional): maximum observed map length (map literals, `map/put`, `map/merge`)
+- `max_bytes_len` (integer, optional): maximum observed bytes length (bytes literals and `bytes/concat`)
+- `max_string_len` (integer, optional): maximum observed string length in UTF-8 bytes (string literals and `str/concat`)
 
 `budgets` keys (all optional):
 - `max_steps_per_test` (integer): maximum kernel evaluation steps for each unit test

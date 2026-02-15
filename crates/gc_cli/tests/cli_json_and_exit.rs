@@ -122,3 +122,35 @@ fn fmt_check_failure_has_exit_code_11() {
         .failure()
         .code(11);
 }
+
+#[test]
+fn manifest_memory_limit_causes_eval_exit_code_20() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_mem_limits");
+    let dst = td.path().join("pkg_fail_mem_limits");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["--json", "test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(20)
+        .get_output()
+        .stdout
+        .clone();
+
+    let v: serde_json::Value = serde_json::from_slice(&out).expect("valid json");
+    assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(false));
+    assert_eq!(
+        v.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/error-v0.2")
+    );
+    assert_eq!(
+        v.get("error")
+            .and_then(|e| e.get("code"))
+            .and_then(|x| x.as_str()),
+        Some("test/error")
+    );
+}

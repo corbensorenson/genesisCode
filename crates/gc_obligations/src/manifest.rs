@@ -45,6 +45,21 @@ pub struct Limits {
     /// Default is deny (false).
     #[serde(default)]
     pub allow_unlimited: bool,
+
+    /// Maximum total number of `pair/cons` cells allocated during evaluation.
+    pub max_pair_cells: Option<u64>,
+
+    /// Maximum observed vector length (vector literals and `vec/push`).
+    pub max_vec_len: Option<u64>,
+
+    /// Maximum observed map length (map literals, `map/put`, `map/merge`).
+    pub max_map_len: Option<u64>,
+
+    /// Maximum observed bytes length (bytes literals and `bytes/concat`).
+    pub max_bytes_len: Option<u64>,
+
+    /// Maximum observed string length in UTF-8 bytes (string literals and `str/concat`).
+    pub max_string_len: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

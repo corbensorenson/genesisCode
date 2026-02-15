@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use gc_coreform::{Term, canonicalize_module, hash_module, parse_module, parse_term, print_module};
 use gc_effects::{CapsPolicy, Decision, EffectLog};
-use gc_kernel::{Apply, EvalCtx, SealId, StepLimit, Value, eval_module, eval_term};
+use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value, eval_module, eval_term};
 use gc_obligations::PackageManifest;
 use gc_prelude::build_prelude;
 
@@ -35,6 +35,26 @@ struct Cli {
     /// Disable the kernel evaluation step limit.
     #[arg(long, global = true, conflicts_with = "step_limit")]
     no_step_limit: bool,
+
+    /// Maximum total number of `pair/cons` cells allocated during evaluation.
+    #[arg(long, global = true, value_name = "N")]
+    max_pair_cells: Option<u64>,
+
+    /// Maximum observed vector length (vector literals and `vec/push`).
+    #[arg(long, global = true, value_name = "N")]
+    max_vec_len: Option<u64>,
+
+    /// Maximum observed map length (map literals, `map/put`, `map/merge`).
+    #[arg(long, global = true, value_name = "N")]
+    max_map_len: Option<u64>,
+
+    /// Maximum observed bytes length (bytes literals and `bytes/concat`).
+    #[arg(long, global = true, value_name = "N")]
+    max_bytes_len: Option<u64>,
+
+    /// Maximum observed string length in UTF-8 bytes (string literals and `str/concat`).
+    #[arg(long, global = true, value_name = "N")]
+    max_string_len: Option<u64>,
 
     #[command(subcommand)]
     cmd: Cmd,
@@ -251,8 +271,20 @@ fn resolved_step_limit(cli: &Cli) -> StepLimit {
     StepLimit::Default
 }
 
+fn resolved_mem_limits(cli: &Cli) -> MemLimits {
+    MemLimits {
+        max_pair_cells: cli.max_pair_cells,
+        max_vec_len: cli.max_vec_len,
+        max_map_len: cli.max_map_len,
+        max_bytes_len: cli.max_bytes_len,
+        max_string_len: cli.max_string_len,
+    }
+}
+
 fn mk_ctx(cli: &Cli) -> EvalCtx {
-    EvalCtx::with_step_limit(resolved_step_limit(cli).resolve())
+    let mut ctx = EvalCtx::with_step_limit(resolved_step_limit(cli).resolve());
+    ctx.set_mem_limits(resolved_mem_limits(cli));
+    ctx
 }
 
 fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> CliError {
@@ -564,8 +596,13 @@ fn cmd_replay(
 }
 
 fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
-    let r = gc_obligations::test_package_with_step_limit(pkg, caps, resolved_step_limit(cli))
-        .map_err(obligation_err)?;
+    let r = gc_obligations::test_package_with_step_limit(
+        pkg,
+        caps,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+    )
+    .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
 
     let obligations: Vec<serde_json::Value> = r
@@ -728,14 +765,20 @@ fn cmd_apply_patch(
     pkg: &Path,
     caps: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
-    let r = gc_patches::apply_patch_with_step_limit(patch, pkg, caps, resolved_step_limit(cli))
-        .map_err(|e| match e {
-            gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
-                cli_err(EX_PARSE, "patch/invalid", format!("{e}"))
-            }
-            gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
-            gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
-        })?;
+    let r = gc_patches::apply_patch_with_step_limit(
+        patch,
+        pkg,
+        caps,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+    )
+    .map_err(|e| match e {
+        gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
+            cli_err(EX_PARSE, "patch/invalid", format!("{e}"))
+        }
+        gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
+        gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
+    })?;
 
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
     let env = JsonEnvelope {

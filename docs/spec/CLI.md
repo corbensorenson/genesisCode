@@ -12,6 +12,11 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - The v0.2 toolchain default is `5_000_000` steps.
 - `--no-step-limit`: disable the kernel evaluation step limit (for trusted inputs only).
   - For package commands (`test`, `apply-patch`), `package.toml` may reject this via `[limits].allow_unlimited = false` (default).
+- `--max-pair-cells <N>`: maximum total number of `pair/cons` cells allocated during evaluation.
+- `--max-vec-len <N>`: maximum observed vector length (vector literals and `vec/push`).
+- `--max-map-len <N>`: maximum observed map length (map literals, `map/put`, `map/merge`).
+- `--max-bytes-len <N>`: maximum observed bytes length (bytes literals and `bytes/concat`).
+- `--max-string-len <N>`: maximum observed string length in UTF-8 bytes (string literals and `str/concat`).
 
 ## Exit Codes (Stable)
 

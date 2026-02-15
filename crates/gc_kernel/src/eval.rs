@@ -32,6 +32,24 @@ impl StepLimit {
     }
 }
 
+/// Optional, deterministic memory safety valves for the kernel.
+///
+/// These limits are *not* an exact accounting of process RSS; they are stable, semantic measures
+/// based on observed sizes of CoreForm values during evaluation.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct MemLimits {
+    /// Maximum total number of `pair/cons` cells allocated during evaluation.
+    pub max_pair_cells: Option<u64>,
+    /// Maximum observed vector length (applies to vector literals and `vec/push`).
+    pub max_vec_len: Option<u64>,
+    /// Maximum observed map length (applies to map literals, `map/put`, and `map/merge`).
+    pub max_map_len: Option<u64>,
+    /// Maximum observed bytes length (applies to bytes literals and `bytes/concat`).
+    pub max_bytes_len: Option<u64>,
+    /// Maximum observed string length in UTF-8 bytes (applies to string literals and `str/concat`).
+    pub max_string_len: Option<u64>,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct EvalState {
     pub next_seal_id: u64,
@@ -62,7 +80,18 @@ pub struct EvalCtx {
     pub protocol: Option<ProtocolTokens>,
     pub steps: u64,
     pub step_limit: Option<u64>,
+    pub mem_limits: MemLimits,
+    mem_state: MemState,
     coverage: Option<CoverageState>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct MemState {
+    pair_cells: u64,
+    max_vec_len: u64,
+    max_map_len: u64,
+    max_bytes_len: u64,
+    max_string_len: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -100,8 +129,57 @@ impl EvalCtx {
             protocol: Some(protocol),
             steps: 0,
             step_limit,
+            mem_limits: MemLimits::default(),
+            mem_state: MemState::default(),
             coverage: None,
         }
+    }
+
+    pub fn set_mem_limits(&mut self, limits: MemLimits) {
+        self.mem_limits = limits;
+    }
+
+    fn mem_enabled(&self) -> bool {
+        self.mem_limits.max_pair_cells.is_some()
+            || self.mem_limits.max_vec_len.is_some()
+            || self.mem_limits.max_map_len.is_some()
+            || self.mem_limits.max_bytes_len.is_some()
+            || self.mem_limits.max_string_len.is_some()
+    }
+
+    fn mem_observe_data_term(&mut self, t: &Term) -> Result<(), KernelError> {
+        if !self.mem_enabled() {
+            return Ok(());
+        }
+        // Data terms can be deeply nested; avoid stack overflow while observing.
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+            let mut stack: Vec<&Term> = vec![t];
+            while let Some(cur) = stack.pop() {
+                match cur {
+                    Term::Str(s) => self.mem_observe_string_len(s.len())?,
+                    Term::Bytes(b) => self.mem_observe_bytes_len(b.len())?,
+                    Term::Vector(xs) => {
+                        self.mem_observe_vec_len(xs.len())?;
+                        for x in xs {
+                            stack.push(x);
+                        }
+                    }
+                    Term::Map(m) => {
+                        self.mem_observe_map_len(m.len())?;
+                        for (k, v) in m.iter() {
+                            stack.push(&k.0);
+                            stack.push(v);
+                        }
+                    }
+                    Term::Pair(a, d) => {
+                        stack.push(a);
+                        stack.push(d);
+                    }
+                    Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Symbol(_) => {}
+                }
+            }
+            Ok(())
+        })
     }
 
     pub fn enable_coverage(&mut self, tracked: BTreeSet<String>) {
@@ -121,6 +199,81 @@ impl EvalCtx {
             return;
         }
         *c.hits.entry(sym.to_string()).or_insert(0) += 1;
+    }
+
+    fn mem_observe_max(
+        kind: &'static str,
+        slot: &mut u64,
+        observed: u64,
+        limit: Option<u64>,
+    ) -> Result<(), KernelError> {
+        if observed > *slot {
+            *slot = observed;
+        }
+        if let Some(max) = limit
+            && *slot > max
+        {
+            return Err(KernelError::new(
+                KernelErrorKind::MemoryLimit,
+                format!(
+                    "memory limit exceeded: {kind} (observed={}, limit={max})",
+                    *slot
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    fn mem_charge_pair_cells(&mut self, n: u64) -> Result<(), KernelError> {
+        self.mem_state.pair_cells = self.mem_state.pair_cells.saturating_add(n);
+        if let Some(max) = self.mem_limits.max_pair_cells
+            && self.mem_state.pair_cells > max
+        {
+            return Err(KernelError::new(
+                KernelErrorKind::MemoryLimit,
+                format!(
+                    "memory limit exceeded: pair-cells (observed={}, limit={max})",
+                    self.mem_state.pair_cells
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    fn mem_observe_vec_len(&mut self, len: usize) -> Result<(), KernelError> {
+        Self::mem_observe_max(
+            "vec-len",
+            &mut self.mem_state.max_vec_len,
+            len as u64,
+            self.mem_limits.max_vec_len,
+        )
+    }
+
+    fn mem_observe_map_len(&mut self, len: usize) -> Result<(), KernelError> {
+        Self::mem_observe_max(
+            "map-len",
+            &mut self.mem_state.max_map_len,
+            len as u64,
+            self.mem_limits.max_map_len,
+        )
+    }
+
+    fn mem_observe_bytes_len(&mut self, len: usize) -> Result<(), KernelError> {
+        Self::mem_observe_max(
+            "bytes-len",
+            &mut self.mem_state.max_bytes_len,
+            len as u64,
+            self.mem_limits.max_bytes_len,
+        )
+    }
+
+    fn mem_observe_string_len(&mut self, len: usize) -> Result<(), KernelError> {
+        Self::mem_observe_max(
+            "string-len",
+            &mut self.mem_state.max_string_len,
+            len as u64,
+            self.mem_limits.max_string_len,
+        )
     }
 
     pub fn tick(&mut self) -> Result<(), KernelError> {
@@ -180,12 +333,28 @@ fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, Ke
     ctx.tick()?;
 
     match term {
-        Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Str(_) | Term::Bytes(_) => {
+        Term::Nil | Term::Bool(_) | Term::Int(_) => Ok(Value::Data(term.clone())),
+        Term::Str(s) => {
+            ctx.mem_observe_string_len(s.len())?;
             Ok(Value::Data(term.clone()))
         }
-        Term::Vector(xs) => Ok(Value::Vector(xs.iter().cloned().map(Value::Data).collect())),
+        Term::Bytes(b) => {
+            ctx.mem_observe_bytes_len(b.len())?;
+            Ok(Value::Data(term.clone()))
+        }
+        Term::Vector(xs) => {
+            ctx.mem_observe_vec_len(xs.len())?;
+            for x in xs {
+                ctx.mem_observe_data_term(x)?;
+            }
+            Ok(Value::Vector(xs.iter().cloned().map(Value::Data).collect()))
+        }
         Term::Map(m) => {
             // Map literal: keys are data terms (not evaluated), values are expressions (evaluated).
+            ctx.mem_observe_map_len(m.len())?;
+            for (k, _v) in m.iter() {
+                ctx.mem_observe_data_term(&k.0)?;
+            }
             let mut out = std::collections::BTreeMap::new();
             for (k, v) in m.iter() {
                 let vv = eval_term(ctx, env, v)?;
@@ -224,6 +393,7 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
                         "(quote datum) expects exactly 1 argument",
                     ));
                 }
+                ctx.mem_observe_data_term(items[1])?;
                 return Ok(Value::Data(items[1].clone()));
             }
             "fn" => {
@@ -521,6 +691,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(d) = args[1].as_data() else {
                 return type_err(ctx, "pair/cons expects data");
             };
+            ctx.mem_charge_pair_cells(1)?;
             Ok(Value::Data(Term::Pair(
                 Box::new(a.clone()),
                 Box::new(d.clone()),
@@ -579,6 +750,9 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             };
             match &args[0] {
                 Value::Map(m) => {
+                    let existed = m.contains_key(&TermOrdKey(k.clone()));
+                    let new_len = m.len().saturating_add(if existed { 0 } else { 1 });
+                    ctx.mem_observe_map_len(new_len)?;
                     let mut out = m.clone();
                     out.insert(TermOrdKey(k.clone()), args[2].clone());
                     Ok(Value::Map(out))
@@ -587,6 +761,9 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                     let Some(v) = args[2].as_data() else {
                         return type_err(ctx, "map/put expects data value when map is data");
                     };
+                    let existed = m.contains_key(&TermOrdKey(k.clone()));
+                    let new_len = m.len().saturating_add(if existed { 0 } else { 1 });
+                    ctx.mem_observe_map_len(new_len)?;
                     let mut out = m.clone();
                     out.insert(TermOrdKey(k.clone()), v.clone());
                     Ok(Value::Data(Term::Map(out)))
@@ -604,6 +781,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                     for (k, v) in b.iter() {
                         out.insert(k.clone(), v.clone());
                     }
+                    ctx.mem_observe_map_len(out.len())?;
                     Ok(Value::Map(out))
                 }
                 (Value::Data(Term::Map(a)), Value::Data(Term::Map(b))) => {
@@ -611,6 +789,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                     for (k, v) in b.iter() {
                         out.insert(k.clone(), v.clone());
                     }
+                    ctx.mem_observe_map_len(out.len())?;
                     Ok(Value::Data(Term::Map(out)))
                 }
                 _ => type_err(ctx, "map/merge expects maps of the same kind"),
@@ -642,6 +821,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             }
             match &args[0] {
                 Value::Vector(xs) => {
+                    let new_len = xs.len().saturating_add(1);
+                    ctx.mem_observe_vec_len(new_len)?;
                     let mut out = xs.clone();
                     out.push(args[1].clone());
                     Ok(Value::Vector(out))
@@ -650,6 +831,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                     let Some(v) = args[1].as_data() else {
                         return type_err(ctx, "vec/push expects data when vector is data");
                     };
+                    let new_len = xs.len().saturating_add(1);
+                    ctx.mem_observe_vec_len(new_len)?;
                     let mut out = xs.clone();
                     out.push(v.clone());
                     Ok(Value::Data(Term::Vector(out)))
@@ -679,6 +862,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Str(b)) = args[1].as_data() else {
                 return type_err(ctx, "str/concat expects strings");
             };
+            let new_len = a.len().saturating_add(b.len());
+            ctx.mem_observe_string_len(new_len)?;
             Ok(Value::Data(Term::Str(format!("{a}{b}"))))
         }
         "bytes/len" => {
@@ -700,6 +885,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Bytes(b)) = args[1].as_data() else {
                 return type_err(ctx, "bytes/concat expects bytes");
             };
+            let new_len = a.len().saturating_add(b.len());
+            ctx.mem_observe_bytes_len(new_len)?;
             let mut out = a.clone();
             out.extend_from_slice(b);
             Ok(Value::Data(Term::Bytes(out)))

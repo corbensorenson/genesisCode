@@ -79,7 +79,7 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
   - implemented stack-growth mitigation (`stacker`) for CoreForm parser/printer/term ordering and kernel evaluator; documented in `docs/spec/LIMITS.md`.
 - [x] Add CLI-configurable kernel step limits (`--step-limit N`, `--no-step-limit`) and plumb them through all evaluation entrypoints (`eval`, `explain`, `run`, `replay`, `test`, `apply-patch`).
 - [x] Add package-level policy for evaluation limits (so CI can enforce step limits independent of operator CLI flags).
-- [ ] Add (optional) memory limits (allocator-based or RSS budget) with deterministic failure reporting.
+- [x] Add (optional) memory limits with deterministic failure reporting (kernel semantic limits: pair cells + max container/bytes/string sizes; CLI + `package.toml` policy).
 - [x] Reduce OS-specific nondeterminism/leakage in effect error payloads (log FS paths as base-relative with `/` separators, not absolute `Path::display()` output).
 - [x] Make package artifacts content-addressed and path-independent (remove filesystem `:manifest-path` from `genesis/package-v0.2` record; validate manifest paths are relative, use `/`, and do not escape via `..`; normalize `:base-dir` in `.gclog`).
 - [x] Cross-platform determinism review (path normalization in logs, line endings, OS-specific capability behavior). (`docs/spec/DETERMINISM.md`)

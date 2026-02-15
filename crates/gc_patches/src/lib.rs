@@ -4,7 +4,7 @@ use std::path::Path;
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, parse_module, parse_term, print_module, print_term,
 };
-use gc_kernel::StepLimit;
+use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
     EvidenceStore, ObligationError, PackageTestResult, pack, test_package_with_step_limit,
 };
@@ -87,7 +87,13 @@ pub fn apply_patch(
     pkg_toml: &Path,
     caps_override: Option<&Path>,
 ) -> Result<PatchApplyResult, PatchError> {
-    apply_patch_with_step_limit(patch_path, pkg_toml, caps_override, StepLimit::Default)
+    apply_patch_with_step_limit(
+        patch_path,
+        pkg_toml,
+        caps_override,
+        StepLimit::Default,
+        MemLimits::default(),
+    )
 }
 
 pub fn apply_patch_with_step_limit(
@@ -95,6 +101,7 @@ pub fn apply_patch_with_step_limit(
     pkg_toml: &Path,
     caps_override: Option<&Path>,
     step_limit: StepLimit,
+    mem_limits: MemLimits,
 ) -> Result<PatchApplyResult, PatchError> {
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
@@ -125,6 +132,7 @@ pub fn apply_patch_with_step_limit(
         pkg_toml,
         caps_override,
         step_limit,
+        mem_limits,
     )?);
 
     let ok = acceptance.as_ref().is_some_and(|r| r.ok);

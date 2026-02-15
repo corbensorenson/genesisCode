@@ -30,4 +30,6 @@ pub enum KernelErrorKind {
     Internal,
     #[error("step limit exceeded")]
     StepLimit,
+    #[error("memory limit exceeded")]
+    MemoryLimit,
 }

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_term};
 use gc_effects::{CapsPolicy, EffectLog};
-use gc_kernel::{Apply, Env, EvalCtx, StepLimit, Value, eval_term, value_hash};
+use gc_kernel::{Apply, Env, EvalCtx, MemLimits, StepLimit, Value, eval_term, value_hash};
 use gc_prelude::build_prelude;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
@@ -67,6 +67,18 @@ struct TestRun {
     error: Option<String>,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct KernelLimits {
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+}
+
+fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
+    let mut ctx = EvalCtx::with_step_limit(limits.step_limit.resolve());
+    ctx.set_mem_limits(limits.mem_limits);
+    ctx
+}
+
 pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let modules = load_modules(&pkg_dir, &manifest.modules)?;
@@ -87,16 +99,27 @@ pub fn test_package(
     pkg_toml: &Path,
     caps_override: Option<&Path>,
 ) -> Result<PackageTestResult, ObligationError> {
-    test_package_with_step_limit(pkg_toml, caps_override, StepLimit::Default)
+    test_package_with_step_limit(
+        pkg_toml,
+        caps_override,
+        StepLimit::Default,
+        MemLimits::default(),
+    )
 }
 
 pub fn test_package_with_step_limit(
     pkg_toml: &Path,
     caps_override: Option<&Path>,
     step_limit: StepLimit,
+    mem_limits: MemLimits,
 ) -> Result<PackageTestResult, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let step_limit = effective_step_limit(&manifest, step_limit)?;
+    let mem_limits = effective_mem_limits(&manifest, mem_limits);
+    let limits = KernelLimits {
+        step_limit,
+        mem_limits,
+    };
     let store = EvidenceStore::open(&pkg_dir)?;
 
     let mut preflight_errors: Vec<String> = Vec::new();
@@ -194,7 +217,7 @@ pub fn test_package_with_step_limit(
     }
 
     // Discover test ids (suite_sym + test_name) once.
-    let test_ids = discover_tests(&pkg_dir, &manifest, &modules, step_limit)?;
+    let test_ids = discover_tests(&pkg_dir, &manifest, &modules, limits)?;
 
     // Execute tests (each test gets a fresh ctx/env build).
     let mut test_runs = Vec::new();
@@ -205,7 +228,7 @@ pub fn test_package_with_step_limit(
             &modules,
             &caps,
             id.clone(),
-            step_limit,
+            limits,
         )?);
     }
 
@@ -216,23 +239,23 @@ pub fn test_package_with_step_limit(
             "core/obligation::unit-tests" => obligation_unit_tests(&store, &manifest, &test_runs),
             "core/obligation::budgets" => obligation_budgets(&store, &manifest, &test_runs),
             "core/obligation::property-tests" => {
-                obligation_property_tests(&store, &pkg_dir, &manifest, &modules, step_limit)
+                obligation_property_tests(&store, &pkg_dir, &manifest, &modules, limits)
             }
-            "core/obligation::coverage" => obligation_coverage(
-                &store, &pkg_dir, &manifest, &modules, &test_runs, step_limit,
-            ),
+            "core/obligation::coverage" => {
+                obligation_coverage(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
+            }
             "core/obligation::determinism" => {
                 obligation_determinism(&store, &manifest, &modules, &test_runs)
             }
             "core/obligation::capabilities-declared" => {
                 obligation_caps_declared(&store, &manifest, &modules, &test_runs)
             }
-            "core/obligation::replayable-tests" => obligation_replayable(
-                &store, &pkg_dir, &manifest, &modules, &test_runs, step_limit,
-            ),
+            "core/obligation::replayable-tests" => {
+                obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
+            }
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
             "core/obligation::translation-validation" => obligation_translation_validation(
-                &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, step_limit,
+                &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, limits,
             ),
             other => Ok(ObligationResult {
                 name: other.to_string(),
@@ -281,6 +304,25 @@ fn effective_step_limit(
     let cli_n = cli.resolve().expect("finite step limit");
     let pkg_n = pkg.resolve().expect("finite step limit");
     Ok(StepLimit::Limit(cli_n.min(pkg_n)))
+}
+
+fn effective_mem_limits(manifest: &PackageManifest, cli: MemLimits) -> MemLimits {
+    fn min_opt(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+        match (a, b) {
+            (None, None) => None,
+            (Some(x), None) => Some(x),
+            (None, Some(y)) => Some(y),
+            (Some(x), Some(y)) => Some(x.min(y)),
+        }
+    }
+
+    MemLimits {
+        max_pair_cells: min_opt(cli.max_pair_cells, manifest.limits.max_pair_cells),
+        max_vec_len: min_opt(cli.max_vec_len, manifest.limits.max_vec_len),
+        max_map_len: min_opt(cli.max_map_len, manifest.limits.max_map_len),
+        max_bytes_len: min_opt(cli.max_bytes_len, manifest.limits.max_bytes_len),
+        max_string_len: min_opt(cli.max_string_len, manifest.limits.max_string_len),
+    }
 }
 
 fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationError> {
@@ -621,13 +663,13 @@ fn discover_tests(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<Vec<TestId>, ObligationError> {
     if manifest.tests.is_empty() {
         return Ok(Vec::new());
     }
 
-    let eval = eval_package_once(pkg_dir, manifest, modules, step_limit)?;
+    let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
     let mut ids = Vec::new();
     for suite in &manifest.tests {
         let v = eval
@@ -661,9 +703,9 @@ fn run_one_test(
     modules: &[LoadedModule],
     caps: &CapsPolicy,
     id: TestId,
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<TestRun, ObligationError> {
-    let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+    let mut ctx = mk_eval_ctx(limits);
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
 
@@ -869,7 +911,7 @@ fn obligation_coverage(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     // Coverage definition (v0.2): each non-test exported symbol must be *looked up as a variable*
     // at least once during the package unit tests.
@@ -937,7 +979,7 @@ fn obligation_coverage(
     let mut test_terms: Vec<Term> = Vec::new();
 
     for t in tests {
-        let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+        let mut ctx = mk_eval_ctx(limits);
         ctx.enable_coverage(tracked.clone());
 
         let prelude = build_prelude(&mut ctx);
@@ -1102,7 +1144,7 @@ fn obligation_property_tests(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     let default_cases = manifest.property.cases_per_test.unwrap_or(64);
     if manifest.property_tests.is_empty() {
@@ -1135,7 +1177,7 @@ fn obligation_property_tests(
     }
 
     // Evaluate package once to extract property bodies and per-test case counts.
-    let eval = eval_package_once(pkg_dir, manifest, modules, step_limit)?;
+    let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
     let mut props: Vec<PropertyTest> = Vec::new();
 
     let mut ok = true;
@@ -1198,7 +1240,7 @@ fn obligation_property_tests(
         let mut first_failure: Option<Term> = None;
 
         for (i, seed) in seeds.iter().copied().enumerate() {
-            let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+            let mut ctx = mk_eval_ctx(limits);
             let arg = Value::Data(Term::Int(BigInt::from(seed)));
             let r = match p.body.clone().apply(&mut ctx, arg) {
                 Ok(v) => v,
@@ -1654,7 +1696,7 @@ fn obligation_replayable(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     let mut ok = true;
     let mut errors = Vec::new();
@@ -1664,7 +1706,7 @@ fn obligation_replayable(
         let Some(log) = &t.effect_log else { continue };
 
         // Re-evaluate and replay.
-        let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+        let mut ctx = mk_eval_ctx(limits);
         let prelude = build_prelude(&mut ctx);
         let mut base = prelude.env;
         base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
@@ -1774,7 +1816,7 @@ fn obligation_translation_validation(
     modules: &[LoadedModule],
     caps: &CapsPolicy,
     test_ids: &[TestId],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     // Conservative v0.2: we only validate optimization by re-running the *whole package*
     // tests against an optimized copy of each module and comparing per-test hashes.
@@ -1811,7 +1853,7 @@ fn obligation_translation_validation(
 
     for id in test_ids {
         // original
-        let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone(), step_limit)?;
+        let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone(), limits)?;
 
         // optimized modules: optimize pure subsets and re-run.
         let mut opt_modules = Vec::new();
@@ -1824,14 +1866,7 @@ fn obligation_translation_validation(
                 forms: opt_forms,
             });
         }
-        let opt = run_one_test(
-            pkg_dir,
-            manifest,
-            &opt_modules,
-            caps,
-            id.clone(),
-            step_limit,
-        )?;
+        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone(), limits)?;
 
         if orig.value_hash != opt.value_hash {
             ok = false;
@@ -1936,9 +1971,9 @@ fn eval_package_once(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
-    step_limit: StepLimit,
+    limits: KernelLimits,
 ) -> Result<PackageEval, ObligationError> {
-    let mut ctx = EvalCtx::with_step_limit(step_limit.resolve());
+    let mut ctx = mk_eval_ctx(limits);
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
     base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
