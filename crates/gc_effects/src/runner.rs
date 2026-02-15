@@ -2714,19 +2714,27 @@ fn call_capability(
             let right_t = store_get_term(store, &right_h)
                 .map_err(|e| EffectsError::Log(format!("merge3 right read error: {e}")))?;
 
-            let base = match parse_contract_snapshot(&base_t) {
+            fn as_contract_snapshot(t: &Term) -> Result<gc_vcs::ContractSnapshot, String> {
+                let snap = gc_vcs::Snapshot::from_term(t).map_err(|e| e.to_string())?;
+                match snap.kind {
+                    gc_vcs::SnapshotKind::Contract(c) => Ok(c),
+                    _ => Err("merge3 only supports :kind :contract".to_string()),
+                }
+            }
+
+            let base = match as_contract_snapshot(&base_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
                 }
             };
-            let left = match parse_contract_snapshot(&left_t) {
+            let left = match as_contract_snapshot(&left_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
                 }
             };
-            let right = match parse_contract_snapshot(&right_t) {
+            let right = match as_contract_snapshot(&right_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
@@ -2774,7 +2782,7 @@ fn call_capability(
             keys.extend(left.overrides.keys().cloned());
             keys.extend(right.overrides.keys().cloned());
 
-            let mut merged: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            let mut merged: BTreeMap<String, String> = BTreeMap::new();
             let mut conflicts: Vec<Term> = Vec::new();
 
             for k in keys {
@@ -2794,7 +2802,7 @@ fn call_capability(
 
                 if l == r || l == b || r == b {
                     if let Some(h) = pick {
-                        merged.insert(TermOrdKey(Term::symbol(&k)), Term::Str(h));
+                        merged.insert(k.clone(), h);
                     }
                     continue;
                 }
@@ -2839,7 +2847,11 @@ fn call_capability(
                 return Ok(Value::Data(Term::Map(m)));
             }
 
-            let merged_snapshot = mk_contract_snapshot_term(base.proto, merged);
+            let merged_snapshot = gc_vcs::ContractSnapshot {
+                proto: base.proto,
+                overrides: merged,
+            }
+            .to_term();
             let merged_h = store.put_bytes(print_term(&merged_snapshot).as_bytes())?;
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -3446,7 +3458,7 @@ fn call_capability(
 
             let hashes: Vec<String> = if mode == ":shallow" {
                 // Root must be a snapshot.
-                let snap = match gc_vcs::Snapshot::from_term(&root_term) {
+                let _snap = match gc_vcs::Snapshot::from_term(&root_term) {
                     Ok(s) => s,
                     Err(e) => {
                         return Ok(mk_error(
@@ -3457,12 +3469,12 @@ fn call_capability(
                         ));
                     }
                 };
-                let mut hs: Vec<String> = Vec::new();
-                hs.push(root_hex.clone());
-                hs.extend(snap.shallow_refs());
-                hs.sort();
-                hs.dedup();
-                hs
+                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+                match sync_closure_local(store, &root_hex, 0, &mut all, error_tok, op) {
+                    Ok(()) => {}
+                    Err(v) => return Ok(v),
+                }
+                all.into_iter().collect()
             } else if mode == ":full" {
                 let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
                 match sync_closure_local(store, &root_hex, depth, &mut all, error_tok, op) {
@@ -4654,113 +4666,6 @@ fn hash_bytes_hex(bytes: &[u8]) -> String {
     let mut h = blake3::Hasher::new();
     h.update(bytes);
     h.finalize().to_hex().to_string()
-}
-
-#[derive(Debug, Clone)]
-struct ContractSnapshotView {
-    proto: Option<String>,
-    overrides: BTreeMap<String, String>, // op symbol -> artifact hash
-}
-
-fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
-    let Term::Map(m) = t else {
-        return Err("snapshot must be a map".to_string());
-    };
-    match m.get(&TermOrdKey(Term::symbol(":type"))) {
-        Some(Term::Symbol(s)) if s == ":vcs/snapshot" => {}
-        Some(other) => {
-            return Err(format!(
-                "snapshot :type must be :vcs/snapshot, got {}",
-                print_term(other)
-            ));
-        }
-        None => return Err("snapshot missing :type".to_string()),
-    }
-    match m.get(&TermOrdKey(Term::symbol(":v"))) {
-        Some(Term::Int(i)) if i.to_i64() == Some(1) => {}
-        Some(other) => return Err(format!("snapshot :v must be 1, got {}", print_term(other))),
-        None => return Err("snapshot missing :v".to_string()),
-    }
-    match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-        Some(Term::Symbol(s)) if s == ":contract" => {}
-        Some(other) => {
-            return Err(format!(
-                "merge3 only supports :kind :contract, got {}",
-                print_term(other)
-            ));
-        }
-        None => return Err("snapshot missing :kind".to_string()),
-    }
-
-    let proto = match m.get(&TermOrdKey(Term::symbol(":proto"))) {
-        None | Some(Term::Nil) => None,
-        Some(Term::Str(s)) => {
-            gc_vcs::validate_hex_hash(s).map_err(|e| format!("snapshot :proto: {e}"))?;
-            Some(s.clone())
-        }
-        Some(other) => {
-            return Err(format!(
-                "snapshot :proto must be hex string or nil, got {}",
-                print_term(other)
-            ));
-        }
-    };
-
-    let empty_overrides = Term::Map(BTreeMap::new());
-    let overrides_t = m
-        .get(&TermOrdKey(Term::symbol(":overrides")))
-        .unwrap_or(&empty_overrides);
-    let Term::Map(ovm) = overrides_t else {
-        return Err(format!(
-            "snapshot :overrides must be map, got {}",
-            print_term(overrides_t)
-        ));
-    };
-    let mut overrides: BTreeMap<String, String> = BTreeMap::new();
-    for (k, v) in ovm {
-        let op_sym = match &k.0 {
-            Term::Symbol(s) => s.clone(),
-            Term::Str(s) => s.clone(),
-            other => {
-                return Err(format!(
-                    "snapshot :overrides keys must be symbols/strings, got {}",
-                    print_term(other)
-                ));
-            }
-        };
-        let hv = match v {
-            Term::Str(s) => {
-                gc_vcs::validate_hex_hash(s)
-                    .map_err(|e| format!("snapshot :overrides/{op_sym}: {e}"))?;
-                s.clone()
-            }
-            other => {
-                return Err(format!(
-                    "snapshot :overrides values must be hash strings, got {}",
-                    print_term(other)
-                ));
-            }
-        };
-        overrides.insert(op_sym, hv);
-    }
-
-    Ok(ContractSnapshotView { proto, overrides })
-}
-
-fn mk_contract_snapshot_term(proto: Option<String>, overrides: BTreeMap<TermOrdKey, Term>) -> Term {
-    let mut m = BTreeMap::new();
-    m.insert(
-        TermOrdKey(Term::symbol(":type")),
-        Term::symbol(":vcs/snapshot"),
-    );
-    m.insert(TermOrdKey(Term::symbol(":v")), Term::Int(1.into()));
-    m.insert(TermOrdKey(Term::symbol(":kind")), Term::symbol(":contract"));
-    m.insert(
-        TermOrdKey(Term::symbol(":proto")),
-        proto.map(Term::Str).unwrap_or(Term::Nil),
-    );
-    m.insert(TermOrdKey(Term::symbol(":overrides")), Term::Map(overrides));
-    Term::Map(m)
 }
 
 fn mk_conflict_artifact(

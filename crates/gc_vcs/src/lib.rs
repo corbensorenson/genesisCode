@@ -15,4 +15,7 @@ pub use crate::schema::{
 pub use crate::signing::{
     CommitAttestationError, commit_attestation_message, verify_commit_attestation,
 };
-pub use crate::snapshot::{Snapshot, SnapshotError, SnapshotModule};
+pub use crate::snapshot::{
+    ContractSnapshot, ModuleSnapshot, PackageSnapshot, Snapshot, SnapshotError, SnapshotKind,
+    SnapshotModule, WorkspaceSnapshot,
+};

@@ -111,12 +111,12 @@ Docs (addendum spec set):
 
 Implementation (phased, all capabilities are effects; kernel remains pure):
 
-- [ ] GenesisGraph object model:
-  - [ ] Implement `:vcs/snapshot` (package/module/contract/workspace) artifact schemas and canonical hashing.
+- [x] GenesisGraph object model:
+  - [x] Implement `:vcs/snapshot` (package/module/contract/workspace) artifact schemas and canonical hashing.
     - [x] Package snapshots (`:type :vcs/snapshot`, `:kind :package`) produced from `package.toml` via `core/pkg::snapshot` (policy-gated effect).
-    - [ ] Module snapshots (`:kind :module`).
-    - [ ] Contract snapshots (`:kind :contract`).
-    - [ ] Workspace snapshots (`:kind :workspace`).
+    - [x] Module snapshots (`:kind :module`).
+    - [x] Contract snapshots (`:kind :contract`).
+    - [x] Workspace snapshots (`:kind :workspace`).
   - [x] Implement `:vcs/patch` artifacts (semantic ops over canonical AST paths) plus `vcs diff/apply`.
   - [x] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
   - [x] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
