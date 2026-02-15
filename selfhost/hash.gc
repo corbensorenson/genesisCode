@@ -1,0 +1,17 @@
+(def selfhost/hash::TERM_PREFIX b"GCv0.2\x00")
+
+(def selfhost/hash::MODULE_PREFIX b"GCv0.2\x00module\x00")
+
+(def selfhost/hash::hash-bytes-hex (fn (b) (core/bytes::to-hex (core/crypto::blake3 b))))
+
+(def selfhost/hash::hash-term
+  (fn (t)
+    (selfhost/hash::hash-bytes-hex
+      ((core/bytes::concat selfhost/hash::TERM_PREFIX)
+        (core/str::to-utf8 (selfhost/printer::print-term t))))))
+
+(def selfhost/hash::hash-module
+  (fn (forms)
+    (selfhost/hash::hash-bytes-hex
+      ((core/bytes::concat selfhost/hash::MODULE_PREFIX)
+        (core/str::to-utf8 (selfhost/printer::print-module forms))))))

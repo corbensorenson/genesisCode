@@ -107,6 +107,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Implement a self-hosted "frontend v0" in GenesisCode:
   - [x] CoreForm printer equivalence tests against Rust (see `selfhost/printer.gc` + `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`)
   - [x] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form) (see `selfhost/canon.gc` + `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`)
+  - [x] CoreForm hashing (term/module) equivalence tests against Rust:
+    - `selfhost/hash.gc`
+    - `crates/gc_prelude/tests/selfhost_hash_equivalence.rs`
   - module loader + package resolver over commit/snapshot/module artifacts:
     - `selfhost/frontend_v0.gc`
     - `crates/gc_prelude/tests/selfhost_frontend_loader.rs`
