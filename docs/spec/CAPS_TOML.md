@@ -37,6 +37,8 @@ Supported keys:
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
 
+Note: the effect log (`.gclog`) does not record `base_dir` values.
+
 Example:
 ```toml
 allow = ["io/fs::read", "io/fs::write"]

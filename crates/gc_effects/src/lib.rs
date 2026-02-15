@@ -15,6 +15,7 @@ mod tests {
     use gc_coreform::{Term, hash_module, parse_module};
     use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
     use gc_prelude::build_prelude;
+    use gc_coreform::TermOrdKey;
 
     use super::*;
 
@@ -290,6 +291,52 @@ base_dir = "./sandbox"
         assert!(
             matches!(err, EffectsError::ReplayMismatch(_)),
             "expected replay mismatch, got {err}"
+        );
+    }
+
+    #[test]
+    fn cap_term_omits_base_dir_paths_for_deterministic_logs() {
+        let td = tempfile::tempdir().unwrap();
+        let base = td.path().join("sandbox");
+        std::fs::create_dir_all(&base).unwrap();
+        std::fs::write(base.join("in.bin"), vec![1u8, 2, 3]).unwrap();
+
+        let caps_path = td.path().join("caps.toml");
+        std::fs::write(
+            &caps_path,
+            r#"
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+base_dir = "./sandbox"
+"#,
+        )
+        .unwrap();
+        let pol = CapsPolicy::load(&caps_path).unwrap();
+
+        let src = r#"
+            (def prog
+              (core/effect::perform
+                'io/fs::read
+                {:path "in.bin"}
+                (fn (b) (core/effect::pure b))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+        let Term::Map(m) = &r.log.entries[0].cap else {
+            panic!("expected cap map");
+        };
+        assert!(
+            !m.contains_key(&TermOrdKey(Term::symbol(":base-dir"))),
+            "cap term must not include :base-dir"
         );
     }
 }

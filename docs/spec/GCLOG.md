@@ -30,6 +30,9 @@ Each entry is a map with keys:
 - `:resp` (map): response descriptor (inline or artifact reference).
 - `:resp-h` (bytes32): `value_hash(response_value)`.
 
+Notes:
+- `:cap` is intended for stable, non-secret configuration metadata. The v0.2 toolchain does not record filesystem paths (such as `base_dir`) in logs to avoid nondeterminism and path leakage.
+
 ## Response Schema (`:resp`)
 
 Response is a map:
@@ -42,4 +45,3 @@ Response is a map:
 - `:artifact` (string): present for `*-artifact` kinds, content-addressed artifact hash (lowercase hex BLAKE3)
 
 Artifact lookup is performed in the configured artifact store directory (see `docs/spec/CAPS_TOML.md` and `docs/spec/EVIDENCE_STORE.md`).
-

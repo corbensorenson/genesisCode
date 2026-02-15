@@ -422,12 +422,6 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
         Term::Symbol(op.to_string()),
     );
     if let Some(pol) = pol {
-        if let Some(base) = &pol.base_dir {
-            m.insert(
-                TermOrdKey(Term::Symbol(":base-dir".to_string())),
-                Term::Str(path_to_slash(base)),
-            );
-        }
         if pol.create_dirs {
             m.insert(
                 TermOrdKey(Term::Symbol(":create-dirs".to_string())),
