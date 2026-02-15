@@ -144,7 +144,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
 - [ ] Acceptance tests (must be added early):
   - [ ] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
-  - [ ] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
+  - [x] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
   - [ ] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
   - [ ] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
 - [ ] Garbage collection:
