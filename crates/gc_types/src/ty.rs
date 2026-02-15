@@ -2,17 +2,38 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{Term, print_term};
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RowTail {
+    Closed,      // nil
+    Any,         // ?
+    Var(String), // symbol var
+}
+
+impl RowTail {
+    pub fn is_open(&self) -> bool {
+        !matches!(self, RowTail::Closed)
+    }
+
+    pub fn to_term(&self) -> Term {
+        match self {
+            RowTail::Closed => Term::Nil,
+            RowTail::Any => Term::Symbol("?".to_string()),
+            RowTail::Var(v) => Term::Symbol(v.clone()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EffRow {
     pub ops: BTreeSet<String>,
-    pub open: bool, // open tail (symbol var or ?) means "may contain more"
+    pub tail: RowTail, // nil, ?, or a symbol var
 }
 
 impl EffRow {
     pub fn empty() -> Self {
         Self {
             ops: BTreeSet::new(),
-            open: false,
+            tail: RowTail::Closed,
         }
     }
 }
@@ -45,12 +66,12 @@ pub enum Ty {
 
     Rec {
         fields: BTreeMap<String, Ty>,
-        open: bool,
+        tail: RowTail,
     },
 
     Contract {
         methods: BTreeMap<String, Ty>, // op -> method type (usually Fn)
-        open: bool,
+        tail: RowTail,
     },
 }
 
@@ -78,36 +99,26 @@ impl Ty {
                 ret.to_term(),
                 eff_to_term(eff),
             ]),
-            Ty::Rec { fields, open } => {
+            Ty::Rec { fields, tail } => {
                 let mut xs = Vec::new();
                 for (k, v) in fields {
                     xs.push(Term::Vector(vec![Term::Symbol(k.clone()), v.to_term()]));
                 }
-                let tail = if *open {
-                    Term::Symbol("?".to_string())
-                } else {
-                    Term::Nil
-                };
                 Term::list(vec![
                     Term::Symbol("Rec".to_string()),
                     Term::Vector(xs),
-                    tail,
+                    tail.to_term(),
                 ])
             }
-            Ty::Contract { methods, open } => {
+            Ty::Contract { methods, tail } => {
                 let mut xs = Vec::new();
                 for (op, mt) in methods {
                     xs.push(Term::Vector(vec![Term::Symbol(op.clone()), mt.to_term()]));
                 }
-                let tail = if *open {
-                    Term::Symbol("?".to_string())
-                } else {
-                    Term::Nil
-                };
                 Term::list(vec![
                     Term::Symbol("Contract".to_string()),
                     Term::Vector(xs),
-                    tail,
+                    tail.to_term(),
                 ])
             }
         }
@@ -198,8 +209,8 @@ pub fn parse_type_term(t: &Term) -> Result<Ty, String> {
                 ));
             }
             let fields = parse_row_fields(items[1])?;
-            let open = parse_row_tail_open(items[2])?;
-            Ok(Ty::Rec { fields, open })
+            let tail = parse_row_tail(items[2])?;
+            Ok(Ty::Rec { fields, tail })
         }
         "Contract" => {
             if items.len() != 3 {
@@ -209,8 +220,8 @@ pub fn parse_type_term(t: &Term) -> Result<Ty, String> {
                 ));
             }
             let methods = parse_row_fields(items[1])?;
-            let open = parse_row_tail_open(items[2])?;
-            Ok(Ty::Contract { methods, open })
+            let tail = parse_row_tail(items[2])?;
+            Ok(Ty::Contract { methods, tail })
         }
         "Eff" => Err("(Eff ...) is an effect-row term, not a type".to_string()),
         _ => Err(format!("unknown type constructor {h}")),
@@ -250,15 +261,15 @@ fn parse_eff_term(t: &Term) -> Result<EffRow, String> {
         }
     }
 
-    let open = parse_row_tail_open(tail_term)?;
-    Ok(EffRow { ops, open })
+    let tail = parse_row_tail(tail_term)?;
+    Ok(EffRow { ops, tail })
 }
 
-fn parse_row_tail_open(t: &Term) -> Result<bool, String> {
+fn parse_row_tail(t: &Term) -> Result<RowTail, String> {
     match t {
-        Term::Nil => Ok(false),
-        Term::Symbol(s) if s == "?" => Ok(true),
-        Term::Symbol(_var) => Ok(true),
+        Term::Nil => Ok(RowTail::Closed),
+        Term::Symbol(s) if s == "?" => Ok(RowTail::Any),
+        Term::Symbol(var) => Ok(RowTail::Var(var.clone())),
         _ => Err(format!(
             "row tail must be nil, ?, or a symbol var, got {}",
             print_term(t)
@@ -300,14 +311,9 @@ fn parse_row_fields(t: &Term) -> Result<BTreeMap<String, Ty>, String> {
 
 fn eff_to_term(eff: &EffRow) -> Term {
     let ops: Vec<Term> = eff.ops.iter().cloned().map(Term::Symbol).collect();
-    let tail = if eff.open {
-        Term::Symbol("?".to_string())
-    } else {
-        Term::Nil
-    };
     Term::list(vec![
         Term::Symbol("Eff".to_string()),
         Term::Vector(ops),
-        tail,
+        eff.tail.to_term(),
     ])
 }

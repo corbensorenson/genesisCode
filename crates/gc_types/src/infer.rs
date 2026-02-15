@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{Term, TermOrdKey, print_term};
 
-use crate::ty::{EffRow, Ty};
+use crate::ty::{EffRow, RowTail, Ty};
 
 #[derive(Default)]
 pub struct InferSession {
@@ -16,12 +16,26 @@ pub struct TypeEnv {
 }
 
 impl TypeEnv {
-    pub fn with_prelude() -> Self {
+    pub fn with_prelude(declared: &BTreeMap<String, Ty>) -> Self {
         // Treat prelude-provided bindings as gradual/unknown unless they are core builtins
         // we special-case in `infer_app`.
-        Self {
-            vars: BTreeMap::new(),
+        let mut vars = BTreeMap::new();
+
+        // Seed declared export types so inference can be row-polymorphic across uses.
+        for (k, v) in declared {
+            vars.insert(k.clone(), v.clone());
         }
+
+        // Provide a stable type for genesis contract root so contract-row tails can be preserved.
+        vars.insert(
+            "core/contract::genesis".to_string(),
+            Ty::Contract {
+                methods: BTreeMap::new(),
+                tail: RowTail::Var("r".to_string()),
+            },
+        );
+
+        Self { vars }
     }
 
     pub fn get(&self, s: &str) -> Option<&Ty> {
@@ -36,8 +50,9 @@ impl TypeEnv {
 pub fn infer_module_types(
     forms: &[Term],
     sess: &mut InferSession,
+    declared: &BTreeMap<String, Ty>,
 ) -> (TypeEnv, BTreeMap<String, Ty>) {
-    let mut env = TypeEnv::with_prelude();
+    let mut env = TypeEnv::with_prelude(declared);
     let mut defs = BTreeMap::new();
     for f in forms {
         let Some(items) = f.as_proper_list() else {
@@ -71,7 +86,7 @@ pub fn infer_term(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
 
 fn infer_map_literal(m: &BTreeMap<TermOrdKey, Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
     let mut fields = BTreeMap::new();
-    let mut open = false;
+    let mut tail = RowTail::Closed;
     for (k, v) in m {
         let key = match &k.0 {
             Term::Symbol(s) => Some(s.clone()),
@@ -81,12 +96,12 @@ fn infer_map_literal(m: &BTreeMap<TermOrdKey, Term>, env: &TypeEnv, sess: &mut I
         if let Some(lbl) = key {
             fields.insert(lbl, infer_term(v, env, sess));
         } else {
-            open = true;
+            tail = RowTail::Any;
             // Still traverse for side knowledge (effects live in syntax).
             let _ = infer_term(v, env, sess);
         }
     }
-    Ty::Rec { fields, open }
+    Ty::Rec { fields, tail }
 }
 
 fn infer_list_form(t: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
@@ -206,10 +221,19 @@ fn infer_fn(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
     let mut env2 = env.clone();
     env2.set(names[0].clone(), Ty::Any);
     let ret = infer_term(&body, &env2, sess);
+    let eff = {
+        let inf = crate::infer_effects_in_term(&body);
+        let tail = if inf.unknown {
+            RowTail::Any
+        } else {
+            RowTail::Closed
+        };
+        EffRow { ops: inf.ops, tail }
+    };
     Ty::Fn {
         param: Box::new(Ty::Any),
         ret: Box::new(ret),
-        eff: EffRow::empty(),
+        eff,
     }
 }
 
@@ -333,7 +357,7 @@ fn infer_app(head: &Term, args: &[Term], env: &TypeEnv, sess: &mut InferSession)
             "core/contract::make" => {
                 return Ty::Contract {
                     methods: BTreeMap::new(),
-                    open: true,
+                    tail: RowTail::Any,
                 };
             }
             "core/contract::extend" => return infer_core_contract_extend(args, env, sess),
@@ -397,13 +421,13 @@ fn infer_core_contract_extend(args: &[Term], env: &TypeEnv, sess: &mut InferSess
         return Ty::Any;
     }
     let base = infer_term(&args[0], env, sess);
-    let (mut methods, mut open) = match base {
-        Ty::Contract { methods, open } => (methods, open),
-        Ty::Any => (BTreeMap::new(), true),
+    let (mut methods, mut tail) = match base {
+        Ty::Contract { methods, tail } => (methods, tail),
+        Ty::Any => (BTreeMap::new(), RowTail::Any),
         _ => {
             sess.errors
                 .push("core/contract::extend base must be a Contract".to_string());
-            (BTreeMap::new(), true)
+            (BTreeMap::new(), RowTail::Any)
         }
     };
 
@@ -412,7 +436,7 @@ fn infer_core_contract_extend(args: &[Term], env: &TypeEnv, sess: &mut InferSess
         Term::Map(m) => {
             for (k, v) in m {
                 let Term::Symbol(op) = &k.0 else {
-                    open = true;
+                    tail = RowTail::Any;
                     continue;
                 };
                 let mt = infer_contract_method(op, v, env, sess);
@@ -420,12 +444,12 @@ fn infer_core_contract_extend(args: &[Term], env: &TypeEnv, sess: &mut InferSess
             }
         }
         _ => {
-            open = true;
+            tail = RowTail::Any;
             let _ = infer_term(&args[1], env, sess);
         }
     }
     let _ = infer_term(&args[2], env, sess);
-    Ty::Contract { methods, open }
+    Ty::Contract { methods, tail }
 }
 
 fn infer_contract_method(op: &str, v: &Term, env: &TypeEnv, sess: &mut InferSession) -> Ty {
@@ -473,13 +497,32 @@ fn infer_contract_method(op: &str, v: &Term, env: &TypeEnv, sess: &mut InferSess
         }
         infer_term(&Term::list(xs), &env2, sess)
     };
+    let eff = {
+        // Only treat effects in the handler body as latent effects; not in quoted data.
+        let inf = if items.len() == 3 {
+            crate::infer_effects_in_term(items[2])
+        } else {
+            let mut xs = Vec::new();
+            xs.push(Term::Symbol("begin".to_string()));
+            for b in items.iter().skip(2) {
+                xs.push((*b).clone());
+            }
+            crate::infer_effects_in_term(&Term::list(xs))
+        };
+        let tail = if inf.unknown {
+            RowTail::Any
+        } else {
+            RowTail::Closed
+        };
+        EffRow { ops: inf.ops, tail }
+    };
     Ty::Fn {
         param: Box::new(Ty::Msg {
             op: Some(op.to_string()),
             payload: Box::new(Ty::Any),
         }),
         ret: Box::new(body_ty),
-        eff: EffRow::empty(),
+        eff,
     }
 }
 
@@ -493,8 +536,8 @@ fn infer_core_contract_dispatch(args: &[Term], env: &TypeEnv, sess: &mut InferSe
     }
     let c = infer_term(&args[0], env, sess);
     let m = infer_term(&args[1], env, sess);
-    let (methods, open) = match c {
-        Ty::Contract { methods, open } => (methods, open),
+    let (methods, tail) = match c {
+        Ty::Contract { methods, tail } => (methods, tail),
         Ty::Any => return Ty::Any,
         _ => {
             sess.errors
@@ -513,7 +556,7 @@ fn infer_core_contract_dispatch(args: &[Term], env: &TypeEnv, sess: &mut InferSe
         return Ty::Any;
     };
     let Some(mt) = methods.get(&op) else {
-        if open {
+        if tail.is_open() {
             sess.warnings.push(format!(
                 "dispatch on op {op} against open contract row; return type is ?"
             ));
@@ -557,13 +600,13 @@ fn infer_core_effect_perform(args: &[Term], env: &TypeEnv, sess: &mut InferSessi
     let op = literal_op_symbol(&args[0]);
     let _payload = infer_term(&args[1], env, sess);
     let k_ty = infer_term(&args[2], env, sess);
-    let (ret, mut eff) = match k_ty {
+    let (k_ret, mut eff) = match k_ty {
         Ty::Fn { ret, eff, .. } => (ret, eff),
         Ty::Any => (
             Box::new(Ty::Any),
             EffRow {
                 ops: BTreeSet::new(),
-                open: true,
+                tail: RowTail::Any,
             },
         ),
         _ => {
@@ -573,16 +616,49 @@ fn infer_core_effect_perform(args: &[Term], env: &TypeEnv, sess: &mut InferSessi
                 Box::new(Ty::Any),
                 EffRow {
                     ops: BTreeSet::new(),
-                    open: true,
+                    tail: RowTail::Any,
                 },
             )
         }
     };
+
+    // The continuation must return a program; the performed op extends that program's effect row.
+    let (ret, k_eff) = match *k_ret {
+        Ty::Prog { ret, eff: keff } => (ret, keff),
+        Ty::Any => (
+            Box::new(Ty::Any),
+            EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Any,
+            },
+        ),
+        other => {
+            sess.errors.push(format!(
+                "core/effect::perform continuation must return a Prog, got {}",
+                print_term(&other.to_term())
+            ));
+            (
+                Box::new(Ty::Any),
+                EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Any,
+                },
+            )
+        }
+    };
+
+    // Merge effects: the performed op plus downstream effects from the returned program.
+    eff.ops.extend(k_eff.ops);
+    if k_eff.tail.is_open() {
+        eff.tail = k_eff.tail;
+    }
+
     if let Some(op) = op {
         eff.ops.insert(op);
     } else {
-        eff.open = true;
+        eff.tail = RowTail::Any;
     }
+
     Ty::Prog { ret, eff }
 }
 

@@ -6,7 +6,7 @@ mod infer;
 mod ty;
 
 use crate::infer::{InferSession, infer_module_types};
-use crate::ty::{EffRow, Ty, parse_type_term};
+use crate::ty::{EffRow, RowTail, Ty, parse_type_term};
 
 #[derive(Debug, Clone)]
 pub struct ModuleForTypecheck {
@@ -335,9 +335,34 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         .map(|x| (x.name.clone(), x.effects.clone()))
         .collect();
 
+    // Parse declared export types early so inference can use them as hints (row tails, dispatch, etc.).
+    let types = match meta_types(&meta) {
+        None => {
+            ok = false;
+            errors.push(format!("{}: ::meta missing :types", m.path));
+            BTreeMap::new()
+        }
+        Some(t) => t,
+    };
+    let mut declared_parsed: BTreeMap<String, Ty> = BTreeMap::new();
+    for (name, term) in types.iter() {
+        if matches!(term, Term::Symbol(s) if s == "?") {
+            continue;
+        }
+        match parse_type_term(term) {
+            Ok(ty) => {
+                declared_parsed.insert(name.clone(), ty);
+            }
+            Err(pe) => {
+                ok = false;
+                errors.push(format!("{}: type parse error for {}: {}", m.path, name, pe));
+            }
+        }
+    }
+
     // Infer module types once (sequential def order).
     let mut infer_sess = InferSession::default();
-    let (_env, inferred_defs) = infer_module_types(&m.forms, &mut infer_sess);
+    let (_env, inferred_defs) = infer_module_types(&m.forms, &mut infer_sess, &declared_parsed);
     for e in infer_sess.errors.iter() {
         ok = false;
         errors.push(format!("{}: {e}", m.path));
@@ -347,14 +372,6 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
     }
 
     // Export/type conformance.
-    let types = match meta_types(&meta) {
-        None => {
-            ok = false;
-            errors.push(format!("{}: ::meta missing :types", m.path));
-            BTreeMap::new()
-        }
-        Some(t) => t,
-    };
     let mut export_types = Vec::new();
     for e in exports {
         if let Some(ty) = types.get(&e) {
@@ -369,7 +386,12 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
 
             // Parse declared type and check compatibility when it isn't `?`.
             if !matches!(ty, Term::Symbol(s) if s == "?") {
-                match parse_type_term(ty) {
+                let decl_res = if let Some(d) = declared_parsed.get(&e) {
+                    Ok(d.clone())
+                } else {
+                    parse_type_term(ty)
+                };
+                match decl_res {
                     Ok(decl) => {
                         if !type_compatible(&inferred_ty, &decl) {
                             tr_ok = false;
@@ -385,14 +407,16 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                                 ops: BTreeSet::new(),
                                 unknown: false,
                             });
-                            if eff.unknown && !decl_eff.open {
+                            if eff.unknown && matches!(decl_eff.tail, RowTail::Closed) {
                                 tr_ok = false;
                                 tr_errors.push(format!(
                                     "{e}: inferred unknown effect ops but declared effect row is closed"
                                 ));
                             }
                             for op in eff.ops.iter() {
-                                if !decl_eff.ops.contains(op) && !decl_eff.open {
+                                if !decl_eff.ops.contains(op)
+                                    && matches!(decl_eff.tail, RowTail::Closed)
+                                {
                                     tr_ok = false;
                                     tr_errors.push(format!(
                                         "{e}: inferred effect op {op} not present in declared effect row"
@@ -514,11 +538,11 @@ fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
         (
             Ty::Rec {
                 fields: ifs,
-                open: _,
+                tail: _,
             },
             Ty::Rec {
                 fields: dfs,
-                open: _,
+                tail: _,
             },
         ) => dfs
             .iter()
@@ -526,11 +550,11 @@ fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
         (
             Ty::Contract {
                 methods: ims,
-                open: _,
+                tail: _,
             },
             Ty::Contract {
                 methods: dms,
-                open: _,
+                tail: _,
             },
         ) => dms
             .iter()
@@ -540,10 +564,10 @@ fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
 }
 
 fn eff_row_compatible(inferred: &EffRow, declared: &EffRow) -> bool {
-    if declared.open {
+    if declared.tail.is_open() {
         return true;
     }
-    inferred.ops.is_subset(&declared.ops) && !inferred.open
+    inferred.ops.is_subset(&declared.ops) && matches!(inferred.tail, RowTail::Closed)
 }
 
 fn meta_exports(meta: &Term) -> Option<Vec<String>> {
@@ -722,6 +746,8 @@ mod tests {
     use gc_coreform::{Term, canonicalize_module, parse_module};
 
     use super::*;
+    use crate::infer::infer_module_types;
+    use crate::ty::RowTail;
 
     fn extract_meta(forms: &[Term]) -> Option<Term> {
         forms.iter().find_map(|t| {
@@ -859,5 +885,64 @@ mod tests {
             "expected declared type mismatch error, got {:?}",
             r.errors
         );
+    }
+
+    #[test]
+    fn infer_perform_returns_prog_of_continuation_prog() {
+        let src = r#"
+            (def ::meta '{:exports [] :caps [sys/time::now] :types {}})
+            (def m::p
+              (core/effect::perform
+                'sys/time::now
+                nil
+                (fn (t) (core/effect::pure 1))))
+            m::p
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut sess = InferSession::default();
+        let (_env, defs) = infer_module_types(&forms, &mut sess, &BTreeMap::new());
+        assert!(
+            sess.errors.is_empty(),
+            "unexpected infer errors: {:?}",
+            sess.errors
+        );
+        let ty = defs.get("m::p").cloned().unwrap_or(Ty::Any);
+        match ty {
+            Ty::Prog { ret, eff } => {
+                assert_eq!(*ret, Ty::Int);
+                assert!(eff.ops.contains("sys/time::now"));
+                assert!(matches!(eff.tail, RowTail::Closed));
+            }
+            other => panic!("expected Prog, got {}", print_term(&other.to_term())),
+        }
+    }
+
+    #[test]
+    fn infer_contract_extend_preserves_row_tail_var() {
+        let src = r#"
+          (def ::meta '{:exports [] :caps [] :types {}})
+          (def m::c
+            (core/contract::extend
+              core/contract::genesis
+              {foo/bar::x (fn (m) 10)}
+              {}))
+          m::c
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut sess = InferSession::default();
+        let (_env, defs) = infer_module_types(&forms, &mut sess, &BTreeMap::new());
+        assert!(
+            sess.errors.is_empty(),
+            "unexpected infer errors: {:?}",
+            sess.errors
+        );
+        let ty = defs.get("m::c").cloned().unwrap_or(Ty::Any);
+        match ty {
+            Ty::Contract { tail, methods } => {
+                assert!(matches!(tail, RowTail::Var(ref s) if s == "r"));
+                assert!(methods.contains_key("foo/bar::x"));
+            }
+            other => panic!("expected Contract, got {}", print_term(&other.to_term())),
+        }
     }
 }

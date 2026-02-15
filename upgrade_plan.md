@@ -154,8 +154,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
 
 ### P2: Advanced Stacks (Not Required For Initial Production, But v0.2-Vision Complete)
 
-- [ ] Type stack completion:
-  - row-polymorphic contract typing with effect rows (current checker is partial/lightweight).
+- [x] Type stack completion:
+  - row-polymorphic contract typing with effect rows (row tails now preserve `nil|?|var`, `core/effect::perform` typing is correct, and inference is seeded from declared export types).
 - [x] Type stack groundwork:
   - type term parsing + basic type inference for `core/msg::*`, `core/contract::*`, `core/effect::*`, plus contract-row conformance checks (still not full row-polymorphism with row variables).
 - [x] Optimizer completion:
