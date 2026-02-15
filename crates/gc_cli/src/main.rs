@@ -711,6 +711,30 @@ enum VcsCmd {
         #[arg(long)]
         right: String,
     },
+
+    /// Resolve a `:vcs/conflict` artifact (currently supports `:kind :contract`) into a merged snapshot and patch.
+    ResolveConflict {
+        /// Conflict artifact hash (hex).
+        #[arg(long)]
+        conflict: String,
+
+        /// Default conflict resolution strategy for all ops without an explicit `--pick/--set` override.
+        /// One of: left, right, base.
+        #[arg(long)]
+        strategy: Option<String>,
+
+        /// Per-op side pick in the form `op=left|right|base`. May be repeated.
+        #[arg(long = "pick")]
+        picks: Vec<String>,
+
+        /// Per-op explicit handler hash in the form `op=<64-hex>`. May be repeated.
+        #[arg(long = "set")]
+        sets: Vec<String>,
+
+        /// Optional output path for the resulting patch term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
 }
 
 fn main() -> std::process::ExitCode {
@@ -2042,6 +2066,23 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
             "genesis/vcs-merge3-v0.1",
             "vcs-merge3",
         ),
+        VcsCmd::ResolveConflict {
+            conflict,
+            strategy,
+            picks,
+            sets,
+            out,
+        } => (
+            mk_vcs_resolve_conflict_program(
+                conflict,
+                strategy.as_deref(),
+                picks,
+                sets,
+                out.as_deref(),
+            )?,
+            "genesis/vcs-resolve-conflict-v0.1",
+            "vcs-resolve-conflict",
+        ),
     };
 
     let forms = canonicalize_module(forms)
@@ -2086,7 +2127,7 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
     let (value, value_format) = render_value_for_cli(&ctx, &r.value);
 
     // Detect conflict artifact and use stable exit semantics for merge.
-    if matches!(cmd, VcsCmd::Merge3 { .. })
+    if matches!(cmd, VcsCmd::Merge3 { .. } | VcsCmd::ResolveConflict { .. })
         && let Value::Data(Term::Map(m)) = &r.value
         && matches!(
             m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok"))),
@@ -3217,6 +3258,150 @@ fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
         Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
         Term::symbol("prog"),
     ]
+}
+
+fn mk_vcs_resolve_conflict_program(
+    conflict: &str,
+    strategy: Option<&str>,
+    picks: &[String],
+    sets: &[String],
+    out: Option<&Path>,
+) -> Result<Vec<Term>, CliError> {
+    if strategy.is_none() && picks.is_empty() && sets.is_empty() {
+        return Err(cli_err(
+            EX_PARSE,
+            "vcs/resolve-conflict",
+            "must provide --strategy and/or --pick/--set overrides",
+        ));
+    }
+
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs::resolve-conflict"),
+    ]);
+
+    let mut payload: std::collections::BTreeMap<gc_coreform::TermOrdKey, Term> =
+        std::collections::BTreeMap::new();
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":conflict")),
+        Term::Str(conflict.to_string()),
+    );
+    if let Some(s) = strategy {
+        let s = s.trim();
+        let sym = match s {
+            "left" | ":left" => ":left",
+            "right" | ":right" => ":right",
+            "base" | ":base" => ":base",
+            other => {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "vcs/resolve-conflict",
+                    format!("unsupported --strategy {other} (expected left|right|base)"),
+                ));
+            }
+        };
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":strategy")),
+            Term::Str(sym.to_string()),
+        );
+    }
+    if let Some(out) = out {
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+
+    let mut res: std::collections::BTreeMap<String, Term> = std::collections::BTreeMap::new();
+    for p in picks {
+        let (opk, side) = p.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("bad --pick {p}; expected op=left|right|base"),
+            )
+        })?;
+        let opk = opk.trim();
+        if opk.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                "bad --pick: empty op",
+            ));
+        }
+        if res.contains_key(opk) {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("duplicate resolution for op {opk}"),
+            ));
+        }
+        let side = side.trim();
+        let sym = match side {
+            "left" | ":left" => ":left",
+            "right" | ":right" => ":right",
+            "base" | ":base" => ":base",
+            other => {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "vcs/resolve-conflict",
+                    format!("bad --pick {p}; unsupported side {other}"),
+                ));
+            }
+        };
+        res.insert(opk.to_string(), Term::Str(sym.to_string()));
+    }
+    for s in sets {
+        let (opk, hv) = s.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("bad --set {s}; expected op=<64-hex>"),
+            )
+        })?;
+        let opk = opk.trim();
+        if opk.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                "bad --set: empty op",
+            ));
+        }
+        if res.contains_key(opk) {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("duplicate resolution for op {opk}"),
+            ));
+        }
+        let hv = hv.trim();
+        gc_vcs::validate_hex_hash(hv)
+            .map_err(|e| cli_err(EX_PARSE, "vcs/resolve-conflict", e.to_string()))?;
+        res.insert(opk.to_string(), Term::Str(hv.to_string()));
+    }
+    if !res.is_empty() {
+        let mut rm: std::collections::BTreeMap<gc_coreform::TermOrdKey, Term> =
+            std::collections::BTreeMap::new();
+        for (k, v) in res {
+            rm.insert(gc_coreform::TermOrdKey(Term::Symbol(k)), v);
+        }
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":resolutions")),
+            Term::Map(rm),
+        );
+    }
+
+    let payload = Term::Map(payload);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
 }
 
 fn extract_vcs_patch_hash(v: &Value) -> Option<String> {

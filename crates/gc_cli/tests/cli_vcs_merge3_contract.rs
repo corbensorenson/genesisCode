@@ -13,7 +13,9 @@ fn write_caps(dir: &Path) -> PathBuf {
 allow = [
   "core/store::put",
   "core/store::get",
-  "core/vcs::merge3"
+  "core/vcs::merge3",
+  "core/vcs::resolve-conflict",
+  "core/vcs::apply"
 ]
 
 [store]
@@ -244,4 +246,95 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         panic!(":conflicts must be vector");
     };
     assert!(!xs.is_empty());
+
+    // Resolve by taking left for all conflicts.
+    let out3 = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args([
+            "resolve-conflict",
+            "--conflict",
+            &conflict_h,
+            "--strategy",
+            "left",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let t3 = parse_term(&json_value(&out3)).unwrap();
+    let Term::Map(m3) = t3 else {
+        panic!("expected map")
+    };
+    assert_eq!(
+        m3.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+    let Term::Str(resolved_h) = m3
+        .get(&TermOrdKey(Term::symbol(":snapshot")))
+        .expect("missing :snapshot")
+        .clone()
+    else {
+        panic!(":snapshot must be string");
+    };
+    let Term::Str(patch_h) = m3
+        .get(&TermOrdKey(Term::symbol(":patch")))
+        .expect("missing :patch")
+        .clone()
+    else {
+        panic!(":patch must be string");
+    };
+
+    // Applying the emitted patch to base must yield the resolved snapshot.
+    let out4 = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args(["apply", "--base", &base, "--patch", &patch_h])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let t4 = parse_term(&json_value(&out4)).unwrap();
+    let Term::Map(m4) = t4 else {
+        panic!("expected map")
+    };
+    assert_eq!(
+        m4.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+    let Term::Str(applied_h) = m4
+        .get(&TermOrdKey(Term::symbol(":snapshot")))
+        .expect("missing :snapshot")
+        .clone()
+    else {
+        panic!(":snapshot must be string");
+    };
+    assert_eq!(applied_h, resolved_h);
+
+    // Resolved snapshot must pick left's op1 and retain left's op2.
+    let resolved_term = get_artifact_term(dir, &caps, &resolved_h);
+    let Term::Map(rm) = resolved_term else {
+        panic!("resolved snapshot must be map")
+    };
+    let Term::Map(rov) = rm
+        .get(&TermOrdKey(Term::symbol(":overrides")))
+        .expect("missing :overrides")
+        .clone()
+    else {
+        panic!(":overrides must be map");
+    };
+    assert_eq!(
+        rov.get(&TermOrdKey(Term::symbol("op1"))),
+        Some(&Term::Str(hb.clone()))
+    );
+    assert_eq!(
+        rov.get(&TermOrdKey(Term::symbol("op2"))),
+        Some(&Term::Str(hc.clone()))
+    );
 }

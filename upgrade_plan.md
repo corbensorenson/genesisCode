@@ -137,11 +137,11 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Shallow export/import (snapshot closure) and required verification checks.
   - [x] Full export/import (commit DAG closure) with depth control.
   - [x] Include optional embedded refs and attestations.
-- [ ] Contract-level branching/merging:
+- [x] Contract-level branching/merging:
   - [x] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
   - [x] 3-way merge for contract snapshots (op-table keyed merge).
   - [x] Conflict artifacts for merge divergence (`:vcs/conflict`).
-  - [ ] Conflict resolution pipeline via semantic patches.
+  - [x] Conflict resolution pipeline via semantic patches.
   - [x] Acceptance tests (must be added early):
   - [x] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
