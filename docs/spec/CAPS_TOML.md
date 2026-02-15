@@ -62,6 +62,8 @@ Supported keys:
 - `create_dirs` (bool): if true, `io/fs::write` may create parent directories.
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
+- `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` ops (see below).
+- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` (default is false).
 
 Note: the effect log (`.gclog`) does not record `base_dir` values.
 
@@ -76,6 +78,28 @@ timeout_ms = 250
 [op."io/fs::write"]
 base_dir = "./sandbox"
 create_dirs = true
+```
+
+## Sync Remotes (`core/sync::*`)
+
+`core/sync::pull` and `core/sync::push` are **secure-by-default**:
+- They require a per-op `remote_allow` allowlist (deny otherwise).
+- `http://` is rejected unless `allow_http = true`.
+
+Remote normalization:
+- `gen://host/path` is normalized to `https://host/path`.
+- Remotes are normalized to a `.../v1/` base (e.g. `https://example.com/registry/v1/`).
+- Matching is prefix-based against the normalized base.
+
+Example:
+```toml
+allow = ["core/sync::pull", "core/sync::push"]
+
+[op."core/sync::pull"]
+remote_allow = ["https://registry.example.com/v1/"]
+
+[op."core/sync::push"]
+remote_allow = ["https://registry.example.com/v1/"]
 ```
 
 ### `base_dir` For Non-`io/fs::*` Ops

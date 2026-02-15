@@ -128,8 +128,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Local refs database with atomic CAS-style `set` and stable serialization.
   - [x] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.
 - [ ] Sync capability (`core/sync::*`) as runner effects:
-  - [ ] `push/pull` artifact transfer using reachability closure planning.
-  - [ ] Remote refs updates via registry `refs/set` with CAS.
+  - [x] `push/pull` artifact transfer using reachability closure planning.
+  - [x] Remote refs updates via registry `refs/set` with CAS.
 - [ ] Workspace lock (`genesis.lock`) and package install flow:
   - [x] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
   - [x] Deterministic lock writer with stable ordering and strict `--frozen` semantics.

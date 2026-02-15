@@ -5,6 +5,7 @@ use blake3::Hasher;
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 
 use crate::error::EffectsError;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
@@ -538,6 +539,341 @@ fn call_capability(
         ));
     }
     match op {
+        "core/sync::pull" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/sync::pull".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/sync::pull".to_string())
+            })?;
+
+            let remote_s = match payload_sync_remote(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+            let depth = payload_sync_depth(payload).unwrap_or(0);
+            let force = payload_sync_force(payload).unwrap_or(false);
+            let refnames = match payload_sync_refs(payload) {
+                Ok(rs) => rs,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+            let roots = match payload_sync_roots(payload) {
+                Ok(rs) => rs,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+            if refnames.is_empty() && roots.is_empty() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/sync/bad-payload",
+                    "pull requires :refs and/or :roots".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let sp = match sync_policy_from_op(pol) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
+                Ok(b) => b,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op))),
+            };
+            let client = match gc_registry::RegistryClient::new(
+                &base,
+                timeout_ms.map(std::time::Duration::from_millis),
+            ) {
+                Ok(c) => c,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/sync/remote-error",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut pulled: u64 = 0;
+            let mut already: u64 = 0;
+            let mut heads: Vec<Term> = Vec::new();
+
+            // Pull by roots (hashes) first.
+            for h in &roots {
+                let mut stats = SyncPullStats {
+                    pulled: &mut pulled,
+                    already: &mut already,
+                    error_tok,
+                    op,
+                };
+                match sync_pull_closure(&client, store, h, depth, &mut stats) {
+                    Ok(()) => {}
+                    Err(v) => return Ok(v),
+                }
+            }
+
+            // Pull and update refs.
+            for rname in &refnames {
+                let h = match client.refs_get(rname) {
+                    Ok(Some(h)) => h,
+                    Ok(None) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/sync/ref-not-found",
+                            format!("remote ref not found: {rname}"),
+                            Some(op),
+                        ));
+                    }
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/sync/remote-error",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                let mut stats = SyncPullStats {
+                    pulled: &mut pulled,
+                    already: &mut already,
+                    error_tok,
+                    op,
+                };
+                match sync_pull_closure(&client, store, &h, depth, &mut stats) {
+                    Ok(()) => {}
+                    Err(v) => return Ok(v),
+                }
+
+                // Update local refs unless it would clobber a different value.
+                let cur = refs.get(rname)?;
+                if !force
+                    && let Some(curh) = &cur
+                    && curh != &h
+                {
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/refs/conflict",
+                            "local ref differs; use force to overwrite".to_string(),
+                            Some(op),
+                            Term::Map(
+                                [
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/name")),
+                                        Term::Str(rname.clone()),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/current")),
+                                        cur.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":refs/remote")),
+                                        Term::Str(h.clone()),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ));
+                }
+                let _ = refs.set(rname, Some(&h), None)?;
+
+                heads.push(Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
+                        (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ));
+            }
+
+            heads.sort_by_cached_key(print_term);
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+            m.insert(
+                TermOrdKey(Term::symbol(":pulled")),
+                Term::Int((pulled as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":present")),
+                Term::Int((already as i64).into()),
+            );
+            m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/sync::push" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/sync::push".to_string())
+            })?;
+
+            let remote_s = match payload_sync_remote(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+            let depth = payload_sync_depth(payload).unwrap_or(0);
+            let roots = match payload_sync_roots(payload) {
+                Ok(rs) => rs,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+            if roots.is_empty() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/sync/bad-payload",
+                    "push requires :roots".to_string(),
+                    Some(op),
+                ));
+            }
+            let set_refs = match payload_sync_set_refs(payload) {
+                Ok(v) => v,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op))),
+            };
+
+            let sp = match sync_policy_from_op(pol) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
+                Ok(b) => b,
+                Err(e) => return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op))),
+            };
+            let client = match gc_registry::RegistryClient::new(
+                &base,
+                timeout_ms.map(std::time::Duration::from_millis),
+            ) {
+                Ok(c) => c,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/sync/remote-error",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            for h in &roots {
+                match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
+                    Ok(()) => {}
+                    Err(v) => return Ok(v),
+                }
+            }
+            let hashes: Vec<String> = all.into_iter().collect();
+
+            let mut missing: Vec<String> = Vec::new();
+            let mut present: u64 = 0;
+            for chunk in hashes.chunks(512) {
+                let chunk_vec: Vec<String> = chunk.to_vec();
+                let mp = match client.store_has(&chunk_vec) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/sync/remote-error",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                for h in chunk {
+                    match mp.get(h) {
+                        Some(true) => present = present.saturating_add(1),
+                        _ => missing.push(h.clone()),
+                    }
+                }
+            }
+            missing.sort();
+            missing.dedup();
+
+            let mut uploaded: u64 = 0;
+            for h in &missing {
+                let bytes = match store.get_bytes(h) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-found",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                match client.store_put(h, &bytes) {
+                    Ok(()) => uploaded = uploaded.saturating_add(1),
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/sync/remote-error",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                }
+            }
+
+            let mut refs_updated: u64 = 0;
+            if !set_refs.is_empty() {
+                let mut set_refs_sorted = set_refs;
+                set_refs_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+                for sr in &set_refs_sorted {
+                    let req = gc_registry::RefsSetReq {
+                        name: &sr.name,
+                        hash: &sr.hash,
+                        policy: &sr.policy,
+                        expected_old: sr.expected_old.as_deref(),
+                    };
+                    match client.refs_set(&req) {
+                        Ok(r) => {
+                            if !r.ok {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/sync/refs-set-failed",
+                                    "remote refs/set returned ok=false".to_string(),
+                                    Some(op),
+                                ));
+                            }
+                            refs_updated = refs_updated.saturating_add(1);
+                        }
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/sync/remote-error",
+                                format!("{e}"),
+                                Some(op),
+                            ));
+                        }
+                    }
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+            m.insert(
+                TermOrdKey(Term::symbol(":total")),
+                Term::Int((hashes.len() as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":present")),
+                Term::Int((present as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":uploaded")),
+                Term::Int((uploaded as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":refs-updated")),
+                Term::Int((refs_updated as i64).into()),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
         "core/pkg::init" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
@@ -2961,4 +3297,402 @@ fn payload_pkg_bool(payload: &Term, key: &str) -> Option<bool> {
         Some(Term::Bool(b)) => Some(*b),
         _ => None,
     }
+}
+
+#[derive(Debug, Clone)]
+struct SyncPolicy {
+    remote_allow: Vec<String>,
+    allow_http: bool,
+}
+
+fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
+    let mut remote_allow: Vec<String> = Vec::new();
+    let mut allow_http = false;
+    if let Some(pol) = pol {
+        if let Some(v) = pol.extra.get("remote_allow")
+            && let Some(arr) = v.as_array()
+        {
+            for x in arr {
+                let s = x
+                    .as_str()
+                    .ok_or_else(|| "remote_allow entries must be strings".to_string())?;
+                let t = s.trim();
+                if !t.is_empty() {
+                    remote_allow.push(t.to_string());
+                }
+            }
+        }
+        if let Some(v) = pol.extra.get("allow_http")
+            && let Some(b) = v.as_bool()
+        {
+            allow_http = b;
+        }
+    }
+    if remote_allow.is_empty() {
+        return Err("sync requires per-op remote_allow allowlist in caps.toml".to_string());
+    }
+    Ok(SyncPolicy {
+        remote_allow,
+        allow_http,
+    })
+}
+
+fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<String, String> {
+    let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
+    if base.scheme() == "http" && !sp.allow_http {
+        return Err("http remotes are disabled by policy (set allow_http=true)".to_string());
+    }
+    let base_s = base.as_str().to_string();
+    for p in &sp.remote_allow {
+        if base_s.starts_with(p) {
+            return Ok(base_s);
+        }
+    }
+    Err("remote is not in policy remote_allow allowlist".to_string())
+}
+
+fn payload_sync_remote(payload: &Term) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":remote"))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err("missing :remote string".to_string()),
+    }
+}
+
+fn payload_sync_refs(payload: &Term) -> Result<Vec<String>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(":refs"))) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(format!(":refs must be vector, got {}", print_term(t)));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        match x {
+            Term::Str(s) => out.push(s.clone()),
+            other => {
+                return Err(format!(
+                    ":refs entries must be strings, got {}",
+                    print_term(other)
+                ));
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn payload_sync_roots(payload: &Term) -> Result<Vec<String>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(":roots"))) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(format!(":roots must be vector, got {}", print_term(t)));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        match x {
+            Term::Str(s) => out.push(s.clone()),
+            other => {
+                return Err(format!(
+                    ":roots entries must be strings, got {}",
+                    print_term(other)
+                ));
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn payload_sync_depth(payload: &Term) -> Option<u64> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":depth"))) {
+        Some(Term::Int(i)) => i.to_u64(),
+        _ => None,
+    }
+}
+
+fn payload_sync_force(payload: &Term) -> Option<bool> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":force"))) {
+        Some(Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SyncSetRef {
+    name: String,
+    hash: String,
+    policy: String,
+    expected_old: Option<String>,
+}
+
+fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(":set-refs"))) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(format!(":set-refs must be vector, got {}", print_term(t)));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        let Term::Map(mm) = x else {
+            return Err(format!(
+                ":set-refs entries must be maps, got {}",
+                print_term(x)
+            ));
+        };
+        let name = match mm.get(&TermOrdKey(Term::symbol(":name"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => return Err("set-ref missing :name string".to_string()),
+        };
+        let hash = match mm.get(&TermOrdKey(Term::symbol(":hash"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => return Err("set-ref missing :hash string".to_string()),
+        };
+        let policy = match mm.get(&TermOrdKey(Term::symbol(":policy"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => return Err("set-ref missing :policy string".to_string()),
+        };
+        let expected_old = match mm.get(&TermOrdKey(Term::symbol(":expected-old"))) {
+            None | Some(Term::Nil) => None,
+            Some(Term::Str(s)) => Some(s.clone()),
+            Some(other) => {
+                return Err(format!(
+                    "set-ref :expected-old must be string or nil, got {}",
+                    print_term(other)
+                ));
+            }
+        };
+        out.push(SyncSetRef {
+            name,
+            hash,
+            policy,
+            expected_old,
+        });
+    }
+    Ok(out)
+}
+
+struct SyncPullStats<'a> {
+    pulled: &'a mut u64,
+    already: &'a mut u64,
+    error_tok: SealId,
+    op: &'a str,
+}
+
+fn sync_pull_closure(
+    client: &gc_registry::RegistryClient,
+    store: &ArtifactStore,
+    root: &str,
+    depth: u64,
+    stats: &mut SyncPullStats<'_>,
+) -> Result<(), Value> {
+    use std::collections::{HashSet, VecDeque};
+
+    let mut q: VecDeque<(String, u64)> = VecDeque::new();
+    q.push_back((root.to_string(), depth));
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut obj_count: u64 = 0;
+
+    while let Some((h, dleft)) = q.pop_front() {
+        if !seen.insert(h.clone()) {
+            continue;
+        }
+        obj_count = obj_count.saturating_add(1);
+        if obj_count > 50_000 {
+            return Err(mk_error(
+                stats.error_tok,
+                "core/sync/too-many-objects",
+                "closure exceeded 50k objects".to_string(),
+                Some(stats.op),
+            ));
+        }
+
+        if store.path_for(&h).exists() {
+            if store.verify_hex(&h).is_err() {
+                return Err(mk_error(
+                    stats.error_tok,
+                    "core/store/corruption",
+                    format!("artifact store corruption: {h}"),
+                    Some(stats.op),
+                ));
+            }
+            *stats.already = stats.already.saturating_add(1);
+        } else {
+            let bytes = client.store_get(&h).map_err(|e| {
+                mk_error(
+                    stats.error_tok,
+                    "core/sync/remote-error",
+                    format!("{e}"),
+                    Some(stats.op),
+                )
+            })?;
+            let got = store
+                .put_bytes(&bytes)
+                .map_err(|e| {
+                    mk_error(stats.error_tok, "core/store/io-error", e.to_string(), Some(stats.op))
+                })?;
+            if got != h {
+                return Err(mk_error(
+                    stats.error_tok,
+                    "core/sync/hash-mismatch",
+                    "remote bytes hash mismatch".to_string(),
+                    Some(stats.op),
+                ));
+            }
+            *stats.pulled = stats.pulled.saturating_add(1);
+        }
+
+        let t = match store_get_term(store, &h) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+
+        // Commit closure: commit, base, patch, result snapshot, evidence, attestations, parents.
+        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+            if let Some(b) = c.base {
+                q.push_back((b, dleft));
+            }
+            q.push_back((c.patch, dleft));
+            q.push_back((c.result, dleft));
+            for x in c.evidence {
+                q.push_back((x, dleft));
+            }
+            for x in c.attestations {
+                q.push_back((x, dleft));
+            }
+            if dleft > 0 {
+                for p in c.parents {
+                    q.push_back((p, dleft - 1));
+                }
+            }
+            continue;
+        }
+
+        // Patch closure: follow referenced values.
+        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
+            for x in p.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+
+        // Evidence closure: follow any referenced inputs/outputs/data.
+        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
+            for x in e.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+
+        // Snapshot closure: shallow refs.
+        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
+            for x in s.shallow_refs() {
+                q.push_back((x, dleft));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn sync_closure_local(
+    store: &ArtifactStore,
+    root: &str,
+    depth: u64,
+    out: &mut std::collections::BTreeSet<String>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    use std::collections::{HashSet, VecDeque};
+    let mut q: VecDeque<(String, u64)> = VecDeque::new();
+    q.push_back((root.to_string(), depth));
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut obj_count: u64 = 0;
+
+    while let Some((h, dleft)) = q.pop_front() {
+        if !seen.insert(h.clone()) {
+            continue;
+        }
+        obj_count = obj_count.saturating_add(1);
+        if obj_count > 50_000 {
+            return Err(mk_error(
+                error_tok,
+                "core/sync/too-many-objects",
+                "closure exceeded 50k objects".to_string(),
+                Some(op),
+            ));
+        }
+        if !store.path_for(&h).exists() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {h}"),
+                Some(op),
+            ));
+        }
+        if store.verify_hex(&h).is_err() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/corruption",
+                format!("artifact store corruption: {h}"),
+                Some(op),
+            ));
+        }
+        out.insert(h.clone());
+
+        let t = match store_get_term(store, &h) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+            if let Some(b) = c.base {
+                q.push_back((b, dleft));
+            }
+            q.push_back((c.patch, dleft));
+            q.push_back((c.result, dleft));
+            for x in c.evidence {
+                q.push_back((x, dleft));
+            }
+            for x in c.attestations {
+                q.push_back((x, dleft));
+            }
+            if dleft > 0 {
+                for p in c.parents {
+                    q.push_back((p, dleft - 1));
+                }
+            }
+            continue;
+        }
+        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
+            for x in p.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
+            for x in e.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
+            for x in s.shallow_refs() {
+                q.push_back((x, dleft));
+            }
+        }
+    }
+    Ok(())
 }

@@ -275,6 +275,9 @@ pub fn commit_signing_hash(commit_term: &Term) -> Result<[u8; 32], SchemaError> 
 #[derive(Debug, Clone)]
 pub struct Evidence {
     pub kind: String,
+    pub inputs: Vec<String>,
+    pub outputs: Vec<String>,
+    pub data: Option<String>,
 }
 
 impl Evidence {
@@ -289,7 +292,37 @@ impl Evidence {
             return Err(SchemaError::Bad(format!("evidence: unsupported :v {v}")));
         }
         let kind = req_sym(m, ":kind", "evidence")?;
-        Ok(Self { kind })
+
+        // Optional reachability pointers (all content-addressed).
+        let inputs = opt_vec_hex(m, ":inputs", "evidence")?;
+        let outputs = opt_vec_hex(m, ":outputs", "evidence")?;
+        let data = match get(m, ":data") {
+            None | Some(Term::Nil) => None,
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("evidence: :data: {e}")))?;
+                Some(s.clone())
+            }
+            // Inline evidence payloads are allowed; only hash strings participate in reachability.
+            Some(_) => None,
+        };
+
+        Ok(Self {
+            kind,
+            inputs,
+            outputs,
+            data,
+        })
+    }
+
+    pub fn refs(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        out.extend(self.inputs.iter().cloned());
+        out.extend(self.outputs.iter().cloned());
+        if let Some(d) = &self.data {
+            out.push(d.clone());
+        }
+        out
     }
 }
 

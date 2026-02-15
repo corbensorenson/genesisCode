@@ -1,10 +1,12 @@
 mod gpk;
+mod patch;
 mod policy;
 mod schema;
 mod signing;
 mod snapshot;
 
 pub use crate::gpk::{GpkBundle, GpkEntry, GpkError, read_bundle, write_bundle};
+pub use crate::patch::{Patch, PatchError, PatchOp};
 pub use crate::policy::{Policy, PolicyClass, PolicyError};
 pub use crate::schema::{
     Attestation, Commit, Evidence, SchemaError, bytes32_to_hex, commit_signing_hash,
