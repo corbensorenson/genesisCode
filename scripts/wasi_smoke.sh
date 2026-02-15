@@ -89,4 +89,109 @@ if [[ "$NATIVE_REPLAY" != "$WASI_REPLAY" ]]; then
   exit 1
 fi
 
+# store/refs should match native for the same artifacts.
+cat >"$TMP_DIR/caps_store_refs.toml" <<'TOML'
+allow = [
+  "core/store::put",
+  "core/store::get",
+  "core/store::has",
+  "core/refs::get",
+  "core/refs::list",
+  "core/refs::set",
+  "core/refs::delete"
+]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+TOML
+
+cat >"$TMP_DIR/policy.gc" <<'GC'
+{
+  :type :vcs/policy
+  :v 1
+  :refs {:frozen-prefixes ["refs/frozen/"]}
+  :classes {
+    :dev  {:patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"]
+           :required-obligations ["core/obligation::unit-tests"]}
+    :main {:patterns ["refs/**/heads/main"]
+           :required-obligations ["core/obligation::unit-tests"]}
+    :tags {:patterns ["refs/**/tags/*"]
+           :required-obligations ["core/obligation::unit-tests"]
+           :require-signatures false}
+  }
+}
+GC
+
+POLICY_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-store-put.gclog" put --in "$TMP_DIR/policy.gc" | tr -d '\n')"
+POLICY_H_WASI="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-put.gclog" put --in "$TMP_DIR/policy.gc" | tr -d '\n')"
+if [[ "$POLICY_H_NATIVE" != "$POLICY_H_WASI" ]]; then
+  echo "store put hash mismatch native=$POLICY_H_NATIVE wasi=$POLICY_H_WASI" >&2
+  exit 1
+fi
+
+NATIVE_POLICY_TERM="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-store-get.gclog" get "$POLICY_H_NATIVE" | tr -d '\n')"
+WASI_POLICY_TERM="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-store-get.gclog" get "$POLICY_H_NATIVE" | tr -d '\n')"
+if [[ "$NATIVE_POLICY_TERM" != "$WASI_POLICY_TERM" ]]; then
+  echo "store get mismatch native=$NATIVE_POLICY_TERM wasi=$WASI_POLICY_TERM" >&2
+  exit 1
+fi
+
+cat >"$TMP_DIR/evidence.gc" <<'GC'
+{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}
+GC
+EVIDENCE_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-evidence-put.gclog" put --in "$TMP_DIR/evidence.gc" | tr -d '\n')"
+
+Z64="$(python - <<'PY'\nprint('0'*64)\nPY\n)"
+cat >"$TMP_DIR/commit.gc" <<GC
+{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :base nil
+  :patch "$Z64"
+  :result "$Z64"
+  :obligations ["core/obligation::unit-tests"]
+  :evidence ["$EVIDENCE_H_NATIVE"]
+  :attestations []
+  :message "test commit"
+}
+GC
+COMMIT_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-commit-put.gclog" put --in "$TMP_DIR/commit.gc" | tr -d '\n')"
+
+# refs set via WASI, read via native.
+WASI_SET="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-set.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" | tr -d '\n')"
+if [[ "$WASI_SET" != "$COMMIT_H_NATIVE" ]]; then
+  echo "refs set output mismatch wasi=$WASI_SET expected=$COMMIT_H_NATIVE" >&2
+  exit 1
+fi
+
+NATIVE_GET="$(cargo run -p gc_cli --quiet -- refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-refs-get.gclog" get "refs/heads/dev" | tr -d '\n')"
+if [[ "$NATIVE_GET" != "$COMMIT_H_NATIVE" ]]; then
+  echo "refs get mismatch native=$NATIVE_GET expected=$COMMIT_H_NATIVE" >&2
+  exit 1
+fi
+
+# CAS conflict should exit 20 on both.
+set +e
+cargo run -p gc_cli --quiet -- refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-refs-cas.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" --expected-old nil >/dev/null 2>&1
+N_CODE=$?
+wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-cas.gclog" set "refs/heads/dev" "$COMMIT_H_NATIVE" --policy "$POLICY_H_NATIVE" --expected-old nil >/dev/null 2>&1
+W_CODE=$?
+set -e
+if [[ "$N_CODE" -ne 20 || "$W_CODE" -ne 20 ]]; then
+  echo "expected CAS conflict to exit 20 (native=$N_CODE wasi=$W_CODE)" >&2
+  exit 1
+fi
+
+# delete via native, read via WASI.
+cargo run -p gc_cli --quiet -- refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-refs-del.gclog" delete "refs/heads/dev" --policy "$POLICY_H_NATIVE" >/dev/null
+WASI_GET_AFTER_DEL="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" refs --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/wasi-refs-get2.gclog" get "refs/heads/dev" | tr -d '\n')"
+if [[ "$WASI_GET_AFTER_DEL" != "nil" ]]; then
+  echo "refs get after delete mismatch wasi=$WASI_GET_AFTER_DEL expected=nil" >&2
+  exit 1
+fi
+
 echo "ok"

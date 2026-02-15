@@ -37,8 +37,8 @@ Key docs to treat as authoritative:
 - [x] `gc_effects` builds on `wasm32-wasip1` (local-only; sync/remote is denied on WASI).
 - [ ] Expand WASI CLI to cover effectful local workflows:
   - [x] `run` and `replay` with deterministic `.gclog`
-  - [ ] `store put/get/has` (local `.genesis/store`)
-  - [ ] `refs get/set/list/delete` (local refs db)
+  - [x] `store put/get/has` (local `.genesis/store`)
+  - [x] `refs get/set/list/delete` (local refs db)
   - Acceptance: WASI outputs match native for the same inputs and logs.
  - [x] Add WASI smoke tests for `run` and `replay` (compare native vs wasmtime) in CI.
 
