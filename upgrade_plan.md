@@ -123,3 +123,68 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - Rust produces the self-host toolchain artifact
   - then runtime uses the self-host toolchain under obligations
   - Rust becomes optional tooling only
+
+---
+
+## P4: Post-Selfhost (GenesisCode-Only, On WASM)
+
+Everything in P4+ is blocked until we have a self-hosted GenesisCode toolchain running on WASM (Rust host only).
+
+### P4.1 Level 2: Universal Graphics Stack (2D/3D)
+
+Goal: a production-grade, extensible graphics library that can target “anything from websites to 3D games”.
+Constraints:
+- written exclusively in GenesisCode (no Rust-side rendering logic)
+- runs on WASM (browser first), with a host bridge providing GPU/window/input as capabilities
+- state-of-the-art performance (GPU-first, explicit resource lifetime, predictable allocations)
+
+- [ ] Define the graphics host capability surface (effects) and policies:
+  - `gfx/gpu::*` (WebGPU-backed): instance/device/queue, buffers, textures, samplers, shaders, pipelines, bind groups, command encoding, present
+  - `gfx/window::*` (browser canvas + later native shell): create/surface resize, pixel ratio
+  - `gfx/input::*` (events): pointer/keyboard/gamepad
+  - `gfx/time::*` (frame time) as an effect input (no ambient time in kernel)
+  - `gfx/audio::*` (optional, later)
+  - determinism: input/time must be loggable and replayable; rendering is an effect-only sink
+- [ ] Specify core data model + architecture for the Level 2 graphics library:
+  - scene graph +/or ECS (define which is canonical, and how they interop)
+  - render graph / frame graph with explicit passes
+  - asset pipeline primitives (images, meshes, fonts) as GenesisGraph artifacts
+  - UI foundation: layout (flex-like), vector graphics, text shaping, accessibility hooks
+  - extension mechanism: plugins register render passes, components, and asset types (all via contracts)
+- [ ] Implement the Level 2 graphics stack in GenesisCode:
+  - low-level GPU wrapper layer (thin, stable API over `gfx/gpu::*`)
+  - 2D renderer (shapes, sprites, text) + batching
+  - 3D renderer (PBR baseline), cameras, lights, shadows (phased)
+  - UI toolkit built on 2D primitives (widgets as contracts)
+  - end-to-end demos: 2D UI app, 3D scene, and a hybrid “web app” view
+- [ ] Add obligations for graphics correctness + performance:
+  - golden image tests (headless browser, deterministic input logs)
+  - frame time budgets (bench evidence artifacts)
+  - API stability checks for the public Level 2 surface
+
+### P4.2 Level 3: GenesisCode GUI Editor (First “Big” Self-Host App)
+
+Goal: a GUI code editor written exclusively in GenesisCode, designed for GenesisGraph + GenesisPkg workflows,
+and plugin/agent-friendly from day 1.
+
+- [ ] Define editor host capabilities (effects) needed beyond graphics:
+  - filesystem (workspace access), store/refs/sync, clipboard, OS dialogs
+  - optional: language server–like background tasks (still effect-logged)
+- [ ] Implement editor core (GenesisCode-only):
+  - incremental parser integration (once self-host parser exists) + AST aware editing
+  - CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
+  - GenesisGraph-native UX: commit/log/blame/why/evidence views
+  - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
+- [ ] Plugin + agent architecture (GenesisCode-only):
+  - plugin API as contracts; sandboxed capabilities per plugin
+  - agent actions as semantic patches + obligation-gated acceptance pipeline
+  - deterministic “agent session logs” (effect logs + patch artifacts) for replay/audit
+
+### P4.3 AI Authoring Skill (Codex / Agent Guidance)
+
+Once the toolchain is fully self-hosted on WASM:
+- [ ] Write a canonical AI authoring guide as a `SKILL.md` (GenesisCode coding skill):
+  - language norms, canonical library usage (Levels 0–2), error convention, effect patterns
+  - GenesisGraph/GenesisPkg workflows (patch-first, obligations-first)
+  - performance + determinism rules for WASM targets
+  - recommended “prompt protocol” for agentic refactors (plan -> patch -> evidence -> accept)
