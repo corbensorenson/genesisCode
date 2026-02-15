@@ -18,6 +18,16 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--max-bytes-len <N>`: maximum observed bytes length (bytes literals and `bytes/concat`).
 - `--max-string-len <N>`: maximum observed string length in UTF-8 bytes (string literals and `str/concat`).
 
+## Subcommands (Signing + Policy)
+
+- `genesis keygen --out <key.toml>`: generate an Ed25519 signing key (see `docs/spec/SIGNING.md`).
+- `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`:
+  - sign the acceptance artifact hash and write a signature artifact into the evidence store
+  - update `.genesis/last_signature` and the signature set file (default `.genesis/signatures.gc`)
+- `genesis verify --pkg <package.toml> [--policy <policy.toml>] [--signatures <file>]`:
+  - when `--policy` is provided, enforce signature policy (see `docs/spec/REGISTRY_POLICY.md`)
+- `genesis transparency-verify --pkg <package.toml>`: verify the local transparency log chain (see `docs/spec/TRANSPARENCY_LOG.md`)
+
 ## Exit Codes (Stable)
 
 The CLI uses stable exit codes for automation and CI.

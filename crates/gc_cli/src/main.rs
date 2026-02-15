@@ -123,6 +123,39 @@ enum Cmd {
         pkg: PathBuf,
     },
 
+    /// Generate a new Ed25519 signing key.
+    Keygen {
+        /// Output key TOML path.
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Sign a package acceptance artifact and record the signature in the evidence store.
+    Sign {
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+
+        /// Signing key TOML path (from `genesis keygen`).
+        #[arg(long)]
+        key: PathBuf,
+
+        /// Acceptance artifact hash to sign (defaults to .genesis/last_acceptance).
+        #[arg(long)]
+        acceptance: Option<String>,
+
+        /// Signature set file to update (defaults to .genesis/signatures.gc).
+        #[arg(long)]
+        signatures: Option<PathBuf>,
+    },
+
+    /// Verify the local transparency log chain (if present).
+    TransparencyVerify {
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
     /// Run the (gradual) type/effect checker for a package.
     Typecheck {
         /// Path to package.toml
@@ -158,6 +191,15 @@ enum Cmd {
         /// Acceptance artifact hash to verify (defaults to .genesis/last_acceptance if present).
         #[arg(long)]
         acceptance: Option<String>,
+
+        /// Registry policy TOML. When provided, signature policy is enforced.
+        #[arg(long)]
+        policy: Option<PathBuf>,
+
+        /// Signature set file (CoreForm term vector of signature artifact hashes).
+        /// Defaults to .genesis/signatures.gc when --policy is provided.
+        #[arg(long)]
+        signatures: Option<PathBuf>,
 
         /// Scan the entire evidence store and verify name->content hashes (can be slow).
         #[arg(long)]
@@ -250,14 +292,31 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store.as_deref()),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
+        Cmd::Keygen { out } => cmd_keygen(cli, out),
+        Cmd::Sign {
+            pkg,
+            key,
+            acceptance,
+            signatures,
+        } => cmd_sign(cli, pkg, key, acceptance.as_deref(), signatures.as_deref()),
+        Cmd::TransparencyVerify { pkg } => cmd_transparency_verify(cli, pkg),
         Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg),
         Cmd::Optimize { file, out } => cmd_optimize(cli, file, out.as_ref()),
         Cmd::ApplyPatch { patch, pkg, caps } => cmd_apply_patch(cli, patch, pkg, caps.as_deref()),
         Cmd::Verify {
             pkg,
             acceptance,
+            policy,
+            signatures,
             scan_store,
-        } => cmd_verify(cli, pkg, acceptance.as_deref(), *scan_store),
+        } => cmd_verify(
+            cli,
+            pkg,
+            acceptance.as_deref(),
+            policy.as_deref(),
+            signatures.as_deref(),
+            *scan_store,
+        ),
     }
 }
 
@@ -663,6 +722,145 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     })
 }
 
+fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
+    let k = gc_obligations::KeyFile::generate_ed25519();
+    k.write_secure(out)
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/keygen-v0.2",
+        data: Some(serde_json::json!({
+            "out": out.display().to_string(),
+            "alg": k.alg,
+            "pk_b64": k.pk_b64,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", out.display())
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_sign(
+    cli: &Cli,
+    pkg: &Path,
+    key_path: &Path,
+    acceptance: Option<&str>,
+    signatures: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let (_manifest, pkg_dir) =
+        gc_obligations::PackageManifest::load(pkg).map_err(obligation_err)?;
+    let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
+
+    let acc_hex = match acceptance {
+        Some(s) => s.trim().to_string(),
+        None => gc_obligations::read_acceptance_hash_from_last(&pkg_dir).map_err(|e| match e {
+            gc_obligations::SigningError::Io(_) => cli_err(EX_IO, "io/read", format!("{e}")),
+            _ => cli_err(EX_PARSE, "sign/acceptance", format!("{e}")),
+        })?,
+    };
+
+    let k = gc_obligations::KeyFile::load(key_path)
+        .map_err(|e| cli_err(EX_PARSE, "sign/key", format!("{e}")))?;
+    let sk = k
+        .signing_key()
+        .map_err(|e| cli_err(EX_PARSE, "sign/key", format!("{e}")))?;
+
+    let (sig_artifact, _rec) = gc_obligations::sign_acceptance_hash(&store, &acc_hex, &sk)
+        .map_err(|e| cli_err(EX_INTERNAL, "sign/error", format!("{e}")))?;
+
+    // Update .genesis/last_signature and the signature set.
+    let genesis_dir = pkg_dir.join(".genesis");
+    std::fs::create_dir_all(&genesis_dir)
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    std::fs::write(
+        genesis_dir.join("last_signature"),
+        format!("{sig_artifact}\n"),
+    )
+    .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let sigset_path = signatures
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| gc_obligations::signatures_file_path(&pkg_dir));
+    let mut set = gc_obligations::load_signature_set(&sigset_path).unwrap_or_default();
+    set.push(sig_artifact.clone());
+    gc_obligations::write_signature_set(&sigset_path, &set)
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    // Append a transparency log entry (best-effort deterministic format; if this fails, treat as error).
+    let pkg_artifact = gc_obligations::package_artifact_hash(pkg).map_err(obligation_err)?;
+    let transparency_entry = gc_obligations::append_transparency_entry(
+        &store,
+        &pkg_dir,
+        &pkg_artifact,
+        &acc_hex,
+        &sig_artifact,
+        &k.pk_b64,
+    )
+    .map_err(|e| cli_err(EX_INTERNAL, "transparency/error", format!("{e}")))?;
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/sign-v0.2",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "key": key_path.display().to_string(),
+            "package_artifact": pkg_artifact,
+            "acceptance_artifact": acc_hex,
+            "signature_artifact": sig_artifact,
+            "sigset": sigset_path.display().to_string(),
+            "transparency_entry": transparency_entry,
+            "pk_b64": k.pk_b64,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{sig_artifact}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
+    let (_manifest, pkg_dir) =
+        gc_obligations::PackageManifest::load(pkg).map_err(obligation_err)?;
+    let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
+    let r = gc_obligations::verify_transparency_log(&store, &pkg_dir)
+        .map_err(|e| cli_err(EX_INTERNAL, "transparency/error", format!("{e}")))?;
+    let exit_code = if r.ok { EX_OK } else { EX_VERIFY };
+    let env = JsonEnvelope {
+        ok: r.ok,
+        kind: "genesis/transparency-verify-v0.2",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "head": r.head,
+            "entries": r.entries,
+            "errors": r.errors,
+        })),
+        error: None,
+    };
+    let mut stdout = String::new();
+    if !cli.json {
+        stdout.push_str(if r.ok { "ok\n" } else { "not ok\n" });
+    }
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg)
         .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
@@ -810,9 +1008,13 @@ fn cmd_verify(
     cli: &Cli,
     pkg: &Path,
     acceptance: Option<&str>,
+    policy: Option<&Path>,
+    signatures: Option<&Path>,
     scan_store: bool,
 ) -> Result<CmdOut, CliError> {
-    let r = gc_obligations::verify_package(pkg, acceptance, scan_store).map_err(obligation_err)?;
+    let r =
+        gc_obligations::verify_package_with_policy(pkg, acceptance, scan_store, policy, signatures)
+            .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_VERIFY };
 
     let env = JsonEnvelope {
@@ -821,6 +1023,11 @@ fn cmd_verify(
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
             "acceptance_artifact": r.acceptance_artifact,
+            "policy": policy.map(|p| p.display().to_string()),
+            "signatures": signatures.map(|p| p.display().to_string()),
+            "policy_min_signatures": r.policy_min_signatures,
+            "checked_signatures": r.checked_signatures,
+            "valid_signatures": r.valid_signatures,
             "store_scanned": r.store_scanned,
             "checked_modules": r.checked_modules,
             "checked_deps": r.checked_deps,

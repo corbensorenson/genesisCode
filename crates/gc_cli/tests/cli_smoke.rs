@@ -159,3 +159,122 @@ fn run_and_replay_roundtrip_effect_program() {
     let replay_s = String::from_utf8(replay_out).unwrap();
     assert_eq!(run_s.trim(), replay_s.trim());
 }
+
+#[test]
+fn sign_and_verify_with_policy_succeeds() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_basic");
+    let dst = td.path().join("pkg_basic");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let caps = dst.join("caps.toml");
+
+    cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .args(["--caps"])
+        .arg(&caps)
+        .assert()
+        .success();
+
+    let key = dst.join("signing_key.toml");
+    cargo_bin_cmd!("genesis")
+        .args(["keygen", "--out"])
+        .arg(&key)
+        .assert()
+        .success();
+
+    let key_s = fs::read_to_string(&key).unwrap();
+    let pk_b64 = key_s
+        .lines()
+        .find_map(|l| {
+            let l = l.trim();
+            l.strip_prefix("pk_b64 = \"")
+                .and_then(|rest| rest.strip_suffix('\"'))
+        })
+        .expect("pk_b64 in key file");
+
+    let policy = dst.join("policy.toml");
+    fs::write(
+        &policy,
+        format!("version = 1\nmin_signatures = 1\nallowed_public_keys = [\"{pk_b64}\"]\n"),
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args(["sign", "--pkg"])
+        .arg(&pkg)
+        .args(["--key"])
+        .arg(&key)
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match("[0-9a-f]{64}\\s*").unwrap());
+
+    cargo_bin_cmd!("genesis")
+        .args(["verify", "--pkg"])
+        .arg(&pkg)
+        .args(["--policy"])
+        .arg(&policy)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ok"));
+
+    cargo_bin_cmd!("genesis")
+        .args(["transparency-verify", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success();
+}
+
+#[test]
+fn verify_with_policy_fails_when_not_signed() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_basic");
+    let dst = td.path().join("pkg_basic");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let caps = dst.join("caps.toml");
+
+    cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .args(["--caps"])
+        .arg(&caps)
+        .assert()
+        .success();
+
+    let key = dst.join("signing_key.toml");
+    cargo_bin_cmd!("genesis")
+        .args(["keygen", "--out"])
+        .arg(&key)
+        .assert()
+        .success();
+
+    let key_s = fs::read_to_string(&key).unwrap();
+    let pk_b64 = key_s
+        .lines()
+        .find_map(|l| {
+            let l = l.trim();
+            l.strip_prefix("pk_b64 = \"")
+                .and_then(|rest| rest.strip_suffix('\"'))
+        })
+        .expect("pk_b64 in key file");
+
+    let policy = dst.join("policy.toml");
+    fs::write(
+        &policy,
+        format!("version = 1\nmin_signatures = 1\nallowed_public_keys = [\"{pk_b64}\"]\n"),
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args(["verify", "--pkg"])
+        .arg(&pkg)
+        .args(["--policy"])
+        .arg(&policy)
+        .assert()
+        .failure()
+        .code(50);
+}

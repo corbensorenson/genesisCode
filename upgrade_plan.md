@@ -30,11 +30,12 @@ This plan does not require implementing refinement proofs, a registry server, a 
 
 - [x] Write a normative spec for CoreForm canonical printing and hashing (version tags, map key ordering, application printing, width/indent rules) and link it from `docs/spec/`. (`docs/spec/COREFORM_CANON_HASH.md`)
 - [x] Write a normative spec for value hashing used in effect logs (`value_hash`) and for effect request hashing (`req_h`), including what data is included/excluded. (`docs/spec/VALUE_EFFECT_HASH.md`)
-- [ ] Expand golden/spec tests to cover every conformance checklist item:
+- [x] Expand golden/spec tests to cover every conformance checklist item:
   - [x] `seal/unseal` edge cases and spoof resistance (baseline + non-token mismatch errors + protocol spoof tests).
   - [x] contract dispatch/extend precedence and `explain` trace stability.
   - [x] effect log schema roundtrip + replay mismatch matrix (wrong op/payload/cont/resp).
   - [x] patch schema validation matrix (bad schema, bad paths, obligation rerun failures).
+  - [x] additional obligations negative fixtures (budgets, property-tests, coverage, mem limits).
 - [x] Add “failure fixture” packages under `tests/spec/` that intentionally fail each obligation, and assert stable error reporting.
 
 ### P0: CLI Stability + Machine Interfaces (Must-Have)
@@ -92,9 +93,9 @@ Style guide expects a stable set of names and helpers. Today, many helpers exist
 
 ### P2: Supply Chain + Registry Policy (Paper Direction)
 
-- [ ] Add signature support for acceptance artifacts (package-level signing).
-- [ ] Define a minimal “registry policy” spec (local policy format first) and implement a verifier that enforces it.
-- [ ] Optional: transparency log integration (append-only log of published package hashes + signatures).
+- [x] Add signature support for acceptance artifacts (package-level signing). (`docs/spec/SIGNING.md`)
+- [x] Define a minimal “registry policy” spec (local policy format first) and implement a verifier that enforces it. (`docs/spec/REGISTRY_POLICY.md`)
+- [x] Optional: transparency log integration (append-only log of published package hashes + signatures). (`docs/spec/TRANSPARENCY_LOG.md`)
 
 ### P2: Advanced Stacks (Not Required For Initial Production, But v0.2-Vision Complete)
 

@@ -1,6 +1,9 @@
 mod error;
 mod manifest;
+mod registry_policy;
+mod signing;
 mod store;
+mod transparency;
 mod verify;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,8 +18,16 @@ use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
 pub use crate::manifest::{DepEntry, ModuleEntry, PackageManifest};
+pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
+pub use crate::signing::{
+    AcceptanceSignature, KeyFile, SigningError, load_signature_set, read_acceptance_hash_from_last,
+    sign_acceptance_hash, signatures_file_path, write_signature_set,
+};
 pub use crate::store::EvidenceStore;
-pub use crate::verify::{PackageVerifyResult, verify_package};
+pub use crate::transparency::{
+    TransparencyError, TransparencyVerifyResult, append_transparency_entry, verify_transparency_log,
+};
+pub use crate::verify::{PackageVerifyResult, verify_package, verify_package_with_policy};
 
 #[derive(Debug, Clone)]
 pub struct ObligationResult {
@@ -93,6 +104,14 @@ pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
     let record = package_record_term(&manifest, &modules, &deps);
     let store = EvidenceStore::open(&pkg_dir)?;
     store.put_term(&record)
+}
+
+/// Compute the package artifact hash without modifying `package.toml`.
+///
+/// This requires pinned module hashes and pinned dependency hashes to match.
+pub fn package_artifact_hash(pkg_toml: &Path) -> Result<String, ObligationError> {
+    let mut visited = std::collections::BTreeSet::new();
+    compute_package_artifact_hash(pkg_toml, true, &mut visited)
 }
 
 pub fn test_package(

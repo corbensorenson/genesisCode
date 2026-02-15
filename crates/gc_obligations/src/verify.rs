@@ -2,7 +2,10 @@ use std::path::Path;
 
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
-use crate::{EvidenceStore, ObligationError, PackageManifest};
+use crate::{
+    AcceptanceSignature, EvidenceStore, ObligationError, PackageManifest, RegistryPolicy,
+    load_signature_set, signatures_file_path,
+};
 
 #[derive(Debug, Clone)]
 pub struct PackageVerifyResult {
@@ -15,12 +18,26 @@ pub struct PackageVerifyResult {
 
     pub acceptance_artifact: Option<String>,
     pub store_scanned: bool,
+
+    pub checked_signatures: usize,
+    pub valid_signatures: usize,
+    pub policy_min_signatures: Option<u64>,
 }
 
 pub fn verify_package(
     pkg_toml: &Path,
     acceptance_artifact: Option<&str>,
     scan_store: bool,
+) -> Result<PackageVerifyResult, ObligationError> {
+    verify_package_with_policy(pkg_toml, acceptance_artifact, scan_store, None, None)
+}
+
+pub fn verify_package_with_policy(
+    pkg_toml: &Path,
+    acceptance_artifact: Option<&str>,
+    scan_store: bool,
+    policy: Option<&Path>,
+    signatures: Option<&Path>,
 ) -> Result<PackageVerifyResult, ObligationError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
     let store = EvidenceStore::open(&pkg_dir)?;
@@ -29,6 +46,8 @@ pub fn verify_package(
 
     let mut checked_modules = 0usize;
     let mut checked_artifacts = 0usize;
+    let mut checked_signatures = 0usize;
+    let mut valid_signatures = 0usize;
     let checked_deps = manifest.dependencies.len();
 
     // Modules: pinned hashes must exist and match computed hashes.
@@ -90,6 +109,90 @@ pub fn verify_package(
         }
     }
 
+    // Registry policy enforcement (optional).
+    let mut policy_min_signatures: Option<u64> = None;
+    if let Some(policy_path) = policy {
+        match RegistryPolicy::load(policy_path) {
+            Ok(pol) => {
+                policy_min_signatures = Some(pol.min_signatures);
+                if pol.min_signatures > 0 {
+                    let acc_hex = acceptance_artifact.as_deref();
+                    if acc_hex.is_none() {
+                        errors.push(
+                            "policy requires acceptance artifact but none was found".to_string(),
+                        );
+                    }
+
+                    let acc_bytes = acc_hex.and_then(|h| hex32_to_bytes(h).ok());
+                    if acc_hex.is_some() && acc_bytes.is_none() {
+                        errors.push("invalid acceptance artifact hash (not 64-hex)".to_string());
+                    }
+
+                    match (pol.allowed_verifying_keys(), acc_hex, acc_bytes) {
+                        (Ok(allowed), Some(acc_hex), Some(acc_bytes)) => {
+                            let sigset_path = signatures
+                                .map(|p| p.to_path_buf())
+                                .unwrap_or_else(|| signatures_file_path(&pkg_dir));
+                            match load_signature_set(&sigset_path) {
+                                Ok(sigs) => {
+                                    for sh in sigs {
+                                        match store.verify_hex(&sh) {
+                                            Ok(()) => {
+                                                checked_artifacts =
+                                                    checked_artifacts.saturating_add(1)
+                                            }
+                                            Err(e) => {
+                                                errors.push(format!("{e}"));
+                                                continue;
+                                            }
+                                        }
+                                        checked_signatures = checked_signatures.saturating_add(1);
+                                        match read_term_from_store(&store, &sh) {
+                                            Ok(t) => match AcceptanceSignature::from_term(&t) {
+                                                Ok(rec) => {
+                                                    if rec.acceptance_hash != acc_bytes {
+                                                        errors.push(format!(
+                                                            "signature {} does not match acceptance artifact {}",
+                                                            sh,
+                                                            acc_hex
+                                                        ));
+                                                        continue;
+                                                    }
+                                                    if rec.verify(&allowed).is_ok() {
+                                                        valid_signatures =
+                                                            valid_signatures.saturating_add(1);
+                                                    } else {
+                                                        errors.push(format!(
+                                                            "invalid signature {}",
+                                                            sh
+                                                        ));
+                                                    }
+                                                }
+                                                Err(e) => errors.push(format!("{e}")),
+                                            },
+                                            Err(e) => errors.push(format!("{e}")),
+                                        }
+                                    }
+                                }
+                                Err(e) => errors.push(format!("{e}")),
+                            }
+
+                            if valid_signatures < pol.min_signatures as usize {
+                                errors.push(format!(
+                                    "policy requires {} valid signatures but found {}",
+                                    pol.min_signatures, valid_signatures
+                                ));
+                            }
+                        }
+                        (Err(e), _, _) => errors.push(format!("{e}")),
+                        (_, _, _) => {}
+                    }
+                }
+            }
+            Err(e) => errors.push(format!("{e}")),
+        }
+    }
+
     if scan_store {
         // Verify all store artifacts by name->content hash.
         match std::fs::read_dir(store.root_dir()) {
@@ -127,7 +230,33 @@ pub fn verify_package(
         checked_artifacts,
         acceptance_artifact,
         store_scanned: scan_store,
+        checked_signatures,
+        valid_signatures,
+        policy_min_signatures,
     })
+}
+
+fn hex32_to_bytes(s: &str) -> Result<[u8; 32], ()> {
+    let t = s.trim();
+    if t.len() != 64 || !t.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(());
+    }
+    let mut out = [0u8; 32];
+    for (i, b) in out.iter_mut().enumerate() {
+        let hi = hex_val(t.as_bytes()[2 * i]).ok_or(())?;
+        let lo = hex_val(t.as_bytes()[2 * i + 1]).ok_or(())?;
+        *b = (hi << 4) | lo;
+    }
+    Ok(out)
+}
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(10 + (b - b'a')),
+        b'A'..=b'F' => Some(10 + (b - b'A')),
+        _ => None,
+    }
 }
 
 fn read_last_acceptance(pkg_dir: &Path) -> Option<String> {
