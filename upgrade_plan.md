@@ -124,16 +124,16 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
 - [ ] Store capability (`core/store::*`) as runner effects:
   - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
   - [ ] Optional remote-backed store adapter using the minimal registry protocol.
-- [ ] Refs capability (`core/refs::*`) as runner effects:
+- [x] Refs capability (`core/refs::*`) as runner effects:
   - [x] Local refs database with atomic CAS-style `set` and stable serialization.
   - [x] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.
-- [ ] Sync capability (`core/sync::*`) as runner effects:
+- [x] Sync capability (`core/sync::*`) as runner effects:
   - [x] `push/pull` artifact transfer using reachability closure planning.
   - [x] Remote refs updates via registry `refs/set` with CAS.
-- [ ] Workspace lock (`genesis.lock`) and package install flow:
+- [x] Workspace lock (`genesis.lock`) and package install flow:
   - [x] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
   - [x] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
-- [ ] `.gpk` bundle format:
+- [x] `.gpk` bundle format:
   - [x] Shallow export/import (snapshot closure) and required verification checks.
   - [x] Full export/import (commit DAG closure) with depth control.
   - [x] Include optional embedded refs and attestations.
@@ -142,13 +142,13 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] 3-way merge for contract snapshots (op-table keyed merge).
   - [x] Conflict artifacts for merge divergence (`:vcs/conflict`).
   - [ ] Conflict resolution pipeline via semantic patches.
-  - [ ] Acceptance tests (must be added early):
+  - [x] Acceptance tests (must be added early):
   - [x] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
   - [x] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
   - [x] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
   - [x] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
-- [ ] Garbage collection:
+- [x] Garbage collection:
   - [x] Implement `genesis gc plan/run/pin/unpin` using reachability closure from roots (refs + locks + pins).
   - [x] Quarantine mode + TTL purge.
 
