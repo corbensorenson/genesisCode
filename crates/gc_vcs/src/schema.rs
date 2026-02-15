@@ -334,6 +334,153 @@ pub struct Attestation {
     pub sig: [u8; 64],
 }
 
+#[derive(Debug, Clone)]
+pub struct ConflictEntry {
+    pub op: String,
+    pub base: Option<String>,
+    pub left: Option<String>,
+    pub right: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Conflict {
+    pub kind: String,
+    pub base: String,
+    pub left: String,
+    pub right: String,
+    pub conflicts: Vec<ConflictEntry>,
+}
+
+impl Conflict {
+    pub fn from_term(t: &Term) -> Result<Self, SchemaError> {
+        let m = req_map(t, "conflict")?;
+        let ty = req_sym(m, ":type", "conflict")?;
+        if ty != ":vcs/conflict" {
+            return Err(SchemaError::Bad(format!("conflict: wrong :type {ty}")));
+        }
+        let v = req_int(m, ":v", "conflict")?;
+        if v != 1 {
+            return Err(SchemaError::Bad(format!("conflict: unsupported :v {v}")));
+        }
+        let kind = req_sym(m, ":kind", "conflict")?;
+        let base = match get(m, ":base") {
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("conflict: :base: {e}")))?;
+                s.clone()
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "conflict: :base must be hex string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("conflict: missing :base".to_string())),
+        };
+        let left = match get(m, ":left") {
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("conflict: :left: {e}")))?;
+                s.clone()
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "conflict: :left must be hex string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("conflict: missing :left".to_string())),
+        };
+        let right = match get(m, ":right") {
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("conflict: :right: {e}")))?;
+                s.clone()
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "conflict: :right must be hex string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("conflict: missing :right".to_string())),
+        };
+
+        let ct = get(m, ":conflicts")
+            .ok_or_else(|| SchemaError::Bad("conflict: missing :conflicts".to_string()))?;
+        let Term::Vector(xs) = ct else {
+            return Err(SchemaError::Bad(format!(
+                "conflict: :conflicts must be vector, got {}",
+                print_term(ct)
+            )));
+        };
+        let mut conflicts = Vec::new();
+        for x in xs {
+            let Term::Map(mm) = x else {
+                return Err(SchemaError::Bad(format!(
+                    "conflict: entry must be map, got {}",
+                    print_term(x)
+                )));
+            };
+            let op = req_sym(mm, ":op", "conflict entry")?;
+            let basev = opt_hex_or_nil(mm, ":base", "conflict entry")?;
+            let leftv = opt_hex_or_nil(mm, ":left", "conflict entry")?;
+            let rightv = opt_hex_or_nil(mm, ":right", "conflict entry")?;
+            conflicts.push(ConflictEntry {
+                op,
+                base: basev,
+                left: leftv,
+                right: rightv,
+            });
+        }
+
+        Ok(Self {
+            kind,
+            base,
+            left,
+            right,
+            conflicts,
+        })
+    }
+
+    pub fn refs(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        out.push(self.base.clone());
+        out.push(self.left.clone());
+        out.push(self.right.clone());
+        for c in &self.conflicts {
+            if let Some(h) = &c.base {
+                out.push(h.clone());
+            }
+            if let Some(h) = &c.left {
+                out.push(h.clone());
+            }
+            if let Some(h) = &c.right {
+                out.push(h.clone());
+            }
+        }
+        out
+    }
+}
+
+fn opt_hex_or_nil(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+    what: &str,
+) -> Result<Option<String>, SchemaError> {
+    match get(m, k) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => {
+            validate_hex_hash(s).map_err(|e| SchemaError::Bad(format!("{what}: {k}: {e}")))?;
+            Ok(Some(s.clone()))
+        }
+        Some(other) => Err(SchemaError::Bad(format!(
+            "{what}: {k} must be hex string or nil, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
 impl Attestation {
     pub fn from_term(t: &Term) -> Result<Self, SchemaError> {
         let m = req_map(t, "attestation")?;

@@ -2159,6 +2159,187 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
+        "core/vcs::merge3" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/vcs::merge3".to_string())
+            })?;
+
+            let base_h = match payload_vcs_hash(payload, ":base") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let left_h = match payload_vcs_hash(payload, ":left") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let right_h = match payload_vcs_hash(payload, ":right") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let base_t = store_get_term(store, &base_h).map_err(|e| {
+                EffectsError::Log(format!("merge3 base read error: {e}"))
+            })?;
+            let left_t = store_get_term(store, &left_h).map_err(|e| {
+                EffectsError::Log(format!("merge3 left read error: {e}"))
+            })?;
+            let right_t = store_get_term(store, &right_h).map_err(|e| {
+                EffectsError::Log(format!("merge3 right read error: {e}"))
+            })?;
+
+            let base = match parse_contract_snapshot(&base_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let left = match parse_contract_snapshot(&left_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let right = match parse_contract_snapshot(&right_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+
+            // Proto must be stable across all three snapshots for contract merge.
+            if base.proto != left.proto || base.proto != right.proto {
+                let conflict_h = store.put_bytes(
+                    print_term(&mk_conflict_artifact(
+                        ":contract-snapshot-merge3",
+                        &base_h,
+                        &left_h,
+                        &right_h,
+                        vec![Term::Map(
+                            [
+                                (TermOrdKey(Term::symbol(":op")), Term::symbol(":proto")),
+                                (
+                                    TermOrdKey(Term::symbol(":base")),
+                                    base.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":left")),
+                                    left.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":right")),
+                                    right.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )],
+                    ))
+                    .as_bytes(),
+                )?;
+                let mut m = BTreeMap::new();
+                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
+                return Ok(Value::Data(Term::Map(m)));
+            }
+
+            let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            keys.extend(base.overrides.keys().cloned());
+            keys.extend(left.overrides.keys().cloned());
+            keys.extend(right.overrides.keys().cloned());
+
+            let mut merged: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            let mut conflicts: Vec<Term> = Vec::new();
+
+            for k in keys {
+                let b = base.overrides.get(&k).cloned();
+                let l = left.overrides.get(&k).cloned();
+                let r = right.overrides.get(&k).cloned();
+
+                let pick = if l == r {
+                    l.clone()
+                } else if l == b {
+                    r.clone()
+                } else if r == b {
+                    l.clone()
+                } else {
+                    None
+                };
+
+                if l == r || l == b || r == b {
+                    if let Some(h) = pick {
+                        merged.insert(TermOrdKey(Term::symbol(&k)), Term::Str(h));
+                    }
+                    continue;
+                }
+
+                // One-side change from None / deletion can still be cleanly merged.
+                // Treat absence as None; if one side differs from base and the other equals base, we already handled.
+                // Remaining cases are conflicts.
+                conflicts.push(Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":op")), Term::Symbol(k.clone())),
+                        (
+                            TermOrdKey(Term::symbol(":base")),
+                            b.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":left")),
+                            l.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":right")),
+                            r.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ));
+            }
+
+            if !conflicts.is_empty() {
+                conflicts.sort_by_cached_key(print_term);
+                let conflict_term = mk_conflict_artifact(
+                    ":contract-snapshot-merge3",
+                    &base_h,
+                    &left_h,
+                    &right_h,
+                    conflicts,
+                );
+                let conflict_h = store.put_bytes(print_term(&conflict_term).as_bytes())?;
+                let mut m = BTreeMap::new();
+                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                m.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
+                return Ok(Value::Data(Term::Map(m)));
+            }
+
+            let merged_snapshot = mk_contract_snapshot_term(base.proto, merged);
+            let merged_h = store.put_bytes(print_term(&merged_snapshot).as_bytes())?;
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
+            Ok(Value::Data(Term::Map(m)))
+        }
         "core/gc::plan" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gc::plan".to_string())
@@ -3908,6 +4089,135 @@ fn payload_vcs_max(payload: &Term) -> Option<u64> {
     }
 }
 
+fn payload_vcs_hash(payload: &Term, key: &str) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::symbol(key)))
+        .ok_or_else(|| EffectsError::BadPayload(format!("missing {key}")))?;
+    match v {
+        Term::Str(s) => {
+            gc_vcs::validate_hex_hash(s)
+                .map_err(|e| EffectsError::BadPayload(format!("{key}: {e}")))?;
+            Ok(s.clone())
+        }
+        other => Err(EffectsError::BadPayload(format!(
+            "{key} must be hex string, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VCS merge3 (contract snapshots)
+// -----------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+struct ContractSnapshotView {
+    proto: Option<String>,
+    overrides: BTreeMap<String, String>, // op symbol -> artifact hash
+}
+
+fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
+    let Term::Map(m) = t else {
+        return Err("snapshot must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":type"))) {
+        Some(Term::Symbol(s)) if s == ":vcs/snapshot" => {}
+        Some(other) => return Err(format!("snapshot :type must be :vcs/snapshot, got {}", print_term(other))),
+        None => return Err("snapshot missing :type".to_string()),
+    }
+    match m.get(&TermOrdKey(Term::symbol(":v"))) {
+        Some(Term::Int(i)) if i.to_i64() == Some(1) => {}
+        Some(other) => return Err(format!("snapshot :v must be 1, got {}", print_term(other))),
+        None => return Err("snapshot missing :v".to_string()),
+    }
+    match m.get(&TermOrdKey(Term::symbol(":kind"))) {
+        Some(Term::Symbol(s)) if s == ":contract" => {}
+        Some(other) => return Err(format!("merge3 only supports :kind :contract, got {}", print_term(other))),
+        None => return Err("snapshot missing :kind".to_string()),
+    }
+
+    let proto = match m.get(&TermOrdKey(Term::symbol(":proto"))) {
+        None | Some(Term::Nil) => None,
+        Some(Term::Str(s)) => {
+            gc_vcs::validate_hex_hash(s).map_err(|e| format!("snapshot :proto: {e}"))?;
+            Some(s.clone())
+        }
+        Some(other) => return Err(format!("snapshot :proto must be hex string or nil, got {}", print_term(other))),
+    };
+
+    let empty_overrides = Term::Map(BTreeMap::new());
+    let overrides_t = m
+        .get(&TermOrdKey(Term::symbol(":overrides")))
+        .unwrap_or(&empty_overrides);
+    let Term::Map(ovm) = overrides_t else {
+        return Err(format!(
+            "snapshot :overrides must be map, got {}",
+            print_term(overrides_t)
+        ));
+    };
+    let mut overrides: BTreeMap<String, String> = BTreeMap::new();
+    for (k, v) in ovm {
+        let op_sym = match &k.0 {
+            Term::Symbol(s) => s.clone(),
+            Term::Str(s) => s.clone(),
+            other => return Err(format!("snapshot :overrides keys must be symbols/strings, got {}", print_term(other))),
+        };
+        let hv = match v {
+            Term::Str(s) => {
+                gc_vcs::validate_hex_hash(s).map_err(|e| format!("snapshot :overrides/{op_sym}: {e}"))?;
+                s.clone()
+            }
+            other => return Err(format!("snapshot :overrides values must be hash strings, got {}", print_term(other))),
+        };
+        overrides.insert(op_sym, hv);
+    }
+
+    Ok(ContractSnapshotView { proto, overrides })
+}
+
+fn mk_contract_snapshot_term(
+    proto: Option<String>,
+    overrides: BTreeMap<TermOrdKey, Term>,
+) -> Term {
+    let mut m = BTreeMap::new();
+    m.insert(TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/snapshot"));
+    m.insert(TermOrdKey(Term::symbol(":v")), Term::Int(1.into()));
+    m.insert(TermOrdKey(Term::symbol(":kind")), Term::symbol(":contract"));
+    m.insert(
+        TermOrdKey(Term::symbol(":proto")),
+        proto.map(Term::Str).unwrap_or(Term::Nil),
+    );
+    m.insert(TermOrdKey(Term::symbol(":overrides")), Term::Map(overrides));
+    Term::Map(m)
+}
+
+fn mk_conflict_artifact(
+    kind: &str,
+    base: &str,
+    left: &str,
+    right: &str,
+    conflicts: Vec<Term>,
+) -> Term {
+    Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/conflict")),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":kind")), Term::symbol(kind)),
+            (TermOrdKey(Term::symbol(":base")), Term::Str(base.to_string())),
+            (TermOrdKey(Term::symbol(":left")), Term::Str(left.to_string())),
+            (TermOrdKey(Term::symbol(":right")), Term::Str(right.to_string())),
+            (TermOrdKey(Term::symbol(":conflicts")), Term::Vector(conflicts)),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
 fn effective_base_dir(pol: Option<&OpPolicy>) -> Result<PathBuf, EffectsError> {
     if let Some(pol) = pol
         && let Some(base) = &pol.base_dir
@@ -4522,6 +4832,14 @@ fn sync_pull_closure(
             continue;
         }
 
+        // Conflict closure: follow referenced snapshots and referenced handler/value hashes.
+        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
+            for x in c.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+
         // Snapshot closure: shallow refs.
         if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
             for x in s.shallow_refs() {
@@ -4609,6 +4927,12 @@ fn sync_closure_local(
         }
         if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
             for x in e.refs() {
+                q.push_back((x, dleft));
+            }
+            continue;
+        }
+        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
+            for x in c.refs() {
                 q.push_back((x, dleft));
             }
             continue;

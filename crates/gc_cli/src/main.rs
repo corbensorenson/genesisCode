@@ -628,6 +628,21 @@ enum VcsCmd {
         #[arg(long, default_value_t = 1000)]
         max: u64,
     },
+
+    /// 3-way semantic merge of contract snapshots (op-table merge; emits conflict artifact on divergence).
+    Merge3 {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Left snapshot hash (hex).
+        #[arg(long)]
+        left: String,
+
+        /// Right snapshot hash (hex).
+        #[arg(long)]
+        right: String,
+    },
 }
 
 fn main() -> std::process::ExitCode {
@@ -1739,6 +1754,11 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
             "genesis/vcs-log-v0.1",
             "vcs-log",
         ),
+        VcsCmd::Merge3 { base, left, right } => (
+            mk_vcs_merge3_program(base, left, right),
+            "genesis/vcs-merge3-v0.1",
+            "vcs-merge3",
+        ),
     };
 
     let forms = canonicalize_module(forms)
@@ -1781,11 +1801,18 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
     }
 
     let (value, value_format) = render_value_for_cli(&ctx, &r.value);
-    let stdout = if cli.json {
-        String::new()
-    } else {
-        format!("{value}\n")
-    };
+
+    // Detect conflict artifact and use stable exit semantics for merge.
+    if matches!(cmd, VcsCmd::Merge3 { .. })
+        && let Value::Data(Term::Map(m)) = &r.value
+        && matches!(m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok"))), Some(Term::Bool(false)))
+        && m.contains_key(&gc_coreform::TermOrdKey(Term::symbol(":conflict")))
+    {
+        ok = false;
+        exit_code = 3; // conflict
+    }
+
+    let stdout = if cli.json { String::new() } else { format!("{value}\n") };
 
     let env = JsonEnvelope {
         ok,
@@ -2760,6 +2787,38 @@ fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
             (
                 gc_coreform::TermOrdKey(Term::symbol(":max")),
                 Term::Int((max as i64).into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::merge3")]);
+    let payload = Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":base")),
+                Term::Str(base.to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":left")),
+                Term::Str(left.to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":right")),
+                Term::Str(right.to_string()),
             ),
         ]
         .into_iter()
