@@ -2,6 +2,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use gc_coreform::{Term, TermOrdKey, print_term};
 
+mod infer;
+mod ty;
+
+use crate::infer::{InferSession, infer_module_types};
+use crate::ty::{EffRow, Ty, parse_type_term};
+
 #[derive(Debug, Clone)]
 pub struct ModuleForTypecheck {
     pub path: String,
@@ -31,12 +37,23 @@ pub struct ModuleReport {
     pub warnings: Vec<String>,
     pub inferred_effects: InferredEffects,
     pub export_effects: Vec<ExportEffectReport>,
+    pub export_types: Vec<ExportTypeReport>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ExportEffectReport {
     pub name: String,
     pub effects: InferredEffects,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExportTypeReport {
+    pub name: String,
+    pub declared: Option<Term>,
+    pub inferred: Term,
+    pub ok: bool,
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
 }
 
 pub fn infer_effects(forms: &[Term]) -> InferredEffects {
@@ -237,6 +254,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 warnings,
                 inferred_effects: inferred,
                 export_effects: Vec::new(),
+                export_types: Vec::new(),
             };
         }
         Some(Term::Map(mm)) => Term::Map(mm.clone()),
@@ -254,6 +272,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 warnings,
                 inferred_effects: inferred,
                 export_effects: Vec::new(),
+                export_types: Vec::new(),
             };
         }
     };
@@ -311,6 +330,21 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
             effects: eff,
         });
     }
+    let export_eff_map: BTreeMap<String, InferredEffects> = export_effects
+        .iter()
+        .map(|x| (x.name.clone(), x.effects.clone()))
+        .collect();
+
+    // Infer module types once (sequential def order).
+    let mut infer_sess = InferSession::default();
+    let (_env, inferred_defs) = infer_module_types(&m.forms, &mut infer_sess);
+    for e in infer_sess.errors.iter() {
+        ok = false;
+        errors.push(format!("{}: {e}", m.path));
+    }
+    for w in infer_sess.warnings.iter() {
+        warnings.push(format!("{}: {w}", m.path));
+    }
 
     // Export/type conformance.
     let types = match meta_types(&meta) {
@@ -321,17 +355,87 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         }
         Some(t) => t,
     };
+    let mut export_types = Vec::new();
     for e in exports {
         if let Some(ty) = types.get(&e) {
+            let declared_term = ty.clone();
             if matches!(ty, Term::Symbol(s) if s == "?") {
                 warnings.push(format!("{}: export {} has type ?", m.path, e));
             }
+            let mut tr_ok = true;
+            let mut tr_errors = Vec::new();
+            let mut tr_warnings = Vec::new();
+            let inferred_ty = inferred_defs.get(&e).cloned().unwrap_or(Ty::Any);
+
+            // Parse declared type and check compatibility when it isn't `?`.
+            if !matches!(ty, Term::Symbol(s) if s == "?") {
+                match parse_type_term(ty) {
+                    Ok(decl) => {
+                        if !type_compatible(&inferred_ty, &decl) {
+                            tr_ok = false;
+                            tr_errors.push(format!(
+                                "declared type mismatch for {e}: declared {}, inferred {}",
+                                print_term(&decl.to_term()),
+                                print_term(&inferred_ty.to_term())
+                            ));
+                        }
+                        // If declared includes an effect row, enforce it against inferred effects.
+                        if let Some(decl_eff) = declared_eff_row(&decl) {
+                            let eff = export_eff_map.get(&e).cloned().unwrap_or(InferredEffects {
+                                ops: BTreeSet::new(),
+                                unknown: false,
+                            });
+                            if eff.unknown && !decl_eff.open {
+                                tr_ok = false;
+                                tr_errors.push(format!(
+                                    "{e}: inferred unknown effect ops but declared effect row is closed"
+                                ));
+                            }
+                            for op in eff.ops.iter() {
+                                if !decl_eff.ops.contains(op) && !decl_eff.open {
+                                    tr_ok = false;
+                                    tr_errors.push(format!(
+                                        "{e}: inferred effect op {op} not present in declared effect row"
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    Err(pe) => {
+                        tr_ok = false;
+                        tr_errors.push(format!("type parse error for {e}: {pe}"));
+                    }
+                }
+            } else if matches!(inferred_ty, Ty::Any) {
+                tr_warnings.push("inferred type is ?".to_string());
+            }
+
+            ok &= tr_ok;
+            for msg in tr_errors.iter() {
+                errors.push(format!("{}: {}", m.path, msg));
+            }
+            export_types.push(ExportTypeReport {
+                name: e.clone(),
+                declared: Some(declared_term),
+                inferred: inferred_ty.to_term(),
+                ok: tr_ok,
+                errors: tr_errors,
+                warnings: tr_warnings,
+            });
         } else {
             ok = false;
             errors.push(format!(
                 "{}: exported symbol {} has no type in ::meta :types",
                 m.path, e
             ));
+            export_types.push(ExportTypeReport {
+                name: e.clone(),
+                declared: None,
+                inferred: inferred_defs.get(&e).cloned().unwrap_or(Ty::Any).to_term(),
+                ok: false,
+                errors: vec!["missing declared type".to_string()],
+                warnings: Vec::new(),
+            });
         }
     }
 
@@ -342,7 +446,104 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         warnings,
         inferred_effects: inferred,
         export_effects,
+        export_types,
     }
+}
+
+fn declared_eff_row(ty: &Ty) -> Option<&EffRow> {
+    match ty {
+        Ty::Fn { eff, .. } => Some(eff),
+        Ty::Prog { eff, .. } => Some(eff),
+        _ => None,
+    }
+}
+
+fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
+    // `?` in the declared position accepts anything.
+    if matches!(declared, Ty::Any) {
+        return true;
+    }
+    match (inferred, declared) {
+        (Ty::Any, _) => false,
+        (Ty::Int, Ty::Int)
+        | (Ty::Bool, Ty::Bool)
+        | (Ty::Nil, Ty::Nil)
+        | (Ty::Str, Ty::Str)
+        | (Ty::Bytes, Ty::Bytes)
+        | (Ty::Symbol, Ty::Symbol) => true,
+        (
+            Ty::Msg {
+                op: iop,
+                payload: ip,
+            },
+            Ty::Msg {
+                op: dop,
+                payload: dp,
+            },
+        ) => {
+            if let Some(d) = dop
+                && iop.as_deref() != Some(d.as_str())
+            {
+                return false;
+            }
+            type_compatible(ip, dp)
+        }
+        (
+            Ty::Fn {
+                param: ip,
+                ret: ir,
+                eff: ie,
+            },
+            Ty::Fn {
+                param: dp,
+                ret: dr,
+                eff: de,
+            },
+        ) => {
+            if !type_compatible(ip, dp) {
+                return false;
+            }
+            if !type_compatible(ir, dr) {
+                return false;
+            }
+            eff_row_compatible(ie, de)
+        }
+        (Ty::Prog { ret: ir, eff: ie }, Ty::Prog { ret: dr, eff: de }) => {
+            type_compatible(ir, dr) && eff_row_compatible(ie, de)
+        }
+        (
+            Ty::Rec {
+                fields: ifs,
+                open: _,
+            },
+            Ty::Rec {
+                fields: dfs,
+                open: _,
+            },
+        ) => dfs
+            .iter()
+            .all(|(k, dt)| ifs.get(k).is_some_and(|it| type_compatible(it, dt))),
+        (
+            Ty::Contract {
+                methods: ims,
+                open: _,
+            },
+            Ty::Contract {
+                methods: dms,
+                open: _,
+            },
+        ) => dms
+            .iter()
+            .all(|(k, dt)| ims.get(k).is_some_and(|it| type_compatible(it, dt))),
+        _ => false,
+    }
+}
+
+fn eff_row_compatible(inferred: &EffRow, declared: &EffRow) -> bool {
+    if declared.open {
+        return true;
+    }
+    inferred.ops.is_subset(&declared.ops) && !inferred.open
 }
 
 fn meta_exports(meta: &Term) -> Option<Vec<String>> {
@@ -440,6 +641,10 @@ impl ModuleReport {
             TermOrdKey(Term::symbol(":exports")),
             Term::Vector(self.export_effects.iter().map(|e| e.to_term()).collect()),
         );
+        m.insert(
+            TermOrdKey(Term::symbol(":types")),
+            Term::Vector(self.export_types.iter().map(|e| e.to_term()).collect()),
+        );
         Term::Map(m)
     }
 }
@@ -458,6 +663,31 @@ impl ExportEffectReport {
         m.insert(
             TermOrdKey(Term::symbol(":unknown")),
             Term::Bool(self.effects.unknown),
+        );
+        Term::Map(m)
+    }
+}
+
+impl ExportTypeReport {
+    pub fn to_term(&self) -> Term {
+        let mut m = BTreeMap::new();
+        m.insert(
+            TermOrdKey(Term::symbol(":name")),
+            Term::Symbol(self.name.clone()),
+        );
+        m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(self.ok));
+        m.insert(
+            TermOrdKey(Term::symbol(":declared")),
+            self.declared.clone().unwrap_or(Term::Nil),
+        );
+        m.insert(TermOrdKey(Term::symbol(":inferred")), self.inferred.clone());
+        m.insert(
+            TermOrdKey(Term::symbol(":errors")),
+            Term::Vector(self.errors.iter().cloned().map(Term::Str).collect()),
+        );
+        m.insert(
+            TermOrdKey(Term::symbol(":warnings")),
+            Term::Vector(self.warnings.iter().cloned().map(Term::Str).collect()),
         );
         Term::Map(m)
     }
@@ -492,6 +722,22 @@ mod tests {
     use gc_coreform::{Term, canonicalize_module, parse_module};
 
     use super::*;
+
+    fn extract_meta(forms: &[Term]) -> Option<Term> {
+        forms.iter().find_map(|t| {
+            let items = t.as_proper_list()?;
+            if items.len() == 3
+                && matches!(items[0], Term::Symbol(s) if s == "def")
+                && matches!(items[1], Term::Symbol(s) if s == "::meta")
+            {
+                let q = items[2].as_proper_list()?;
+                if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote") {
+                    return Some(q[1].clone());
+                }
+            }
+            None
+        })
+    }
 
     #[test]
     fn infers_literal_effect_ops() {
@@ -529,19 +775,7 @@ mod tests {
             m::x
         "#;
         let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
-        let meta = forms.iter().find_map(|t| {
-            let items = t.as_proper_list()?;
-            if items.len() == 3
-                && matches!(items[0], Term::Symbol(s) if s == "def")
-                && matches!(items[1], Term::Symbol(s) if s == "::meta")
-            {
-                let q = items[2].as_proper_list()?;
-                if q.len() == 2 && matches!(q[0], Term::Symbol(s) if s == "quote") {
-                    return Some(q[1].clone());
-                }
-            }
-            None
-        });
+        let meta = extract_meta(&forms);
         let m = ModuleForTypecheck {
             path: "x.gc".to_string(),
             forms,
@@ -553,6 +787,77 @@ mod tests {
             r.errors
                 .iter()
                 .any(|e| e.contains("exported symbol m::x has no type"))
+        );
+    }
+
+    #[test]
+    fn contract_row_typing_accepts_declared_method() {
+        let src = r#"
+          (def ::meta
+            '{
+              :exports [pkg/t::c]
+              :caps []
+              :types {
+                pkg/t::c
+                  (Contract
+                    [[foo/bar::x (Fn (Msg ?) Int (Eff [] nil))]]
+                    nil)}})
+
+          (def pkg/t::c
+            (core/contract::extend
+              core/contract::genesis
+              {foo/bar::x (fn (m) 10)}
+              {}))
+
+          pkg/t::c
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let meta = extract_meta(&forms);
+        let m = ModuleForTypecheck {
+            path: "t.gc".to_string(),
+            forms,
+            meta,
+        };
+        let r = typecheck_package(&[m]);
+        assert!(r.ok, "expected ok, errors: {:?}", r.errors);
+    }
+
+    #[test]
+    fn contract_row_typing_rejects_missing_declared_method() {
+        let src = r#"
+          (def ::meta
+            '{
+              :exports [pkg/t::c]
+              :caps []
+              :types {
+                pkg/t::c
+                  (Contract
+                    [[foo/bar::y (Fn (Msg ?) Int (Eff [] nil))]]
+                    nil)}})
+
+          (def pkg/t::c
+            (core/contract::extend
+              core/contract::genesis
+              {foo/bar::x (fn (m) 10)}
+              {}))
+
+          pkg/t::c
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let meta = extract_meta(&forms);
+        let m = ModuleForTypecheck {
+            path: "t.gc".to_string(),
+            forms,
+            meta,
+        };
+        let r = typecheck_package(&[m]);
+        assert!(!r.ok);
+        assert!(
+            r.errors
+                .iter()
+                .any(|e| e.contains("declared type mismatch")),
+            "expected declared type mismatch error, got {:?}",
+            r.errors
         );
     }
 }
