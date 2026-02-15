@@ -1,0 +1,17 @@
+(def selfhost/tool::is-error core/error::is?)
+
+(def selfhost/tool::fmt-module
+  (fn (src)
+    (let ((forms (core/coreform::parse-module src)))
+      (if (selfhost/tool::is-error forms)
+        forms
+        (let ((canon (selfhost/canon::canonicalize-module forms)))
+          (if (selfhost/tool::is-error canon) canon (selfhost/printer::print-module canon)))))))
+
+(def selfhost/tool::hash-module-src
+  (fn (src)
+    (let ((forms (core/coreform::parse-module src)))
+      (if (selfhost/tool::is-error forms)
+        forms
+        (let ((canon (selfhost/canon::canonicalize-module forms)))
+          (if (selfhost/tool::is-error canon) canon (selfhost/hash::hash-module canon)))))))
