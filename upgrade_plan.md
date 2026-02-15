@@ -118,9 +118,9 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
     - [ ] Contract snapshots (`:kind :contract`).
     - [ ] Workspace snapshots (`:kind :workspace`).
   - [ ] Implement `:vcs/patch` artifacts (semantic ops over canonical AST paths) plus `vcs diff/apply`.
-  - [ ] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
-  - [ ] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
-  - [ ] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
+  - [x] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
+  - [x] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
+  - [x] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
 - [ ] Store capability (`core/store::*`) as runner effects:
   - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
   - [ ] Optional remote-backed store adapter using the minimal registry protocol.
@@ -138,9 +138,10 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Full export/import (commit DAG closure) with depth control.
   - [x] Include optional embedded refs and attestations.
 - [ ] Contract-level branching/merging:
-  - [ ] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
-  - [ ] 3-way merge for contract snapshots (op-table keyed merge).
-  - [ ] Conflict artifacts + resolution pipeline via semantic patches.
+  - [x] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
+  - [x] 3-way merge for contract snapshots (op-table keyed merge).
+  - [x] Conflict artifacts for merge divergence (`:vcs/conflict`).
+  - [ ] Conflict resolution pipeline via semantic patches.
   - [ ] Acceptance tests (must be added early):
   - [x] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.

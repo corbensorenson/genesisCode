@@ -130,6 +130,37 @@ fn refs_set_get_list_delete_roundtrip_and_policy_gates() {
         .success()
         .stdout(format!("{commit_h}\n"));
 
+    // Contract-level ref namespaces are just regular refs; policy patterns should match them too.
+    let contract_ref = "refs/contracts/mini/counter::x/heads/dev";
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["refs", "--caps"])
+        .arg(&caps)
+        .args(["set", contract_ref, &commit_h, "--policy", &policy_h])
+        .assert()
+        .success()
+        .stdout(format!("{commit_h}\n"));
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["refs", "--caps"])
+        .arg(&caps)
+        .args(["get", contract_ref])
+        .assert()
+        .success()
+        .stdout(format!("{commit_h}\n"));
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["refs", "--caps"])
+        .arg(&caps)
+        .args(["list", "--prefix", "refs/contracts/"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!(
+            "{contract_ref} {commit_h}\n"
+        )));
+
     // list
     cargo_bin_cmd!("genesis")
         .current_dir(dir)
