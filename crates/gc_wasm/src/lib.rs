@@ -1,7 +1,16 @@
+use std::collections::BTreeMap;
+
+use blake3::Hasher;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-use gc_coreform::{canonicalize_module, hash_module, parse_module, print_module, print_term};
-use gc_kernel::{EvalCtx, Value, eval_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, parse_term,
+    print_module, print_term,
+};
+use gc_kernel::{
+    Apply, EffectProgram, EffectRequest, Env, EvalCtx, SealId, Value, eval_module, value_hash,
+};
 use gc_prelude::build_prelude;
 
 fn js_err(code: &str, msg: impl ToString) -> JsValue {
@@ -45,6 +54,309 @@ pub fn eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValu
 
     let protocol_error = ctx.protocol.map(|p| p.error);
     Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
+}
+
+#[derive(Clone)]
+struct PendingEffect {
+    op: String,
+    k: Value,
+}
+
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum StepResult {
+    Done {
+        module_h: String,
+        value: String,
+        value_h: String,
+    },
+    Effect {
+        module_h: String,
+        op: String,
+        payload: String,
+        payload_h: String,
+        cont_h: String,
+        req_h: String,
+    },
+}
+
+#[derive(Serialize)]
+struct ResumeResult {
+    resp_h: String,
+    next: StepResult,
+}
+
+#[wasm_bindgen]
+pub struct Runtime {
+    step_limit: Option<u64>,
+    module_h: Option<[u8; 32]>,
+    ctx: EvalCtx,
+    env: Env,
+    cur: Option<Value>,
+    pending: Option<PendingEffect>,
+}
+
+#[wasm_bindgen]
+impl Runtime {
+    #[wasm_bindgen(constructor)]
+    pub fn new(step_limit: u32) -> Runtime {
+        let step_limit = if step_limit == 0 {
+            None
+        } else {
+            Some(step_limit as u64)
+        };
+        let mut ctx = EvalCtx::with_step_limit(step_limit);
+        let prelude = build_prelude(&mut ctx);
+        Runtime {
+            step_limit,
+            module_h: None,
+            ctx,
+            env: prelude.env,
+            cur: None,
+            pending: None,
+        }
+    }
+
+    /// Parse + canonicalize + eval a CoreForm module, then step to the first done/effect result.
+    pub fn eval_module(&mut self, src: &str) -> Result<JsValue, JsValue> {
+        // Reset to a clean deterministic state so reusing a Runtime doesn't perturb seal IDs.
+        self.ctx = EvalCtx::with_step_limit(self.step_limit);
+        let prelude = build_prelude(&mut self.ctx);
+        self.env = prelude.env;
+        self.cur = None;
+        self.pending = None;
+
+        let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
+        let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
+        let mh = hash_module(&forms);
+        self.module_h = Some(mh);
+
+        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
+        self.cur = Some(v);
+        self.step()
+    }
+
+    /// Step until either the program is done or an effect request is produced.
+    pub fn step(&mut self) -> Result<JsValue, JsValue> {
+        if self.pending.is_some() {
+            return Err(js_err(
+                "state",
+                "pending effect request; call respond_* before stepping again",
+            ));
+        }
+        let r = self.step_internal()?;
+        serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
+    }
+
+    /// Resume by responding with a data term value.
+    pub fn respond_data(&mut self, resp_term_src: &str) -> Result<JsValue, JsValue> {
+        let term = parse_term(resp_term_src).map_err(|e| js_err("parse", e))?;
+        self.respond_value(Value::Data(term))
+    }
+
+    /// Resume by denying the capability (constructs a sealed ERROR inside the kernel).
+    pub fn respond_denied(&mut self) -> Result<JsValue, JsValue> {
+        let op = self
+            .pending
+            .as_ref()
+            .ok_or_else(|| js_err("state", "no pending effect request"))?
+            .op
+            .clone();
+        let error_tok = self
+            .ctx
+            .protocol
+            .map(|p| p.error)
+            .ok_or_else(|| js_err("state", "missing protocol tokens"))?;
+        self.respond_value(mk_caps_denied(error_tok, &op))
+    }
+
+    /// Resume by constructing a sealed ERROR value inside the kernel.
+    pub fn respond_error(&mut self, code: &str, message: &str) -> Result<JsValue, JsValue> {
+        let op = self
+            .pending
+            .as_ref()
+            .ok_or_else(|| js_err("state", "no pending effect request"))?
+            .op
+            .clone();
+        let error_tok = self
+            .ctx
+            .protocol
+            .map(|p| p.error)
+            .ok_or_else(|| js_err("state", "missing protocol tokens"))?;
+        self.respond_value(mk_error(error_tok, code, message.to_string(), Some(&op)))
+    }
+}
+
+impl Runtime {
+    fn step_internal(&mut self) -> Result<StepResult, JsValue> {
+        let module_h = hex::encode(
+            self.module_h
+                .ok_or_else(|| js_err("state", "no module loaded"))?,
+        );
+
+        let cur = self
+            .cur
+            .as_ref()
+            .ok_or_else(|| js_err("state", "no program loaded"))?
+            .clone();
+
+        let (out, pending) = match cur {
+            Value::EffectProgram(p) => match p.as_ref() {
+                EffectProgram::Pure(v) => {
+                    let protocol_error = self.ctx.protocol.map(|p| p.error);
+                    let value = print_term(&v.to_term_for_log(protocol_error));
+                    let value_h = hex::encode(value_hash(v));
+                    (
+                        StepResult::Done {
+                            module_h,
+                            value,
+                            value_h,
+                        },
+                        None,
+                    )
+                }
+                EffectProgram::Perform { request } => {
+                    let effect_tok = self
+                        .ctx
+                        .protocol
+                        .map(|p| p.effect)
+                        .ok_or_else(|| js_err("state", "missing protocol tokens"))?;
+                    let req = unseal_effect_request(request.as_ref(), effect_tok)?;
+
+                    let payload_s = print_term(&req.payload);
+                    let payload_h = hash_term(&req.payload);
+                    let cont_h = value_hash(&req.k);
+                    let req_h = hash_request(&req.op, payload_h, cont_h);
+
+                    (
+                        StepResult::Effect {
+                            module_h,
+                            op: req.op.clone(),
+                            payload: payload_s,
+                            payload_h: hex::encode(payload_h),
+                            cont_h: hex::encode(cont_h),
+                            req_h: hex::encode(req_h),
+                        },
+                        Some(PendingEffect {
+                            op: req.op,
+                            k: (*req.k).clone(),
+                        }),
+                    )
+                }
+            },
+            other => {
+                let protocol_error = self.ctx.protocol.map(|p| p.error);
+                let value = print_term(&other.to_term_for_log(protocol_error));
+                let value_h = hex::encode(value_hash(&other));
+                (
+                    StepResult::Done {
+                        module_h,
+                        value,
+                        value_h,
+                    },
+                    None,
+                )
+            }
+        };
+
+        if let Some(p) = pending {
+            self.pending = Some(p);
+        }
+        Ok(out)
+    }
+
+    fn respond_value(&mut self, resp_val: Value) -> Result<JsValue, JsValue> {
+        let PendingEffect { k, .. } = self
+            .pending
+            .take()
+            .ok_or_else(|| js_err("state", "no pending effect request"))?;
+
+        let resp_h = value_hash(&resp_val);
+
+        let next = k
+            .apply(&mut self.ctx, resp_val)
+            .map_err(|e| js_err("eval", e))?;
+        let next = match next {
+            Value::EffectProgram(_) => next,
+            other => Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(other)))),
+        };
+        self.cur = Some(next);
+
+        let next_step = self.step_internal()?;
+        let out = ResumeResult {
+            resp_h: hex::encode(resp_h),
+            next: next_step,
+        };
+        serde_wasm_bindgen::to_value(&out).map_err(|e| js_err("serde", e))
+    }
+}
+
+fn unseal_effect_request(v: &Value, effect_tok: SealId) -> Result<EffectRequest, JsValue> {
+    let Value::Sealed { token, payload } = v else {
+        return Err(js_err("effect", "bad effect seal"));
+    };
+    if *token != effect_tok {
+        return Err(js_err("effect", "bad effect seal token"));
+    }
+    let Value::EffectRequest(r) = payload.as_ref() else {
+        return Err(js_err("effect", "bad effect request payload"));
+    };
+    Ok(r.clone())
+}
+
+fn hash_request(op: &str, payload_h: [u8; 32], cont_h: [u8; 32]) -> [u8; 32] {
+    let mut h = Hasher::new();
+    h.update(b"GCv0.2\0effect-req\0");
+    h.update(op.as_bytes());
+    h.update(b"\0");
+    h.update(&payload_h);
+    h.update(&cont_h);
+    *h.finalize().as_bytes()
+}
+
+fn mk_caps_denied(error_tok: SealId, op: &str) -> Value {
+    mk_error(
+        error_tok,
+        "core/caps/denied",
+        format!("capability denied: {op}"),
+        Some(op),
+    )
+}
+
+fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Value {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/code".to_string())),
+        Term::Str(code.to_string()),
+    );
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/message".to_string())),
+        Term::Str(msg),
+    );
+
+    let mut ctxm = BTreeMap::new();
+    ctxm.insert(
+        TermOrdKey(Term::Symbol(":subsystem".to_string())),
+        Term::Str("effects".to_string()),
+    );
+    if let Some(op) = op {
+        m.insert(
+            TermOrdKey(Term::Symbol(":error/op".to_string())),
+            Term::Symbol(op.to_string()),
+        );
+        ctxm.insert(
+            TermOrdKey(Term::Symbol(":op".to_string())),
+            Term::Symbol(op.to_string()),
+        );
+    }
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/context".to_string())),
+        Term::Map(ctxm),
+    );
+    Value::Sealed {
+        token: error_tok,
+        payload: Box::new(Value::Data(Term::Map(m))),
+    }
 }
 
 // Tiny dependency-free hex encoding for wasm.

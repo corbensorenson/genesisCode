@@ -22,6 +22,23 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Pure evaluation (no effects runner). `step_limit=0` means “no limit”.
   - If evaluation produces an effect program, returns an error telling the caller to use the host runner.
 
+For effectful programs, the WASM module exports a stateful runtime that supports step/resume:
+
+- `new Runtime(step_limit: u32)`
+  - `step_limit=0` means “no limit”.
+- `Runtime.eval_module(src: &str) -> Result<JsValue, JsValue>`
+  - Parses/canonicalizes/evaluates and returns the first step result (`done` or `effect`).
+- `Runtime.step() -> Result<JsValue, JsValue>`
+  - Advances until `done` or `effect` (errors if a pending effect hasn't been responded to yet).
+- `Runtime.respond_data(resp_term_src: &str) -> Result<JsValue, JsValue>`
+  - Responds with a CoreForm datum (parsed as a single term).
+- `Runtime.respond_denied() -> Result<JsValue, JsValue>`
+  - Responds with a sealed `core/caps/denied` ERROR constructed inside the kernel.
+- `Runtime.respond_error(code: &str, message: &str) -> Result<JsValue, JsValue>`
+  - Responds with a sealed ERROR constructed inside the kernel.
+
+The step/resume semantics and hashing requirements are specified in `docs/spec/WASM_HOST_BRIDGE.md`.
+
 All outputs are deterministic given the same inputs.
 
 ## Build

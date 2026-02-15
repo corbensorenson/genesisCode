@@ -50,7 +50,7 @@ Non-negotiables:
 - [x] Define a normative WASM host interface doc:
   - `docs/spec/WASM_HOST_BRIDGE.md`
   - Includes: step/resume API, effect request hashing inputs, continuation handles, response hashing, and log equivalence requirements.
-- [ ] Extend the WASM build beyond pure `eval` so effectful programs can run with a host runner:
+- [x] Extend the WASM build beyond pure `eval` so effectful programs can run with a host runner:
   - Preferred architecture: WASM exports a stateful “runtime” object:
     - runs until `done` or `effect-request`
     - returns `{op, payload, req_h, cont_h, payload_h, state_handle}`
