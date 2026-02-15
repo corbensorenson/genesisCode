@@ -15,6 +15,7 @@ jobs:
         with:
           toolchain: 1.90.0
           components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
@@ -26,3 +27,6 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+      - name: WASM Build (Pure Kernel)
+        run: cargo build -p gc_wasm --target wasm32-unknown-unknown

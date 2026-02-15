@@ -1,0 +1,16 @@
+[package]
+name = "gc_wasm"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+# local
+gc_coreform = { path = "../gc_coreform" }
+gc_kernel = { path = "../gc_kernel" }
+gc_prelude = { path = "../gc_prelude" }

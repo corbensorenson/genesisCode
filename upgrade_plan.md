@@ -160,7 +160,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - type term parsing + basic type inference for `core/msg::*`, `core/contract::*`, `core/effect::*`, plus contract-row conformance checks (still not full row-polymorphism with row variables).
 - [x] Optimizer completion:
   - real e-graph (`egg`) optimizer for the pure subset, with rewrite statistics and stronger translation-validation evidence. (`docs/spec/OPTIMIZER.md`, `docs/spec/TRANSLATION_VALIDATION.md`)
-- [ ] WASM target:
+- [x] WASM target:
   - compile kernel + pure evaluator to WASM; keep runner as host bridge; keep logs identical.
 
 ## Rough Effort Estimate (Single Engineer, Full-Time)
