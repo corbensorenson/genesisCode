@@ -722,6 +722,46 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let is = matches!(args[0].as_data(), Some(Term::Nil));
             Ok(Value::Data(Term::Bool(is)))
         }
+        "data/tag" => {
+            if args.len() != 1 {
+                return type_err(ctx, "data/tag expects 1 arg");
+            }
+            let Some(t) = args[0].as_data() else {
+                return type_err(ctx, "data/tag expects datum");
+            };
+            let tag = match t {
+                Term::Nil => "nil",
+                Term::Bool(_) => "bool",
+                Term::Int(_) => "int",
+                Term::Str(_) => "str",
+                Term::Bytes(_) => "bytes",
+                Term::Symbol(_) => "sym",
+                Term::Pair(_, _) => "pair",
+                Term::Vector(_) => "vec",
+                Term::Map(_) => "map",
+            };
+            Ok(Value::Data(Term::Symbol(tag.to_string())))
+        }
+        "pair/as-proper-list" => {
+            if args.len() != 1 {
+                return type_err(ctx, "pair/as-proper-list expects 1 arg");
+            }
+            let Some(t) = args[0].as_data() else {
+                return type_err(ctx, "pair/as-proper-list expects datum");
+            };
+            match t {
+                Term::Nil => Ok(Value::Data(Term::Vector(Vec::new()))),
+                Term::Pair(_, _) => {
+                    let Some(items) = t.as_proper_list() else {
+                        return Ok(Value::Data(Term::Nil));
+                    };
+                    let items: Vec<Term> = items.into_iter().cloned().collect();
+                    ctx.mem_observe_vec_len(items.len())?;
+                    Ok(Value::Data(Term::Vector(items)))
+                }
+                _ => type_err(ctx, "pair/as-proper-list expects pair or nil"),
+            }
+        }
         "map/get" => {
             if args.len() != 2 {
                 return type_err(ctx, "map/get expects 2 args");
@@ -806,6 +846,20 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             };
             Ok(Value::Data(Term::Int((n as i64).into())))
         }
+        "map/entries" => {
+            if args.len() != 1 {
+                return type_err(ctx, "map/entries expects 1 arg");
+            }
+            let Some(Term::Map(m)) = args[0].as_data() else {
+                return type_err(ctx, "map/entries expects map datum");
+            };
+            let mut out: Vec<Term> = Vec::with_capacity(m.len());
+            for (k, v) in m.iter() {
+                out.push(Term::Vector(vec![k.0.clone(), v.clone()]));
+            }
+            ctx.mem_observe_vec_len(out.len())?;
+            Ok(Value::Data(Term::Vector(out)))
+        }
         "vec/get" => {
             if args.len() != 2 {
                 return type_err(ctx, "vec/get expects 2 args");
@@ -874,6 +928,16 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             };
             Ok(Value::Data(Term::Bool(a == b)))
         }
+        "sym/to-str" => {
+            if args.len() != 1 {
+                return type_err(ctx, "sym/to-str expects 1 arg");
+            }
+            let Some(Term::Symbol(s)) = args[0].as_data() else {
+                return type_err(ctx, "sym/to-str expects symbol");
+            };
+            ctx.mem_observe_string_len(s.len())?;
+            Ok(Value::Data(Term::Str(s.clone())))
+        }
         "str/concat" => {
             if args.len() != 2 {
                 return type_err(ctx, "str/concat expects 2 args");
@@ -907,6 +971,81 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let bytes = s.as_bytes().to_vec();
             ctx.mem_observe_bytes_len(bytes.len())?;
             Ok(Value::Data(Term::Bytes(bytes)))
+        }
+        "str/repeat" => {
+            if args.len() != 2 {
+                return type_err(ctx, "str/repeat expects 2 args");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "str/repeat expects string");
+            };
+            let Some(Term::Int(n)) = args[1].as_data() else {
+                return type_err(ctx, "str/repeat expects int count");
+            };
+            let n: usize = match n.to_usize() {
+                Some(x) => x,
+                None => return type_err(ctx, "str/repeat count out of range"),
+            };
+            let out = s.repeat(n);
+            ctx.mem_observe_string_len(out.len())?;
+            Ok(Value::Data(Term::Str(out)))
+        }
+        "str/join" => {
+            if args.len() != 2 {
+                return type_err(ctx, "str/join expects 2 args");
+            }
+            let Some(Term::Str(sep)) = args[1].as_data() else {
+                return type_err(ctx, "str/join expects string separator");
+            };
+
+            let mut parts: Vec<&str> = Vec::new();
+            match &args[0] {
+                Value::Vector(xs) => {
+                    parts.reserve(xs.len());
+                    for x in xs {
+                        let Some(Term::Str(s)) = x.as_data() else {
+                            return type_err(ctx, "str/join expects vector of strings");
+                        };
+                        parts.push(s);
+                    }
+                }
+                Value::Data(Term::Vector(xs)) => {
+                    parts.reserve(xs.len());
+                    for x in xs {
+                        let Term::Str(s) = x else {
+                            return type_err(ctx, "str/join expects vector of strings");
+                        };
+                        parts.push(s);
+                    }
+                }
+                _ => return type_err(ctx, "str/join expects vector"),
+            }
+
+            let out = parts.join(sep);
+            ctx.mem_observe_string_len(out.len())?;
+            Ok(Value::Data(Term::Str(out)))
+        }
+        "coreform/escape-str" => {
+            if args.len() != 1 {
+                return type_err(ctx, "coreform/escape-str expects 1 arg");
+            }
+            let Some(Term::Str(s)) = args[0].as_data() else {
+                return type_err(ctx, "coreform/escape-str expects string");
+            };
+            let out = escape_str(s);
+            ctx.mem_observe_string_len(out.len())?;
+            Ok(Value::Data(Term::Str(out)))
+        }
+        "coreform/escape-bytes" => {
+            if args.len() != 1 {
+                return type_err(ctx, "coreform/escape-bytes expects 1 arg");
+            }
+            let Some(Term::Bytes(b)) = args[0].as_data() else {
+                return type_err(ctx, "coreform/escape-bytes expects bytes");
+            };
+            let out = escape_bytes(b);
+            ctx.mem_observe_string_len(out.len())?;
+            Ok(Value::Data(Term::Str(out)))
         }
         "bytes/len" => {
             if args.len() != 1 {
@@ -1182,4 +1321,36 @@ impl ToUsize for num_bigint::BigInt {
     fn to_usize(&self) -> Option<usize> {
         num_traits::ToPrimitive::to_usize(self)
     }
+}
+
+fn escape_str(s: &str) -> String {
+    let mut out = String::new();
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+fn escape_bytes(b: &[u8]) -> String {
+    let mut out = String::new();
+    for &x in b {
+        match x {
+            b'\\' => out.push_str("\\\\"),
+            b'"' => out.push_str("\\\""),
+            b'\n' => out.push_str("\\n"),
+            b'\r' => out.push_str("\\r"),
+            b'\t' => out.push_str("\\t"),
+            0x20..=0x7E => out.push(x as char),
+            _ => out.push_str(&format!("\\x{:02X}", x)),
+        }
+    }
+    out
 }

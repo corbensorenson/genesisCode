@@ -79,6 +79,10 @@ Key docs to treat as authoritative:
   - UTF-8 conversions, string length, integer formatting
   - bytes indexing/slicing and hex conversion
   - raw `crypto/blake3` (bytes -> 32-byte digest)
+- [x] Add pure term-introspection + canonical-print helpers needed to implement the CoreForm printer in GenesisCode:
+  - `data/tag`, `pair/as-proper-list`, `map/entries`, `sym/to-str`
+  - `str/repeat`, `str/join`
+  - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
 - [ ] Implement a self-hosted "frontend v0" in GenesisCode:
   - CoreForm printer/canonicalizer equivalence tests against Rust
   - module loader and package resolver on GenesisGraph objects

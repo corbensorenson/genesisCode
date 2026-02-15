@@ -34,6 +34,8 @@
 
 (def core/eq? (fn (a b) (prim core/eq? a b)))
 
+(def core/data::tag (fn (t) (prim data/tag t)))
+
 (def core/int::add (fn (a b) (prim int/add a b)))
 (def core/int::sub (fn (a b) (prim int/sub a b)))
 (def core/int::mul (fn (a b) (prim int/mul a b)))
@@ -44,22 +46,27 @@
 (def core/pair::cons (fn (a d) (prim pair/cons a d)))
 (def core/pair::car (fn (p) (prim pair/car p)))
 (def core/pair::cdr (fn (p) (prim pair/cdr p)))
+(def core/pair::as-proper-list (fn (p) (prim pair/as-proper-list p)))
 (def core/list::is-nil? (fn (x) (prim list/is-nil? x)))
 
 (def core/map::get (fn (m k) (prim map/get m k)))
 (def core/map::put (fn (m k v) (prim map/put m k v)))
 (def core/map::merge (fn (a b) (prim map/merge a b)))
 (def core/map::len (fn (m) (prim map/len m)))
+(def core/map::entries (fn (m) (prim map/entries m)))
 
 (def core/vec::get (fn (v i) (prim vec/get v i)))
 (def core/vec::push (fn (v x) (prim vec/push v x)))
 (def core/vec::len (fn (v) (prim vec/len v)))
 
 (def core/sym::eq? (fn (a b) (prim sym/eq? a b)))
+(def core/sym::to-str (fn (s) (prim sym/to-str s)))
 (def core/str::concat (fn (a b) (prim str/concat a b)))
 (def core/str::len (fn (s) (prim str/len s)))
 (def core/str::to-utf8 (fn (s) (prim str/to-bytes-utf8 s)))
 (def core/str::from-utf8 (fn (b) (prim bytes/to-str-utf8 b)))
+(def core/str::repeat (fn (s n) (prim str/repeat s n)))
+(def core/str::join (fn (v sep) (prim str/join v sep)))
 (def core/bytes::len (fn (b) (prim bytes/len b)))
 (def core/bytes::concat (fn (a b) (prim bytes/concat a b)))
 (def core/bytes::get (fn (b i) (prim bytes/get b i)))
@@ -67,6 +74,8 @@
 (def core/bytes::to-hex (fn (b) (prim bytes/to-hex b)))
 (def core/bytes::from-hex (fn (s) (prim bytes/from-hex s)))
 (def core/crypto::blake3 (fn (b) (prim crypto/blake3 b)))
+(def core/coreform::escape-str (fn (s) (prim coreform/escape-str s)))
+(def core/coreform::escape-bytes (fn (b) (prim coreform/escape-bytes b)))
 
 ; ---------
 ; Test DSL

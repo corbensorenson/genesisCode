@@ -277,3 +277,90 @@ fn bytes_from_hex_invalid_is_sealed_type_error() {
         _ => panic!("expected sealed error, got {}", v.debug_repr()),
     }
 }
+
+#[test]
+fn term_introspection_and_escape_prims_work() {
+    let forms = parse_module(
+        r#"
+      {
+        :t_nil (prim data/tag nil)
+        :t_int (prim data/tag 1)
+        :pl_ok (prim pair/as-proper-list (quote (1 2)))
+        :pl_bad (prim pair/as-proper-list (prim pair/cons 1 2))
+        :entries (prim map/entries (quote {:b 2 :a 1}))
+        :sym_s (prim sym/to-str 'foo/bar::x)
+        :es (prim coreform/escape-str "a\n\"")
+        :eb (prim coreform/escape-bytes b"\x00\"\\")
+        :rep (prim str/repeat " " 3)
+        :join (prim str/join ["a" "b"] ",")
+      }
+    "#,
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+
+    let m = match v {
+        Value::Map(m) => m
+            .into_iter()
+            .map(|(k, v)| (k, v.as_data().cloned().unwrap_or(Term::Nil)))
+            .collect::<std::collections::BTreeMap<_, _>>(),
+        Value::Data(Term::Map(m)) => m,
+        _ => panic!("expected map, got {}", v.debug_repr()),
+    };
+
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":t_nil"))),
+        Some(Term::Symbol(s)) if s == "nil"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":t_int"))),
+        Some(Term::Symbol(s)) if s == "int"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":pl_bad"))),
+        Some(Term::Nil)
+    ));
+    let Term::Vector(pl) = m
+        .get(&gc_coreform::TermOrdKey(Term::symbol(":pl_ok")))
+        .unwrap()
+    else {
+        panic!("expected vector from pair/as-proper-list");
+    };
+    assert_eq!(pl.len(), 2);
+
+    let Term::Vector(entries) = m
+        .get(&gc_coreform::TermOrdKey(Term::symbol(":entries")))
+        .unwrap()
+    else {
+        panic!("expected entries vector");
+    };
+    assert_eq!(entries.len(), 2);
+    let Term::Vector(e0) = &entries[0] else {
+        panic!("expected entry[0] vector");
+    };
+    assert!(matches!(e0.first(), Some(Term::Symbol(s)) if s == ":a"));
+    assert!(matches!(e0.get(1), Some(Term::Int(i)) if i == &1.into()));
+
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":sym_s"))),
+        Some(Term::Str(s)) if s == "foo/bar::x"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":es"))),
+        Some(Term::Str(s)) if s == "a\\n\\\""
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":eb"))),
+        Some(Term::Str(s)) if s == "\\x00\\\"\\\\"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":rep"))),
+        Some(Term::Str(s)) if s == "   "
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":join"))),
+        Some(Term::Str(s)) if s == "a,b"
+    ));
+}
