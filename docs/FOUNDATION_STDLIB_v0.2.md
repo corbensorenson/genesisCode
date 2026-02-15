@@ -1,6 +1,7 @@
 # Foundation Standard Library (Level 1) v0.2
 
-Status: design target (medium-confidence input; evolves with implementation).
+Status: partially implemented (v0.2). This doc is normative for the intended stable surface, and is
+kept in sync with the current prelude as it lands.
 
 This document defines the *Level 1 (Foundation)* standard library surface. The point is not to be
 "big", but to be **canonical** and **uniform** so higher-level stacks do not re-invent basics and
@@ -126,6 +127,5 @@ The primitive capability surface is effect ops:
 Foundation should provide:
 
 - stable schemas (docs)
-- convenience wrappers in GenesisCode that construct these effect programs uniformly
+- convenience wrappers in GenesisCode that construct these effect programs uniformly (implemented in `prelude/prelude.gc`)
 - obligation profiles and policy defaults
-
