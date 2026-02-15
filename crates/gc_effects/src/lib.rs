@@ -1,12 +1,14 @@
 mod error;
 mod log;
 mod policy;
+mod refs;
 mod runner;
 mod store;
 
 pub use crate::error::EffectsError;
 pub use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 pub use crate::policy::{CapsPolicy, OpPolicy};
+pub use crate::refs::{RefEntry, RefsDb, SetResult};
 pub use crate::runner::{RunResult, replay, replay_with_store, run};
 pub use crate::store::ArtifactStore;
 

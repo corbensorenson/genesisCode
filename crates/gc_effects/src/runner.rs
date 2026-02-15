@@ -9,6 +9,7 @@ use num_bigint::BigInt;
 use crate::error::EffectsError;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
+use crate::refs::{RefsDb, SetResult};
 use crate::store::ArtifactStore;
 
 pub struct RunResult {
@@ -27,6 +28,11 @@ pub fn run(
 
     let store = match policy.artifact_store_dir() {
         Some(sd) => Some(ArtifactStore::open(sd)?),
+        None => None,
+    };
+
+    let refs = match policy.refs_db_path() {
+        Some(p) => Some(RefsDb::open(p)?),
         None => None,
     };
 
@@ -72,8 +78,14 @@ pub fn run(
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = cap_term(&req.op, pol)?;
-                    let resp =
-                        call_capability(&req.op, &req.payload, pol, store.as_ref(), proto.error)?;
+                    let resp = call_capability(
+                        &req.op,
+                        &req.payload,
+                        pol,
+                        store.as_ref(),
+                        refs.as_ref(),
+                        proto.error,
+                    )?;
                     (
                         Decision::Allow,
                         cap_term,
@@ -269,6 +281,41 @@ fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Val
     }
 }
 
+fn mk_error_with_ctx(
+    error_tok: SealId,
+    code: &str,
+    msg: String,
+    op: Option<&str>,
+    extra_ctx: Term,
+) -> Value {
+    let Value::Sealed { token, payload } = mk_error(error_tok, code, msg, op) else {
+        unreachable!("mk_error must return sealed");
+    };
+    let Value::Data(Term::Map(mut m)) = *payload else {
+        return Value::Sealed {
+            token,
+            payload: Box::new(Value::Data(Term::Map(BTreeMap::new()))),
+        };
+    };
+    let mut ctxm = match m.remove(&TermOrdKey(Term::Symbol(":error/context".to_string()))) {
+        Some(Term::Map(mm)) => mm,
+        _ => BTreeMap::new(),
+    };
+    if let Term::Map(extra) = extra_ctx {
+        for (k, v) in extra {
+            ctxm.insert(k, v);
+        }
+    }
+    m.insert(
+        TermOrdKey(Term::Symbol(":error/context".to_string())),
+        Term::Map(ctxm),
+    );
+    Value::Sealed {
+        token,
+        payload: Box::new(Value::Data(Term::Map(m))),
+    }
+}
+
 fn logged_resp(
     policy: &CapsPolicy,
     op: &str,
@@ -450,6 +497,7 @@ fn call_capability(
     payload: &Term,
     pol: Option<&OpPolicy>,
     store: Option<&ArtifactStore>,
+    refs: Option<&RefsDb>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
@@ -514,6 +562,386 @@ fn call_capability(
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
             Ok(Value::Data(Term::Map(m)))
+        }
+        "core/refs::get" => {
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/refs::get".to_string())
+            })?;
+            let name = payload_refs_name(payload)?;
+            let h = refs.get(&name)?;
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":name".to_string())),
+                Term::Str(name),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":hash".to_string())),
+                h.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/refs::list" => {
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/refs::list".to_string())
+            })?;
+            let prefix = payload_refs_prefix(payload)?;
+            let xs = refs.list(prefix.as_deref())?;
+            let mut out = Vec::new();
+            for e in xs {
+                let mut m = BTreeMap::new();
+                m.insert(
+                    TermOrdKey(Term::Symbol(":name".to_string())),
+                    Term::Str(e.name),
+                );
+                m.insert(
+                    TermOrdKey(Term::Symbol(":hash".to_string())),
+                    e.hash.map(Term::Str).unwrap_or(Term::Nil),
+                );
+                out.push(Term::Map(m));
+            }
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":refs".to_string())),
+                Term::Vector(out),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/refs::set" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/refs::set".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/refs::set".to_string())
+            })?;
+
+            let name = payload_refs_name(payload)?;
+            let new_hash = payload_refs_hash(payload)?;
+            let expected_old = payload_refs_expected_old(payload)?;
+            let policy_h = payload_refs_policy_hash(payload)?;
+
+            let pol_term = match store_get_term(store, &policy_h) {
+                Ok(t) => t,
+                Err(_) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/policy-not-found",
+                        format!("policy artifact not found: {policy_h}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let pol = match gc_vcs::Policy::from_term(&pol_term) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/bad-policy",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if pol.is_frozen_ref(&name) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/refs/frozen",
+                    format!("ref is frozen by policy: {name}"),
+                    Some(op),
+                ));
+            }
+            let class = match pol.class_for_ref(&name) {
+                Some(c) => c,
+                None => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/no-class",
+                        format!("policy has no matching class for ref {name}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            if let Some(h) = &new_hash {
+                let commit_term = match store_get_term(store, h) {
+                    Ok(t) => t,
+                    Err(_) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/commit-not-found",
+                            format!("commit artifact not found: {h}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                let commit = match gc_vcs::Commit::from_term(&commit_term) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/bad-commit",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+
+                for req in &class.required_obligations {
+                    if !commit.obligations.iter().any(|o| o == req) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/missing-obligation",
+                            format!("commit missing required obligation: {req}"),
+                            Some(op),
+                        ));
+                    }
+                }
+                if !class.required_obligations.is_empty() && commit.evidence.is_empty() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/missing-evidence",
+                        "commit has required obligations but no evidence".to_string(),
+                        Some(op),
+                    ));
+                }
+                for ev_h in &commit.evidence {
+                    if store.path_for(ev_h).exists() {
+                        if store.verify_hex(ev_h).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("evidence artifact corrupted: {ev_h}"),
+                                Some(op),
+                            ));
+                        }
+                    } else {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-found",
+                            format!("evidence artifact not found: {ev_h}"),
+                            Some(op),
+                        ));
+                    }
+                    let ev_t = match store_get_term(store, ev_h) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/refs/bad-evidence",
+                                format!("evidence artifact is not a valid CoreForm term: {ev_h}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if let Err(e) = gc_vcs::Evidence::from_term(&ev_t) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/bad-evidence",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                }
+
+                if class.require_signatures {
+                    let signing_h = match gc_vcs::commit_signing_hash(&commit_term) {
+                        Ok(hh) => hh,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/refs/bad-commit",
+                                format!("{e}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let mut valid: u64 = 0;
+                    let mut seen_pks: std::collections::BTreeSet<Vec<u8>> =
+                        std::collections::BTreeSet::new();
+                    for at_h in &commit.attestations {
+                        if store.path_for(at_h).exists() {
+                            if store.verify_hex(at_h).is_err() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/corruption",
+                                    format!("attestation artifact corrupted: {at_h}"),
+                                    Some(op),
+                                ));
+                            }
+                        } else {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("attestation artifact not found: {at_h}"),
+                                Some(op),
+                            ));
+                        }
+                        let at_t = match store_get_term(store, at_h) {
+                            Ok(t) => t,
+                            Err(_) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/refs/bad-attestation",
+                                    format!(
+                                        "attestation artifact is not a valid CoreForm term: {at_h}"
+                                    ),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        let at = match gc_vcs::Attestation::from_term(&at_t) {
+                            Ok(a) => a,
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/refs/bad-attestation",
+                                    format!("{e}"),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        let pk_vec = at.pk.to_vec();
+                        if seen_pks.contains(&pk_vec) {
+                            continue;
+                        }
+                        if gc_vcs::verify_commit_attestation(
+                            &at,
+                            &signing_h,
+                            &class.allowed_public_keys,
+                        )
+                        .is_ok()
+                        {
+                            seen_pks.insert(pk_vec);
+                            valid = valid.saturating_add(1);
+                        }
+                    }
+                    if valid < class.min_signatures {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/insufficient-signatures",
+                            format!(
+                                "need {} valid signatures, got {valid}",
+                                class.min_signatures
+                            ),
+                            Some(op),
+                        ));
+                    }
+                }
+            }
+
+            match refs.set(
+                &name,
+                new_hash.as_deref(),
+                expected_old.as_ref().map(|x| x.as_deref()),
+            )? {
+                SetResult::Updated => {
+                    let mut m = BTreeMap::new();
+                    m.insert(
+                        TermOrdKey(Term::Symbol(":ok".to_string())),
+                        Term::Bool(true),
+                    );
+                    m.insert(
+                        TermOrdKey(Term::Symbol(":name".to_string())),
+                        Term::Str(name),
+                    );
+                    m.insert(
+                        TermOrdKey(Term::Symbol(":hash".to_string())),
+                        new_hash.map(Term::Str).unwrap_or(Term::Nil),
+                    );
+                    Ok(Value::Data(Term::Map(m)))
+                }
+                SetResult::Conflict { current } => Ok(mk_error_with_ctx(
+                    error_tok,
+                    "core/refs/conflict",
+                    "ref update conflict".to_string(),
+                    Some(op),
+                    Term::Map(
+                        [(
+                            TermOrdKey(Term::Symbol(":refs/current".to_string())),
+                            current.map(Term::Str).unwrap_or(Term::Nil),
+                        )]
+                        .into_iter()
+                        .collect(),
+                    ),
+                )),
+            }
+        }
+        "core/refs::delete" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/refs::delete".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/refs::delete".to_string())
+            })?;
+            let name = payload_refs_name(payload)?;
+            let expected_old = payload_refs_expected_old(payload)?;
+            let policy_h = payload_refs_policy_hash(payload)?;
+            let pol_term = match store_get_term(store, &policy_h) {
+                Ok(t) => t,
+                Err(_) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/policy-not-found",
+                        format!("policy artifact not found: {policy_h}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let pol = match gc_vcs::Policy::from_term(&pol_term) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/refs/bad-policy",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if pol.is_frozen_ref(&name) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/refs/frozen",
+                    format!("ref is frozen by policy: {name}"),
+                    Some(op),
+                ));
+            }
+            if pol.class_for_ref(&name).is_none() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/refs/no-class",
+                    format!("policy has no matching class for ref {name}"),
+                    Some(op),
+                ));
+            }
+
+            match refs.set(&name, None, expected_old.as_ref().map(|x| x.as_deref()))? {
+                SetResult::Updated => {
+                    let mut m = BTreeMap::new();
+                    m.insert(
+                        TermOrdKey(Term::Symbol(":ok".to_string())),
+                        Term::Bool(true),
+                    );
+                    m.insert(
+                        TermOrdKey(Term::Symbol(":name".to_string())),
+                        Term::Str(name),
+                    );
+                    Ok(Value::Data(Term::Map(m)))
+                }
+                SetResult::Conflict { current } => Ok(mk_error_with_ctx(
+                    error_tok,
+                    "core/refs/conflict",
+                    "ref delete conflict".to_string(),
+                    Some(op),
+                    Term::Map(
+                        [(
+                            TermOrdKey(Term::Symbol(":refs/current".to_string())),
+                            current.map(Term::Str).unwrap_or(Term::Nil),
+                        )]
+                        .into_iter()
+                        .collect(),
+                    ),
+                )),
+            }
         }
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
@@ -632,6 +1060,87 @@ fn payload_store_artifact(payload: &Term) -> Result<Term, EffectsError> {
         ));
     };
     Ok(t.clone())
+}
+
+fn store_get_term(store: &ArtifactStore, hex: &str) -> Result<Term, EffectsError> {
+    let bytes = store.get_bytes(hex)?;
+    let s = String::from_utf8(bytes)
+        .map_err(|_| EffectsError::Log("artifact bytes are not utf-8 term".to_string()))?;
+    gc_coreform::parse_term(&s).map_err(|e| EffectsError::Log(format!("bad artifact term: {e}")))
+}
+
+fn payload_refs_name(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/refs payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::Symbol(":name".to_string()))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err(EffectsError::Log(
+            "core/refs payload missing :name".to_string(),
+        )),
+    }
+}
+
+fn payload_refs_prefix(payload: &Term) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/refs payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::Symbol(":prefix".to_string()))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        _ => Err(EffectsError::Log(
+            "core/refs payload :prefix must be string or nil".to_string(),
+        )),
+    }
+}
+
+fn payload_refs_hash(payload: &Term) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/refs payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::Symbol(":hash".to_string()))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        _ => Err(EffectsError::Log(
+            "core/refs payload :hash must be string or nil".to_string(),
+        )),
+    }
+}
+
+fn payload_refs_expected_old(payload: &Term) -> Result<Option<Option<String>>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/refs payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::Symbol(":expected-old".to_string()))) {
+        None => Ok(None),
+        Some(Term::Nil) => Ok(Some(None)),
+        Some(Term::Str(s)) => Ok(Some(Some(s.clone()))),
+        _ => Err(EffectsError::Log(
+            "core/refs payload :expected-old must be string, nil, or absent".to_string(),
+        )),
+    }
+}
+
+fn payload_refs_policy_hash(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::Log(
+            "core/refs payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::Symbol(":policy".to_string()))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err(EffectsError::Log(
+            "core/refs payload missing :policy".to_string(),
+        )),
+    }
 }
 
 fn with_timeout<T, F>(timeout_ms: u64, f: F) -> Result<Option<T>, EffectsError>

@@ -7,6 +7,7 @@ This file defines the *deny-by-default* capability policy used by `genesis run` 
 - `allow` (required): array of strings. Each string is a fully-qualified op symbol, e.g. `"sys/time::now"`.
 - `log` (optional): table controlling effect log behavior (see below).
 - `store` (optional): table controlling the artifact store used by `core/store::*` capabilities (see below).
+- `refs` (optional): table controlling the local refs database used by `core/refs::*` capabilities (see below).
 
 Example:
 ```toml
@@ -23,6 +24,18 @@ Example:
 ```toml
 [store]
 dir = "./.genesis/store"
+```
+
+## Refs Policy (`[refs]`)
+
+Supported keys:
+- `path` (string): local refs database file used by `core/refs::*`.
+  - If omitted, defaults to `<caps.toml directory>/.genesis/refs.gc`.
+
+Example:
+```toml
+[refs]
+path = "./.genesis/refs.gc"
 ```
 
 ## Log Policy (`[log]`)

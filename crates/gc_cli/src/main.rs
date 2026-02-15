@@ -219,6 +219,20 @@ enum Cmd {
         #[command(subcommand)]
         cmd: StoreCmd,
     },
+
+    /// Manage refs (branches/tags) as effectful operations (policy-gated).
+    Refs {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: RefsCmd,
+    },
 }
 
 #[derive(Subcommand)]
@@ -241,6 +255,47 @@ enum StoreCmd {
     Has {
         /// Content hash (hex).
         hash: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum RefsCmd {
+    /// Get a ref value.
+    Get {
+        /// Ref name (e.g. refs/heads/main).
+        name: String,
+    },
+    /// List refs (optionally filtered by prefix).
+    List {
+        /// Prefix filter (e.g. refs/heads/).
+        #[arg(long)]
+        prefix: Option<String>,
+    },
+    /// Advance a ref to a commit hash (policy-gated).
+    Set {
+        /// Ref name.
+        name: String,
+        /// Commit hash (hex).
+        hash: String,
+        /// Policy artifact hash (hex).
+        #[arg(long)]
+        policy: String,
+        /// Optional optimistic concurrency check. Pass a hex hash, or the literal string `nil`
+        /// to require the ref to be unset.
+        #[arg(long)]
+        expected_old: Option<String>,
+    },
+    /// Delete a ref (policy-gated).
+    Delete {
+        /// Ref name.
+        name: String,
+        /// Policy artifact hash (hex).
+        #[arg(long)]
+        policy: String,
+        /// Optional optimistic concurrency check. Pass a hex hash, or the literal string `nil`
+        /// to require the ref to be unset.
+        #[arg(long)]
+        expected_old: Option<String>,
     },
 }
 
@@ -355,6 +410,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             *scan_store,
         ),
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps, log.as_deref(), cmd),
+        Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps, log.as_deref(), cmd),
     }
 }
 
@@ -768,6 +824,148 @@ fn cmd_store(
     })
 }
 
+fn cmd_refs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &RefsCmd) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        RefsCmd::Get { name } => (
+            mk_refs_get_program(name),
+            "genesis/refs-get-v0.1",
+            "refs-get",
+        ),
+        RefsCmd::List { prefix } => (
+            mk_refs_list_program(prefix.as_deref()),
+            "genesis/refs-list-v0.1",
+            "refs-list",
+        ),
+        RefsCmd::Set {
+            name,
+            hash,
+            policy,
+            expected_old,
+        } => (
+            mk_refs_set_program(name, hash, policy, expected_old.as_deref()),
+            "genesis/refs-set-v0.1",
+            "refs-set",
+        ),
+        RefsCmd::Delete {
+            name,
+            policy,
+            expected_old,
+        } => (
+            mk_refs_delete_program(name, policy, expected_old.as_deref()),
+            "genesis/refs-delete-v0.1",
+            "refs-delete",
+        ),
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = log
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_log_path(log_op));
+    std::fs::write(&log_path, r.log.to_string_canonical() + "\n")
+        .with_context(|| format!("write {}", log_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENIED;
+        }
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        match cmd {
+            RefsCmd::Get { .. } => extract_refs_get_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            RefsCmd::List { .. } => extract_refs_list_pairs(&r.value)
+                .map(|pairs| {
+                    let mut s = String::new();
+                    for (n, h) in pairs {
+                        s.push_str(&n);
+                        s.push(' ');
+                        s.push_str(&h);
+                        s.push('\n');
+                    }
+                    s
+                })
+                .unwrap_or_else(|| format!("{value}\n")),
+            RefsCmd::Set { .. } => {
+                if ok {
+                    extract_refs_set_hash(&r.value)
+                        .map(|h| format!("{h}\n"))
+                        .unwrap_or_else(|| "ok\n".to_string())
+                } else {
+                    format!("{value}\n")
+                }
+            }
+            RefsCmd::Delete { .. } => {
+                if ok {
+                    "ok\n".to_string()
+                } else {
+                    format!("{value}\n")
+                }
+            }
+        }
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "refs/error",
+                message: "refs operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn mk_store_put_program(artifact: &Term) -> Vec<Term> {
     // (def prog (core/effect::perform 'core/store::put {:artifact (quote <artifact>)} (fn (r) (core/effect::pure r)))) prog
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::put")]);
@@ -858,6 +1056,171 @@ fn extract_store_get_artifact(v: &Value) -> Option<Term> {
     let Term::Map(m) = t else { return None };
     m.get(&gc_coreform::TermOrdKey(Term::symbol(":artifact")))
         .cloned()
+}
+
+fn mk_refs_get_program(name: &str) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/refs::get")]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":name")),
+            Term::Str(name.to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_refs_list_program(prefix: Option<&str>) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/refs::list")]);
+    let mut m = std::collections::BTreeMap::new();
+    if let Some(p) = prefix {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":prefix")),
+            Term::Str(p.to_string()),
+        );
+    } else {
+        m.insert(gc_coreform::TermOrdKey(Term::symbol(":prefix")), Term::Nil);
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_refs_set_program(
+    name: &str,
+    hash: &str,
+    policy: &str,
+    expected_old: Option<&str>,
+) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/refs::set")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":name")),
+        Term::Str(name.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":hash")),
+        Term::Str(hash.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":policy")),
+        Term::Str(policy.to_string()),
+    );
+    if let Some(e) = expected_old {
+        let v = if e == "nil" {
+            Term::Nil
+        } else {
+            Term::Str(e.to_string())
+        };
+        m.insert(gc_coreform::TermOrdKey(Term::symbol(":expected-old")), v);
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_refs_delete_program(name: &str, policy: &str, expected_old: Option<&str>) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/refs::delete"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":name")),
+        Term::Str(name.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":policy")),
+        Term::Str(policy.to_string()),
+    );
+    if let Some(e) = expected_old {
+        let v = if e == "nil" {
+            Term::Nil
+        } else {
+            Term::Str(e.to_string())
+        };
+        m.insert(gc_coreform::TermOrdKey(Term::symbol(":expected-old")), v);
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn extract_refs_get_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":hash"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        Some(Term::Nil) => Some("nil".to_string()),
+        _ => None,
+    }
+}
+
+fn extract_refs_set_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":hash"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        Some(Term::Nil) => Some("nil".to_string()),
+        _ => None,
+    }
+}
+
+fn extract_refs_list_pairs(v: &Value) -> Option<Vec<(String, String)>> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    let Term::Vector(xs) = m.get(&gc_coreform::TermOrdKey(Term::symbol(":refs")))? else {
+        return None;
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        let Term::Map(em) = x else { return None };
+        let name = match em.get(&gc_coreform::TermOrdKey(Term::symbol(":name"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => return None,
+        };
+        let hash = match em.get(&gc_coreform::TermOrdKey(Term::symbol(":hash"))) {
+            Some(Term::Str(s)) => s.clone(),
+            Some(Term::Nil) => "nil".to_string(),
+            _ => return None,
+        };
+        out.push((name, hash));
+    }
+    Some(out)
 }
 
 fn cmd_replay(

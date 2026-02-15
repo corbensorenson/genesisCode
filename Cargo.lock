@@ -457,6 +457,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "gc_cli"
 version = "0.1.0"
 dependencies = [
@@ -497,13 +507,18 @@ name = "gc_effects"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64ct",
  "blake3",
+ "ed25519-dalek",
+ "fs2",
  "gc_coreform",
  "gc_kernel",
  "gc_prelude",
+ "gc_vcs",
  "num-bigint",
  "num-traits",
  "proptest",
+ "rand_core 0.6.4",
  "serde",
  "tempfile",
  "thiserror 2.0.18",
@@ -604,6 +619,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gc_vcs"
+version = "0.1.0"
+dependencies = [
+ "base64ct",
+ "blake3",
+ "ed25519-dalek",
+ "gc_coreform",
+ "globset",
+ "num-traits",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -647,6 +675,19 @@ dependencies = [
  "r-efi",
  "wasip2",
  "wasip3",
+]
+
+[[package]]
+name = "globset"
+version = "0.4.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52dfc19153a48bde0cbd630453615c8151bce3a5adfac7a0aebfbf0a1e1f57e3"
+dependencies = [
+ "aho-corasick",
+ "bstr",
+ "log",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]

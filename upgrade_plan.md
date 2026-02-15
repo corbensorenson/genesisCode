@@ -121,8 +121,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
   - [ ] Optional remote-backed store adapter using the minimal registry protocol.
 - [ ] Refs capability (`core/refs::*`) as runner effects:
-  - [ ] Local refs database with atomic CAS-style `set` and stable serialization.
-  - [ ] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.
+  - [x] Local refs database with atomic CAS-style `set` and stable serialization.
+  - [x] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.
 - [ ] Sync capability (`core/sync::*`) as runner effects:
   - [ ] `push/pull` artifact transfer using reachability closure planning.
   - [ ] Remote refs updates via registry `refs/set` with CAS.

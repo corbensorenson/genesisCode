@@ -1,0 +1,349 @@
+use std::collections::BTreeMap;
+
+use blake3::Hasher;
+use gc_coreform::{Term, TermOrdKey, print_term};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum SchemaError {
+    #[error("schema error: {0}")]
+    Bad(String),
+}
+
+fn req_map<'a>(t: &'a Term, what: &str) -> Result<&'a BTreeMap<TermOrdKey, Term>, SchemaError> {
+    match t {
+        Term::Map(m) => Ok(m),
+        _ => Err(SchemaError::Bad(format!(
+            "{what}: expected map, got {}",
+            print_term(t)
+        ))),
+    }
+}
+
+fn get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
+    m.get(&TermOrdKey(Term::symbol(k)))
+}
+
+fn req_sym(m: &BTreeMap<TermOrdKey, Term>, k: &str, what: &str) -> Result<String, SchemaError> {
+    match get(m, k) {
+        Some(Term::Symbol(s)) => Ok(s.clone()),
+        Some(other) => Err(SchemaError::Bad(format!(
+            "{what}: {k} must be symbol, got {}",
+            print_term(other)
+        ))),
+        None => Err(SchemaError::Bad(format!("{what}: missing {k}"))),
+    }
+}
+
+fn req_int(m: &BTreeMap<TermOrdKey, Term>, k: &str, what: &str) -> Result<i64, SchemaError> {
+    match get(m, k) {
+        Some(Term::Int(i)) => {
+            use num_traits::ToPrimitive;
+            i.to_i64()
+                .ok_or_else(|| SchemaError::Bad(format!("{what}: {k} out of range")))
+        }
+        Some(other) => Err(SchemaError::Bad(format!(
+            "{what}: {k} must be int, got {}",
+            print_term(other)
+        ))),
+        None => Err(SchemaError::Bad(format!("{what}: missing {k}"))),
+    }
+}
+
+fn opt_vec_str(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+    what: &str,
+) -> Result<Vec<String>, SchemaError> {
+    let Some(t) = get(m, k) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(SchemaError::Bad(format!(
+            "{what}: {k} must be vector, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        match x {
+            Term::Str(s) => out.push(s.clone()),
+            Term::Symbol(s) => out.push(s.clone()),
+            _ => {
+                return Err(SchemaError::Bad(format!(
+                    "{what}: {k} entries must be str/sym, got {}",
+                    print_term(x)
+                )));
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn opt_vec_hex(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+    what: &str,
+) -> Result<Vec<String>, SchemaError> {
+    let Some(t) = get(m, k) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(SchemaError::Bad(format!(
+            "{what}: {k} must be vector, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        let Term::Str(s) = x else {
+            return Err(SchemaError::Bad(format!(
+                "{what}: {k} entries must be hex strings, got {}",
+                print_term(x)
+            )));
+        };
+        validate_hex_hash(s).map_err(|e| SchemaError::Bad(format!("{what}: {k}: {e}")))?;
+        out.push(s.clone());
+    }
+    Ok(out)
+}
+
+pub fn validate_hex_hash(s: &str) -> Result<(), String> {
+    let t = s.trim();
+    if t.len() != 64 || !t.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(format!("invalid hash: {t}"));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct Commit {
+    pub parents: Vec<String>,
+    pub base: Option<String>,
+    pub patch: String,
+    pub result: String,
+    pub obligations: Vec<String>,
+    pub evidence: Vec<String>,
+    pub attestations: Vec<String>,
+    pub message: String,
+}
+
+impl Commit {
+    pub fn from_term(t: &Term) -> Result<Self, SchemaError> {
+        let m = req_map(t, "commit")?;
+        let ty = req_sym(m, ":type", "commit")?;
+        if ty != ":vcs/commit" {
+            return Err(SchemaError::Bad(format!("commit: wrong :type {ty}")));
+        }
+        let v = req_int(m, ":v", "commit")?;
+        if v != 1 {
+            return Err(SchemaError::Bad(format!("commit: unsupported :v {v}")));
+        }
+
+        let parents = opt_vec_hex(m, ":parents", "commit")?;
+        let base = match get(m, ":base") {
+            None => None,
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("commit: :base: {e}")))?;
+                Some(s.clone())
+            }
+            Some(Term::Nil) => None,
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "commit: :base must be hex string or nil, got {}",
+                    print_term(other)
+                )));
+            }
+        };
+        let patch = match get(m, ":patch") {
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("commit: :patch: {e}")))?;
+                s.clone()
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "commit: :patch must be hex string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("commit: missing :patch".to_string())),
+        };
+        let result = match get(m, ":result") {
+            Some(Term::Str(s)) => {
+                validate_hex_hash(s)
+                    .map_err(|e| SchemaError::Bad(format!("commit: :result: {e}")))?;
+                s.clone()
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "commit: :result must be hex string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("commit: missing :result".to_string())),
+        };
+
+        let obligations = opt_vec_str(m, ":obligations", "commit")?;
+        let evidence = opt_vec_hex(m, ":evidence", "commit")?;
+        let attestations = opt_vec_hex(m, ":attestations", "commit")?;
+
+        let message = match get(m, ":message") {
+            Some(Term::Str(s)) => s.clone(),
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "commit: :message must be string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("commit: missing :message".to_string())),
+        };
+
+        Ok(Self {
+            parents,
+            base,
+            patch,
+            result,
+            obligations,
+            evidence,
+            attestations,
+            message,
+        })
+    }
+}
+
+/// Compute the stable "signing hash" for a `:vcs/commit` artifact.
+///
+/// This avoids self-referential cycles by hashing the canonical commit term with `:attestations`
+/// forced to `[]` (regardless of what the stored commit contains).
+pub fn commit_signing_hash(commit_term: &Term) -> Result<[u8; 32], SchemaError> {
+    let Term::Map(m) = commit_term else {
+        return Err(SchemaError::Bad(
+            "commit_signing_hash: expected map".to_string(),
+        ));
+    };
+    let ty = req_sym(m, ":type", "commit")?;
+    if ty != ":vcs/commit" {
+        return Err(SchemaError::Bad(
+            "commit_signing_hash: not a :vcs/commit".to_string(),
+        ));
+    }
+    let mut mm = m.clone();
+    mm.insert(
+        TermOrdKey(Term::symbol(":attestations")),
+        Term::Vector(Vec::new()),
+    );
+    let canonical = print_term(&Term::Map(mm));
+    let mut h = Hasher::new();
+    h.update(b"GCv0.2\0vcs\0commit-signing-hash\0");
+    h.update(canonical.as_bytes());
+    Ok(*h.finalize().as_bytes())
+}
+
+#[derive(Debug, Clone)]
+pub struct Evidence {
+    pub kind: String,
+}
+
+impl Evidence {
+    pub fn from_term(t: &Term) -> Result<Self, SchemaError> {
+        let m = req_map(t, "evidence")?;
+        let ty = req_sym(m, ":type", "evidence")?;
+        if ty != ":vcs/evidence" {
+            return Err(SchemaError::Bad(format!("evidence: wrong :type {ty}")));
+        }
+        let v = req_int(m, ":v", "evidence")?;
+        if v != 1 {
+            return Err(SchemaError::Bad(format!("evidence: unsupported :v {v}")));
+        }
+        let kind = req_sym(m, ":kind", "evidence")?;
+        Ok(Self { kind })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Attestation {
+    pub alg: String,
+    pub signing_hash: [u8; 32],
+    pub pk: [u8; 32],
+    pub sig: [u8; 64],
+}
+
+impl Attestation {
+    pub fn from_term(t: &Term) -> Result<Self, SchemaError> {
+        let m = req_map(t, "attestation")?;
+        let ty = req_sym(m, ":type", "attestation")?;
+        if ty != ":vcs/attestation" {
+            return Err(SchemaError::Bad(format!("attestation: wrong :type {ty}")));
+        }
+        let v = req_int(m, ":v", "attestation")?;
+        if v != 1 {
+            return Err(SchemaError::Bad(format!("attestation: unsupported :v {v}")));
+        }
+        let alg = match get(m, ":alg") {
+            Some(Term::Str(s)) => s.clone(),
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "attestation: :alg must be string, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("attestation: missing :alg".to_string())),
+        };
+        let signing_hash = match get(m, ":signing-h") {
+            Some(Term::Bytes(b)) if b.len() == 32 => {
+                let mut out = [0u8; 32];
+                out.copy_from_slice(b);
+                out
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "attestation: :signing-h must be 32-byte bytes, got {}",
+                    print_term(other)
+                )));
+            }
+            None => {
+                return Err(SchemaError::Bad(
+                    "attestation: missing :signing-h".to_string(),
+                ));
+            }
+        };
+
+        let pk = match get(m, ":pk") {
+            Some(Term::Bytes(b)) if b.len() == 32 => {
+                let mut out = [0u8; 32];
+                out.copy_from_slice(b);
+                out
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "attestation: :pk must be 32-byte bytes, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("attestation: missing :pk".to_string())),
+        };
+        let sig = match get(m, ":sig") {
+            Some(Term::Bytes(b)) if b.len() == 64 => {
+                let mut out = [0u8; 64];
+                out.copy_from_slice(b);
+                out
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "attestation: :sig must be 64-byte bytes, got {}",
+                    print_term(other)
+                )));
+            }
+            None => return Err(SchemaError::Bad("attestation: missing :sig".to_string())),
+        };
+
+        Ok(Self {
+            alg,
+            signing_hash,
+            pk,
+            sig,
+        })
+    }
+}

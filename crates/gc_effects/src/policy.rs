@@ -8,6 +8,7 @@ pub struct CapsPolicy {
     ops: BTreeMap<String, OpPolicy>,
     pub log: LogPolicy,
     pub store: StorePolicy,
+    pub refs: RefsPolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +31,12 @@ pub struct StorePolicy {
 }
 
 #[derive(Debug, Clone)]
+pub struct RefsPolicy {
+    /// Local refs database file used by `core/refs::*` capabilities.
+    pub path: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
     pub create_dirs: bool,
@@ -47,6 +54,7 @@ impl CapsPolicy {
                 store_dir: None,
             },
             store: StorePolicy { dir: None },
+            refs: RefsPolicy { path: None },
         }
     }
 
@@ -75,6 +83,10 @@ impl CapsPolicy {
         self.store.dir.as_deref().or(self.log.store_dir.as_deref())
     }
 
+    pub fn refs_db_path(&self) -> Option<&Path> {
+        self.refs.path.as_deref()
+    }
+
     pub fn from_toml_str(s: &str) -> Result<Self, EffectsError> {
         let v: toml::Value =
             toml::from_str(s).map_err(|e| EffectsError::Log(format!("caps.toml: {e}")))?;
@@ -87,6 +99,7 @@ impl CapsPolicy {
         let mut ops: BTreeMap<String, OpPolicy> = BTreeMap::new();
         let log = parse_log_policy(tbl)?;
         let store = parse_store_policy(tbl)?;
+        let refs = parse_refs_policy(tbl)?;
 
         // Baseline allowlist.
         if let Some(arr) = tbl.get("allow").and_then(|v| v.as_array()) {
@@ -119,7 +132,13 @@ impl CapsPolicy {
         }
 
         for (k, v) in tbl {
-            if k == "version" || k == "allow" || k == "op" || k == "log" {
+            if k == "version"
+                || k == "allow"
+                || k == "op"
+                || k == "log"
+                || k == "store"
+                || k == "refs"
+            {
                 continue;
             }
             if let Some(_cfg_tbl) = v.as_table() {
@@ -127,7 +146,12 @@ impl CapsPolicy {
             }
         }
 
-        Ok(Self { ops, log, store })
+        Ok(Self {
+            ops,
+            log,
+            store,
+            refs,
+        })
     }
 
     pub fn load(path: &Path) -> Result<Self, EffectsError> {
@@ -140,6 +164,9 @@ impl CapsPolicy {
         }
         if pol.store.dir.is_none() {
             pol.store.dir = Some(base.join(".genesis").join("store"));
+        }
+        if pol.refs.path.is_none() {
+            pol.refs.path = Some(base.join(".genesis").join("refs.gc"));
         }
         Ok(pol)
     }
@@ -154,6 +181,11 @@ impl CapsPolicy {
             && sd.is_relative()
         {
             self.store.dir = Some(base.join(sd));
+        }
+        if let Some(rp) = &self.refs.path
+            && rp.is_relative()
+        {
+            self.refs.path = Some(base.join(rp));
         }
         for p in self.ops.values_mut() {
             if let Some(bd) = &p.base_dir
@@ -208,6 +240,20 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         .and_then(|x| x.as_str())
         .map(PathBuf::from);
     Ok(StorePolicy { dir })
+}
+
+fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsError> {
+    let Some(v) = tbl.get("refs") else {
+        return Ok(RefsPolicy { path: None });
+    };
+    let refs_tbl = v
+        .as_table()
+        .ok_or_else(|| EffectsError::Log("caps.toml: refs must be a table".to_string()))?;
+    let path = refs_tbl
+        .get("path")
+        .and_then(|x| x.as_str())
+        .map(PathBuf::from);
+    Ok(RefsPolicy { path })
 }
 
 fn apply_op_cfg(
