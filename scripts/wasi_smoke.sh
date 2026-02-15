@@ -19,6 +19,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 cp tests/spec/coreform/app_sugar.in.gc "$TMP_DIR/in.gc"
 cp tests/spec/coreform/app_sugar.out.gc "$TMP_DIR/out.gc"
+cp tests/spec/coreform/app_sugar.in.gc "$TMP_DIR/in2.gc"
 
 # fmt --check must fail on non-canonical input.
 set +e
@@ -30,9 +31,23 @@ if [[ "$CODE" -ne 11 ]]; then
   exit 1
 fi
 
+# fmt --check must also fail on non-canonical input when using the self-host engine.
+set +e
+wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in2.gc" --check --engine selfhost >/dev/null 2>&1
+CODE=$?
+set -e
+if [[ "$CODE" -ne 11 ]]; then
+  echo "expected fmt --check --engine selfhost to exit 11, got $CODE" >&2
+  exit 1
+fi
+
 # fmt should rewrite to canonical output.
 wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in.gc" >/dev/null
 diff -u "$TMP_DIR/out.gc" "$TMP_DIR/in.gc" >/dev/null
+
+# fmt should rewrite to canonical output with the self-host engine as well.
+wasmtime --dir "$TMP_DIR" "$WASM_BIN" fmt "$TMP_DIR/in2.gc" --engine selfhost >/dev/null
+diff -u "$TMP_DIR/out.gc" "$TMP_DIR/in2.gc" >/dev/null
 
 # vcs hash should match native genesis for the same file.
 NATIVE_HASH="$(cargo run -p gc_cli --quiet -- vcs hash --in tests/spec/coreform/map_order.in.gc | tr -d '\n')"

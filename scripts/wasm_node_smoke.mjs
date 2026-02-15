@@ -18,6 +18,10 @@ const wasm = require(modPath);
 
 assert.equal(typeof wasm.fmt_coreform_term, "function");
 assert.equal(typeof wasm.hash_coreform_term, "function");
+assert.equal(typeof wasm.fmt_coreform_module, "function");
+assert.equal(typeof wasm.hash_coreform_module, "function");
+assert.equal(typeof wasm.fmt_coreform_module_selfhost, "function");
+assert.equal(typeof wasm.hash_coreform_module_selfhost, "function");
 assert.equal(typeof wasm.Runtime, "function");
 
 // Term fmt/hash idempotency and canonical hashing invariants.
@@ -30,6 +34,22 @@ const h0 = wasm.hash_coreform_term(t0);
 const h1 = wasm.hash_coreform_term(fmt1);
 assert.ok(isHex32(h0), "hash_coreform_term should be 64-hex");
 assert.equal(h1, h0, "hash_coreform_term should canonicalize inputs");
+
+// Module fmt/hash equivalence between rust frontend and self-host toolchain.
+const m0 = `
+  ; messy module input (canonical output must be stable)
+  (def  m::x   1)
+  (def m::y (prim int/add m::x 2))
+  m::y
+`;
+const mfmtRust = wasm.fmt_coreform_module(m0);
+const mfmtSelf = wasm.fmt_coreform_module_selfhost(m0, 5_000_000);
+assert.equal(mfmtSelf, mfmtRust, "selfhost module fmt must match rust module fmt");
+
+const mhRust = wasm.hash_coreform_module(m0);
+const mhSelf = wasm.hash_coreform_module_selfhost(m0, 5_000_000);
+assert.ok(isHex32(mhRust), "hash_coreform_module should be 64-hex");
+assert.equal(mhSelf, mhRust, "selfhost module hash must match rust module hash");
 
 // Effectful stepping smoke test (host denies, kernel constructs sealed ERROR).
 const src = `
@@ -60,4 +80,3 @@ assert.ok(
 assert.ok(isHex32(resumed.next.value_h));
 
 process.stdout.write("ok\n");
-

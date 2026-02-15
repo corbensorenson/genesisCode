@@ -71,6 +71,10 @@ async function writeHarnessHtml(outDir) {
 
           if (typeof mod.fmt_coreform_term !== "function") throw new Error("missing fmt_coreform_term");
           if (typeof mod.hash_coreform_term !== "function") throw new Error("missing hash_coreform_term");
+          if (typeof mod.fmt_coreform_module !== "function") throw new Error("missing fmt_coreform_module");
+          if (typeof mod.hash_coreform_module !== "function") throw new Error("missing hash_coreform_module");
+          if (typeof mod.fmt_coreform_module_selfhost !== "function") throw new Error("missing fmt_coreform_module_selfhost");
+          if (typeof mod.hash_coreform_module_selfhost !== "function") throw new Error("missing hash_coreform_module_selfhost");
           if (typeof mod.Runtime !== "function") throw new Error("missing Runtime");
 
           const t0 = "{:b 2 :a 1}";
@@ -82,6 +86,21 @@ async function writeHarnessHtml(outDir) {
           const h1 = mod.hash_coreform_term(fmt1);
           if (!isHex32(h0)) throw new Error("hash_coreform_term must be 64-hex");
           if (h1 !== h0) throw new Error("hash_coreform_term should canonicalize inputs");
+
+          const m0 = \`
+            ; messy module input (canonical output must be stable)
+            (def  m::x   1)
+            (def m::y (prim int/add m::x 2))
+            m::y
+          \`;
+          const mfmtRust = mod.fmt_coreform_module(m0);
+          const mfmtSelf = mod.fmt_coreform_module_selfhost(m0, 5000000);
+          if (mfmtSelf !== mfmtRust) throw new Error("selfhost fmt must match rust fmt");
+
+          const mhRust = mod.hash_coreform_module(m0);
+          const mhSelf = mod.hash_coreform_module_selfhost(m0, 5000000);
+          if (!isHex32(mhRust)) throw new Error("hash_coreform_module must be 64-hex");
+          if (mhSelf !== mhRust) throw new Error("selfhost hash must match rust hash");
 
           const src = \`
             (core/effect::perform
