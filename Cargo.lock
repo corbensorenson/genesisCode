@@ -513,6 +513,7 @@ dependencies = [
  "fs2",
  "gc_coreform",
  "gc_kernel",
+ "gc_pkg",
  "gc_prelude",
  "gc_vcs",
  "num-bigint",
@@ -550,6 +551,7 @@ dependencies = [
  "gc_effects",
  "gc_kernel",
  "gc_opt",
+ "gc_pkg",
  "gc_prelude",
  "gc_types",
  "num-bigint",
@@ -587,8 +589,19 @@ dependencies = [
  "gc_coreform",
  "gc_kernel",
  "gc_obligations",
+ "gc_pkg",
  "num-traits",
  "proptest",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.18",
+ "toml",
+]
+
+[[package]]
+name = "gc_pkg"
+version = "0.1.0"
+dependencies = [
  "serde",
  "tempfile",
  "thiserror 2.0.18",
@@ -622,6 +635,7 @@ dependencies = [
 name = "gc_vcs"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "base64ct",
  "blake3",
  "ed25519-dalek",

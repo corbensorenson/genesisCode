@@ -78,6 +78,16 @@ base_dir = "./sandbox"
 create_dirs = true
 ```
 
+### `base_dir` For Non-`io/fs::*` Ops
+
+The runner also uses `base_dir` to sandbox filesystem paths carried in payloads for some non-`io/fs::*` ops:
+
+- `core/pkg::snapshot`: payload key `:pkg` (package.toml path)
+- `core/gpk::export`: payload key `:out` (output `.gpk` path)
+- `core/gpk::import`: payload key `:in` (input `.gpk` path)
+
+These payload paths must remain under `base_dir` after canonicalization, using the same rules as `io/fs::*`.
+
 Notes on `timeout_ms`:
 - Timeouts are enforced by running the capability in a background thread and waiting for a result.
 - If the timeout elapses, the runner returns a sealed ERROR response with code `core/caps/timeout` and records it in the log.

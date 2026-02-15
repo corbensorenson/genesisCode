@@ -39,7 +39,8 @@ pub fn verify_package_with_policy(
     policy: Option<&Path>,
     signatures: Option<&Path>,
 ) -> Result<PackageVerifyResult, ObligationError> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
+    let (manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
     let mut errors: Vec<String> = Vec::new();

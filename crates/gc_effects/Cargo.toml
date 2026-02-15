@@ -19,6 +19,7 @@ gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude" }
 gc_vcs = { path = "../gc_vcs" }
+gc_pkg = { path = "../gc_pkg" }
 
 [dev-dependencies]
 proptest = "1"

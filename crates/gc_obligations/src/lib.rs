@@ -1,5 +1,4 @@
 mod error;
-mod manifest;
 mod registry_policy;
 mod signing;
 mod store;
@@ -17,7 +16,6 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
-pub use crate::manifest::{DepEntry, ModuleEntry, PackageManifest};
 pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
 pub use crate::signing::{
     AcceptanceSignature, KeyFile, SigningError, load_signature_set, read_acceptance_hash_from_last,
@@ -28,6 +26,7 @@ pub use crate::transparency::{
     TransparencyError, TransparencyVerifyResult, append_transparency_entry, verify_transparency_log,
 };
 pub use crate::verify::{PackageVerifyResult, verify_package, verify_package_with_policy};
+pub use gc_pkg::{DepEntry, ModuleEntry, PackageManifest};
 
 #[derive(Debug, Clone)]
 pub struct ObligationResult {
@@ -91,7 +90,8 @@ fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
 }
 
 pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
+    let (manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let modules = load_modules(&pkg_dir, &manifest.modules)?;
 
     // Compute dependency package hashes (recursive) to lock.
@@ -132,7 +132,8 @@ pub fn test_package_with_step_limit(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<PackageTestResult, ObligationError> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
+    let (manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let step_limit = effective_step_limit(&manifest, step_limit)?;
     let mem_limits = effective_mem_limits(&manifest, mem_limits);
     let limits = KernelLimits {
@@ -443,7 +444,7 @@ fn load_modules(
 
 fn pack_dep_hashes(
     pkg_dir: &Path,
-    deps: &[manifest::DepEntry],
+    deps: &[DepEntry],
 ) -> Result<Vec<(String, String, String)>, ObligationError> {
     let mut out = Vec::new();
     for d in deps {
@@ -459,7 +460,7 @@ fn pack_dep_hashes(
     Ok(out)
 }
 
-fn check_dep_hashes(pkg_dir: &Path, deps: &[manifest::DepEntry]) -> Result<(), ObligationError> {
+fn check_dep_hashes(pkg_dir: &Path, deps: &[DepEntry]) -> Result<(), ObligationError> {
     let mut visited = std::collections::BTreeSet::new();
     for d in deps {
         let want = d.hash.as_deref().unwrap_or("");
@@ -499,7 +500,8 @@ fn compute_package_artifact_hash(
         )));
     }
 
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml)?;
+    let (manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let modules = load_modules(&pkg_dir, &manifest.modules)?;
     if require_pinned {
         for m in &modules {
@@ -2092,7 +2094,7 @@ fn eval_dependencies(
     ctx: &mut EvalCtx,
     pkg_dir: &Path,
     base: &Env,
-    deps: &[manifest::DepEntry],
+    deps: &[DepEntry],
 ) -> Result<Env, ObligationError> {
     let mut cur = base.clone();
     for d in deps {
@@ -2102,7 +2104,8 @@ fn eval_dependencies(
         } else {
             dep_path
         };
-        let (dep_manifest, dep_dir) = PackageManifest::load(&dep_pkg)?;
+        let (dep_manifest, dep_dir) = PackageManifest::load(&dep_pkg)
+            .map_err(|e| ObligationError::Manifest(e.to_string()))?;
         let dep_modules = load_modules(&dep_dir, &dep_manifest.modules)?;
 
         // Evaluate dependency modules and merge their exports into env.

@@ -11,6 +11,7 @@ ed25519-dalek.workspace = true
 globset = "0.4"
 num-traits.workspace = true
 thiserror.workspace = true
+anyhow.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }

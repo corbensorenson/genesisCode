@@ -233,6 +233,20 @@ enum Cmd {
         #[command(subcommand)]
         cmd: RefsCmd,
     },
+
+    /// GenesisPkg operations (snapshot + bundle export/import).
+    Pkg {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: PkgCmd,
+    },
 }
 
 #[derive(Subcommand)]
@@ -296,6 +310,33 @@ enum RefsCmd {
         /// to require the ref to be unset.
         #[arg(long)]
         expected_old: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum PkgCmd {
+    /// Build and store a `:vcs/snapshot` for a `package.toml`.
+    Snapshot {
+        /// Path to package.toml (relative to the capability base_dir).
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
+    /// Export a shallow `.gpk` bundle from a snapshot hash.
+    Export {
+        /// Snapshot hash (hex).
+        #[arg(long)]
+        snapshot: String,
+        /// Output bundle path (relative to capability base_dir).
+        #[arg(long)]
+        out: PathBuf,
+    },
+
+    /// Import a `.gpk` bundle into the local store.
+    Import {
+        /// Input bundle path (relative to capability base_dir).
+        #[arg(long)]
+        input: PathBuf,
     },
 }
 
@@ -411,6 +452,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         ),
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps, log.as_deref(), cmd),
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps, log.as_deref(), cmd),
+        Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
     }
 }
 
@@ -966,6 +1008,112 @@ fn cmd_refs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &RefsCmd) -> Result
     })
 }
 
+fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        PkgCmd::Snapshot { pkg } => (
+            mk_pkg_snapshot_program(pkg),
+            "genesis/pkg-snapshot-v0.1",
+            "pkg-snapshot",
+        ),
+        PkgCmd::Export { snapshot, out } => (
+            mk_gpk_export_program(snapshot, out),
+            "genesis/pkg-export-v0.1",
+            "pkg-export",
+        ),
+        PkgCmd::Import { input } => (
+            mk_gpk_import_program(input),
+            "genesis/pkg-import-v0.1",
+            "pkg-import",
+        ),
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+    let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = log
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_log_path(log_op));
+    std::fs::write(&log_path, r.log.to_string_canonical() + "\n")
+        .with_context(|| format!("write {}", log_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENIED;
+        }
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        match cmd {
+            PkgCmd::Snapshot { .. } => extract_pkg_snapshot_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Export { .. } => extract_pkg_export_bundle_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Import { .. } => extract_pkg_import_root(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+        }
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "pkg/error",
+                message: "pkg operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn mk_store_put_program(artifact: &Term) -> Vec<Term> {
     // (def prog (core/effect::perform 'core/store::put {:artifact (quote <artifact>)} (fn (r) (core/effect::pure r)))) prog
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::put")]);
@@ -1223,6 +1371,114 @@ fn extract_refs_list_pairs(v: &Value) -> Option<Vec<(String, String)>> {
     Some(out)
 }
 
+fn mk_pkg_snapshot_program(pkg: &Path) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg::snapshot"),
+    ]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":pkg")),
+            Term::Str(pkg.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_gpk_export_program(snapshot: &str, out: &Path) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gpk::export"),
+    ]);
+    let payload = Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":root")),
+                Term::Str(snapshot.to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":out")),
+                Term::Str(out.display().to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_gpk_import_program(input: &Path) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gpk::import"),
+    ]);
+    let payload = Term::Map(
+        [(
+            gc_coreform::TermOrdKey(Term::symbol(":in")),
+            Term::Str(input.display().to_string()),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn extract_pkg_snapshot_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":snapshot"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_export_bundle_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":bundle-h"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_pkg_import_root(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":root"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn cmd_replay(
     cli: &Cli,
     file: &PathBuf,
@@ -1399,8 +1655,8 @@ fn cmd_sign(
     acceptance: Option<&str>,
     signatures: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
-    let (_manifest, pkg_dir) =
-        gc_obligations::PackageManifest::load(pkg).map_err(obligation_err)?;
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
 
     let acc_hex = match acceptance {
@@ -1477,8 +1733,8 @@ fn cmd_sign(
 }
 
 fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
-    let (_manifest, pkg_dir) =
-        gc_obligations::PackageManifest::load(pkg).map_err(obligation_err)?;
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
     let r = gc_obligations::verify_transparency_log(&store, &pkg_dir)
         .map_err(|e| cli_err(EX_INTERNAL, "transparency/error", format!("{e}")))?;

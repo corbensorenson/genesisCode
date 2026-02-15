@@ -113,6 +113,10 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
 
 - [ ] GenesisGraph object model:
   - [ ] Implement `:vcs/snapshot` (package/module/contract/workspace) artifact schemas and canonical hashing.
+    - [x] Package snapshots (`:type :vcs/snapshot`, `:kind :package`) produced from `package.toml` via `core/pkg::snapshot` (policy-gated effect).
+    - [ ] Module snapshots (`:kind :module`).
+    - [ ] Contract snapshots (`:kind :contract`).
+    - [ ] Workspace snapshots (`:kind :workspace`).
   - [ ] Implement `:vcs/patch` artifacts (semantic ops over canonical AST paths) plus `vcs diff/apply`.
   - [ ] Implement `:vcs/commit` artifacts binding parents/base/patch/result + obligations + evidence refs.
   - [ ] Implement `:vcs/evidence` and `:vcs/attestation` artifacts; integrate with existing signing/transparency primitives.
@@ -130,7 +134,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [ ] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
   - [ ] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
 - [ ] `.gpk` bundle format:
-  - [ ] Shallow export/import (snapshot closure) and required verification checks.
+  - [x] Shallow export/import (snapshot closure) and required verification checks.
   - [ ] Full export/import (commit DAG closure) with depth control.
   - [ ] Include optional embedded refs and attestations.
 - [ ] Contract-level branching/merging:

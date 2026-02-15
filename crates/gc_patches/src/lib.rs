@@ -8,6 +8,7 @@ use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
     EvidenceStore, ObligationError, PackageTestResult, pack, test_package_with_step_limit,
 };
+use gc_pkg::PackageManifest;
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
@@ -113,7 +114,8 @@ pub fn apply_patch_with_step_limit(
         )));
     }
 
-    let (_manifest, pkg_dir) = gc_obligations::PackageManifest::load(pkg_toml)?;
+    let (_manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| PatchError::Validate(format!("{e}")))?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
     // Store the patch artifact itself (as canonical CoreForm bytes).

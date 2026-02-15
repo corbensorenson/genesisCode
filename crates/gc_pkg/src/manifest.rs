@@ -1,8 +1,19 @@
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use thiserror::Error;
 
-use crate::error::ObligationError;
+#[derive(Debug, Error)]
+pub enum ManifestError {
+    #[error("manifest io error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("manifest parse error: {path}: {msg}")]
+    Parse { path: String, msg: String },
+
+    #[error("manifest invalid: {path}: {msg}")]
+    Invalid { path: String, msg: String },
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PackageManifest {
@@ -94,19 +105,25 @@ pub struct DepEntry {
 }
 
 impl PackageManifest {
-    pub fn load(path: &Path) -> Result<(Self, PathBuf), ObligationError> {
+    pub fn load(path: &Path) -> Result<(Self, PathBuf), ManifestError> {
         let s = std::fs::read_to_string(path)?;
-        let m: PackageManifest = toml::from_str(&s)
-            .map_err(|e| ObligationError::Manifest(format!("{}: {e}", path.display())))?;
-        validate_manifest_paths(path, &m)?;
-        let dir = path.parent().map(PathBuf::from).ok_or_else(|| {
-            ObligationError::Manifest("package.toml has no parent dir".to_string())
+        let m: PackageManifest = toml::from_str(&s).map_err(|e| ManifestError::Parse {
+            path: path.display().to_string(),
+            msg: e.to_string(),
         })?;
+        validate_manifest_paths(path, &m)?;
+        let dir = path
+            .parent()
+            .map(PathBuf::from)
+            .ok_or_else(|| ManifestError::Invalid {
+                path: path.display().to_string(),
+                msg: "package.toml has no parent dir".to_string(),
+            })?;
         Ok((m, dir))
     }
 }
 
-fn validate_manifest_paths(pkg_toml: &Path, m: &PackageManifest) -> Result<(), ObligationError> {
+fn validate_manifest_paths(pkg_toml: &Path, m: &PackageManifest) -> Result<(), ManifestError> {
     for (i, me) in m.modules.iter().enumerate() {
         validate_rel_path_str(&me.path, &format!("modules[{i}].path"), pkg_toml)?;
     }
@@ -119,35 +136,38 @@ fn validate_manifest_paths(pkg_toml: &Path, m: &PackageManifest) -> Result<(), O
     Ok(())
 }
 
-fn validate_rel_path_str(s: &str, field: &str, pkg_toml: &Path) -> Result<(), ObligationError> {
+fn validate_rel_path_str(s: &str, field: &str, pkg_toml: &Path) -> Result<(), ManifestError> {
+    let pstr = pkg_toml.display().to_string();
     if s.is_empty() {
-        return Err(ObligationError::Manifest(format!(
-            "{}: {field} must be non-empty",
-            pkg_toml.display()
-        )));
+        return Err(ManifestError::Invalid {
+            path: pstr,
+            msg: format!("{field} must be non-empty"),
+        });
     }
     if s.contains('\\') {
-        return Err(ObligationError::Manifest(format!(
-            "{}: {field} must use '/' path separators (got backslash)",
-            pkg_toml.display()
-        )));
+        return Err(ManifestError::Invalid {
+            path: pstr,
+            msg: format!("{field} must use '/' path separators (got backslash)"),
+        });
     }
     let p = Path::new(s);
     if p.is_absolute() {
-        return Err(ObligationError::Manifest(format!(
-            "{}: {field} must be a relative path, got {s}",
-            pkg_toml.display()
-        )));
+        return Err(ManifestError::Invalid {
+            path: pstr,
+            msg: format!("{field} must be a relative path, got {s}"),
+        });
     }
     for c in p.components() {
         match c {
             std::path::Component::Normal(_) => {}
             // Disallow '.', '..', Windows prefixes, and root dirs to avoid non-portable and unsafe paths.
             _ => {
-                return Err(ObligationError::Manifest(format!(
-                    "{}: {field} must not contain '.', '..', or absolute/prefix components: {s}",
-                    pkg_toml.display()
-                )));
+                return Err(ManifestError::Invalid {
+                    path: pstr,
+                    msg: format!(
+                        "{field} must not contain '.', '..', or absolute/prefix components: {s}"
+                    ),
+                });
             }
         }
     }

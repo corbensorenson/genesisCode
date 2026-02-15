@@ -12,6 +12,34 @@ use crate::policy::{CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetResult};
 use crate::store::ArtifactStore;
 
+struct HashingWriter<'a, W: std::io::Write> {
+    inner: &'a mut W,
+    hasher: blake3::Hasher,
+}
+
+impl<'a, W: std::io::Write> HashingWriter<'a, W> {
+    fn new(inner: &'a mut W) -> Self {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"GCv0.2\0gpk\0");
+        Self { inner, hasher }
+    }
+
+    fn finish_hex(self) -> String {
+        self.hasher.finalize().to_hex().to_string()
+    }
+}
+
+impl<'a, W: std::io::Write> std::io::Write for HashingWriter<'a, W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.hasher.update(buf);
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
 pub struct RunResult {
     pub value: Value,
     pub log: EffectLog,
@@ -510,6 +538,143 @@ fn call_capability(
         ));
     }
     match op {
+        "core/pkg::snapshot" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg::snapshot".to_string())
+            })?;
+            let pkg_path_s = payload_pkg_path(payload)?;
+            let base_dir = effective_base_dir(pol)?;
+            let pkg_path = sandbox_path_read(&base_dir, &pkg_path_s)?;
+
+            let (manifest, pkg_dir) = gc_pkg::PackageManifest::load(&pkg_path)
+                .map_err(|e| EffectsError::BadPayload(format!("package manifest error: {e}")))?;
+
+            // Ensure the package directory is within the sandbox base.
+            let base = std::fs::canonicalize(&base_dir)?;
+            let pkg_dir_resolved = std::fs::canonicalize(&pkg_dir)?;
+            if !pkg_dir_resolved.starts_with(&base) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/caps/path-escape",
+                    "package directory escapes base dir".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let mut modules_out: Vec<Term> = Vec::new();
+            for me in &manifest.modules {
+                let module_fs_path = pkg_dir.join(&me.path);
+                let resolved = std::fs::canonicalize(&module_fs_path)
+                    .map_err(|e| EffectsError::BadPayload(format!("module read error: {e}")))?;
+                if !resolved.starts_with(&base) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("module escapes base dir: {}", me.path),
+                        Some(op),
+                    ));
+                }
+                let src = std::fs::read_to_string(&resolved)
+                    .map_err(|e| EffectsError::BadPayload(format!("module read error: {e}")))?;
+                let forms = gc_coreform::parse_module(&src)
+                    .map_err(|e| EffectsError::BadPayload(format!("module parse error: {e}")))?;
+                let forms = gc_coreform::canonicalize_module(forms).map_err(|e| {
+                    EffectsError::BadPayload(format!("module canonicalize error: {e}"))
+                })?;
+                let module_h = gc_coreform::hash_module(&forms);
+                if let Some(want_hex) = &me.hash {
+                    if want_hex.len() != 64 || !want_hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-hash",
+                            format!("manifest module hash is not 64-hex: {}", me.path),
+                            Some(op),
+                        ));
+                    }
+                    let got_hex = blake3::Hash::from_bytes(module_h).to_hex().to_string();
+                    if &got_hex != want_hex {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/hash-mismatch",
+                            format!("module hash mismatch: {}", me.path),
+                            Some(op),
+                        ));
+                    }
+                }
+
+                let module_art = Term::Vector(forms);
+                let module_bytes = print_term(&module_art);
+                let store_hex = store.put_bytes(module_bytes.as_bytes())?;
+                let mut mm = BTreeMap::new();
+                mm.insert(
+                    TermOrdKey(Term::Symbol(":path".to_string())),
+                    Term::Str(me.path.clone()),
+                );
+                mm.insert(
+                    TermOrdKey(Term::Symbol(":hash".to_string())),
+                    Term::Str(store_hex),
+                );
+                mm.insert(
+                    TermOrdKey(Term::Symbol(":module-h".to_string())),
+                    Term::Bytes(module_h.to_vec()),
+                );
+                modules_out.push(Term::Map(mm));
+            }
+
+            let snapshot = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::Symbol(":type".to_string())),
+                        Term::Symbol(":vcs/snapshot".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":v".to_string())),
+                        Term::Int(1.into()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":kind".to_string())),
+                        Term::Symbol(":package".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":pkg/name".to_string())),
+                        Term::Str(manifest.name.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":pkg/version".to_string())),
+                        Term::Str(manifest.version.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":modules".to_string())),
+                        Term::Vector(modules_out.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::Symbol(":obligations".to_string())),
+                        Term::Vector(
+                            manifest
+                                .obligations
+                                .iter()
+                                .cloned()
+                                .map(Term::Symbol)
+                                .collect(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let snap_hex = store.put_bytes(print_term(&snapshot).as_bytes())?;
+
+            let mut out = BTreeMap::new();
+            out.insert(
+                TermOrdKey(Term::Symbol(":snapshot".to_string())),
+                Term::Str(snap_hex),
+            );
+            out.insert(
+                TermOrdKey(Term::Symbol(":modules".to_string())),
+                Term::Vector(modules_out),
+            );
+            Ok(Value::Data(Term::Map(out)))
+        }
         "core/store::put" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/store::put".to_string())
@@ -561,6 +726,134 @@ fn call_capability(
                 .map_err(|e| EffectsError::Log(format!("bad artifact term: {e}")))?;
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/gpk::export" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/gpk::export".to_string())
+            })?;
+            let root_hex = payload_gpk_root(payload)?;
+            let out_path_s = payload_gpk_out(payload)?;
+            let base_dir = effective_base_dir(pol)?;
+            let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
+            let out_path = sandbox_path_write(&base_dir, &out_path_s, create_dirs)?;
+
+            // Root must be a snapshot.
+            let root_term = store_get_term(store, &root_hex).map_err(|_| {
+                EffectsError::BadPayload("missing root snapshot in store".to_string())
+            })?;
+            let snap = match gc_vcs::Snapshot::from_term(&root_term) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-root",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut hashes: Vec<String> = Vec::new();
+            hashes.push(root_hex.clone());
+            hashes.extend(snap.shallow_refs());
+            hashes.sort();
+            hashes.dedup();
+
+            let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
+            for h in &hashes {
+                if !store.path_for(h).exists() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/not-found",
+                        format!("artifact not found: {h}"),
+                        Some(op),
+                    ));
+                }
+                if store.verify_hex(h).is_err() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/corruption",
+                        format!("artifact store corruption: {h}"),
+                        Some(op),
+                    ));
+                }
+                let bytes = store.get_bytes(h)?;
+                entries.push((h.clone(), bytes));
+            }
+
+            let root_b = match gc_vcs::hex_to_bytes32(&root_hex) {
+                Ok(b) => b,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/gpk/bad-root", e, Some(op)));
+                }
+            };
+
+            let mut file = std::fs::File::create(&out_path)?;
+            let bundle_h = {
+                let mut hw = HashingWriter::new(&mut file);
+                gc_vcs::write_bundle(&mut hw, root_b, &entries)
+                    .map_err(|e| EffectsError::BadPayload(format!("{e}")))?;
+                hw.finish_hex()
+            };
+            file.sync_all()?;
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":ok".to_string())),
+                Term::Bool(true),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":bundle-h".to_string())),
+                Term::Str(bundle_h),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":root".to_string())),
+                Term::Str(root_hex),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":count".to_string())),
+                Term::Int((hashes.len() as i64).into()),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/gpk::import" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/gpk::import".to_string())
+            })?;
+            let in_path_s = payload_gpk_in(payload)?;
+            let base_dir = effective_base_dir(pol)?;
+            let in_path = sandbox_path_read(&base_dir, &in_path_s)?;
+            let mut f = std::fs::File::open(&in_path)?;
+            let bundle = gc_vcs::read_bundle(&mut f)
+                .map_err(|e| EffectsError::BadPayload(format!("{e}")))?;
+            let root_hex = gc_vcs::bytes32_to_hex(&bundle.root);
+
+            for e in &bundle.entries {
+                let expected = gc_vcs::bytes32_to_hex(&e.hash);
+                let got = store.put_bytes(&e.bytes)?;
+                if got != expected {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/hash-mismatch",
+                        "bundle entry hash mismatch".to_string(),
+                        Some(op),
+                    ));
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":ok".to_string())),
+                Term::Bool(true),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":root".to_string())),
+                Term::Str(root_hex),
+            );
+            m.insert(
+                TermOrdKey(Term::Symbol(":count".to_string())),
+                Term::Int((bundle.entries.len() as i64).into()),
+            );
             Ok(Value::Data(Term::Map(m)))
         }
         "core/refs::get" => {
@@ -1227,6 +1520,78 @@ fn payload_path(payload: &Term) -> Result<String, EffectsError> {
         Term::Str(s) => Ok(s.clone()),
         _ => Err(EffectsError::BadPayload(format!(
             ":path must be string, got {}",
+            print_term(v)
+        ))),
+    }
+}
+
+fn payload_pkg_path(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::Symbol(":pkg".to_string())))
+        .ok_or_else(|| EffectsError::BadPayload("missing :pkg".to_string()))?;
+    match v {
+        Term::Str(s) => Ok(s.clone()),
+        _ => Err(EffectsError::BadPayload(format!(
+            ":pkg must be string, got {}",
+            print_term(v)
+        ))),
+    }
+}
+
+fn payload_gpk_root(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::Symbol(":root".to_string())))
+        .ok_or_else(|| EffectsError::BadPayload("missing :root".to_string()))?;
+    match v {
+        Term::Str(s) => Ok(s.clone()),
+        _ => Err(EffectsError::BadPayload(format!(
+            ":root must be string, got {}",
+            print_term(v)
+        ))),
+    }
+}
+
+fn payload_gpk_out(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::Symbol(":out".to_string())))
+        .ok_or_else(|| EffectsError::BadPayload("missing :out".to_string()))?;
+    match v {
+        Term::Str(s) => Ok(s.clone()),
+        _ => Err(EffectsError::BadPayload(format!(
+            ":out must be string, got {}",
+            print_term(v)
+        ))),
+    }
+}
+
+fn payload_gpk_in(payload: &Term) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::Symbol(":in".to_string())))
+        .ok_or_else(|| EffectsError::BadPayload("missing :in".to_string()))?;
+    match v {
+        Term::Str(s) => Ok(s.clone()),
+        _ => Err(EffectsError::BadPayload(format!(
+            ":in must be string, got {}",
             print_term(v)
         ))),
     }

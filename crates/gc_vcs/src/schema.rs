@@ -116,6 +116,37 @@ pub fn validate_hex_hash(s: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn hex_to_bytes32(s: &str) -> Result<[u8; 32], String> {
+    let t = s.trim();
+    validate_hex_hash(t)?;
+    let mut out = [0u8; 32];
+    for (i, b) in out.iter_mut().enumerate() {
+        let hi = hex_val(t.as_bytes()[2 * i]).ok_or_else(|| "invalid hex".to_string())?;
+        let lo = hex_val(t.as_bytes()[2 * i + 1]).ok_or_else(|| "invalid hex".to_string())?;
+        *b = (hi << 4) | lo;
+    }
+    Ok(out)
+}
+
+pub fn bytes32_to_hex(b: &[u8; 32]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = [0u8; 64];
+    for (i, x) in b.iter().enumerate() {
+        out[2 * i] = HEX[(x >> 4) as usize];
+        out[2 * i + 1] = HEX[(x & 0xF) as usize];
+    }
+    String::from_utf8(out.to_vec()).expect("hex")
+}
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(10 + (b - b'a')),
+        b'A'..=b'F' => Some(10 + (b - b'A')),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Commit {
     pub parents: Vec<String>,

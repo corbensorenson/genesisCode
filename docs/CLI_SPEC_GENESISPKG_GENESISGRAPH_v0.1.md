@@ -392,11 +392,26 @@ See `docs/LOCK_GENERATOR_RULESET_v0.1.md` for invariants and generation rules.
 
 ## 5.0 `.gpk` bundle format (minimal spec)
 
-- header: magic + version
-- index: `hash -> {offset, length, kind}`
-- payload: canonical bytes for each artifact
-- optional: included refs
-- optional: attestations/signatures
+v0.1 tooling ships `.gpk` **v1** bundles with a simple binary format:
+
+- header:
+  - magic bytes `GPK\\0`
+  - `version` (u32 little-endian) = `1`
+  - `root` (32-byte BLAKE3 hash of the root snapshot)
+  - `count` (u64 little-endian)
+- index: `count` fixed-size entries, in the same order as payload:
+  - `hash` (32 bytes)
+  - `kind` (u8). v1 uses `0` for "raw canonical artifact bytes".
+  - `reserved` (7 bytes, zero)
+  - `offset` (u64 little-endian, absolute file offset to payload bytes)
+  - `length` (u64 little-endian)
+- payload:
+  - concatenated `length` bytes for each entry, in index order
+
+Notes:
+
+- v1 has no trailing sections (no embedded refs/attestations). Extra trailing bytes are treated as corruption.
+- Future extensions (embedded refs, attestations, compression) must bump `version`.
 
 ## 6.0 Exit codes (for scripting)
 
@@ -428,4 +443,3 @@ See `docs/LOCK_GENERATOR_RULESET_v0.1.md` for invariants and generation rules.
 5. `pkg export/import` (shallow only)
 6. `policy show/list/set-default`
 7. `pkg publish` + `sync push/pull` (remote later)
-
