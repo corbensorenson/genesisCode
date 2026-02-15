@@ -131,8 +131,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [ ] `push/pull` artifact transfer using reachability closure planning.
   - [ ] Remote refs updates via registry `refs/set` with CAS.
 - [ ] Workspace lock (`genesis.lock`) and package install flow:
-  - [ ] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
-  - [ ] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
+  - [x] Implement `genesis pkg init/add/lock/install/update/info/list/verify`.
+  - [x] Deterministic lock writer with stable ordering and strict `--frozen` semantics.
 - [ ] `.gpk` bundle format:
   - [x] Shallow export/import (snapshot closure) and required verification checks.
   - [ ] Full export/import (commit DAG closure) with depth control.

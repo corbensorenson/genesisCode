@@ -538,16 +538,876 @@ fn call_capability(
         ));
     }
     match op {
+        "core/pkg::init" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let workspace = match payload_pkg_workspace(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let policy_s =
+                payload_pkg_policy(payload).unwrap_or_else(|| "policy:default-v0.1".to_string());
+            let reg_default = payload_pkg_registry_default(payload);
+
+            let base_dir = effective_base_dir(pol)?;
+            let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
+            let lock_path = match sandbox_path_write(&base_dir, &lock_s, create_dirs) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut l = gc_pkg::GenesisLock::empty(workspace);
+            l.policy = policy_s;
+            if let Some(rd) = reg_default {
+                l.registries.insert("default".to_string(), rd);
+            }
+            let bytes = l.to_toml_canonical();
+            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            if let Err(e) = atomic_write_text(&lock_path, bytes.as_bytes()) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::add" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let name = match payload_pkg_name(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let selector = match payload_pkg_selector(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let update_policy = match payload_pkg_update_policy(payload) {
+                Ok(Some(p)) => p,
+                Ok(None) => gc_pkg::UpdatePolicy::Manual,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let registry = payload_pkg_registry(payload);
+
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            l.set_requirement(&name, &selector, update_policy, registry);
+            let bytes = l.to_toml_canonical();
+            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::list" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut reqs = Vec::new();
+            for (name, r) in &l.requirements {
+                let mut mm = BTreeMap::new();
+                mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
+                mm.insert(
+                    TermOrdKey(Term::symbol(":selector")),
+                    Term::Str(r.selector.clone()),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":update-policy")),
+                    Term::Symbol(match r.update_policy {
+                        gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
+                        gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
+                    }),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":registry")),
+                    r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                reqs.push(Term::Map(mm));
+            }
+
+            let mut locks = Vec::new();
+            for (name, le) in &l.locked {
+                let mut mm = BTreeMap::new();
+                mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
+                mm.insert(
+                    TermOrdKey(Term::symbol(":commit")),
+                    le.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":snapshot")),
+                    Term::Str(le.snapshot.clone()),
+                );
+                locks.push(Term::Map(mm));
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(
+                TermOrdKey(Term::symbol(":requirements")),
+                Term::Vector(reqs),
+            );
+            m.insert(TermOrdKey(Term::symbol(":locked")), Term::Vector(locks));
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::info" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let name = match payload_pkg_name(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
+            m.insert(
+                TermOrdKey(Term::symbol(":requirement")),
+                l.requirements
+                    .get(&name)
+                    .map(|r| {
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":selector")),
+                                    Term::Str(r.selector.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":update-policy")),
+                                    Term::Symbol(match r.update_policy {
+                                        gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
+                                        gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
+                                    }),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":registry")),
+                                    r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )
+                    })
+                    .unwrap_or(Term::Nil),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":locked")),
+                l.locked
+                    .get(&name)
+                    .map(|le| {
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":commit")),
+                                    le.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":snapshot")),
+                                    Term::Str(le.snapshot.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":resolved-ref")),
+                                    le.resolved_ref.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        )
+                    })
+                    .unwrap_or(Term::Nil),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::lock" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg::lock".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/pkg::lock".to_string())
+            })?;
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut out_locked: BTreeMap<String, gc_pkg::LockedEntry> = BTreeMap::new();
+            for (name, req) in &l.requirements {
+                match resolve_requirement(store, refs, name, req, error_tok, op) {
+                    Ok(le) => {
+                        out_locked.insert(name.clone(), le);
+                    }
+                    Err(err_val) => return Ok(err_val),
+                }
+            }
+            l.locked = out_locked;
+
+            let bytes = l.to_toml_canonical();
+            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+            m.insert(
+                TermOrdKey(Term::symbol(":locked-count")),
+                Term::Int((l.locked.len() as i64).into()),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::update" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg::update".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/pkg::update".to_string())
+            })?;
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let mut l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut updated: u64 = 0;
+            for (name, req) in &l.requirements {
+                let sel = parse_selector(&req.selector);
+                let should_update = req.update_policy == gc_pkg::UpdatePolicy::Auto
+                    && matches!(sel, Some(Selector::Ref(_)));
+                if !should_update && l.locked.contains_key(name) {
+                    continue;
+                }
+                match resolve_requirement(store, refs, name, req, error_tok, op) {
+                    Ok(le) => {
+                        l.locked.insert(name.clone(), le);
+                        updated = updated.saturating_add(1);
+                    }
+                    Err(err_val) => return Ok(err_val),
+                }
+            }
+
+            let bytes = l.to_toml_canonical();
+            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+            m.insert(
+                TermOrdKey(Term::symbol(":updated")),
+                Term::Int((updated as i64).into()),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::install" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg::install".to_string())
+            })?;
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let frozen = payload_pkg_bool(payload, ":frozen").unwrap_or(false);
+            let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
+
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if frozen {
+                let missing = l.requirements_missing_locks();
+                if !missing.is_empty() {
+                    return Ok(mk_error_with_ctx(
+                        error_tok,
+                        "core/pkg/not-locked",
+                        "lock is missing locked entries".to_string(),
+                        Some(op),
+                        Term::Map(
+                            [(
+                                TermOrdKey(Term::symbol(":missing")),
+                                Term::Vector(missing.into_iter().map(Term::Str).collect()),
+                            )]
+                            .into_iter()
+                            .collect(),
+                        ),
+                    ));
+                }
+            }
+
+            let mut ok = true;
+            let mut missing_hashes: Vec<Term> = Vec::new();
+            let mut checked: u64 = 0;
+
+            for (name, le) in &l.locked {
+                // Snapshot must exist and be well-formed.
+                let snapshot_hex = &le.snapshot;
+                if !store.path_for(snapshot_hex).exists() {
+                    ok = false;
+                    missing_hashes.push(Term::Str(snapshot_hex.clone()));
+                    continue;
+                }
+                if store.verify_hex(snapshot_hex).is_err() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/corruption",
+                        format!("artifact store corruption: {snapshot_hex}"),
+                        Some(op),
+                    ));
+                }
+                let snap_term = match store_get_term(store, snapshot_hex) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-snapshot",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let snap = match gc_vcs::Snapshot::from_term(&snap_term) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-snapshot",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+
+                // Shallow closure: snapshot + module artifacts.
+                let mut hashes: Vec<String> = Vec::new();
+                hashes.push(snapshot_hex.clone());
+                hashes.extend(snap.shallow_refs());
+                hashes.sort();
+                hashes.dedup();
+
+                for h in hashes {
+                    if !store.path_for(&h).exists() {
+                        ok = false;
+                        missing_hashes.push(Term::Str(h));
+                        continue;
+                    }
+                    if store.verify_hex(&h).is_err() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/corruption",
+                            format!("artifact store corruption: {h}"),
+                            Some(op),
+                        ));
+                    }
+                    checked = checked.saturating_add(1);
+                }
+
+                if strict && let Some(commit_hex) = &le.commit {
+                    let commit_term = match store_get_term(store, commit_hex) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("artifact not found: {commit_hex}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let c = match gc_vcs::Commit::from_term(&commit_term) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-commit",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if c.result != *snapshot_hex {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/commit-snapshot-mismatch",
+                            format!("commit.result != locked.snapshot for {name}"),
+                            Some(op),
+                        ));
+                    }
+                    for evh in &c.evidence {
+                        if !store.path_for(evh).exists() {
+                            ok = false;
+                            missing_hashes.push(Term::Str(evh.clone()));
+                            continue;
+                        }
+                        if store.verify_hex(evh).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("artifact store corruption: {evh}"),
+                                Some(op),
+                            ));
+                        }
+                        let ev_term = match store_get_term(store, evh) {
+                            Ok(t) => t,
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-evidence",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-evidence",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                        checked = checked.saturating_add(1);
+                    }
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(
+                TermOrdKey(Term::symbol(":checked")),
+                Term::Int((checked as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":missing")),
+                Term::Vector(missing_hashes),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
+        "core/pkg::verify" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg::verify".to_string())
+            })?;
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut ok = true;
+            let mut missing_hashes: Vec<Term> = Vec::new();
+            let mut checked: u64 = 0;
+
+            for (name, le) in &l.locked {
+                let snapshot_hex = &le.snapshot;
+                if !store.path_for(snapshot_hex).exists() {
+                    ok = false;
+                    missing_hashes.push(Term::Str(snapshot_hex.clone()));
+                    continue;
+                }
+                if store.verify_hex(snapshot_hex).is_err() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/corruption",
+                        format!("artifact store corruption: {snapshot_hex}"),
+                        Some(op),
+                    ));
+                }
+                let snap_term = match store_get_term(store, snapshot_hex) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-snapshot",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let snap = match gc_vcs::Snapshot::from_term(&snap_term) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-snapshot",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let mut hashes: Vec<String> = Vec::new();
+                hashes.push(snapshot_hex.clone());
+                hashes.extend(snap.shallow_refs());
+                hashes.sort();
+                hashes.dedup();
+                for h in hashes {
+                    if !store.path_for(&h).exists() {
+                        ok = false;
+                        missing_hashes.push(Term::Str(h));
+                        continue;
+                    }
+                    if store.verify_hex(&h).is_err() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/corruption",
+                            format!("artifact store corruption: {h}"),
+                            Some(op),
+                        ));
+                    }
+                    checked = checked.saturating_add(1);
+                }
+
+                if let Some(commit_hex) = &le.commit {
+                    let commit_term = match store_get_term(store, commit_hex) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("artifact not found: {commit_hex}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let c = match gc_vcs::Commit::from_term(&commit_term) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-commit",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if c.result != *snapshot_hex {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/commit-snapshot-mismatch",
+                            format!("commit.result != locked.snapshot for {name}"),
+                            Some(op),
+                        ));
+                    }
+                    for evh in &c.evidence {
+                        if !store.path_for(evh).exists() {
+                            ok = false;
+                            missing_hashes.push(Term::Str(evh.clone()));
+                            continue;
+                        }
+                        if store.verify_hex(evh).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("artifact store corruption: {evh}"),
+                                Some(op),
+                            ));
+                        }
+                        let ev_term = match store_get_term(store, evh) {
+                            Ok(t) => t,
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-evidence",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-evidence",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                        checked = checked.saturating_add(1);
+                    }
+                }
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(
+                TermOrdKey(Term::symbol(":checked")),
+                Term::Int((checked as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":missing")),
+                Term::Vector(missing_hashes),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+
         "core/pkg::snapshot" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::snapshot".to_string())
             })?;
-            let pkg_path_s = payload_pkg_path(payload)?;
+            let pkg_path_s = match payload_pkg_path(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
             let base_dir = effective_base_dir(pol)?;
             let pkg_path = sandbox_path_read(&base_dir, &pkg_path_s)?;
 
-            let (manifest, pkg_dir) = gc_pkg::PackageManifest::load(&pkg_path)
-                .map_err(|e| EffectsError::BadPayload(format!("package manifest error: {e}")))?;
+            let (manifest, pkg_dir) = match gc_pkg::PackageManifest::load(&pkg_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/manifest-error",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
 
             // Ensure the package directory is within the sandbox base.
             let base = std::fs::canonicalize(&base_dir)?;
@@ -564,8 +1424,25 @@ fn call_capability(
             let mut modules_out: Vec<Term> = Vec::new();
             for me in &manifest.modules {
                 let module_fs_path = pkg_dir.join(&me.path);
-                let resolved = std::fs::canonicalize(&module_fs_path)
-                    .map_err(|e| EffectsError::BadPayload(format!("module read error: {e}")))?;
+                let resolved = match std::fs::canonicalize(&module_fs_path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/pkg/io-error",
+                            e.to_string(),
+                            Some(op),
+                            Term::Map(
+                                [(
+                                    TermOrdKey(Term::symbol(":path")),
+                                    Term::Str(me.path.clone()),
+                                )]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ));
+                    }
+                };
                 if !resolved.starts_with(&base) {
                     return Ok(mk_error(
                         error_tok,
@@ -574,13 +1451,47 @@ fn call_capability(
                         Some(op),
                     ));
                 }
-                let src = std::fs::read_to_string(&resolved)
-                    .map_err(|e| EffectsError::BadPayload(format!("module read error: {e}")))?;
-                let forms = gc_coreform::parse_module(&src)
-                    .map_err(|e| EffectsError::BadPayload(format!("module parse error: {e}")))?;
-                let forms = gc_coreform::canonicalize_module(forms).map_err(|e| {
-                    EffectsError::BadPayload(format!("module canonicalize error: {e}"))
-                })?;
+                let src = match std::fs::read_to_string(&resolved) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/pkg/io-error",
+                            e.to_string(),
+                            Some(op),
+                            Term::Map(
+                                [(
+                                    TermOrdKey(Term::symbol(":path")),
+                                    Term::Str(me.path.clone()),
+                                )]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ));
+                    }
+                };
+                let forms = match gc_coreform::parse_module(&src) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/parse-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let forms = match gc_coreform::canonicalize_module(forms) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/canon-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
                 let module_h = gc_coreform::hash_module(&forms);
                 if let Some(want_hex) = &me.hash {
                     if want_hex.len() != 64 || !want_hex.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -604,7 +1515,17 @@ fn call_capability(
 
                 let module_art = Term::Vector(forms);
                 let module_bytes = print_term(&module_art);
-                let store_hex = store.put_bytes(module_bytes.as_bytes())?;
+                let store_hex = match store.put_bytes(module_bytes.as_bytes()) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
                 let mut mm = BTreeMap::new();
                 mm.insert(
                     TermOrdKey(Term::Symbol(":path".to_string())),
@@ -662,7 +1583,17 @@ fn call_capability(
                 .into_iter()
                 .collect(),
             );
-            let snap_hex = store.put_bytes(print_term(&snapshot).as_bytes())?;
+            let snap_hex = match store.put_bytes(print_term(&snapshot).as_bytes()) {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
 
             let mut out = BTreeMap::new();
             out.insert(
@@ -732,16 +1663,44 @@ fn call_capability(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gpk::export".to_string())
             })?;
-            let root_hex = payload_gpk_root(payload)?;
-            let out_path_s = payload_gpk_out(payload)?;
+            let root_hex = match payload_gpk_root(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let out_path_s = match payload_gpk_out(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
             let base_dir = effective_base_dir(pol)?;
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
             let out_path = sandbox_path_write(&base_dir, &out_path_s, create_dirs)?;
 
             // Root must be a snapshot.
-            let root_term = store_get_term(store, &root_hex).map_err(|_| {
-                EffectsError::BadPayload("missing root snapshot in store".to_string())
-            })?;
+            let root_term = match store_get_term(store, &root_hex) {
+                Ok(t) => t,
+                Err(_) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/not-found",
+                        format!("artifact not found: {root_hex}"),
+                        Some(op),
+                    ));
+                }
+            };
             let snap = match gc_vcs::Snapshot::from_term(&root_term) {
                 Ok(s) => s,
                 Err(e) => {
@@ -778,7 +1737,17 @@ fn call_capability(
                         Some(op),
                     ));
                 }
-                let bytes = store.get_bytes(h)?;
+                let bytes = match store.get_bytes(h) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
                 entries.push((h.clone(), bytes));
             }
 
@@ -789,14 +1758,37 @@ fn call_capability(
                 }
             };
 
-            let mut file = std::fs::File::create(&out_path)?;
+            let mut file = match std::fs::File::create(&out_path) {
+                Ok(f) => f,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
             let bundle_h = {
                 let mut hw = HashingWriter::new(&mut file);
-                gc_vcs::write_bundle(&mut hw, root_b, &entries)
-                    .map_err(|e| EffectsError::BadPayload(format!("{e}")))?;
+                if let Err(e) = gc_vcs::write_bundle(&mut hw, root_b, &entries) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/write-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
                 hw.finish_hex()
             };
-            file.sync_all()?;
+            if let Err(e) = file.sync_all() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/gpk/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
             let mut m = BTreeMap::new();
             m.insert(
                 TermOrdKey(Term::Symbol(":ok".to_string())),
@@ -820,17 +1812,56 @@ fn call_capability(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gpk::import".to_string())
             })?;
-            let in_path_s = payload_gpk_in(payload)?;
+            let in_path_s = match payload_gpk_in(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
             let base_dir = effective_base_dir(pol)?;
             let in_path = sandbox_path_read(&base_dir, &in_path_s)?;
-            let mut f = std::fs::File::open(&in_path)?;
-            let bundle = gc_vcs::read_bundle(&mut f)
-                .map_err(|e| EffectsError::BadPayload(format!("{e}")))?;
+            let mut f = match std::fs::File::open(&in_path) {
+                Ok(f) => f,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let bundle = match gc_vcs::read_bundle(&mut f) {
+                Ok(b) => b,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/read-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
             let root_hex = gc_vcs::bytes32_to_hex(&bundle.root);
 
             for e in &bundle.entries {
                 let expected = gc_vcs::bytes32_to_hex(&e.hash);
-                let got = store.put_bytes(&e.bytes)?;
+                let got = match store.put_bytes(&e.bytes) {
+                    Ok(h) => h,
+                    Err(err) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            err.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
                 if got != expected {
                     return Ok(mk_error(
                         error_tok,
@@ -1677,4 +2708,257 @@ fn sandbox_path_write(
         }
     }
     Ok(candidate)
+}
+
+fn atomic_write_text(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let mut tmp_i: u64 = 0;
+    let tmp_path = loop {
+        let cand = dir.join(format!(
+            ".tmp-{}-{}-{}",
+            std::process::id(),
+            path.file_name().and_then(|s| s.to_str()).unwrap_or("lock"),
+            tmp_i
+        ));
+        tmp_i = tmp_i.saturating_add(1);
+        match OpenOptions::new().write(true).create_new(true).open(&cand) {
+            Ok(mut f) => {
+                f.write_all(bytes)?;
+                f.sync_all()?;
+                break cand;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
+    };
+
+    match std::fs::rename(&tmp_path, path) {
+        Ok(()) => {
+            #[cfg(unix)]
+            {
+                let d = std::fs::File::open(dir)?;
+                d.sync_all()?;
+            }
+            Ok(())
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp_path);
+            Err(e)
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Selector {
+    Commit(String),
+    Snapshot(String),
+    Ref(String),
+}
+
+fn parse_selector(s: &str) -> Option<Selector> {
+    let t = s.trim();
+    if let Some(rest) = t.strip_prefix("commit:") {
+        return Some(Selector::Commit(rest.trim().to_string()));
+    }
+    if let Some(rest) = t.strip_prefix("snapshot:") {
+        return Some(Selector::Snapshot(rest.trim().to_string()));
+    }
+    if let Some(rest) = t.strip_prefix("ref:") {
+        return Some(Selector::Ref(rest.trim().to_string()));
+    }
+    if t.starts_with("refs/") {
+        return Some(Selector::Ref(t.to_string()));
+    }
+    if gc_vcs::validate_hex_hash(t).is_ok() {
+        return Some(Selector::Commit(t.to_string()));
+    }
+    None
+}
+
+fn resolve_requirement(
+    store: &ArtifactStore,
+    refs: &RefsDb,
+    _name: &str,
+    req: &gc_pkg::Requirement,
+    error_tok: SealId,
+    op: &str,
+) -> Result<gc_pkg::LockedEntry, Value> {
+    let sel = parse_selector(&req.selector).ok_or_else(|| {
+        mk_error(
+            error_tok,
+            "core/pkg/bad-selector",
+            format!("unsupported selector: {}", req.selector),
+            Some(op),
+        )
+    })?;
+
+    match sel {
+        Selector::Snapshot(h) => {
+            if let Err(e) = gc_vcs::validate_hex_hash(&h) {
+                return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
+            }
+            Ok(gc_pkg::LockedEntry {
+                commit: None,
+                snapshot: h,
+                registry: req.registry.clone(),
+                source_selector: req.selector.clone(),
+                resolved_ref: None,
+                exports_hash: None,
+            })
+        }
+        Selector::Commit(h) => {
+            if let Err(e) = gc_vcs::validate_hex_hash(&h) {
+                return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
+            }
+            if !store.path_for(&h).exists() {
+                return Err(mk_error(
+                    error_tok,
+                    "core/store/not-found",
+                    format!("artifact not found: {h}"),
+                    Some(op),
+                ));
+            }
+            let t = store_get_term(store, &h)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            let c = gc_vcs::Commit::from_term(&t)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            Ok(gc_pkg::LockedEntry {
+                commit: Some(h),
+                snapshot: c.result,
+                registry: req.registry.clone(),
+                source_selector: req.selector.clone(),
+                resolved_ref: None,
+                exports_hash: None,
+            })
+        }
+        Selector::Ref(rn) => {
+            let h = refs
+                .get(&rn)
+                .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
+            let Some(commit_hex) = h else {
+                return Err(mk_error(
+                    error_tok,
+                    "core/pkg/ref-not-found",
+                    format!("ref not found: {rn}"),
+                    Some(op),
+                ));
+            };
+            if !store.path_for(&commit_hex).exists() {
+                return Err(mk_error(
+                    error_tok,
+                    "core/store/not-found",
+                    format!("artifact not found: {commit_hex}"),
+                    Some(op),
+                ));
+            }
+            let t = store_get_term(store, &commit_hex)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            let c = gc_vcs::Commit::from_term(&t)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            Ok(gc_pkg::LockedEntry {
+                commit: Some(commit_hex),
+                snapshot: c.result,
+                registry: req.registry.clone(),
+                source_selector: req.selector.clone(),
+                resolved_ref: Some(rn),
+                exports_hash: None,
+            })
+        }
+    }
+}
+
+fn payload_pkg_lock(payload: &Term) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":lock"))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        None => Ok("genesis.lock".to_string()),
+        Some(other) => Err(format!(":lock must be string, got {}", print_term(other))),
+    }
+}
+
+fn payload_pkg_workspace(payload: &Term) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":workspace"))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err("missing :workspace string".to_string()),
+    }
+}
+
+fn payload_pkg_policy(payload: &Term) -> Option<String> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":policy"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn payload_pkg_registry_default(payload: &Term) -> Option<String> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":registry-default"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn payload_pkg_name(payload: &Term) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":name"))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err("missing :name string".to_string()),
+    }
+}
+
+fn payload_pkg_selector(payload: &Term) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":selector"))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err("missing :selector string".to_string()),
+    }
+}
+
+fn payload_pkg_registry(payload: &Term) -> Option<String> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":registry"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn payload_pkg_update_policy(payload: &Term) -> Result<Option<gc_pkg::UpdatePolicy>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":update-policy"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => match s.as_str() {
+            "auto" => Ok(Some(gc_pkg::UpdatePolicy::Auto)),
+            "manual" => Ok(Some(gc_pkg::UpdatePolicy::Manual)),
+            other => Err(format!(
+                ":update-policy must be 'manual' or 'auto', got {other}"
+            )),
+        },
+        Some(other) => Err(format!(
+            ":update-policy must be string or nil, got {}",
+            print_term(other)
+        )),
+    }
+}
+
+fn payload_pkg_bool(payload: &Term, key: &str) -> Option<bool> {
+    let Term::Map(m) = payload else { return None };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
 }

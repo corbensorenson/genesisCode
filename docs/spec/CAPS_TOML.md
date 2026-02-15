@@ -83,6 +83,14 @@ create_dirs = true
 The runner also uses `base_dir` to sandbox filesystem paths carried in payloads for some non-`io/fs::*` ops:
 
 - `core/pkg::snapshot`: payload key `:pkg` (package.toml path)
+- `core/pkg::init`: payload key `:lock` (lockfile path)
+- `core/pkg::add`: payload key `:lock` (lockfile path)
+- `core/pkg::lock`: payload key `:lock` (lockfile path)
+- `core/pkg::update`: payload key `:lock` (lockfile path)
+- `core/pkg::install`: payload key `:lock` (lockfile path)
+- `core/pkg::verify`: payload key `:lock` (lockfile path)
+- `core/pkg::list`: payload key `:lock` (lockfile path)
+- `core/pkg::info`: payload key `:lock` (lockfile path)
 - `core/gpk::export`: payload key `:out` (output `.gpk` path)
 - `core/gpk::import`: payload key `:in` (input `.gpk` path)
 
