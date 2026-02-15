@@ -148,8 +148,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [ ] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
   - [ ] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
 - [ ] Garbage collection:
-  - [ ] Implement `genesis gc plan/run/pin/unpin` using reachability closure from roots (refs + locks + pins).
-  - [ ] Quarantine mode + TTL purge.
+  - [x] Implement `genesis gc plan/run/pin/unpin` using reachability closure from roots (refs + locks + pins).
+  - [x] Quarantine mode + TTL purge.
 
 ### P2: Advanced Stacks (Not Required For Initial Production, But v0.2-Vision Complete)
 

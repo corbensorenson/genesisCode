@@ -117,8 +117,11 @@ The runner also uses `base_dir` to sandbox filesystem paths carried in payloads 
 - `core/pkg::info`: payload key `:lock` (lockfile path)
 - `core/gpk::export`: payload key `:out` (output `.gpk` path)
 - `core/gpk::import`: payload key `:in` (input `.gpk` path)
+- `core/gc::*`: payload keys `:lock`, `:pins`, and (optionally) `:quarantine-dir`
 
 These payload paths must remain under `base_dir` after canonicalization, using the same rules as `io/fs::*`.
+
+For `core/gc::*`, paths may refer to files/directories that do not exist yet (e.g. `.genesis/pins.toml` or `.genesis/quarantine/`). The runner validates the longest existing ancestor is within `base_dir`, rejects `..`, and then uses the resulting under-base path.
 
 Notes on `timeout_ms`:
 - Timeouts are enforced by running the capability in a background thread and waiting for a result.
