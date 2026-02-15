@@ -9,6 +9,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--step-limit <N>`: set the kernel evaluation step limit for commands that evaluate CoreForm.
   - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, and `fmt --engine selfhost`.
   - The step limit also applies to prelude initialization for that command.
+  - Exception: for `fmt --engine selfhost`, the toolchain bootstrap load is not charged against the step limit; the step limit applies to formatting the input file/module.
   - The v0.2 toolchain default is `5_000_000` steps.
 - `--no-step-limit`: disable the kernel evaluation step limit (for trusted inputs only).
   - For package commands (`test`, `apply-patch`), `package.toml` may reject this via `[limits].allow_unlimited = false` (default).

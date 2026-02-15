@@ -65,16 +65,20 @@ pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
 
 #[wasm_bindgen]
 pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
-    let mut ctx = if step_limit == 0 {
-        EvalCtx::with_step_limit(None)
-    } else {
-        EvalCtx::with_step_limit(Some(step_limit as u64))
-    };
+    // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
+    let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
     load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
         .map_err(|e| js_err("selfhost/init", e))?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
 
     let f = env
         .get("selfhost/tool::fmt-module")
@@ -97,16 +101,20 @@ pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String
 
 #[wasm_bindgen]
 pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
-    let mut ctx = if step_limit == 0 {
-        EvalCtx::with_step_limit(None)
-    } else {
-        EvalCtx::with_step_limit(Some(step_limit as u64))
-    };
+    // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
+    let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
     load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
         .map_err(|e| js_err("selfhost/init", e))?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
 
     let f = env
         .get("selfhost/tool::hash-module-src")

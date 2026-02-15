@@ -542,7 +542,10 @@ fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<
             print_module(&canon)
         }
         FmtEngine::Selfhost => {
-            let mut ctx = mk_ctx(cli);
+            // Toolchain bootstrap is trusted; do not charge it against the step limit for the file being formatted.
+            // Memory limits still apply deterministically.
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
 
@@ -556,6 +559,9 @@ fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<
                     "missing binding selfhost/tool::fmt-module",
                 )
             })?;
+            // Now apply the user-configured step limit to the formatting work itself.
+            ctx.steps = 0;
+            ctx.step_limit = resolved_step_limit(cli).resolve();
             let r = f
                 .apply(&mut ctx, Value::Data(gc_coreform::Term::Str(src.clone())))
                 .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost fmt failed: {e}")))?;
