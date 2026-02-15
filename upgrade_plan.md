@@ -59,7 +59,7 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] WASI CLI for pure subset (`fmt`, `eval`, `vcs hash`): `crates/gc_wasi_cli` producing `genesis_wasi.wasm`.
 - [x] CI proves WASI smoke via wasmtime.
 - [x] `gc_effects` builds on `wasm32-wasip1` (local-only; sync/remote is denied on WASI).
-- [ ] Expand WASI CLI to cover effectful local workflows:
+- [x] Expand WASI CLI to cover effectful local workflows:
   - [x] `run` and `replay` with deterministic `.gclog`
   - [x] `store put/get/has` (local `.genesis/store`)
   - [x] `refs get/set/list/delete` (local refs db)
@@ -81,7 +81,7 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - filesystem sandboxing and canonical path rules (`docs/spec/FS_SANDBOX.md`)
   - network denied by default (explicit capability only; `core/sync::*` denied under WASI bootstrap)
   - deterministic time only via effect logs (no ambient time in kernel)
-- [ ] Make the WASI CLI support package workflows without network:
+- [x] Make the WASI CLI support package workflows without network:
   - [x] `genesis pkg init/add/lock/update/install/verify/list/info` using local store and refs.
   - [x] `genesis pkg export/import` using `.gpk` bundles (shallow/full), local-only.
   - [x] WASI smoke asserts native vs WASI equivalence for `pkg init/add/lock/install` (plus store+refs).
