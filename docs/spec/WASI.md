@@ -9,14 +9,19 @@ print results, but kernel evaluation remains pure.
 ## Crate
 
 - `crates/gc_wasi_cli` builds a WASI CLI binary: `genesis_wasi.wasm`.
-- Current command surface is intentionally minimal and pure:
+- Current command surface is intentionally minimal (WASI bootstrap):
   - `genesis fmt <file> [--check]`
   - `genesis eval <file>`
+  - `genesis run <file> --caps <caps.toml> [--log <out.gclog>]` (local effects only)
+  - `genesis replay <file> --log <log.gclog> [--store <dir>]`
   - `genesis vcs hash --in <file>`
 
 The interface mirrors the native `genesis` CLI for these commands:
 - stable exit codes (see `docs/spec/CLI.md`)
 - `--json` envelope support
+
+Notes:
+- Networking is denied in the WASI bootstrap. `core/sync::*` is not supported under WASI.
 
 ## Build
 
@@ -48,4 +53,3 @@ Run the deterministic smoke test, which asserts equivalence with the native `gen
 wasmtime --version
 bash scripts/wasi_smoke.sh
 ```
-

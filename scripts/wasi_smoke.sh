@@ -54,5 +54,39 @@ if [[ "$NATIVE_EVAL" != "$WASI_EVAL" ]]; then
   exit 1
 fi
 
-echo "ok"
+# run/replay should match native genesis for a deterministic filesystem read.
+cat >"$TMP_DIR/data.txt" <<'TXT'
+hello
+TXT
 
+cat >"$TMP_DIR/caps.toml" <<'TOML'
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+base_dir = "."
+TOML
+
+cat >"$TMP_DIR/run.gc" <<'GC'
+(def prog
+  (core/effect::perform
+    'io/fs::read
+    { :path "data.txt" }
+    (fn (b) (core/effect::pure b))))
+prog
+GC
+
+NATIVE_RUN="$(cargo run -p gc_cli --quiet -- run "$TMP_DIR/run.gc" --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/native.gclog" | tr -d '\n')"
+WASI_RUN="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" run "$TMP_DIR/run.gc" --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
+if [[ "$NATIVE_RUN" != "$WASI_RUN" ]]; then
+  echo "run mismatch native=$NATIVE_RUN wasi=$WASI_RUN" >&2
+  exit 1
+fi
+
+NATIVE_REPLAY="$(cargo run -p gc_cli --quiet -- replay "$TMP_DIR/run.gc" --log "$TMP_DIR/native.gclog" | tr -d '\n')"
+WASI_REPLAY="$(wasmtime --dir "$TMP_DIR" "$WASM_BIN" replay "$TMP_DIR/run.gc" --log "$TMP_DIR/wasi.gclog" | tr -d '\n')"
+if [[ "$NATIVE_REPLAY" != "$WASI_REPLAY" ]]; then
+  echo "replay mismatch native=$NATIVE_REPLAY wasi=$WASI_REPLAY" >&2
+  exit 1
+fi
+
+echo "ok"

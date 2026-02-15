@@ -1,17 +1,17 @@
 # Policy Defaults v0.1
 
-Default ref protection rules, obligations, and enforcement strategy for GenesisGraph/GenesisPkg.
+Default ref protection rules, required obligations, and enforcement strategy.
 
 ## 1.0 Policy model overview
 
-A policy is an artifact (content-addressed) that defines:
+A policy is a content-addressed artifact defining:
 
 - which refs are protected
 - which obligations are required to advance each ref class
-- what evidence kinds are required and how strict verification is
+- which evidence kinds are required
 - optional signature/attestation requirements
 
-Policy enforcement occurs at:
+Enforcement occurs at:
 
 - `refs set`
 - `pkg publish`
@@ -19,133 +19,61 @@ Policy enforcement occurs at:
 
 ## 2.0 Ref classes (normative defaults)
 
-Refnames are classified by prefix/pattern:
-
-### 2.1 Development branches
-
-- `refs/heads/*`
-- `refs/pkgs/*/heads/*`
-- `refs/contracts/*/heads/*`
-
-### 2.2 Release tags
-
-- `refs/tags/*`
-- `refs/pkgs/*/tags/*`
-- `refs/contracts/*/tags/*`
-
-### 2.3 Protected mainline
-
-- `refs/heads/main`
-- `refs/pkgs/*/heads/main`
-
-### 2.4 Frozen / immutable refs (optional)
-
-- `refs/frozen/*`
-
-Default: advancing frozen refs is disallowed.
+- Development branches: `refs/**/heads/*` except main
+- Mainline branches: `refs/**/heads/main`
+- Release tags: `refs/**/tags/*`
+- Frozen refs: `refs/frozen/*` (cannot advance by default)
 
 ## 3.0 Default obligations by ref class
 
-Obligations are qualified symbols; evidence artifacts are hashes stored in the content store.
-
-### 3.1 Dev branches (`refs/**/heads/*` except main)
+### 3.1 Dev branches
 
 Required obligations:
 
 - `core/obligation::unit-tests`
 - `core/obligation::capabilities-declared`
 
-Evidence required:
+Signatures: not required.
 
-- unit test report evidence
-- capability audit evidence (can be derived from effect logs)
-
-Signatures:
-
-- not required by default
-
-### 3.2 Mainline branches (`refs/**/heads/main`)
+### 3.2 Mainline
 
 Required obligations:
 
 - `core/obligation::unit-tests`
 - `core/obligation::replayable-tests`
 - `core/obligation::capabilities-declared`
-- `core/obligation::determinism` (for declared-pure modules/packages)
+- `core/obligation::determinism` (for declared-pure packages/modules)
 
-Evidence required:
+Signatures: optional.
 
-- unit test logs
-- effect logs from test runs (for replay)
-- replay verification evidence
-- capability audit evidence
-
-Signatures:
-
-- optional by default (recommended for shared registries)
-
-### 3.3 Release tags (`refs/**/tags/*`)
+### 3.3 Release tags
 
 Required obligations:
 
-- all mainline obligations, plus:
-- `core/obligation::no-unknown-deps` (deps pinned to hashes)
-- `core/obligation::signed-provenance` (default ON for tags)
-- optional: `core/obligation::resource-budgets` (if configured)
+- all mainline obligations
+- `core/obligation::no-unknown-deps`
+- `core/obligation::signed-provenance` (default ON)
 
-Evidence required:
+Signatures: required by default.
 
-- mainline evidence
-- dependency lock evidence (`genesis.lock` hash or equivalent)
-- signature/attestation artifacts
+### 3.4 Frozen refs
 
-### 3.4 Frozen refs (`refs/frozen/*`)
+Cannot be advanced.
 
-Rule: cannot be advanced by default policy.
+## 4.0 Determinism rules
 
-## 4.0 Determinism rules (policy semantics)
-
-### 4.1 Declared pure packages/modules
-
-If `:caps` is empty at package/module level:
-
-- require `core/obligation::determinism`
-- evaluation/tests must not emit sealed EFFECT requests
-
-### 4.2 Declared effectful packages/modules
-
-If `:caps` is non-empty:
-
-- require `core/obligation::capabilities-declared`
-- require `core/obligation::replayable-tests` where policy demands it (main/tags)
+If `:caps` is empty for a package/module, enforce no effects (no sealed EFFECT observed).
 
 ## 5.0 Install-time verification strictness
 
-Policies define install verification strictness:
+Policy defines `install.verify = off|basic|strict`.
 
-- `install.verify = off|basic|strict`
-
-Defaults:
-
-- dev workspace: `basic`
-- CI: `strict`
-- releases: `strict`
-
-Basic checks:
-
-- commit exists
-- obligations list contains required symbols
-- evidence hashes are present in store/bundle
-
-Strict checks:
-
-- verify evidence integrity
-- replay effect logs
-- optionally re-run tests in sandbox runner
+- basic: verify presence of obligations/evidence hashes
+- strict: verify integrity, replay logs, optionally re-run tests
 
 ## 6.0 Policy artifact schema (recommended)
 
-Policies are stored as artifacts (CoreForm, TOML, or JSON). Example TOML:
+Example TOML:
 
 ```toml
 version = 1
@@ -186,32 +114,19 @@ require_signatures = true
 verify = "basic"
 ```
 
-## 7.0 Enforcement points (must implement)
+## 7.0 Enforcement points
 
 ### 7.1 `refs set`
 
-- load policy and determine ref class by patterns
-- verify commit object:
-  - obligations include all required ones
-  - evidence hashes are present (and verifiable in strict mode)
-  - if signatures required: verify attestation/signature
-- only then mutate the ref
+- determine ref class
+- verify commit obligations and evidence presence
+- verify attestations if required
+- only then advance ref
 
 ### 7.2 `pkg publish`
 
-- same gating as `refs set`, but includes:
-  - push required artifacts to remote
-  - advance remote ref only if policy satisfied
+Same checks as `refs set`, plus push required artifacts.
 
-### 7.3 Optional `pkg install` enforcement
+### 7.3 Optional `pkg install`
 
-- verify installed packages according to policy install.strictness
-
-## 8.0 Minimal policy implementation order (MVP)
-
-1. pattern matching for ref classes
-2. required obligations presence check
-3. required evidence presence check
-4. determinism check based on `:caps` empty
-5. signatures/attestations (integrate with existing signing work)
-
+Verify according to `install.verify`.

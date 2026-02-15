@@ -1,88 +1,80 @@
-# GenesisCode Upgrade Plan (Post-v0.2): WASM Bootstrap -> WASM-First -> Self-Host
+# GenesisCode Upgrade Plan (WASM-First -> Self-Host)
 
 Date: 2026-02-15
 
-This plan is derived from the current `docs/` set (v0.2 + GenesisGraph/GenesisPkg addendum docs).
-It tracks work required to make GenesisCode usable in WASM hosts (Node/browser), then move the
-toolchain onto WASM (WASI/wasmtime), and finally self-host (removing Rust from the steady-state).
+North star:
+- Minimal Rust bootstrap that can be compiled to WASM (WASI/wasmtime and wasm-bindgen hosts).
+- Then replace the bootstrap with a self-hosted GenesisCode toolchain running on WASM.
 
 Non-negotiables:
-- Keep the kernel pure and deterministic (effects only via runner + `.gclog` + replay).
-- Keep `cargo fmt`, `cargo test --workspace`, and `cargo clippy --workspace --all-targets -- -D warnings` green.
+- Kernel stays pure and deterministic (effects only via runner + `.gclog` + replay).
+- Keep `cargo fmt --all`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` green.
 - No mock/simulated product behavior.
 
+Key docs to treat as authoritative:
+- `docs/WASM.md`, `docs/WASI.md`, `docs/WASM_HOST_BRIDGE.md`
+- `docs/CLI.md`, `docs/GENESISGRAPH_GENESISPKG_v0.2.md`
+- `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md`, `docs/POLICY_DEFAULTS_v0.1.md`
+- `docs/LOCK_GENERATOR_RULESET_v0.1.md`, `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md`
+- `docs/REACHABILITY_RULES_v0.1.md`, `docs/GARBAGE_COLLECTION_RULES_v0.1.md`
+
 ---
 
-## P0: WASM Bootstrap (Node/Browser Usability)
+## P0: "Useful Today" (Native)
 
-- [x] Define normative WASM host stepping interface: `docs/spec/WASM_HOST_BRIDGE.md`.
-- [x] WASM kernel exports for canonical fmt/hash/eval and effectful step/resume runtime (`crates/gc_wasm`).
-- [x] Node wasm-bindgen build + smoke (repo-local):
-  - `scripts/wasm_bindgen_node.sh`
-  - `scripts/wasm_node_smoke.mjs`
-  - CI runs Node smoke in `.github/workflows/ci.yml`
-- [x] Cross-host determinism: native runner vs Node(WASM) must match for:
-  - canonical formatting bytes (module + term)
-  - module hash
-  - effect request/response hashes for a deterministic deny-by-default run
-  - Acceptance: CI fails on any mismatch.
-- [ ] Browser build support:
+- [ ] Write a short "getting started" program and tutorial that uses real features:
+  - canonical formatting, eval, contracts, effects, run/replay, package snapshot + gpk export/import
+  - Acceptance: a new user can run it end-to-end with `genesis` and understand outputs.
+
+---
+
+## P1: WASM Bootstrap (Rust Compiled To WASM)
+
+### P1.1 WASI toolchain ("runs on WASM")
+
+- [x] WASI CLI for pure subset (`fmt`, `eval`, `vcs hash`): `crates/gc_wasi_cli` producing `genesis_wasi.wasm`.
+- [x] CI proves WASI smoke via wasmtime.
+- [x] `gc_effects` builds on `wasm32-wasip1` (local-only; sync/remote is denied on WASI).
+- [ ] Expand WASI CLI to cover effectful local workflows:
+  - [x] `run` and `replay` with deterministic `.gclog`
+  - [ ] `store put/get/has` (local `.genesis/store`)
+  - [ ] `refs get/set/list/delete` (local refs db)
+  - Acceptance: WASI outputs match native for the same inputs and logs.
+ - [x] Add WASI smoke tests for `run` and `replay` (compare native vs wasmtime) in CI.
+
+### P1.2 wasm-bindgen hosts (Node and browser)
+
+- [x] Node wasm-bindgen smoke for stepping interface (`docs/WASM_HOST_BRIDGE.md`).
+- [ ] Browser build + harness:
   - produce `wasm-bindgen --target web` artifacts
-  - add a minimal browser harness that can run `Runtime.step/respond_*` with a host policy
-  - Acceptance: deterministic golden tests run in headless browser in CI.
+  - headless browser CI runs deterministic golden tests
 
 ---
 
-## P0: CLI/Spec Hygiene (Docs Must Remain Trustworthy)
+## P2: WASM-First Toolchain Features (Still Rust, But Runs Under WASI)
 
-Focus docs:
-- `docs/spec/CLI.md` (exit codes + JSON envelope)
-- `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` (GenesisGraph/GenesisPkg commands)
-
-- [x] `genesis vcs hash --in <file>` implemented (pure).
-- [x] `genesis store put --in` flag compatibility alias.
-- [ ] Align `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` with the current CLI surface:
-  - either implement missing spec commands as aliases, or update the spec to point at the actual commands
-  - Required outcomes: a single authoritative command surface and stable flags.
-- [x] Implement `genesis pkg import --set-ref <ref>=<hash>` (spec wants local ref updates post-import).
-- [x] Add `genesis vcs merge3 --out <file>` (deterministic file output for snapshot or conflict).
-- [x] Add a “spec surface” test that asserts the CLI parser exposes the documented commands/flags (or lists explicit deviations with doc links).
+- [ ] Implement WASI-safe policies for host boundary:
+  - filesystem sandboxing and canonical path rules (`docs/FS_SANDBOX.md`)
+  - network denied by default (explicit capability only)
+  - deterministic time only via effect logs (no ambient time in kernel)
+- [ ] Make the WASI CLI support package workflows without network:
+  - `pkg init/add/lock/install/export/import/verify` using local store and refs
+  - Acceptance: a workspace can be built and tested inside wasmtime.
 
 ---
 
-## P1: WASM-First Toolchain (WASI/wasmtime)
+## P3: Self-Host Boundary And Cutover
 
-Goal: “Rust bootstrap on top of WASM” in practice: run the toolchain on WASI everywhere.
-
-- [x] Add a WASI CLI target that runs `fmt/hash/eval` on top of the WASM kernel.
-  - Implemented as `crates/gc_wasi_cli` (`genesis_wasi.wasm`) with `fmt/eval/vcs hash`.
-  - Doc: `docs/spec/WASI.md`
-- [x] Add `wasmtime` CI smoke tests to prove “tooling runs on wasm”.
-- [ ] Specify/implement WASI capability bridging policy:
-  - filesystem sandboxing (`docs/spec/FS_SANDBOX.md`)
-  - deterministic time via effect logs (no ambient time in kernel)
-  - network deny-by-default
-
----
-
-## P2: Self-Host Roadmap (Remove Rust in Steady-State)
-
-- [ ] Write a “self-host boundary” spec:
-  - what subset of GenesisCode is required to implement parsing/printing/canonicalization and a compiler pipeline
-  - how obligations and translation validation (`docs/spec/TRANSLATION_VALIDATION.md`) de-risk bootstrap replacement
-- [ ] Implement a self-hostable frontend in GenesisCode:
-  - CoreForm printer/canonicalizer equivalence tests against Rust implementation
-  - module loader + package resolver on GenesisGraph objects
-- [ ] Implement a compiler pipeline suitable for WASM-first execution:
+- [ ] Write `docs/spec/SELF_HOST_BOUNDARY.md`:
+  - minimal subset to self-host parsing/printing/canonicalization and a compiler pipeline
+  - bootstrapping stages and how translation validation reduces risk
+- [ ] Implement a self-hosted "frontend v0" in GenesisCode:
+  - CoreForm printer/canonicalizer equivalence tests against Rust
+  - module loader and package resolver on GenesisGraph objects
+- [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)
 - [ ] Cutover plan:
-  - Rust builds the self-host toolchain artifact, then runtime uses it
-  - self-hosted toolchain builds itself under obligations
+  - Rust produces the self-host toolchain artifact
+  - then runtime uses the self-host toolchain under obligations
   - Rust becomes optional tooling only
-
----
-
-## Notes
-
-If this file reaches “all checked”, we should delete it and replace with a release checklist plus a long-term roadmap doc.
