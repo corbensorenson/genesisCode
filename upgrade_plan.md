@@ -53,9 +53,9 @@ Key docs to treat as authoritative:
 
 ## P2: WASM-First Toolchain Features (Still Rust, But Runs Under WASI)
 
-- [ ] Implement WASI-safe policies for host boundary:
-  - filesystem sandboxing and canonical path rules (`docs/FS_SANDBOX.md`)
-  - network denied by default (explicit capability only)
+- [x] Implement WASI-safe policies for host boundary:
+  - filesystem sandboxing and canonical path rules (`docs/spec/FS_SANDBOX.md`)
+  - network denied by default (explicit capability only; `core/sync::*` denied under WASI bootstrap)
   - deterministic time only via effect logs (no ambient time in kernel)
 - [ ] Make the WASI CLI support package workflows without network:
   - [x] `genesis pkg init/add/lock/update/install/verify/list/info` using local store and refs.
