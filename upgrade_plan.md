@@ -47,7 +47,7 @@ Non-negotiables:
 ## P0: WASM Bootstrap (Make It Usable in Node/Browser)
 
 ### WASM runtime model (effects without breaking kernel purity)
-- [ ] Define a normative WASM host interface doc:
+- [x] Define a normative WASM host interface doc:
   - `docs/spec/WASM_HOST_BRIDGE.md`
   - Includes: step/resume API, effect request hashing inputs, continuation handles, response hashing, and log equivalence requirements.
 - [ ] Extend the WASM build beyond pure `eval` so effectful programs can run with a host runner:

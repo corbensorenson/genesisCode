@@ -3,6 +3,8 @@
 GenesisCode keeps the kernel pure. The WASM target builds the **parser + canonicalizer + pure evaluator**
 so CoreForm can be formatted, hashed, and evaluated in browser or other WASM hosts without effects.
 
+Effectful programs are supported via a host bridge step/resume protocol; see `docs/spec/WASM_HOST_BRIDGE.md`.
+
 ## Crate
 
 - `crates/gc_wasm` builds a `cdylib` for `wasm32-unknown-unknown`.
@@ -28,4 +30,3 @@ All outputs are deterministic given the same inputs.
 rustup target add wasm32-unknown-unknown
 cargo build -p gc_wasm --target wasm32-unknown-unknown
 ```
-
