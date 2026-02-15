@@ -2,11 +2,11 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
+use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
-use fs2::FileExt;
 
 use crate::error::EffectsError;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
@@ -652,30 +652,30 @@ fn call_capability(
                     && let Some(curh) = &cur
                     && curh != &h
                 {
-                        return Ok(mk_error_with_ctx(
-                            error_tok,
-                            "core/refs/conflict",
-                            "local ref differs; use force to overwrite".to_string(),
-                            Some(op),
-                            Term::Map(
-                                [
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/name")),
-                                        Term::Str(rname.clone()),
-                                    ),
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/current")),
-                                        cur.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                    ),
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/remote")),
-                                        Term::Str(h.clone()),
-                                    ),
-                                ]
-                                .into_iter()
-                                .collect(),
-                            ),
-                        ));
+                    return Ok(mk_error_with_ctx(
+                        error_tok,
+                        "core/refs/conflict",
+                        "local ref differs; use force to overwrite".to_string(),
+                        Some(op),
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":refs/name")),
+                                    Term::Str(rname.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":refs/current")),
+                                    cur.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":refs/remote")),
+                                    Term::Str(h.clone()),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        ),
+                    ));
                 }
                 let _ = refs.set(rname, Some(&h), None)?;
 
@@ -2120,10 +2120,7 @@ fn call_capability(
                     },
                 );
                 cm.insert(TermOrdKey(Term::symbol(":patch")), Term::Str(c.patch));
-                cm.insert(
-                    TermOrdKey(Term::symbol(":result")),
-                    Term::Str(c.result),
-                );
+                cm.insert(TermOrdKey(Term::symbol(":result")), Term::Str(c.result));
                 cm.insert(
                     TermOrdKey(Term::symbol(":obligations")),
                     Term::Vector(c.obligations.iter().cloned().map(Term::Str).collect()),
@@ -2136,27 +2133,18 @@ fn call_capability(
                     TermOrdKey(Term::symbol(":attestations")),
                     Term::Vector(c.attestations.iter().cloned().map(Term::Str).collect()),
                 );
-                cm.insert(
-                    TermOrdKey(Term::symbol(":message")),
-                    Term::Str(c.message),
-                );
+                cm.insert(TermOrdKey(Term::symbol(":message")), Term::Str(c.message));
                 out.push(Term::Map(cm));
             }
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(
-                TermOrdKey(Term::symbol(":root")),
-                Term::Str(root_commit),
-            );
+            m.insert(TermOrdKey(Term::symbol(":root")), Term::Str(root_commit));
             m.insert(
                 TermOrdKey(Term::symbol(":truncated")),
                 Term::Bool(truncated),
             );
-            m.insert(
-                TermOrdKey(Term::symbol(":commits")),
-                Term::Vector(out),
-            );
+            m.insert(TermOrdKey(Term::symbol(":commits")), Term::Vector(out));
             Ok(Value::Data(Term::Map(m)))
         }
         "core/vcs::merge3" => {
@@ -2198,15 +2186,12 @@ fn call_capability(
                 }
             };
 
-            let base_t = store_get_term(store, &base_h).map_err(|e| {
-                EffectsError::Log(format!("merge3 base read error: {e}"))
-            })?;
-            let left_t = store_get_term(store, &left_h).map_err(|e| {
-                EffectsError::Log(format!("merge3 left read error: {e}"))
-            })?;
-            let right_t = store_get_term(store, &right_h).map_err(|e| {
-                EffectsError::Log(format!("merge3 right read error: {e}"))
-            })?;
+            let base_t = store_get_term(store, &base_h)
+                .map_err(|e| EffectsError::Log(format!("merge3 base read error: {e}")))?;
+            let left_t = store_get_term(store, &left_h)
+                .map_err(|e| EffectsError::Log(format!("merge3 left read error: {e}")))?;
+            let right_t = store_get_term(store, &right_h)
+                .map_err(|e| EffectsError::Log(format!("merge3 right read error: {e}")))?;
 
             let base = match parse_contract_snapshot(&base_t) {
                 Ok(s) => s,
@@ -2347,7 +2332,8 @@ fn call_capability(
 
             let base_dir = effective_base_dir(pol)?;
             let lock_s = payload_gc_lock(payload).unwrap_or_else(|| "genesis.lock".to_string());
-            let pins_s = payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
+            let pins_s =
+                payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let depth = payload_gc_depth(payload).unwrap_or(200);
             let include_lock = payload_gc_include_lock(payload).unwrap_or(true);
             let include_refs = payload_gc_include_refs(payload).unwrap_or(true);
@@ -2355,9 +2341,7 @@ fn call_capability(
             let mut roots: Vec<String> = Vec::new();
             let mut roots_kind: Vec<Term> = Vec::new();
 
-            if include_refs
-                && let Some(rdb) = refs
-            {
+            if include_refs && let Some(rdb) = refs {
                 for r in rdb.list(None)? {
                     if let Some(h) = r.hash
                         && gc_vcs::validate_hex_hash(&h).is_ok()
@@ -2403,50 +2387,47 @@ fn call_capability(
                                     .collect(),
                                 ));
                             }
-                                    if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
-                                        roots.push(le.snapshot.clone());
-                                        roots_kind.push(Term::Map(
-                                            [
-                                                (
-                                                    TermOrdKey(Term::symbol(":kind")),
-                                                    Term::symbol(":lock-snapshot"),
-                                                ),
-                                                (
-                                                    TermOrdKey(Term::symbol(":lock")),
-                                                    Term::Str(lock_s.clone()),
-                                                ),
-                                                (
-                                                    TermOrdKey(Term::symbol(":hash")),
-                                                    Term::Str(le.snapshot),
-                                                ),
-                                            ]
-                                            .into_iter()
-                                            .collect(),
-                                        ));
-                                    }
-                                }
-                                for (k, v) in lk.artifacts {
-                                    if gc_vcs::validate_hex_hash(&v).is_ok() {
-                                        roots.push(v.clone());
-                                        roots_kind.push(Term::Map(
-                                            [
-                                                (
-                                                    TermOrdKey(Term::symbol(":kind")),
-                                                    Term::symbol(":lock-artifact"),
-                                                ),
-                                                (
-                                                    TermOrdKey(Term::symbol(":lock")),
-                                                    Term::Str(lock_s.clone()),
-                                                ),
-                                                (TermOrdKey(Term::symbol(":key")), Term::Str(k)),
-                                                (TermOrdKey(Term::symbol(":hash")), Term::Str(v)),
-                                            ]
-                                            .into_iter()
-                                            .collect(),
-                                        ));
-                                    }
-                                }
+                            if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
+                                roots.push(le.snapshot.clone());
+                                roots_kind.push(Term::Map(
+                                    [
+                                        (
+                                            TermOrdKey(Term::symbol(":kind")),
+                                            Term::symbol(":lock-snapshot"),
+                                        ),
+                                        (
+                                            TermOrdKey(Term::symbol(":lock")),
+                                            Term::Str(lock_s.clone()),
+                                        ),
+                                        (TermOrdKey(Term::symbol(":hash")), Term::Str(le.snapshot)),
+                                    ]
+                                    .into_iter()
+                                    .collect(),
+                                ));
+                            }
                         }
+                        for (k, v) in lk.artifacts {
+                            if gc_vcs::validate_hex_hash(&v).is_ok() {
+                                roots.push(v.clone());
+                                roots_kind.push(Term::Map(
+                                    [
+                                        (
+                                            TermOrdKey(Term::symbol(":kind")),
+                                            Term::symbol(":lock-artifact"),
+                                        ),
+                                        (
+                                            TermOrdKey(Term::symbol(":lock")),
+                                            Term::Str(lock_s.clone()),
+                                        ),
+                                        (TermOrdKey(Term::symbol(":key")), Term::Str(k)),
+                                        (TermOrdKey(Term::symbol(":hash")), Term::Str(v)),
+                                    ]
+                                    .into_iter()
+                                    .collect(),
+                                ));
+                            }
+                        }
+                    }
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
@@ -2545,12 +2526,7 @@ fn call_capability(
                 })
                 .collect();
 
-            let dead_sample: Vec<Term> = dead
-                .iter()
-                .take(50)
-                .cloned()
-                .map(Term::Str)
-                .collect();
+            let dead_sample: Vec<Term> = dead.iter().take(50).cloned().map(Term::Str).collect();
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -2567,7 +2543,10 @@ fn call_capability(
                 Term::Int((dead_bytes as i64).into()),
             );
             m.insert(TermOrdKey(Term::symbol(":roots")), Term::Vector(roots_kind));
-            m.insert(TermOrdKey(Term::symbol(":largest")), Term::Vector(largest_term));
+            m.insert(
+                TermOrdKey(Term::symbol(":largest")),
+                Term::Vector(largest_term),
+            );
             m.insert(
                 TermOrdKey(Term::symbol(":dead-sample")),
                 Term::Vector(dead_sample),
@@ -2581,7 +2560,8 @@ fn call_capability(
 
             let base_dir = effective_base_dir(pol)?;
             let lock_s = payload_gc_lock(payload).unwrap_or_else(|| "genesis.lock".to_string());
-            let pins_s = payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
+            let pins_s =
+                payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let depth = payload_gc_depth(payload).unwrap_or(200);
             let include_lock = payload_gc_include_lock(payload).unwrap_or(true);
             let include_refs = payload_gc_include_refs(payload).unwrap_or(true);
@@ -2590,9 +2570,7 @@ fn call_capability(
 
             // Compute live set by reusing plan logic (without returning the whole plan payload).
             let mut roots: Vec<String> = Vec::new();
-            if include_refs
-                && let Some(rdb) = refs
-            {
+            if include_refs && let Some(rdb) = refs {
                 for r in rdb.list(None)? {
                     if let Some(h) = r.hash
                         && gc_vcs::validate_hex_hash(&h).is_ok()
@@ -2613,16 +2591,16 @@ fn call_capability(
                             {
                                 roots.push(ch);
                             }
-                                    if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
-                                        roots.push(le.snapshot);
-                                    }
-                                }
-                                for (_, v) in lk.artifacts {
-                                    if gc_vcs::validate_hex_hash(&v).is_ok() {
-                                        roots.push(v);
-                                    }
-                                }
-                }
+                            if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
+                                roots.push(le.snapshot);
+                            }
+                        }
+                        for (_, v) in lk.artifacts {
+                            if gc_vcs::validate_hex_hash(&v).is_ok() {
+                                roots.push(v);
+                            }
+                        }
+                    }
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
@@ -2687,15 +2665,10 @@ fn call_capability(
 
             let quarantine_dir = if quarantine {
                 Some(match quarantine_dir_s {
-                    Some(s) => {
-                        sandbox_path_write(&base_dir, &s, true).map_err(|e| {
-                            EffectsError::Log(format!("quarantine dir path error: {e}"))
-                        })?
-                    }
-                    None => store_dir
-                        .parent()
-                        .unwrap_or(store_dir)
-                        .join("quarantine"),
+                    Some(s) => sandbox_path_write(&base_dir, &s, true).map_err(|e| {
+                        EffectsError::Log(format!("quarantine dir path error: {e}"))
+                    })?,
+                    None => store_dir.parent().unwrap_or(store_dir).join("quarantine"),
                 })
             } else {
                 None
@@ -2746,11 +2719,11 @@ fn call_capability(
         }
         "core/gc::pin" => {
             let base_dir = effective_base_dir(pol)?;
-            let pins_s = payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
+            let pins_s =
+                payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let target = payload_gc_target(payload)?;
 
-            let mut pins = gc_pins_load(&base_dir, &pins_s)
-                .unwrap_or_else(|_| GcPins::empty());
+            let mut pins = gc_pins_load(&base_dir, &pins_s).unwrap_or_else(|_| GcPins::empty());
             if target.starts_with("refs/") {
                 if !pins.keep_refs.iter().any(|r| r == &target) {
                     pins.keep_refs.push(target);
@@ -2774,10 +2747,7 @@ fn call_capability(
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(
-                TermOrdKey(Term::symbol(":pins")),
-                Term::Str(pins_s),
-            );
+            m.insert(TermOrdKey(Term::symbol(":pins")), Term::Str(pins_s));
             m.insert(
                 TermOrdKey(Term::symbol(":keep")),
                 Term::Vector(pins.keep.iter().cloned().map(Term::Str).collect()),
@@ -2790,11 +2760,11 @@ fn call_capability(
         }
         "core/gc::unpin" => {
             let base_dir = effective_base_dir(pol)?;
-            let pins_s = payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
+            let pins_s =
+                payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let target = payload_gc_target(payload)?;
 
-            let mut pins = gc_pins_load(&base_dir, &pins_s)
-                .unwrap_or_else(|_| GcPins::empty());
+            let mut pins = gc_pins_load(&base_dir, &pins_s).unwrap_or_else(|_| GcPins::empty());
             if target.starts_with("refs/") {
                 pins.keep_refs.retain(|r| r != &target);
             } else if let Some(h) = gc_normalize_hash(&target) {
@@ -2813,10 +2783,7 @@ fn call_capability(
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(
-                TermOrdKey(Term::symbol(":pins")),
-                Term::Str(pins_s),
-            );
+            m.insert(TermOrdKey(Term::symbol(":pins")), Term::Str(pins_s));
             m.insert(
                 TermOrdKey(Term::symbol(":keep")),
                 Term::Vector(pins.keep.iter().cloned().map(Term::Str).collect()),
@@ -2829,9 +2796,8 @@ fn call_capability(
         }
         "core/gc::purge" => {
             let base_dir = effective_base_dir(pol)?;
-            let ttl_days = payload_gc_ttl_days(payload).ok_or_else(|| {
-                EffectsError::BadPayload("missing :ttl-days int".to_string())
-            })?;
+            let ttl_days = payload_gc_ttl_days(payload)
+                .ok_or_else(|| EffectsError::BadPayload("missing :ttl-days int".to_string()))?;
             let quarantine_dir_s = payload_gc_quarantine_dir(payload);
 
             let qd = match quarantine_dir_s {
@@ -3089,7 +3055,9 @@ fn call_capability(
                 } else {
                     None
                 };
-                if let Err(e) = gc_vcs::write_bundle(&mut hw, bundle_version, root_b, &entries, refs_opt) {
+                if let Err(e) =
+                    gc_vcs::write_bundle(&mut hw, bundle_version, root_b, &entries, refs_opt)
+                {
                     return Ok(mk_error(
                         error_tok,
                         "core/gpk/write-error",
@@ -3232,7 +3200,10 @@ fn call_capability(
                 for rr in &bundle.refs {
                     rs.push(Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(rr.name.clone())),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str(rr.name.clone()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":hash")),
                                 Term::Str(gc_vcs::bytes32_to_hex(&rr.hash)),
@@ -4127,7 +4098,12 @@ fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
     };
     match m.get(&TermOrdKey(Term::symbol(":type"))) {
         Some(Term::Symbol(s)) if s == ":vcs/snapshot" => {}
-        Some(other) => return Err(format!("snapshot :type must be :vcs/snapshot, got {}", print_term(other))),
+        Some(other) => {
+            return Err(format!(
+                "snapshot :type must be :vcs/snapshot, got {}",
+                print_term(other)
+            ));
+        }
         None => return Err("snapshot missing :type".to_string()),
     }
     match m.get(&TermOrdKey(Term::symbol(":v"))) {
@@ -4137,7 +4113,12 @@ fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
     }
     match m.get(&TermOrdKey(Term::symbol(":kind"))) {
         Some(Term::Symbol(s)) if s == ":contract" => {}
-        Some(other) => return Err(format!("merge3 only supports :kind :contract, got {}", print_term(other))),
+        Some(other) => {
+            return Err(format!(
+                "merge3 only supports :kind :contract, got {}",
+                print_term(other)
+            ));
+        }
         None => return Err("snapshot missing :kind".to_string()),
     }
 
@@ -4147,7 +4128,12 @@ fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
             gc_vcs::validate_hex_hash(s).map_err(|e| format!("snapshot :proto: {e}"))?;
             Some(s.clone())
         }
-        Some(other) => return Err(format!("snapshot :proto must be hex string or nil, got {}", print_term(other))),
+        Some(other) => {
+            return Err(format!(
+                "snapshot :proto must be hex string or nil, got {}",
+                print_term(other)
+            ));
+        }
     };
 
     let empty_overrides = Term::Map(BTreeMap::new());
@@ -4165,14 +4151,25 @@ fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
         let op_sym = match &k.0 {
             Term::Symbol(s) => s.clone(),
             Term::Str(s) => s.clone(),
-            other => return Err(format!("snapshot :overrides keys must be symbols/strings, got {}", print_term(other))),
+            other => {
+                return Err(format!(
+                    "snapshot :overrides keys must be symbols/strings, got {}",
+                    print_term(other)
+                ));
+            }
         };
         let hv = match v {
             Term::Str(s) => {
-                gc_vcs::validate_hex_hash(s).map_err(|e| format!("snapshot :overrides/{op_sym}: {e}"))?;
+                gc_vcs::validate_hex_hash(s)
+                    .map_err(|e| format!("snapshot :overrides/{op_sym}: {e}"))?;
                 s.clone()
             }
-            other => return Err(format!("snapshot :overrides values must be hash strings, got {}", print_term(other))),
+            other => {
+                return Err(format!(
+                    "snapshot :overrides values must be hash strings, got {}",
+                    print_term(other)
+                ));
+            }
         };
         overrides.insert(op_sym, hv);
     }
@@ -4180,12 +4177,12 @@ fn parse_contract_snapshot(t: &Term) -> Result<ContractSnapshotView, String> {
     Ok(ContractSnapshotView { proto, overrides })
 }
 
-fn mk_contract_snapshot_term(
-    proto: Option<String>,
-    overrides: BTreeMap<TermOrdKey, Term>,
-) -> Term {
+fn mk_contract_snapshot_term(proto: Option<String>, overrides: BTreeMap<TermOrdKey, Term>) -> Term {
     let mut m = BTreeMap::new();
-    m.insert(TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/snapshot"));
+    m.insert(
+        TermOrdKey(Term::symbol(":type")),
+        Term::symbol(":vcs/snapshot"),
+    );
     m.insert(TermOrdKey(Term::symbol(":v")), Term::Int(1.into()));
     m.insert(TermOrdKey(Term::symbol(":kind")), Term::symbol(":contract"));
     m.insert(
@@ -4205,13 +4202,28 @@ fn mk_conflict_artifact(
 ) -> Term {
     Term::Map(
         [
-            (TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/conflict")),
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":vcs/conflict"),
+            ),
             (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
             (TermOrdKey(Term::symbol(":kind")), Term::symbol(kind)),
-            (TermOrdKey(Term::symbol(":base")), Term::Str(base.to_string())),
-            (TermOrdKey(Term::symbol(":left")), Term::Str(left.to_string())),
-            (TermOrdKey(Term::symbol(":right")), Term::Str(right.to_string())),
-            (TermOrdKey(Term::symbol(":conflicts")), Term::Vector(conflicts)),
+            (
+                TermOrdKey(Term::symbol(":base")),
+                Term::Str(base.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":left")),
+                Term::Str(left.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":right")),
+                Term::Str(right.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":conflicts")),
+                Term::Vector(conflicts),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -4774,11 +4786,14 @@ fn sync_pull_closure(
                     Some(stats.op),
                 )
             })?;
-            let got = store
-                .put_bytes(&bytes)
-                .map_err(|e| {
-                    mk_error(stats.error_tok, "core/store/io-error", e.to_string(), Some(stats.op))
-                })?;
+            let got = store.put_bytes(&bytes).map_err(|e| {
+                mk_error(
+                    stats.error_tok,
+                    "core/store/io-error",
+                    e.to_string(),
+                    Some(stats.op),
+                )
+            })?;
             if got != h {
                 return Err(mk_error(
                     stats.error_tok,
@@ -4974,8 +4989,7 @@ fn gc_normalize_hash(s: &str) -> Option<String> {
 }
 
 fn gc_pins_load(base_dir: &Path, pins_path: &str) -> Result<GcPins, String> {
-    let p = sandbox_path_allow_missing(base_dir, pins_path, false)
-        .map_err(|e| format!("{e}"))?;
+    let p = sandbox_path_allow_missing(base_dir, pins_path, false).map_err(|e| format!("{e}"))?;
     if !p.exists() {
         return Ok(GcPins::empty());
     }
@@ -4983,10 +4997,7 @@ fn gc_pins_load(base_dir: &Path, pins_path: &str) -> Result<GcPins, String> {
     let s = String::from_utf8(bytes).map_err(|_| "pins file is not utf-8".to_string())?;
     let v: toml::Value = toml::from_str(&s).map_err(|e| format!("pins toml parse: {e}"))?;
 
-    let version = v
-        .get("version")
-        .and_then(|x| x.as_integer())
-        .unwrap_or(1);
+    let version = v.get("version").and_then(|x| x.as_integer()).unwrap_or(1);
     if version != 1 {
         return Err(format!("unsupported pins version: {version}"));
     }
@@ -5152,9 +5163,7 @@ fn sandbox_path_allow_missing(
         }
     }
     let candidate = if p.is_absolute() { p } else { base.join(p) };
-    if create_dirs
-        && let Some(parent) = candidate.parent()
-    {
+    if create_dirs && let Some(parent) = candidate.parent() {
         std::fs::create_dir_all(parent)?;
     }
     // Find the longest existing ancestor to canonicalize for anti-symlink-escape.

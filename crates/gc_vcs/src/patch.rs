@@ -107,11 +107,7 @@ impl Patch {
     }
 }
 
-fn req_sym(
-    m: &BTreeMap<TermOrdKey, Term>,
-    k: &str,
-    what: &str,
-) -> Result<String, SchemaError> {
+fn req_sym(m: &BTreeMap<TermOrdKey, Term>, k: &str, what: &str) -> Result<String, SchemaError> {
     match m.get(&TermOrdKey(Term::symbol(k))) {
         Some(Term::Symbol(s)) => Ok(s.clone()),
         Some(Term::Str(s)) => Ok(s.clone()),
@@ -137,4 +133,3 @@ fn req_i64(m: &BTreeMap<TermOrdKey, Term>, k: &str, what: &str) -> Result<i64, S
         None => Err(SchemaError::Bad(format!("{what}: missing {k}"))),
     }
 }
-

@@ -27,8 +27,14 @@ fn gpk_v2_roundtrips_refs_and_sorts_them() {
     let ent_bytes = b"{:kind \"x\"}".to_vec();
     let ent_hex = blake3::hash(&ent_bytes).to_hex().to_string();
     let refs = vec![
-        ("refs/tags/v1.0.0".to_string(), blake3::hash(b"c2").to_hex().to_string()),
-        ("refs/heads/main".to_string(), blake3::hash(b"c1").to_hex().to_string()),
+        (
+            "refs/tags/v1.0.0".to_string(),
+            blake3::hash(b"c2").to_hex().to_string(),
+        ),
+        (
+            "refs/heads/main".to_string(),
+            blake3::hash(b"c1").to_hex().to_string(),
+        ),
     ];
 
     let mut buf: Vec<u8> = Vec::new();
@@ -45,7 +51,10 @@ fn gpk_v1_write_rejects_refs_section() {
     let root = hash_bytes32(b"root");
     let ent_bytes = b"{:kind \"x\"}".to_vec();
     let ent_hex = blake3::hash(&ent_bytes).to_hex().to_string();
-    let refs = vec![("refs/heads/main".to_string(), blake3::hash(b"c1").to_hex().to_string())];
+    let refs = vec![(
+        "refs/heads/main".to_string(),
+        blake3::hash(b"c1").to_hex().to_string(),
+    )];
 
     let mut buf: Vec<u8> = Vec::new();
     let err = write_bundle(&mut buf, 1, root, &[(ent_hex, ent_bytes)], Some(&refs)).unwrap_err();
@@ -54,4 +63,3 @@ fn gpk_v1_write_rejects_refs_section() {
         other => panic!("expected BadIndex, got {other:?}"),
     }
 }
-

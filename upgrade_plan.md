@@ -146,7 +146,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
   - [x] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
   - [x] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
-  - [ ] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
+  - [x] Obligation-gated publish: refuse without required evidence; accept and advance refs when satisfied.
 - [ ] Garbage collection:
   - [x] Implement `genesis gc plan/run/pin/unpin` using reachability closure from roots (refs + locks + pins).
   - [x] Quarantine mode + TTL purge.

@@ -131,14 +131,18 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         .arg("--json")
         .args(["vcs", "--caps"])
         .arg(&caps)
-        .args(["merge3", "--base", &base, "--left", &left, "--right", &right])
+        .args([
+            "merge3", "--base", &base, "--left", &left, "--right", &right,
+        ])
         .assert()
         .success()
         .get_output()
         .stdout
         .clone();
     let t = parse_term(&json_value(&out)).unwrap();
-    let Term::Map(m) = t else { panic!("expected map") };
+    let Term::Map(m) = t else {
+        panic!("expected map")
+    };
     assert_eq!(
         m.get(&TermOrdKey(Term::symbol(":ok"))),
         Some(&Term::Bool(true))
@@ -150,9 +154,15 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
     else {
         panic!(":snapshot must be string");
     };
-    assert!(predicate::str::is_match("^[0-9a-f]{64}$").unwrap().eval(&merged_h));
+    assert!(
+        predicate::str::is_match("^[0-9a-f]{64}$")
+            .unwrap()
+            .eval(&merged_h)
+    );
     let merged_term = get_artifact_term(dir, &caps, &merged_h);
-    let Term::Map(mm) = merged_term else { panic!("merged snapshot must be map") };
+    let Term::Map(mm) = merged_term else {
+        panic!("merged snapshot must be map")
+    };
     let Term::Map(ov) = mm
         .get(&TermOrdKey(Term::symbol(":overrides")))
         .expect("missing :overrides")
@@ -194,7 +204,9 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         .arg("--json")
         .args(["vcs", "--caps"])
         .arg(&caps)
-        .args(["merge3", "--base", &base, "--left", &left, "--right", &right2])
+        .args([
+            "merge3", "--base", &base, "--left", &left, "--right", &right2,
+        ])
         .assert()
         .code(3)
         .get_output()
@@ -202,7 +214,9 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         .clone();
 
     let t2 = parse_term(&json_value(&out2)).unwrap();
-    let Term::Map(m2) = t2 else { panic!("expected map") };
+    let Term::Map(m2) = t2 else {
+        panic!("expected map")
+    };
     assert_eq!(
         m2.get(&TermOrdKey(Term::symbol(":ok"))),
         Some(&Term::Bool(false))
@@ -215,7 +229,9 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
         panic!(":conflict must be string");
     };
     let conf_term = get_artifact_term(dir, &caps, &conflict_h);
-    let Term::Map(cm) = conf_term else { panic!("conflict must be map") };
+    let Term::Map(cm) = conf_term else {
+        panic!("conflict must be map")
+    };
     assert_eq!(
         cm.get(&TermOrdKey(Term::symbol(":type"))),
         Some(&Term::symbol(":vcs/conflict"))
@@ -229,4 +245,3 @@ fn merge3_contract_snapshots_merges_disjoint_ops_and_conflicts_on_divergence() {
     };
     assert!(!xs.is_empty());
 }
-

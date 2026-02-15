@@ -242,7 +242,9 @@ path = "mini.gc"
     let env: serde_json::Value = serde_json::from_slice(&out).unwrap();
     let value_s = env["data"]["value"].as_str().expect("data.value");
     let v = parse_term(value_s).expect("parse import value");
-    let Term::Map(m) = v else { panic!("import value must be a map") };
+    let Term::Map(m) = v else {
+        panic!("import value must be a map")
+    };
 
     // Root is the commit hash (bundle root), and refs are present.
     assert_eq!(
@@ -282,4 +284,3 @@ path = "mini.gc"
             .stdout("true\n");
     }
 }
-

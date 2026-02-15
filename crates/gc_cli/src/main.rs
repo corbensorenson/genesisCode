@@ -529,6 +529,36 @@ enum PkgCmd {
         #[arg(long)]
         input: PathBuf,
     },
+
+    /// Publish a commit to a remote registry and advance a remote ref (policy-gated).
+    ///
+    /// This is the "pip publish" equivalent: upload reachable artifacts and set the remote ref.
+    Publish {
+        /// Remote spec (e.g. gen://example.com/registry or https://...).
+        #[arg(long)]
+        remote: String,
+
+        /// Remote ref to advance (e.g. refs/heads/main, refs/tags/v1.0.0).
+        #[arg(long = "ref")]
+        refname: String,
+
+        /// Policy artifact hash (hex) used by the remote refs/set gate.
+        #[arg(long)]
+        policy: String,
+
+        /// Optional optimistic concurrency check for the remote ref.
+        /// Pass a hex hash, or the literal string `nil` to require the ref to be unset.
+        #[arg(long)]
+        expected_old: Option<String>,
+
+        /// Commit parent depth to include when publishing (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Commit hash to publish. If omitted, resolves from the local `refname` in the refs db.
+        #[arg(long)]
+        commit: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1401,6 +1431,27 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             "genesis/pkg-import-v0.1",
             "pkg-import",
         ),
+        PkgCmd::Publish {
+            remote,
+            refname,
+            policy: policy_h,
+            expected_old,
+            depth,
+            commit,
+        } => {
+            let commit_hex = preflight_publish(&policy, refname, commit.as_deref(), policy_h)?;
+            let sr = SetRefSpec {
+                name: refname.clone(),
+                hash: commit_hex.clone(),
+                policy: policy_h.clone(),
+                expected_old: expected_old.clone(),
+            };
+            (
+                mk_sync_push_program(remote, &[commit_hex, policy_h.clone()], *depth, &[sr]),
+                "genesis/pkg-publish-v0.1",
+                "pkg-publish",
+            )
+        }
     };
 
     let forms = canonicalize_module(forms)
@@ -1475,6 +1526,22 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             PkgCmd::Import { .. } => extract_pkg_import_root(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Publish {
+                commit, refname, ..
+            } => {
+                if ok {
+                    // Prefer commit hash (resolved from local ref if needed).
+                    if let Some(h) = commit {
+                        format!("{h}\n")
+                    } else {
+                        resolve_local_ref_head(&policy, refname)
+                            .map(|h| format!("{h}\n"))
+                            .unwrap_or_else(|_| "ok\n".to_string())
+                    }
+                } else {
+                    format!("{value}\n")
+                }
+            }
         }
     };
 
@@ -1503,6 +1570,164 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
         stdout,
         json: serde_json::to_value(env).expect("json"),
     })
+}
+
+fn resolve_local_ref_head(policy: &CapsPolicy, refname: &str) -> Result<String, CliError> {
+    let refs_path = policy.refs_db_path().ok_or_else(|| {
+        cli_err(
+            EX_PARSE,
+            "pkg/publish",
+            "caps policy missing [refs].path (needed to resolve commit from --ref)",
+        )
+    })?;
+    let rdb = gc_effects::RefsDb::open(refs_path)
+        .map_err(|e| cli_err(EX_IO, "pkg/publish", format!("refs db open: {e}")))?;
+    let h = rdb
+        .get(refname)
+        .map_err(|e| cli_err(EX_IO, "pkg/publish", format!("refs db read: {e}")))?;
+    let Some(h) = h else {
+        return Err(cli_err(
+            EX_OBLIGATIONS,
+            "pkg/publish",
+            format!("local ref is unset: {refname}"),
+        ));
+    };
+    if gc_vcs::validate_hex_hash(&h).is_err() {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/publish",
+            format!("local ref points to invalid hash: {h}"),
+        ));
+    }
+    Ok(h)
+}
+
+fn preflight_publish(
+    policy: &CapsPolicy,
+    refname: &str,
+    commit_override: Option<&str>,
+    policy_h: &str,
+) -> Result<String, CliError> {
+    let store_dir = policy.artifact_store_dir().ok_or_else(|| {
+        cli_err(
+            EX_PARSE,
+            "pkg/publish",
+            "caps policy missing [store].dir (needed for local artifact store)",
+        )
+    })?;
+    let store = gc_effects::ArtifactStore::open(store_dir)
+        .map_err(|e| cli_err(EX_IO, "pkg/publish", format!("store open: {e}")))?;
+
+    let commit_hex = if let Some(h) = commit_override {
+        h.to_string()
+    } else {
+        resolve_local_ref_head(policy, refname)?
+    };
+    if gc_vcs::validate_hex_hash(&commit_hex).is_err() {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/publish",
+            "commit must be 64-hex".to_string(),
+        ));
+    }
+    if gc_vcs::validate_hex_hash(policy_h).is_err() {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/publish",
+            "policy must be 64-hex".to_string(),
+        ));
+    }
+
+    let pol_term = read_term_from_store(&store, policy_h)
+        .map_err(|e| cli_err(EX_OBLIGATIONS, "pkg/publish", e))?;
+    let pol = gc_vcs::Policy::from_term(&pol_term)
+        .map_err(|e| cli_err(EX_PARSE, "pkg/publish", format!("bad policy: {e}")))?;
+
+    if pol.is_frozen_ref(refname) {
+        return Err(cli_err(
+            EX_OBLIGATIONS,
+            "pkg/publish",
+            format!("ref is frozen by policy: {refname}"),
+        ));
+    }
+    let class = pol.class_for_ref(refname).ok_or_else(|| {
+        cli_err(
+            EX_OBLIGATIONS,
+            "pkg/publish",
+            format!("policy has no matching class for ref: {refname}"),
+        )
+    })?;
+
+    let commit_term = read_term_from_store(&store, &commit_hex)
+        .map_err(|e| cli_err(EX_OBLIGATIONS, "pkg/publish", e))?;
+    let commit = gc_vcs::Commit::from_term(&commit_term)
+        .map_err(|e| cli_err(EX_PARSE, "pkg/publish", format!("bad commit: {e}")))?;
+
+    for req in &class.required_obligations {
+        if !commit.obligations.iter().any(|o| o == req) {
+            return Err(cli_err(
+                EX_OBLIGATIONS,
+                "pkg/publish",
+                format!("commit missing required obligation: {req}"),
+            ));
+        }
+    }
+    if !class.required_obligations.is_empty() && commit.evidence.is_empty() {
+        return Err(cli_err(
+            EX_OBLIGATIONS,
+            "pkg/publish",
+            "commit has required obligations but no evidence".to_string(),
+        ));
+    }
+    for ev_h in &commit.evidence {
+        let ev_term = read_term_from_store(&store, ev_h)
+            .map_err(|e| cli_err(EX_OBLIGATIONS, "pkg/publish", e))?;
+        gc_vcs::Evidence::from_term(&ev_term)
+            .map_err(|e| cli_err(EX_PARSE, "pkg/publish", format!("bad evidence: {e}")))?;
+    }
+
+    if class.require_signatures {
+        let signing_h = gc_vcs::commit_signing_hash(&commit_term)
+            .map_err(|e| cli_err(EX_PARSE, "pkg/publish", format!("bad commit: {e}")))?;
+        let mut valid: u64 = 0;
+        let mut seen_pks: std::collections::BTreeSet<Vec<u8>> = std::collections::BTreeSet::new();
+        for at_h in &commit.attestations {
+            let at_term = read_term_from_store(&store, at_h)
+                .map_err(|e| cli_err(EX_OBLIGATIONS, "pkg/publish", e))?;
+            let at = gc_vcs::Attestation::from_term(&at_term)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/publish", format!("bad attestation: {e}")))?;
+            let pk_vec = at.pk.to_vec();
+            if seen_pks.contains(&pk_vec) {
+                continue;
+            }
+            if gc_vcs::verify_commit_attestation(&at, &signing_h, &class.allowed_public_keys)
+                .is_ok()
+            {
+                seen_pks.insert(pk_vec);
+                valid = valid.saturating_add(1);
+            }
+        }
+        if valid < class.min_signatures {
+            return Err(cli_err(
+                EX_OBLIGATIONS,
+                "pkg/publish",
+                format!(
+                    "need {} valid signatures, got {valid}",
+                    class.min_signatures
+                ),
+            ));
+        }
+    }
+
+    Ok(commit_hex)
+}
+
+fn read_term_from_store(store: &gc_effects::ArtifactStore, hex: &str) -> Result<Term, String> {
+    let bytes = store
+        .get_bytes(hex)
+        .map_err(|e| format!("artifact not found: {e}"))?;
+    let s = String::from_utf8(bytes).map_err(|_| "artifact bytes not utf-8".to_string())?;
+    gc_coreform::parse_term(&s).map_err(|e| format!("bad artifact term: {e}"))
 }
 
 fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result<CmdOut, CliError> {
@@ -1540,8 +1765,8 @@ fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result
         }
     };
 
-    let forms =
-        canonicalize_module(forms).map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
     let program_hash = hash_module(&forms);
 
     let mut ctx = mk_ctx(cli);
@@ -1805,14 +2030,21 @@ fn cmd_vcs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &VcsCmd) -> Result<C
     // Detect conflict artifact and use stable exit semantics for merge.
     if matches!(cmd, VcsCmd::Merge3 { .. })
         && let Value::Data(Term::Map(m)) = &r.value
-        && matches!(m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok"))), Some(Term::Bool(false)))
+        && matches!(
+            m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok"))),
+            Some(Term::Bool(false))
+        )
         && m.contains_key(&gc_coreform::TermOrdKey(Term::symbol(":conflict")))
     {
         ok = false;
         exit_code = 3; // conflict
     }
 
-    let stdout = if cli.json { String::new() } else { format!("{value}\n") };
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        format!("{value}\n")
+    };
 
     let env = JsonEnvelope {
         ok,
@@ -2124,7 +2356,8 @@ fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
         return Err(cli_err(
             EX_PARSE,
             "sync/set-ref",
-            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]".to_string(),
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
+                .to_string(),
         ));
     }
     let name = parts[0].trim();
@@ -2137,7 +2370,10 @@ fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
             "set-ref fields must be non-empty".to_string(),
         ));
     }
-    let expected_old = parts.get(3).map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let expected_old = parts
+        .get(3)
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
     Ok(SetRefSpec {
         name: name.to_string(),
         hash: hash.to_string(),
@@ -2524,7 +2760,10 @@ fn mk_sync_pull_program(
         );
     }
     if force {
-        m.insert(gc_coreform::TermOrdKey(Term::symbol(":force")), Term::Bool(true));
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":force")),
+            Term::Bool(true),
+        );
     }
     let payload = Term::Map(m);
     let k = Term::list(vec![
@@ -2578,12 +2817,19 @@ fn mk_sync_push_program(
                 Term::Str(sr.policy.clone()),
             );
             if let Some(e) = &sr.expected_old {
-                let v = if e == "nil" { Term::Nil } else { Term::Str(e.clone()) };
+                let v = if e == "nil" {
+                    Term::Nil
+                } else {
+                    Term::Str(e.clone())
+                };
                 mm.insert(gc_coreform::TermOrdKey(Term::symbol(":expected-old")), v);
             }
             out.push(Term::Map(mm));
         }
-        m.insert(gc_coreform::TermOrdKey(Term::symbol(":set-refs")), Term::Vector(out));
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":set-refs")),
+            Term::Vector(out),
+        );
     }
     let payload = Term::Map(m);
     let k = Term::list(vec![
@@ -2805,7 +3051,10 @@ fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
 }
 
 fn mk_vcs_merge3_program(base: &str, left: &str, right: &str) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::merge3")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs::merge3"),
+    ]);
     let payload = Term::Map(
         [
             (

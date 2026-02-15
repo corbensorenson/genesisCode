@@ -612,6 +612,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "axum",
+ "blake3",
  "clap",
  "gc_coreform",
  "gc_effects",
@@ -621,11 +623,13 @@ dependencies = [
  "gc_patches",
  "gc_prelude",
  "gc_types",
+ "gc_vcs",
  "predicates",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]

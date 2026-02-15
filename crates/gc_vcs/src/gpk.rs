@@ -243,7 +243,8 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
             let nlen = u16::from_le_bytes(nlb) as usize;
             let mut nb = vec![0u8; nlen];
             r.read_exact(&mut nb).map_err(|_| GpkError::Truncated)?;
-            let name = String::from_utf8(nb).map_err(|_| GpkError::BadIndex("bad ref name".to_string()))?;
+            let name = String::from_utf8(nb)
+                .map_err(|_| GpkError::BadIndex("bad ref name".to_string()))?;
             if name.trim().is_empty() {
                 return Err(GpkError::BadIndex("empty ref name".to_string()));
             }

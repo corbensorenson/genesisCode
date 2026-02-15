@@ -79,7 +79,9 @@ fn pkg_info(dir: &Path, caps: &Path, name: &str) -> Term {
 }
 
 fn locked_commit_snapshot(info: &Term) -> (String, String) {
-    let Term::Map(m) = info else { panic!("info must be map") };
+    let Term::Map(m) = info else {
+        panic!("info must be map")
+    };
     let Term::Map(lk) = m
         .get(&TermOrdKey(Term::symbol(":locked")))
         .expect("missing :locked")
@@ -106,8 +108,18 @@ fn pin_vs_track_lock_and_update_are_deterministic() {
     let caps = write_caps(dir);
 
     // VCS artifacts: patch, snapshot, commit.
-    let patch1 = store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch1.gc");
-    let patch2 = store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch2.gc");
+    let patch1 = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "patch1.gc",
+    );
+    let patch2 = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "patch2.gc",
+    );
 
     let snap1 = store_put(
         dir,
@@ -268,4 +280,3 @@ fn pin_vs_track_lock_and_update_are_deterministic() {
     assert_eq!(t_commit1, c2);
     assert_eq!(t_snap1, snap2);
 }
-

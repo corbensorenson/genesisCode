@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
+use axum::Json;
 use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post, put};
-use axum::Json;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
@@ -187,7 +187,9 @@ async fn refs_set(
             };
             let ev_s = match String::from_utf8(ev_bytes) {
                 Ok(s) => s,
-                Err(_) => return (StatusCode::FORBIDDEN, "evidence bytes not utf8").into_response(),
+                Err(_) => {
+                    return (StatusCode::FORBIDDEN, "evidence bytes not utf8").into_response();
+                }
             };
             let ev_t = match parse_term(&ev_s) {
                 Ok(t) => t,
@@ -251,9 +253,10 @@ impl TestRegistry {
                 let base = format!("http://{addr}/");
                 base_tx.send(base).expect("send base");
 
-                let srv = axum::serve(listener, app.with_state(st_for_thread)).with_graceful_shutdown(async move {
-                    let _ = shutdown_rx.await;
-                });
+                let srv = axum::serve(listener, app.with_state(st_for_thread))
+                    .with_graceful_shutdown(async move {
+                        let _ = shutdown_rx.await;
+                    });
                 let _ = srv.await;
             });
         });
@@ -308,7 +311,11 @@ impl Drop for TestRegistry {
     }
 }
 
-fn mk_caps_for_sync(store_dir: &std::path::Path, refs_path: &std::path::Path, remote_allow: &str) -> CapsPolicy {
+fn mk_caps_for_sync(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+) -> CapsPolicy {
     let s = format!(
         r#"
 allow = ["core/sync::push", "core/sync::pull"]
@@ -343,7 +350,12 @@ fn mk_prog(op: &str, payload: &Term) -> (Vec<Term>, [u8; 32]) {
         Term::list(vec![Term::symbol("r")]),
         Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
     ]);
-    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op_t, payload_t, k]);
+    let perform = Term::list(vec![
+        Term::symbol("core/effect::perform"),
+        op_t,
+        payload_t,
+        k,
+    ]);
     let forms = vec![
         Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
         Term::symbol("prog"),
@@ -402,18 +414,36 @@ fn mk_patch_with_value(value_hex: &str) -> Term {
 fn mk_snapshot(module_hex: &str, module_h: [u8; 32]) -> Term {
     Term::Map(
         [
-            (TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/snapshot")),
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":vcs/snapshot"),
+            ),
             (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
             (TermOrdKey(Term::symbol(":kind")), Term::symbol(":package")),
-            (TermOrdKey(Term::symbol(":pkg/name")), Term::Str("my-lib".to_string())),
-            (TermOrdKey(Term::symbol(":pkg/version")), Term::Str("0.1.0".to_string())),
+            (
+                TermOrdKey(Term::symbol(":pkg/name")),
+                Term::Str("my-lib".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg/version")),
+                Term::Str("0.1.0".to_string()),
+            ),
             (
                 TermOrdKey(Term::symbol(":modules")),
                 Term::Vector(vec![Term::Map(
                     [
-                        (TermOrdKey(Term::symbol(":path")), Term::Str("m.gc".to_string())),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(module_hex.to_string())),
-                        (TermOrdKey(Term::symbol(":module-h")), Term::Bytes(module_h.to_vec())),
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str("m.gc".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(module_hex.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":module-h")),
+                            Term::Bytes(module_h.to_vec()),
+                        ),
                     ]
                     .into_iter()
                     .collect(),
@@ -449,12 +479,18 @@ fn mk_commit(result_hex: &str, patch_hex: &str, evidence_hex: &str) -> Term {
 }
 
 fn is_sealed_error(ctx: &EvalCtx, v: &Value, code: &str) -> bool {
-    let Some(proto) = ctx.protocol else { return false };
-    let Value::Sealed { token, payload } = v else { return false };
+    let Some(proto) = ctx.protocol else {
+        return false;
+    };
+    let Value::Sealed { token, payload } = v else {
+        return false;
+    };
     if *token != proto.error {
         return false;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else { return false };
+    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+        return false;
+    };
     matches!(
         m.get(&TermOrdKey(Term::symbol(":error/code"))),
         Some(Term::Str(s)) if s == code
@@ -497,7 +533,9 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         .unwrap();
 
     let patch_t = mk_patch_with_value(&extra_patch_hex);
-    let patch_hex = local_store.put_bytes(print_term(&patch_t).as_bytes()).unwrap();
+    let patch_hex = local_store
+        .put_bytes(print_term(&patch_t).as_bytes())
+        .unwrap();
 
     let evidence_t = mk_evidence_with_data(&extra_data_hex);
     let evidence_hex = local_store
@@ -505,7 +543,9 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         .unwrap();
 
     let snap_t = mk_snapshot(&module_hex, module_h);
-    let snap_hex = local_store.put_bytes(print_term(&snap_t).as_bytes()).unwrap();
+    let snap_hex = local_store
+        .put_bytes(print_term(&snap_t).as_bytes())
+        .unwrap();
 
     let commit_t = mk_commit(&snap_hex, &patch_hex, &evidence_hex);
     let commit_hex = local_store
@@ -593,7 +633,10 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         store2.verify_hex(h).unwrap();
     }
     let refs2 = gc_effects::RefsDb::open(&refs_path2).unwrap();
-    assert_eq!(refs2.get("refs/heads/main").unwrap(), Some(commit_hex.clone()));
+    assert_eq!(
+        refs2.get("refs/heads/main").unwrap(),
+        Some(commit_hex.clone())
+    );
 
     // Ensure pull is deterministic with replay (log roundtrip).
     let log_term = r2.log.to_term();
@@ -633,7 +676,8 @@ fn sync_pull_ref_conflict_requires_force() {
     // Set remote ref (server-gated).
     {
         let mut g = reg.state.inner.lock().unwrap();
-        g.refs.insert("refs/heads/main".to_string(), commit_hex.clone());
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
     }
 
     // Local store/refs already have a different main head.
@@ -642,7 +686,8 @@ fn sync_pull_ref_conflict_requires_force() {
     let refs_path = td.path().join("refs.gc");
     let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
     let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
-    refs.set("refs/heads/main", Some(&"0".repeat(64)), None).unwrap();
+    refs.set("refs/heads/main", Some(&"0".repeat(64)), None)
+        .unwrap();
 
     // Pull without force should return a sealed ERROR with code core/refs/conflict.
     let pull_payload = parse_term(&format!(
@@ -685,7 +730,10 @@ fn sync_pull_ref_conflict_requires_force() {
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    assert!(!matches!(r2.value, Value::Sealed { .. }), "force pull failed");
+    assert!(
+        !matches!(r2.value, Value::Sealed { .. }),
+        "force pull failed"
+    );
     assert_eq!(refs.get("refs/heads/main").unwrap(), Some(commit_hex));
 
     // Keep policy_hex referenced (server-side policy must exist; future tests can use it).

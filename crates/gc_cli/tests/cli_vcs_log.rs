@@ -261,7 +261,9 @@ fn full_history_import_supports_vcs_log_over_embedded_ref_head() {
         .clone();
 
     let t = parse_term(&json_value(&out)).unwrap();
-    let Term::Map(m) = t else { panic!("expected map") };
+    let Term::Map(m) = t else {
+        panic!("expected map")
+    };
     let Term::Vector(commits) = m
         .get(&TermOrdKey(Term::symbol(":commits")))
         .expect("missing :commits")
@@ -271,10 +273,11 @@ fn full_history_import_supports_vcs_log_over_embedded_ref_head() {
     };
     assert_eq!(commits.len(), 3);
     // First entry is the head.
-    let Term::Map(h0) = &commits[0] else { panic!("commit entry must be map") };
+    let Term::Map(h0) = &commits[0] else {
+        panic!("commit entry must be map")
+    };
     assert_eq!(
         h0.get(&TermOrdKey(Term::symbol(":hash"))),
         Some(&Term::Str(c3))
     );
 }
-

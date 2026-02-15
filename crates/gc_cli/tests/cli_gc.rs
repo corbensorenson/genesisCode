@@ -31,7 +31,9 @@ fn json_value(stdout: &[u8]) -> String {
 }
 
 fn term_map_get_i64(t: &Term, key: &str) -> i64 {
-    let Term::Map(m) = t else { panic!("expected map") };
+    let Term::Map(m) = t else {
+        panic!("expected map")
+    };
     let k = TermOrdKey(Term::symbol(key));
     match m.get(&k) {
         Some(Term::Int(i)) => i.to_string().parse::<i64>().unwrap(),
@@ -58,10 +60,16 @@ fn store_put(dir: &Path, caps: &Path, content: &str, log_name: &str) -> String {
         .stdout
         .clone();
     let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    let value_s = v.get("data").and_then(|d| d.get("value")).and_then(|x| x.as_str()).unwrap();
+    let value_s = v
+        .get("data")
+        .and_then(|d| d.get("value"))
+        .and_then(|x| x.as_str())
+        .unwrap();
     // store put prints the value term; extract :hash
     let term = parse_term(value_s).unwrap();
-    let Term::Map(m) = term else { panic!("expected map") };
+    let Term::Map(m) = term else {
+        panic!("expected map")
+    };
     let h = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
         Some(Term::Str(s)) => s.clone(),
         other => panic!("missing :hash: {other:?}"),
@@ -82,10 +90,7 @@ fn gc_plan_then_run_deletes_unreachable_artifacts() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(
-        dir,
-        &["core/store::put", "core/gc::plan", "core/gc::run"],
-    );
+    let caps = write_caps(dir, &["core/store::put", "core/gc::plan", "core/gc::run"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead");
@@ -100,7 +105,15 @@ fn gc_plan_then_run_deletes_unreachable_artifacts() {
         .arg(&caps)
         .args(["--log"])
         .arg(&plan_log)
-        .args(["plan", "--lock", "genesis.lock", "--pins", ".genesis/pins.toml", "--depth", "0"])
+        .args([
+            "plan",
+            "--lock",
+            "genesis.lock",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+        ])
         .assert()
         .success()
         .get_output()
@@ -117,7 +130,15 @@ fn gc_plan_then_run_deletes_unreachable_artifacts() {
         .arg(&caps)
         .args(["--log"])
         .arg(&run_log)
-        .args(["run", "--lock", "genesis.lock", "--pins", ".genesis/pins.toml", "--depth", "0"])
+        .args([
+            "run",
+            "--lock",
+            "genesis.lock",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+        ])
         .assert()
         .success();
 
@@ -130,14 +151,7 @@ fn gc_quarantine_and_purge_roundtrip() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(
-        dir,
-        &[
-            "core/store::put",
-            "core/gc::run",
-            "core/gc::purge",
-        ],
-    );
+    let caps = write_caps(dir, &["core/store::put", "core/gc::run", "core/gc::purge"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep2");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead2");
@@ -196,14 +210,7 @@ fn gc_pin_prevents_deletion() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(
-        dir,
-        &[
-            "core/store::put",
-            "core/gc::pin",
-            "core/gc::run",
-        ],
-    );
+    let caps = write_caps(dir, &["core/store::put", "core/gc::pin", "core/gc::run"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep3");
     let pinned_h = store_put(dir, &caps, "{:pin true}\n", "pin3");
@@ -229,7 +236,15 @@ fn gc_pin_prevents_deletion() {
         .arg(&caps)
         .args(["--log"])
         .arg(&run_log)
-        .args(["run", "--lock", "genesis.lock", "--pins", ".genesis/pins.toml", "--depth", "0"])
+        .args([
+            "run",
+            "--lock",
+            "genesis.lock",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+        ])
         .assert()
         .success();
 
