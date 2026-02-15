@@ -141,8 +141,8 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [ ] Per-contract ref namespaces (`refs/contracts/<sym>/heads/*`).
   - [ ] 3-way merge for contract snapshots (op-table keyed merge).
   - [ ] Conflict artifacts + resolution pipeline via semantic patches.
-- [ ] Acceptance tests (must be added early):
-  - [ ] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
+  - [ ] Acceptance tests (must be added early):
+  - [x] Shallow share roundtrip: export `.gpk` -> import -> install -> run tests -> verify hashes.
   - [x] Full history export/import: multiple commits + refs -> import -> `vcs log` correctness.
   - [x] Pin vs track: pinned commit stable; tracked ref advances and lock updates deterministically.
   - [x] Merge: disjoint-op merge clean; same-op divergence yields `:vcs/conflict`.
