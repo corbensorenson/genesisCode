@@ -47,3 +47,13 @@ All outputs are deterministic given the same inputs.
 rustup target add wasm32-unknown-unknown
 cargo build -p gc_wasm --target wasm32-unknown-unknown
 ```
+
+## Node (wasm-bindgen) Smoke
+
+To generate Node bindings and run a deterministic smoke test:
+
+```bash
+cargo install wasm-bindgen-cli --version 0.2.108 --locked
+bash scripts/wasm_bindgen_node.sh
+node scripts/wasm_node_smoke.mjs
+```

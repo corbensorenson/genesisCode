@@ -32,6 +32,18 @@ pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+pub fn fmt_coreform_term(src: &str) -> Result<String, JsValue> {
+    let t = parse_term(src).map_err(|e| js_err("parse", e))?;
+    Ok(print_term(&t) + "\n")
+}
+
+#[wasm_bindgen]
+pub fn hash_coreform_term(src: &str) -> Result<String, JsValue> {
+    let t = parse_term(src).map_err(|e| js_err("parse", e))?;
+    Ok(hex::encode(hash_term(&t)))
+}
+
+#[wasm_bindgen]
 pub fn eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
@@ -379,6 +391,7 @@ mod hex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gc_effects::CapsPolicy;
 
     fn eval_to_first_step(rt: &mut Runtime, src: &str) -> StepResult {
         rt.ctx = EvalCtx::with_step_limit(rt.step_limit);
@@ -479,6 +492,64 @@ mod tests {
             .unwrap();
         match resumed.next {
             StepResult::Done { value, .. } => {
+                assert!(value.contains(":error/code"));
+                assert!(value.contains("core/caps/denied"));
+            }
+            other => panic!("expected done after denied, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn wasm_runtime_hashes_match_native_effect_runner_entry() {
+        let src = r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#;
+
+        // WASM-side first step.
+        let mut rt = Runtime::new(0);
+        let step = eval_to_first_step(&mut rt, src);
+        let StepResult::Effect {
+            op,
+            payload_h,
+            cont_h,
+            req_h,
+            ..
+        } = step
+        else {
+            panic!("expected effect");
+        };
+        assert_eq!(op, "sys/time::now");
+
+        // Native runner first entry (deny-by-default, so response is deterministic).
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let program_hash = hash_module(&forms);
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+
+        let policy = CapsPolicy::empty(); // deny everything
+        let r = gc_effects::run(&mut ctx, &policy, v, program_hash, "test".to_string()).unwrap();
+        assert_eq!(r.log.entries.len(), 1);
+        let e = &r.log.entries[0];
+
+        assert_eq!(hex::encode(e.payload_h), payload_h);
+        assert_eq!(hex::encode(e.cont_h), cont_h);
+        assert_eq!(hex::encode(e.req_h), req_h);
+
+        // Now resume in wasm runtime with denied and compare response hash deterministically.
+        let error_tok = rt.ctx.protocol.unwrap().error;
+        let resumed = rt
+            .respond_value_internal(mk_caps_denied(error_tok, "sys/time::now"))
+            .unwrap();
+        assert_eq!(hex::encode(e.resp_h), resumed.resp_h);
+
+        match resumed.next {
+            StepResult::Done { value, .. } => {
+                // Deny produces a sealed ERROR; log serialization for ERROR drops the seal and records payload map.
                 assert!(value.contains(":error/code"));
                 assert!(value.contains("core/caps/denied"));
             }

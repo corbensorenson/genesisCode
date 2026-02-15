@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import path from "node:path";
+import process from "node:process";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+
+function isHex32(s) {
+  return typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
+}
+
+const modPath = path.resolve(
+  process.argv[2] ?? "target/wasm-bindgen/gc_wasm/gc_wasm.js",
+);
+// wasm-bindgen (--target nodejs) emits a CommonJS module.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const wasm = require(modPath);
+
+assert.equal(typeof wasm.fmt_coreform_term, "function");
+assert.equal(typeof wasm.hash_coreform_term, "function");
+assert.equal(typeof wasm.Runtime, "function");
+
+// Term fmt/hash idempotency and canonical hashing invariants.
+const t0 = "{:b 2 :a 1}";
+const fmt1 = wasm.fmt_coreform_term(t0);
+const fmt2 = wasm.fmt_coreform_term(fmt1);
+assert.equal(fmt2, fmt1, "fmt_coreform_term should be idempotent");
+
+const h0 = wasm.hash_coreform_term(t0);
+const h1 = wasm.hash_coreform_term(fmt1);
+assert.ok(isHex32(h0), "hash_coreform_term should be 64-hex");
+assert.equal(h1, h0, "hash_coreform_term should canonicalize inputs");
+
+// Effectful stepping smoke test (host denies, kernel constructs sealed ERROR).
+const src = `
+  (core/effect::perform
+    'sys/time::now
+    nil
+    (fn (t) (core/effect::pure t)))
+`;
+
+const rt = new wasm.Runtime(0);
+const step = rt.eval_module(src);
+
+assert.equal(step.kind, "effect");
+assert.equal(step.op, "sys/time::now");
+assert.equal(step.payload, "nil");
+assert.ok(isHex32(step.module_h));
+assert.ok(isHex32(step.payload_h));
+assert.ok(isHex32(step.cont_h));
+assert.ok(isHex32(step.req_h));
+
+const resumed = rt.respond_denied();
+assert.ok(isHex32(resumed.resp_h));
+assert.equal(resumed.next.kind, "done");
+assert.ok(
+  resumed.next.value.includes("core/caps/denied"),
+  "denied response should be a caps-denied ERROR payload in log form",
+);
+assert.ok(isHex32(resumed.next.value_h));
+
+process.stdout.write("ok\n");
+

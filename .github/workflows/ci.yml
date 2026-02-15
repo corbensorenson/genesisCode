@@ -30,3 +30,16 @@ jobs:
 
       - name: WASM Build (Pure Kernel)
         run: cargo build -p gc_wasm --target wasm32-unknown-unknown
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
+
+      - name: WASM Bindings (Node) + Smoke Test
+        run: |
+          bash scripts/wasm_bindgen_node.sh >/dev/null
+          node scripts/wasm_node_smoke.mjs
