@@ -2338,115 +2338,17 @@ fn call_capability(
                 }
             };
 
-            fn store_value(store: &ArtifactStore, v: &Term) -> Result<String, EffectsError> {
-                store.put_bytes(print_term(v).as_bytes())
-            }
-
-            fn mk_op(op_sym: &str, path: &[gc_vcs::PathStep], value: Option<&str>) -> Term {
-                let mut m = BTreeMap::new();
-                m.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op_sym));
-                m.insert(
-                    TermOrdKey(Term::symbol(":path")),
-                    gc_vcs::path_to_term(path),
-                );
-                if let Some(vh) = value {
-                    m.insert(
-                        TermOrdKey(Term::symbol(":value")),
-                        Term::Str(vh.to_string()),
-                    );
+            let (patch_term, values) = match vcs_diff_patch_term(store, &base_t, &to_t) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/diff-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
                 }
-                Term::Map(m)
-            }
-
-            fn diff_rec(
-                store: &ArtifactStore,
-                path: &mut Vec<gc_vcs::PathStep>,
-                a: &Term,
-                b: &Term,
-                ops: &mut Vec<Term>,
-                values: &mut Vec<String>,
-            ) -> Result<(), EffectsError> {
-                if a == b {
-                    return Ok(());
-                }
-                match (a, b) {
-                    (Term::Map(ma), Term::Map(mb)) => {
-                        let mut keys: std::collections::BTreeSet<TermOrdKey> =
-                            std::collections::BTreeSet::new();
-                        keys.extend(ma.keys().cloned());
-                        keys.extend(mb.keys().cloned());
-                        for k in keys {
-                            let av = ma.get(&k);
-                            let bv = mb.get(&k);
-                            match (av, bv) {
-                                (Some(x), Some(y)) => {
-                                    path.push(gc_vcs::PathStep::Map(k.0.clone()));
-                                    diff_rec(store, path, x, y, ops, values)?;
-                                    path.pop();
-                                }
-                                (None, Some(y)) => {
-                                    let vh = store_value(store, y)?;
-                                    values.push(vh.clone());
-                                    let mut p2 = path.clone();
-                                    p2.push(gc_vcs::PathStep::Map(k.0.clone()));
-                                    ops.push(mk_op(":insert", &p2, Some(&vh)));
-                                }
-                                (Some(_), None) => {
-                                    let mut p2 = path.clone();
-                                    p2.push(gc_vcs::PathStep::Map(k.0.clone()));
-                                    ops.push(mk_op(":delete", &p2, None));
-                                }
-                                (None, None) => {}
-                            }
-                        }
-                        Ok(())
-                    }
-                    (Term::Vector(_), Term::Vector(_))
-                    | (Term::Pair(_, _), Term::Pair(_, _))
-                    | (Term::Vector(_), _)
-                    | (_, Term::Vector(_))
-                    | (Term::Pair(_, _), _)
-                    | (_, Term::Pair(_, _)) => {
-                        // Conservative: replace whole node when shape differs or container contents differ.
-                        let vh = store_value(store, b)?;
-                        values.push(vh.clone());
-                        ops.push(mk_op(":replace", path, Some(&vh)));
-                        Ok(())
-                    }
-                    _ => {
-                        let vh = store_value(store, b)?;
-                        values.push(vh.clone());
-                        ops.push(mk_op(":replace", path, Some(&vh)));
-                        Ok(())
-                    }
-                }
-            }
-
-            let mut ops: Vec<Term> = Vec::new();
-            let mut values: Vec<String> = Vec::new();
-            let mut path: Vec<gc_vcs::PathStep> = Vec::new();
-            if let Err(e) = diff_rec(store, &mut path, &base_t, &to_t, &mut ops, &mut values) {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/vcs/diff-error",
-                    e.to_string(),
-                    Some(op),
-                ));
-            }
-            ops.sort_by_cached_key(print_term);
-
-            let patch_term = Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":type")),
-                        Term::symbol(":vcs/patch"),
-                    ),
-                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-                    (TermOrdKey(Term::symbol(":ops")), Term::Vector(ops)),
-                ]
-                .into_iter()
-                .collect(),
-            );
+            };
             let patch_bytes = print_term(&patch_term);
             let patch_h = if store_patch {
                 match store.put_bytes(patch_bytes.as_bytes()) {
@@ -2841,14 +2743,6 @@ fn call_capability(
                 .map_err(|e| EffectsError::Log(format!("merge3 left read error: {e}")))?;
             let right_t = store_get_term(store, &right_h)
                 .map_err(|e| EffectsError::Log(format!("merge3 right read error: {e}")))?;
-
-            fn as_contract_snapshot(t: &Term) -> Result<gc_vcs::ContractSnapshot, String> {
-                let snap = gc_vcs::Snapshot::from_term(t).map_err(|e| e.to_string())?;
-                match snap.kind {
-                    gc_vcs::SnapshotKind::Contract(c) => Ok(c),
-                    _ => Err("merge3 only supports :kind :contract".to_string()),
-                }
-            }
 
             let base = match as_contract_snapshot(&base_t) {
                 Ok(s) => s,
@@ -4794,6 +4688,118 @@ fn hash_bytes_hex(bytes: &[u8]) -> String {
     let mut h = blake3::Hasher::new();
     h.update(bytes);
     h.finalize().to_hex().to_string()
+}
+
+fn as_contract_snapshot(t: &Term) -> Result<gc_vcs::ContractSnapshot, String> {
+    let snap = gc_vcs::Snapshot::from_term(t).map_err(|e| e.to_string())?;
+    match snap.kind {
+        gc_vcs::SnapshotKind::Contract(c) => Ok(c),
+        _ => Err("expected :vcs/snapshot with :kind :contract".to_string()),
+    }
+}
+
+fn vcs_diff_patch_term(
+    store: &ArtifactStore,
+    base_t: &Term,
+    to_t: &Term,
+) -> Result<(Term, Vec<String>), EffectsError> {
+    fn store_value(store: &ArtifactStore, v: &Term) -> Result<String, EffectsError> {
+        store.put_bytes(print_term(v).as_bytes())
+    }
+
+    fn mk_op(op_sym: &str, path: &[gc_vcs::PathStep], value: Option<&str>) -> Term {
+        let mut m = BTreeMap::new();
+        m.insert(TermOrdKey(Term::symbol(":op")), Term::symbol(op_sym));
+        m.insert(
+            TermOrdKey(Term::symbol(":path")),
+            gc_vcs::path_to_term(path),
+        );
+        if let Some(vh) = value {
+            m.insert(TermOrdKey(Term::symbol(":value")), Term::Str(vh.to_string()));
+        }
+        Term::Map(m)
+    }
+
+    fn diff_rec(
+        store: &ArtifactStore,
+        path: &mut Vec<gc_vcs::PathStep>,
+        a: &Term,
+        b: &Term,
+        ops: &mut Vec<Term>,
+        values: &mut Vec<String>,
+    ) -> Result<(), EffectsError> {
+        if a == b {
+            return Ok(());
+        }
+        match (a, b) {
+            (Term::Map(ma), Term::Map(mb)) => {
+                let mut keys: std::collections::BTreeSet<TermOrdKey> =
+                    std::collections::BTreeSet::new();
+                keys.extend(ma.keys().cloned());
+                keys.extend(mb.keys().cloned());
+                for k in keys {
+                    let av = ma.get(&k);
+                    let bv = mb.get(&k);
+                    match (av, bv) {
+                        (Some(x), Some(y)) => {
+                            path.push(gc_vcs::PathStep::Map(k.0.clone()));
+                            diff_rec(store, path, x, y, ops, values)?;
+                            path.pop();
+                        }
+                        (None, Some(y)) => {
+                            let vh = store_value(store, y)?;
+                            values.push(vh.clone());
+                            let mut p2 = path.clone();
+                            p2.push(gc_vcs::PathStep::Map(k.0.clone()));
+                            ops.push(mk_op(":insert", &p2, Some(&vh)));
+                        }
+                        (Some(_), None) => {
+                            let mut p2 = path.clone();
+                            p2.push(gc_vcs::PathStep::Map(k.0.clone()));
+                            ops.push(mk_op(":delete", &p2, None));
+                        }
+                        (None, None) => {}
+                    }
+                }
+                Ok(())
+            }
+            (Term::Vector(_), Term::Vector(_))
+            | (Term::Pair(_, _), Term::Pair(_, _))
+            | (Term::Vector(_), _)
+            | (_, Term::Vector(_))
+            | (Term::Pair(_, _), _)
+            | (_, Term::Pair(_, _)) => {
+                // Conservative: replace whole node when shape differs or container contents differ.
+                let vh = store_value(store, b)?;
+                values.push(vh.clone());
+                ops.push(mk_op(":replace", path, Some(&vh)));
+                Ok(())
+            }
+            _ => {
+                let vh = store_value(store, b)?;
+                values.push(vh.clone());
+                ops.push(mk_op(":replace", path, Some(&vh)));
+                Ok(())
+            }
+        }
+    }
+
+    let mut ops: Vec<Term> = Vec::new();
+    let mut values: Vec<String> = Vec::new();
+    let mut path: Vec<gc_vcs::PathStep> = Vec::new();
+    diff_rec(store, &mut path, base_t, to_t, &mut ops, &mut values)?;
+    ops.sort_by_cached_key(print_term);
+
+    let patch_term = Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/patch")),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":ops")), Term::Vector(ops)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    Ok((patch_term, values))
 }
 
 fn mk_conflict_artifact(
