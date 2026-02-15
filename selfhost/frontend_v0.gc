@@ -1,0 +1,148 @@
+(def selfhost/frontend::error (fn (code) (fn (msg) (fn (ctx) (((core/error::make code) msg) ctx)))))
+
+(def selfhost/frontend::is-error core/error::is?)
+
+(def selfhost/frontend::starts-with?
+  (fn (s)
+    (fn (prefix)
+      (let ((sb (core/str::to-utf8 s)))
+        (let ((pb (core/str::to-utf8 prefix)))
+          (let ((sn (core/bytes::len sb)))
+            (let ((pn (core/bytes::len pb)))
+              (if ((core/int::lt? sn) pn) false ((core/eq? (((core/bytes::slice sb) 0) pn)) pb)))))))))
+
+(def selfhost/frontend::store-get-artifact
+  (fn (hex)
+    ((core/effect::bind (core/store::get hex))
+      (fn (resp)
+        (if (selfhost/frontend::is-error resp)
+          (core/effect::pure resp)
+          (let ((art ((core/map::get resp) (quote :artifact))))
+            (if (core/list::is-nil? art)
+              (core/effect::pure
+                (((selfhost/frontend::error "core/store/bad-response") "core/store::get response missing :artifact")
+                  {:hash hex}))
+              (core/effect::pure art))))))))
+
+(def selfhost/frontend::load-commit
+  (fn (commit-h)
+    ((core/effect::bind (selfhost/frontend::store-get-artifact commit-h))
+      (fn (t)
+        (if (selfhost/frontend::is-error t)
+          (core/effect::pure t)
+          (let ((ty ((core/map::get t) (quote :type))))
+            (if ((core/sym::eq? ty) (quote :vcs/commit))
+              (core/effect::pure t)
+              (core/effect::pure
+                (((selfhost/frontend::error "core/vcs/bad-commit") "artifact is not a :vcs/commit")
+                  {:hash commit-h :type ty})))))))))
+
+(def selfhost/frontend::load-snapshot
+  (fn (snap-h)
+    ((core/effect::bind (selfhost/frontend::store-get-artifact snap-h))
+      (fn (t)
+        (if (selfhost/frontend::is-error t)
+          (core/effect::pure t)
+          (let ((ty ((core/map::get t) (quote :type))))
+            (if ((core/sym::eq? ty) (quote :vcs/snapshot))
+              (core/effect::pure t)
+              (core/effect::pure
+                (((selfhost/frontend::error "core/vcs/bad-snapshot") "artifact is not a :vcs/snapshot")
+                  {:hash snap-h :type ty})))))))))
+
+(def selfhost/frontend::resolve-root->commit
+  (fn (root)
+    (let
+      ((r (if ((core/sym::eq? (core/data::tag root)) (quote :sym)) (core/sym::to-str root) root)))
+      (if ((selfhost/frontend::starts-with? r) "refs/")
+        ((core/effect::bind (core/refs::get r))
+          (fn (resp)
+            (if (selfhost/frontend::is-error resp)
+              (core/effect::pure resp)
+              (let ((h ((core/map::get resp) (quote :hash))))
+                (if (core/list::is-nil? h)
+                  (core/effect::pure
+                    (((selfhost/frontend::error "core/refs/not-found") "ref does not exist")
+                      {:ref r}))
+                  (core/effect::pure h))))))
+        (core/effect::pure r)))))
+
+(def selfhost/frontend::load-module-entry
+  (fn (entry)
+    (let ((path ((core/map::get entry) (quote :path))))
+      (let ((hash ((core/map::get entry) (quote :hash))))
+        (if (core/list::is-nil? path)
+          (core/effect::pure
+            (((selfhost/frontend::error "core/pkg/bad-snapshot") "module entry missing :path")
+              {:entry entry}))
+          (if (core/list::is-nil? hash)
+            (core/effect::pure
+              (((selfhost/frontend::error "core/pkg/bad-snapshot") "module entry missing :hash")
+                {:entry entry}))
+            ((core/effect::bind (selfhost/frontend::store-get-artifact hash))
+              (fn (art)
+                (if (selfhost/frontend::is-error art)
+                  (core/effect::pure art)
+                  (if ((core/sym::eq? (core/data::tag art)) (quote :vec))
+                    (core/effect::pure
+                      {
+                        :forms art
+                        :hash hash
+                        :path path})
+                    (core/effect::pure
+                      (
+                        ((selfhost/frontend::error "core/pkg/bad-module-artifact")
+                          "module artifact must be a vector of forms")
+                        {:hash hash :path path}))))))))))))
+
+(def selfhost/frontend::load-module-entries2
+  (fn (entries)
+    (fn (i)
+      (fn (acc)
+        (if ((core/int::lt? i) (core/vec::len entries))
+          ((core/effect::bind (selfhost/frontend::load-module-entry ((core/vec::get entries) i)))
+            (fn (x)
+              (if (selfhost/frontend::is-error x)
+                (core/effect::pure x)
+                (((selfhost/frontend::load-module-entries2 entries) ((core/int::add i) 1))
+                  ((core/vec::push acc) x)))))
+          (core/effect::pure acc))))))
+
+(def selfhost/frontend::load-package-modules
+  (fn (snapshot-h)
+    ((core/effect::bind (selfhost/frontend::load-snapshot snapshot-h))
+      (fn (snap)
+        (if (selfhost/frontend::is-error snap)
+          (core/effect::pure snap)
+          (let ((kind ((core/map::get snap) (quote :kind))))
+            (if ((core/sym::eq? kind) (quote :package))
+              (let ((mods ((core/map::get snap) (quote :modules))))
+                (if ((core/sym::eq? (core/data::tag mods)) (quote :vec))
+                  ((core/effect::bind (((selfhost/frontend::load-module-entries2 mods) 0) []))
+                    (fn (xs)
+                      (if (selfhost/frontend::is-error xs)
+                        (core/effect::pure xs)
+                        (core/effect::pure {:modules xs :snapshot snapshot-h}))))
+                  (core/effect::pure
+                    (((selfhost/frontend::error "core/pkg/bad-snapshot") ":modules must be a vector")
+                      {:snapshot snapshot-h}))))
+              (core/effect::pure
+                (((selfhost/frontend::error "core/pkg/bad-snapshot") "snapshot is not a :package")
+                  {:kind kind :snapshot snapshot-h})))))))))
+
+(def selfhost/frontend::load-root-modules
+  (fn (root)
+    ((core/effect::bind (selfhost/frontend::resolve-root->commit root))
+      (fn (commit-h)
+        (if (selfhost/frontend::is-error commit-h)
+          (core/effect::pure commit-h)
+          ((core/effect::bind (selfhost/frontend::load-commit commit-h))
+            (fn (c)
+              (if (selfhost/frontend::is-error c)
+                (core/effect::pure c)
+                (let ((snap-h ((core/map::get c) (quote :result))))
+                  (if (core/list::is-nil? snap-h)
+                    (core/effect::pure
+                      (((selfhost/frontend::error "core/vcs/bad-commit") "commit missing :result")
+                        {:hash commit-h}))
+                    (selfhost/frontend::load-package-modules snap-h)))))))))))

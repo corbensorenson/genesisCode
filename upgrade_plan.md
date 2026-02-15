@@ -46,9 +46,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Effect programming toolkit:
   - `core/effect::{catch,catch-payload}` (error-as-value) + tests
   - document canonical effect payload shapes (maps with keyword keys)
-- [ ] In-language convenience wrappers for GenesisGraph/GenesisPkg capability ops (pure constructors):
-  - `core/store::*`, `core/refs::*`, `core/vcs::*`, `core/pkg::*`, `core/sync::*`, `core/gc::*`
-  - wrappers should only construct effect programs; runners remain capability-gated
+- [x] In-language convenience wrappers for GenesisGraph/GenesisPkg capability ops (pure constructors):
+  - Implemented in `prelude/prelude.gc` for: `core/store::*`, `core/refs::*`, `core/vcs::*`, `core/pkg::*`, `core/sync::*`, `core/gpk::*`, `core/gc::*`
+  - Validated via `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
 
 ---
 
@@ -104,10 +104,12 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - `data/tag`, `pair/as-proper-list`, `map/entries`, `sym/to-str`
   - `str/repeat`, `str/join`
   - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
-- [ ] Implement a self-hosted "frontend v0" in GenesisCode:
+- [x] Implement a self-hosted "frontend v0" in GenesisCode:
   - [x] CoreForm printer equivalence tests against Rust (see `selfhost/printer.gc` + `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`)
   - [x] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form) (see `selfhost/canon.gc` + `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`)
-  - module loader and package resolver on GenesisGraph objects
+  - module loader + package resolver over commit/snapshot/module artifacts:
+    - `selfhost/frontend_v0.gc`
+    - `crates/gc_prelude/tests/selfhost_frontend_loader.rs`
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)
