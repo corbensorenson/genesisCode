@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+use reqwest::StatusCode;
 use reqwest::Url;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
@@ -150,6 +151,30 @@ impl RegistryClient {
         }
         r.bytes()
             .map(|b| b.to_vec())
+            .map_err(|e| RegistryError::Http(format!("store/get bytes: {e}")))
+    }
+
+    pub fn store_get_opt(&self, hash: &str) -> Result<Option<Vec<u8>>, RegistryError> {
+        let u = self
+            .base
+            .join(&format!("store/get/{hash}"))
+            .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
+        let r = self
+            .http
+            .get(u)
+            .send()
+            .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
+        if r.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !r.status().is_success() {
+            return Err(RegistryError::Http(format!(
+                "store/get: status {}",
+                r.status()
+            )));
+        }
+        r.bytes()
+            .map(|b| Some(b.to_vec()))
             .map_err(|e| RegistryError::Http(format!("store/get bytes: {e}")))
     }
 

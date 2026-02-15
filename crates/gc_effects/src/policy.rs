@@ -28,6 +28,18 @@ pub struct LogPolicy {
 pub struct StorePolicy {
     /// Content-addressed store directory used by `core/store::*` capabilities.
     pub dir: Option<PathBuf>,
+
+    /// Optional remote registry base used as a read-through source for `core/store::{has,get}`.
+    ///
+    /// This is secure-by-default: if `remote` is set, the runner still requires `remote_allow`
+    /// to be non-empty and to allow the normalized base URL prefix.
+    pub remote: Option<String>,
+
+    /// Allowlist of remote base URL prefixes permitted for `store.remote`.
+    pub remote_allow: Vec<String>,
+
+    /// If true, `http://` remotes are permitted (default false).
+    pub allow_http: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +65,12 @@ impl CapsPolicy {
                 inline_max_bytes: None,
                 store_dir: None,
             },
-            store: StorePolicy { dir: None },
+            store: StorePolicy {
+                dir: None,
+                remote: None,
+                remote_allow: Vec::new(),
+                allow_http: false,
+            },
             refs: RefsPolicy { path: None },
         }
     }
@@ -230,7 +247,12 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
 
 fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsError> {
     let Some(v) = tbl.get("store") else {
-        return Ok(StorePolicy { dir: None });
+        return Ok(StorePolicy {
+            dir: None,
+            remote: None,
+            remote_allow: Vec::new(),
+            allow_http: false,
+        });
     };
     let store_tbl = v
         .as_table()
@@ -239,7 +261,38 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         .get("dir")
         .and_then(|x| x.as_str())
         .map(PathBuf::from);
-    Ok(StorePolicy { dir })
+    let remote = store_tbl
+        .get("remote")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let allow_http = store_tbl
+        .get("allow_http")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false);
+    let remote_allow = match store_tbl.get("remote_allow") {
+        None => Vec::new(),
+        Some(v) => {
+            let arr = v.as_array().ok_or_else(|| {
+                EffectsError::Log("caps.toml: store.remote_allow must be an array".to_string())
+            })?;
+            let mut out = Vec::new();
+            for x in arr {
+                let s = x.as_str().ok_or_else(|| {
+                    EffectsError::Log(
+                        "caps.toml: store.remote_allow entries must be strings".to_string(),
+                    )
+                })?;
+                out.push(s.to_string());
+            }
+            out
+        }
+    };
+    Ok(StorePolicy {
+        dir,
+        remote,
+        remote_allow,
+        allow_http,
+    })
 }
 
 fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsError> {

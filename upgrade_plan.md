@@ -123,7 +123,7 @@ Implementation (phased, all capabilities are effects; kernel remains pure):
   - [x] Implement `:vcs/conflict` artifacts for merge conflicts (non-publishable).
 - [ ] Store capability (`core/store::*`) as runner effects:
   - [x] `put/get/has` backed by local `.genesis/store/` with canonical term encoding and stable hashing.
-  - [ ] Optional remote-backed store adapter using the minimal registry protocol.
+  - [x] Optional remote-backed store adapter using the minimal registry protocol.
 - [x] Refs capability (`core/refs::*`) as runner effects:
   - [x] Local refs database with atomic CAS-style `set` and stable serialization.
   - [x] Policy-gated `refs::set` enforcing obligations/evidence/signatures per policy.

@@ -45,10 +45,7 @@ impl ArtifactStore {
         let got = Self::hash_bytes(&bytes);
         if got != hex {
             return Err(EffectsError::Log(format!(
-                "artifact store corruption: {} expected hash {}, got {}",
-                p.display(),
-                hex,
-                got
+                "artifact store corruption: expected hash {hex}, got {got}"
             )));
         }
         Ok(())

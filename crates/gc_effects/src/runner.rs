@@ -112,6 +112,7 @@ pub fn run(
                         &req.op,
                         &req.payload,
                         pol,
+                        policy,
                         store.as_ref(),
                         refs.as_ref(),
                         proto.error,
@@ -526,6 +527,7 @@ fn call_capability(
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     error_tok: SealId,
@@ -1949,7 +1951,17 @@ fn call_capability(
             })?;
             let art = payload_store_artifact(payload)?;
             let bytes = print_term(&art);
-            let h = store.put_bytes(bytes.as_bytes())?;
+            let h = match store.put_bytes(bytes.as_bytes()) {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::Symbol(":hash".to_string())), Term::Str(h));
             Ok(Value::Data(Term::Map(m)))
@@ -1960,12 +1972,37 @@ fn call_capability(
             })?;
             let h = payload_store_hash(payload)?;
             let p = store.path_for(&h);
-            let present = if p.exists() {
-                store.verify_hex(&h)?;
-                true
+            let mut present = false;
+            if p.exists() {
+                if let Err(e) = store.verify_hex(&h) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/corruption",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+                present = true;
             } else {
-                false
-            };
+                match store_remote_client(policy, timeout_ms, error_tok, op) {
+                    Ok(Some((client, _base))) => {
+                        let mp = match client.store_has(std::slice::from_ref(&h)) {
+                            Ok(m) => m,
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/remote-error",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        present = mp.get(&h).copied().unwrap_or(false);
+                    }
+                    Ok(None) => {}
+                    Err(v) => return Ok(v),
+                }
+            }
             let mut m = BTreeMap::new();
             m.insert(
                 TermOrdKey(Term::Symbol(":present".to_string())),
@@ -1980,6 +2017,61 @@ fn call_capability(
             let h = payload_store_hash(payload)?;
             let p = store.path_for(&h);
             if !p.exists() {
+                match store_remote_client(policy, timeout_ms, error_tok, op) {
+                    Ok(Some((client, _base))) => {
+                        let bytes = match client.store_get_opt(&h) {
+                            Ok(Some(b)) => b,
+                            Ok(None) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/not-found",
+                                    format!("artifact not found: {h}"),
+                                    Some(op),
+                                ));
+                            }
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/remote-error",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        let got = hash_bytes_hex(&bytes);
+                        if got != h {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/hash-mismatch",
+                                "remote bytes hash mismatch".to_string(),
+                                Some(op),
+                            ));
+                        }
+                        match store.put_bytes(&bytes) {
+                            Ok(stored_h) if stored_h == h => {}
+                            Ok(_) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/hash-mismatch",
+                                    "local store wrote under different hash".to_string(),
+                                    Some(op),
+                                ));
+                            }
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/io-error",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                    }
+                    Ok(None) => {}
+                    Err(v) => return Ok(v),
+                }
+            }
+            if !p.exists() {
                 return Ok(mk_error(
                     error_tok,
                     "core/store/not-found",
@@ -1987,11 +2079,47 @@ fn call_capability(
                     Some(op),
                 ));
             }
-            let bytes = store.get_bytes(&h)?;
-            let s = String::from_utf8(bytes)
-                .map_err(|_| EffectsError::Log("artifact bytes are not utf-8 term".to_string()))?;
-            let t = gc_coreform::parse_term(&s)
-                .map_err(|e| EffectsError::Log(format!("bad artifact term: {e}")))?;
+            if let Err(e) = store.verify_hex(&h) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/store/corruption",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+            let bytes = match std::fs::read(store.path_for(&h)) {
+                Ok(b) => b,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let s = match String::from_utf8(bytes) {
+                Ok(s) => s,
+                Err(_) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/bad-artifact",
+                        "artifact bytes are not a utf-8 CoreForm term".to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let t = match gc_coreform::parse_term(&s) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/bad-artifact",
+                        format!("bad artifact term: {e}"),
+                        Some(op),
+                    ));
+                }
+            };
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
             Ok(Value::Data(Term::Map(m)))
@@ -5071,6 +5199,55 @@ fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<Stri
         }
     }
     Err("remote is not in policy remote_allow allowlist".to_string())
+}
+
+fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result<String, String> {
+    let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
+    if base.scheme() == "http" && !policy.store.allow_http {
+        return Err("http remotes are disabled by policy (set store.allow_http=true)".to_string());
+    }
+    if policy.store.remote_allow.is_empty() {
+        return Err("store remote requires store.remote_allow allowlist in caps.toml".to_string());
+    }
+    let base_s = base.as_str().to_string();
+    for p in &policy.store.remote_allow {
+        if base_s.starts_with(p) {
+            return Ok(base_s);
+        }
+    }
+    Err("store remote is not in policy store.remote_allow allowlist".to_string())
+}
+
+fn store_remote_client(
+    policy: &CapsPolicy,
+    timeout_ms: Option<u64>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Option<(gc_registry::RegistryClient, String)>, Value> {
+    let Some(remote) = &policy.store.remote else {
+        return Ok(None);
+    };
+    let base = match store_normalize_and_check_remote(policy, remote) {
+        Ok(b) => b,
+        Err(e) => {
+            return Err(mk_error(error_tok, "core/store/remote-denied", e, Some(op)));
+        }
+    };
+    let client = match gc_registry::RegistryClient::new(
+        &base,
+        timeout_ms.map(std::time::Duration::from_millis),
+    ) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(mk_error(
+                error_tok,
+                "core/store/remote-error",
+                format!("{e}"),
+                Some(op),
+            ));
+        }
+    };
+    Ok(Some((client, base)))
 }
 
 fn payload_sync_remote(payload: &Term) -> Result<String, String> {

@@ -19,12 +19,25 @@ allow = ["sys/time::now", "io/fs::read"]
 Supported keys:
 - `dir` (string): directory used for content-addressed artifacts for `core/store::*`.
   - If omitted, defaults to `<caps.toml directory>/.genesis/store`.
+- `remote` (string, optional): remote registry base used as a read-through source for `core/store::{has,get}`.
+  - If set, the runner may query/download artifacts from the remote when they are missing locally.
+  - Remote normalization and allowlisting are enforced (see below).
+- `remote_allow` (array of strings, optional): allowlist of normalized remote base URL prefixes permitted for `store.remote`.
+  - If `store.remote` is set, `store.remote_allow` must be non-empty or the remote is denied.
+- `allow_http` (bool, optional): if true, `http://` remotes are permitted (default false).
 
 Example:
 ```toml
 [store]
 dir = "./.genesis/store"
+remote = "gen://registry.example.com/registry"
+remote_allow = ["https://registry.example.com/registry/v1/"]
 ```
+
+Remote normalization and matching:
+- `gen://host/path` is normalized to `https://host/path`.
+- Remotes are normalized to a `.../v1/` base (e.g. `https://example.com/registry/v1/`).
+- `remote_allow` is matched by prefix against the normalized base.
 
 ## Refs Policy (`[refs]`)
 
