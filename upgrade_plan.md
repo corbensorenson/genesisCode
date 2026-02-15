@@ -46,7 +46,7 @@ Focus docs:
   - Required outcomes: a single authoritative command surface and stable flags.
 - [x] Implement `genesis pkg import --set-ref <ref>=<hash>` (spec wants local ref updates post-import).
 - [x] Add `genesis vcs merge3 --out <file>` (deterministic file output for snapshot or conflict).
-- [ ] Add a “spec surface” test that asserts the CLI parser exposes the documented commands/flags (or lists explicit deviations with doc links).
+- [x] Add a “spec surface” test that asserts the CLI parser exposes the documented commands/flags (or lists explicit deviations with doc links).
 
 ---
 
