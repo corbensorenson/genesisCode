@@ -5,7 +5,7 @@ pub use prelude::{Prelude, build_prelude};
 #[cfg(test)]
 mod tests {
     use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-    use gc_kernel::{EvalCtx, Value, eval_module};
+    use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, Value, eval_module};
 
     use super::build_prelude;
 
@@ -313,5 +313,52 @@ mod tests {
             gc_coreform::print_module(&c)
         };
         assert_eq!(got, want);
+    }
+
+    #[test]
+    fn effect_bind_chains_continuations() {
+        let src = r#"
+            (def prog
+              (core/effect::bind
+                (core/effect::perform
+                  'io/fs::read
+                  {:path "x"}
+                  (fn (b) (core/effect::pure b)))
+                (fn (b) (core/effect::pure (prim bytes/len b)))))
+            prog
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+
+        let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+
+        let Value::EffectProgram(p) = prog else {
+            panic!("expected effect program, got {}", prog.debug_repr());
+        };
+        let EffectProgram::Perform { request } = p.as_ref() else {
+            panic!("expected perform");
+        };
+
+        let tok = ctx.protocol.unwrap().effect;
+        let Value::Sealed { token, payload } = request.as_ref() else {
+            panic!("expected sealed request");
+        };
+        assert_eq!(*token, tok);
+
+        let Value::EffectRequest(EffectRequest { k, .. }) = payload.as_ref() else {
+            panic!("expected effect request payload");
+        };
+
+        let resp = Value::Data(Term::Bytes(vec![1, 2, 3, 4]));
+        let next = (*k).clone().apply(&mut ctx, resp).unwrap();
+        let Value::EffectProgram(p2) = next else {
+            panic!("expected effect program");
+        };
+        let EffectProgram::Pure(v) = p2.as_ref() else {
+            panic!("expected pure");
+        };
+        assert!(matches!(v.as_ref(), Value::Data(Term::Int(i)) if i == &4.into()));
     }
 }

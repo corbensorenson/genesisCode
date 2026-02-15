@@ -71,3 +71,18 @@
 (def core/test::case0
   (fn (body)
     { :body body }))
+
+; --------------------
+; Effect Combinators
+; --------------------
+;
+; `core/effect::bind` is a host intrinsic (see style guide). These are small convenience
+; helpers defined in CoreForm for readability.
+
+(def core/effect::map
+  (fn (p f)
+    (core/effect::bind p (fn (x) (core/effect::pure (f x))))))
+
+(def core/effect::then
+  (fn (p q)
+    (core/effect::bind p (fn (_) q))))

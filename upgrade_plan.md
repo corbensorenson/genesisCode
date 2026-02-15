@@ -25,6 +25,9 @@ Key docs to treat as authoritative:
 - [x] Write a short "getting started" program and tutorial that uses real features:
   - canonical formatting, eval, contracts, effects, run/replay, package snapshot + gpk export/import
   - See `docs/GETTING_STARTED.md` and `examples/hello_pkg/`.
+- [x] Provide standard effect program combinators used in docs/style-guide:
+  - `core/effect::bind` intrinsic (chains effect programs deterministically)
+  - `core/effect::map` and `core/effect::then` helpers (in `prelude/prelude.gc`)
 
 ---
 

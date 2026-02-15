@@ -159,6 +159,11 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
         "core/effect::perform",
         Value::NativeFn(NativeFn::new("core/effect::perform", 3, nf_effect_perform)),
     );
+    env = Env::with_binding(
+        &env,
+        "core/effect::bind",
+        Value::NativeFn(NativeFn::new("core/effect::bind", 2, nf_effect_bind)),
+    );
 
     // Bootstrap CoreForm API (pure, deterministic).
     //
@@ -935,4 +940,70 @@ fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Kerne
     Ok(Value::EffectProgram(Box::new(EffectProgram::Perform {
         request: Box::new(sealed),
     })))
+}
+
+fn lift_to_effect_program(v: Value) -> Value {
+    match v {
+        Value::EffectProgram(_) => v,
+        other => Value::EffectProgram(Box::new(EffectProgram::Pure(Box::new(other)))),
+    }
+}
+
+fn bind_impl(ctx: &mut EvalCtx, program: Value, f: Value) -> Result<Value, KernelError> {
+    let Value::EffectProgram(p) = program else {
+        return Ok(mk_error(ctx, "bind expects an effect program"));
+    };
+    match p.as_ref() {
+        EffectProgram::Pure(v) => {
+            let next = f.apply(ctx, (*v.as_ref()).clone())?;
+            Ok(lift_to_effect_program(next))
+        }
+        EffectProgram::Perform { request } => {
+            let tok = proto(ctx).effect;
+            let payload = match sealed_matches(request.as_ref(), tok) {
+                Some(x) => x,
+                None => return Ok(mk_error(ctx, "bind expects an EFFECT-sealed request")),
+            };
+            let Value::EffectRequest(req) = payload else {
+                return Ok(mk_error(ctx, "bind expects a well-formed effect request"));
+            };
+
+            let k = (*req.k).clone();
+            let k2 = Value::NativeFn(NativeFn {
+                name: "core/effect::internal-bind-cont",
+                arity: 3,
+                collected: vec![k, f],
+                func: nf_effect_bind_cont,
+            });
+
+            let req2 = Value::EffectRequest(EffectRequest {
+                op: req.op.clone(),
+                payload: req.payload.clone(),
+                k: Box::new(k2),
+            });
+            let sealed2 = Value::Sealed {
+                token: tok,
+                payload: Box::new(req2),
+            };
+            Ok(Value::EffectProgram(Box::new(EffectProgram::Perform {
+                request: Box::new(sealed2),
+            })))
+        }
+    }
+}
+
+fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let f = args[1].clone();
+    if !matches!(f, Value::Closure { .. } | Value::NativeFn(_)) {
+        return Ok(mk_error(ctx, "bind function must be callable"));
+    }
+    bind_impl(ctx, args[0].clone(), f)
+}
+
+fn nf_effect_bind_cont(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let k = args[0].clone();
+    let f = args[1].clone();
+    let resp = args[2].clone();
+    let next = k.apply(ctx, resp)?;
+    bind_impl(ctx, lift_to_effect_program(next), f)
 }
