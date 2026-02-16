@@ -1,0 +1,8 @@
+dependencies = []
+name = "pkg_fail_lint"
+obligations = ["core/obligation::lint"]
+version = "0.0.1"
+
+[[modules]]
+hash = "5b5e998b7f01858eeaa0c07f6870d226ef9792b6295361913b612d29acc34542"
+path = "lint.gc"

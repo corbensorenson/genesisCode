@@ -8,7 +8,9 @@ mod verify;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_term};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, print_term,
+};
 use gc_effects::{CapsPolicy, EffectLog};
 use gc_kernel::{Apply, Env, EvalCtx, MemLimits, StepLimit, Value, eval_term, value_hash};
 use gc_prelude::build_prelude;
@@ -280,6 +282,16 @@ pub fn test_package_with_step_limit(
             "core/obligation::translation-validation" => obligation_translation_validation(
                 &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, limits,
             ),
+            "core/obligation::gfx-golden-images" => {
+                obligation_gfx_golden_images(&store, &pkg_dir, &manifest, &modules, limits)
+            }
+            "core/obligation::gfx-frame-budgets" => {
+                obligation_gfx_frame_budgets(&store, &pkg_dir, &manifest, &modules, limits)
+            }
+            "core/obligation::gfx-api-stability" => {
+                obligation_gfx_api_stability(&store, &manifest, &modules)
+            }
+            "core/obligation::lint" => obligation_lint(&store, &manifest, &modules, limits),
             other => Ok(ObligationResult {
                 name: other.to_string(),
                 ok: false,
@@ -1833,6 +1845,278 @@ fn obligation_typecheck(
     })
 }
 
+fn obligation_lint(
+    store: &EvidenceStore,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    limits: KernelLimits,
+) -> Result<ObligationResult, ObligationError> {
+    let mut ctx = mk_eval_ctx(limits);
+    let prelude = build_prelude(&mut ctx);
+    let env = prelude.env;
+    let lint_fn = env.get("core/editor/lint::lint-module").ok_or_else(|| {
+        ObligationError::Test("missing prelude binding core/editor/lint::lint-module".to_string())
+    })?;
+
+    let mut ok = true;
+    let mut errors: Vec<String> = Vec::new();
+    let mut module_terms: Vec<Term> = Vec::new();
+    let mut autofix_patches: Vec<Term> = Vec::new();
+
+    for m in modules {
+        let p = Value::Data(Term::Str(m.entry.path.clone()));
+        let forms = Value::Data(Term::Vector(m.forms.clone()));
+        let applied = lint_fn
+            .clone()
+            .apply(&mut ctx, p)
+            .map_err(|e| ObligationError::Test(format!("lint apply(path) failed: {e}")))?;
+        let out = applied
+            .apply(&mut ctx, forms)
+            .map_err(|e| ObligationError::Test(format!("lint apply(forms) failed: {e}")))?;
+        let term = out.to_term_for_log(ctx.protocol.map(|p| p.error));
+        let diags = match term {
+            Term::Vector(v) => v,
+            other => {
+                return Err(ObligationError::Test(format!(
+                    "lint result must be vector diagnostics, got {}",
+                    print_term(&other)
+                )));
+            }
+        };
+
+        let mut module_has_error = false;
+        for d in &diags {
+            let Term::Map(dm) = d else { continue };
+            let is_error = match dm.get(&TermOrdKey(Term::symbol(":level"))) {
+                Some(Term::Symbol(s)) => s == ":error" || s == "error",
+                Some(Term::Str(s)) => s == ":error" || s == "error",
+                _ => false,
+            };
+            if is_error {
+                module_has_error = true;
+                let code = match dm.get(&TermOrdKey(Term::symbol(":code"))) {
+                    Some(Term::Str(s)) => s.clone(),
+                    Some(Term::Symbol(s)) => s.clone(),
+                    _ => "editor/lint/error".to_string(),
+                };
+                let msg = match dm.get(&TermOrdKey(Term::symbol(":msg"))) {
+                    Some(Term::Str(s)) => s.clone(),
+                    _ => "lint error".to_string(),
+                };
+                errors.push(format!("{}: {}: {}", m.entry.path, code, msg));
+            }
+        }
+        if module_has_error {
+            ok = false;
+        }
+
+        let autofix_patch_h = if let Some((patch_term, reasons)) =
+            lint_autofix_patch_for_module(&m.entry.path, &m.forms)
+        {
+            let patch_h = store.put_term(&patch_term)?;
+            autofix_patches.push(Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":path")),
+                        Term::Str(m.entry.path.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":patch")),
+                        Term::Str(patch_h.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":reasons")),
+                        Term::Vector(reasons.into_iter().map(Term::Str).collect()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ));
+            Some(patch_h)
+        } else {
+            None
+        };
+
+        module_terms.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str(m.entry.path.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":diagnostics")),
+                    Term::Vector(diags),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":autofix-patch")),
+                    autofix_patch_h.map(Term::Str).unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/lints-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (
+                TermOrdKey(Term::symbol(":obligation")),
+                Term::Str("core/obligation::lint".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":modules")),
+                Term::Vector(module_terms),
+            ),
+            (
+                TermOrdKey(Term::symbol(":autofix-patches")),
+                Term::Vector(autofix_patches),
+            ),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::lint".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
+fn lint_autofix_patch_for_module(module_path: &str, forms: &[Term]) -> Option<(Term, Vec<String>)> {
+    let mut meta_idx = None;
+    let mut meta_map = None;
+    for (i, f) in forms.iter().enumerate() {
+        let Some((name, expr)) = parse_def(f) else {
+            continue;
+        };
+        if name != "::meta" {
+            continue;
+        }
+        let items = expr.as_proper_list()?;
+        if items.len() != 2 || !matches!(items[0], Term::Symbol(s) if s == "quote") {
+            return None;
+        }
+        let Term::Map(m) = &items[1] else {
+            return None;
+        };
+        meta_idx = Some(i);
+        meta_map = Some(m.clone());
+        break;
+    }
+    let (meta_idx, mut meta_map) = (meta_idx?, meta_map?);
+
+    let exports = match meta_map.get(&TermOrdKey(Term::symbol(":exports"))) {
+        Some(Term::Vector(xs)) => xs
+            .iter()
+            .filter_map(|x| match x {
+                Term::Symbol(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>(),
+        _ => return None,
+    };
+
+    let mut reasons = Vec::new();
+    let mut types = match meta_map.get(&TermOrdKey(Term::symbol(":types"))) {
+        Some(Term::Map(m)) => m.clone(),
+        _ => {
+            reasons.push("editor/lint/missing-types-map".to_string());
+            BTreeMap::new()
+        }
+    };
+
+    let mut added_missing = false;
+    for sym in exports {
+        let key = TermOrdKey(Term::Symbol(sym));
+        if let std::collections::btree_map::Entry::Vacant(e) = types.entry(key) {
+            e.insert(Term::Symbol("?".to_string()));
+            added_missing = true;
+        }
+    }
+    if added_missing {
+        reasons.push("editor/lint/missing-type".to_string());
+    }
+    if reasons.is_empty() {
+        return None;
+    }
+
+    meta_map.insert(TermOrdKey(Term::symbol(":types")), Term::Map(types));
+    let new_form = Term::list(vec![
+        Term::symbol("def"),
+        Term::symbol("::meta"),
+        Term::list(vec![Term::symbol("quote"), Term::Map(meta_map)]),
+    ]);
+    let path = Term::Vector(vec![Term::Vector(vec![
+        Term::symbol(":form"),
+        Term::Int((meta_idx as i64).into()),
+    ])]);
+    let op = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":op")),
+                Term::symbol(":replace-node"),
+            ),
+            (
+                TermOrdKey(Term::symbol(":module-path")),
+                Term::Str(module_path.to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":path")), path),
+            (TermOrdKey(Term::symbol(":new")), new_form),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let patch = Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":version")), Term::Int(1i64.into())),
+            (
+                TermOrdKey(Term::symbol(":intent")),
+                Term::Str("lint/autofix-types".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":provenance")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":generated-by")),
+                            Term::Str("core/obligation::lint".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":module-path")),
+                            Term::Str(module_path.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":reasons")),
+                            Term::Vector(reasons.iter().cloned().map(Term::Str).collect()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (TermOrdKey(Term::symbol(":ops")), Term::Vector(vec![op])),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    Some((patch, reasons))
+}
+
 fn obligation_stage1_validation(
     store: &EvidenceStore,
     manifest: &PackageManifest,
@@ -2271,6 +2555,1044 @@ fn obligation_translation_validation(
     })
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum GfxGoldenKind {
+    FrameGraph,
+    Scene,
+}
+
+#[derive(Debug, Clone)]
+struct GfxGoldenCase {
+    id: TestId,
+    body: Value,
+    kind: GfxGoldenKind,
+    expect_hash: String,
+    expect_png_hash: Option<String>,
+    pixel_width: u32,
+    pixel_height: u32,
+}
+
+#[derive(Debug, Clone)]
+struct ParsedGfxGoldenEntry {
+    body: Value,
+    kind: GfxGoldenKind,
+    expect_hash: String,
+    expect_png_hash: Option<String>,
+    pixel_width: u32,
+    pixel_height: u32,
+}
+
+#[derive(Debug, Clone)]
+struct GfxFrameBudgetCase {
+    id: TestId,
+    body: Value,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct FrameMetrics {
+    render_passes: u64,
+    compute_passes: u64,
+    draw_commands: u64,
+    compute_commands: u64,
+    frame_graph_bytes: u64,
+}
+
+fn obligation_gfx_golden_images(
+    store: &EvidenceStore,
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    limits: KernelLimits,
+) -> Result<ObligationResult, ObligationError> {
+    let mut ok = true;
+    let mut errors: Vec<String> = Vec::new();
+    let mut case_terms: Vec<Term> = Vec::new();
+
+    if manifest.gfx.golden_tests.is_empty() {
+        ok = false;
+        errors.push(
+            "gfx.golden_tests is empty; configure suite symbols for core/obligation::gfx-golden-images"
+                .to_string(),
+        );
+    }
+
+    let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
+    let mut cases: Vec<GfxGoldenCase> = Vec::new();
+
+    for suite in &manifest.gfx.golden_tests {
+        let Some(suite_v) = eval.lookup_any(suite) else {
+            ok = false;
+            errors.push(format!("missing gfx golden suite symbol {suite}"));
+            continue;
+        };
+        let Some(suite_map) = value_as_map(&suite_v) else {
+            ok = false;
+            errors.push(format!("gfx golden suite {suite} must be a map"));
+            continue;
+        };
+        for (k, vv) in suite_map {
+            let name = match &k.0 {
+                Term::Str(s) => s.clone(),
+                Term::Symbol(s) => s.clone(),
+                other => {
+                    ok = false;
+                    errors.push(format!(
+                        "gfx golden suite {suite}: key must be string/symbol, got {}",
+                        print_term(other)
+                    ));
+                    continue;
+                }
+            };
+            match parse_gfx_golden_entry(vv) {
+                Ok(parsed) => cases.push(GfxGoldenCase {
+                    id: TestId {
+                        suite_sym: suite.clone(),
+                        test_name: name,
+                    },
+                    body: parsed.body,
+                    kind: parsed.kind,
+                    expect_hash: parsed.expect_hash,
+                    expect_png_hash: parsed.expect_png_hash,
+                    pixel_width: parsed.pixel_width,
+                    pixel_height: parsed.pixel_height,
+                }),
+                Err(e) => {
+                    ok = false;
+                    errors.push(format!("gfx golden suite {suite}::{name}: {e}"));
+                }
+            }
+        }
+    }
+
+    for c in &cases {
+        let mut t_ok = true;
+        let mut actual_h = String::new();
+        let mut actual_png_h = String::new();
+        let mut err: Option<String> = None;
+        let mut ctx = mk_eval_ctx(limits);
+        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
+            Ok(v) => v,
+            Err(e) => {
+                t_ok = false;
+                err = Some(format!("apply failed: {e}"));
+                Value::Data(Term::Nil)
+            }
+        };
+
+        if t_ok && matches!(value, Value::EffectProgram(_)) {
+            t_ok = false;
+            err = Some(
+                "effect program returned; gfx golden tests must return pure frame/scene data"
+                    .to_string(),
+            );
+        }
+
+        if t_ok {
+            let is_error = ctx
+                .protocol
+                .is_some_and(|p| matches!(value, Value::Sealed { token, .. } if token == p.error));
+            if is_error {
+                t_ok = false;
+                err = Some("sealed ERROR returned by golden test body".to_string());
+            }
+        }
+
+        if t_ok {
+            let term = value.to_term_for_log(ctx.protocol.map(|p| p.error));
+            if t_ok {
+                let got = match c.kind {
+                    GfxGoldenKind::FrameGraph => match extract_frame_graph_term(&term) {
+                        Some(frame) => {
+                            if let Some(expect_png_h) = c.expect_png_hash.as_ref() {
+                                match gc_gfx::render_frame_graph_headless(
+                                    frame,
+                                    c.pixel_width,
+                                    c.pixel_height,
+                                ) {
+                                    Ok(img) => {
+                                        actual_png_h = hex32(img.png_hash);
+                                        if &actual_png_h != expect_png_h {
+                                            t_ok = false;
+                                            err = Some(format!(
+                                                "golden png hash mismatch: expected {}, got {}",
+                                                expect_png_h, actual_png_h
+                                            ));
+                                        }
+                                    }
+                                    Err(e) => {
+                                        t_ok = false;
+                                        err = Some(format!("headless render failed: {e}"));
+                                    }
+                                }
+                            }
+                            hex32(hash_term(frame))
+                        }
+                        None => {
+                            t_ok = false;
+                            err = Some("expected frame-graph output".to_string());
+                            String::new()
+                        }
+                    },
+                    GfxGoldenKind::Scene => match extract_scene_term(&term) {
+                        Some(scene) => hex32(hash_term(scene)),
+                        None => {
+                            t_ok = false;
+                            err = Some("expected scene output".to_string());
+                            String::new()
+                        }
+                    },
+                };
+                actual_h = got.clone();
+                if got != c.expect_hash {
+                    t_ok = false;
+                    err = Some(format!(
+                        "golden hash mismatch: expected {}, got {}",
+                        c.expect_hash, got
+                    ));
+                }
+            }
+        }
+
+        ok &= t_ok;
+        if let Some(e) = err.as_ref() {
+            errors.push(format!("{}::{}: {e}", c.id.suite_sym, c.id.test_name));
+        }
+
+        let mut tm = BTreeMap::new();
+        tm.insert(
+            TermOrdKey(Term::symbol(":suite")),
+            Term::Symbol(c.id.suite_sym.clone()),
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":name")),
+            Term::Str(c.id.test_name.clone()),
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":kind")),
+            Term::Symbol(match c.kind {
+                GfxGoldenKind::FrameGraph => ":frame-graph".to_string(),
+                GfxGoldenKind::Scene => ":scene".to_string(),
+            }),
+        );
+        tm.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t_ok));
+        tm.insert(
+            TermOrdKey(Term::symbol(":expect-h")),
+            Term::Str(c.expect_hash.clone()),
+        );
+        tm.insert(TermOrdKey(Term::symbol(":actual-h")), Term::Str(actual_h));
+        tm.insert(
+            TermOrdKey(Term::symbol(":expect-png-h")),
+            c.expect_png_hash
+                .as_ref()
+                .map(|h| Term::Str(h.clone()))
+                .unwrap_or(Term::Nil),
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":actual-png-h")),
+            if actual_png_h.is_empty() {
+                Term::Nil
+            } else {
+                Term::Str(actual_png_h)
+            },
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":pixel-width")),
+            Term::Int((c.pixel_width as i64).into()),
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":pixel-height")),
+            Term::Int((c.pixel_height as i64).into()),
+        );
+        if let Some(e) = err {
+            tm.insert(TermOrdKey(Term::symbol(":error")), Term::Str(e));
+        }
+        case_terms.push(Term::Map(tm));
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/gfx-golden-images-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (TermOrdKey(Term::symbol(":cases")), Term::Vector(case_terms)),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::gfx-golden-images".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
+fn obligation_gfx_frame_budgets(
+    store: &EvidenceStore,
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    limits: KernelLimits,
+) -> Result<ObligationResult, ObligationError> {
+    let mut ok = true;
+    let mut errors: Vec<String> = Vec::new();
+    let mut case_terms: Vec<Term> = Vec::new();
+
+    if manifest.gfx.frame_budget_tests.is_empty() {
+        ok = false;
+        errors.push(
+            "gfx.frame_budget_tests is empty; configure suite symbols for core/obligation::gfx-frame-budgets"
+                .to_string(),
+        );
+    }
+    let has_any_limit = manifest.gfx.max_render_passes_per_frame.is_some()
+        || manifest.gfx.max_compute_passes_per_frame.is_some()
+        || manifest.gfx.max_draw_commands_per_frame.is_some()
+        || manifest.gfx.max_compute_commands_per_frame.is_some()
+        || manifest.gfx.max_frame_graph_bytes.is_some()
+        || manifest.gfx.max_frame_time_ms.is_some();
+    if !has_any_limit {
+        ok = false;
+        errors.push(
+            "gfx frame budget obligation requires at least one configured gfx.* budget limit"
+                .to_string(),
+        );
+    }
+
+    let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
+    let mut cases: Vec<GfxFrameBudgetCase> = Vec::new();
+
+    for suite in &manifest.gfx.frame_budget_tests {
+        let Some(suite_v) = eval.lookup_any(suite) else {
+            ok = false;
+            errors.push(format!("missing gfx frame-budget suite symbol {suite}"));
+            continue;
+        };
+        let Some(suite_map) = value_as_map(&suite_v) else {
+            ok = false;
+            errors.push(format!("gfx frame-budget suite {suite} must be a map"));
+            continue;
+        };
+        for (k, vv) in suite_map {
+            let name = match &k.0 {
+                Term::Str(s) => s.clone(),
+                Term::Symbol(s) => s.clone(),
+                other => {
+                    ok = false;
+                    errors.push(format!(
+                        "gfx frame-budget suite {suite}: key must be string/symbol, got {}",
+                        print_term(other)
+                    ));
+                    continue;
+                }
+            };
+            match parse_gfx_frame_budget_entry(vv) {
+                Ok(body) => cases.push(GfxFrameBudgetCase {
+                    id: TestId {
+                        suite_sym: suite.clone(),
+                        test_name: name,
+                    },
+                    body,
+                }),
+                Err(e) => {
+                    ok = false;
+                    errors.push(format!("gfx frame-budget suite {suite}::{name}: {e}"));
+                }
+            }
+        }
+    }
+
+    for c in &cases {
+        let mut t_ok = true;
+        let mut local_errors: Vec<String> = Vec::new();
+        let mut metrics_opt: Option<FrameMetrics> = None;
+        let mut frame_time_ms: Option<u64> = None;
+
+        let mut ctx = mk_eval_ctx(limits);
+        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
+            Ok(v) => v,
+            Err(e) => {
+                t_ok = false;
+                local_errors.push(format!("apply failed: {e}"));
+                Value::Data(Term::Nil)
+            }
+        };
+
+        if t_ok && matches!(value, Value::EffectProgram(_)) {
+            t_ok = false;
+            local_errors.push(
+                "effect program returned; gfx frame budgets must return pure frame data"
+                    .to_string(),
+            );
+        }
+        if t_ok {
+            let is_error = ctx
+                .protocol
+                .is_some_and(|p| matches!(value, Value::Sealed { token, .. } if token == p.error));
+            if is_error {
+                t_ok = false;
+                local_errors.push("sealed ERROR returned by frame budget test body".to_string());
+            }
+        }
+
+        if t_ok {
+            let term = value.to_term_for_log(ctx.protocol.map(|p| p.error));
+            if t_ok {
+                match extract_frame_graph_and_time(&term) {
+                    Ok((frame, time_ms)) => match frame_graph_metrics(frame) {
+                        Ok(m) => {
+                            metrics_opt = Some(m);
+                            frame_time_ms = time_ms;
+                        }
+                        Err(e) => {
+                            t_ok = false;
+                            local_errors.push(e);
+                        }
+                    },
+                    Err(e) => {
+                        t_ok = false;
+                        local_errors.push(e);
+                    }
+                }
+            }
+        }
+
+        if let Some(metrics) = metrics_opt {
+            if let Some(max) = manifest.gfx.max_render_passes_per_frame
+                && metrics.render_passes > max
+            {
+                t_ok = false;
+                local_errors.push(format!(
+                    "render passes {} > max {}",
+                    metrics.render_passes, max
+                ));
+            }
+            if let Some(max) = manifest.gfx.max_compute_passes_per_frame
+                && metrics.compute_passes > max
+            {
+                t_ok = false;
+                local_errors.push(format!(
+                    "compute passes {} > max {}",
+                    metrics.compute_passes, max
+                ));
+            }
+            if let Some(max) = manifest.gfx.max_draw_commands_per_frame
+                && metrics.draw_commands > max
+            {
+                t_ok = false;
+                local_errors.push(format!(
+                    "draw commands {} > max {}",
+                    metrics.draw_commands, max
+                ));
+            }
+            if let Some(max) = manifest.gfx.max_compute_commands_per_frame
+                && metrics.compute_commands > max
+            {
+                t_ok = false;
+                local_errors.push(format!(
+                    "compute commands {} > max {}",
+                    metrics.compute_commands, max
+                ));
+            }
+            if let Some(max) = manifest.gfx.max_frame_graph_bytes
+                && metrics.frame_graph_bytes > max
+            {
+                t_ok = false;
+                local_errors.push(format!(
+                    "frame graph bytes {} > max {}",
+                    metrics.frame_graph_bytes, max
+                ));
+            }
+        }
+        if let Some(max) = manifest.gfx.max_frame_time_ms {
+            match frame_time_ms {
+                Some(ms) if ms <= max => {}
+                Some(ms) => {
+                    t_ok = false;
+                    local_errors.push(format!("frame-time-ms {} > max {}", ms, max));
+                }
+                None => {
+                    t_ok = false;
+                    local_errors.push(
+                        "frame-time-ms metric missing (return {:frame <frame-graph> :frame-time-ms <int>})"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+
+        ok &= t_ok;
+        if !local_errors.is_empty() {
+            errors.push(format!(
+                "{}::{}: {}",
+                c.id.suite_sym,
+                c.id.test_name,
+                local_errors.join("; ")
+            ));
+        }
+
+        let mut tm = BTreeMap::new();
+        tm.insert(
+            TermOrdKey(Term::symbol(":suite")),
+            Term::Symbol(c.id.suite_sym.clone()),
+        );
+        tm.insert(
+            TermOrdKey(Term::symbol(":name")),
+            Term::Str(c.id.test_name.clone()),
+        );
+        tm.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t_ok));
+        if let Some(m) = metrics_opt {
+            tm.insert(
+                TermOrdKey(Term::symbol(":render-passes")),
+                Term::Int((m.render_passes as i64).into()),
+            );
+            tm.insert(
+                TermOrdKey(Term::symbol(":compute-passes")),
+                Term::Int((m.compute_passes as i64).into()),
+            );
+            tm.insert(
+                TermOrdKey(Term::symbol(":draw-commands")),
+                Term::Int((m.draw_commands as i64).into()),
+            );
+            tm.insert(
+                TermOrdKey(Term::symbol(":compute-commands")),
+                Term::Int((m.compute_commands as i64).into()),
+            );
+            tm.insert(
+                TermOrdKey(Term::symbol(":frame-graph-bytes")),
+                Term::Int((m.frame_graph_bytes as i64).into()),
+            );
+        }
+        tm.insert(
+            TermOrdKey(Term::symbol(":frame-time-ms")),
+            frame_time_ms
+                .map(|x| Term::Int((x as i64).into()))
+                .unwrap_or(Term::Nil),
+        );
+        if !local_errors.is_empty() {
+            tm.insert(
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(local_errors.into_iter().map(Term::Str).collect()),
+            );
+        }
+        case_terms.push(Term::Map(tm));
+    }
+
+    let mut limits_map = BTreeMap::new();
+    if let Some(v) = manifest.gfx.max_render_passes_per_frame {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-render-passes-per-frame")),
+            Term::Int((v as i64).into()),
+        );
+    }
+    if let Some(v) = manifest.gfx.max_compute_passes_per_frame {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-compute-passes-per-frame")),
+            Term::Int((v as i64).into()),
+        );
+    }
+    if let Some(v) = manifest.gfx.max_draw_commands_per_frame {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-draw-commands-per-frame")),
+            Term::Int((v as i64).into()),
+        );
+    }
+    if let Some(v) = manifest.gfx.max_compute_commands_per_frame {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-compute-commands-per-frame")),
+            Term::Int((v as i64).into()),
+        );
+    }
+    if let Some(v) = manifest.gfx.max_frame_graph_bytes {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-frame-graph-bytes")),
+            Term::Int((v as i64).into()),
+        );
+    }
+    if let Some(v) = manifest.gfx.max_frame_time_ms {
+        limits_map.insert(
+            TermOrdKey(Term::symbol(":max-frame-time-ms")),
+            Term::Int((v as i64).into()),
+        );
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/gfx-frame-budgets-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (TermOrdKey(Term::symbol(":limits")), Term::Map(limits_map)),
+            (TermOrdKey(Term::symbol(":cases")), Term::Vector(case_terms)),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::gfx-frame-budgets".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
+fn obligation_gfx_api_stability(
+    store: &EvidenceStore,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+) -> Result<ObligationResult, ObligationError> {
+    let mut ok = true;
+    let mut errors: Vec<String> = Vec::new();
+
+    let mut def_hashes: BTreeMap<String, [u8; 32]> = BTreeMap::new();
+    for m in modules {
+        for f in &m.forms {
+            if let Some((name, expr)) = parse_def(f) {
+                let h = hash_term(&expr);
+                if let Some(prev) = def_hashes.insert(name.clone(), h)
+                    && prev != h
+                {
+                    ok = false;
+                    errors.push(format!(
+                        "symbol {} has conflicting definitions across modules",
+                        name
+                    ));
+                }
+            }
+        }
+    }
+
+    let mut exported: BTreeSet<String> = BTreeSet::new();
+    for m in modules {
+        if let Some(meta) = extract_meta_static(&m.forms)
+            && let Some(es) = meta_exports(&meta)
+        {
+            for e in es {
+                if e.starts_with("core/gfx/") {
+                    exported.insert(e);
+                }
+            }
+        }
+    }
+
+    let mut tracked: BTreeSet<String> = exported.clone();
+    if !manifest.gfx.api_exports.is_empty() {
+        tracked = manifest.gfx.api_exports.iter().cloned().collect();
+        let expected: BTreeSet<String> = tracked.clone();
+        if expected != exported {
+            ok = false;
+            let missing: Vec<String> = expected.difference(&exported).cloned().collect();
+            let extra: Vec<String> = exported.difference(&expected).cloned().collect();
+            if !missing.is_empty() {
+                errors.push(format!(
+                    "missing exported gfx symbols: {}",
+                    missing.join(", ")
+                ));
+            }
+            if !extra.is_empty() {
+                errors.push(format!(
+                    "unexpected exported gfx symbols: {}",
+                    extra.join(", ")
+                ));
+            }
+        }
+    }
+
+    if tracked.is_empty() {
+        ok = false;
+        errors.push("no tracked gfx API exports found".to_string());
+    }
+
+    if manifest.gfx.api_exports.is_empty() && manifest.gfx.api_surface_hash.is_none() {
+        ok = false;
+        errors.push(
+            "gfx api stability requires gfx.api_exports and/or gfx.api_surface_hash configuration"
+                .to_string(),
+        );
+    }
+
+    let mut def_entries: Vec<Term> = Vec::new();
+    for sym in &tracked {
+        match def_hashes.get(sym) {
+            Some(h) => def_entries.push(Term::Map(
+                [
+                    (TermOrdKey(Term::symbol(":sym")), Term::Symbol(sym.clone())),
+                    (
+                        TermOrdKey(Term::symbol(":expr-h")),
+                        Term::Bytes(h.to_vec().into()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            )),
+            None => {
+                ok = false;
+                errors.push(format!(
+                    "tracked API symbol has no defining def form: {sym}"
+                ));
+            }
+        }
+    }
+
+    let surface = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/gfx-api-surface-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":exports")),
+                Term::Vector(tracked.iter().cloned().map(Term::Symbol).collect()),
+            ),
+            (TermOrdKey(Term::symbol(":defs")), Term::Vector(def_entries)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let surface_hash = hex32(hash_term(&surface));
+    if let Some(want) = manifest.gfx.api_surface_hash.as_ref() {
+        let want = want.to_ascii_lowercase();
+        if !is_hex32(&want) {
+            ok = false;
+            errors.push("gfx.api_surface_hash must be 64 lowercase hex chars".to_string());
+        } else if surface_hash != want {
+            ok = false;
+            errors.push(format!(
+                "gfx API surface hash mismatch: expected {}, got {}",
+                want, surface_hash
+            ));
+        }
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/gfx-api-stability-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (
+                TermOrdKey(Term::symbol(":surface-h")),
+                Term::Str(surface_hash),
+            ),
+            (
+                TermOrdKey(Term::symbol(":expected-surface-h")),
+                manifest
+                    .gfx
+                    .api_surface_hash
+                    .as_ref()
+                    .map(|s| Term::Str(s.to_ascii_lowercase()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (TermOrdKey(Term::symbol(":surface")), surface),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::gfx-api-stability".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
+fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, ObligationError> {
+    let Some(m) = value_as_map(v) else {
+        return Err(ObligationError::Test(
+            "golden entry must be a map".to_string(),
+        ));
+    };
+    let body = m
+        .get(&TermOrdKey(Term::symbol(":body")))
+        .ok_or_else(|| ObligationError::Test("golden entry missing :body".to_string()))?;
+    if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+        return Err(ObligationError::Test(
+            "golden entry :body must be callable".to_string(),
+        ));
+    }
+    let expect = match m.get(&TermOrdKey(Term::symbol(":expect-h"))) {
+        Some(Value::Data(Term::Str(s))) => s.to_ascii_lowercase(),
+        Some(Value::Data(Term::Symbol(s))) => s.to_ascii_lowercase(),
+        Some(other) => {
+            return Err(ObligationError::Test(format!(
+                "golden entry :expect-h must be string/symbol, got {}",
+                other.debug_repr()
+            )));
+        }
+        None => {
+            return Err(ObligationError::Test(
+                "golden entry missing :expect-h".to_string(),
+            ));
+        }
+    };
+    if !is_hex32(&expect) {
+        return Err(ObligationError::Test(
+            "golden entry :expect-h must be 64 lowercase hex chars".to_string(),
+        ));
+    }
+    let expect_png_hash = match m.get(&TermOrdKey(Term::symbol(":expect-png-h"))) {
+        None | Some(Value::Data(Term::Nil)) => None,
+        Some(Value::Data(Term::Str(s))) => {
+            let h = s.to_ascii_lowercase();
+            if !is_hex32(&h) {
+                return Err(ObligationError::Test(
+                    "golden entry :expect-png-h must be 64 lowercase hex chars".to_string(),
+                ));
+            }
+            Some(h)
+        }
+        Some(Value::Data(Term::Symbol(s))) => {
+            let h = s.to_ascii_lowercase();
+            if !is_hex32(&h) {
+                return Err(ObligationError::Test(
+                    "golden entry :expect-png-h must be 64 lowercase hex chars".to_string(),
+                ));
+            }
+            Some(h)
+        }
+        Some(other) => {
+            return Err(ObligationError::Test(format!(
+                "golden entry :expect-png-h must be string/symbol or nil, got {}",
+                other.debug_repr()
+            )));
+        }
+    };
+    let pixel_width = parse_u32_field(m, ":pixel-width")?.unwrap_or(256);
+    let pixel_height = parse_u32_field(m, ":pixel-height")?.unwrap_or(256);
+    if pixel_width == 0 || pixel_height == 0 {
+        return Err(ObligationError::Test(
+            "golden entry pixel size must be non-zero".to_string(),
+        ));
+    }
+    let kind = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
+        Some(Value::Data(Term::Symbol(s))) | Some(Value::Data(Term::Str(s))) => match s.as_str() {
+            ":frame-graph" | "frame-graph" => GfxGoldenKind::FrameGraph,
+            ":scene" | "scene" => GfxGoldenKind::Scene,
+            _ => {
+                return Err(ObligationError::Test(format!(
+                    "golden entry :kind must be :frame-graph or :scene, got {s}"
+                )));
+            }
+        },
+        Some(other) => {
+            return Err(ObligationError::Test(format!(
+                "golden entry :kind must be symbol/string, got {}",
+                other.debug_repr()
+            )));
+        }
+        None => GfxGoldenKind::FrameGraph,
+    };
+    if expect_png_hash.is_some() && kind != GfxGoldenKind::FrameGraph {
+        return Err(ObligationError::Test(
+            "golden entry :expect-png-h currently supports only :frame-graph kind".to_string(),
+        ));
+    }
+    Ok(ParsedGfxGoldenEntry {
+        body: body.clone(),
+        kind,
+        expect_hash: expect,
+        expect_png_hash,
+        pixel_width,
+        pixel_height,
+    })
+}
+
+fn parse_gfx_frame_budget_entry(v: &Value) -> Result<Value, ObligationError> {
+    if matches!(v, Value::Closure { .. } | Value::NativeFn(_)) {
+        return Ok(v.clone());
+    }
+    let Some(m) = value_as_map(v) else {
+        return Err(ObligationError::Test(
+            "frame budget entry must be callable or map".to_string(),
+        ));
+    };
+    let body = m
+        .get(&TermOrdKey(Term::symbol(":body")))
+        .ok_or_else(|| ObligationError::Test("frame budget entry missing :body".to_string()))?;
+    if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+        return Err(ObligationError::Test(
+            "frame budget entry :body must be callable".to_string(),
+        ));
+    }
+    Ok(body.clone())
+}
+
+fn term_is_typed_map(t: &Term, typ: &str) -> bool {
+    let Term::Map(m) = t else { return false };
+    matches!(
+        m.get(&TermOrdKey(Term::symbol(":type"))),
+        Some(Term::Symbol(s)) if s == typ
+    )
+}
+
+fn extract_frame_graph_term(t: &Term) -> Option<&Term> {
+    if term_is_typed_map(t, ":gfx/frame-graph") {
+        return Some(t);
+    }
+    let Term::Map(m) = t else { return None };
+    for key in [":frame", ":frame-graph"] {
+        if let Some(inner) = m.get(&TermOrdKey(Term::symbol(key)))
+            && term_is_typed_map(inner, ":gfx/frame-graph")
+        {
+            return Some(inner);
+        }
+    }
+    None
+}
+
+fn extract_scene_term(t: &Term) -> Option<&Term> {
+    if term_is_typed_map(t, ":gfx/scene") {
+        return Some(t);
+    }
+    let Term::Map(m) = t else { return None };
+    for key in [":scene"] {
+        if let Some(inner) = m.get(&TermOrdKey(Term::symbol(key)))
+            && term_is_typed_map(inner, ":gfx/scene")
+        {
+            return Some(inner);
+        }
+    }
+    None
+}
+
+fn extract_frame_graph_and_time(t: &Term) -> Result<(&Term, Option<u64>), String> {
+    if term_is_typed_map(t, ":gfx/frame-graph") {
+        return Ok((t, None));
+    }
+    let Term::Map(m) = t else {
+        return Err("expected frame-graph or {:frame <frame-graph> ...}".to_string());
+    };
+    let frame = m
+        .get(&TermOrdKey(Term::symbol(":frame")))
+        .or_else(|| m.get(&TermOrdKey(Term::symbol(":frame-graph"))))
+        .ok_or_else(|| "missing :frame/:frame-graph field".to_string())?;
+    if !term_is_typed_map(frame, ":gfx/frame-graph") {
+        return Err(":frame value must be :gfx/frame-graph".to_string());
+    }
+    let frame_time_ms = match m.get(&TermOrdKey(Term::symbol(":frame-time-ms"))) {
+        None | Some(Term::Nil) => None,
+        Some(Term::Int(i)) => i.to_u64(),
+        Some(other) => {
+            return Err(format!(
+                ":frame-time-ms must be int or nil, got {}",
+                print_term(other)
+            ));
+        }
+    };
+    Ok((frame, frame_time_ms))
+}
+
+fn frame_graph_metrics(frame: &Term) -> Result<FrameMetrics, String> {
+    let Term::Map(m) = frame else {
+        return Err("frame graph must be a map".to_string());
+    };
+    let render = m
+        .get(&TermOrdKey(Term::symbol(":render-passes")))
+        .ok_or_else(|| "frame graph missing :render-passes".to_string())?;
+    let compute = m
+        .get(&TermOrdKey(Term::symbol(":compute-passes")))
+        .ok_or_else(|| "frame graph missing :compute-passes".to_string())?;
+    let Term::Vector(render_passes) = render else {
+        return Err(":render-passes must be a vector".to_string());
+    };
+    let Term::Vector(compute_passes) = compute else {
+        return Err(":compute-passes must be a vector".to_string());
+    };
+
+    let mut draw_commands = 0u64;
+    for rp in render_passes {
+        let Term::Map(rm) = rp else {
+            return Err("render pass must be a map".to_string());
+        };
+        let cmds = rm
+            .get(&TermOrdKey(Term::symbol(":commands")))
+            .ok_or_else(|| "render pass missing :commands".to_string())?;
+        let Term::Vector(v) = cmds else {
+            return Err("render pass :commands must be a vector".to_string());
+        };
+        draw_commands = draw_commands.saturating_add(v.len() as u64);
+    }
+
+    let mut compute_commands = 0u64;
+    for cp in compute_passes {
+        let Term::Map(cm) = cp else {
+            return Err("compute pass must be a map".to_string());
+        };
+        let cmds = cm
+            .get(&TermOrdKey(Term::symbol(":commands")))
+            .ok_or_else(|| "compute pass missing :commands".to_string())?;
+        let Term::Vector(v) = cmds else {
+            return Err("compute pass :commands must be a vector".to_string());
+        };
+        compute_commands = compute_commands.saturating_add(v.len() as u64);
+    }
+
+    Ok(FrameMetrics {
+        render_passes: render_passes.len() as u64,
+        compute_passes: compute_passes.len() as u64,
+        draw_commands,
+        compute_commands,
+        frame_graph_bytes: print_term(frame).len() as u64,
+    })
+}
+
+fn is_hex32(s: &str) -> bool {
+    s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+fn parse_u32_field(
+    m: &BTreeMap<TermOrdKey, Value>,
+    key: &str,
+) -> Result<Option<u32>, ObligationError> {
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        None | Some(Value::Data(Term::Nil)) => Ok(None),
+        Some(Value::Data(Term::Int(i))) => {
+            let n = i.to_u64().ok_or_else(|| {
+                ObligationError::Test(format!("{key} must be a non-negative integer"))
+            })?;
+            let n = u32::try_from(n)
+                .map_err(|_| ObligationError::Test(format!("{key} exceeds u32 range")))?;
+            Ok(Some(n))
+        }
+        Some(other) => Err(ObligationError::Test(format!(
+            "{key} must be int or nil, got {}",
+            other.debug_repr()
+        ))),
+    }
+}
+
 struct PackageEval {
     modules: Vec<ModuleEval>,
     exports_env: Env,
@@ -2518,6 +3840,7 @@ fn hex32(h: [u8; 32]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gc_coreform::parse_module;
 
     #[test]
     fn store_is_content_addressed() {
@@ -2528,5 +3851,46 @@ mod tests {
         let h2 = store.put_term(&t).unwrap();
         assert_eq!(h1, h2);
         assert!(store.path_for(&h1).exists());
+    }
+
+    #[test]
+    fn lint_autofix_builds_replace_node_patch_for_missing_types() {
+        let src = r#"
+          (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))
+          (def pkg/a::x 1)
+          (def pkg/a::y 2)
+        "#;
+        let forms = parse_module(src).unwrap();
+        let (patch, reasons) = lint_autofix_patch_for_module("lint.gc", &forms).unwrap();
+        assert!(reasons.iter().any(|r| r == "editor/lint/missing-types-map"));
+        assert!(reasons.iter().any(|r| r == "editor/lint/missing-type"));
+
+        let Term::Map(m) = patch else {
+            panic!("patch must be map")
+        };
+        let ops = m
+            .get(&TermOrdKey(Term::symbol(":ops")))
+            .expect("patch must contain :ops");
+        let Term::Vector(ops) = ops else {
+            panic!(":ops must be vector")
+        };
+        assert_eq!(ops.len(), 1);
+        let Term::Map(opm) = &ops[0] else {
+            panic!("op must be map")
+        };
+        assert!(matches!(
+            opm.get(&TermOrdKey(Term::symbol(":op"))),
+            Some(Term::Symbol(s)) if s == ":replace-node"
+        ));
+    }
+
+    #[test]
+    fn lint_autofix_returns_none_when_types_are_complete() {
+        let src = r#"
+          (def ::meta (quote {:exports [pkg/a::x] :types {pkg/a::x Int}}))
+          (def pkg/a::x 1)
+        "#;
+        let forms = parse_module(src).unwrap();
+        assert!(lint_autofix_patch_for_module("lint.gc", &forms).is_none());
     }
 }

@@ -1,0 +1,28 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/gfx-pixel::goldens]
+      :types {pkg/gfx-pixel::goldens ?}}))
+
+(def pkg/gfx-pixel::cmd
+  ((((core/gfx/frame::cmd-draw 3) 1) 0) 0))
+
+(def pkg/gfx-pixel::pass
+  ((((core/gfx/frame::render-pass "main") []) nil) [pkg/gfx-pixel::cmd]))
+
+(def pkg/gfx-pixel::frame
+  ((core/gfx/frame::add-render-pass (core/gfx/frame::empty)) pkg/gfx-pixel::pass))
+
+(def pkg/gfx-pixel::goldens
+  {
+    "frame-main"
+      {
+        :body (fn (_) pkg/gfx-pixel::frame)
+        :kind (quote :frame-graph)
+        :expect-h "1ab3d045a0f1a6231cdca46a649242e9cb087dba95cacf1909f3ea4fc248009e"
+        :expect-png-h "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        :pixel-width 64
+        :pixel-height 48}})
+
+pkg/gfx-pixel::goldens

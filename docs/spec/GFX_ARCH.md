@@ -115,11 +115,19 @@ UI rendering output is a frame graph fragment merged into the final frame plan.
 
 ## Determinism + obligations
 
-Required future obligations for Level 2:
-- golden image tests with replayed input/time logs
-- frame graph hash stability tests for fixed inputs
-- scene hash stability tests for canonical snapshots
-- frame time budget evidence artifacts
+Implemented obligations for Level 2:
+- `core/obligation::gfx-golden-images`
+  - deterministic golden hashing for frame-graph/scene outputs
+- `core/obligation::gfx-frame-budgets`
+  - frame complexity/time budget evidence per configured suite
+- `core/obligation::gfx-api-stability`
+  - public gfx API surface fingerprint checks
+
+See `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_OBLIGATIONS.md` for schema details and evidence formats.
+
+Planned extension:
+- headless pixel-golden backends (browser/native) using deterministic input/time logs for image-level parity checks.
+  - native deterministic headless backend is now implemented and wired into `core/obligation::gfx-golden-images` via `:expect-png-h`.
 
 ## Compatibility policy
 
@@ -147,5 +155,41 @@ The following pure/effect wrappers are currently implemented in `prelude/prelude
   - `core/gfx/scene::node`
   - `core/gfx/scene::add-node`
   - `core/gfx/scene::set-roots`
+- Expanded schema-aligned data/builders:
+  - descriptor constructors: `core/gfx/desc::{buffer,texture,sampler,shader-module,render-pipeline,compute-pipeline}`
+  - command/pass constructors: `core/gfx/frame::{color-attachment,depth-attachment,cmd-set-pipeline,cmd-set-vertex-buffer,cmd-set-index-buffer,cmd-set-bind-group,cmd-set-push-constants,cmd-draw,cmd-draw-indexed,cmd-dispatch,render-pass-empty,compute-pass-empty,render-pass-add-color-attachment,render-pass-add-command,compute-pass-add-command}`
+  - scene/math helpers: `core/gfx/math::{v2,v3,quat,rgb,rgba}`, `core/gfx/scene::{transform,mesh-ref,material-pbr,camera-perspective,camera-orthographic,light-point,light-directional,node-basic,add-root,add-child}`
+  - 2D/UI data builders: `core/gfx/2d::{identity-rotation,transform,sprite-material,sprite-node,scene-empty,scene-add-draw,draw-sprite,draw-rect,draw-text}` and `core/gfx/ui::{node,style,text,button,container,vertical,horizontal}`
+  - runtime planners: `core/gfx/runtime::{plan-frame-2d,plan-frame-2d-batched,plan-frame-2d-scene-batched,plan-frame-3d,plan-frame-3d-pbr,plan-frame-2d+ui,plan-render-pass,plan-render-pass-3d,plan-2d-pass-batched,2d-batches,first-camera,count-lights,count-shadow-lights,ui-node-count,hash-scene,hash-frame-graph}`
+  - UI runtime projection/planning: `core/gfx/ui/runtime::{to-2d-draws,to-2d-scene,plan-frame-batched,render-node-to-draws}`
+
+### 2D batching baseline (implemented)
+
+`core/gfx/runtime::2d-batches` performs deterministic run-length batching over 2D draw items using structural batch keys (`:kind`, `:texture`, `:font`, `:blend`), and `core/gfx/runtime::plan-frame-2d-batched` emits one draw command per batch with `:instance-count` set to the batch size.
+
+### 3D PBR baseline (implemented)
+
+`core/gfx/runtime::plan-frame-3d-pbr` emits a deterministic main render pass plus deterministic depth-only shadow passes (one per shadow-casting light), and attaches stable frame metadata under `:meta`:
+- `:camera` (first camera found in scene traversal order, or `nil`)
+- `:light-count` (total lights)
+- `:shadow-light-count` (lights where `:casts-shadow` is true or omitted)
+
+Shadow pass labels and depth views are deterministic (`<prefix><index>`), and shadow pass command streams reuse the same renderable-node planner as main pass construction.
+
+### UI toolkit baseline (implemented)
+
+`core/gfx/ui/runtime` now projects retained UI trees into deterministic 2D draw lists and plans batched 2D frame graphs:
+- style `:paint/:bg` emits rect draws
+- `text` and `button` nodes emit text draws (with deterministic defaults for font/color/size)
+- container `:layout/:axis` + `:spacing/:gap` drives deterministic child placement
+- resulting `:gfx/2d-scene` flows through `core/gfx/runtime::plan-frame-2d-scene-batched`
+
+### End-to-end demos (implemented)
+
+See `/Users/corbensorenson/Documents/genesisCode/docs/GFX_DEMOS.md` and `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/` for runnable `.gc` demos:
+- `ui_app.gc`
+- `scene3d.gc`
+- `hybrid_web.gc`
+
 - Capability wrappers:
   - `core/gfx/gpu::*`, `core/gfx/window::*`, `core/gfx/input::*`, `core/gfx/time::*`, `core/gfx/audio::*`

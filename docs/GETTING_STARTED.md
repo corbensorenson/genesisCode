@@ -87,3 +87,15 @@ The pure kernel + stepping interface is exposed via `wasm-bindgen` (`crates/gc_w
 See:
 - `docs/spec/WASM.md` for build and smoke instructions
 - `docs/spec/WASM_HOST_BRIDGE.md` for the normative step/resume protocol
+
+## 7) Graphics Demos (2D UI, 3D Scene, Hybrid View)
+
+Run the end-to-end `.gc` graphics demos:
+
+```sh
+cargo run -p gc_cli -- eval examples/gfx_demos/ui_app.gc
+cargo run -p gc_cli -- eval examples/gfx_demos/scene3d.gc
+cargo run -p gc_cli -- eval examples/gfx_demos/hybrid_web.gc
+```
+
+See `docs/GFX_DEMOS.md` for details and test coverage.

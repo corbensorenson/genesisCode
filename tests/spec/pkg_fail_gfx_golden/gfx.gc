@@ -1,0 +1,19 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/gfx-golden::goldens]
+      :types {pkg/gfx-golden::goldens ?}}))
+
+(def pkg/gfx-golden::frame
+  (core/gfx/frame::empty))
+
+(def pkg/gfx-golden::goldens
+  {
+    "empty-frame"
+      {
+        :body (fn (_) pkg/gfx-golden::frame)
+        :kind (quote :frame-graph)
+        :expect-h "0000000000000000000000000000000000000000000000000000000000000000"}})
+
+pkg/gfx-golden::goldens

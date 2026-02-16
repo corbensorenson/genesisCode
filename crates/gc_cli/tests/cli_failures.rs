@@ -318,3 +318,135 @@ fn coverage_failure_is_recorded_in_acceptance_artifact() {
     assert!(!acceptance_ok(&acc));
     assert!(acceptance_has_obligation(&acc, "core/obligation::coverage"));
 }
+
+#[test]
+fn gfx_golden_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_gfx_golden");
+    let dst = td.path().join("pkg_fail_gfx_golden");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(
+        &acc,
+        "core/obligation::gfx-golden-images"
+    ));
+}
+
+#[test]
+fn gfx_frame_budget_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_gfx_frame_budget");
+    let dst = td.path().join("pkg_fail_gfx_frame_budget");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(
+        &acc,
+        "core/obligation::gfx-frame-budgets"
+    ));
+}
+
+#[test]
+fn gfx_api_stability_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_gfx_api");
+    let dst = td.path().join("pkg_fail_gfx_api");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(
+        &acc,
+        "core/obligation::gfx-api-stability"
+    ));
+}
+
+#[test]
+fn gfx_pixel_golden_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_gfx_pixel_golden");
+    let dst = td.path().join("pkg_fail_gfx_pixel_golden");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(
+        &acc,
+        "core/obligation::gfx-golden-images"
+    ));
+}
+
+#[test]
+fn lint_failure_is_recorded_in_acceptance_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_fail_lint");
+    let dst = td.path().join("pkg_fail_lint");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+
+    let hex = parse_acceptance_hash(&out);
+    let acc = read_acceptance(&dst, &hex);
+    assert!(!acceptance_ok(&acc));
+    assert!(acceptance_has_obligation(&acc, "core/obligation::lint"));
+}

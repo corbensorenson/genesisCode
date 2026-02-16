@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use gc_coreform::{Term, hash_module};
+use gc_coreform::{Term, TermOrdKey, hash_module};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 use num_traits::ToPrimitive;
@@ -180,6 +180,8 @@ struct Planner {
     symbol_ids: BTreeMap<String, i32>,
     string_ids: BTreeMap<String, i32>,
     bytes_ids: BTreeMap<Vec<u8>, i32>,
+    global_const_vector_aliases: BTreeMap<String, Vec<Term>>,
+    global_const_map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>>,
     local_const_int_values: BTreeMap<u32, i64>,
     local_const_symbol_ids: BTreeMap<u32, i32>,
     local_const_string_ids: BTreeMap<u32, i32>,
@@ -487,15 +489,50 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
             });
         }
 
+        let mut vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+        let mut map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        let mut scalar_aliases: BTreeMap<String, Term> = BTreeMap::new();
+        let empty_vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+        let empty_map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
         for stmt in &statements {
             let Stmt::Def(name, rhs) = stmt else {
                 continue;
             };
-            if !is_safe_defs_only_rhs(rhs) {
+            let rhs_resolved = resolve_scalar_aliases_term(rhs, &scalar_aliases);
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                &rhs_resolved,
+                &vec_aliases,
+                &empty_vec_aliases,
+            )? {
+                vec_aliases.insert(name.clone(), items);
+                map_aliases.remove(name);
+                scalar_aliases.remove(name);
+                continue;
+            }
+            if let Some(items) =
+                term_const_map_expr_with_aliases(&rhs_resolved, &map_aliases, &empty_map_aliases)?
+            {
+                map_aliases.insert(name.clone(), items);
+                vec_aliases.remove(name);
+                scalar_aliases.remove(name);
+                continue;
+            }
+            if let Some(v) = term_const_if_condition_expr(&rhs_resolved)
+                .or_else(|| term_const_data_expr(&rhs_resolved))
+            {
+                scalar_aliases.insert(name.clone(), v);
+                vec_aliases.remove(name);
+                map_aliases.remove(name);
+                continue;
+            }
+            if !is_safe_defs_only_rhs(&rhs_resolved) {
                 return Err(Stage2CompileError::Unsupported(format!(
                     "defs-only module contains non-trivial def rhs: {name}"
                 )));
             }
+            scalar_aliases.remove(name);
+            vec_aliases.remove(name);
+            map_aliases.remove(name);
         }
 
         let mut func = Function::new(Vec::new());
@@ -545,6 +582,8 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
         match stmt {
             Stmt::Def(name, expr) => {
                 if let Some((param, body)) = desugar_fn_literal_to_unary(&expr)? {
+                    planner.global_const_vector_aliases.remove(&name);
+                    planner.global_const_map_aliases.remove(&name);
                     env.remove(&name);
                     fn_defs.insert(
                         name,
@@ -559,8 +598,59 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
                 if let Term::Symbol(sym) = &expr
                     && let Some(alias_fn) = resolve_global_inlinable_symbol(sym, &fn_defs)
                 {
+                    planner.global_const_vector_aliases.remove(&name);
+                    planner.global_const_map_aliases.remove(&name);
                     env.remove(&name);
                     fn_defs.insert(name, alias_fn);
+                    continue;
+                }
+                if let Term::Symbol(sym) = &expr
+                    && !env.contains_key(sym)
+                    && let Some(items) = planner.global_const_vector_aliases.get(sym).cloned()
+                {
+                    planner
+                        .global_const_vector_aliases
+                        .insert(name.clone(), items);
+                    planner.global_const_map_aliases.remove(&name);
+                    env.remove(&name);
+                    fn_defs.remove(&name);
+                    continue;
+                }
+                if let Term::Symbol(sym) = &expr
+                    && !env.contains_key(sym)
+                    && let Some(items) = planner.global_const_map_aliases.get(sym).cloned()
+                {
+                    planner.global_const_map_aliases.insert(name.clone(), items);
+                    planner.global_const_vector_aliases.remove(&name);
+                    env.remove(&name);
+                    fn_defs.remove(&name);
+                    continue;
+                }
+                let local_vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+                if let Some(items) = term_const_vector_expr_with_aliases(
+                    &expr,
+                    &local_vec_aliases,
+                    &planner.global_const_vector_aliases,
+                )? {
+                    planner
+                        .global_const_vector_aliases
+                        .insert(name.clone(), items);
+                    planner.global_const_map_aliases.remove(&name);
+                    env.remove(&name);
+                    fn_defs.remove(&name);
+                    continue;
+                }
+                let local_map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> =
+                    BTreeMap::new();
+                if let Some(items) = term_const_map_expr_with_aliases(
+                    &expr,
+                    &local_map_aliases,
+                    &planner.global_const_map_aliases,
+                )? {
+                    planner.global_const_map_aliases.insert(name.clone(), items);
+                    planner.global_const_vector_aliases.remove(&name);
+                    env.remove(&name);
+                    fn_defs.remove(&name);
                     continue;
                 }
 
@@ -568,6 +658,8 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
                 let ty = pexpr.ty();
                 let idx = planner.alloc_local(ty)?;
                 record_local_const_ids(&mut planner, idx, &pexpr);
+                planner.global_const_vector_aliases.remove(&name);
+                planner.global_const_map_aliases.remove(&name);
                 fn_defs.remove(&name);
                 env.insert(name.clone(), Local { idx, ty });
                 planned.push(PStmt::Def {
@@ -1168,6 +1260,8 @@ fn plan_list_expr(
         };
         let mut env2 = env.clone();
         let mut local_fn_defs2 = local_fn_defs.clone();
+        let mut vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+        let mut map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
         let mut bindings = Vec::with_capacity(bs.len());
         for b in bs {
             let Some(pair) = b.as_proper_list() else {
@@ -1185,6 +1279,43 @@ fn plan_list_expr(
                     "(let ...) binding name must be symbol".to_string(),
                 ));
             };
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                pair[1],
+                &vec_aliases,
+                &planner.global_const_vector_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                vec_aliases.insert(name.clone(), items);
+                continue;
+            }
+            if let Some(items) = term_const_map_expr_with_aliases(
+                pair[1],
+                &map_aliases,
+                &planner.global_const_map_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                map_aliases.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+            }
             if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
                 env2.remove(name);
                 local_fn_defs2.insert(
@@ -1222,8 +1353,9 @@ fn plan_list_expr(
         }
         let mut body = Vec::with_capacity(xs.len() - 2);
         for x in xs.iter().skip(2) {
+            let resolved = resolve_collection_aliases_term(x, &vec_aliases, &map_aliases);
             body.push(plan_expr(
-                x,
+                &resolved,
                 &env2,
                 global_env,
                 fn_defs,
@@ -1241,10 +1373,49 @@ fn plan_list_expr(
         && matches!(xs[0], Term::Symbol(s) if s == "prim")
         && let Term::Symbol(op) = &xs[1]
     {
+        if op == "str/join" {
+            return lower_str_join_terms(
+                xs[2],
+                xs[3],
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
+        if op == "map/get" {
+            return lower_map_get_terms(
+                xs[2],
+                xs[3],
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
+        if op == "vec/get" {
+            return lower_vec_get_terms(
+                xs[2],
+                xs[3],
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
         let lhs = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
         let rhs = plan_expr(xs[3], env, global_env, fn_defs, local_fn_defs, planner)?;
         if op == "str/concat" {
             return lower_str_concat(lhs, rhs, planner);
+        }
+        if op == "str/repeat" {
+            return lower_str_repeat(lhs, rhs, planner);
+        }
+        if op == "bytes/get" {
+            return lower_bytes_get(lhs, rhs, planner);
         }
         if op == "bytes/concat" {
             return lower_bytes_concat(lhs, rhs, planner);
@@ -1256,6 +1427,27 @@ fn plan_list_expr(
             rhs: Box::new(rhs),
             ty,
         });
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "vec/len"
+    {
+        return lower_vec_len_term(xs[2], env, global_env, fn_defs, local_fn_defs, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "map/len"
+    {
+        return lower_map_len_term(xs[2], env, global_env, fn_defs, local_fn_defs, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "bytes/join"
+    {
+        return lower_bytes_join_term(xs[2], env, global_env, fn_defs, local_fn_defs, planner);
     }
     if xs.len() == 3
         && matches!(xs[0], Term::Symbol(s) if s == "prim")
@@ -1345,6 +1537,22 @@ fn plan_list_expr(
         let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
         return lower_str_len(arg, planner);
     }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "coreform/escape-str"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_coreform_escape_str(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "coreform/escape-bytes"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_coreform_escape_bytes(arg, planner);
+    }
     if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/str::len") {
         let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
         return lower_str_len(arg, planner);
@@ -1377,15 +1585,71 @@ fn plan_list_expr(
         let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
         return lower_bytes_from_hex(arg, planner);
     }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/coreform::escape-str") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_coreform_escape_str(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/coreform::escape-bytes") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_coreform_escape_bytes(arg, planner);
+    }
     if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/bytes::len") {
         let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
         return lower_bytes_len(arg, planner);
     }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/map::len") {
+        return lower_map_len_term(xs[1], env, global_env, fn_defs, local_fn_defs, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/vec::len") {
+        return lower_vec_len_term(xs[1], env, global_env, fn_defs, local_fn_defs, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/bytes::join") {
+        return lower_bytes_join_term(xs[1], env, global_env, fn_defs, local_fn_defs, planner);
+    }
     if let Some((op_sym, lhs_t, rhs_t)) = match_curried_wrapper_call(&xs) {
+        if op_sym == "str/join" {
+            return lower_str_join_terms(
+                &lhs_t,
+                &rhs_t,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
+        if op_sym == "map/get" {
+            return lower_map_get_terms(
+                &lhs_t,
+                &rhs_t,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
+        if op_sym == "vec/get" {
+            return lower_vec_get_terms(
+                &lhs_t,
+                &rhs_t,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            );
+        }
         let lhs = plan_expr(&lhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
         let rhs = plan_expr(&rhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
         if op_sym == "str/concat" {
             return lower_str_concat(lhs, rhs, planner);
+        }
+        if op_sym == "str/repeat" {
+            return lower_str_repeat(lhs, rhs, planner);
+        }
+        if op_sym == "bytes/get" {
+            return lower_bytes_get(lhs, rhs, planner);
         }
         if op_sym == "bytes/concat" {
             return lower_bytes_concat(lhs, rhs, planner);
@@ -1501,6 +1765,19 @@ fn lower_str_concat(
     lower_str_concat_expr(lhs, rhs, planner)
 }
 
+fn lower_str_repeat(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if lhs.ty() != Ty::StrI32 || rhs.ty() != Ty::I64 {
+        return Err(Stage2CompileError::Unsupported(
+            "str/repeat expects (string, int) arguments in stage2".to_string(),
+        ));
+    }
+    lower_str_repeat_expr(lhs, rhs, planner)
+}
+
 fn lower_bytes_concat(
     lhs: PExpr,
     rhs: PExpr,
@@ -1512,6 +1789,2367 @@ fn lower_bytes_concat(
         ));
     }
     lower_bytes_concat_expr(lhs, rhs, planner)
+}
+
+fn lower_bytes_get(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if lhs.ty() != Ty::BytesI32 || rhs.ty() != Ty::I64 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/get expects (bytes, int) arguments in stage2".to_string(),
+        ));
+    }
+    lower_bytes_get_expr(lhs, rhs, planner)
+}
+
+fn ensure_scalar_cond_ty(cond_ty: Ty) -> Result<(), Stage2CompileError> {
+    if matches!(
+        cond_ty,
+        Ty::BoolI32 | Ty::NilI32 | Ty::I64 | Ty::SymI32 | Ty::StrI32 | Ty::BytesI32
+    ) {
+        Ok(())
+    } else {
+        Err(Stage2CompileError::Unsupported(
+            "if condition must be scalar (bool, nil, int, symbol, string, or bytes)".to_string(),
+        ))
+    }
+}
+
+fn term_const_vector_expr_with_aliases(
+    t: &Term,
+    local_aliases: &BTreeMap<String, Vec<Term>>,
+    global_aliases: &BTreeMap<String, Vec<Term>>,
+) -> Result<Option<Vec<Term>>, Stage2CompileError> {
+    if let Term::Symbol(sym) = t {
+        if let Some(items) = local_aliases.get(sym) {
+            return Ok(Some(items.clone()));
+        }
+        if let Some(items) = global_aliases.get(sym) {
+            return Ok(Some(items.clone()));
+        }
+    }
+    if let Term::Vector(items) = t {
+        return Ok(Some(items.clone()));
+    }
+    let Some(xs) = t.as_proper_list() else {
+        return Ok(None);
+    };
+    if xs.is_empty() {
+        return Ok(None);
+    }
+
+    if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
+        let Some(cond) = term_const_if_condition_expr(xs[1]) else {
+            return Ok(None);
+        };
+        let branch = if term_truthy(&cond) { xs[2] } else { xs[3] };
+        return term_const_vector_expr_with_aliases(branch, local_aliases, global_aliases);
+    }
+
+    if xs.len() == 4
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && matches!(xs[1], Term::Symbol(s) if s == "vec/push")
+    {
+        let Some(mut items) =
+            term_const_vector_expr_with_aliases(xs[2], local_aliases, global_aliases)?
+        else {
+            return Err(Stage2CompileError::Unsupported(
+                "vec/push currently requires stage2-known vector literals".to_string(),
+            ));
+        };
+        let Some(v) = term_const_data_expr(xs[3]) else {
+            return Err(Stage2CompileError::Unsupported(
+                "vec/push currently requires stage2-known data values".to_string(),
+            ));
+        };
+        items.push(v);
+        return Ok(Some(items));
+    }
+
+    if xs.len() == 2
+        && let Some(inner) = xs[0].as_proper_list()
+        && inner.len() == 2
+        && matches!(inner[0], Term::Symbol(s) if s == "core/vec::push")
+    {
+        let Some(mut items) =
+            term_const_vector_expr_with_aliases(inner[1], local_aliases, global_aliases)?
+        else {
+            return Err(Stage2CompileError::Unsupported(
+                "core/vec::push currently requires stage2-known vector literals".to_string(),
+            ));
+        };
+        let Some(v) = term_const_data_expr(xs[1]) else {
+            return Err(Stage2CompileError::Unsupported(
+                "core/vec::push currently requires stage2-known data values".to_string(),
+            ));
+        };
+        items.push(v);
+        return Ok(Some(items));
+    }
+
+    Ok(None)
+}
+
+fn term_const_string_vector_ids_with_aliases(
+    t: &Term,
+    local_aliases: &BTreeMap<String, Vec<Term>>,
+    global_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<Option<Vec<i32>>, Stage2CompileError> {
+    let Some(items) = term_const_vector_expr_with_aliases(t, local_aliases, global_aliases)? else {
+        return Ok(None);
+    };
+    let mut ids = Vec::with_capacity(items.len());
+    for item in items {
+        let Term::Str(s) = &item else {
+            return Err(Stage2CompileError::Unsupported(
+                "str/join expects a vector of stage2-known string values".to_string(),
+            ));
+        };
+        ids.push(planner.intern_string(s)?);
+    }
+    Ok(Some(ids))
+}
+
+fn term_const_bytes_vector_ids_with_aliases(
+    t: &Term,
+    local_aliases: &BTreeMap<String, Vec<Term>>,
+    global_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<Option<Vec<i32>>, Stage2CompileError> {
+    let Some(items) = term_const_vector_expr_with_aliases(t, local_aliases, global_aliases)? else {
+        return Ok(None);
+    };
+    let mut ids = Vec::with_capacity(items.len());
+    for item in items {
+        let Term::Bytes(bs) = &item else {
+            return Err(Stage2CompileError::Unsupported(
+                "bytes/join expects a vector of stage2-known bytes values".to_string(),
+            ));
+        };
+        ids.push(planner.intern_bytes(bs)?);
+    }
+    Ok(Some(ids))
+}
+
+fn scalar_term_to_pexpr(
+    t: &Term,
+    planner: &mut Planner,
+) -> Result<Option<PExpr>, Stage2CompileError> {
+    match t {
+        Term::Nil => Ok(Some(PExpr::Nil)),
+        Term::Bool(b) => Ok(Some(PExpr::Bool(*b))),
+        Term::Int(i) => {
+            let n = i.to_i64().ok_or_else(|| {
+                Stage2CompileError::Unsupported(
+                    "vec/get supports only int literals in i64 range".to_string(),
+                )
+            })?;
+            Ok(Some(PExpr::Int(n)))
+        }
+        Term::Symbol(s) => Ok(Some(PExpr::Sym(planner.intern_symbol(s)?))),
+        Term::Str(s) => Ok(Some(PExpr::Str(planner.intern_string(s)?))),
+        Term::Bytes(bs) => Ok(Some(PExpr::Bytes(planner.intern_bytes(bs)?))),
+        _ => Ok(None),
+    }
+}
+
+fn term_const_scalar_vector_exprs_with_aliases(
+    t: &Term,
+    local_aliases: &BTreeMap<String, Vec<Term>>,
+    global_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<Option<Vec<PExpr>>, Stage2CompileError> {
+    let Some(items) = term_const_vector_expr_with_aliases(t, local_aliases, global_aliases)? else {
+        return Ok(None);
+    };
+    let mut out = Vec::with_capacity(items.len());
+    for item in items {
+        let Some(e) = scalar_term_to_pexpr(&item, planner)? else {
+            return Err(Stage2CompileError::Unsupported(
+                "vec/get expects a vector of stage2-known scalar values".to_string(),
+            ));
+        };
+        out.push(e);
+    }
+    Ok(Some(out))
+}
+
+fn term_const_data_term(t: &Term) -> Option<Term> {
+    match t {
+        Term::Nil
+        | Term::Bool(_)
+        | Term::Int(_)
+        | Term::Symbol(_)
+        | Term::Str(_)
+        | Term::Bytes(_) => Some(t.clone()),
+        Term::Pair(a, d) => {
+            let a2 = term_const_data_term(a)?;
+            let d2 = term_const_data_term(d)?;
+            Some(Term::Pair(Box::new(a2), Box::new(d2)))
+        }
+        Term::Vector(xs) => {
+            let mut out = Vec::with_capacity(xs.len());
+            for x in xs {
+                out.push(term_const_data_term(x)?);
+            }
+            Some(Term::Vector(out))
+        }
+        Term::Map(m) => {
+            let mut out: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for (k, v) in m {
+                let k2 = term_const_data_term(&k.0)?;
+                let v2 = term_const_data_term(v)?;
+                out.insert(TermOrdKey(k2), v2);
+            }
+            Some(Term::Map(out))
+        }
+    }
+}
+
+fn term_const_quoted_data_term(t: &Term) -> Option<Term> {
+    let xs = t.as_proper_list()?;
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "quote") {
+        return Some(xs[1].clone());
+    }
+    None
+}
+
+fn term_const_data_expr(t: &Term) -> Option<Term> {
+    term_const_quoted_data_term(t).or_else(|| term_const_data_term(t))
+}
+
+fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
+    if let Some(quoted) = term_const_quoted_data_term(t) {
+        return Some(quoted);
+    }
+    match t {
+        Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Str(_) | Term::Bytes(_) => Some(t.clone()),
+        _ => {
+            let xs = t.as_proper_list()?;
+            if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
+                let cond = term_const_if_condition_expr(xs[1])?;
+                let branch = if term_truthy(&cond) { xs[2] } else { xs[3] };
+                return term_const_if_condition_expr(branch)
+                    .or_else(|| term_const_data_expr(branch));
+            }
+            if xs.len() == 4
+                && matches!(xs[0], Term::Symbol(s) if s == "prim")
+                && matches!(xs[1], Term::Symbol(s) if s == "int/lt?")
+            {
+                let a = term_const_i64_expr(xs[2])?;
+                let b = term_const_i64_expr(xs[3])?;
+                return Some(Term::Bool(a < b));
+            }
+            if xs.len() == 4
+                && matches!(xs[0], Term::Symbol(s) if s == "prim")
+                && matches!(xs[1], Term::Symbol(s) if s == "int/eq?")
+            {
+                let a = term_const_i64_expr(xs[2])?;
+                let b = term_const_i64_expr(xs[3])?;
+                return Some(Term::Bool(a == b));
+            }
+            if xs.len() == 4
+                && matches!(xs[0], Term::Symbol(s) if s == "prim")
+                && matches!(xs[1], Term::Symbol(s) if s == "core/eq?")
+            {
+                let a = term_const_data_expr(xs[2])?;
+                let b = term_const_data_expr(xs[3])?;
+                return Some(Term::Bool(a == b));
+            }
+            if xs.len() == 3
+                && matches!(xs[0], Term::Symbol(s) if s == "prim")
+                && matches!(xs[1], Term::Symbol(s) if s == "list/is-nil?")
+            {
+                let x = term_const_data_expr(xs[2])?;
+                return Some(Term::Bool(matches!(x, Term::Nil)));
+            }
+            if xs.len() == 2
+                && let Some(inner) = xs[0].as_proper_list()
+                && inner.len() == 2
+                && matches!(inner[0], Term::Symbol(s) if s == "core/int::lt?")
+            {
+                let a = term_const_i64_expr(inner[1])?;
+                let b = term_const_i64_expr(xs[1])?;
+                return Some(Term::Bool(a < b));
+            }
+            if xs.len() == 2
+                && let Some(inner) = xs[0].as_proper_list()
+                && inner.len() == 2
+                && matches!(inner[0], Term::Symbol(s) if s == "core/int::eq?")
+            {
+                let a = term_const_i64_expr(inner[1])?;
+                let b = term_const_i64_expr(xs[1])?;
+                return Some(Term::Bool(a == b));
+            }
+            if xs.len() == 2
+                && let Some(inner) = xs[0].as_proper_list()
+                && inner.len() == 2
+                && matches!(inner[0], Term::Symbol(s) if s == "core/eq?")
+            {
+                let a = term_const_data_expr(inner[1])?;
+                let b = term_const_data_expr(xs[1])?;
+                return Some(Term::Bool(a == b));
+            }
+            if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/list::is-nil?") {
+                let x = term_const_data_expr(xs[1])?;
+                return Some(Term::Bool(matches!(x, Term::Nil)));
+            }
+            None
+        }
+    }
+}
+
+fn term_truthy(t: &Term) -> bool {
+    !matches!(t, Term::Nil | Term::Bool(false))
+}
+
+fn term_const_i64_expr(t: &Term) -> Option<i64> {
+    let Term::Int(i) = term_const_data_expr(t)? else {
+        return None;
+    };
+    i.to_i64()
+}
+
+fn term_const_map_expr_with_aliases(
+    t: &Term,
+    local_aliases: &BTreeMap<String, BTreeMap<TermOrdKey, Term>>,
+    global_aliases: &BTreeMap<String, BTreeMap<TermOrdKey, Term>>,
+) -> Result<Option<BTreeMap<TermOrdKey, Term>>, Stage2CompileError> {
+    if let Term::Symbol(sym) = t {
+        if let Some(items) = local_aliases.get(sym) {
+            return Ok(Some(items.clone()));
+        }
+        if let Some(items) = global_aliases.get(sym) {
+            return Ok(Some(items.clone()));
+        }
+    }
+    if let Term::Map(items) = t {
+        return Ok(Some(items.clone()));
+    }
+    let Some(xs) = t.as_proper_list() else {
+        return Ok(None);
+    };
+    if xs.is_empty() {
+        return Ok(None);
+    }
+
+    if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
+        let Some(cond) = term_const_if_condition_expr(xs[1]) else {
+            return Ok(None);
+        };
+        let branch = if term_truthy(&cond) { xs[2] } else { xs[3] };
+        return term_const_map_expr_with_aliases(branch, local_aliases, global_aliases);
+    }
+
+    if xs.len() == 5
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && matches!(xs[1], Term::Symbol(s) if s == "map/put")
+    {
+        let Some(mut map) = term_const_map_expr_with_aliases(xs[2], local_aliases, global_aliases)?
+        else {
+            return Err(Stage2CompileError::Unsupported(
+                "map/put currently requires stage2-known map literals".to_string(),
+            ));
+        };
+        let Some(k) = term_const_data_expr(xs[3]) else {
+            return Err(Stage2CompileError::Unsupported(
+                "map/put currently requires stage2-known data keys".to_string(),
+            ));
+        };
+        let Some(v) = term_const_data_expr(xs[4]) else {
+            return Err(Stage2CompileError::Unsupported(
+                "map/put currently requires stage2-known data values".to_string(),
+            ));
+        };
+        map.insert(TermOrdKey(k), v);
+        return Ok(Some(map));
+    }
+
+    if xs.len() == 4
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && matches!(xs[1], Term::Symbol(s) if s == "map/merge")
+    {
+        let Some(mut left) =
+            term_const_map_expr_with_aliases(xs[2], local_aliases, global_aliases)?
+        else {
+            return Err(Stage2CompileError::Unsupported(
+                "map/merge currently requires stage2-known map literals".to_string(),
+            ));
+        };
+        let Some(right) = term_const_map_expr_with_aliases(xs[3], local_aliases, global_aliases)?
+        else {
+            return Err(Stage2CompileError::Unsupported(
+                "map/merge currently requires stage2-known map literals".to_string(),
+            ));
+        };
+        for (k, v) in right {
+            left.insert(k, v);
+        }
+        return Ok(Some(left));
+    }
+
+    if xs.len() == 2 {
+        if let Some(inner) = xs[0].as_proper_list()
+            && inner.len() == 2
+            && matches!(inner[0], Term::Symbol(s) if s == "core/map::merge")
+        {
+            let Some(mut left) =
+                term_const_map_expr_with_aliases(inner[1], local_aliases, global_aliases)?
+            else {
+                return Err(Stage2CompileError::Unsupported(
+                    "core/map::merge currently requires stage2-known map literals".to_string(),
+                ));
+            };
+            let Some(right) =
+                term_const_map_expr_with_aliases(xs[1], local_aliases, global_aliases)?
+            else {
+                return Err(Stage2CompileError::Unsupported(
+                    "core/map::merge currently requires stage2-known map literals".to_string(),
+                ));
+            };
+            for (k, v) in right {
+                left.insert(k, v);
+            }
+            return Ok(Some(left));
+        }
+
+        if let Some(inner) = xs[0].as_proper_list()
+            && inner.len() == 2
+            && let Some(inner2) = inner[0].as_proper_list()
+            && inner2.len() == 2
+            && matches!(inner2[0], Term::Symbol(s) if s == "core/map::put")
+        {
+            let Some(mut map) =
+                term_const_map_expr_with_aliases(inner2[1], local_aliases, global_aliases)?
+            else {
+                return Err(Stage2CompileError::Unsupported(
+                    "core/map::put currently requires stage2-known map literals".to_string(),
+                ));
+            };
+            let Some(k) = term_const_data_expr(inner[1]) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "core/map::put currently requires stage2-known data keys".to_string(),
+                ));
+            };
+            let Some(v) = term_const_data_expr(xs[1]) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "core/map::put currently requires stage2-known data values".to_string(),
+                ));
+            };
+            map.insert(TermOrdKey(k), v);
+            return Ok(Some(map));
+        }
+    }
+
+    Ok(None)
+}
+
+fn resolve_map_alias_term(
+    t: &Term,
+    map_aliases: &BTreeMap<String, BTreeMap<TermOrdKey, Term>>,
+) -> Term {
+    match t {
+        Term::Symbol(sym) => map_aliases
+            .get(sym)
+            .cloned()
+            .map(Term::Map)
+            .unwrap_or_else(|| t.clone()),
+        Term::Vector(items) => Term::Vector(
+            items
+                .iter()
+                .map(|item| resolve_map_alias_term(item, map_aliases))
+                .collect(),
+        ),
+        Term::Map(items) => {
+            let mut out = BTreeMap::new();
+            for (k, v) in items {
+                let key = resolve_map_alias_term(&k.0, map_aliases);
+                let val = resolve_map_alias_term(v, map_aliases);
+                out.insert(TermOrdKey(key), val);
+            }
+            Term::Map(out)
+        }
+        _ => {
+            if let Some(xs) = t.as_proper_list() {
+                let resolved: Vec<Term> = xs
+                    .iter()
+                    .map(|item| resolve_map_alias_term(item, map_aliases))
+                    .collect();
+                Term::list(resolved)
+            } else {
+                t.clone()
+            }
+        }
+    }
+}
+
+fn resolve_collection_aliases_term(
+    t: &Term,
+    vec_aliases: &BTreeMap<String, Vec<Term>>,
+    map_aliases: &BTreeMap<String, BTreeMap<TermOrdKey, Term>>,
+) -> Term {
+    match t {
+        Term::Symbol(sym) => {
+            if let Some(items) = map_aliases.get(sym) {
+                return Term::Map(items.clone());
+            }
+            if let Some(items) = vec_aliases.get(sym) {
+                return Term::Vector(items.clone());
+            }
+            t.clone()
+        }
+        Term::Vector(items) => Term::Vector(
+            items
+                .iter()
+                .map(|item| resolve_collection_aliases_term(item, vec_aliases, map_aliases))
+                .collect(),
+        ),
+        Term::Map(items) => {
+            let mut out = BTreeMap::new();
+            for (k, v) in items {
+                let key = resolve_collection_aliases_term(&k.0, vec_aliases, map_aliases);
+                let val = resolve_collection_aliases_term(v, vec_aliases, map_aliases);
+                out.insert(TermOrdKey(key), val);
+            }
+            Term::Map(out)
+        }
+        _ => {
+            let Some(xs) = t.as_proper_list() else {
+                return t.clone();
+            };
+            if !xs.is_empty() {
+                if matches!(xs[0], Term::Symbol(s) if s == "quote") {
+                    return t.clone();
+                }
+                // Avoid alias substitution under binders in generic planning.
+                if matches!(xs[0], Term::Symbol(s) if s == "fn" || s == "let") {
+                    return t.clone();
+                }
+            }
+            Term::list(
+                xs.iter()
+                    .map(|item| resolve_collection_aliases_term(item, vec_aliases, map_aliases))
+                    .collect(),
+            )
+        }
+    }
+}
+
+fn resolve_scalar_aliases_term(t: &Term, scalar_aliases: &BTreeMap<String, Term>) -> Term {
+    match t {
+        Term::Symbol(sym) => scalar_aliases
+            .get(sym)
+            .cloned()
+            .unwrap_or_else(|| t.clone()),
+        Term::Vector(items) => Term::Vector(
+            items
+                .iter()
+                .map(|item| resolve_scalar_aliases_term(item, scalar_aliases))
+                .collect(),
+        ),
+        Term::Map(items) => {
+            let mut out = BTreeMap::new();
+            for (k, v) in items {
+                let key = resolve_scalar_aliases_term(&k.0, scalar_aliases);
+                let val = resolve_scalar_aliases_term(v, scalar_aliases);
+                out.insert(TermOrdKey(key), val);
+            }
+            Term::Map(out)
+        }
+        _ => {
+            let Some(xs) = t.as_proper_list() else {
+                return t.clone();
+            };
+            if !xs.is_empty() {
+                if matches!(xs[0], Term::Symbol(s) if s == "quote") {
+                    return t.clone();
+                }
+                if matches!(xs[0], Term::Symbol(s) if s == "fn") {
+                    return t.clone();
+                }
+            }
+            Term::list(
+                xs.iter()
+                    .map(|item| resolve_scalar_aliases_term(item, scalar_aliases))
+                    .collect(),
+            )
+        }
+    }
+}
+
+fn scalar_term_from_pexpr_const(planner: &Planner, expr: &PExpr) -> Option<Term> {
+    match expr {
+        PExpr::Nil => Some(Term::Nil),
+        PExpr::Bool(b) => Some(Term::Bool(*b)),
+        PExpr::Int(n) => Some(Term::Int((*n).into())),
+        _ => {
+            if let Some(id) = planner_const_symbol_id(planner, expr)
+                && let Ok(sym) = planner_symbol_for_id(planner, id)
+            {
+                return Some(Term::Symbol(sym));
+            }
+            if let Some(id) = planner_const_string_id(planner, expr)
+                && let Ok(s) = planner_string_for_id(planner, id)
+            {
+                return Some(Term::Str(s));
+            }
+            if let Some(id) = planner_const_bytes_id(planner, expr)
+                && let Ok(bs) = planner_bytes_for_id(planner, id)
+            {
+                return Some(Term::Bytes(bs.into()));
+            }
+            None
+        }
+    }
+}
+
+struct VecGetScope<'a> {
+    env: &'a BTreeMap<String, Local>,
+    global_env: &'a BTreeMap<String, Local>,
+    fn_defs: &'a BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &'a BTreeMap<String, InlinableFnDef>,
+}
+
+fn lower_vec_get_terms(
+    vec_t: &Term,
+    idx_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let idx = plan_expr(idx_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+    if idx.ty() != Ty::I64 {
+        return Err(Stage2CompileError::Unsupported(
+            "vec/get expects (vector, int) arguments in stage2".to_string(),
+        ));
+    }
+    let scope = VecGetScope {
+        env,
+        global_env,
+        fn_defs,
+        local_fn_defs,
+    };
+    let vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+    lower_vec_get_vec_term_with_aliases(vec_t, idx, &scope, &vec_aliases, planner)
+}
+
+fn lower_vec_get_vec_term_with_aliases(
+    vec_t: &Term,
+    idx: PExpr,
+    scope: &VecGetScope<'_>,
+    vec_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let global_vec_aliases = planner.global_const_vector_aliases.clone();
+    if let Some(items) = term_const_scalar_vector_exprs_with_aliases(
+        vec_t,
+        vec_aliases,
+        &global_vec_aliases,
+        planner,
+    )? {
+        return lower_vec_get_index_expr(items, idx, planner);
+    }
+
+    let Some(xs) = vec_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "vec/get currently requires stage2-known vector literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "vec/get currently requires stage2-known vector literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                scope.env,
+                scope.global_env,
+                scope.fn_defs,
+                scope.local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs
+            .last()
+            .copied()
+            .ok_or_else(|| Stage2CompileError::Internal("vec/get begin had no body".to_string()))?;
+        exprs.push(lower_vec_get_vec_term_with_aliases(
+            last,
+            idx,
+            scope,
+            vec_aliases,
+            planner,
+        )?);
+        let ty = exprs
+            .last()
+            .map(PExpr::ty)
+            .ok_or_else(|| Stage2CompileError::Internal("vec/get begin had no body".to_string()))?;
+        return Ok(PExpr::Begin { exprs, ty });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(
+            xs[1],
+            scope.env,
+            scope.global_env,
+            scope.fn_defs,
+            scope.local_fn_defs,
+            planner,
+        )?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr =
+            lower_vec_get_vec_term_with_aliases(xs[2], idx.clone(), scope, vec_aliases, planner)?;
+        let else_expr =
+            lower_vec_get_vec_term_with_aliases(xs[3], idx, scope, vec_aliases, planner)?;
+        if then_expr.ty() != else_expr.ty() {
+            return Err(Stage2CompileError::Unsupported(
+                "vec/get branch variants must resolve to matching scalar result types".to_string(),
+            ));
+        }
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr.clone()),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: then_expr.ty(),
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = scope.env.clone();
+        let mut local_fn_defs2 = scope.local_fn_defs.clone();
+        let mut vec_aliases2 = vec_aliases.clone();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                pair[1],
+                &vec_aliases2,
+                &planner.global_const_vector_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                vec_aliases2.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = vec_aliases2.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_vector_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) =
+                    resolve_inlinable_symbol(sym, scope.fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                scope.global_env,
+                scope.fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let local_idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, local_idx, &rhs);
+            env2.insert(
+                name.clone(),
+                Local {
+                    idx: local_idx,
+                    ty: rhs.ty(),
+                },
+            );
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding {
+                idx: local_idx,
+                expr: rhs,
+            });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    scope.global_env,
+                    scope.fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("vec/get let had empty body".to_string())
+        })?;
+        let scope2 = VecGetScope {
+            env: &env2,
+            global_env: scope.global_env,
+            fn_defs: scope.fn_defs,
+            local_fn_defs: &local_fn_defs2,
+        };
+        body.push(lower_vec_get_vec_term_with_aliases(
+            last,
+            idx,
+            &scope2,
+            &vec_aliases2,
+            planner,
+        )?);
+        let ty = body.last().map(PExpr::ty).ok_or_else(|| {
+            Stage2CompileError::Internal("vec/get let had empty body".to_string())
+        })?;
+        return Ok(PExpr::Let { bindings, body, ty });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "vec/get currently requires stage2-known vector literals".to_string(),
+    ))
+}
+
+fn lower_vec_get_index_expr(
+    items: Vec<PExpr>,
+    idx: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(i) = planner_const_int_value(planner, &idx) {
+        return lower_vec_get_const_pair(items, idx, i, planner);
+    }
+    match idx {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("vec/get index begin had no expressions".to_string())
+            })?;
+            let lowered = lower_vec_get_index_expr(items, last, planner)?;
+            let ty = lowered.ty();
+            exprs.push(lowered);
+            Ok(PExpr::Begin { exprs, ty })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("vec/get index let had empty body".to_string())
+            })?;
+            let lowered = lower_vec_get_index_expr(items, last, planner)?;
+            let ty = lowered.ty();
+            body.push(lowered);
+            Ok(PExpr::Let { bindings, body, ty })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::I64,
+        } => {
+            let then_lowered = lower_vec_get_index_expr(items.clone(), *then_expr, planner)?;
+            let else_lowered = lower_vec_get_index_expr(items, *else_expr, planner)?;
+            if then_lowered.ty() != else_lowered.ty() {
+                return Err(Stage2CompileError::Unsupported(
+                    "vec/get branch indices must resolve to matching scalar result types"
+                        .to_string(),
+                ));
+            }
+            let out_ty = then_lowered.ty();
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: out_ty,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "vec/get currently requires stage2-known int indices".to_string(),
+        )),
+    }
+}
+
+fn lower_map_get_terms(
+    map_t: &Term,
+    key_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let key = plan_expr(key_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+    if !matches!(
+        key.ty(),
+        Ty::NilI32 | Ty::BoolI32 | Ty::I64 | Ty::SymI32 | Ty::StrI32 | Ty::BytesI32
+    ) {
+        return Err(Stage2CompileError::Unsupported(
+            "map/get expects a scalar data key in stage2".to_string(),
+        ));
+    }
+    lower_map_get_map_term(map_t, key, env, global_env, fn_defs, local_fn_defs, planner)
+}
+
+fn lower_map_get_map_term(
+    map_t: &Term,
+    key: PExpr,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if !(matches!(map_t, Term::Symbol(sym) if env.contains_key(sym) || local_fn_defs.contains_key(sym)))
+    {
+        let empty_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        if let Some(entries) = term_const_map_expr_with_aliases(
+            map_t,
+            &empty_aliases,
+            &planner.global_const_map_aliases,
+        )? {
+            return lower_map_get_key_expr(entries, key, planner);
+        }
+    }
+
+    let Some(xs) = map_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "map/get currently requires stage2-known map literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "map/get currently requires stage2-known map literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs
+            .last()
+            .copied()
+            .ok_or_else(|| Stage2CompileError::Internal("map/get begin had no body".to_string()))?;
+        let lowered =
+            lower_map_get_map_term(last, key, env, global_env, fn_defs, local_fn_defs, planner)?;
+        let ty = lowered.ty();
+        exprs.push(lowered);
+        return Ok(PExpr::Begin { exprs, ty });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr = lower_map_get_map_term(
+            xs[2],
+            key.clone(),
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            planner,
+        )?;
+        let else_expr =
+            lower_map_get_map_term(xs[3], key, env, global_env, fn_defs, local_fn_defs, planner)?;
+        if then_expr.ty() != else_expr.ty() {
+            return Err(Stage2CompileError::Unsupported(
+                "map/get branch variants must resolve to matching scalar result types".to_string(),
+            ));
+        }
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr.clone()),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: then_expr.ty(),
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = env.clone();
+        let mut local_fn_defs2 = local_fn_defs.clone();
+        let mut map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_map_expr_with_aliases(
+                pair[1],
+                &map_aliases,
+                &planner.global_const_map_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                map_aliases.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) = resolve_inlinable_symbol(sym, fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                global_env,
+                fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let local_idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, local_idx, &rhs);
+            env2.insert(
+                name.clone(),
+                Local {
+                    idx: local_idx,
+                    ty: rhs.ty(),
+                },
+            );
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding {
+                idx: local_idx,
+                expr: rhs,
+            });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    global_env,
+                    fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("map/get let had empty body".to_string())
+        })?;
+        let resolved_last = resolve_map_alias_term(last, &map_aliases);
+        let lowered = lower_map_get_map_term(
+            &resolved_last,
+            key,
+            &env2,
+            global_env,
+            fn_defs,
+            &local_fn_defs2,
+            planner,
+        )?;
+        let ty = lowered.ty();
+        body.push(lowered);
+        return Ok(PExpr::Let { bindings, body, ty });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "map/get currently requires stage2-known map literals".to_string(),
+    ))
+}
+
+fn lower_map_get_key_expr(
+    entries: BTreeMap<TermOrdKey, Term>,
+    key: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(k) = scalar_term_from_pexpr_const(planner, &key) {
+        return lower_map_get_const_pair(entries, key, k, planner);
+    }
+    match key {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("map/get key begin had no expressions".to_string())
+            })?;
+            let lowered = lower_map_get_key_expr(entries, last, planner)?;
+            let ty = lowered.ty();
+            exprs.push(lowered);
+            Ok(PExpr::Begin { exprs, ty })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("map/get key let had empty body".to_string())
+            })?;
+            let lowered = lower_map_get_key_expr(entries, last, planner)?;
+            let ty = lowered.ty();
+            body.push(lowered);
+            Ok(PExpr::Let { bindings, body, ty })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: _,
+        } => {
+            let then_lowered = lower_map_get_key_expr(entries.clone(), *then_expr, planner)?;
+            let else_lowered = lower_map_get_key_expr(entries, *else_expr, planner)?;
+            if then_lowered.ty() != else_lowered.ty() {
+                return Err(Stage2CompileError::Unsupported(
+                    "map/get branch keys must resolve to matching scalar result types".to_string(),
+                ));
+            }
+            let out_ty = then_lowered.ty();
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: out_ty,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "map/get currently requires stage2-known scalar keys".to_string(),
+        )),
+    }
+}
+
+fn lower_map_get_const_pair(
+    entries: BTreeMap<TermOrdKey, Term>,
+    key: PExpr,
+    key_term: Term,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let chosen_term = entries
+        .get(&TermOrdKey(key_term))
+        .cloned()
+        .unwrap_or(Term::Nil);
+    let chosen = scalar_term_to_pexpr(&chosen_term, planner)?.ok_or_else(|| {
+        Stage2CompileError::Unsupported(
+            "map/get currently requires selected values to be scalar in stage2".to_string(),
+        )
+    })?;
+    let key_local = planner.alloc_local(key.ty())?;
+    let ty = chosen.ty();
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding {
+            idx: key_local,
+            expr: key,
+        }],
+        body: vec![chosen],
+        ty,
+    })
+}
+
+fn lower_vec_len_term(
+    vec_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+    lower_vec_len_term_with_aliases(
+        vec_t,
+        env,
+        global_env,
+        fn_defs,
+        local_fn_defs,
+        &vec_aliases,
+        planner,
+    )
+}
+
+fn lower_vec_len_term_with_aliases(
+    vec_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    vec_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(items) = term_const_vector_expr_with_aliases(
+        vec_t,
+        vec_aliases,
+        &planner.global_const_vector_aliases,
+    )? {
+        let n = i64::try_from(items.len()).map_err(|_| {
+            Stage2CompileError::Internal("vec/len literal length does not fit i64".to_string())
+        })?;
+        return Ok(PExpr::Int(n));
+    }
+
+    let Some(xs) = vec_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "vec/len currently requires stage2-known vector literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "vec/len currently requires stage2-known vector literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs
+            .last()
+            .copied()
+            .ok_or_else(|| Stage2CompileError::Internal("vec/len begin had no body".to_string()))?;
+        exprs.push(lower_vec_len_term_with_aliases(
+            last,
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            vec_aliases,
+            planner,
+        )?);
+        return Ok(PExpr::Begin { exprs, ty: Ty::I64 });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr = lower_vec_len_term_with_aliases(
+            xs[2],
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            vec_aliases,
+            planner,
+        )?;
+        let else_expr = lower_vec_len_term_with_aliases(
+            xs[3],
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            vec_aliases,
+            planner,
+        )?;
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: Ty::I64,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = env.clone();
+        let mut local_fn_defs2 = local_fn_defs.clone();
+        let mut vec_aliases2 = vec_aliases.clone();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                pair[1],
+                &vec_aliases2,
+                &planner.global_const_vector_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                vec_aliases2.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = vec_aliases2.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_vector_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) = resolve_inlinable_symbol(sym, fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                global_env,
+                fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let local_idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, local_idx, &rhs);
+            env2.insert(
+                name.clone(),
+                Local {
+                    idx: local_idx,
+                    ty: rhs.ty(),
+                },
+            );
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding {
+                idx: local_idx,
+                expr: rhs,
+            });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    global_env,
+                    fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("vec/len let had empty body".to_string())
+        })?;
+        body.push(lower_vec_len_term_with_aliases(
+            last,
+            &env2,
+            global_env,
+            fn_defs,
+            &local_fn_defs2,
+            &vec_aliases2,
+            planner,
+        )?);
+        return Ok(PExpr::Let {
+            bindings,
+            body,
+            ty: Ty::I64,
+        });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "vec/len currently requires stage2-known vector literals".to_string(),
+    ))
+}
+
+fn lower_map_len_term(
+    map_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if !(matches!(map_t, Term::Symbol(sym) if env.contains_key(sym) || local_fn_defs.contains_key(sym)))
+    {
+        let empty_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        if let Some(items) = term_const_map_expr_with_aliases(
+            map_t,
+            &empty_aliases,
+            &planner.global_const_map_aliases,
+        )? {
+            let n = i64::try_from(items.len()).map_err(|_| {
+                Stage2CompileError::Internal("map/len literal length does not fit i64".to_string())
+            })?;
+            return Ok(PExpr::Int(n));
+        }
+    }
+
+    let Some(xs) = map_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "map/len currently requires stage2-known map literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "map/len currently requires stage2-known map literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs
+            .last()
+            .copied()
+            .ok_or_else(|| Stage2CompileError::Internal("map/len begin had no body".to_string()))?;
+        exprs.push(lower_map_len_term(
+            last,
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            planner,
+        )?);
+        return Ok(PExpr::Begin { exprs, ty: Ty::I64 });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr =
+            lower_map_len_term(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let else_expr =
+            lower_map_len_term(xs[3], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: Ty::I64,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = env.clone();
+        let mut local_fn_defs2 = local_fn_defs.clone();
+        let mut map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_map_expr_with_aliases(
+                pair[1],
+                &map_aliases,
+                &planner.global_const_map_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                map_aliases.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_map_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    map_aliases.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) = resolve_inlinable_symbol(sym, fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                global_env,
+                fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let local_idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, local_idx, &rhs);
+            env2.insert(
+                name.clone(),
+                Local {
+                    idx: local_idx,
+                    ty: rhs.ty(),
+                },
+            );
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding {
+                idx: local_idx,
+                expr: rhs,
+            });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    global_env,
+                    fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("map/len let had empty body".to_string())
+        })?;
+        let resolved_last = resolve_map_alias_term(last, &map_aliases);
+        body.push(lower_map_len_term(
+            &resolved_last,
+            &env2,
+            global_env,
+            fn_defs,
+            &local_fn_defs2,
+            planner,
+        )?);
+        return Ok(PExpr::Let {
+            bindings,
+            body,
+            ty: Ty::I64,
+        });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "map/len currently requires stage2-known map literals".to_string(),
+    ))
+}
+
+fn lower_str_join_terms(
+    parts_t: &Term,
+    sep_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let sep = plan_expr(sep_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+    if sep.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "str/join expects (vector-of-strings, string) arguments in stage2".to_string(),
+        ));
+    }
+    lower_str_join_parts_term(
+        parts_t,
+        sep,
+        env,
+        global_env,
+        fn_defs,
+        local_fn_defs,
+        planner,
+    )
+}
+
+fn lower_str_join_parts_term(
+    parts_t: &Term,
+    sep: PExpr,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let scope = VecGetScope {
+        env,
+        global_env,
+        fn_defs,
+        local_fn_defs,
+    };
+    let vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+    lower_str_join_parts_term_with_aliases(parts_t, sep, &scope, &vec_aliases, planner)
+}
+
+fn lower_str_join_parts_term_with_aliases(
+    parts_t: &Term,
+    sep: PExpr,
+    scope: &VecGetScope<'_>,
+    vec_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let global_vec_aliases = planner.global_const_vector_aliases.clone();
+    if let Some(parts_ids) = term_const_string_vector_ids_with_aliases(
+        parts_t,
+        vec_aliases,
+        &global_vec_aliases,
+        planner,
+    )? {
+        return lower_str_join_sep_expr(parts_ids, sep, planner);
+    }
+
+    let Some(xs) = parts_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "str/join currently requires stage2-known vector literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "str/join currently requires stage2-known vector literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                scope.env,
+                scope.global_env,
+                scope.fn_defs,
+                scope.local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("str/join begin had no body".to_string())
+        })?;
+        exprs.push(lower_str_join_parts_term_with_aliases(
+            last,
+            sep,
+            scope,
+            vec_aliases,
+            planner,
+        )?);
+        return Ok(PExpr::Begin {
+            exprs,
+            ty: Ty::StrI32,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(
+            xs[1],
+            scope.env,
+            scope.global_env,
+            scope.fn_defs,
+            scope.local_fn_defs,
+            planner,
+        )?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr = lower_str_join_parts_term_with_aliases(
+            xs[2],
+            sep.clone(),
+            scope,
+            vec_aliases,
+            planner,
+        )?;
+        let else_expr =
+            lower_str_join_parts_term_with_aliases(xs[3], sep, scope, vec_aliases, planner)?;
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: Ty::StrI32,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = scope.env.clone();
+        let mut local_fn_defs2 = scope.local_fn_defs.clone();
+        let mut vec_aliases2 = vec_aliases.clone();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                pair[1],
+                &vec_aliases2,
+                &planner.global_const_vector_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                vec_aliases2.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = vec_aliases2.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_vector_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) =
+                    resolve_inlinable_symbol(sym, scope.fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                scope.global_env,
+                scope.fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, idx, &rhs);
+            env2.insert(name.clone(), Local { idx, ty: rhs.ty() });
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding { idx, expr: rhs });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    scope.global_env,
+                    scope.fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("str/join let had empty body".to_string())
+        })?;
+        let scope2 = VecGetScope {
+            env: &env2,
+            global_env: scope.global_env,
+            fn_defs: scope.fn_defs,
+            local_fn_defs: &local_fn_defs2,
+        };
+        body.push(lower_str_join_parts_term_with_aliases(
+            last,
+            sep,
+            &scope2,
+            &vec_aliases2,
+            planner,
+        )?);
+        return Ok(PExpr::Let {
+            bindings,
+            body,
+            ty: Ty::StrI32,
+        });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "str/join currently requires stage2-known vector literals".to_string(),
+    ))
+}
+
+fn lower_str_join_sep_expr(
+    parts_ids: Vec<i32>,
+    sep: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(sep_id) = planner_const_string_id(planner, &sep) {
+        return lower_str_join_const_pair(parts_ids, sep, sep_id, planner);
+    }
+    match sep {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "str/join separator begin had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_str_join_sep_expr(parts_ids, last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/join separator let had empty body".to_string())
+            })?;
+            let lowered = lower_str_join_sep_expr(parts_ids, last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let then_lowered = lower_str_join_sep_expr(parts_ids.clone(), *then_expr, planner)?;
+            let else_lowered = lower_str_join_sep_expr(parts_ids, *else_expr, planner)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "str/join currently requires a stage2-known string separator".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_join_term(
+    parts_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    lower_bytes_join_parts_term(parts_t, env, global_env, fn_defs, local_fn_defs, planner)
+}
+
+fn lower_bytes_join_parts_term(
+    parts_t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let scope = VecGetScope {
+        env,
+        global_env,
+        fn_defs,
+        local_fn_defs,
+    };
+    let vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
+    lower_bytes_join_parts_term_with_aliases(parts_t, &scope, &vec_aliases, planner)
+}
+
+fn lower_bytes_join_parts_term_with_aliases(
+    parts_t: &Term,
+    scope: &VecGetScope<'_>,
+    vec_aliases: &BTreeMap<String, Vec<Term>>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let global_vec_aliases = planner.global_const_vector_aliases.clone();
+    if let Some(parts_ids) = term_const_bytes_vector_ids_with_aliases(
+        parts_t,
+        vec_aliases,
+        &global_vec_aliases,
+        planner,
+    )? {
+        return lower_bytes_join_const_parts(parts_ids, planner);
+    }
+
+    let Some(xs) = parts_t.as_proper_list() else {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/join currently requires stage2-known vector literals".to_string(),
+        ));
+    };
+    if xs.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/join currently requires stage2-known vector literals".to_string(),
+        ));
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        if xs.len() < 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "begin must have at least one expression".to_string(),
+            ));
+        }
+        let mut exprs = Vec::with_capacity(xs.len() - 1);
+        for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
+            exprs.push(plan_expr(
+                x,
+                scope.env,
+                scope.global_env,
+                scope.fn_defs,
+                scope.local_fn_defs,
+                planner,
+            )?);
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("bytes/join begin had no body".to_string())
+        })?;
+        exprs.push(lower_bytes_join_parts_term_with_aliases(
+            last,
+            scope,
+            vec_aliases,
+            planner,
+        )?);
+        return Ok(PExpr::Begin {
+            exprs,
+            ty: Ty::BytesI32,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "if") {
+        if xs.len() != 4 {
+            return Err(Stage2CompileError::Unsupported(
+                "if must have exactly 3 arguments".to_string(),
+            ));
+        }
+        let cond = plan_expr(
+            xs[1],
+            scope.env,
+            scope.global_env,
+            scope.fn_defs,
+            scope.local_fn_defs,
+            planner,
+        )?;
+        let cond_ty = cond.ty();
+        ensure_scalar_cond_ty(cond_ty)?;
+        let then_expr =
+            lower_bytes_join_parts_term_with_aliases(xs[2], scope, vec_aliases, planner)?;
+        let else_expr =
+            lower_bytes_join_parts_term_with_aliases(xs[3], scope, vec_aliases, planner)?;
+        return Ok(PExpr::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr),
+            else_expr: Box::new(else_expr),
+            cond_ty,
+            ty: Ty::BytesI32,
+        });
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ((x e) ...) body...) expects bindings and body".to_string(),
+            ));
+        }
+        let Some(bs) = xs[1].as_proper_list() else {
+            return Err(Stage2CompileError::Unsupported(
+                "(let ...) bindings must be a list".to_string(),
+            ));
+        };
+        let mut env2 = scope.env.clone();
+        let mut local_fn_defs2 = scope.local_fn_defs.clone();
+        let mut vec_aliases2 = vec_aliases.clone();
+        let mut bindings = Vec::with_capacity(bs.len());
+        for b in bs {
+            let Some(pair) = b.as_proper_list() else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must be a list (name expr)".to_string(),
+                ));
+            };
+            if pair.len() != 2 {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding must have exactly 2 forms".to_string(),
+                ));
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Err(Stage2CompileError::Unsupported(
+                    "(let ...) binding name must be symbol".to_string(),
+                ));
+            };
+            if let Some(items) = term_const_vector_expr_with_aliases(
+                pair[1],
+                &vec_aliases2,
+                &planner.global_const_vector_aliases,
+            )? {
+                env2.remove(name);
+                local_fn_defs2.remove(name);
+                vec_aliases2.insert(name.clone(), items);
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && !local_fn_defs2.contains_key(sym)
+            {
+                if let Some(items) = vec_aliases2.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+                if let Some(items) = planner.global_const_vector_aliases.get(sym).cloned() {
+                    env2.remove(name);
+                    local_fn_defs2.remove(name);
+                    vec_aliases2.insert(name.clone(), items);
+                    continue;
+                }
+            }
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) =
+                    resolve_inlinable_symbol(sym, scope.fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                scope.global_env,
+                scope.fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
+            let idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, idx, &rhs);
+            env2.insert(name.clone(), Local { idx, ty: rhs.ty() });
+            local_fn_defs2.remove(name);
+            bindings.push(LetBinding { idx, expr: rhs });
+        }
+
+        let mut body = Vec::with_capacity(xs.len() - 2);
+        if xs.len() > 3 {
+            for x in xs.iter().skip(2).take(xs.len() - 3) {
+                body.push(plan_expr(
+                    x,
+                    &env2,
+                    scope.global_env,
+                    scope.fn_defs,
+                    &local_fn_defs2,
+                    planner,
+                )?);
+            }
+        }
+        let last = xs.last().copied().ok_or_else(|| {
+            Stage2CompileError::Internal("bytes/join let had empty body".to_string())
+        })?;
+        let scope2 = VecGetScope {
+            env: &env2,
+            global_env: scope.global_env,
+            fn_defs: scope.fn_defs,
+            local_fn_defs: &local_fn_defs2,
+        };
+        body.push(lower_bytes_join_parts_term_with_aliases(
+            last,
+            &scope2,
+            &vec_aliases2,
+            planner,
+        )?);
+        return Ok(PExpr::Let {
+            bindings,
+            body,
+            ty: Ty::BytesI32,
+        });
+    }
+
+    Err(Stage2CompileError::Unsupported(
+        "bytes/join currently requires stage2-known vector literals".to_string(),
+    ))
 }
 
 fn lower_str_concat_const_pair(
@@ -1540,6 +4178,76 @@ fn lower_str_concat_const_pair(
         body: vec![PExpr::Str(out_id)],
         ty: Ty::StrI32,
     })
+}
+
+fn lower_str_join_const_pair(
+    parts_ids: Vec<i32>,
+    sep: PExpr,
+    sep_id: i32,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let sep_s = planner_string_for_id(planner, sep_id)?;
+    let mut out = String::new();
+    for (i, pid) in parts_ids.iter().enumerate() {
+        if i > 0 {
+            out.push_str(&sep_s);
+        }
+        out.push_str(&planner_string_for_id(planner, *pid)?);
+    }
+    let out_id = planner.intern_string(&out)?;
+    let sep_idx = planner.alloc_local(Ty::StrI32)?;
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding {
+            idx: sep_idx,
+            expr: sep,
+        }],
+        body: vec![PExpr::Str(out_id)],
+        ty: Ty::StrI32,
+    })
+}
+
+fn lower_str_repeat_const_pair(
+    lhs: PExpr,
+    rhs: PExpr,
+    lhs_id: i32,
+    rhs_n: i64,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let n = usize::try_from(rhs_n).map_err(|_| {
+        Stage2CompileError::Unsupported(
+            "str/repeat currently requires non-negative int counts".to_string(),
+        )
+    })?;
+    let out = planner_string_for_id(planner, lhs_id)?.repeat(n);
+    let out_id = planner.intern_string(&out)?;
+    let lhs_idx = planner.alloc_local(Ty::StrI32)?;
+    let rhs_idx = planner.alloc_local(Ty::I64)?;
+    Ok(PExpr::Let {
+        bindings: vec![
+            LetBinding {
+                idx: lhs_idx,
+                expr: lhs,
+            },
+            LetBinding {
+                idx: rhs_idx,
+                expr: rhs,
+            },
+        ],
+        body: vec![PExpr::Str(out_id)],
+        ty: Ty::StrI32,
+    })
+}
+
+fn lower_bytes_join_const_parts(
+    parts_ids: Vec<i32>,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let mut out = Vec::new();
+    for pid in parts_ids {
+        out.extend_from_slice(&planner_bytes_for_id(planner, pid)?);
+    }
+    let out_id = planner.intern_bytes(&out)?;
+    Ok(PExpr::Bytes(out_id))
 }
 
 fn lower_bytes_concat_const_pair(
@@ -1571,6 +4279,173 @@ fn lower_bytes_concat_const_pair(
         body: vec![PExpr::Bytes(out_id)],
         ty: Ty::BytesI32,
     })
+}
+
+fn lower_bytes_get_const_pair(
+    lhs: PExpr,
+    rhs: PExpr,
+    lhs_id: i32,
+    rhs_n: i64,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let idx = usize::try_from(rhs_n).map_err(|_| {
+        Stage2CompileError::Unsupported(
+            "bytes/get currently requires non-negative in-range indices".to_string(),
+        )
+    })?;
+    let bs = planner_bytes_for_id(planner, lhs_id)?;
+    let b = bs.get(idx).copied().ok_or_else(|| {
+        Stage2CompileError::Unsupported(
+            "bytes/get currently requires non-negative in-range indices".to_string(),
+        )
+    })?;
+    let lhs_idx = planner.alloc_local(Ty::BytesI32)?;
+    let rhs_idx = planner.alloc_local(Ty::I64)?;
+    Ok(PExpr::Let {
+        bindings: vec![
+            LetBinding {
+                idx: lhs_idx,
+                expr: lhs,
+            },
+            LetBinding {
+                idx: rhs_idx,
+                expr: rhs,
+            },
+        ],
+        body: vec![PExpr::Int(i64::from(b))],
+        ty: Ty::I64,
+    })
+}
+
+fn lower_vec_get_const_pair(
+    items: Vec<PExpr>,
+    idx: PExpr,
+    idx_n: i64,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let idx_usize = usize::try_from(idx_n).map_err(|_| {
+        Stage2CompileError::Unsupported(
+            "vec/get currently requires non-negative int indices".to_string(),
+        )
+    })?;
+    let chosen = items.get(idx_usize).cloned().unwrap_or(PExpr::Nil);
+    let idx_local = planner.alloc_local(Ty::I64)?;
+    let ty = chosen.ty();
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding {
+            idx: idx_local,
+            expr: idx,
+        }],
+        body: vec![chosen],
+        ty,
+    })
+}
+
+fn lower_str_repeat_expr(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let (Some(lhs_id), Some(rhs_n)) = (
+        planner_const_string_id(planner, &lhs),
+        planner_const_int_value(planner, &rhs),
+    ) {
+        return lower_str_repeat_const_pair(lhs, rhs, lhs_id, rhs_n, planner);
+    }
+
+    let lhs = match lhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/repeat lhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_str_repeat_expr(last, rhs, planner)?;
+            exprs.push(lowered);
+            return Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            });
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/repeat lhs let had empty body".to_string())
+            })?;
+            let lowered = lower_str_repeat_expr(last, rhs, planner)?;
+            body.push(lowered);
+            return Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            });
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let then_lowered = lower_str_repeat_expr(*then_expr, rhs.clone(), planner)?;
+            let else_lowered = lower_str_repeat_expr(*else_expr, rhs, planner)?;
+            return Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::StrI32,
+            });
+        }
+        other => other,
+    };
+
+    match rhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/repeat rhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_str_repeat_expr(lhs, last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/repeat rhs let had empty body".to_string())
+            })?;
+            let lowered = lower_str_repeat_expr(lhs, last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::I64,
+        } => {
+            let then_lowered = lower_str_repeat_expr(lhs.clone(), *then_expr, planner)?;
+            let else_lowered = lower_str_repeat_expr(lhs, *else_expr, planner)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "str/repeat currently requires stage2-known string and int values".to_string(),
+        )),
+    }
 }
 
 fn lower_str_concat_expr(
@@ -1791,6 +4666,107 @@ fn lower_bytes_concat_expr(
     }
 }
 
+fn lower_bytes_get_expr(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let (Some(lhs_id), Some(rhs_n)) = (
+        planner_const_bytes_id(planner, &lhs),
+        planner_const_int_value(planner, &rhs),
+    ) {
+        return lower_bytes_get_const_pair(lhs, rhs, lhs_id, rhs_n, planner);
+    }
+
+    let lhs = match lhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/get lhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_bytes_get_expr(last, rhs, planner)?;
+            exprs.push(lowered);
+            return Ok(PExpr::Begin { exprs, ty: Ty::I64 });
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/get lhs let had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_get_expr(last, rhs, planner)?;
+            body.push(lowered);
+            return Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::I64,
+            });
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let then_lowered = lower_bytes_get_expr(*then_expr, rhs.clone(), planner)?;
+            let else_lowered = lower_bytes_get_expr(*else_expr, rhs, planner)?;
+            return Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::I64,
+            });
+        }
+        other => other,
+    };
+
+    match rhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/get rhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_bytes_get_expr(lhs, last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin { exprs, ty: Ty::I64 })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/get rhs let had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_get_expr(lhs, last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::I64,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::I64,
+        } => {
+            let then_lowered = lower_bytes_get_expr(lhs.clone(), *then_expr, planner)?;
+            let else_lowered = lower_bytes_get_expr(lhs, *else_expr, planner)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::I64,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/get currently requires stage2-known bytes and int values".to_string(),
+        )),
+    }
+}
+
 fn lower_bytes_len(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
     if arg.ty() != Ty::BytesI32 {
         return Err(Stage2CompileError::Unsupported(
@@ -1870,6 +4846,30 @@ fn lower_bytes_from_hex(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stag
         ));
     }
     lower_bytes_from_hex_expr(arg, planner)
+}
+
+fn lower_coreform_escape_str(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "coreform/escape-str expects string in stage2".to_string(),
+        ));
+    }
+    lower_coreform_escape_str_expr(arg, planner)
+}
+
+fn lower_coreform_escape_bytes(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::BytesI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "coreform/escape-bytes expects bytes in stage2".to_string(),
+        ));
+    }
+    lower_coreform_escape_bytes_expr(arg, planner)
 }
 
 fn string_len_i64_for_id(planner: &Planner, id: i32) -> Result<i64, Stage2CompileError> {
@@ -2387,7 +5387,7 @@ fn lower_bytes_to_str_utf8_expr(
 }
 
 fn decode_hex_bytes(s: &str) -> Result<Vec<u8>, Stage2CompileError> {
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         return Err(Stage2CompileError::Unsupported(
             "bytes/from-hex currently requires even-length hex strings".to_string(),
         ));
@@ -2445,7 +5445,9 @@ fn lower_bytes_to_hex_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, S
     match arg {
         PExpr::Begin { mut exprs, .. } => {
             let last = exprs.pop().ok_or_else(|| {
-                Stage2CompileError::Internal("bytes/to-hex begin arg had no expressions".to_string())
+                Stage2CompileError::Internal(
+                    "bytes/to-hex begin arg had no expressions".to_string(),
+                )
             })?;
             let lowered = lower_bytes_to_hex_expr(last, planner)?;
             exprs.push(lowered);
@@ -2534,7 +5536,9 @@ fn lower_bytes_from_hex_expr(
     match arg {
         PExpr::Begin { mut exprs, .. } => {
             let last = exprs.pop().ok_or_else(|| {
-                Stage2CompileError::Internal("bytes/from-hex begin arg had no expressions".to_string())
+                Stage2CompileError::Internal(
+                    "bytes/from-hex begin arg had no expressions".to_string(),
+                )
             })?;
             let lowered = lower_bytes_from_hex_expr(last, planner)?;
             exprs.push(lowered);
@@ -2588,6 +5592,202 @@ fn lower_bytes_from_hex_expr(
         }
         _ => Err(Stage2CompileError::Unsupported(
             "bytes/from-hex currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn escape_coreform_str_literal(s: &str) -> String {
+    let mut out = String::new();
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+fn escape_coreform_bytes_literal(b: &[u8]) -> String {
+    let mut out = String::new();
+    for &x in b {
+        match x {
+            b'\\' => out.push_str("\\\\"),
+            b'"' => out.push_str("\\\""),
+            b'\n' => out.push_str("\\n"),
+            b'\r' => out.push_str("\\r"),
+            b'\t' => out.push_str("\\t"),
+            0x20..=0x7E => out.push(x as char),
+            _ => out.push_str(&format!("\\x{:02X}", x)),
+        }
+    }
+    out
+}
+
+fn lower_coreform_escape_str_expr(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_string_id(planner, &arg) {
+        let out_id = planner.intern_string(&escape_coreform_str_literal(
+            &planner_string_for_id(planner, id)?,
+        ))?;
+        let idx = planner.alloc_local(Ty::StrI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "coreform/escape-str begin arg had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_coreform_escape_str_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "coreform/escape-str let arg had empty body".to_string(),
+                )
+            })?;
+            let lowered = lower_coreform_escape_str_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let Some(then_id) = planner_const_string_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "coreform/escape-str currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_string_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "coreform/escape-str currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let then_out = planner.intern_string(&escape_coreform_str_literal(
+                &planner_string_for_id(planner, then_id)?,
+            ))?;
+            let else_out = planner.intern_string(&escape_coreform_str_literal(
+                &planner_string_for_id(planner, else_id)?,
+            ))?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(then_out)),
+                else_expr: Box::new(PExpr::Str(else_out)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "coreform/escape-str currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn lower_coreform_escape_bytes_expr(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_bytes_id(planner, &arg) {
+        let out_id = planner.intern_string(&escape_coreform_bytes_literal(
+            &planner_bytes_for_id(planner, id)?,
+        ))?;
+        let idx = planner.alloc_local(Ty::BytesI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "coreform/escape-bytes begin arg had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_coreform_escape_bytes_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "coreform/escape-bytes let arg had empty body".to_string(),
+                )
+            })?;
+            let lowered = lower_coreform_escape_bytes_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let Some(then_id) = planner_const_bytes_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "coreform/escape-bytes currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_bytes_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "coreform/escape-bytes currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let then_out = planner.intern_string(&escape_coreform_bytes_literal(
+                &planner_bytes_for_id(planner, then_id)?,
+            ))?;
+            let else_out = planner.intern_string(&escape_coreform_bytes_literal(
+                &planner_bytes_for_id(planner, else_id)?,
+            ))?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(then_out)),
+                else_expr: Box::new(PExpr::Str(else_out)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "coreform/escape-bytes currently requires stage2-known byte values".to_string(),
         )),
     }
 }
@@ -2859,6 +6059,30 @@ fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
             capture: FnCapture::GlobalFrame,
         });
     }
+    if sym == "core/coreform::escape-str" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("coreform/escape-str".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/coreform::escape-bytes" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("coreform/escape-bytes".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
     if sym == "core/bytes::to-hex" {
         let body = Term::list(vec![
             Term::Symbol("prim".to_string()),
@@ -2907,6 +6131,42 @@ fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
             capture: FnCapture::GlobalFrame,
         });
     }
+    if sym == "core/vec::len" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("vec/len".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/map::len" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("map/len".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/bytes::join" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("bytes/join".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
     if sym == "core/str::len" {
         let body = Term::list(vec![
             Term::Symbol("prim".to_string()),
@@ -2939,6 +6199,11 @@ fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
         "core/int::lt?" => "int/lt?",
         "core/eq?" => "core/eq?",
         "core/str::concat" => "str/concat",
+        "core/str::join" => "str/join",
+        "core/str::repeat" => "str/repeat",
+        "core/map::get" => "map/get",
+        "core/vec::get" => "vec/get",
+        "core/bytes::get" => "bytes/get",
         "core/bytes::concat" => "bytes/concat",
         _ => return None,
     };
@@ -3082,6 +6347,11 @@ fn match_curried_wrapper_call(xs: &[&Term]) -> Option<(&'static str, Term, Term)
             "core/int::lt?" => "int/lt?",
             "core/eq?" => "core/eq?",
             "core/str::concat" => "str/concat",
+            "core/str::join" => "str/join",
+            "core/str::repeat" => "str/repeat",
+            "core/map::get" => "map/get",
+            "core/vec::get" => "vec/get",
+            "core/bytes::get" => "bytes/get",
             "core/bytes::concat" => "bytes/concat",
             _ => return None,
         },
@@ -3292,20 +6562,25 @@ fn is_safe_defs_only_rhs(t: &Term) -> bool {
         | Term::Int(_)
         | Term::Str(_)
         | Term::Bytes(_)
-        | Term::Symbol(_) => true,
-        _ => {
-            let Some(xs) = t.as_proper_list() else {
-                return false;
-            };
-            if xs.is_empty() {
-                return false;
-            }
-            matches!(
-                xs[0],
-                Term::Symbol(s) if (s == "fn" && xs.len() == 3) || (s == "quote" && xs.len() == 2)
-            )
+        | Term::Symbol(_)
+        | Term::Vector(_)
+        | Term::Map(_)
+            if term_const_data_term(t).is_some() =>
+        {
+            return true;
         }
+        _ => {}
     }
+    let Some(xs) = t.as_proper_list() else {
+        return false;
+    };
+    if xs.is_empty() {
+        return false;
+    }
+    matches!(
+        xs[0],
+        Term::Symbol(s) if (s == "fn" && xs.len() == 3) || (s == "quote" && xs.len() == 2)
+    )
 }
 
 #[cfg(test)]
@@ -4010,6 +7285,731 @@ mod tests {
     }
 
     #[test]
+    fn stage2_validates_str_repeat_prim_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim str/repeat "ab" 3) "ababab")
+            (prim core/eq? (prim str/repeat "z" 0) "")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_repeat_wrapper_on_bound_constant_values() {
+        let src = r#"
+          (def s ((core/str::repeat "ab") 3))
+          (def n (prim int/add 1 1))
+          (if (prim core/eq? s "ababab")
+            (prim core/eq? ((core/str::repeat "z") n) "zz")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_repeat_wrapper_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                ((core/str::repeat
+                   (let ((x 1))
+                     (if cond "ab" "abc")))
+                 (if cond 2 3))
+                "abab")
+            (prim core/eq?
+              ((core/str::repeat "z")
+               (if cond 0 1))
+              "")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_join_prim_on_literal_vectors() {
+        let src = r#"
+          (if (prim core/eq? (prim str/join ["a" "b" "c"] ",") "a,b,c")
+            (prim core/eq? (prim str/join [] ",") "")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_join_wrapper_on_if_variant_vectors() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                ((core/str::join
+                   (let ((x 1))
+                     (if cond ["ab" "cd"] ["x" "y"])))
+                 (if cond "-" ":"))
+                "ab-cd")
+            (prim core/eq?
+              ((core/str::join
+                 (if cond [] ["q"]))
+               ",")
+              "")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_join_prim_on_literal_vectors() {
+        let src = r#"
+          (if (prim core/eq? (prim bytes/join [b"\x01\x02" b"\xFF"]) b"\x01\x02\xFF")
+            (prim core/eq? (prim bytes/join []) b"")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_join_wrapper_on_if_variant_vectors() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/bytes::join
+                  (let ((x 1))
+                    (if cond [b"\xAA" b"\xBB"] [b"\xCC"])))
+                b"\xAA\xBB")
+            (prim core/eq?
+              (core/bytes::join
+                (if cond [] [b"\x01"]))
+              b"")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_len_prim_on_literal_vectors() {
+        let src = r#"
+          (if (prim int/eq? (prim vec/len [10 20 30]) 3)
+            (prim int/eq? (prim vec/len []) 0)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_len_wrapper_on_if_variant_vectors() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                (core/vec::len
+                  (if cond [1 2 3] [4]))
+                3)
+            (prim int/eq?
+              (core/vec::len
+                (let ((x 1))
+                  (if cond [] [0])))
+              0)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_len_on_let_bound_vector_alias() {
+        let src = r#"
+          (if (prim int/eq?
+                (core/vec::len
+                  (let ((v [1 2 3 4]))
+                    v))
+                4)
+            (prim int/eq?
+              (prim vec/len
+                (let ((v (prim vec/push [8] 9)))
+                  v))
+              2)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_len_prim_on_literal_maps() {
+        let src = r#"
+          (if (prim int/eq? (prim map/len {:a 1 :b 2}) 2)
+            (prim int/eq? (prim map/len {}) 0)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_len_wrapper_on_if_variant_maps() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                (core/map::len
+                  (if cond {:a 1 :b 2} {:z 9}))
+                2)
+            (prim int/eq?
+              (core/map::len
+                (let ((x 1))
+                  (if cond {} {:k 1})))
+              0)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_get_prim_on_literal_maps() {
+        let src = r#"
+          (if (prim int/eq? (prim map/get {:a 1 :b 2} (quote :a)) 1)
+            (prim list/is-nil? (prim map/get {:a 1} (quote :z)))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_get_wrapper_on_if_variant_maps_and_keys() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                ((core/map::get
+                   (if cond {:a 7 :b 8} {:a 1 :b 2}))
+                 (if cond (quote :a) (quote :b)))
+                7)
+            (prim list/is-nil?
+              ((core/map::get
+                 (let ((x 1))
+                   (if cond {:k 1} {:m 2})))
+               (if cond (quote :z) (quote :y))))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_get_len_on_put_merge_constant_forms() {
+        let src = r#"
+          (if (prim int/eq?
+                (prim map/get
+                  (prim map/put {:a 1} (quote :b) 2)
+                  (quote :b))
+                2)
+            (if (prim int/eq?
+                  (prim map/len
+                    (prim map/merge {:a 1} {:b 2 :c 3}))
+                  3)
+              (prim int/eq?
+                (prim map/get
+                  (((core/map::put {:x 1}) (quote :y)) 9)
+                  (quote :y))
+                9)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_collection_constant_composition_on_alias_sources() {
+        let src = r#"
+          (def v0 [1 2])
+          (def v1 (prim vec/push v0 3))
+          (def m0 {:a 1})
+          (def m1 (prim map/put m0 (quote :b) 2))
+          (def m2 (prim map/merge m1 {:c 3}))
+          (if (prim int/eq? (prim vec/get v1 2) 3)
+            (if (prim int/eq? (prim map/get m2 (quote :b)) 2)
+              (prim int/eq? (core/map::len m2) 3)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_map_get_len_on_let_bound_map_aliases() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                (prim map/get
+                  (let ((m1 {:a 1 :b 2})
+                        (m2 {:a 10 :b 20}))
+                    (if cond m1 m2))
+                  (quote :b))
+                2)
+            (if (prim int/eq?
+                  (core/map::len
+                    (let ((m1 (prim map/put {} (quote :x) 9))
+                          (m2 (prim map/merge {:a 1} {:b 2})))
+                      (if cond m1 m2)))
+                  1)
+              (prim list/is-nil?
+                (prim map/get
+                  (let ((m1 (prim map/merge {:a 1} {:b 2}))
+                        (m2 {:y 0}))
+                    (if cond m1 m2))
+                  (quote :z)))
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_collection_ops_on_def_bound_aliases() {
+        let src = r#"
+          (def v [1 2 3])
+          (def m {:a 7 :b 8})
+          (def parts ["a" "b"])
+          (def bytes-parts [b"\x01" b"\x02"])
+          (if (prim int/eq? (prim vec/get v 1) 2)
+            (if (prim int/eq? (core/vec::len v) 3)
+              (if (prim int/eq? ((core/map::get m) (quote :a)) 7)
+                (if (prim int/eq? (core/map::len m) 2)
+                  (if (prim core/eq? (core/str::join parts "-") "a-b")
+                    (prim core/eq? (core/bytes::join bytes-parts) b"\x01\x02")
+                    false)
+                  false)
+                false)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_collection_ops_on_def_bound_alias_chains() {
+        let src = r#"
+          (def v1 [1 2 3])
+          (def v2 v1)
+          (def v3 v2)
+          (def m1 {:a 7 :b 8})
+          (def m2 m1)
+          (def m3 m2)
+          (def parts1 ["a" "b"])
+          (def parts2 parts1)
+          (def parts3 parts2)
+          (def bytes1 [b"\x01" b"\x02"])
+          (def bytes2 bytes1)
+          (def bytes3 bytes2)
+          (if (prim int/eq? (prim vec/get v3 1) 2)
+            (if (prim int/eq? (core/vec::len v3) 3)
+              (if (prim int/eq? ((core/map::get m3) (quote :a)) 7)
+                (if (prim int/eq? (core/map::len m3) 2)
+                  (if (prim core/eq? (core/str::join parts3 "-") "a-b")
+                    (prim core/eq? (core/bytes::join bytes3) b"\x01\x02")
+                    false)
+                  false)
+                false)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_collection_ops_on_let_bound_alias_chains() {
+        let src = r#"
+          (if (prim int/eq?
+                (prim vec/get
+                  (let ((v1 [1 2 3])
+                        (v2 v1)
+                        (v3 v2))
+                    v3)
+                  2)
+                3)
+            (if (prim int/eq?
+                  (prim map/get
+                    (let ((m1 {:a 7 :b 8})
+                          (m2 m1)
+                          (m3 m2))
+                      m3)
+                    (quote :b))
+                  8)
+              (if (prim core/eq?
+                    (prim str/join
+                      (let ((s1 ["a" "b"])
+                            (s2 s1)
+                            (s3 s2))
+                        s3)
+                      "-")
+                    "a-b")
+                (prim core/eq?
+                  (core/bytes::join
+                    (let ((b1 [b"\x01" b"\x02"])
+                          (b2 b1)
+                          (b3 b2))
+                      b3))
+                  b"\x01\x02")
+                false)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_generic_let_collection_alias_flow() {
+        let src = r#"
+          (let ((v [1 2 3])
+                (m {:a 7 :b 8})
+                (parts ["a" "b"])
+                (bparts [b"\x01" b"\x02"]))
+            (if (prim int/eq? (prim vec/get v 1) 2)
+              (if (prim int/eq? (prim map/get m (quote :b)) 8)
+                (if (prim core/eq? (prim str/join parts "-") "a-b")
+                  (prim core/eq? (core/bytes::join bparts) b"\x01\x02")
+                  false)
+                false)
+              false))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_defs_only_module_with_data_literal_rhs() {
+        let src = r#"
+          (def v [1 2 3])
+          (def m {:a 1 :b 2})
+          (def p '(x y))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
+    fn stage2_validates_vec_get_len_on_push_constant_forms() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                (prim vec/get
+                  (if cond
+                    (prim vec/push [1 2] 3)
+                    (prim vec/push [1 2] 4))
+                  (if cond 2 1))
+                3)
+            (if (prim int/eq?
+                  (core/vec::len
+                    (if cond
+                      ((core/vec::push [7]) 10)
+                      ((core/vec::push [8 9]) 10)))
+                  2)
+              (prim list/is-nil?
+                (prim vec/get
+                  ((core/vec::push []) 5)
+                  9))
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_join_on_vec_push_constant_forms() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (prim str/join
+                  (if cond
+                    (prim vec/push ["a"] "b")
+                    (prim vec/push ["x"] "b"))
+                  (if cond "-" ":"))
+                "a-b")
+            (prim core/eq?
+              (core/bytes::join
+                (if cond
+                  ((core/vec::push [b"\x01"]) b"\x02")
+                  ((core/vec::push [b"\xAA"]) b"\x02")))
+              b"\x01\x02")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_join_on_let_bound_vector_aliases() {
+        let src = r#"
+          (if (prim core/eq?
+                (prim str/join
+                  (let ((parts ["a" "b"]))
+                    parts)
+                  "-")
+                "a-b")
+            (prim core/eq?
+              (core/bytes::join
+                (let ((parts (prim vec/push [b"\x01"] b"\x02")))
+                  parts))
+              b"\x01\x02")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_get_prim_on_literal_vectors() {
+        let src = r#"
+          (if (prim int/eq? (prim vec/get [10 20 30] 1) 20)
+            (prim list/is-nil? (prim vec/get [10] 5))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_get_wrapper_on_if_variant_vectors_and_indices() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                ((core/vec::get
+                   (if cond [7 8] [9 10]))
+                 (if cond 0 1))
+                7)
+            (prim list/is-nil?
+              ((core/vec::get
+                 (let ((x 1))
+                   (if cond [1] [2])))
+               (if cond 5 7)))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_vec_get_on_let_bound_vector_alias() {
+        let src = r#"
+          (if (prim int/eq?
+                (prim vec/get
+                  (let ((v [5 6 7]))
+                    v)
+                  1)
+                6)
+            (prim list/is-nil?
+              (prim vec/get
+                (let ((v (prim vec/push [] 9)))
+                  v)
+                5))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_get_prim_on_literals() {
+        let src = r#"
+          (if (prim int/eq? (prim bytes/get b"\x00\x7f\xff" 2) 255)
+            (prim int/eq? (prim bytes/get b"AZ" 0) 65)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_get_wrapper_on_bound_constant_values() {
+        let src = r#"
+          (def bs b"\x10\x20\x30")
+          (def i (prim int/add 1 1))
+          (if (prim int/eq? ((core/bytes::get bs) i) 48)
+            (prim int/eq? ((core/bytes::get bs) 0) 16)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_get_wrapper_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                ((core/bytes::get
+                   (let ((x 1))
+                     (if cond b"\x01\x02" b"\x03\x04")))
+                 (if cond 1 0))
+                2)
+            (prim int/eq?
+              ((core/bytes::get b"\x09\x08")
+               (if cond 0 1))
+              9)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_coreform_escape_prims_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim coreform/escape-str "a\n\t\"\\") "a\\n\\t\\\"\\\\")
+            (prim core/eq? (prim coreform/escape-bytes b"\x00\xFF") "\\x00\\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_coreform_escape_wrappers_on_bound_constant_values() {
+        let src = r#"
+          (def s (core/coreform::escape-str "x\n"))
+          (def b (core/coreform::escape-bytes b"\n"))
+          (if (prim core/eq? s "x\\n")
+            (prim core/eq? b "\\n")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_coreform_escape_wrappers_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/coreform::escape-str
+                  (if cond "a\n" "b\t"))
+                "a\\n")
+            (prim core/eq?
+              (core/coreform::escape-bytes
+                (let ((x 1))
+                  (if cond b"\x00" b"\xFF")))
+              "\\x00")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
     fn stage2_validates_sym_string_conversion_prims_on_literals() {
         let src = r#"
           (if (prim core/eq? (prim sym/to-str (quote :alpha/ns::k)) ":alpha/ns::k")
@@ -4369,9 +8369,74 @@ mod tests {
     }
 
     #[test]
+    fn stage2_validates_defs_only_module_with_collection_composition_rhs() {
+        let src = r#"
+          (def base {:a 1})
+          (def merged (prim map/merge base {:b 2}))
+          (def updated (prim map/put merged (quote :c) 3))
+          (def v0 [1 2])
+          (def v1 (prim vec/push v0 3))
+          (def v2 ((core/vec::push v1) 4))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
+    fn stage2_validates_defs_only_module_with_if_selected_collection_rhs() {
+        let src = r#"
+          (def selected-map (if true {:a 1} {:b 2}))
+          (def selected-vec (if false [1 2] [3 4]))
+          (def merged (prim map/put selected-map (quote :c) 3))
+          (def pushed (prim vec/push selected-vec 5))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
+    fn stage2_validates_defs_only_module_with_if_selected_collection_rhs_via_prim_condition() {
+        let src = r#"
+          (def selected-map (if (prim int/lt? 0 1) {:a 1} {:b 2}))
+          (def selected-vec (if ((core/int::eq? 1) 2) [1 2] [3 4]))
+          (def merged (prim map/put selected-map (quote :c) 3))
+          (def pushed (prim vec/push selected-vec 5))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
+    fn stage2_validates_defs_only_module_with_if_selected_collection_rhs_via_def_condition_aliases()
+    {
+        let src = r#"
+          (def cond0 (prim int/lt? 0 1))
+          (def cond1 cond0)
+          (def selected-map (if cond1 {:a 1} {:b 2}))
+          (def selected-vec (if cond1 [1 2] [3 4]))
+          (def merged (prim map/put selected-map (quote :c) 3))
+          (def pushed (prim vec/push selected-vec 5))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
     fn stage2_rejects_defs_only_module_with_non_trivial_rhs() {
         let src = r#"
-          (def x [1 2 3])
+          (def x (if cond {:a 1} {:b 2}))
         "#;
         let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
         let r = stage2_validation_report(&forms);

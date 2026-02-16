@@ -19,6 +19,10 @@ This file defines a package, its modules, dependencies, and required obligations
 - `limits` (table): evaluation limits enforced for package evaluation and tests
 - `budgets` (table): per-test budgets enforced by the `core/obligation::budgets` obligation
 - `property` (table): configuration for property tests
+- `gfx` (table): graphics-obligation configuration used by:
+  - `core/obligation::gfx-golden-images`
+  - `core/obligation::gfx-frame-budgets`
+  - `core/obligation::gfx-api-stability`
 
 `limits` keys:
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests
@@ -37,6 +41,29 @@ This file defines a package, its modules, dependencies, and required obligations
 
 `property` keys:
 - `cases_per_test` (integer, optional): default cases per property test when not specified by the test entry
+
+`gfx` keys:
+- `golden_tests` (array of strings): suite symbols for golden graphics checks.
+  - Each suite entry must be a map test entry:
+    - `:body` callable
+    - `:kind` `:frame-graph | :scene` (defaults to `:frame-graph`)
+    - `:expect-h` 64-char lowercase hex expected hash
+    - optional pixel-golden fields (frame-graph only):
+      - `:expect-png-h` 64-char lowercase hex expected PNG hash
+      - `:pixel-width` / `:pixel-height` positive integers (defaults `256`)
+- `frame_budget_tests` (array of strings): suite symbols for frame budget checks.
+  - Each suite entry is a callable or `{ :body callable }`.
+  - Body result must be:
+    - a `:gfx/frame-graph` term, or
+    - `{ :frame <frame-graph> :frame-time-ms <int|nil> }`
+- `api_exports` (array of strings): strict expected exported gfx symbols (typically `core/gfx/*`) for API stability checks.
+- `api_surface_hash` (string): expected 64-char lowercase hex surface hash (computed from tracked export symbols + defining expression hashes).
+- `max_render_passes_per_frame` (integer, optional)
+- `max_compute_passes_per_frame` (integer, optional)
+- `max_draw_commands_per_frame` (integer, optional)
+- `max_compute_commands_per_frame` (integer, optional)
+- `max_frame_graph_bytes` (integer, optional)
+- `max_frame_time_ms` (integer, optional)
 
 ## Module Table
 

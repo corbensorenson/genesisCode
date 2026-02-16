@@ -52,6 +52,10 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] In-language convenience wrappers for GenesisGraph/GenesisPkg capability ops (pure constructors):
   - Implemented in `prelude/prelude.gc` for: `core/store::*`, `core/refs::*`, `core/vcs::*`, `core/pkg::*`, `core/sync::*`, `core/gpk::*`, `core/gc::*`
   - Validated via `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
+- [x] Modularize prelude source for `.gc`-first evolution while preserving stable runtime bootstrap:
+  - authoring source now lives in `prelude/modules/{00_core.gc,10_gfx.gc,20_editor.gc}`
+  - `scripts/assemble_prelude.sh` deterministically assembles `prelude/prelude.gc` from modules
+  - drift guard + parse/canonicalize validation: `crates/gc_prelude/tests/prelude_modularization.rs`
 
 ---
 
@@ -196,6 +200,36 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - wrappers `core/sym::to-str` and `core/sym::from-str` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive symbol/string conversions
       - `prim str/to-bytes-utf8` and `prim bytes/to-str-utf8` now lower for stage2-known string/bytes values, including constant-propagated locals and direct `if` branch variants (with UTF-8 validity checks for bytes-to-string)
       - wrappers `core/str::to-utf8` and `core/str::from-utf8` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive UTF-8 conversions
+      - `prim bytes/to-hex` and `prim bytes/from-hex` now lower for stage2-known bytes/string values, including constant-propagated locals and direct `if` branch variants (with deterministic hex-validation checks)
+      - wrappers `core/bytes::to-hex` and `core/bytes::from-hex` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive hex conversions
+      - `prim str/repeat` now lowers for stage2-known string/int values, including constant-propagated locals and direct `if` branch variants
+      - wrapper `core/str::repeat` now lowers through the Stage-2 callable path for constant-propagated and branch-sensitive string repeat flows
+      - `prim str/join` now lowers for stage2-known vector string literals plus stage2-known separators, including direct `if`/`let`/`begin` branch-sensitive vector composition
+      - wrapper `core/str::join` now lowers through the Stage-2 callable path for branch-sensitive vector-string join flows
+      - `prim bytes/join` now lowers for stage2-known vector bytes literals, including direct `if`/`let`/`begin` branch-sensitive vector composition
+      - wrapper `core/bytes::join` now lowers through the Stage-2 callable path for branch-sensitive vector-bytes join flows
+      - `prim vec/get` now lowers for stage2-known vector scalar literals with stage2-known indices, including direct `if`/`let`/`begin` branch-sensitive vector/index composition
+      - wrapper `core/vec::get` now lowers through the Stage-2 callable path for branch-sensitive scalar vector indexing flows (including nil out-of-range semantics for non-negative indices)
+      - `prim vec/len` now lowers for stage2-known vector literals, including direct `if`/`let`/`begin` branch-sensitive vector composition
+      - wrapper `core/vec::len` now lowers through the Stage-2 callable path for branch-sensitive vector-length flows
+      - vector-term lowering for `vec/get`/`vec/len`/`str/join`/`bytes/join` now also recognizes constant vector composition via `prim vec/push` and curried wrapper form `core/vec::push` when vector/value terms are stage2-known data
+      - `vec/get` + `vec/len` vector-term lowering now recognizes `let`-bound constant vector aliases when the vector position is resolved through a `let` body symbol
+      - `str/join` + `bytes/join` vector-term lowering now recognizes `let`-bound constant vector aliases when the vector position is resolved through a `let` body symbol
+      - `prim map/get` now lowers for stage2-known map scalar literals with stage2-known scalar keys, including direct `if`/`let`/`begin` branch-sensitive map/key composition
+      - wrapper `core/map::get` now lowers through the Stage-2 callable path for branch-sensitive scalar map lookup flows (including nil on missing key semantics)
+      - `prim map/len` now lowers for stage2-known map literals, including direct `if`/`let`/`begin` branch-sensitive map composition
+      - wrapper `core/map::len` now lowers through the Stage-2 callable path for branch-sensitive map-length flows
+      - `map/get` + `map/len` map-term lowering now also recognizes constant map composition via `prim map/put`, `prim map/merge`, and curried wrapper forms `core/map::put` / `core/map::merge` when map/key/value terms are stage2-known data
+      - `map/get` + `map/len` map-term lowering now recognizes `let`-bound constant map aliases when the map position is resolved through a `let` body symbol
+      - `map/get` + `map/len` map-term lowering now recursively resolves `let`-bound map aliases through nested map-position terms (including branch-selected `(if cond m1 m2)` alias forms)
+      - collection ops now resolve top-level `def`-bound constant aliases for vectors/maps when consumed by `vec/get`, `vec/len`, `str/join`, `bytes/join`, `map/get`, and `map/len`
+      - collection alias chains are now propagated for both top-level `def` and `let` bindings (`a -> b -> c`) across vector/map consumers, including mixed local/global alias sources
+      - constant collection composition now resolves aliased sources in `vec/push`, `map/put`, and `map/merge` (both `prim` and curried wrapper forms), including global alias inputs and downstream Stage-2 collection consumers
+      - generic `let` planning now propagates constant collection aliases into body expressions before Stage-2 lowering (with conservative binder/quote guards), so `vec/get`/`map/get`/join consumers inside shared `let` bodies resolve to stage2-known collection terms
+      - `prim bytes/get` now lowers for stage2-known bytes/int values, including constant-propagated locals and direct `if` branch variants (with deterministic non-negative in-range index checks)
+      - wrapper `core/bytes::get` now lowers through the Stage-2 callable path for constant-propagated and branch-sensitive byte indexing flows
+      - `prim coreform/escape-str` and `prim coreform/escape-bytes` now lower for stage2-known string/bytes values, including constant-propagated locals and direct `if` branch variants
+      - wrappers `core/coreform::escape-str` and `core/coreform::escape-bytes` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive escape flows
       - curried wrappers `core/str::concat` and `core/bytes::concat` now lower through the Stage-2 callable path for literal-driven calls
       - Stage-2 now propagates deterministic string/bytes constant IDs through local bindings and inlined applications, enabling `str/len`/`bytes/len` on def/let-bound values when the value set is statically known
       - unary wrappers `core/str::len` and `core/bytes::len` now lower through the Stage-2 callable path for constant-propagated calls
@@ -216,6 +250,23 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - coverage: `stage2_validates_quote_string_and_bytes_literals`, `stage2_validates_data_tag_for_string_and_bytes`, and `stage2_validates_string_and_bytes_top_level_results`
       - coverage: `stage2_validates_sym_string_conversion_prims_on_literals`, `stage2_validates_sym_string_wrapper_conversion_on_bound_constant_values`, and `stage2_validates_sym_string_wrapper_conversion_on_if_variant_values`
       - coverage: `stage2_validates_utf8_conversion_prims_on_literals`, `stage2_validates_utf8_wrapper_conversion_on_bound_constant_values`, and `stage2_validates_utf8_wrapper_conversion_on_if_variant_values`
+      - coverage: `stage2_validates_hex_conversion_prims_on_literals`, `stage2_validates_hex_wrapper_conversion_on_bound_constant_values`, and `stage2_validates_hex_wrapper_conversion_on_if_variant_values`
+      - coverage: `stage2_validates_str_repeat_prim_on_literals`, `stage2_validates_str_repeat_wrapper_on_bound_constant_values`, and `stage2_validates_str_repeat_wrapper_on_if_variant_values`
+      - coverage: `stage2_validates_str_join_prim_on_literal_vectors`, `stage2_validates_str_join_wrapper_on_if_variant_vectors`, `stage2_validates_bytes_join_prim_on_literal_vectors`, and `stage2_validates_bytes_join_wrapper_on_if_variant_vectors`
+      - coverage: `stage2_validates_vec_get_prim_on_literal_vectors` and `stage2_validates_vec_get_wrapper_on_if_variant_vectors_and_indices`
+      - coverage: `stage2_validates_vec_len_prim_on_literal_vectors` and `stage2_validates_vec_len_wrapper_on_if_variant_vectors`
+      - coverage: `stage2_validates_vec_get_len_on_push_constant_forms` and `stage2_validates_join_on_vec_push_constant_forms`
+      - coverage: `stage2_validates_vec_get_on_let_bound_vector_alias` and `stage2_validates_vec_len_on_let_bound_vector_alias`
+      - coverage: `stage2_validates_join_on_let_bound_vector_aliases`
+      - coverage: `stage2_validates_map_get_prim_on_literal_maps`, `stage2_validates_map_get_wrapper_on_if_variant_maps_and_keys`, `stage2_validates_map_len_prim_on_literal_maps`, and `stage2_validates_map_len_wrapper_on_if_variant_maps`
+      - coverage: `stage2_validates_map_get_len_on_put_merge_constant_forms`
+      - coverage: `stage2_validates_map_get_len_on_let_bound_map_aliases`
+      - coverage: `stage2_validates_collection_ops_on_def_bound_aliases`
+      - coverage: `stage2_validates_collection_ops_on_def_bound_alias_chains` and `stage2_validates_collection_ops_on_let_bound_alias_chains`
+      - coverage: `stage2_validates_collection_constant_composition_on_alias_sources`
+      - coverage: `stage2_validates_generic_let_collection_alias_flow`
+      - coverage: `stage2_validates_bytes_get_prim_on_literals`, `stage2_validates_bytes_get_wrapper_on_bound_constant_values`, and `stage2_validates_bytes_get_wrapper_on_if_variant_values`
+      - coverage: `stage2_validates_coreform_escape_prims_on_literals`, `stage2_validates_coreform_escape_wrappers_on_bound_constant_values`, and `stage2_validates_coreform_escape_wrappers_on_if_variant_values`
       - coverage: `stage2_validates_if_truthiness_for_string_and_bytes_condition`
       - coverage: `stage2_validates_str_concat_and_len_prims_on_literals`, `stage2_validates_bytes_concat_and_len_prims_on_literals`, and `stage2_validates_str_and_bytes_wrapper_calls_on_literals`
       - coverage: `stage2_validates_len_wrappers_on_def_bound_constant_values` and `stage2_validates_len_wrappers_on_let_bound_constant_values`
@@ -233,6 +284,23 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - host gate behavior coverage for nested wrapper-based branch-sensitive length lowering: `eval_stage2_gate_validates_nested_let_branch_sensitive_len_wrappers` in both native and WASI CLI suites
       - host gate behavior coverage for branch-sensitive symbol/string conversion lowering: `eval_stage2_gate_validates_sym_string_wrapper_branch_sensitive_values` in both native and WASI CLI suites
       - host gate behavior coverage for branch-sensitive UTF-8 conversion lowering: `eval_stage2_gate_validates_utf8_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive hex conversion lowering: `eval_stage2_gate_validates_hex_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive str/repeat lowering: `eval_stage2_gate_validates_str_repeat_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive str/bytes join lowering: `eval_stage2_gate_validates_join_wrappers_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive vec/get lowering: `eval_stage2_gate_validates_vec_get_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive vec/len lowering: `eval_stage2_gate_validates_vec_len_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for vector push constant composition lowering (`vec/get`, `vec/len`, `str/join`, `bytes/join`): `eval_stage2_gate_validates_vec_push_constant_composition` in both native and WASI CLI suites
+      - host gate behavior coverage for `let`-bound vector alias lowering (`vec/get`, `vec/len`): `eval_stage2_gate_validates_let_bound_vector_aliases` in both native and WASI CLI suites
+      - host gate behavior coverage for `let`-bound vector alias join lowering (`str/join`, `bytes/join`): `eval_stage2_gate_validates_join_let_bound_vector_aliases` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive map/get+map/len lowering: `eval_stage2_gate_validates_map_wrappers_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for map put/merge constant composition lowering: `eval_stage2_gate_validates_map_put_merge_constant_composition` in both native and WASI CLI suites
+      - host gate behavior coverage for `let`-bound map alias lowering (`map/get`, `map/len`): `eval_stage2_gate_validates_map_let_bound_aliases` in both native and WASI CLI suites
+      - host gate behavior coverage for top-level `def`-bound collection alias chain lowering (`vec/get`, `vec/len`, `str/join`, `bytes/join`, `map/get`, `map/len`): `eval_stage2_gate_validates_def_bound_collection_alias_chains` in both native and WASI CLI suites
+      - host gate behavior coverage for `let`-bound collection alias chain lowering (`vec/get`, `str/join`, `bytes/join`, `map/get`): `eval_stage2_gate_validates_let_bound_collection_alias_chains` in both native and WASI CLI suites
+      - host gate behavior coverage for alias-driven constant composition (`vec/push`, `map/put`, `map/merge`) flowing into collection consumers: `eval_stage2_gate_validates_collection_constant_composition_on_alias_sources` in both native and WASI CLI suites
+      - host gate behavior coverage for generic `let` alias flow into mixed collection consumers: `eval_stage2_gate_validates_generic_let_collection_alias_flow` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive bytes/get lowering: `eval_stage2_gate_validates_bytes_get_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive coreform escaping lowering: `eval_stage2_gate_validates_coreform_escape_wrapper_branch_sensitive_values` in both native and WASI CLI suites
       - host gate behavior coverage for branch-sensitive int stringification lowering: `eval_stage2_gate_validates_int_to_str_wrapper_branch_sensitive_values` in both native and WASI CLI suites
       - host gate behavior coverage for branch-sensitive concat lowering: `eval_stage2_gate_validates_branch_sensitive_string_bytes_concat_prims` in both native and WASI CLI suites
       - host gate behavior coverage for nested wrapper-based branch-sensitive concat lowering: `eval_stage2_gate_validates_nested_let_branch_sensitive_concat_wrappers` in both native and WASI CLI suites
@@ -241,6 +309,27 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - [x] Stage-2 literal string/bytes primitive lowering (`str/concat`, `str/len`, `bytes/concat`, `bytes/len`) plus native/WASI gate coverage
       - [x] Stage-2 symbol/string conversion lowering (`prim sym/to-str` / `prim sym/from-str` + `core/sym::{to-str,from-str}`) for constant-propagated and branch-sensitive values
       - [x] Stage-2 UTF-8 conversion lowering (`prim str/to-bytes-utf8` / `prim bytes/to-str-utf8` + `core/str::{to-utf8,from-utf8}`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 hex conversion lowering (`prim bytes/to-hex` / `prim bytes/from-hex` + `core/bytes::{to-hex,from-hex}`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 string repeat lowering (`prim str/repeat` + `core/str::repeat`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 join lowering (`prim str/join` + `core/str::join`, `prim bytes/join` + `core/bytes::join`) for branch-sensitive vector literal composition
+      - [x] Stage-2 vector indexing lowering (`prim vec/get` + `core/vec::get`) for branch-sensitive scalar vector literal composition
+      - [x] Stage-2 vector length lowering (`prim vec/len` + `core/vec::len`) for branch-sensitive vector literal composition
+      - [x] Stage-2 vector constant composition lowering (`prim vec/push` + `core/vec::push`) for `vec/get`/`vec/len`/`str/join`/`bytes/join`
+      - [x] Stage-2 `let`-bound vector alias lowering for vector-position symbols consumed by `vec/get` / `vec/len`
+      - [x] Stage-2 `let`-bound vector alias lowering for vector-position symbols consumed by `str/join` / `bytes/join`
+      - [x] Stage-2 map lookup/length lowering (`prim map/get` + `core/map::get`, `prim map/len` + `core/map::len`) for branch-sensitive scalar map literal composition
+      - [x] Stage-2 `let`-bound map alias lowering for map-position symbols consumed by `map/get` / `map/len`
+      - [x] Stage-2 nested map-term alias resolution for `map/get` / `map/len` (`let` aliases propagated through branch-selected map terms)
+      - [x] Stage-2 top-level `def`-bound collection alias lowering for vector/map consumers (`vec/get`, `vec/len`, `str/join`, `bytes/join`, `map/get`, `map/len`)
+      - [x] Stage-2 transitive collection alias-chain lowering for both `def` and `let` bindings across vector/map consumers (`alias -> alias -> alias`)
+      - [x] Stage-2 alias-aware constant composition for collection builders (`vec/push`, `map/put`, `map/merge`) consumed by Stage-2 collection operations
+      - [x] Stage-2 generic `let` collection-alias propagation for mixed collection consumers (`vec/get`/`map/get`/`str/join`/`bytes/join`) in shared `let` bodies
+      - [x] Stage-2 defs-only module acceptance for alias-driven constant collection composition RHS (`vec/push`, `map/put`, `map/merge`) with native/WASI eval gate coverage
+      - [x] Stage-2 defs-only module acceptance for constant-condition `if` collection RHS selection (vector/map) with native/WASI eval gate coverage
+      - [x] Stage-2 defs-only module acceptance for pure-computed constant `if` conditions (`prim int/lt?`, `prim int/eq?`, `prim core/eq?`, `prim list/is-nil?` and curried wrappers) in collection RHS selection, with native/WASI eval gate coverage
+      - [x] Stage-2 defs-only module acceptance for def-bound scalar condition aliases (including alias chains) in collection `if` RHS selection, with native/WASI eval gate coverage
+      - [x] Stage-2 byte indexing lowering (`prim bytes/get` + `core/bytes::get`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 coreform escape lowering (`prim coreform/escape-str` / `prim coreform/escape-bytes` + `core/coreform::{escape-str,escape-bytes}`) for constant-propagated and branch-sensitive values
       - [x] Stage-2 string/bytes constant-ID propagation across locals + unary `core/str::len` / `core/bytes::len` wrapper lowering for constant-propagated calls
       - [x] Stage-2 int stringification lowering (`prim int/to-str` + `core/int::to-str`) for constant-propagated and branch-sensitive integer values
       - [x] Stage-2 branch-sensitive length lowering for direct `if`-composed string/bytes values (`prim str/len` / `prim bytes/len`)
@@ -277,11 +366,24 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - local aliases to in-scope inlinable functions are resolved with lexical capture semantics preserved across later scalar shadowing
       - coverage: `stage2_validates_let_bound_function_call`, `stage2_validates_let_bound_function_lexical_capture_before_shadow`, and `stage2_validates_let_bound_function_alias_chain`
     - expanded Stage-2 support for defs-only toolchain modules:
-      - defs-only modules with safe RHS forms (`fn`, `quote`, scalar literals, symbol aliases) now validate with `nil` result kind
+      - defs-only modules with safe RHS forms (`fn`, `quote`, constant data literals, symbol aliases) now validate with `nil` result kind
       - defs-only modules with scalar computed bindings now lower/evaluate in Stage-2 (instead of being conservatively rejected), while retaining safe fallback for non-lowerable `fn`/`quote` bootstrap modules
+      - defs-only modules now also accept alias-driven constant collection composition RHS forms (`vec/push`, `map/put`, `map/merge`) when they resolve to deterministic constant data
+      - defs-only modules now accept constant-condition `if` selection for collection RHS forms when selected branches resolve to deterministic vector/map data
+      - defs-only modules now accept pure-computed constant conditions in collection `if` selection (`int/lt?`, `int/eq?`, `core/eq?`, `list/is-nil?`, plus curried wrappers) when operands are stage2-known data
+      - defs-only modules now accept def-bound scalar condition aliases (including alias chains) in collection `if` selection when aliased conditions resolve to stage2-known scalar data
       - selfhost artifact generation now reports Stage-2 coverage for selfhost modules (`stage2_supported_modules=5`, `stage2_validated_modules=5`)
       - coverage: `stage2_validates_defs_only_module_with_safe_rhs_and_nil_result`
       - coverage: `stage2_validates_defs_only_module_with_scalar_rhs_via_lowering`
+      - coverage: `stage2_validates_defs_only_module_with_data_literal_rhs`
+      - coverage: `stage2_validates_defs_only_module_with_collection_composition_rhs`
+      - coverage: `stage2_validates_defs_only_module_with_if_selected_collection_rhs`
+      - coverage: `stage2_validates_defs_only_module_with_if_selected_collection_rhs_via_prim_condition`
+      - coverage: `stage2_validates_defs_only_module_with_if_selected_collection_rhs_via_def_condition_aliases`
+      - host gate behavior coverage for defs-only collection composition modules: `eval_stage2_gate_validates_defs_only_collection_composition_module` in both native and WASI CLI suites
+      - host gate behavior coverage for defs-only constant-`if` collection modules: `eval_stage2_gate_validates_defs_only_if_selected_collection_module` in both native and WASI CLI suites
+      - host gate behavior coverage for defs-only computed constant-`if` collection modules: `eval_stage2_gate_validates_defs_only_if_selected_collection_module_via_prim_condition` in both native and WASI CLI suites
+      - host gate behavior coverage for defs-only def-bound condition alias collection modules: `eval_stage2_gate_validates_defs_only_if_selected_collection_module_via_def_condition_aliases` in both native and WASI CLI suites
     - remaining scope: widen Stage-2 coverage beyond scalar pure subset to full module/test surface
     - [x] Cutover plan:
       - [x] Rust produces a self-host toolchain artifact:
@@ -357,14 +459,71 @@ Constraints:
     - `core/gfx/frame::{empty,render-pass,compute-pass,add-render-pass,add-compute-pass,submit}`
     - `core/gfx/scene::{identity-transform,empty,node,add-node,set-roots}`
     - coverage: `crates/gc_prelude/tests/prelude_gfx_builders.rs`
-  - [ ] 2D renderer (shapes, sprites, text) + batching
-  - [ ] 3D renderer (PBR baseline), cameras, lights, shadows (phased)
-  - [ ] UI toolkit built on 2D primitives (widgets as contracts)
-  - [ ] end-to-end demos: 2D UI app, 3D scene, and a hybrid “web app” view
+  - [x] schema-aligned graphics data/builders expanded in GenesisCode prelude modules (`prelude/modules/10_gfx.gc`):
+    - descriptor constructors: `core/gfx/desc::{buffer,texture,sampler,shader-module,render-pipeline,compute-pipeline}`
+    - command/pass constructors: `core/gfx/frame::{cmd-set-*,cmd-draw,cmd-draw-indexed,cmd-dispatch,render-pass-empty,compute-pass-empty,render-pass-add-*,compute-pass-add-command}`
+    - scene/math helpers for 2D+3D authoring: `core/gfx/math::*`, `core/gfx/scene::{transform,mesh-ref,material-pbr,camera-*,light-*,node-basic,add-root,add-child}`
+    - UI data primitives in GenesisCode: `core/gfx/ui::{node,style,text,button,container,vertical,horizontal}`
+    - coverage: `prelude_gfx_descriptor_and_command_builders_match_schema_shapes` and `prelude_gfx_2d_3d_and_ui_builders_construct_expected_shapes`
+  - [x] deterministic runtime frame planners expanded in GenesisCode (`prelude/modules/10_gfx.gc`):
+    - scene planners: `core/gfx/runtime::{plan-render-pass,plan-render-pass-3d,plan-frame-2d,plan-frame-3d}`
+    - UI planning: `core/gfx/runtime::{ui-node-count,plan-ui-pass,plan-frame-2d+ui}` with total recursion guards for non-map children
+    - attachment builders: `core/gfx/frame::{color-attachment,depth-attachment}`
+    - coverage: `prelude_gfx_runtime_plan_frame_2d_is_deterministic_and_renderable_aware`, `prelude_gfx_runtime_plan_frame_2d_ui_adds_ui_pass_with_node_count_draws`, `prelude_gfx_runtime_plan_frame_3d_uses_attachments_and_renderable_filtering`
+  - [x] 2D renderer baseline (shapes, sprites, text) + deterministic batching in GenesisCode:
+    - 2D scene/draw model in `prelude/modules/10_gfx.gc`:
+      - `core/gfx/2d::{scene-empty,scene-add-draw,draw-sprite,draw-rect,draw-text}`
+    - deterministic batching + planning:
+      - `core/gfx/runtime::{2d-batches,plan-2d-pass-batched,plan-frame-2d-batched,plan-frame-2d-scene-batched}`
+      - batching key is structural (`:kind/:texture/:font/:blend`) and emits one draw command per batch with `:instance-count = batch-size`
+    - coverage: `prelude_gfx_runtime_plan_frame_2d_batched_groups_sprite_text_rect_draws`
+  - [x] 3D renderer baseline (PBR), cameras, lights, and deterministic shadow passes in GenesisCode:
+    - scene analysis helpers in `prelude/modules/10_gfx.gc`:
+      - `core/gfx/runtime::{first-camera,count-lights,count-shadow-lights,light-casts-shadow?}`
+    - deterministic 3D planning:
+      - `core/gfx/runtime::plan-frame-3d-pbr` emits:
+        - one main pass (color+depth attachments)
+        - depth-only shadow passes (one per shadow-casting light) with deterministic labels/depth-view ids (`<prefix><index>`)
+        - stable frame metadata under `:meta` (`:camera`, `:light-count`, `:shadow-light-count`)
+    - coverage: `prelude_gfx_runtime_plan_frame_3d_pbr_emits_shadow_passes_and_metadata`
+  - [x] UI toolkit baseline built on 2D primitives (widgets as contracts):
+    - pure UI runtime projection in `prelude/modules/10_gfx.gc`:
+      - `core/gfx/ui/runtime::{to-2d-draws,to-2d-scene,plan-frame-batched}`
+      - deterministic node/layout helpers: `map-get-or-nil`, `node-size-*`, `node-axis`, `node-gap`, `node-bg`, `node-font`, `node-text-color`, `node-px-size`
+      - deterministic recursive renderers: `render-node-to-draws`, `render-children-{vertical,horizontal}-loop`
+    - widget behavior:
+      - `text` and `button` nodes emit text draw primitives
+      - style paint `:bg` emits 2D rect draw primitives
+      - container axis/gap semantics map to deterministic child placement
+    - integration:
+      - output is `:gfx/2d-scene` consumed by `core/gfx/runtime::plan-frame-2d-scene-batched`
+    - coverage: `prelude_gfx_ui_runtime_projects_to_2d_and_plans_batched_frame`
+  - [x] end-to-end demos: 2D UI app, 3D scene, and a hybrid “web app” view
+    - demo programs (all `.gc`) under `examples/gfx_demos/`:
+      - `ui_app.gc` (UI -> 2D draw projection + batched frame planning)
+      - `scene3d.gc` (3D PBR baseline with camera/light/shadow metadata)
+      - `hybrid_web.gc` (3D frame + UI overlay pass composition)
+    - deterministic-output coverage:
+      - `crates/gc_prelude/tests/gfx_demos_examples.rs`
+    - CLI execution coverage:
+      - `crates/gc_cli/tests/cli_gfx_demos.rs`
 - [ ] Add obligations for graphics correctness + performance:
-  - golden image tests (headless browser, deterministic input logs)
-  - frame time budgets (bench evidence artifacts)
-  - API stability checks for the public Level 2 surface
+  - [x] deterministic golden graphics checks are now enforced via `core/obligation::gfx-golden-images`
+    - configured from `package.toml [gfx].golden_tests`
+    - validates frame/scene outputs against golden hashes and records evidence artifact `genesis/gfx-golden-images-v0.2`
+  - [x] frame budgets are now enforced via `core/obligation::gfx-frame-budgets`
+    - configured from `package.toml [gfx].frame_budget_tests` plus `max_*` limits
+    - emits per-case bench evidence artifact `genesis/gfx-frame-budgets-v0.2` (passes/commands/bytes/time)
+  - [x] API stability checks are now enforced via `core/obligation::gfx-api-stability`
+    - checks exported gfx surface (`core/gfx/*` or configured `api_exports`) and optional `api_surface_hash`
+    - emits surface evidence artifact `genesis/gfx-api-stability-v0.2`
+  - [x] add deterministic native headless pixel-golden backend so golden obligations can additionally gate image-level parity
+    - `gc_gfx::render_frame_graph_headless` now produces deterministic RGBA + PNG bytes from frame-graph terms
+    - `core/obligation::gfx-golden-images` supports optional pixel gating fields:
+      - `:expect-png-h`
+      - `:pixel-width` / `:pixel-height`
+    - coverage includes passing and failing pixel-golden fixtures in CLI obligation tests
+  - [ ] add browser-backend pixel golden parity (headless web target) and cross-validate native vs browser golden hashes under deterministic input logs
 
 ### P4.2 Level 3: GenesisCode GUI Editor (First “Big” Self-Host App)
 
@@ -387,9 +546,37 @@ and plugin/agent-friendly from day 1.
   - GenesisGraph-native UX: commit/log/blame/why/evidence views
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
 - [ ] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
-  - fast, incremental lint for CoreForm and higher-level “Level 1 Foundation” conventions
-  - includes deterministic autofix patches (semantic patch artifacts) where safe
-  - lints are obligation-producible evidence artifacts (so they can gate refs/publish)
+  - [x] ship a baseline GenesisCode linter runtime in Prelude (`core/editor/lint::*`) with module-level checks for:
+    - missing `::meta`
+    - malformed `::meta`
+    - `:exports` membership against defs
+    - missing `:types` entries (warning)
+  - [x] add package-gated lint obligation:
+    - `core/obligation::lint` implemented in `gc_obligations`
+    - evidence artifact kind: `genesis/lints-v0.2`
+    - success/failure fixtures and CLI acceptance tests (`pkg_lint`, `pkg_fail_lint`)
+  - [x] fast, incremental lint for CoreForm module diagnostics:
+    - new API: `core/editor/lint::lint-module-delta` in `prelude/modules/20_editor.gc`
+    - diagnostics now carry `:sym` for symbol-scoped filtering where applicable
+    - incremental behavior:
+      - `changed-syms` includes `::meta` => return full diagnostics
+      - global diagnostics (missing/malformed meta, missing exports/types-map, export-not-symbol) are always retained
+      - symbol-scoped diagnostics (export-missing-def, missing-type) are filtered to changed symbols
+    - coverage: `crates/gc_prelude/tests/prelude_editor_lint.rs` (`editor_lint_delta_*`)
+  - [ ] extend incremental lint to higher-level “Level 1 Foundation” conventions
+  - [x] includes deterministic autofix patches (semantic patch artifacts) for safe lint classes:
+    - `core/obligation::lint` now emits deterministic `.gcpatch` artifacts (`:replace-node` on `::meta`) when fixes are safe:
+      - add missing `:types` map
+      - add missing export type entries as `?`
+    - lint evidence report (`genesis/lints-v0.2`) now includes:
+      - per-module `:autofix-patch`
+      - global `:autofix-patches` with patch hashes + reason codes
+    - coverage:
+      - `crates/gc_obligations/src/lib.rs` unit tests `lint_autofix_*`
+      - CLI e2e `crates/gc_cli/tests/cli_smoke.rs::test_pkg_lint_autofix_emits_patch_artifact`
+  - [ ] editor integration path:
+    - expose lints through editor actions/panels
+    - wire lint outputs into patch/evidence UX
 - [ ] Plugin + agent architecture (GenesisCode-only):
   - plugin API as contracts; sandboxed capabilities per plugin
   - agent actions as semantic patches + obligation-gated acceptance pipeline

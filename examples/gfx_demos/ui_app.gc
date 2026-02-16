@@ -1,0 +1,30 @@
+(def root-style
+  ((((core/gfx/ui::style {:axis "vertical"}) {:w 800000 :h 600000}) {:gap 12000})
+    {:bg [10000 10000 10000 1000000]}))
+
+(def text-style
+  ((((core/gfx/ui::style {:axis "vertical"}) {:w 760000 :h 40000}) {:gap 0}) {}))
+
+(def button-style
+  ((((core/gfx/ui::style {:axis "horizontal"}) {:w 760000 :h 56000}) {:gap 0})
+    {:bg [300000 350000 1000000 1000000]}))
+
+(def title (((core/gfx/ui::text "title") "GenesisCode UI Demo") text-style))
+(def button ((((core/gfx/ui::button "run") "Run") button-style) "action/run"))
+
+(def children0 [])
+(def children1 ((core/vec::push children0) title))
+(def children2 ((core/vec::push children1) button))
+(def root (((core/gfx/ui::container "root") root-style) children2))
+
+(def draws (((core/gfx/ui/runtime::to-2d-draws root) 800000) 600000))
+(def batches (core/gfx/runtime::2d-batches draws))
+(def frame (((((core/gfx/ui/runtime::plan-frame-batched root) 800000) 600000) "ui-main") 901))
+
+{
+  :demo "gfx/ui-app"
+  :draw-count (core/vec::len draws)
+  :batch-count (core/vec::len batches)
+  :frame-hash (core/gfx/runtime::hash-frame-graph frame)
+  :frame frame
+}

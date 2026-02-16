@@ -1,0 +1,545 @@
+(def core/error::make
+  (fn (code)
+    (fn (msg)
+      (fn (ctx)
+        (core/protocol::error
+          {
+            :error/code code
+            :error/context ctx
+            :error/message msg})))))
+
+(def core/error::make2 (fn (code) (fn (msg) (((core/error::make code) msg) {}))))
+
+(def core/error::is? core/protocol::is-error)
+
+(def core/error::payload core/protocol::unerror)
+
+(def core/eq? (fn (a) (fn (b) (prim core/eq? a b))))
+
+(def core/data::tag (fn (t) (prim data/tag t)))
+
+(def core/int::add (fn (a) (fn (b) (prim int/add a b))))
+
+(def core/int::sub (fn (a) (fn (b) (prim int/sub a b))))
+
+(def core/int::mul (fn (a) (fn (b) (prim int/mul a b))))
+
+(def core/int::eq? (fn (a) (fn (b) (prim int/eq? a b))))
+
+(def core/int::lt? (fn (a) (fn (b) (prim int/lt? a b))))
+
+(def core/int::to-str (fn (i) (prim int/to-str i)))
+
+(def core/pair::cons (fn (a) (fn (d) (prim pair/cons a d))))
+
+(def core/pair::car (fn (p) (prim pair/car p)))
+
+(def core/pair::cdr (fn (p) (prim pair/cdr p)))
+
+(def core/pair::as-proper-list (fn (p) (prim pair/as-proper-list p)))
+
+(def core/list::is-nil? (fn (x) (prim list/is-nil? x)))
+
+(def core/list::cons core/pair::cons)
+
+(def core/list::car core/pair::car)
+
+(def core/list::cdr core/pair::cdr)
+
+(def core/list::is-pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+
+(def core/list::type-error (fn (msg) ((core/error::make2 "core/type-error") msg)))
+
+(def core/list::len
+  (fn (xs)
+    (let ((tag (core/data::tag xs)))
+      (if ((core/sym::eq? tag) (quote :nil))
+        0
+        (if ((core/sym::eq? tag) (quote :pair))
+          ((core/int::add 1) (core/list::len (core/list::cdr xs)))
+          (core/list::type-error "core/list::len expects a proper list"))))))
+
+(def core/list::reverse (fn (xs) ((core/list::reverse2 xs) nil)))
+
+(def core/list::reverse2
+  (fn (xs)
+    (fn (acc)
+      (let ((tag (core/data::tag xs)))
+        (if ((core/sym::eq? tag) (quote :nil))
+          acc
+          (if ((core/sym::eq? tag) (quote :pair))
+            ((core/list::reverse2 (core/list::cdr xs)) ((core/list::cons (core/list::car xs)) acc))
+            (core/list::type-error "core/list::reverse expects a proper list")))))))
+
+(def core/list::append
+  (fn (a)
+    (fn (b)
+      (let ((ra (core/list::reverse a))) (if (core/error::is? ra) ra ((core/list::append2 ra) b))))))
+
+(def core/list::append2
+  (fn (ra)
+    (fn (b)
+      (let ((tag (core/data::tag ra)))
+        (if ((core/sym::eq? tag) (quote :nil))
+          b
+          (if ((core/sym::eq? tag) (quote :pair))
+            ((core/list::append2 (core/list::cdr ra)) ((core/list::cons (core/list::car ra)) b))
+            (core/list::type-error "core/list::append expects proper lists")))))))
+
+(def core/list::map
+  (fn (xs)
+    (fn (f)
+      (let ((r (((core/list::map-rev xs) f) nil)))
+        (if (core/error::is? r) r (core/list::reverse r))))))
+
+(def core/list::map-rev
+  (fn (xs)
+    (fn (f)
+      (fn (acc)
+        (let ((tag (core/data::tag xs)))
+          (if ((core/sym::eq? tag) (quote :nil))
+            acc
+            (if ((core/sym::eq? tag) (quote :pair))
+              (let ((y (f (core/list::car xs))))
+                (if (core/error::is? y)
+                  y
+                  (((core/list::map-rev (core/list::cdr xs)) f) ((core/list::cons y) acc))))
+              (core/list::type-error "core/list::map expects a proper list"))))))))
+
+(def core/list::filter
+  (fn (xs)
+    (fn (pred)
+      (let ((r (((core/list::filter-rev xs) pred) nil)))
+        (if (core/error::is? r) r (core/list::reverse r))))))
+
+(def core/list::filter-rev
+  (fn (xs)
+    (fn (pred)
+      (fn (acc)
+        (let ((tag (core/data::tag xs)))
+          (if ((core/sym::eq? tag) (quote :nil))
+            acc
+            (if ((core/sym::eq? tag) (quote :pair))
+              (let ((x (core/list::car xs)))
+                (let ((p (pred x)))
+                  (if (core/error::is? p)
+                    p
+                    (let ((ptag (core/data::tag p)))
+                      (if ((core/sym::eq? ptag) (quote :bool))
+                        (if p
+                          (((core/list::filter-rev (core/list::cdr xs)) pred)
+                            ((core/list::cons x) acc))
+                          (((core/list::filter-rev (core/list::cdr xs)) pred) acc))
+                        (core/list::type-error "core/list::filter predicate must return bool"))))))
+              (core/list::type-error "core/list::filter expects a proper list"))))))))
+
+(def core/list::foldl (fn (xs) (fn (init) (fn (f) (((core/list::foldl2 xs) init) f)))))
+
+(def core/list::foldl2
+  (fn (xs)
+    (fn (acc)
+      (fn (f)
+        (let ((tag (core/data::tag xs)))
+          (if ((core/sym::eq? tag) (quote :nil))
+            acc
+            (if ((core/sym::eq? tag) (quote :pair))
+              (let ((acc2 ((f acc) (core/list::car xs))))
+                (if (core/error::is? acc2) acc2 (((core/list::foldl2 (core/list::cdr xs)) acc2) f)))
+              (core/list::type-error "core/list::foldl expects a proper list"))))))))
+
+(def core/map::get (fn (m) (fn (k) (prim map/get m k))))
+
+(def core/map::put (fn (m) (fn (k) (fn (v) (prim map/put m k v)))))
+
+(def core/map::merge (fn (a) (fn (b) (prim map/merge a b))))
+
+(def core/map::len (fn (m) (prim map/len m)))
+
+(def core/map::entries (fn (m) (prim map/entries m)))
+
+(def core/map::from-entries (fn (es) (prim map/from-entries es)))
+
+(def core/vec::get (fn (v) (fn (i) (prim vec/get v i))))
+
+(def core/vec::push (fn (v) (fn (x) (prim vec/push v x))))
+
+(def core/vec::len (fn (v) (prim vec/len v)))
+
+(def core/vec::set (fn (v) (fn (i) (fn (x) (prim vec/set v i x)))))
+
+(def core/sym::eq? (fn (a) (fn (b) (prim sym/eq? a b))))
+
+(def core/sym::to-str (fn (s) (prim sym/to-str s)))
+
+(def core/sym::from-str (fn (s) (prim sym/from-str s)))
+
+(def core/str::concat (fn (a) (fn (b) (prim str/concat a b))))
+
+(def core/str::len (fn (s) (prim str/len s)))
+
+(def core/str::to-utf8 (fn (s) (prim str/to-bytes-utf8 s)))
+
+(def core/str::from-utf8 (fn (b) (prim bytes/to-str-utf8 b)))
+
+(def core/str::repeat (fn (s) (fn (n) (prim str/repeat s n))))
+
+(def core/str::join (fn (v) (fn (sep) (prim str/join v sep))))
+
+(def core/bytes::len (fn (b) (prim bytes/len b)))
+
+(def core/bytes::concat (fn (a) (fn (b) (prim bytes/concat a b))))
+
+(def core/bytes::join (fn (parts) (prim bytes/join parts)))
+
+(def core/bytes::get (fn (b) (fn (i) (prim bytes/get b i))))
+
+(def core/bytes::slice (fn (b) (fn (start) (fn (len) (prim bytes/slice b start len)))))
+
+(def core/bytes::to-hex (fn (b) (prim bytes/to-hex b)))
+
+(def core/bytes::from-hex (fn (s) (prim bytes/from-hex s)))
+
+(def core/crypto::blake3 (fn (b) (prim crypto/blake3 b)))
+
+(def core/utf8::encode-codepoint (fn (cp) (prim utf8/encode-codepoint cp)))
+
+(def core/coreform::escape-str (fn (s) (prim coreform/escape-str s)))
+
+(def core/coreform::escape-bytes (fn (b) (prim coreform/escape-bytes b)))
+
+(def core/test::case (fn (body) (fn (expect) {:body body :expect expect})))
+
+(def core/test::case0 (fn (body) {:body body}))
+
+(def core/effect::map (fn (p) (fn (f) ((core/effect::bind p) (fn (x) (core/effect::pure (f x)))))))
+
+(def core/effect::then (fn (p) (fn (q) ((core/effect::bind p) (fn (_) q)))))
+
+(def core/effect::catch
+  (fn (p)
+    (fn (handler)
+      ((core/effect::bind p) (fn (x) (if (core/error::is? x) (handler x) (core/effect::pure x)))))))
+
+(def core/effect::catch-payload
+  (fn (p) (fn (handler) ((core/effect::catch p) (fn (err) (handler (core/error::payload err)))))))
+
+(def core/contract::call
+  (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))
+
+(def core/store::put
+  (fn (artifact)
+    (((core/effect::perform (quote core/store::put)) {:artifact artifact})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/store::get
+  (fn (hash)
+    (((core/effect::perform (quote core/store::get)) {:hash hash})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/store::has
+  (fn (hash)
+    (((core/effect::perform (quote core/store::has)) {:hash hash})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/refs::get
+  (fn (name)
+    (((core/effect::perform (quote core/refs::get)) {:name name})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/refs::list
+  (fn (prefix)
+    (((core/effect::perform (quote core/refs::list)) {:prefix prefix})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/refs::set
+  (fn (name)
+    (fn (hash)
+      (fn (policy)
+        (
+          ((core/effect::perform (quote core/refs::set))
+            {
+              :hash hash
+              :name name
+              :policy policy})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/refs::set-cas
+  (fn (name)
+    (fn (hash)
+      (fn (policy)
+        (fn (expected-old)
+          (
+            ((core/effect::perform (quote core/refs::set))
+              {
+                :expected-old expected-old
+                :hash hash
+                :name name
+                :policy policy})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/refs::delete
+  (fn (name)
+    (fn (policy)
+      (((core/effect::perform (quote core/refs::delete)) {:name name :policy policy})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/refs::delete-cas
+  (fn (name)
+    (fn (policy)
+      (fn (expected-old)
+        (
+          ((core/effect::perform (quote core/refs::delete))
+            {
+              :expected-old expected-old
+              :name name
+              :policy policy})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/vcs::log
+  (fn (root)
+    (fn (max)
+      (((core/effect::perform (quote core/vcs::log)) {:max max :root root})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/vcs::diff
+  (fn (base)
+    (fn (to)
+      (fn (out)
+        (fn (store)
+          (
+            ((core/effect::perform (quote core/vcs::diff))
+              {
+                :base base
+                :out out
+                :store store
+                :to to})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/vcs::apply
+  (fn (base)
+    (fn (patch)
+      (fn (out)
+        (fn (store)
+          (
+            ((core/effect::perform (quote core/vcs::apply))
+              {
+                :base base
+                :out out
+                :patch patch
+                :store store})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/vcs::merge3
+  (fn (base)
+    (fn (left)
+      (fn (right)
+        (fn (out)
+          (fn (store)
+            (
+              ((core/effect::perform (quote core/vcs::merge3))
+                {
+                  :base base
+                  :left left
+                  :out out
+                  :right right
+                  :store store})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/vcs::resolve-conflict
+  (fn (conflict)
+    (fn (out)
+      (fn (store)
+        (
+          ((core/effect::perform (quote core/vcs::resolve-conflict))
+            {
+              :conflict conflict
+              :out out
+              :store store})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/pkg::init
+  (fn (lock)
+    (fn (workspace)
+      (fn (policy)
+        (fn (registry-default)
+          (
+            ((core/effect::perform (quote core/pkg::init))
+              {
+                :lock lock
+                :policy policy
+                :registry-default registry-default
+                :workspace workspace})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/pkg::add
+  (fn (lock)
+    (fn (name)
+      (fn (selector)
+        (fn (update-policy)
+          (fn (registry)
+            (
+              ((core/effect::perform (quote core/pkg::add))
+                {
+                  :lock lock
+                  :name name
+                  :registry registry
+                  :selector selector
+                  :update-policy update-policy})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/pkg::list
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::list)) {:lock lock})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::info
+  (fn (lock)
+    (fn (name)
+      (((core/effect::perform (quote core/pkg::info)) {:lock lock :name name})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/pkg::lock
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::lock)) {:lock lock})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::update
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::update)) {:lock lock})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::install
+  (fn (lock)
+    (fn (frozen)
+      (fn (strict)
+        (
+          ((core/effect::perform (quote core/pkg::install))
+            {
+              :frozen frozen
+              :lock lock
+              :strict strict})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/pkg::verify
+  (fn (lock)
+    (fn (strict)
+      (((core/effect::perform (quote core/pkg::verify)) {:lock lock :strict strict})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/pkg::snapshot
+  (fn (pkg-path)
+    (((core/effect::perform (quote core/pkg::snapshot)) {:pkg pkg-path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/gpk::export
+  (fn (root)
+    (fn (out)
+      (fn (mode)
+        (fn (depth)
+          (fn (refs)
+            (
+              ((core/effect::perform (quote core/gpk::export))
+                {
+                  :depth depth
+                  :mode mode
+                  :out out
+                  :refs refs
+                  :root root})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/gpk::import
+  (fn (in)
+    (((core/effect::perform (quote core/gpk::import)) {:in in}) (fn (resp) (core/effect::pure resp)))))
+
+(def core/sync::pull
+  (fn (remote)
+    (fn (refs)
+      (fn (roots)
+        (fn (depth)
+          (fn (force)
+            (fn (set-refs)
+              (
+                ((core/effect::perform (quote core/sync::pull))
+                  {
+                    :depth depth
+                    :force force
+                    :refs refs
+                    :remote remote
+                    :roots roots
+                    :set-refs set-refs})
+                (fn (resp) (core/effect::pure resp))))))))))
+
+(def core/sync::push
+  (fn (remote)
+    (fn (refs)
+      (fn (roots)
+        (fn (depth)
+          (
+            ((core/effect::perform (quote core/sync::push))
+              {
+                :depth depth
+                :refs refs
+                :remote remote
+                :roots roots})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/gc::plan
+  (fn (lock)
+    (fn (pins)
+      (fn (depth)
+        (fn (include-lock)
+          (fn (include-refs)
+            (
+              ((core/effect::perform (quote core/gc::plan))
+                {
+                  :depth depth
+                  :include-lock include-lock
+                  :include-refs include-refs
+                  :lock lock
+                  :pins pins})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/gc::run
+  (fn (lock)
+    (fn (pins)
+      (fn (depth)
+        (fn (include-lock)
+          (fn (include-refs)
+            (fn (quarantine)
+              (fn (quarantine-dir)
+                (
+                  ((core/effect::perform (quote core/gc::run))
+                    {
+                      :depth depth
+                      :include-lock include-lock
+                      :include-refs include-refs
+                      :lock lock
+                      :pins pins
+                      :quarantine quarantine
+                      :quarantine-dir quarantine-dir})
+                  (fn (resp) (core/effect::pure resp)))))))))))
+
+(def core/gc::pin
+  (fn (pins)
+    (fn (target)
+      (((core/effect::perform (quote core/gc::pin)) {:pins pins :target target})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/gc::unpin
+  (fn (pins)
+    (fn (target)
+      (((core/effect::perform (quote core/gc::unpin)) {:pins pins :target target})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/gc::purge
+  (fn (pins)
+    (fn (ttl-days)
+      (fn (quarantine-dir)
+        (
+          ((core/effect::perform (quote core/gc::purge))
+            {
+              :pins pins
+              :quarantine-dir quarantine-dir
+              :ttl-days ttl-days})
+          (fn (resp) (core/effect::pure resp)))))))
+

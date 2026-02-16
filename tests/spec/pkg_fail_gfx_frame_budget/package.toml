@@ -1,0 +1,13 @@
+dependencies = []
+name = "pkg_fail_gfx_frame_budget"
+obligations = ["core/obligation::gfx-frame-budgets"]
+version = "0.0.1"
+
+[gfx]
+frame_budget_tests = ["pkg/gfx-budget::benches"]
+max_draw_commands_per_frame = 2
+max_render_passes_per_frame = 1
+
+[[modules]]
+hash = "c3de7e4cb7f153ed26bfab2cfc1412d2ad05e5944ead7629558a0d5b9f03665a"
+path = "gfx.gc"

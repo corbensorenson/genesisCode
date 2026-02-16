@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -27,6 +28,42 @@ fn fixture(path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/spec")
         .join(path)
+}
+
+fn parse_hash_line(stdout: &[u8]) -> String {
+    let s = String::from_utf8_lossy(stdout);
+    s.lines()
+        .map(str::trim)
+        .find(|t| t.len() == 64 && t.chars().all(|c| c.is_ascii_hexdigit()))
+        .unwrap()
+        .to_string()
+}
+
+fn read_store_term(pkg_dir: &Path, hash: &str) -> Term {
+    let p = pkg_dir.join(".genesis").join("store").join(hash);
+    let s = fs::read_to_string(p).unwrap();
+    parse_term(&s).unwrap()
+}
+
+fn acceptance_obligation_artifact(acc: &Term, name: &str) -> Option<String> {
+    let Term::Map(m) = acc else { return None };
+    let Term::Vector(obs) = m.get(&TermOrdKey(Term::symbol(":obligations")))? else {
+        return None;
+    };
+    for o in obs {
+        let Term::Map(om) = o else { continue };
+        let is_name = matches!(
+            om.get(&TermOrdKey(Term::symbol(":name"))),
+            Some(Term::Symbol(s)) if s == name
+        );
+        if !is_name {
+            continue;
+        }
+        if let Some(Term::Str(h)) = om.get(&TermOrdKey(Term::symbol(":artifact"))) {
+            return Some(h.clone());
+        }
+    }
+    None
 }
 
 #[test]
@@ -69,6 +106,91 @@ fn test_pkg_basic_obligations_succeed() {
         .assert()
         .success()
         .stdout(predicate::str::is_match("[0-9a-f]{64}\\s*").unwrap());
+}
+
+#[test]
+fn test_pkg_gfx_obligations_succeed() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_gfx_obligations");
+    let dst = td.path().join("pkg_gfx_obligations");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+
+    cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match("[0-9a-f]{64}\\s*").unwrap());
+}
+
+#[test]
+fn test_pkg_lint_obligation_succeeds() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_lint");
+    let dst = td.path().join("pkg_lint");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+
+    cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match("[0-9a-f]{64}\\s*").unwrap());
+}
+
+#[test]
+fn test_pkg_lint_autofix_emits_patch_artifact() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_lint_autofix");
+    let dst = td.path().join("pkg_lint_autofix");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let acceptance_h = parse_hash_line(&out);
+    let acc = read_store_term(&dst, &acceptance_h);
+    let lint_h = acceptance_obligation_artifact(&acc, "core/obligation::lint")
+        .expect("lint obligation must produce artifact");
+    let lint_report = read_store_term(&dst, &lint_h);
+
+    let Term::Map(rm) = lint_report else {
+        panic!("lint report must be a map")
+    };
+    let Term::Vector(autofixes) = rm
+        .get(&TermOrdKey(Term::symbol(":autofix-patches")))
+        .expect("lint report must include :autofix-patches")
+    else {
+        panic!(":autofix-patches must be vector");
+    };
+    assert!(!autofixes.is_empty(), "expected at least one autofix patch");
+    let Term::Map(first) = &autofixes[0] else {
+        panic!("autofix entry must be map")
+    };
+    let Term::Str(patch_h) = first
+        .get(&TermOrdKey(Term::symbol(":patch")))
+        .expect("autofix entry must include :patch")
+    else {
+        panic!(":patch must be string hash");
+    };
+
+    // Ensure patch artifact exists and has patch schema shape.
+    let patch_term = read_store_term(&dst, patch_h);
+    let Term::Map(pm) = patch_term else {
+        panic!("patch artifact must be map")
+    };
+    assert!(pm.contains_key(&TermOrdKey(Term::symbol(":ops"))));
 }
 
 #[test]

@@ -1,0 +1,11 @@
+dependencies = []
+name = "pkg_fail_gfx_pixel_golden"
+obligations = ["core/obligation::gfx-golden-images"]
+version = "0.0.1"
+
+[gfx]
+golden_tests = ["pkg/gfx-pixel::goldens"]
+
+[[modules]]
+hash = "d1fb7031efcbb4a35184855cbb0ede6017cc5f5b307ae219525edafbcf4fd1bd"
+path = "gfx.gc"

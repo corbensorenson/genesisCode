@@ -7,3 +7,4 @@ license.workspace = true
 [dependencies]
 blake3.workspace = true
 gc_coreform = { path = "../gc_coreform" }
+png = "0.17"

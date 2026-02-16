@@ -1,0 +1,12 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [core/gfx/example::stable]
+      :types {core/gfx/example::stable ?}}))
+
+(def core/gfx/example::stable
+  (fn (x)
+    x))
+
+core/gfx/example::stable

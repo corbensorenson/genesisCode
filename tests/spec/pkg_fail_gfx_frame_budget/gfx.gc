@@ -1,0 +1,28 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/gfx-budget::benches]
+      :types {pkg/gfx-budget::benches ?}}))
+
+(def pkg/gfx-budget::cmd
+  ((((core/gfx/frame::cmd-draw 3) 1) 0) 0))
+
+(def pkg/gfx-budget::pass-a
+  ((((core/gfx/frame::render-pass "main") []) nil) [pkg/gfx-budget::cmd pkg/gfx-budget::cmd]))
+
+(def pkg/gfx-budget::pass-b
+  ((((core/gfx/frame::render-pass "overlay") []) nil) [pkg/gfx-budget::cmd]))
+
+(def pkg/gfx-budget::frame
+  ((core/gfx/frame::add-render-pass
+    ((core/gfx/frame::add-render-pass (core/gfx/frame::empty)) pkg/gfx-budget::pass-a))
+    pkg/gfx-budget::pass-b))
+
+(def pkg/gfx-budget::benches
+  {
+    "frame"
+      {
+        :body (fn (_) pkg/gfx-budget::frame)}})
+
+pkg/gfx-budget::benches

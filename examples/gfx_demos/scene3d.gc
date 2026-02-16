@@ -1,0 +1,74 @@
+(def mat (((((core/gfx/scene::material-pbr [1000000 1000000 1000000 1000000]) nil) nil) nil) nil))
+
+(def mesh-node
+  (((((core/gfx/scene::node-basic "mesh")
+    core/gfx/scene::identity-transform)
+    (core/gfx/scene::mesh-ref "artifact:mesh/cube"))
+    mat)
+    []))
+
+(def camera (((core/gfx/scene::camera-perspective 60000) 100) 1000000))
+(def cam-node
+  (((((((core/gfx/scene::node "camera")
+    core/gfx/scene::identity-transform)
+    nil)
+    nil)
+    camera)
+    nil)
+    []))
+
+(def key-light0 ((core/gfx/scene::light-directional (((core/gfx/math::rgb 1000000) 950000) 900000)) 1200))
+(def key-light (((core/map::put key-light0) (quote :casts-shadow)) true))
+
+(def fill-light0 (((core/gfx/scene::light-point (((core/gfx/math::rgb 800000) 850000) 900000)) 900) 50000))
+(def fill-light (((core/map::put fill-light0) (quote :casts-shadow)) false))
+
+(def key-light-node
+  (((((((core/gfx/scene::node "key-light")
+    core/gfx/scene::identity-transform)
+    nil)
+    nil)
+    nil)
+    key-light)
+    []))
+
+(def fill-light-node
+  (((((((core/gfx/scene::node "fill-light")
+    core/gfx/scene::identity-transform)
+    nil)
+    nil)
+    nil)
+    fill-light)
+    []))
+
+(def scene0 (core/gfx/scene::empty "gfx-3d-demo"))
+(def scene1 ((core/gfx/scene::add-node scene0) mesh-node))
+(def scene2 ((core/gfx/scene::add-node scene1) cam-node))
+(def scene3 ((core/gfx/scene::add-node scene2) key-light-node))
+(def scene4 ((core/gfx/scene::add-node scene3) fill-light-node))
+
+(def color-att ((((core/gfx/frame::color-attachment "swapchain-view") [0 0 0 1000000]) "clear") "store"))
+(def color-atts ((core/vec::push []) color-att))
+(def depth-main (((((core/gfx/frame::depth-attachment "main-depth") 1000000) 0) "clear") "store"))
+
+(def frame
+  ((((((((core/gfx/runtime::plan-frame-3d-pbr scene4)
+    "main")
+    301)
+    color-atts)
+    depth-main)
+    "shadow-")
+    302)
+    "shadow-depth-"))
+
+(def passes ((core/map::get frame) (quote :render-passes)))
+(def meta ((core/map::get frame) (quote :meta)))
+
+{
+  :demo "gfx/scene3d"
+  :render-pass-count (core/vec::len passes)
+  :light-count ((core/map::get meta) (quote :light-count))
+  :shadow-light-count ((core/map::get meta) (quote :shadow-light-count))
+  :frame-hash (core/gfx/runtime::hash-frame-graph frame)
+  :frame frame
+}

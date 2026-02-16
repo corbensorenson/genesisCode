@@ -26,6 +26,7 @@ gc_effects = { path = "../gc_effects" }
 gc_pkg = { path = "../gc_pkg" }
 gc_types = { path = "../gc_types" }
 gc_opt = { path = "../gc_opt" }
+gc_gfx = { path = "../gc_gfx" }
 
 [dev-dependencies]
 tempfile = "3"

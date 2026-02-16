@@ -1,0 +1,11 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/fail-lint::missing]
+      :types {pkg/fail-lint::missing Int}
+    }))
+
+(def pkg/fail-lint::present 1)
+
+pkg/fail-lint::present

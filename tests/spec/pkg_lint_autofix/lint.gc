@@ -1,0 +1,10 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/lint-autofix::value]
+    }))
+
+(def pkg/lint-autofix::value 42)
+
+pkg/lint-autofix::value

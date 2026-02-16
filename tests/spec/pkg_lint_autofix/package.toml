@@ -1,0 +1,8 @@
+dependencies = []
+name = "pkg_lint_autofix"
+obligations = ["core/obligation::lint"]
+version = "0.0.1"
+
+[[modules]]
+hash = "4fad1118c60c5628443a7ab24bf6ced6d9415a7c51fd45be243960fca861c6ca"
+path = "lint.gc"

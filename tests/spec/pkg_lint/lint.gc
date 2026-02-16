@@ -1,0 +1,11 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/lint::value]
+      :types {pkg/lint::value Int}
+    }))
+
+(def pkg/lint::value 42)
+
+pkg/lint::value

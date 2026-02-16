@@ -1,0 +1,66 @@
+(def mat (((((core/gfx/scene::material-pbr [1000000 1000000 1000000 1000000]) nil) nil) nil) nil))
+(def mesh-node
+  (((((core/gfx/scene::node-basic "mesh")
+    core/gfx/scene::identity-transform)
+    (core/gfx/scene::mesh-ref "artifact:mesh/cube"))
+    mat)
+    []))
+(def camera (((core/gfx/scene::camera-perspective 60000) 100) 1000000))
+(def cam-node
+  (((((((core/gfx/scene::node "camera")
+    core/gfx/scene::identity-transform)
+    nil)
+    nil)
+    camera)
+    nil)
+    []))
+(def light0 ((core/gfx/scene::light-directional (((core/gfx/math::rgb 1000000) 950000) 900000)) 1200))
+(def light (((core/map::put light0) (quote :casts-shadow)) true))
+(def light-node
+  (((((((core/gfx/scene::node "key-light")
+    core/gfx/scene::identity-transform)
+    nil)
+    nil)
+    nil)
+    light)
+    []))
+(def scene0 (core/gfx/scene::empty "gfx-hybrid-demo"))
+(def scene1 ((core/gfx/scene::add-node scene0) mesh-node))
+(def scene2 ((core/gfx/scene::add-node scene1) cam-node))
+(def scene3 ((core/gfx/scene::add-node scene2) light-node))
+(def color-att ((((core/gfx/frame::color-attachment "swapchain-view") [0 0 0 1000000]) "clear") "store"))
+(def color-atts ((core/vec::push []) color-att))
+(def depth-main (((((core/gfx/frame::depth-attachment "main-depth") 1000000) 0) "clear") "store"))
+(def frame-3d
+  ((((((((core/gfx/runtime::plan-frame-3d-pbr scene3)
+    "main")
+    401)
+    color-atts)
+    depth-main)
+    "shadow-")
+    402)
+    "shadow-depth-"))
+
+(def root-style
+  ((((core/gfx/ui::style {:axis "vertical"}) {:w 800000 :h 600000}) {:gap 12000})
+    {:bg [0 0 0 300000]}))
+(def text-style ((((core/gfx/ui::style {:axis "vertical"}) {:w 760000 :h 40000}) {:gap 0}) {}))
+(def button-style
+  ((((core/gfx/ui::style {:axis "horizontal"}) {:w 760000 :h 56000}) {:gap 0})
+    {:bg [200000 250000 900000 1000000]}))
+(def title (((core/gfx/ui::text "title") "Hybrid View") text-style))
+(def button ((((core/gfx/ui::button "toggle") "Toggle") button-style) "action/toggle"))
+(def children0 [])
+(def children1 ((core/vec::push children0) title))
+(def children2 ((core/vec::push children1) button))
+(def root (((core/gfx/ui::container "overlay") root-style) children2))
+(def ui-frame (((((core/gfx/ui/runtime::plan-frame-batched root) 800000) 600000) "ui-overlay") 499))
+(def ui-pass ((core/vec::get ((core/map::get ui-frame) (quote :render-passes))) 0))
+(def frame-hybrid ((core/gfx/frame::add-render-pass frame-3d) ui-pass))
+
+{
+  :demo "gfx/hybrid-web"
+  :render-pass-count (core/vec::len ((core/map::get frame-hybrid) (quote :render-passes)))
+  :frame-hash (core/gfx/runtime::hash-frame-graph frame-hybrid)
+  :frame frame-hybrid
+}

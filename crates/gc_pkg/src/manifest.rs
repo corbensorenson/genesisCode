@@ -42,6 +42,9 @@ pub struct PackageManifest {
 
     #[serde(default)]
     pub property: PropertyConfig,
+
+    #[serde(default)]
+    pub gfx: GfxConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -89,6 +92,42 @@ pub struct Budgets {
 pub struct PropertyConfig {
     /// Default number of cases per property test, if the test entry does not specify `:cases`.
     pub cases_per_test: Option<u64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct GfxConfig {
+    /// Suite symbols containing golden frame/scene checks.
+    ///
+    /// Each suite must evaluate to a map of test-name -> test-entry where test-entry is:
+    /// `{ :body <callable> :kind :frame-graph|:scene :expect-h "<hex32>" }`
+    #[serde(default)]
+    pub golden_tests: Vec<String>,
+
+    /// Suite symbols containing frame budget checks.
+    ///
+    /// Each suite evaluates to a map of test-name -> test-entry where test-entry is either
+    /// a callable body or `{ :body <callable> }`. The body must return a frame-graph term, or
+    /// `{ :frame <frame-graph> :frame-time-ms <int> }`.
+    #[serde(default)]
+    pub frame_budget_tests: Vec<String>,
+
+    /// Optional strict expected list of public gfx exports.
+    #[serde(default)]
+    pub api_exports: Vec<String>,
+
+    /// Optional expected hash of the public gfx API surface.
+    ///
+    /// The surface hash is computed from exported symbols + canonical hashes of their defining
+    /// CoreForm expressions.
+    pub api_surface_hash: Option<String>,
+
+    /// Optional frame budget limits (applied per frame-budget test).
+    pub max_render_passes_per_frame: Option<u64>,
+    pub max_compute_passes_per_frame: Option<u64>,
+    pub max_draw_commands_per_frame: Option<u64>,
+    pub max_compute_commands_per_frame: Option<u64>,
+    pub max_frame_graph_bytes: Option<u64>,
+    pub max_frame_time_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

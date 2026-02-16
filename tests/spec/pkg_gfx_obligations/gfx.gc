@@ -1,0 +1,43 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [core/gfx/example::stable]
+      :types {core/gfx/example::stable ?}}))
+
+(def core/gfx/example::stable
+  (fn (x)
+    x))
+
+(def pkg/gfx::cmd
+  ((((core/gfx/frame::cmd-draw 3) 1) 0) 0))
+
+(def pkg/gfx::pass
+  ((((core/gfx/frame::render-pass "main") []) nil) [pkg/gfx::cmd]))
+
+(def pkg/gfx::frame
+  ((core/gfx/frame::add-render-pass (core/gfx/frame::empty)) pkg/gfx::pass))
+
+(def pkg/gfx::goldens
+  {
+    "frame-main"
+      {
+        :body (fn (_) pkg/gfx::frame)
+        :kind (quote :frame-graph)
+        :expect-h "1ab3d045a0f1a6231cdca46a649242e9cb087dba95cacf1909f3ea4fc248009e"
+        :expect-png-h "8d1b76f43c6fbb3d564044085c5505fe2d44bb06934625e7c1065a26d468a02d"
+        :pixel-width 64
+        :pixel-height 48}})
+
+(def pkg/gfx::benches
+  {
+    "frame-main"
+      {
+        :body
+          (fn (_)
+            {
+              :frame pkg/gfx::frame
+              :frame-time-ms 4
+            })}})
+
+core/gfx/example::stable

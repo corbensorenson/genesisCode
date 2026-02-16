@@ -1,0 +1,12 @@
+dependencies = []
+name = "pkg_fail_gfx_api"
+obligations = ["core/obligation::gfx-api-stability"]
+version = "0.0.1"
+
+[gfx]
+api_exports = ["core/gfx/example::stable"]
+api_surface_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[[modules]]
+hash = "3035a81b73793b3b73c76f4b7e3e9a37fdc43368e0586828f994aeb2b31e638b"
+path = "gfx.gc"

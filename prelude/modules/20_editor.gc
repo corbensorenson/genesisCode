@@ -1,0 +1,389 @@
+(def core/editor/clipboard::get (fn (_) ((core/caps::perform (quote editor/clipboard::get)) {})))
+
+(def core/editor/clipboard::set
+  (fn (mime)
+    (fn (data) ((core/caps::perform (quote editor/clipboard::set)) {:data data :mime mime}))))
+
+(def core/editor/dialog::open
+  (fn (title)
+    (fn (multi)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::open))
+            {
+              :filters filters
+              :multi multi
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/dialog::save
+  (fn (title)
+    (fn (default-name)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::save))
+            {
+              :default-name default-name
+              :filters filters
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/task::spawn
+  (fn (task-kind)
+    (fn (input)
+      (fn (budget-ms)
+        ((core/caps::perform (quote editor/task::spawn))
+          {
+            :budget-ms budget-ms
+            :input input
+            :task-kind task-kind})))))
+
+(def core/editor/task::poll
+  (fn (task-id) ((core/caps::perform (quote editor/task::poll)) {:task-id task-id})))
+
+(def core/editor/task::cancel
+  (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
+
+(def core/editor/watch::subscribe
+  (fn (root)
+    (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
+
+(def core/editor/watch::poll
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::poll)) {:watch-id watch-id})))
+
+(def core/editor/watch::unsubscribe
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::unsubscribe)) {:watch-id watch-id})))
+
+(def core/editor/lint::diag
+  (fn (level)
+    (fn (code)
+      (fn (path)
+        (fn (msg)
+          {
+            :code code
+            :level level
+            :msg msg
+            :path path
+            :sym nil})))))
+
+(def core/editor/lint::error
+  (fn (code) (fn (path) (fn (msg) ((((core/editor/lint::diag (quote :error)) code) path) msg)))))
+
+(def core/editor/lint::warn
+  (fn (code) (fn (path) (fn (msg) ((((core/editor/lint::diag (quote :warn)) code) path) msg)))))
+
+(def core/editor/lint::error-sym
+  (fn (code)
+    (fn (path)
+      (fn (sym)
+        (fn (msg)
+          (prim map/put
+            ((((core/editor/lint::diag (quote :error)) code) path) msg)
+            (quote :sym)
+            sym))))))
+
+(def core/editor/lint::warn-sym
+  (fn (code)
+    (fn (path)
+      (fn (sym)
+        (fn (msg)
+          (prim map/put ((((core/editor/lint::diag (quote :warn)) code) path) msg) (quote :sym) sym))))))
+
+(def core/editor/lint::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/editor/lint::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/editor/lint::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/editor/lint::pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+
+(def core/editor/lint::proper-list-items
+  (fn (x) (if (core/editor/lint::pair? x) (core/pair::as-proper-list x) [])))
+
+(def core/editor/lint::def-name-or-nil
+  (fn (form)
+    (if (core/editor/lint::pair? form)
+      (let ((items (core/pair::as-proper-list form)))
+        (if (core/editor/lint::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 3)
+            (let ((h ((core/vec::get items) 0)) (n ((core/vec::get items) 1)))
+              (if (core/editor/lint::sym? h)
+                (if ((core/sym::eq? h) (quote def)) (if (core/editor/lint::sym? n) n nil) nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def core/editor/lint::def-expr-or-nil
+  (fn (form)
+    (if (core/editor/lint::pair? form)
+      (let ((items (core/pair::as-proper-list form)))
+        (if (core/editor/lint::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 3) ((core/vec::get items) 2) nil)
+          nil))
+      nil)))
+
+(def core/editor/lint::contains-sym?
+  (fn (v) (fn (sym) (((core/editor/lint::contains-sym-loop v) sym) 0))))
+
+(def core/editor/lint::contains-sym-loop
+  (fn (v)
+    (fn (sym)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len v))
+          false
+          (let ((x ((core/vec::get v) i)))
+            (if (core/editor/lint::sym? x)
+              (if ((core/sym::eq? x) sym)
+                true
+                (((core/editor/lint::contains-sym-loop v) sym) ((core/int::add i) 1)))
+              (((core/editor/lint::contains-sym-loop v) sym) ((core/int::add i) 1)))))))))
+
+(def core/editor/lint::collect-def-names
+  (fn (forms) (((core/editor/lint::collect-def-names-loop forms) 0) [])))
+
+(def core/editor/lint::collect-def-names-loop
+  (fn (forms)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) (core/vec::len forms))
+          out
+          (let ((name (core/editor/lint::def-name-or-nil ((core/vec::get forms) i))))
+            (if (core/editor/lint::sym? name)
+              (((core/editor/lint::collect-def-names-loop forms) ((core/int::add i) 1))
+                ((core/vec::push out) name))
+              (((core/editor/lint::collect-def-names-loop forms) ((core/int::add i) 1)) out))))))))
+
+(def core/editor/lint::meta-state
+  (fn (forms)
+    (((core/editor/lint::meta-state-loop forms) 0)
+      {
+        :has-def false
+        :malformed false
+        :meta nil})))
+
+(def core/editor/lint::meta-state-loop
+  (fn (forms)
+    (fn (i)
+      (fn (state)
+        (if ((core/int::eq? i) (core/vec::len forms))
+          state
+          (let
+            ((form ((core/vec::get forms) i))
+              (name (core/editor/lint::def-name-or-nil ((core/vec::get forms) i))))
+            (if (core/editor/lint::sym? name)
+              (if ((core/sym::eq? name) (quote ::meta))
+                (let ((expr (core/editor/lint::def-expr-or-nil form)))
+                  (if (core/editor/lint::pair? expr)
+                    (let ((qitems (core/pair::as-proper-list expr)))
+                      (if (core/editor/lint::vec? qitems)
+                        (if ((core/int::eq? (core/vec::len qitems)) 2)
+                          (let ((qh ((core/vec::get qitems) 0)) (qv ((core/vec::get qitems) 1)))
+                            (if (core/editor/lint::sym? qh)
+                              (if ((core/sym::eq? qh) (quote quote))
+                                (if (core/editor/lint::map? qv)
+                                  (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                                    {
+                                      :has-def true
+                                      :malformed false
+                                      :meta qv})
+                                  (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                                    {
+                                      :has-def true
+                                      :malformed true
+                                      :meta nil}))
+                                (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                                  {
+                                    :has-def true
+                                    :malformed true
+                                    :meta nil}))
+                              (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                                {
+                                  :has-def true
+                                  :malformed true
+                                  :meta nil})))
+                          (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                            {
+                              :has-def true
+                              :malformed true
+                              :meta nil}))
+                        (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                          {
+                            :has-def true
+                            :malformed true
+                            :meta nil})))
+                    (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1))
+                      {
+                        :has-def true
+                        :malformed true
+                        :meta nil})))
+                (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1)) state))
+              (((core/editor/lint::meta-state-loop forms) ((core/int::add i) 1)) state))))))))
+
+(def core/editor/lint::lint-exports
+  (fn (path)
+    (fn (exports) (fn (defs) (((((core/editor/lint::lint-exports-loop path) exports) defs) 0) [])))))
+
+(def core/editor/lint::lint-exports-loop
+  (fn (path)
+    (fn (exports)
+      (fn (defs)
+        (fn (i)
+          (fn (diags)
+            (if ((core/int::eq? i) (core/vec::len exports))
+              diags
+              (let
+                ((x ((core/vec::get exports) i))
+                  (next
+                    ((((core/editor/lint::lint-exports-loop path) exports) defs)
+                      ((core/int::add i) 1))))
+                (if (core/editor/lint::sym? x)
+                  (if ((core/editor/lint::contains-sym? defs) x)
+                    (next diags)
+                    (next
+                      ((core/vec::push diags)
+                        ((((core/editor/lint::error-sym "editor/lint/export-missing-def") path) x)
+                          ((core/str::concat "export has no matching def: ") (core/sym::to-str x))))))
+                  (next
+                    ((core/vec::push diags)
+                      (((core/editor/lint::error "editor/lint/export-not-symbol") path)
+                        "meta :exports entries must be symbols"))))))))))))
+
+(def core/editor/lint::lint-types
+  (fn (path)
+    (fn (exports)
+      (fn (types-map) (((((core/editor/lint::lint-types-loop path) exports) types-map) 0) [])))))
+
+(def core/editor/lint::lint-types-loop
+  (fn (path)
+    (fn (exports)
+      (fn (types-map)
+        (fn (i)
+          (fn (diags)
+            (if ((core/int::eq? i) (core/vec::len exports))
+              diags
+              (let
+                ((x ((core/vec::get exports) i))
+                  (next
+                    ((((core/editor/lint::lint-types-loop path) exports) types-map)
+                      ((core/int::add i) 1))))
+                (if (core/editor/lint::sym? x)
+                  (let ((t ((core/map::get types-map) x)))
+                    (if ((core/sym::eq? (core/data::tag t)) (quote :nil))
+                      (next
+                        ((core/vec::push diags)
+                          ((((core/editor/lint::warn-sym "editor/lint/missing-type") path) x)
+                            ((core/str::concat "export missing :types entry: ") (core/sym::to-str x)))))
+                      (next diags)))
+                  (next diags))))))))))
+
+(def core/editor/lint::vec-append
+  (fn (a) (fn (b) ((((core/editor/lint::vec-append-loop a) b) 0) a))))
+
+(def core/editor/lint::vec-append-loop
+  (fn (a)
+    (fn (b)
+      (fn (i)
+        (fn (acc)
+          (if ((core/int::eq? i) (core/vec::len b))
+            acc
+            ((((core/editor/lint::vec-append-loop a) b) ((core/int::add i) 1))
+              ((core/vec::push acc) ((core/vec::get b) i)))))))))
+
+(def core/editor/lint::lint-module
+  (fn (path)
+    (fn (forms)
+      (let
+        ((diags []) (defs (core/editor/lint::collect-def-names forms))
+          (state (core/editor/lint::meta-state forms)))
+        (let
+          ((has-meta ((core/map::get state) (quote :has-def)))
+            (meta ((core/map::get state) (quote :meta)))
+            (malformed ((core/map::get state) (quote :malformed))))
+          (let
+            (
+              (d1
+                (if has-meta
+                  diags
+                  ((core/vec::push diags)
+                    (((core/editor/lint::error "editor/lint/missing-meta") path)
+                      "module is missing (def ::meta (quote {...}))"))))
+              (d2
+                (if malformed
+                  ((core/vec::push d1)
+                    (((core/editor/lint::error "editor/lint/malformed-meta") path)
+                      "::meta must be a quoted map datum"))
+                  d1)))
+            (if (core/editor/lint::map? meta)
+              (let
+                ((exports ((core/map::get meta) (quote :exports)))
+                  (types ((core/map::get meta) (quote :types))))
+                (if ((core/sym::eq? (core/data::tag exports)) (quote :vec))
+                  (let ((d3 (((core/editor/lint::lint-exports path) exports) defs)))
+                    (let ((d4 ((core/editor/lint::vec-append d2) d3)))
+                      (if (core/editor/lint::map? types)
+                        ((core/editor/lint::vec-append d4)
+                          (((core/editor/lint::lint-types path) exports) types))
+                        ((core/vec::push d4)
+                          (((core/editor/lint::warn "editor/lint/missing-types-map") path)
+                            "::meta should include :types map")))))
+                  ((core/vec::push d2)
+                    (((core/editor/lint::error "editor/lint/missing-exports") path)
+                      "::meta must include :exports vector"))))
+              d2)))))))
+
+(def core/editor/lint::global-code?
+  (fn (code)
+    (if (prim core/eq? code "editor/lint/missing-meta")
+      true
+      (if (prim core/eq? code "editor/lint/malformed-meta")
+        true
+        (if (prim core/eq? code "editor/lint/missing-exports")
+          true
+          (if (prim core/eq? code "editor/lint/missing-types-map")
+            true
+            (if (prim core/eq? code "editor/lint/export-not-symbol") true false)))))))
+
+(def core/editor/lint::diag-sym (fn (diag) ((core/map::get diag) (quote :sym))))
+
+(def core/editor/lint::diag-code (fn (diag) ((core/map::get diag) (quote :code))))
+
+(def core/editor/lint::diag-affected?
+  (fn (changed-syms)
+    (fn (diag)
+      (let ((code (core/editor/lint::diag-code diag)) (sym (core/editor/lint::diag-sym diag)))
+        (if (core/editor/lint::global-code? code)
+          true
+          (if (core/editor/lint::sym? sym)
+            ((core/editor/lint::contains-sym? changed-syms) sym)
+            false))))))
+
+(def core/editor/lint::filter-diags
+  (fn (changed-syms)
+    (fn (diags) ((((core/editor/lint::filter-diags-loop changed-syms) diags) 0) []))))
+
+(def core/editor/lint::filter-diags-loop
+  (fn (changed-syms)
+    (fn (diags)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len diags))
+            out
+            (let ((d ((core/vec::get diags) i)))
+              ((((core/editor/lint::filter-diags-loop changed-syms) diags) ((core/int::add i) 1))
+                (if ((core/editor/lint::diag-affected? changed-syms) d)
+                  ((core/vec::push out) d)
+                  out)))))))))
+
+(def core/editor/lint::lint-module-delta
+  (fn (path)
+    (fn (forms)
+      (fn (changed-syms)
+        (let ((all ((core/editor/lint::lint-module path) forms)))
+          (if (core/editor/lint::vec? changed-syms)
+            (if ((core/int::eq? (core/vec::len changed-syms)) 0)
+              []
+              (if ((core/editor/lint::contains-sym? changed-syms) (quote ::meta))
+                all
+                ((core/editor/lint::filter-diags changed-syms) all)))
+            all))))))

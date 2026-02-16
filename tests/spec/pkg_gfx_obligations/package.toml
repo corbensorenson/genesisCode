@@ -1,0 +1,21 @@
+dependencies = []
+name = "pkg_gfx_obligations"
+obligations = [
+    "core/obligation::gfx-golden-images",
+    "core/obligation::gfx-frame-budgets",
+    "core/obligation::gfx-api-stability",
+]
+version = "0.0.1"
+
+[gfx]
+api_exports = ["core/gfx/example::stable"]
+frame_budget_tests = ["pkg/gfx::benches"]
+golden_tests = ["pkg/gfx::goldens"]
+max_draw_commands_per_frame = 2
+max_frame_graph_bytes = 4096
+max_frame_time_ms = 16
+max_render_passes_per_frame = 2
+
+[[modules]]
+hash = "24b06971f6f882271b7e6817f25f611d9f62ceca02ba9f0597ca27f776d3aa87"
+path = "gfx.gc"
