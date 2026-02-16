@@ -87,3 +87,17 @@ Policies must constrain:
 - Editor capabilities are not kernel primitives.
 - Editor plugins receive least-privilege capability subsets.
 - Task worker payloads are treated as untrusted user input and must return protocol ERROR on invalid shapes.
+
+## Plugin/agent enforcement model (Prelude-level)
+
+- Plugin capability enforcement is deny-by-default in GenesisCode:
+  - `core/editor/plugin::caps-allowed?` evaluates `{:allow [...], :deny [...]}` policies.
+  - `core/editor/plugin::perform` only emits host effects when policy allows the op.
+  - denied plugin requests return deterministic sealed `editor/plugin/cap-denied` errors.
+- Agent actions are patch-first and obligation-gated:
+  - `core/editor/action::agent-propose-patch` wraps `core/vcs::diff`.
+  - `core/editor/action::agent-apply-patch-with-obligations` wraps
+    `core/vcs::apply` + `core/pkg::verify` and returns an acceptance report.
+- Agent session logs are first-class deterministic artifacts:
+  - `core/editor/agent::store-session-log` stores
+    `genesis/editor-agent-session-v0.2` artifacts through `core/store::put`.

@@ -22,6 +22,7 @@ gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_opt = { path = "../gc_opt" }
+gc_gfx = { path = "../gc_gfx" }
 
 [dev-dependencies]
 gc_effects = { path = "../gc_effects" }

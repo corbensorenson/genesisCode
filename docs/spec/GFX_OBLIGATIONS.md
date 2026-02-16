@@ -28,6 +28,7 @@ Hashing:
 Evidence artifact:
 - `:kind = "genesis/gfx-golden-images-v0.2"`
 - includes per-case expected hash, actual hash, and status.
+- includes native headless pixel/png hashes when pixel gating is configured.
 
 ## `core/obligation::gfx-frame-budgets`
 
@@ -74,7 +75,12 @@ Evidence artifact:
 - `:kind = "genesis/gfx-api-stability-v0.2"`
 - includes computed surface hash + surface descriptor.
 
-## Notes
+## Browser parity gate
 
-- These obligations are pure and deterministic.
-- Pixel-level headless-image equivalence is intentionally a follow-on backend phase; current v0.2 obligations gate deterministic scene/frame planning and API stability.
+- Browser-backend pixel parity is enforced in CI/headless web smoke:
+  - `scripts/wasm_web_smoke.mjs` computes deterministic frame-graph image hashes in:
+    - native host (`crates/gc_wasm/examples/native_gfx_headless_hashes.rs`)
+    - browser wasm backend (`gc_wasm::gfx_render_frame_graph_headless_hashes`)
+  - hashes are cross-validated (`gfx_pixel_h`, `gfx_png_h`) under deterministic inputs.
+- Package obligations remain pure/deterministic and continue to gate canonical frame/scene hash
+  correctness plus native headless pixel-golden checks.

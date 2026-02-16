@@ -62,7 +62,22 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :editor_vcs_why_panel_with_op
           (((core/editor/action::vcs-why-panel-with-op "snapshot-h") "pkg/mod::x") "pkg/mod::op")
         :editor_format_file_task (core/editor/action::format-file-task "a.gc")
+        :editor_parse_file_task (core/editor/action::parse-file-task "a.gc")
         :editor_lint_module_task ((core/editor/action::lint-module-task "a.gc") [pkg/a::x])
+        :editor_lint_module_task_from_sources
+          (((core/editor/action::lint-module-task-from-sources "a.gc")
+            "(def ::meta (quote {:exports [pkg/a::x] :types {pkg/a::x ?}})) (def pkg/a::x 1)")
+            "(def ::meta (quote {:exports [pkg/a::y] :types {pkg/a::y ?}})) (def pkg/a::y 2)")
+        :editor_plugin_perform_allowed
+          (((core/editor/plugin::perform {:allow [core/store::get] :deny []}) (quote core/store::get))
+            {:hash "abc"})
+        :editor_agent_store_session_log
+          (core/editor/agent::store-session-log (core/editor/agent::session-empty "agent-1"))
+        :editor_agent_propose_patch ((core/editor/action::agent-propose-patch "base-h") "to-h")
+        :editor_agent_apply_patch_with_obligations
+          ((((core/editor/action::agent-apply-patch-with-obligations "base-h") "patch-h")
+            "genesis.lock")
+            false)
         :editor_typecheck_pkg_task (core/editor/action::typecheck-pkg-task "package.toml")
         :editor_optimize_module_task ((core/editor/action::optimize-module-task "a.gc") "a.opt.gc")
         :editor_test_pkg_task ((core/editor/action::test-pkg-task "package.toml") "caps.toml")
@@ -452,6 +467,24 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         Some(&gc_coreform::Term::symbol("editor/task::fmt-coreform"))
     );
 
+    let editor_parse_file_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_parse_file_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_parse_file_task);
+    assert_eq!(req.op, "editor/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task-kind"
+        ))),
+        Some(&gc_coreform::Term::symbol("editor/task::parse-module"))
+    );
+
     let editor_lint_module_task = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
             ":editor_lint_module_task",
@@ -460,6 +493,79 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .clone();
     let req = get_req(editor_lint_module_task);
     assert_eq!(req.op, "editor/task::spawn");
+
+    let editor_lint_module_task_from_sources = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_lint_module_task_from_sources",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_lint_module_task_from_sources);
+    assert_eq!(req.op, "editor/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    let Some(gc_coreform::Term::Map(input)) = mm.get(&gc_coreform::TermOrdKey(
+        gc_coreform::Term::symbol(":input"),
+    )) else {
+        panic!("spawn input map expected");
+    };
+    let Some(gc_coreform::Term::Vector(changed)) = input.get(&gc_coreform::TermOrdKey(
+        gc_coreform::Term::symbol(":changed-syms"),
+    )) else {
+        panic!("changed-syms vector expected");
+    };
+    assert!(
+        changed
+            .iter()
+            .any(|t| matches!(t, gc_coreform::Term::Symbol(s) if s == "pkg/a::x"))
+    );
+    assert!(
+        changed
+            .iter()
+            .any(|t| matches!(t, gc_coreform::Term::Symbol(s) if s == "pkg/a::y"))
+    );
+    assert!(
+        changed
+            .iter()
+            .any(|t| matches!(t, gc_coreform::Term::Symbol(s) if s == "::meta"))
+    );
+
+    let editor_plugin_perform_allowed = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_plugin_perform_allowed",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_plugin_perform_allowed);
+    assert_eq!(req.op, "core/store::get");
+
+    let editor_agent_store_session_log = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_agent_store_session_log",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_agent_store_session_log);
+    assert_eq!(req.op, "core/store::put");
+
+    let editor_agent_propose_patch = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_agent_propose_patch",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_agent_propose_patch);
+    assert_eq!(req.op, "core/vcs::diff");
+
+    let editor_agent_apply_patch_with_obligations = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_agent_apply_patch_with_obligations",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_agent_apply_patch_with_obligations);
+    assert_eq!(req.op, "core/vcs::apply");
 
     let editor_typecheck_pkg_task = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

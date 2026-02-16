@@ -140,7 +140,7 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - `crates/gc_cli/tests/cli_fmt_engine.rs` asserts `fmt --engine selfhost` output matches Rust engine
     - `crates/gc_cli/tests/cli_eval_engine.rs` asserts `eval --engine selfhost` parity + parse error surfacing
     - `crates/gc_wasm/src/lib.rs` test `eval_coreform_module_selfhost_matches_rust_frontend_eval`
-- [ ] Implement compilation stages suitable for WASM-first execution:
+- [x] Implement compilation stages suitable for WASM-first execution:
   - [x] stage 1: CoreForm -> CoreForm transforms (optimized, validated)
     - `gc_opt::stage1_pipeline` now runs optimize + canonicalize + validation gate report
     - validation gate is `core/obligation::stage1-validation` (pure/hash-equivalence on pure programs)
@@ -414,9 +414,13 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - [x] parser perf: `bytes/join` primitive + `core/bytes::join` wrapper to avoid O(n^2) byte concatenation in self-host parsing
   - [x] re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
   - [x] kernel: tail-call optimize final closure applies in tail position (prevents stack overflows on tail recursion)
-  - [ ] After full self-host cutover (toolchain + compilation stages), archive bootstrap-only implementation artifacts:
-    - add `bootstrap_old/` and move any legacy build scripts/tooling (Python/Node) that are no longer required for the self-hosted workflow
-    - document what remains required for reproducible builds and why (WASM host bridges, etc.)
+  - [x] After full self-host cutover (toolchain + compilation stages), archive bootstrap-only implementation artifacts:
+    - created `bootstrap_old/` archive area and moved legacy convenience wrapper:
+      - `scripts/build_wasi.sh` -> `bootstrap_old/scripts/build_wasi.sh`
+    - active workflow no longer depends on archived wrapper:
+      - `scripts/wasi_smoke.sh` self-builds WASI artifact when no wasm path is provided
+    - documented required remaining bootstrap/host tooling and rationale:
+      - `docs/spec/BOOTSTRAP_OLD.md`
 
 ---
 
@@ -454,7 +458,7 @@ Constraints:
   - asset pipeline primitives (images, meshes, fonts) as GenesisGraph artifacts
   - UI foundation: layout (flex-like), vector graphics, text shaping, accessibility hooks
   - extension mechanism: plugins register render passes, components, and asset types (all via contracts)
-- [ ] Implement the Level 2 graphics stack in GenesisCode:
+- [x] Implement the Level 2 graphics stack in GenesisCode:
   - [x] low-level GPU/frame/scene builder layer is now available in GenesisCode prelude:
     - `core/gfx/frame::{empty,render-pass,compute-pass,add-render-pass,add-compute-pass,submit}`
     - `core/gfx/scene::{identity-transform,empty,node,add-node,set-roots}`
@@ -507,7 +511,7 @@ Constraints:
       - `crates/gc_prelude/tests/gfx_demos_examples.rs`
     - CLI execution coverage:
       - `crates/gc_cli/tests/cli_gfx_demos.rs`
-- [ ] Add obligations for graphics correctness + performance:
+- [x] Add obligations for graphics correctness + performance:
   - [x] deterministic golden graphics checks are now enforced via `core/obligation::gfx-golden-images`
     - configured from `package.toml [gfx].golden_tests`
     - validates frame/scene outputs against golden hashes and records evidence artifact `genesis/gfx-golden-images-v0.2`
@@ -523,7 +527,9 @@ Constraints:
       - `:expect-png-h`
       - `:pixel-width` / `:pixel-height`
     - coverage includes passing and failing pixel-golden fixtures in CLI obligation tests
-  - [ ] add browser-backend pixel golden parity (headless web target) and cross-validate native vs browser golden hashes under deterministic input logs
+  - [x] add browser-backend pixel golden parity (headless web target) and cross-validate native vs browser golden hashes under deterministic input logs
+    - `gc_wasm::gfx_render_frame_graph_headless_hashes` exposes deterministic browser hash checks (`pixel_h`, `png_h`)
+    - `scripts/wasm_web_smoke.mjs` now cross-validates native vs browser effect and gfx hashes under deterministic inputs
 
 ### P4.2 Level 3: GenesisCode GUI Editor (First “Big” Self-Host App)
 
@@ -540,8 +546,18 @@ and plugin/agent-friendly from day 1.
   - Request-shape coverage in `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - filesystem (workspace access), store/refs/sync, clipboard, OS dialogs
   - optional: language server–like background tasks (still effect-logged)
-- [ ] Implement editor core (GenesisCode-only):
-  - incremental parser integration (once self-host parser exists) + AST aware editing
+- [x] Implement editor core (GenesisCode-only):
+  - [x] incremental parser integration (once self-host parser exists) + AST aware editing
+    - AST index + parse action in Prelude:
+      - `core/editor/ast::parse-module-index`
+      - `core/editor/action::parse-source`
+      - `core/editor/action::parse-file-task`
+    - AST-aware changed-symbol tracking for incremental editor tooling:
+      - `core/editor/ast::changed-syms` (defs/meta/export-aware delta)
+      - `core/editor/action::lint-module-task-from-sources`
+    - coverage:
+      - `crates/gc_prelude/tests/prelude_editor_actions.rs`
+      - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - [x] CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
     - pure formatting action:
       - `core/editor/action::format-source` (`core/coreform::fmt-module` + stable hash)
@@ -597,7 +613,7 @@ and plugin/agent-friendly from day 1.
       - coverage:
         - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
         - `crates/gc_prelude/tests/prelude_editor_actions.rs`
-- [ ] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
+- [x] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
   - [x] ship a baseline GenesisCode linter runtime in Prelude (`core/editor/lint::*`) with module-level checks for:
     - missing `::meta`
     - malformed `::meta`
@@ -646,16 +662,33 @@ and plugin/agent-friendly from day 1.
     - coverage:
       - `crates/gc_prelude/tests/prelude_editor_lint.rs` (`editor_lint_panel_*`, `editor_lint_acceptance_*`)
       - `crates/gc_prelude/tests/prelude_caps_wrappers.rs` (`:editor_lint_panel_from_acceptance`)
-- [ ] Plugin + agent architecture (GenesisCode-only):
-  - plugin API as contracts; sandboxed capabilities per plugin
-  - agent actions as semantic patches + obligation-gated acceptance pipeline
-  - deterministic “agent session logs” (effect logs + patch artifacts) for replay/audit
+- [x] Plugin + agent architecture (GenesisCode-only):
+  - [x] plugin API as contracts; sandboxed capabilities per plugin
+    - prelude APIs in `prelude/modules/20_editor.gc`:
+      - `core/editor/plugin::{make,call,command,caps-allowed?,perform}`
+    - deny-by-default capability policy (`:allow` / `:deny`) enforced in-language; denied calls return deterministic sealed `editor/plugin/cap-denied` errors
+  - [x] agent actions as semantic patches + obligation-gated acceptance pipeline
+    - prelude actions:
+      - `core/editor/action::agent-propose-patch` (`core/vcs::diff`)
+      - `core/editor/action::agent-apply-patch-with-obligations` (`core/vcs::apply` + `core/pkg::verify`)
+      - `core/editor/agent::acceptance-report`
+  - [x] deterministic “agent session logs” (effect logs + patch artifacts) for replay/audit
+    - session APIs:
+      - `core/editor/agent::{session-empty,session-add-event,session-add-patch,session-add-evidence,session-hash,session-log-artifact,store-session-log}`
+    - deterministic artifact kind:
+      - `genesis/editor-agent-session-v0.2`
+    - coverage:
+      - `crates/gc_prelude/tests/prelude_editor_actions.rs`
+      - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
 
 ### P4.3 AI Authoring Skill (Codex / Agent Guidance)
 
 Once the toolchain is fully self-hosted on WASM:
-- [ ] Write a canonical AI authoring guide as a `SKILL.md` (GenesisCode coding skill):
-  - language norms, canonical library usage (Levels 0–2), error convention, effect patterns
-  - GenesisGraph/GenesisPkg workflows (patch-first, obligations-first)
-  - performance + determinism rules for WASM targets
-  - recommended “prompt protocol” for agentic refactors (plan -> patch -> evidence -> accept)
+- [x] Write a canonical AI authoring guide as a `SKILL.md` (GenesisCode coding skill):
+  - delivered at:
+    - `.agents/skills/genesiscode-authoring/SKILL.md`
+    - docs pointer: `docs/write_genesisCode_skill.md`
+  - covers language norms + canonical library usage (Levels 0–2), error conventions, and effect patterns
+  - codifies GenesisGraph/GenesisPkg workflows (patch-first, obligations-first)
+  - includes performance + determinism rules for WASM targets
+  - includes explicit agentic refactor protocol (plan -> patch -> evidence -> accept)

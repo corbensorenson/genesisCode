@@ -21,12 +21,16 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Run the self-hosted CoreForm toolchain inside the kernel to format a module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to formatting the input module.
+- `fmt_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Selfhost format using a caller-supplied toolchain artifact source (no filesystem dependency).
 - `hash_coreform_module(src: &str) -> Result<String, JsValue>`
   - Parse, canonicalize, and return the 32-byte module hash as 64-hex.
 - `hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Run the self-hosted CoreForm toolchain inside the kernel to hash a module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to hashing the input module.
+- `hash_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Selfhost hash using a caller-supplied toolchain artifact source (no filesystem dependency).
 - `eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Pure evaluation (no effects runner). `step_limit=0` means “no limit”.
   - If evaluation produces an effect program, returns an error telling the caller to use the host runner.
@@ -45,6 +49,10 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Selfhost eval using a caller-supplied toolchain artifact source (no filesystem dependency).
 - `eval_coreform_module_selfhost_with_artifact_and_gates(src: &str, artifact_src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
   - Artifact-backed selfhost eval with Stage-1/Stage-2 gating.
+- `gfx_render_frame_graph_headless_hashes(frame_graph_src: &str, width: u32, height: u32) -> Result<JsValue, JsValue>`
+  - Deterministic headless renderer hash API.
+  - Accepts either a direct `:gfx/frame-graph` term or a map containing `:frame`/`:frame-graph`.
+  - Returns `{width,height,pixel_h,png_h}` for cross-host parity gates.
 
 For effectful programs, the WASM module exports a stateful runtime that supports step/resume:
 
@@ -106,3 +114,7 @@ npm ci
 npx playwright install chromium
 node scripts/wasm_web_smoke.mjs
 ```
+
+`scripts/wasm_web_smoke.mjs` enforces cross-host parity against native examples for:
+- effect-step hashes (`module_h`, `payload_h`, `cont_h`, `req_h`, `resp_h`, `final_value_h`)
+- headless graphics hashes (`gfx_pixel_h`, `gfx_png_h`)

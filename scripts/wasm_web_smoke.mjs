@@ -32,6 +32,34 @@ function runNativeEffectHashes() {
   return o;
 }
 
+function runNativeGfxHashes() {
+  const stdout = execFileSync(
+    "cargo",
+    ["run", "-p", "gc_wasm", "--example", "native_gfx_headless_hashes", "--quiet"],
+    { encoding: "utf8" },
+  );
+  const o = JSON.parse(stdout);
+  for (const k of ["gfx_pixel_h", "gfx_png_h"]) {
+    assert.ok(isHex32(o[k]), `native ${k} must be 64-hex`);
+  }
+  return o;
+}
+
+function runNativeSelfhostArtifactSource() {
+  return execFileSync(
+    "cargo",
+    [
+      "run",
+      "-p",
+      "gc_wasm",
+      "--example",
+      "native_selfhost_artifact_source",
+      "--quiet",
+    ],
+    { encoding: "utf8" },
+  );
+}
+
 function contentTypeFor(p) {
   if (p.endsWith(".html")) return "text/html; charset=utf-8";
   if (p.endsWith(".js")) return "text/javascript; charset=utf-8";
@@ -50,7 +78,7 @@ function mustUnderRoot(rootDir, relUrlPath) {
   return full;
 }
 
-async function writeHarnessHtml(outDir) {
+async function writeHarnessHtml(outDir, selfhostArtifactSrc) {
   const html = `<!doctype html>
 <html lang="en">
   <meta charset="utf-8">
@@ -68,13 +96,15 @@ async function writeHarnessHtml(outDir) {
           const mod = await import("./gc_wasm.js");
           const init = mod.default;
           await init();
+          const selfhostArtifactSrc = ${JSON.stringify(selfhostArtifactSrc)};
 
           if (typeof mod.fmt_coreform_term !== "function") throw new Error("missing fmt_coreform_term");
           if (typeof mod.hash_coreform_term !== "function") throw new Error("missing hash_coreform_term");
           if (typeof mod.fmt_coreform_module !== "function") throw new Error("missing fmt_coreform_module");
           if (typeof mod.hash_coreform_module !== "function") throw new Error("missing hash_coreform_module");
-          if (typeof mod.fmt_coreform_module_selfhost !== "function") throw new Error("missing fmt_coreform_module_selfhost");
-          if (typeof mod.hash_coreform_module_selfhost !== "function") throw new Error("missing hash_coreform_module_selfhost");
+          if (typeof mod.fmt_coreform_module_selfhost_with_artifact !== "function") throw new Error("missing fmt_coreform_module_selfhost_with_artifact");
+          if (typeof mod.hash_coreform_module_selfhost_with_artifact !== "function") throw new Error("missing hash_coreform_module_selfhost_with_artifact");
+          if (typeof mod.gfx_render_frame_graph_headless_hashes !== "function") throw new Error("missing gfx_render_frame_graph_headless_hashes");
           if (typeof mod.Runtime !== "function") throw new Error("missing Runtime");
 
           const t0 = "{:b 2 :a 1}";
@@ -94,11 +124,11 @@ async function writeHarnessHtml(outDir) {
             m::y
           \`;
           const mfmtRust = mod.fmt_coreform_module(m0);
-          const mfmtSelf = mod.fmt_coreform_module_selfhost(m0, 5000000);
+          const mfmtSelf = mod.fmt_coreform_module_selfhost_with_artifact(m0, selfhostArtifactSrc, 5000000);
           if (mfmtSelf !== mfmtRust) throw new Error("selfhost fmt must match rust fmt");
 
           const mhRust = mod.hash_coreform_module(m0);
-          const mhSelf = mod.hash_coreform_module_selfhost(m0, 5000000);
+          const mhSelf = mod.hash_coreform_module_selfhost_with_artifact(m0, selfhostArtifactSrc, 5000000);
           if (!isHex32(mhRust)) throw new Error("hash_coreform_module must be 64-hex");
           if (mhSelf !== mhRust) throw new Error("selfhost hash must match rust hash");
 
@@ -124,6 +154,35 @@ async function writeHarnessHtml(outDir) {
           if (!isHex32(resumed.next.value_h)) throw new Error("bad final value hash");
           if (!String(resumed.next.value).includes("core/caps/denied")) throw new Error("expected caps denied error payload");
 
+          const frameGraphSrc = \`
+            {
+              :type :gfx/frame-graph
+              :render-passes [
+                {
+                  :type :gfx/render-pass
+                  :label "web-golden"
+                  :commands [
+                    {
+                      :op :set-pipeline
+                      :pipeline 1
+                    }
+                    {
+                      :op :draw
+                      :vertex-count 3
+                      :instance-count 1
+                      :first-vertex 0
+                      :first-instance 0
+                    }
+                  ]
+                }
+              ]
+              :compute-passes []
+            }
+          \`;
+          const gfx = mod.gfx_render_frame_graph_headless_hashes(frameGraphSrc, 160, 90);
+          if (!isHex32(gfx.pixel_h)) throw new Error("bad gfx pixel_h");
+          if (!isHex32(gfx.png_h)) throw new Error("bad gfx png_h");
+
           const out = {
             module_h: step.module_h,
             payload_h: step.payload_h,
@@ -131,6 +190,8 @@ async function writeHarnessHtml(outDir) {
             req_h: step.req_h,
             resp_h: resumed.resp_h,
             final_value_h: resumed.next.value_h,
+            gfx_pixel_h: gfx.pixel_h,
+            gfx_png_h: gfx.png_h,
           };
 
           window.__GENESIS_WEB_SMOKE__ = { ok: true, out };
@@ -188,9 +249,13 @@ async function main() {
   const rootDir = path.resolve(selfDir, "..");
   process.chdir(rootDir);
 
-  await writeHarnessHtml(outDir);
+  const selfhostArtifactSrc = runNativeSelfhostArtifactSource();
+  await writeHarnessHtml(outDir, selfhostArtifactSrc);
 
-  const native = runNativeEffectHashes();
+  const native = {
+    ...runNativeEffectHashes(),
+    ...runNativeGfxHashes(),
+  };
   const srv = await startStaticServer(outDir);
 
   const browser = await chromium.launch();

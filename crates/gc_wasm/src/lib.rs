@@ -282,6 +282,76 @@ pub fn hash_coreform_term(src: &str) -> Result<String, JsValue> {
     Ok(hex::encode(hash_term(&t)))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct GfxHeadlessHashes {
+    width: u32,
+    height: u32,
+    pixel_h: String,
+    png_h: String,
+}
+
+fn extract_frame_graph_term_for_render(t: &Term) -> Option<&Term> {
+    let typed = matches!(
+        t,
+        Term::Map(m)
+            if matches!(
+                m.get(&TermOrdKey(Term::Symbol(":type".to_string()))),
+                Some(Term::Symbol(s)) if s == ":gfx/frame-graph"
+            )
+    );
+    if typed {
+        return Some(t);
+    }
+    let Term::Map(m) = t else { return None };
+    for key in [":frame", ":frame-graph"] {
+        let Some(candidate) = m.get(&TermOrdKey(Term::Symbol(key.to_string()))) else {
+            continue;
+        };
+        let is_fg = matches!(
+            candidate,
+            Term::Map(cm)
+                if matches!(
+                    cm.get(&TermOrdKey(Term::Symbol(":type".to_string()))),
+                    Some(Term::Symbol(s)) if s == ":gfx/frame-graph"
+                )
+        );
+        if is_fg {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn gfx_render_frame_graph_headless_hashes_inner(
+    frame_graph_src: &str,
+    width: u32,
+    height: u32,
+) -> Result<GfxHeadlessHashes, String> {
+    let t = parse_term(frame_graph_src).map_err(|e| format!("parse: {e}"))?;
+    let frame = extract_frame_graph_term_for_render(&t).ok_or_else(|| {
+        "gfx/shape: expected :gfx/frame-graph term or map with :frame".to_string()
+    })?;
+    let img = gc_gfx::render_frame_graph_headless(frame, width, height)
+        .map_err(|e| format!("gfx/render: {e}"))?;
+    Ok(GfxHeadlessHashes {
+        width: img.width,
+        height: img.height,
+        pixel_h: hex::encode(img.pixel_hash),
+        png_h: hex::encode(img.png_hash),
+    })
+}
+
+#[wasm_bindgen]
+pub fn gfx_render_frame_graph_headless_hashes(
+    frame_graph_src: &str,
+    width: u32,
+    height: u32,
+) -> Result<JsValue, JsValue> {
+    let out = gfx_render_frame_graph_headless_hashes_inner(frame_graph_src, width, height)
+        .map_err(|e| js_err("gfx/headless", e))?;
+    serde_wasm_bindgen::to_value(&out).map_err(|e| js_err("serde", e))
+}
+
 fn gate_eval_forms(
     forms: &mut Vec<Term>,
     stage1_pipeline: bool,
@@ -1324,6 +1394,45 @@ mod tests {
             }
             (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
         }
+    }
+
+    #[test]
+    fn gfx_headless_hashes_match_native_renderer_output() {
+        let src = r#"
+          {
+            :type :gfx/frame-graph
+            :render-passes [
+              {
+                :type :gfx/render-pass
+                :label "web-golden"
+                :commands [
+                  {
+                    :op :set-pipeline
+                    :pipeline 1
+                  }
+                  {
+                    :op :draw
+                    :vertex-count 3
+                    :instance-count 1
+                    :first-vertex 0
+                    :first-instance 0
+                  }
+                ]
+              }
+            ]
+            :compute-passes []
+          }
+        "#;
+
+        let got =
+            gfx_render_frame_graph_headless_hashes_inner(src, 160, 90).expect("compute gfx hashes");
+        assert_eq!(got.width, 160);
+        assert_eq!(got.height, 90);
+
+        let t = parse_term(src).expect("parse frame graph");
+        let img = gc_gfx::render_frame_graph_headless(&t, 160, 90).expect("native render");
+        assert_eq!(got.pixel_h, hex::encode(img.pixel_hash));
+        assert_eq!(got.png_h, hex::encode(img.png_hash));
     }
 
     #[cfg(target_arch = "wasm32")]

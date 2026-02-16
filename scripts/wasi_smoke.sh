@@ -11,7 +11,9 @@ fi
 
 WASM_BIN="${1:-}"
 if [[ -z "${WASM_BIN}" ]]; then
-  WASM_BIN="$(bash scripts/build_wasi.sh)"
+  rustup target add wasm32-wasip1 >/dev/null
+  cargo build -p gc_wasi_cli --target wasm32-wasip1 --release >/dev/null
+  WASM_BIN="target/wasm32-wasip1/release/genesis_wasi.wasm"
 fi
 
 TMP_DIR="$(mktemp -d)"
@@ -159,7 +161,7 @@ cat >"$TMP_DIR/evidence.gc" <<'GC'
 GC
 EVIDENCE_H_NATIVE="$(cargo run -p gc_cli --quiet -- store --caps "$TMP_DIR/caps_store_refs.toml" --log "$TMP_DIR/native-evidence-put.gclog" put --in "$TMP_DIR/evidence.gc" | tr -d '\n')"
 
-Z64="$(python - <<'PY'\nprint('0'*64)\nPY\n)"
+Z64="$(printf '%064d' 0)"
 cat >"$TMP_DIR/commit.gc" <<GC
 {
   :type :vcs/commit

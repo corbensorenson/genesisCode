@@ -1,0 +1,40 @@
+# Bootstrap Archive And Active Tooling (v0.2)
+
+This document records which bootstrap-era artifacts have been archived and which
+ones remain required for reproducible host/runtime verification.
+
+## Archived (`bootstrap_old/`)
+
+- `bootstrap_old/scripts/build_wasi.sh`
+  - reason: legacy convenience wrapper only
+  - replacement:
+    - direct build command:
+      - `rustup target add wasm32-wasip1`
+      - `cargo build -p gc_wasi_cli --target wasm32-wasip1 --release`
+    - `scripts/wasi_smoke.sh` now self-builds WASI when no wasm path is supplied
+
+## Still required (active)
+
+- `scripts/assemble_prelude.sh`
+  - deterministic prelude module assembly (`prelude/modules/*.gc -> prelude/prelude.gc`)
+- `scripts/wasi_smoke.sh`
+  - native-vs-WASI deterministic equivalence checks for CLI behavior
+- `scripts/wasm_bindgen_node.sh`
+  - build wasm-bindgen node target for host-bridge and selfhost API checks
+- `scripts/wasm_bindgen_web.sh`
+  - build wasm-bindgen web target for browser parity checks
+- `scripts/wasm_node_smoke.mjs`
+  - node wasm smoke for core/selfhost APIs
+- `scripts/wasm_cross_host_determinism.mjs`
+  - native-vs-node cross-host determinism checks
+- `scripts/wasm_web_smoke.mjs`
+  - headless browser wasm smoke/parity checks
+
+## Policy for future archival
+
+Move artifacts to `bootstrap_old/` only when all are true:
+
+1. The self-hosted or direct command path is available and tested.
+2. CI no longer references the archived path.
+3. Specs/docs point to the replacement path.
+4. Determinism and obligation coverage remains intact after removal.

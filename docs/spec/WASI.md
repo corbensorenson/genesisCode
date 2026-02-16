@@ -36,11 +36,8 @@ rustup target add wasm32-wasip1
 cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
 ```
 
-Convenience script:
-
-```bash
-bash scripts/build_wasi.sh
-```
+Archived legacy convenience wrappers live under `bootstrap_old/` (see
+`docs/spec/BOOTSTRAP_OLD.md`).
 
 ## Run (wasmtime)
 

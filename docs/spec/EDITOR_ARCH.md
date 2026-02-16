@@ -31,6 +31,35 @@ This defines the first production path for a GenesisCode-native GUI editor.
 - Agent actions produce semantic patches + obligation evidence.
 - Acceptance is policy-gated (`refs set` / publish rules).
 
+### GenesisCode API surface (implemented in Prelude)
+
+- Plugin contracts and capability policies:
+  - `core/editor/plugin::make`
+  - `core/editor/plugin::call`
+  - `core/editor/plugin::command`
+  - `core/editor/plugin::caps-allowed?`
+  - `core/editor/plugin::perform` (deny-by-default capability wrapper)
+- Agent session model (deterministic, replay/audit friendly):
+  - `core/editor/agent::session-empty`
+  - `core/editor/agent::{session-add-event,session-add-patch,session-add-evidence}`
+  - `core/editor/agent::session-hash`
+  - `core/editor/agent::session-log-artifact`
+  - `core/editor/agent::store-session-log`
+- Agent patch/acceptance flows:
+  - `core/editor/action::agent-propose-patch`
+  - `core/editor/action::agent-apply-patch-with-obligations`
+  - `core/editor/agent::acceptance-report`
+
+### Deterministic agent session artifact
+
+- Session artifacts are canonical CoreForm maps:
+  - `:kind` = `genesis/editor-agent-session-v0.2`
+  - `:v` = `1`
+  - `:session` = full session map (`:events`, `:patches`, `:evidence`)
+  - `:session-h` = canonical hash of `:session`
+- Session artifacts are stored through `core/store::put`, so they inherit
+  deterministic content addressing and replay coverage from effect logs.
+
 ## Capability needs
 
 - `io/fs::*` for workspace access (sandboxed)
@@ -44,4 +73,3 @@ This defines the first production path for a GenesisCode-native GUI editor.
 2. Editing + canonical format + diagnostics pane
 3. Patch workflow: propose/apply + obligations + evidence
 4. Full package + publish workflow with policy visualization
-

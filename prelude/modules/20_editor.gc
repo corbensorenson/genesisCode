@@ -790,6 +790,142 @@
         :right (f (quote :right))
         :vcs-kind (f (quote :kind))})))
 
+(def core/editor/ast::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
+
+(def core/editor/ast::module-index-ok?
+  (fn (idx)
+    (if (core/editor/lint::map? idx)
+      (let ((ok ((core/map::get idx) (quote :ok))))
+        (if ((core/sym::eq? (core/data::tag ok)) (quote :bool)) ok false))
+      false)))
+
+(def core/editor/ast::module-index-defs
+  (fn (idx)
+    (if (core/editor/lint::map? idx)
+      (core/editor/ast::vec-or-empty ((core/map::get idx) (quote :defs)))
+      [])))
+
+(def core/editor/ast::module-index-has-meta?
+  (fn (idx)
+    (if (core/editor/lint::map? idx)
+      (let ((x ((core/map::get idx) (quote :has-meta))))
+        (if ((core/sym::eq? (core/data::tag x)) (quote :bool)) x false))
+      false)))
+
+(def core/editor/ast::module-index-exports
+  (fn (idx)
+    (if (core/editor/lint::map? idx)
+      (core/editor/ast::vec-or-empty ((core/map::get idx) (quote :exports)))
+      [])))
+
+(def core/editor/ast::parse-module-index
+  (fn (src)
+    (let ((parsed (core/coreform::parse-module src)))
+      (if (core/error::is? parsed)
+        {
+          :defs []
+          :error (core/error::payload parsed)
+          :exports []
+          :form-count 0
+          :forms []
+          :has-meta false
+          :kind (quote :editor/ast-module-index)
+          :ok false}
+        (let
+          ((forms parsed) (defs (core/editor/lint::collect-def-names parsed))
+            (state (core/editor/lint::meta-state parsed)))
+          (let
+            ((meta ((core/map::get state) (quote :meta)))
+              (exports
+                (if (core/editor/lint::map? meta)
+                  (let ((raw-exports ((core/map::get meta) (quote :exports))))
+                    (core/editor/ast::vec-or-empty raw-exports))
+                  [])))
+            {
+              :defs defs
+              :error nil
+              :exports exports
+              :form-count (core/vec::len forms)
+              :forms forms
+              :has-meta ((core/map::get state) (quote :has-def))
+              :kind (quote :editor/ast-module-index)
+              :ok true}))))))
+
+(def core/editor/ast::contains-sym? core/editor/lint::contains-sym?)
+
+(def core/editor/ast::append-if-sym-missing
+  (fn (out)
+    (fn (sym)
+      (if (core/editor/lint::sym? sym)
+        (if ((core/editor/ast::contains-sym? out) sym) out ((core/vec::push out) sym))
+        out))))
+
+(def core/editor/ast::sym-diff
+  (fn (left) (fn (right) ((((core/editor/ast::sym-diff-loop left) right) 0) []))))
+
+(def core/editor/ast::sym-diff-loop
+  (fn (left)
+    (fn (right)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len left))
+            out
+            (let ((x ((core/vec::get left) i)))
+              ((((core/editor/ast::sym-diff-loop left) right) ((core/int::add i) 1))
+                (if (core/editor/lint::sym? x)
+                  (if ((core/editor/ast::contains-sym? right) x) out ((core/vec::push out) x))
+                  out)))))))))
+
+(def core/editor/ast::union-sym-vec
+  (fn (a) (fn (b) ((((core/editor/ast::union-sym-vec-loop a) b) 0) a))))
+
+(def core/editor/ast::union-sym-vec-loop
+  (fn (a)
+    (fn (b)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len b))
+            out
+            (let ((x ((core/vec::get b) i)))
+              ((((core/editor/ast::union-sym-vec-loop a) b) ((core/int::add i) 1))
+                ((core/editor/ast::append-if-sym-missing out) x)))))))))
+
+(def core/editor/ast::meta-changed?
+  (fn (before)
+    (fn (after)
+      (let
+        ((before-exports (core/editor/ast::module-index-exports before))
+          (after-exports (core/editor/ast::module-index-exports after))
+          (before-has-meta (core/editor/ast::module-index-has-meta? before))
+          (after-has-meta (core/editor/ast::module-index-has-meta? after)))
+        (if (prim core/eq? before-has-meta after-has-meta)
+          (let
+            ((exp-removed ((core/editor/ast::sym-diff before-exports) after-exports))
+              (exp-added ((core/editor/ast::sym-diff after-exports) before-exports)))
+            (if ((core/int::eq? (core/vec::len exp-removed)) 0)
+              (if ((core/int::eq? (core/vec::len exp-added)) 0) false true)
+              true))
+          true)))))
+
+(def core/editor/ast::changed-syms
+  (fn (before)
+    (fn (after)
+      (if (core/editor/ast::module-index-ok? before)
+        (if (core/editor/ast::module-index-ok? after)
+          (let
+            ((before-defs (core/editor/ast::module-index-defs before))
+              (after-defs (core/editor/ast::module-index-defs after))
+              (removed ((core/editor/ast::sym-diff before-defs) after-defs))
+              (added ((core/editor/ast::sym-diff after-defs) before-defs)))
+            (let ((delta ((core/editor/ast::union-sym-vec removed) added)))
+              (if ((core/editor/ast::meta-changed? before) after)
+                ((core/editor/ast::append-if-sym-missing delta) (quote ::meta))
+                delta)))
+          [
+            (quote ::meta)])
+        [
+          (quote ::meta)]))))
+
 (def core/editor/action::vcs-diff-panel
   (fn (base)
     (fn (to)
@@ -862,6 +998,11 @@
 (def core/editor/action::format-file-task
   (fn (path) (((core/editor/action::task (quote editor/task::fmt-coreform)) {:path path}) 50)))
 
+(def core/editor/action::parse-source (fn (src) (core/editor/ast::parse-module-index src)))
+
+(def core/editor/action::parse-file-task
+  (fn (path) (((core/editor/action::task (quote editor/task::parse-module)) {:path path}) 50)))
+
 (def core/editor/action::lint-module-task
   (fn (path)
     (fn (changed-syms)
@@ -869,6 +1010,20 @@
         ((core/editor/action::task (quote editor/task::lint-module))
           {:changed-syms changed-syms :path path})
         50))))
+
+(def core/editor/action::lint-module-task-from-sources
+  (fn (path)
+    (fn (before-src)
+      (fn (after-src)
+        (let
+          ((before-index (core/editor/ast::parse-module-index before-src))
+            (after-index (core/editor/ast::parse-module-index after-src)))
+          (
+            ((core/editor/action::task (quote editor/task::lint-module))
+              {
+                :changed-syms ((core/editor/ast::changed-syms before-index) after-index)
+                :path path})
+            50))))))
 
 (def core/editor/action::typecheck-pkg-task
   (fn (pkg) (((core/editor/action::task (quote editor/task::typecheck-pkg)) {:pkg pkg}) 50)))
@@ -882,6 +1037,154 @@
   (fn (pkg)
     (fn (caps)
       (((core/editor/action::task (quote editor/task::test-pkg)) {:caps caps :pkg pkg}) 50))))
+
+(def core/editor/plugin::contains-op?
+  (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
+
+(def core/editor/plugin::contains-op-loop
+  (fn (ops)
+    (fn (op)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len ops))
+          false
+          (let ((x ((core/vec::get ops) i)))
+            (if (core/editor/lint::sym? x)
+              (if ((core/sym::eq? x) op)
+                true
+                (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))
+              (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))))))))
+
+(def core/editor/plugin::caps-allowed?
+  (fn (policy)
+    (fn (op)
+      (if (core/editor/lint::map? policy)
+        (let
+          ((allow (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :allow))))
+            (deny (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :deny)))))
+          (if ((core/editor/plugin::contains-op? deny) op)
+            false
+            (if ((core/int::eq? (core/vec::len allow)) 0)
+              false
+              ((core/editor/plugin::contains-op? allow) op))))
+        false))))
+
+(def core/editor/plugin::perform
+  (fn (policy)
+    (fn (op)
+      (fn (payload)
+        (if ((core/editor/plugin::caps-allowed? policy) op)
+          ((core/caps::perform op) payload)
+          (core/effect::pure
+            (((core/error::make "editor/plugin/cap-denied") "plugin capability denied") {:op op})))))))
+
+(def core/editor/plugin::make
+  (fn (handler)
+    (fn (meta)
+      (fn (caps-policy)
+        (((core/contract::extend core/contract::genesis) handler)
+          {
+            :caps-policy caps-policy
+            :editor-plugin true
+            :meta meta})))))
+
+(def core/editor/plugin::call core/contract::call)
+
+(def core/editor/plugin::command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/editor/plugin::call plugin) (quote editor/plugin::command))
+          {:command command :payload payload})))))
+
+(def core/editor/agent::session-empty
+  (fn (agent-id)
+    {
+      :agent agent-id
+      :events []
+      :evidence []
+      :kind (quote :editor/agent-session)
+      :patches []}))
+
+(def core/editor/agent::session-add-event
+  (fn (session)
+    (fn (event)
+      (prim map/put
+        session
+        (quote :events)
+        ((core/vec::push (core/editor/lint::vec-or-empty ((core/map::get session) (quote :events))))
+          event)))))
+
+(def core/editor/agent::session-add-patch
+  (fn (session)
+    (fn (patch-h)
+      (prim map/put
+        session
+        (quote :patches)
+        ((core/vec::push (core/editor/lint::vec-or-empty ((core/map::get session) (quote :patches))))
+          patch-h)))))
+
+(def core/editor/agent::session-add-evidence
+  (fn (session)
+    (fn (evidence-h)
+      (prim map/put
+        session
+        (quote :evidence)
+        ((core/vec::push (core/editor/lint::vec-or-empty ((core/map::get session) (quote :evidence))))
+          evidence-h)))))
+
+(def core/editor/agent::session-hash (fn (session) (core/coreform::hash-term session)))
+
+(def core/editor/agent::session-log-artifact
+  (fn (session)
+    {
+      :kind (quote genesis/editor-agent-session-v0.2)
+      :session session
+      :session-h (core/editor/agent::session-hash session)
+      :v 1}))
+
+(def core/editor/agent::store-session-log
+  (fn (session) (core/store::put (core/editor/agent::session-log-artifact session))))
+
+(def core/editor/agent::bool-or-false
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :bool)) x false)))
+
+(def core/editor/agent::verify-ok?
+  (fn (verify-resp)
+    (if (core/editor/lint::map? verify-resp)
+      (core/editor/agent::bool-or-false ((core/map::get verify-resp) (quote :ok)))
+      false)))
+
+(def core/editor/agent::acceptance-report
+  (fn (apply-resp)
+    (fn (verify-resp)
+      {
+        :accepted
+          (if (core/editor/agent::verify-ok? verify-resp)
+            (core/editor/agent::bool-or-false ((core/map::get apply-resp) (quote :ok)))
+            false)
+        :apply apply-resp
+        :kind (quote :editor/agent-acceptance)
+        :verify verify-resp})))
+
+(def core/editor/action::agent-propose-patch
+  (fn (base)
+    (fn (to)
+      ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+        core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::agent-apply-patch-with-obligations
+  (fn (base)
+    (fn (patch)
+      (fn (lock)
+        (fn (strict)
+          ((core/effect::bind ((((core/vcs::apply base) patch) nil) true))
+            (fn (apply-resp)
+              (if (core/editor/agent::bool-or-false ((core/map::get apply-resp) (quote :ok)))
+                ((core/effect::bind ((core/pkg::verify lock) strict))
+                  (fn (verify-resp)
+                    (core/effect::pure
+                      ((core/editor/agent::acceptance-report apply-resp) verify-resp))))
+                (core/effect::pure ((core/editor/agent::acceptance-report apply-resp) nil))))))))))
 
 (def core/editor/pkg::field
   (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))
