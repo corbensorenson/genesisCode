@@ -7,9 +7,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--json`: emit exactly one JSON object on stdout for all subcommands.
   - In JSON mode, stderr is reserved for unexpected process-level failures (it should usually be empty).
 - `--step-limit <N>`: set the kernel evaluation step limit for commands that evaluate CoreForm.
-  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, and `fmt --engine selfhost`.
+  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, `fmt --engine selfhost`, and `eval --engine selfhost`.
   - The step limit also applies to prelude initialization for that command.
-  - Exception: for `fmt --engine selfhost`, the toolchain bootstrap load is not charged against the step limit; the step limit applies to formatting the input file/module.
+  - Exception: for `fmt --engine selfhost` and `eval --engine selfhost`, toolchain bootstrap load is not charged against the step limit.
   - The v0.2 toolchain default is `5_000_000` steps.
 - `--no-step-limit`: disable the kernel evaluation step limit (for trusted inputs only).
   - For package commands (`test`, `apply-patch`), `package.toml` may reject this via `[limits].allow_unlimited = false` (default).
@@ -24,6 +24,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`
   - `--engine rust` is the default.
   - `--engine selfhost` runs the self-hosted CoreForm toolchain inside the kernel and therefore honors `--step-limit/--no-step-limit`.
+- `genesis eval <file> [--engine rust|selfhost]`
+  - `--engine rust` is the default.
+  - `--engine selfhost` runs self-hosted parse+canonicalize in-kernel before evaluation.
 - `genesis keygen --out <key.toml>`: generate an Ed25519 signing key (see `docs/spec/SIGNING.md`).
 - `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`:
   - sign the acceptance artifact hash and write a signature artifact into the evidence store

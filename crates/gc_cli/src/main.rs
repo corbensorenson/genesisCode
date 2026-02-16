@@ -75,7 +75,13 @@ enum Cmd {
     },
 
     /// Evaluate a CoreForm program/module (pure).
-    Eval { file: PathBuf },
+    Eval {
+        file: PathBuf,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
+        engine: FmtEngine,
+    },
 
     /// Explain contract dispatch path for a given message.
     Explain {
@@ -849,7 +855,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             check,
             engine,
         } => cmd_fmt(cli, file, *check, *engine),
-        Cmd::Eval { file } => cmd_eval(cli, file),
+        Cmd::Eval { file, engine } => cmd_eval(cli, file, *engine),
         Cmd::Explain {
             file,
             contract,
@@ -1079,18 +1085,128 @@ fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<(String, String, O
     Some((code, msg, Some(gc_coreform::print_term(&payload_term))))
 }
 
-fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
+fn selfhost_parse_canonicalize_module(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    src: &str,
+) -> Result<Vec<Term>, CliError> {
+    let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "selfhost/missing",
+            "missing binding selfhost/parse::parse-module",
+        )
+    })?;
+    let parsed = parse_fn
+        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .map_err(|e| {
+            cli_err(
+                EX_EVAL,
+                "eval/error",
+                format!("selfhost parse-module failed: {e}"),
+            )
+        })?;
+
+    if let Some((code, message, payload)) = extract_protocol_error(ctx, &parsed) {
+        return Err(CliError {
+            exit_code: EX_PARSE,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+
+    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            format!(
+                "selfhost parse-module returned non-vector: {}",
+                parsed.debug_repr()
+            ),
+        ));
+    };
+
+    let canon_fn = env
+        .get("selfhost/canon::canonicalize-module")
+        .ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "selfhost/missing",
+                "missing binding selfhost/canon::canonicalize-module",
+            )
+        })?;
+    let canon = canon_fn
+        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .map_err(|e| {
+            cli_err(
+                EX_EVAL,
+                "eval/error",
+                format!("selfhost canonicalize-module failed: {e}"),
+            )
+        })?;
+
+    if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
+        return Err(CliError {
+            exit_code: EX_PARSE,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+
+    let Some(Term::Vector(forms)) = canon.as_data() else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            format!(
+                "selfhost canonicalize-module returned non-vector: {}",
+                canon.debug_repr()
+            ),
+        ));
+    };
+    Ok(forms.clone())
+}
+
+fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms =
-        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
 
-    let mut ctx = mk_ctx(cli);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
+    let (mut ctx, mut env, forms) = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            (ctx, prelude.env, forms)
+        }
+        FmtEngine::Selfhost => {
+            // Toolchain bootstrap is trusted; do not charge it against user eval budgets.
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
+                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+
+            // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
+            ctx.steps = 0;
+            ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+
+            ctx.steps = 0;
+            ctx.step_limit = resolved_step_limit(cli).resolve();
+            (ctx, env, forms)
+        }
+    };
 
     let v = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
@@ -1101,6 +1217,10 @@ fn cmd_eval(cli: &Cli, file: &PathBuf) -> Result<CmdOut, CliError> {
         kind: "genesis/eval-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
             "value": value,
             "value_format": value_format,
         })),

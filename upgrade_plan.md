@@ -128,8 +128,14 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - singleton list grouping canonicalizes like the kernel (`(y)` formats to `y`) via `crates/gc_prelude/tests/selfhost_singleton_parens_regression.rs`
 - [x] Cutover tooling entrypoints to support a self-host toolchain engine (opt-in):
   - CLI: `genesis fmt --engine selfhost` uses `selfhost/tool::fmt-module` (honors `--step-limit/--no-step-limit`)
-  - wasm-bindgen: expose `fmt_coreform_module_selfhost` and `hash_coreform_module_selfhost`
-  - tests: assert `--engine selfhost` output matches Rust engine on fixtures
+  - CLI: `genesis eval --engine selfhost` uses `selfhost/parse::parse-module` + `selfhost/canon::canonicalize-module` (honors `--step-limit/--no-step-limit`)
+  - WASI CLI mirrors the same `eval --engine selfhost` behavior
+  - wasm-bindgen: expose `fmt_coreform_module_selfhost`, `hash_coreform_module_selfhost`, and `eval_coreform_module_selfhost`
+  - wasm-bindgen runtime: `Runtime.eval_module_selfhost` for step/resume hosts
+  - tests:
+    - `crates/gc_cli/tests/cli_fmt_engine.rs` asserts `fmt --engine selfhost` output matches Rust engine
+    - `crates/gc_cli/tests/cli_eval_engine.rs` asserts `eval --engine selfhost` parity + parse error surfacing
+    - `crates/gc_wasm/src/lib.rs` test `eval_coreform_module_selfhost_matches_rust_frontend_eval`
 - [ ] Implement compilation stages suitable for WASM-first execution:
   - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
   - stage 2: CoreForm -> WASM (behind translation validation obligation)

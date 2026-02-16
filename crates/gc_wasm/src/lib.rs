@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use blake3::Hasher;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use gc_coreform::{
@@ -47,6 +47,56 @@ fn extract_protocol_error_string(ctx: &EvalCtx, v: &Value) -> Option<String> {
         }
         _ => Some(print_term(&payload_term)),
     }
+}
+
+fn selfhost_parse_canonicalize_module(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    src: &str,
+) -> Result<Vec<Term>, JsValue> {
+    let parse_fn = env
+        .get("selfhost/parse::parse-module")
+        .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/parse::parse-module"))?;
+    let parsed = parse_fn
+        .apply(ctx, Value::Data(Term::Str(src.to_owned())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
+    if let Some(s) = extract_protocol_error_string(ctx, &parsed) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!(
+                "selfhost parse-module returned non-vector: {}",
+                parsed.debug_repr()
+            ),
+        ));
+    };
+
+    let canon_fn = env
+        .get("selfhost/canon::canonicalize-module")
+        .ok_or_else(|| {
+            js_err(
+                "selfhost/missing",
+                "missing selfhost/canon::canonicalize-module",
+            )
+        })?;
+    let canon = canon_fn
+        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
+    if let Some(s) = extract_protocol_error_string(ctx, &canon) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Vector(forms)) = canon.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!(
+                "selfhost canonicalize-module returned non-vector: {}",
+                canon.debug_repr()
+            ),
+        ));
+    };
+    Ok(forms.clone())
 }
 
 #[wasm_bindgen]
@@ -172,13 +222,46 @@ pub fn eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValu
     Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
 }
 
+#[wasm_bindgen]
+pub fn eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
+    let mut ctx = EvalCtx::with_step_limit(None);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+
+    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
+        .map_err(|e| js_err("selfhost/init", e))?;
+
+    // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
+    ctx.steps = 0;
+    ctx.step_limit = None;
+    let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
+    let v = eval_module(&mut ctx, &mut env, &forms).map_err(|e| js_err("eval", e))?;
+    if matches!(v, Value::EffectProgram(_)) {
+        return Err(js_err(
+            "eval",
+            "program produced an effect program; use the host runner for effects",
+        ));
+    }
+
+    let protocol_error = ctx.protocol.map(|p| p.error);
+    Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
+}
+
 #[derive(Clone)]
 struct PendingEffect {
     op: String,
     k: Value,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum StepResult {
     Done {
@@ -196,7 +279,7 @@ enum StepResult {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ResumeResult {
     resp_h: String,
     next: StepResult,
@@ -246,6 +329,32 @@ impl Runtime {
         let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
         let mh = hash_module(&forms);
         self.module_h = Some(mh);
+
+        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
+        self.cur = Some(v);
+        self.step()
+    }
+
+    /// Self-hosted frontend path: parse + canonicalize inside the kernel, then step.
+    pub fn eval_module_selfhost(&mut self, src: &str) -> Result<JsValue, JsValue> {
+        // Bootstrap toolchain without charging user step budgets.
+        self.ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut self.ctx);
+        self.env = prelude.env;
+        self.cur = None;
+        self.pending = None;
+
+        load_selfhost_coreform_toolchain_v1(&mut self.ctx, &mut self.env)
+            .map_err(|e| js_err("selfhost/init", e))?;
+
+        self.ctx.steps = 0;
+        self.ctx.step_limit = None;
+        let forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
+        let mh = hash_module(&forms);
+        self.module_h = Some(mh);
+
+        self.ctx.steps = 0;
+        self.ctx.step_limit = self.step_limit;
 
         let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
         self.cur = Some(v);
@@ -511,6 +620,26 @@ mod tests {
         rt.step_internal().unwrap()
     }
 
+    fn eval_to_first_step_selfhost(rt: &mut Runtime, src: &str) -> StepResult {
+        rt.ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut rt.ctx);
+        rt.env = prelude.env;
+        rt.cur = None;
+        rt.pending = None;
+
+        load_selfhost_coreform_toolchain_v1(&mut rt.ctx, &mut rt.env).unwrap();
+        rt.ctx.steps = 0;
+        rt.ctx.step_limit = None;
+        let forms = selfhost_parse_canonicalize_module(&mut rt.ctx, &rt.env, src).unwrap();
+        rt.module_h = Some(hash_module(&forms));
+        rt.ctx.steps = 0;
+        rt.ctx.step_limit = rt.step_limit;
+
+        let v = eval_module(&mut rt.ctx, &mut rt.env, &forms).unwrap();
+        rt.cur = Some(v);
+        rt.step_internal().unwrap()
+    }
+
     #[test]
     fn runtime_steps_pure_program_to_done() {
         let mut rt = Runtime::new(0);
@@ -658,6 +787,41 @@ mod tests {
                 assert!(value.contains("core/caps/denied"));
             }
             other => panic!("expected done after denied, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn eval_coreform_module_selfhost_matches_rust_frontend_eval() {
+        let src = r#"
+          (def x 19)
+          (def y (prim int/add x 23))
+          y
+        "#;
+
+        let rust = eval_coreform_module(src, 0).expect("rust eval");
+        let selfhost = eval_coreform_module_selfhost(src, 0).expect("selfhost eval");
+        assert_eq!(rust, selfhost);
+    }
+
+    #[test]
+    fn runtime_eval_module_selfhost_matches_rust_frontend_path() {
+        let src = r#"
+          (def x 5)
+          (def y (prim int/mul x 9))
+          y
+        "#;
+
+        let mut rt_rust = Runtime::new(0);
+        let rust_step = eval_to_first_step(&mut rt_rust, src);
+
+        let mut rt_selfhost = Runtime::new(0);
+        let selfhost_step = eval_to_first_step_selfhost(&mut rt_selfhost, src);
+
+        match (rust_step, selfhost_step) {
+            (StepResult::Done { value: a, .. }, StepResult::Done { value: b, .. }) => {
+                assert_eq!(a, b);
+            }
+            (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
         }
     }
 }

@@ -51,6 +51,12 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
     let s = stdout_str(&["fmt", "--help"]);
     assert!(s.contains("--engine"), "fmt --help output missing --engine");
 
+    let s = stdout_str(&["eval", "--help"]);
+    assert!(
+        s.contains("--engine"),
+        "eval --help output missing --engine"
+    );
+
     let s = stdout_str(&["pkg", "--help"]);
     assert!(
         s.contains("import"),

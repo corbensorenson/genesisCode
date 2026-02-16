@@ -30,6 +30,10 @@ The WASM module exports these functions via `wasm-bindgen`:
 - `eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Pure evaluation (no effects runner). `step_limit=0` means “no limit”.
   - If evaluation produces an effect program, returns an error telling the caller to use the host runner.
+- `eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Run self-hosted parse+canonicalize in-kernel, then pure-evaluate the module.
+  - `step_limit=0` means “no limit”.
+  - Toolchain bootstrap is not charged against `step_limit`; the limit applies to evaluation of the input module.
 
 For effectful programs, the WASM module exports a stateful runtime that supports step/resume:
 
@@ -37,6 +41,8 @@ For effectful programs, the WASM module exports a stateful runtime that supports
   - `step_limit=0` means “no limit”.
 - `Runtime.eval_module(src: &str) -> Result<JsValue, JsValue>`
   - Parses/canonicalizes/evaluates and returns the first step result (`done` or `effect`).
+- `Runtime.eval_module_selfhost(src: &str) -> Result<JsValue, JsValue>`
+  - Uses self-hosted parse/canonicalize in-kernel, then returns the first step result (`done` or `effect`).
 - `Runtime.step() -> Result<JsValue, JsValue>`
   - Advances until `done` or `effect` (errors if a pending effect hasn't been responded to yet).
 - `Runtime.respond_data(resp_term_src: &str) -> Result<JsValue, JsValue>`
