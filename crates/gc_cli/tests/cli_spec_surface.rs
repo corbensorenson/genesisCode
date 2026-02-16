@@ -22,6 +22,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "replay",
         "test",
         "pack",
+        "selfhost-artifact",
         "keygen",
         "sign",
         "verify",
@@ -38,6 +39,8 @@ fn cli_help_surface_contains_expected_command_groups() {
         "--json",
         "--step-limit",
         "--no-step-limit",
+        "--selfhost-artifact",
+        "--selfhost-bootstrap",
     ] {
         assert!(
             s.contains(needle),
@@ -55,6 +58,38 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
     assert!(
         s.contains("--engine"),
         "eval --help output missing --engine"
+    );
+    assert!(
+        s.contains("--stage1-pipeline"),
+        "eval --help output missing --stage1-pipeline"
+    );
+    assert!(
+        s.contains("--stage1-gate"),
+        "eval --help output missing --stage1-gate"
+    );
+
+    let s = stdout_str(&["optimize", "--help"]);
+    assert!(
+        s.contains("--engine"),
+        "optimize --help output missing --engine"
+    );
+    assert!(
+        s.contains("--stage1-gate"),
+        "optimize --help output missing --stage1-gate"
+    );
+    assert!(
+        s.contains("--stage2-gate"),
+        "optimize --help output missing --stage2-gate"
+    );
+    assert!(
+        s.contains("--emit-wasm"),
+        "optimize --help output missing --emit-wasm"
+    );
+
+    let s = stdout_str(&["selfhost-artifact", "--help"]);
+    assert!(
+        s.contains("--out"),
+        "selfhost-artifact --help output missing --out"
     );
 
     let s = stdout_str(&["pkg", "--help"]);

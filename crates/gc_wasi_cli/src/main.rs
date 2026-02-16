@@ -9,7 +9,9 @@ use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module};
-use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
+use gc_prelude::{
+    SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
+};
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -57,8 +59,25 @@ struct Cli {
     #[arg(long, global = true, value_name = "N")]
     max_string_len: Option<u64>,
 
+    /// Path to selfhost toolchain artifact used when `--engine selfhost` is selected.
+    /// Defaults to `./.genesis/selfhost/toolchain.gc` when bootstrap mode allows artifacts.
+    #[arg(long, global = true, value_name = "FILE")]
+    selfhost_artifact: Option<PathBuf>,
+
+    /// Selfhost bootstrap mode for `--engine selfhost`.
+    /// `artifact-only` is production mode; `embedded` is for local bootstrap/development.
+    #[arg(long, global = true, value_enum, default_value_t = SelfhostBootstrapArg::ArtifactOnly)]
+    selfhost_bootstrap: SelfhostBootstrapArg,
+
     #[command(subcommand)]
     cmd: Cmd,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum SelfhostBootstrapArg {
+    ArtifactOnly,
+    ArtifactPreferred,
+    Embedded,
 }
 
 #[derive(Subcommand)]
@@ -432,6 +451,28 @@ fn mk_ctx(cli: &Cli) -> EvalCtx {
     ctx
 }
 
+fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
+    match cli.selfhost_bootstrap {
+        SelfhostBootstrapArg::ArtifactOnly => SelfhostBootstrapMode::ArtifactOnly,
+        SelfhostBootstrapArg::ArtifactPreferred => SelfhostBootstrapMode::ArtifactPreferred,
+        SelfhostBootstrapArg::Embedded => SelfhostBootstrapMode::Embedded,
+    }
+}
+
+fn load_selfhost_toolchain(
+    cli: &Cli,
+    ctx: &mut EvalCtx,
+    env: &mut gc_kernel::Env,
+) -> Result<(), CliError> {
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        ctx,
+        env,
+        resolved_selfhost_bootstrap_mode(cli),
+        cli.selfhost_artifact.as_deref(),
+    )
+    .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+}
+
 #[derive(Debug)]
 struct CliError {
     exit_code: u8,
@@ -555,8 +596,7 @@ fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
 
-            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             let f = env.get("selfhost/tool::fmt-module").ok_or_else(|| {
                 cli_err(
@@ -783,8 +823,7 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
             ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
-            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
             ctx.steps = 0;

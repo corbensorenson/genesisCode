@@ -4,11 +4,17 @@ use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
-use gc_coreform::{Term, canonicalize_module, hash_module, parse_module, parse_term, print_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_module,
+    print_term,
+};
 use gc_effects::{CapsPolicy, Decision, EffectLog};
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value, eval_module, eval_term};
 use gc_obligations::PackageManifest;
-use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
+use gc_prelude::{
+    SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
+    selfhost_coreform_toolchain_v1_sources,
+};
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -56,8 +62,25 @@ struct Cli {
     #[arg(long, global = true, value_name = "N")]
     max_string_len: Option<u64>,
 
+    /// Path to selfhost toolchain artifact used when `--engine selfhost` is selected.
+    /// Defaults to `./.genesis/selfhost/toolchain.gc` when bootstrap mode allows artifacts.
+    #[arg(long, global = true, value_name = "FILE")]
+    selfhost_artifact: Option<PathBuf>,
+
+    /// Selfhost bootstrap mode for `--engine selfhost`.
+    /// `artifact-only` is production mode; `embedded` is for local bootstrap/development.
+    #[arg(long, global = true, value_enum, default_value_t = SelfhostBootstrapArg::ArtifactOnly)]
+    selfhost_bootstrap: SelfhostBootstrapArg,
+
     #[command(subcommand)]
     cmd: Cmd,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum SelfhostBootstrapArg {
+    ArtifactOnly,
+    ArtifactPreferred,
+    Embedded,
 }
 
 #[derive(Subcommand)]
@@ -81,6 +104,14 @@ enum Cmd {
         /// self-hosted CoreForm parser+canonicalizer inside the kernel.
         #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
         engine: FmtEngine,
+        /// Run the Stage-1 compiler pipeline (CoreForm -> CoreForm validated transforms)
+        /// before evaluation.
+        #[arg(long)]
+        stage1_pipeline: bool,
+        /// Require `core/obligation::stage1-validation` to pass for the Stage-1 pipeline.
+        /// Implies `--stage1-pipeline`.
+        #[arg(long)]
+        stage1_gate: bool,
     },
 
     /// Explain contract dispatch path for a given message.
@@ -133,6 +164,13 @@ enum Cmd {
         pkg: PathBuf,
     },
 
+    /// Build a selfhost CoreForm toolchain artifact for bootstrap cutover.
+    SelfhostArtifact {
+        /// Output artifact path (CoreForm term file).
+        #[arg(long)]
+        out: PathBuf,
+    },
+
     /// Generate a new Ed25519 signing key.
     Keygen {
         /// Output key TOML path.
@@ -179,6 +217,19 @@ enum Cmd {
         /// Output path (defaults to stdout).
         #[arg(long)]
         out: Option<PathBuf>,
+        /// Optional output path for stage-2 lowered WebAssembly bytes.
+        #[arg(long)]
+        emit_wasm: Option<PathBuf>,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
+        engine: FmtEngine,
+        /// Require `core/obligation::stage1-validation` to pass.
+        #[arg(long)]
+        stage1_gate: bool,
+        /// Require stage-2 CoreForm->WASM translation validation to pass for this module.
+        #[arg(long)]
+        stage2_gate: bool,
     },
 
     /// Validate and apply a semantic patch, then re-run package obligations.
@@ -855,7 +906,12 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             check,
             engine,
         } => cmd_fmt(cli, file, *check, *engine),
-        Cmd::Eval { file, engine } => cmd_eval(cli, file, *engine),
+        Cmd::Eval {
+            file,
+            engine,
+            stage1_pipeline,
+            stage1_gate,
+        } => cmd_eval(cli, file, *engine, *stage1_pipeline, *stage1_gate),
         Cmd::Explain {
             file,
             contract,
@@ -865,6 +921,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store.as_deref()),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
+        Cmd::SelfhostArtifact { out } => cmd_selfhost_artifact(cli, out),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,
@@ -874,7 +931,22 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         } => cmd_sign(cli, pkg, key, acceptance.as_deref(), signatures.as_deref()),
         Cmd::TransparencyVerify { pkg } => cmd_transparency_verify(cli, pkg),
         Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg),
-        Cmd::Optimize { file, out } => cmd_optimize(cli, file, out.as_ref()),
+        Cmd::Optimize {
+            file,
+            out,
+            emit_wasm,
+            engine,
+            stage1_gate,
+            stage2_gate,
+        } => cmd_optimize(
+            cli,
+            file,
+            out.as_ref(),
+            emit_wasm.as_ref(),
+            *engine,
+            *stage1_gate,
+            *stage2_gate,
+        ),
         Cmd::ApplyPatch { patch, pkg, caps } => cmd_apply_patch(cli, patch, pkg, caps.as_deref()),
         Cmd::Verify {
             pkg,
@@ -925,6 +997,28 @@ fn mk_ctx(cli: &Cli) -> EvalCtx {
     ctx
 }
 
+fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
+    match cli.selfhost_bootstrap {
+        SelfhostBootstrapArg::ArtifactOnly => SelfhostBootstrapMode::ArtifactOnly,
+        SelfhostBootstrapArg::ArtifactPreferred => SelfhostBootstrapMode::ArtifactPreferred,
+        SelfhostBootstrapArg::Embedded => SelfhostBootstrapMode::Embedded,
+    }
+}
+
+fn load_selfhost_toolchain(
+    cli: &Cli,
+    ctx: &mut EvalCtx,
+    env: &mut gc_kernel::Env,
+) -> Result<(), CliError> {
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        ctx,
+        env,
+        resolved_selfhost_bootstrap_mode(cli),
+        cli.selfhost_artifact.as_deref(),
+    )
+    .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+}
+
 fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> CliError {
     CliError {
         exit_code,
@@ -969,8 +1063,7 @@ fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
 
-            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             let f = env.get("selfhost/tool::fmt-module").ok_or_else(|| {
                 cli_err(
@@ -1172,12 +1265,53 @@ fn selfhost_parse_canonicalize_module(
     Ok(forms.clone())
 }
 
-fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliError> {
+fn stage1_pipeline_json(out: &gc_opt::Stage1PipelineOutcome) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": out.gate_report.obligation,
+        "ok": out.gate_report.ok,
+        "errors": out.gate_report.errors,
+        "original_module_hash": hex32(out.gate_report.original_module_hash),
+        "transformed_module_hash": hex32(out.gate_report.transformed_module_hash),
+        "original_value_hash": out.gate_report.original_value_hash.map(hex32),
+        "transformed_value_hash": out.gate_report.transformed_value_hash.map(hex32),
+        "egg_runs": out.optimize_report.stats.egg_runs,
+        "egg_iterations": out.optimize_report.stats.iterations,
+        "egg_eclasses": out.optimize_report.stats.eclasses,
+        "egg_enodes": out.optimize_report.stats.enodes,
+        "egg_rewrites_applied": out.optimize_report.stats.rewrites_applied,
+    })
+}
+
+fn stage2_report_json(r: &gc_opt::Stage2ValidationReport) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": r.obligation,
+        "supported": r.supported,
+        "ok": r.ok,
+        "module_hash": hex32(r.module_hash),
+        "wasm_hash": r.wasm_hash.map(hex32),
+        "value_kind": r.value_kind.map(|k| match k {
+            gc_opt::Stage2ValueKind::Int => "int",
+            gc_opt::Stage2ValueKind::Bool => "bool",
+        }),
+        "original_value_hash": r.original_value_hash.map(hex32),
+        "wasm_value_hash": r.wasm_value_hash.map(hex32),
+        "wasm_bytes_len": r.wasm_bytes_len,
+        "errors": r.errors,
+    })
+}
+
+fn cmd_eval(
+    cli: &Cli,
+    file: &PathBuf,
+    engine: FmtEngine,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
 
-    let (mut ctx, mut env, forms) = match engine {
+    let (mut ctx, mut env, mut forms) = match engine {
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -1194,8 +1328,7 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
             ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
-            load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-                .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))?;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
             ctx.steps = 0;
@@ -1206,6 +1339,25 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
             ctx.step_limit = resolved_step_limit(cli).resolve();
             (ctx, env, forms)
         }
+    };
+
+    let stage1 = if stage1_pipeline || stage1_gate {
+        let out = gc_opt::stage1_pipeline(&forms)
+            .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?;
+        if stage1_gate && !out.gate_report.ok {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/stage1-validation",
+                    message: "core/obligation::stage1-validation failed".to_string(),
+                    context: Some(stage1_pipeline_json(&out)),
+                },
+            });
+        }
+        forms = out.transformed_forms.clone();
+        Some(out)
+    } else {
+        None
     };
 
     let v = eval_module(&mut ctx, &mut env, &forms)
@@ -1221,6 +1373,7 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "stage1": stage1.as_ref().map(stage1_pipeline_json),
             "value": value,
             "value_format": value_format,
         })),
@@ -4031,6 +4184,161 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     })
 }
 
+fn cmd_selfhost_artifact(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
+    let mut modules = Vec::new();
+    let mut all_ok = true;
+    let mut stage2_supported = 0u64;
+    let mut stage2_validated = 0u64;
+
+    for (path, src) in selfhost_coreform_toolchain_v1_sources() {
+        let forms = parse_module(src)
+            .map_err(|e| cli_err(EX_PARSE, "selfhost/parse", format!("{path}: {e}")))?;
+        let forms = canonicalize_module(forms)
+            .map_err(|e| cli_err(EX_PARSE, "selfhost/canon", format!("{path}: {e}")))?;
+        let module_h = hash_module(&forms);
+
+        let stage1 = gc_opt::stage1_pipeline(&forms)
+            .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{path}: {e}")))?;
+        let stage2 = gc_opt::stage2_validation_report(&stage1.transformed_forms);
+        if !stage1.gate_report.ok || (stage2.supported && !stage2.ok) {
+            all_ok = false;
+        }
+        if stage2.supported {
+            stage2_supported = stage2_supported.saturating_add(1);
+            if stage2.ok {
+                stage2_validated = stage2_validated.saturating_add(1);
+            }
+        }
+
+        modules.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str((*path).to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":source")),
+                    Term::Str((*src).to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":module-h")),
+                    Term::Bytes(module_h.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage1-ok")),
+                    Term::Bool(stage1.gate_report.ok),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage1-errors")),
+                    Term::Vector(
+                        stage1
+                            .gate_report
+                            .errors
+                            .into_iter()
+                            .map(Term::Str)
+                            .collect(),
+                    ),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-supported")),
+                    Term::Bool(stage2.supported),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-ok")),
+                    Term::Bool(stage2.ok),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-errors")),
+                    Term::Vector(stage2.errors.into_iter().map(Term::Str).collect()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-module-h")),
+                    Term::Bytes(stage2.module_hash.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-wasm-h")),
+                    stage2
+                        .wasm_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-wasm-bytes")),
+                    stage2
+                        .wasm_bytes_len
+                        .map(|n| Term::Int((n as i64).into()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let artifact = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(all_ok)),
+            (
+                TermOrdKey(Term::symbol(":generated-by")),
+                Term::Str(format!("genesis {}", env!("CARGO_PKG_VERSION"))),
+            ),
+            (
+                TermOrdKey(Term::symbol(":stage2-summary")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":supported-modules")),
+                            Term::Int((stage2_supported as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":validated-modules")),
+                            Term::Int((stage2_validated as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (TermOrdKey(Term::symbol(":modules")), Term::Vector(modules)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact_s = print_term(&artifact);
+    std::fs::write(out, artifact_s.as_bytes())
+        .with_context(|| format!("write {}", out.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let artifact_hash = *blake3::hash(artifact_s.as_bytes()).as_bytes();
+    let exit_code = if all_ok { EX_OK } else { EX_OBLIGATIONS };
+    let env = JsonEnvelope {
+        ok: all_ok,
+        kind: "genesis/selfhost-artifact-v0.2",
+        data: Some(serde_json::json!({
+            "out": out.display().to_string(),
+            "ok": all_ok,
+            "artifact_hash": hex32(artifact_hash),
+            "stage2_supported_modules": stage2_supported,
+            "stage2_validated_modules": stage2_validated,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", out.display())
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
     let k = gc_obligations::KeyFile::generate_ed25519();
     k.write_secure(out)
@@ -4217,20 +4525,89 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     })
 }
 
-fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdOut, CliError> {
+fn cmd_optimize(
+    cli: &Cli,
+    file: &PathBuf,
+    out: Option<&PathBuf>,
+    emit_wasm: Option<&PathBuf>,
+    engine: FmtEngine,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms =
-        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+
+    let forms = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?
+        }
+        FmtEngine::Selfhost => {
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            ctx.steps = 0;
+            ctx.step_limit = None;
+            selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?
+        }
+    };
     let orig_h = hash_module(&forms);
 
-    let (opt, opt_report) = gc_opt::optimize_module_with_report(&forms);
-    let opt =
-        canonicalize_module(opt).map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let stage1 = gc_opt::stage1_pipeline(&forms)
+        .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?;
+    if stage1_gate && !stage1.gate_report.ok {
+        return Err(CliError {
+            exit_code: EX_OBLIGATIONS,
+            json: JsonError {
+                code: "obligation/stage1-validation",
+                message: "core/obligation::stage1-validation failed".to_string(),
+                context: Some(stage1_pipeline_json(&stage1)),
+            },
+        });
+    }
+    let opt = stage1.transformed_forms.clone();
+    let opt_report = stage1.optimize_report.clone();
     let opt_h = hash_module(&opt);
+    let stage2 = if stage2_gate || emit_wasm.is_some() {
+        Some(gc_opt::stage2_validation_report(&opt))
+    } else {
+        None
+    };
+    if stage2_gate {
+        let s2 = stage2
+            .as_ref()
+            .expect("stage2 report must exist when stage2 gate is enabled");
+        if !(s2.supported && s2.ok) {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/translation-validation",
+                    message:
+                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+                            .to_string(),
+                    context: Some(stage2_report_json(s2)),
+                },
+            });
+        }
+    }
+
+    if let Some(p) = emit_wasm {
+        let art = gc_opt::stage2_compile_module(&opt).map_err(|e| match e {
+            gc_opt::Stage2CompileError::Unsupported(msg) => {
+                cli_err(EX_OBLIGATIONS, "stage2/unsupported", msg)
+            }
+            gc_opt::Stage2CompileError::Internal(msg) => cli_err(EX_INTERNAL, "stage2/error", msg),
+        })?;
+        std::fs::write(p, &art.wasm_bytes)
+            .with_context(|| format!("write {}", p.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+
     let out_s = print_module(&opt);
     let changed = orig_h != opt_h;
 
@@ -4252,6 +4629,13 @@ fn cmd_optimize(cli: &Cli, file: &PathBuf, out: Option<&PathBuf>) -> Result<CmdO
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
             "out": out.map(|p| p.display().to_string()),
+            "wasm_out": emit_wasm.map(|p| p.display().to_string()),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
+            "stage1": stage1_pipeline_json(&stage1),
+            "stage2": stage2.as_ref().map(stage2_report_json),
             "changed": changed,
             "original_hash": hex32(orig_h),
             "optimized_hash": hex32(opt_h),

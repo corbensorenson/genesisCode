@@ -137,12 +137,31 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - `crates/gc_cli/tests/cli_eval_engine.rs` asserts `eval --engine selfhost` parity + parse error surfacing
     - `crates/gc_wasm/src/lib.rs` test `eval_coreform_module_selfhost_matches_rust_frontend_eval`
 - [ ] Implement compilation stages suitable for WASM-first execution:
-  - stage 1: CoreForm -> CoreForm transforms (optimized, validated)
-  - stage 2: CoreForm -> WASM (behind translation validation obligation)
+  - [x] stage 1: CoreForm -> CoreForm transforms (optimized, validated)
+    - `gc_opt::stage1_pipeline` now runs optimize + canonicalize + validation gate report
+    - validation gate is `core/obligation::stage1-validation` (pure/hash-equivalence on pure programs)
+    - CLI integrates obligation gating:
+      - `genesis eval --stage1-pipeline [--stage1-gate]`
+      - `genesis optimize --engine rust|selfhost [--stage1-gate]`
+    - `gc_obligations` supports `core/obligation::stage1-validation` for package/module runs
+    - tests: `crates/gc_cli/tests/cli_stage1_pipeline.rs` and `gc_opt` stage1 validation tests
+  - [x] stage 2 baseline: CoreForm -> WASM for pure scalar subset (int/bool) behind translation validation obligation
+    - `gc_opt::stage2_compile_module` lowers supported CoreForm into deterministic WASM bytes
+    - `gc_opt::stage2_validation_report` executes lowered WASM and compares kernel vs WASM value hashes
+    - `genesis optimize` adds `--stage2-gate` and `--emit-wasm <file>`
+    - `core/obligation::translation-validation` now records `:stage2` evidence and fails when supported Stage-2 translations mismatch
+    - remaining scope: widen Stage-2 coverage beyond scalar pure subset to full module/test surface
   - [ ] Cutover plan:
-  - Rust produces the self-host toolchain artifact
-  - then runtime uses the self-host toolchain under obligations
-  - Rust becomes optional tooling only
+    - [x] Rust produces a self-host toolchain artifact:
+      - `genesis selfhost-artifact --out <file>` emits a canonical CoreForm artifact with per-module Stage-1/Stage-2 validation metadata.
+    - [x] Runtime can consume a validated self-host artifact:
+      - `gc_prelude::load_selfhost_coreform_toolchain_v1` now supports `${GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT}` and verifies schema, module hashes, and gate flags before loading.
+    - [x] make artifact-based bootstrap the default distribution path and reduce embedded-source fallback:
+      - host CLIs default selfhost bootstrap mode to `artifact-only` (`--selfhost-bootstrap artifact-only|artifact-preferred|embedded`).
+      - `--engine selfhost` now requires a validated artifact by default (`--selfhost-artifact` or `./.genesis/selfhost/toolchain.gc`).
+      - embedded bootstrap is now an explicit dev fallback (`--selfhost-bootstrap embedded`).
+    - [ ] Rust becomes optional tooling only (remaining):
+      - remove/feature-gate embedded-source bootstrap from release profiles once artifact distribution is fully standardized across host runtimes.
 - [x] Make self-hosted tooling fast/practical under the kernel step limit:
   - add a compiled execution path (bytecode-like in-kernel compiled evaluator) for toolchain-grade workloads
   - `gc_kernel::{compile_module, eval_compiled_module, eval_module_compiled}`

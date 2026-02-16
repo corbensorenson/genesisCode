@@ -125,6 +125,27 @@ Once selfhost tools exist:
 Eventually:
 - Rust becomes optional tooling and the “release toolchain” is a GenesisGraph artifact (installable via `.gpk`).
 
+Current cutover mechanism (implemented):
+- Rust can produce a canonical selfhost toolchain artifact:
+  - `genesis selfhost-artifact --out <path>`
+- Runtime can load that artifact instead of embedded bootstrap sources by setting:
+  - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`
+- Loader validation before activation:
+  - artifact schema + kind/version checks
+  - required selfhost module set present (parse/canon/printer/hash/tool)
+  - per-module source hash matches declared module hash
+  - `:stage1-ok` must be true for every module
+  - when `:stage2-supported` is true, `:stage2-ok` must be true
+
+This makes artifact-based bootstrap testable today while retaining embedded fallback for development.
+
+Host tooling defaults:
+- native CLI (`genesis`) and WASI CLI now default to `artifact-only` bootstrap mode for selfhost paths.
+- runtime flags:
+  - `--selfhost-artifact <file>` choose artifact explicitly
+  - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
+- `embedded` mode remains available as a deliberate bootstrap/development fallback.
+
 ## Translation Validation Strategy
 
 Translation validation is treated as an **obligation**:

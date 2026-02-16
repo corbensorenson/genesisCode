@@ -1,7 +1,12 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+
 use anyhow::Context;
 use once_cell::sync::Lazy;
 
-use gc_coreform::{canonicalize_module, parse_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
+};
 use gc_kernel::{CompiledModule, Env, EvalCtx, compile_module, eval_compiled_module};
 
 const PARSE_SRC: &str = include_str!(concat!(
@@ -25,17 +30,23 @@ const TOOL_SRC: &str = include_str!(concat!(
     "/../../selfhost/tool_coreform_v1.gc"
 ));
 
+const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";
+const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
+
+const MODULE_SOURCES: [(&str, &str); 5] = [
+    ("selfhost/parse.gc", PARSE_SRC),
+    ("selfhost/canon.gc", CANON_SRC),
+    ("selfhost/printer.gc", PRINTER_SRC),
+    ("selfhost/hash.gc", HASH_SRC),
+    ("selfhost/tool_coreform_v1.gc", TOOL_SRC),
+];
+
 type SelfhostCompiledModules = Vec<(&'static str, CompiledModule)>;
 
 static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Lazy::new(|| {
     let mut out = Vec::new();
-    for (name, src) in [
-        ("selfhost/parse.gc", PARSE_SRC),
-        ("selfhost/canon.gc", CANON_SRC),
-        ("selfhost/printer.gc", PRINTER_SRC),
-        ("selfhost/hash.gc", HASH_SRC),
-        ("selfhost/tool_coreform_v1.gc", TOOL_SRC),
-    ] {
+    for (name, src) in MODULE_SOURCES {
         let forms = parse_module(src).map_err(|e| format!("{name}: parse: {e}"))?;
         let forms = canonicalize_module(forms).map_err(|e| format!("{name}: canon: {e}"))?;
         let compiled = compile_module(&forms).map_err(|e| format!("{name}: compile: {e}"))?;
@@ -44,27 +55,258 @@ static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Laz
     Ok(out)
 });
 
+pub fn selfhost_coreform_toolchain_v1_sources() -> &'static [(&'static str, &'static str)] {
+    &MODULE_SOURCES
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelfhostBootstrapMode {
+    ArtifactOnly,
+    ArtifactPreferred,
+    Embedded,
+}
+
+fn map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
+    m.get(&TermOrdKey(Term::symbol(k)))
+}
+
+fn with_trusted_bootstrap_limits<T, F>(ctx: &mut EvalCtx, f: F) -> anyhow::Result<T>
+where
+    F: FnOnce(&mut EvalCtx) -> anyhow::Result<T>,
+{
+    let saved_step_limit = ctx.step_limit;
+    let saved_mem_limits = ctx.mem_limits;
+    ctx.step_limit = None;
+    ctx.mem_limits = gc_kernel::MemLimits::default();
+    let out = f(ctx);
+    ctx.step_limit = saved_step_limit;
+    ctx.mem_limits = saved_mem_limits;
+    ctx.reset_counters();
+    out
+}
+
+/// Load the self-hosted CoreForm toolchain v1 from an artifact file.
+///
+/// Artifact schema (CoreForm map):
+/// {
+///   :kind "genesis/selfhost-toolchain-artifact-v0.2"
+///   :v 1
+///   :modules [
+///     {
+///       :path "selfhost/parse.gc"
+///       :source "<module source>"
+///       :module-h b"...32 bytes..."
+///       :stage1-ok true
+///       :stage2-supported bool
+///       :stage2-ok bool
+///     }
+///   ]
+/// }
+pub fn load_selfhost_coreform_toolchain_v1_from_artifact(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    artifact_path: &Path,
+) -> anyhow::Result<()> {
+    let src = std::fs::read_to_string(artifact_path)
+        .with_context(|| format!("read {}", artifact_path.display()))?;
+    let term = parse_term(&src).map_err(|e| anyhow::anyhow!("artifact parse: {e}"))?;
+    let root = match term {
+        Term::Map(m) => m,
+        _ => {
+            return Err(anyhow::anyhow!(
+                "artifact root must be a map, got {}",
+                print_term(&term)
+            ));
+        }
+    };
+
+    let kind = match map_get(&root, ":kind") {
+        Some(Term::Str(s)) => s.as_str(),
+        _ => return Err(anyhow::anyhow!("artifact missing :kind string")),
+    };
+    if kind != SELFHOST_TOOLCHAIN_ARTIFACT_KIND {
+        return Err(anyhow::anyhow!(
+            "artifact :kind mismatch: expected {SELFHOST_TOOLCHAIN_ARTIFACT_KIND}, got {kind}"
+        ));
+    }
+
+    let v = match map_get(&root, ":v") {
+        Some(Term::Int(i)) => i,
+        _ => return Err(anyhow::anyhow!("artifact missing :v int")),
+    };
+    if v != &1.into() {
+        return Err(anyhow::anyhow!("artifact :v must be 1, got {v}"));
+    }
+
+    let modules = match map_get(&root, ":modules") {
+        Some(Term::Vector(v)) => v,
+        _ => return Err(anyhow::anyhow!("artifact missing :modules vector")),
+    };
+
+    let expected_paths: BTreeSet<&str> = MODULE_SOURCES.iter().map(|(p, _)| *p).collect();
+    let mut seen = BTreeSet::new();
+    let mut compiled_by_path: BTreeMap<String, CompiledModule> = BTreeMap::new();
+
+    for m in modules {
+        let m_map = match m {
+            Term::Map(mm) => mm,
+            _ => return Err(anyhow::anyhow!("artifact module entry must be map")),
+        };
+        let path = match map_get(m_map, ":path") {
+            Some(Term::Str(s)) => s.clone(),
+            _ => return Err(anyhow::anyhow!("artifact module missing :path string")),
+        };
+        if !expected_paths.contains(path.as_str()) {
+            return Err(anyhow::anyhow!(
+                "artifact module path is not recognized: {path}"
+            ));
+        }
+        if !seen.insert(path.clone()) {
+            return Err(anyhow::anyhow!(
+                "artifact contains duplicate module path: {path}"
+            ));
+        }
+
+        let src = match map_get(m_map, ":source") {
+            Some(Term::Str(s)) => s,
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "artifact module {path} missing :source string"
+                ));
+            }
+        };
+        let module_h = match map_get(m_map, ":module-h") {
+            Some(Term::Bytes(b)) if b.len() == 32 => {
+                let mut h = [0u8; 32];
+                h.copy_from_slice(b.as_ref());
+                h
+            }
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "artifact module {path} missing :module-h 32-byte blob"
+                ));
+            }
+        };
+        let stage1_ok = matches!(map_get(m_map, ":stage1-ok"), Some(Term::Bool(true)));
+        if !stage1_ok {
+            return Err(anyhow::anyhow!(
+                "artifact module {path} is missing stage1 validation"
+            ));
+        }
+        let stage2_supported =
+            matches!(map_get(m_map, ":stage2-supported"), Some(Term::Bool(true)));
+        let stage2_ok = matches!(map_get(m_map, ":stage2-ok"), Some(Term::Bool(true)));
+        if stage2_supported && !stage2_ok {
+            return Err(anyhow::anyhow!(
+                "artifact module {path} has failed stage2 validation"
+            ));
+        }
+
+        let forms = parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?;
+        let forms =
+            canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?;
+        let got_h = hash_module(&forms);
+        if got_h != module_h {
+            return Err(anyhow::anyhow!(
+                "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
+                module_h,
+                got_h
+            ));
+        }
+        let compiled =
+            compile_module(&forms).map_err(|e| anyhow::anyhow!("{path}: compile: {e}"))?;
+        compiled_by_path.insert(path, compiled);
+    }
+
+    for expected in expected_paths {
+        if !seen.contains(expected) {
+            return Err(anyhow::anyhow!(
+                "artifact missing required module: {expected}"
+            ));
+        }
+    }
+
+    with_trusted_bootstrap_limits(ctx, |ctx| {
+        for (path, _) in MODULE_SOURCES {
+            let module = compiled_by_path
+                .remove(path)
+                .ok_or_else(|| anyhow::anyhow!("artifact missing compiled module: {path}"))?;
+            eval_compiled_module(ctx, env, &module).with_context(|| format!("eval {path}"))?;
+        }
+        Ok(())
+    })
+}
+
+fn load_selfhost_coreform_toolchain_v1_embedded(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+) -> anyhow::Result<()> {
+    let mods = SELFHOST_COREFORM_V1
+        .as_ref()
+        .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
+    with_trusted_bootstrap_limits(ctx, |ctx| {
+        for (name, module) in mods {
+            eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
+        }
+        Ok(())
+    })
+}
+
+fn resolve_default_artifact_path() -> PathBuf {
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
+}
+
+pub fn load_selfhost_coreform_toolchain_v1_with_mode(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    mode: SelfhostBootstrapMode,
+    artifact_path: Option<&Path>,
+) -> anyhow::Result<()> {
+    match mode {
+        SelfhostBootstrapMode::Embedded => load_selfhost_coreform_toolchain_v1_embedded(ctx, env),
+        SelfhostBootstrapMode::ArtifactOnly | SelfhostBootstrapMode::ArtifactPreferred => {
+            let from_env = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV)
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+                .map(PathBuf::from);
+            let resolved = artifact_path
+                .map(PathBuf::from)
+                .or(from_env)
+                .unwrap_or_else(resolve_default_artifact_path);
+
+            match load_selfhost_coreform_toolchain_v1_from_artifact(ctx, env, &resolved) {
+                Ok(()) => Ok(()),
+                Err(err) => match mode {
+                    SelfhostBootstrapMode::ArtifactOnly => Err(anyhow::anyhow!(
+                        "selfhost artifact bootstrap required, failed at {}: {err}",
+                        resolved.display()
+                    )),
+                    SelfhostBootstrapMode::ArtifactPreferred => {
+                        load_selfhost_coreform_toolchain_v1_embedded(ctx, env).with_context(|| {
+                            format!(
+                                "artifact bootstrap failed at {}, and embedded fallback failed",
+                                resolved.display()
+                            )
+                        })
+                    }
+                    SelfhostBootstrapMode::Embedded => unreachable!(),
+                },
+            }
+        }
+    }
+}
+
 /// Load the self-hosted CoreForm toolchain v1 into the current environment.
 ///
 /// This is an opt-in cutover mechanism: we bootstrap by parsing the toolchain sources with the Rust
 /// CoreForm frontend, but then run the toolchain logic inside the kernel.
 pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> anyhow::Result<()> {
-    let mods = SELFHOST_COREFORM_V1
-        .as_ref()
-        .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
-
-    // Toolchain bootstrap must not consume user step/memory budgets.
-    let saved_step_limit = ctx.step_limit;
-    let saved_mem_limits = ctx.mem_limits;
-    ctx.step_limit = None;
-    ctx.mem_limits = gc_kernel::MemLimits::default();
-
-    for (name, module) in mods {
-        eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
-    }
-
-    ctx.step_limit = saved_step_limit;
-    ctx.mem_limits = saved_mem_limits;
-    ctx.reset_counters();
-    Ok(())
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        ctx,
+        env,
+        SelfhostBootstrapMode::ArtifactPreferred,
+        None,
+    )
 }

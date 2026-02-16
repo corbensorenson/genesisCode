@@ -1,9 +1,17 @@
 use std::collections::BTreeMap;
 
 use egg::{CostFunction, EGraph, Extractor, Id, RecExpr, Rewrite, Runner, Symbol, rewrite};
-use gc_coreform::Term;
+use gc_coreform::{Term, canonicalize_module, hash_module};
+use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
+use gc_prelude::build_prelude;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
+
+mod stage2_wasm;
+pub use stage2_wasm::{
+    Stage2CompileArtifact, Stage2CompileError, Stage2ValidationReport, Stage2ValueKind,
+    stage2_compile_module, stage2_validation_report,
+};
 
 /// Aggregate statistics from optimizer runs.
 #[derive(Debug, Clone, Default)]
@@ -19,6 +27,94 @@ pub struct OptimizeStats {
 pub struct OptimizeReport {
     pub changed: bool,
     pub stats: OptimizeStats,
+}
+
+#[derive(Debug, Clone)]
+pub struct Stage1GateReport {
+    pub obligation: String,
+    pub ok: bool,
+    pub original_module_hash: [u8; 32],
+    pub transformed_module_hash: [u8; 32],
+    pub original_value_hash: Option<[u8; 32]>,
+    pub transformed_value_hash: Option<[u8; 32]>,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Stage1PipelineOutcome {
+    pub transformed_forms: Vec<Term>,
+    pub optimize_report: OptimizeReport,
+    pub gate_report: Stage1GateReport,
+}
+
+/// Stage-1 compiler pipeline (CoreForm -> CoreForm) with built-in validation gate report.
+///
+/// Pipeline:
+/// 1. Conservative pure-subset optimization (`gc_opt` e-graph + local folds)
+/// 2. Canonicalization for stable downstream hashing
+/// 3. Validation gate report (`core/obligation::stage1-validation`) by evaluating original and
+///    transformed modules and comparing pure result hashes.
+///
+/// The gate report is always produced. Callers decide whether a failed gate should hard-fail.
+pub fn stage1_pipeline(forms: &[Term]) -> Result<Stage1PipelineOutcome, anyhow::Error> {
+    let (opt_forms, optimize_report) = optimize_module_with_report(forms);
+    let transformed_forms =
+        canonicalize_module(opt_forms).map_err(|e| anyhow::anyhow!("stage1 canonicalize: {e}"))?;
+    let gate_report = stage1_validation_report(forms, &transformed_forms);
+    Ok(Stage1PipelineOutcome {
+        transformed_forms,
+        optimize_report,
+        gate_report,
+    })
+}
+
+/// Validation gate used by stage-1 transforms.
+///
+/// `ok=true` only when both modules evaluate to pure values and their value hashes match.
+pub fn stage1_validation_report(original: &[Term], transformed: &[Term]) -> Stage1GateReport {
+    let original_module_hash = hash_module(original);
+    let transformed_module_hash = hash_module(transformed);
+    let mut errors = Vec::new();
+
+    let original_eval = eval_pure_hash(original);
+    let transformed_eval = eval_pure_hash(transformed);
+
+    let original_value_hash = original_eval.as_ref().ok().copied();
+    let transformed_value_hash = transformed_eval.as_ref().ok().copied();
+
+    if let Err(e) = &original_eval {
+        errors.push(format!("original module is not gate-valid: {e}"));
+    }
+    if let Err(e) = &transformed_eval {
+        errors.push(format!("transformed module is not gate-valid: {e}"));
+    }
+
+    if let (Ok(a), Ok(b)) = (original_eval, transformed_eval)
+        && a != b
+    {
+        errors.push("pure value hash mismatch after stage1 transform".to_string());
+    }
+
+    Stage1GateReport {
+        obligation: "core/obligation::stage1-validation".to_string(),
+        ok: errors.is_empty(),
+        original_module_hash,
+        transformed_module_hash,
+        original_value_hash,
+        transformed_value_hash,
+        errors,
+    }
+}
+
+fn eval_pure_hash(forms: &[Term]) -> Result<[u8; 32], String> {
+    let mut ctx = EvalCtx::with_step_limit(None);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let v = eval_module(&mut ctx, &mut env, forms).map_err(|e| format!("{e}"))?;
+    if matches!(v, Value::EffectProgram(_)) {
+        return Err("effect program produced (not pure)".to_string());
+    }
+    Ok(value_hash(&v))
 }
 
 /// Optimize a CoreForm module by rewriting only conservative pure fragments.
@@ -654,7 +750,9 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
 mod tests {
     use gc_coreform::{Term, canonicalize_module, parse_module, print_module};
 
-    use super::{optimize_module, optimize_module_with_report};
+    use super::{
+        optimize_module, optimize_module_with_report, stage1_pipeline, stage1_validation_report,
+    };
 
     #[test]
     fn folds_int_prim_constants() {
@@ -737,5 +835,42 @@ mod tests {
             .expect("def x");
         let xs = def.as_proper_list().unwrap();
         assert!(matches!(xs[2], Term::Symbol(s) if s == "y"));
+    }
+
+    #[test]
+    fn stage1_validation_reports_ok_for_pure_equivalent_module() {
+        let src = r#"
+          (def x (prim int/add 0 (prim int/add 41 1)))
+          x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let out = stage1_pipeline(&forms).expect("stage1 pipeline");
+        assert!(
+            out.gate_report.ok,
+            "expected gate ok: {:?}",
+            out.gate_report
+        );
+        assert!(out.gate_report.original_value_hash.is_some());
+        assert!(out.gate_report.transformed_value_hash.is_some());
+    }
+
+    #[test]
+    fn stage1_validation_fails_for_effectful_module() {
+        let src = r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let gate = stage1_validation_report(&forms, &forms);
+        assert!(!gate.ok);
+        assert!(
+            gate.errors
+                .iter()
+                .any(|e| e.contains("effect program produced")),
+            "expected effect-related gate error, got {:?}",
+            gate.errors
+        );
     }
 }

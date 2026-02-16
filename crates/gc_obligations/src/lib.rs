@@ -274,6 +274,9 @@ pub fn test_package_with_step_limit(
                 obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
             }
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
+            "core/obligation::stage1-validation" => {
+                obligation_stage1_validation(&store, &manifest, &modules)
+            }
             "core/obligation::translation-validation" => obligation_translation_validation(
                 &store, &pkg_dir, &manifest, &modules, &caps, &test_ids, limits,
             ),
@@ -1830,6 +1833,134 @@ fn obligation_typecheck(
     })
 }
 
+fn obligation_stage1_validation(
+    store: &EvidenceStore,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+) -> Result<ObligationResult, ObligationError> {
+    let mut ok = true;
+    let mut errors = Vec::new();
+    let mut module_reports = Vec::new();
+
+    for m in modules {
+        let out =
+            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
+        if !out.gate_report.ok {
+            ok = false;
+            for e in &out.gate_report.errors {
+                errors.push(format!("{}: {e}", m.entry.path));
+            }
+        }
+        module_reports.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str(m.entry.path.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":ok")),
+                    Term::Bool(out.gate_report.ok),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":original-module-h")),
+                    Term::Bytes(out.gate_report.original_module_hash.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":transformed-module-h")),
+                    Term::Bytes(out.gate_report.transformed_module_hash.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":original-value-h")),
+                    out.gate_report
+                        .original_value_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":transformed-value-h")),
+                    out.gate_report
+                        .transformed_value_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(
+                        out.gate_report
+                            .errors
+                            .iter()
+                            .cloned()
+                            .map(Term::Str)
+                            .collect(),
+                    ),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":optimizer")),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":egg-runs")),
+                                Term::Int((out.optimize_report.stats.egg_runs as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":egg-iterations")),
+                                Term::Int((out.optimize_report.stats.iterations as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":egg-eclasses")),
+                                Term::Int((out.optimize_report.stats.eclasses as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":egg-enodes")),
+                                Term::Int((out.optimize_report.stats.enodes as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let report = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/stage1-validation-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (
+                TermOrdKey(Term::symbol(":obligation")),
+                Term::Str("core/obligation::stage1-validation".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":modules")),
+                Term::Vector(module_reports),
+            ),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact = store.put_term(&report)?;
+    Ok(ObligationResult {
+        name: "core/obligation::stage1-validation".to_string(),
+        ok,
+        artifact: Some(artifact),
+        errors,
+    })
+}
+
 fn obligation_translation_validation(
     store: &EvidenceStore,
     pkg_dir: &Path,
@@ -1871,6 +2002,9 @@ fn obligation_translation_validation(
     let mut ok = true;
     let mut errors = Vec::new();
     let mut per_test = Vec::new();
+    let mut stage2_entries = Vec::new();
+    let mut stage2_supported: u64 = 0;
+    let mut stage2_validated: u64 = 0;
 
     // Optimize modules once and record optimizer statistics as evidence.
     let mut opt_modules = Vec::new();
@@ -1887,6 +2021,75 @@ fn obligation_translation_validation(
             *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
         }
         let opt_h = hash_module(&opt_forms);
+
+        let s2 = gc_opt::stage2_validation_report(&opt_forms);
+        if s2.supported {
+            stage2_supported = stage2_supported.saturating_add(1);
+            if s2.ok {
+                stage2_validated = stage2_validated.saturating_add(1);
+            } else {
+                ok = false;
+                for e in &s2.errors {
+                    errors.push(format!("stage2 {}: {e}", m.entry.path));
+                }
+            }
+        }
+        stage2_entries.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str(m.entry.path.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":supported")),
+                    Term::Bool(s2.supported),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(s2.ok)),
+                (
+                    TermOrdKey(Term::symbol(":module-h")),
+                    Term::Bytes(s2.module_hash.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":wasm-h")),
+                    s2.wasm_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":value-kind")),
+                    match s2.value_kind {
+                        Some(gc_opt::Stage2ValueKind::Int) => Term::Symbol(":int".to_string()),
+                        Some(gc_opt::Stage2ValueKind::Bool) => Term::Symbol(":bool".to_string()),
+                        None => Term::Nil,
+                    },
+                ),
+                (
+                    TermOrdKey(Term::symbol(":orig-value-h")),
+                    s2.original_value_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":wasm-value-h")),
+                    s2.wasm_value_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":wasm-bytes")),
+                    s2.wasm_bytes_len
+                        .map(|n| Term::Int((n as i64).into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(s2.errors.iter().cloned().map(Term::Str).collect()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+
         mod_terms.push(Term::Map(
             [
                 (
@@ -2014,6 +2217,27 @@ fn obligation_translation_validation(
             (
                 TermOrdKey(Term::symbol(":modules")),
                 Term::Vector(mod_terms),
+            ),
+            (
+                TermOrdKey(Term::symbol(":stage2")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":supported-modules")),
+                            Term::Int((stage2_supported as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":validated-modules")),
+                            Term::Int((stage2_validated as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":entries")),
+                            Term::Vector(stage2_entries),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
             ),
             (TermOrdKey(Term::symbol(":tests")), Term::Vector(per_test)),
             (

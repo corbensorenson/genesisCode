@@ -206,6 +206,21 @@ fn translation_validation_artifact_includes_optimizer_summary() {
         panic!("artifact missing :modules vector");
     };
     assert!(!mods.is_empty(), ":modules should be non-empty");
+    let Some(Term::Map(stage2)) = map_get(&m, ":stage2") else {
+        panic!("artifact missing :stage2 map");
+    };
+    assert!(
+        stage2.contains_key(&TermOrdKey(Term::symbol(":supported-modules"))),
+        "stage2 summary missing :supported-modules"
+    );
+    assert!(
+        stage2.contains_key(&TermOrdKey(Term::symbol(":validated-modules"))),
+        "stage2 summary missing :validated-modules"
+    );
+    assert!(
+        stage2.contains_key(&TermOrdKey(Term::symbol(":entries"))),
+        "stage2 summary missing :entries"
+    );
 }
 
 #[test]
