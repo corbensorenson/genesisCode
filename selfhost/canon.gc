@@ -1,7 +1,6 @@
 (def selfhost/canon::is-error core/error::is?)
 
 ; v0.2 bootstrap canonicalizer: delegates to the Rust CoreForm canonicalizer.
-
 (def selfhost/canon::canonicalize-module
   (fn (forms) (core/coreform::canonicalize-module forms)))
 

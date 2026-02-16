@@ -107,22 +107,21 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - `data/tag`, `pair/as-proper-list`, `map/entries`, `sym/to-str`
   - `str/repeat`, `str/join`
   - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
-- [x] Implement a self-host toolchain surface in GenesisCode (bootstrap wrappers) with equivalence tests:
-  - selfhost modules are stable CoreForm-level entrypoints, delegating to canonical Rust CoreForm frontend:
-    - `selfhost/parse.gc`, `selfhost/canon.gc`, `selfhost/printer.gc`, `selfhost/hash.gc`, `selfhost/tool_coreform_v1.gc`
-  - Equivalence tests against Rust bootstrap API:
-    - `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
-    - `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`
-    - `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`
-    - `crates/gc_prelude/tests/selfhost_hash_equivalence.rs`
-    - `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
-  - module loader + package resolver over commit/snapshot/module artifacts:
-    - `selfhost/frontend_v0.gc`
-    - `crates/gc_prelude/tests/selfhost_frontend_loader.rs`
-- [ ] Implement a truly self-hosted CoreForm frontend (no Rust CoreForm dependency):
-  - parsing terms/modules and producing protocol ERROR values with stable codes/at
-  - canonicalization and canonical printing
-  - hashing from canonical bytes
+- [x] Self-hosted CoreForm parser v1 (no Rust parser dependency):
+  - `selfhost/parse.gc` parses terms/modules from either UTF-8 strings or UTF-8 bytes
+  - Equivalence tests: `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
+- [x] Self-hosted CoreForm tooling v1 (no Rust parser dependency):
+  - `selfhost/tool_coreform_v1.gc` implements `selfhost/tool::{fmt-module,hash-module-src}` using:
+    - self-hosted parsing via `selfhost/parse::*`
+    - bootstrap canonicalize/print/hash via `core/coreform::{canonicalize-module,print-module,hash-module}`
+  - Equivalence tests: `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
+- [x] Bootstrap selfhost modules for canon/printer/hash remain available (fast, deterministic):
+  - `selfhost/canon.gc`, `selfhost/printer.gc`, `selfhost/hash.gc`
+  - Equivalence tests: `crates/gc_prelude/tests/selfhost_{canon,printer,hash}_equivalence.rs`
+- [ ] Implement a truly self-hosted CoreForm frontend (no Rust CoreForm dependency at all):
+  - canonicalization and canonical printing in GenesisCode (no `core/coreform::*` usage)
+  - hashing from canonical bytes in GenesisCode
+  - (parser already done)
 - [x] Cutover tooling entrypoints to support a self-host toolchain engine (opt-in):
   - CLI: `genesis fmt --engine selfhost` uses `selfhost/tool::fmt-module` (honors `--step-limit/--no-step-limit`)
   - wasm-bindgen: expose `fmt_coreform_module_selfhost` and `hash_coreform_module_selfhost`
@@ -136,6 +135,10 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - Rust becomes optional tooling only
 - [ ] Make self-hosted tooling fast/practical under the kernel step limit:
   - add a compiled execution path (bytecode or WASM) for toolchain-grade workloads
+  - [x] treat toolchain bootstrap as trusted init:
+    - prelude + selfhost toolchain evaluation run without step/memory limits
+    - user budgets start after init (`EvalCtx::reset_counters`)
+  - [x] parser perf: `bytes/join` primitive + `core/bytes::join` wrapper to avoid O(n^2) byte concatenation in self-host parsing
   - [x] re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
   - [x] kernel: tail-call optimize final closure applies in tail position (prevents stack overflows on tail recursion)
 

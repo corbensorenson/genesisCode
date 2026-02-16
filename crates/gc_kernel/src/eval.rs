@@ -192,6 +192,15 @@ impl EvalCtx {
         });
     }
 
+    /// Reset counters that are used for budgeting (steps + semantic memory observations).
+    ///
+    /// This is intended for trusted toolchain initialization paths (prelude/selfhost toolchain),
+    /// so user program budgets measure user code rather than bootstrap overhead.
+    pub fn reset_counters(&mut self) {
+        self.steps = 0;
+        self.mem_state = MemState::default();
+    }
+
     pub fn coverage_hits(&self) -> Option<&BTreeMap<String, u64>> {
         self.coverage.as_ref().map(|c| &c.hits)
     }
@@ -1345,6 +1354,42 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let mut out = BytesMut::with_capacity(new_len);
             out.extend_from_slice(a.as_ref());
             out.extend_from_slice(b.as_ref());
+            Ok(Value::Data(Term::Bytes(out.freeze())))
+        }
+        "bytes/join" => {
+            if args.len() != 1 {
+                return type_err(ctx, "bytes/join expects 1 arg");
+            }
+            let mut total_len: usize = 0;
+            let mut parts: Vec<Bytes> = Vec::new();
+            match &args[0] {
+                Value::Vector(xs) => {
+                    parts.reserve(xs.len());
+                    for x in xs {
+                        let Some(Term::Bytes(b)) = x.as_data() else {
+                            return type_err(ctx, "bytes/join expects vector of bytes");
+                        };
+                        total_len = total_len.saturating_add(b.len());
+                        parts.push(b.clone());
+                    }
+                }
+                Value::Data(Term::Vector(xs)) => {
+                    parts.reserve(xs.len());
+                    for x in xs {
+                        let Term::Bytes(b) = x else {
+                            return type_err(ctx, "bytes/join expects vector of bytes");
+                        };
+                        total_len = total_len.saturating_add(b.len());
+                        parts.push(b.clone());
+                    }
+                }
+                _ => return type_err(ctx, "bytes/join expects vector"),
+            }
+            ctx.mem_observe_bytes_len(total_len)?;
+            let mut out = BytesMut::with_capacity(total_len);
+            for p in parts {
+                out.extend_from_slice(p.as_ref());
+            }
             Ok(Value::Data(Term::Bytes(out.freeze())))
         }
         _ => Err(KernelError::new(

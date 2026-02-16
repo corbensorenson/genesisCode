@@ -52,8 +52,18 @@ pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> 
         .as_ref()
         .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
 
+    // Toolchain bootstrap must not consume user step/memory budgets.
+    let saved_step_limit = ctx.step_limit;
+    let saved_mem_limits = ctx.mem_limits;
+    ctx.step_limit = None;
+    ctx.mem_limits = gc_kernel::MemLimits::default();
+
     for (name, forms) in mods {
         eval_module(ctx, env, forms).with_context(|| format!("eval {name}"))?;
     }
+
+    ctx.step_limit = saved_step_limit;
+    ctx.mem_limits = saved_mem_limits;
+    ctx.reset_counters();
     Ok(())
 }

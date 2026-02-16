@@ -187,6 +187,8 @@
 
 (def core/bytes::concat (fn (a) (fn (b) (prim bytes/concat a b))))
 
+(def core/bytes::join (fn (parts) (prim bytes/join parts)))
+
 (def core/bytes::get (fn (b) (fn (i) (prim bytes/get b i))))
 
 (def core/bytes::slice (fn (b) (fn (start) (fn (len) (prim bytes/slice b start len)))))
