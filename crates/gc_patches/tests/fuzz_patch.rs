@@ -5,6 +5,9 @@ use gc_coreform::parse_term;
 proptest! {
     #![proptest_config(ProptestConfig {
         cases: 256,
+        // These are fuzz-style invariants; persisting failures to disk is noisy in workspace test crates
+        // (and can emit warnings when `PROPTEST_FAILURE_PERSISTENCE` is set in the environment).
+        failure_persistence: None,
         max_shrink_iters: 0,
         .. ProptestConfig::default()
     })]

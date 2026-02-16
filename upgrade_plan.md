@@ -10,6 +10,7 @@ Non-negotiables:
 - Kernel stays pure and deterministic (effects only via runner + `.gclog` + replay).
 - Keep `cargo fmt --all`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` green.
 - No mock/simulated product behavior.
+- Keep test output clean (no noisy property-test persistence warnings or other nondeterministic spew).
 
 Key docs to treat as authoritative:
 - `docs/spec/WASM.md`, `docs/spec/WASI.md`, `docs/spec/WASM_HOST_BRIDGE.md`
@@ -30,6 +31,8 @@ Key docs to treat as authoritative:
 - [x] Provide standard effect program combinators used in docs/style-guide:
   - `core/effect::bind` intrinsic (chains effect programs deterministically)
   - `core/effect::map` and `core/effect::then` helpers (in `prelude/prelude.gc`)
+- [x] CI/test hygiene:
+  - proptest-based fuzz/property tests do not emit failure-persistence warnings (disable persistence for fuzz-style invariants)
 
 ---
 
