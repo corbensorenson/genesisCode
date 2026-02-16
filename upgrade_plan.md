@@ -177,7 +177,8 @@ Constraints:
   - frame graph + render/compute command schemas
   - 2D/3D scene graph + PBR material schema
   - canonical CoreForm term projection + stable hashes (`frame_graph_hash`, `scene_hash`)
-- [ ] Specify core data model + architecture for the Level 2 graphics library:
+- [x] Specify core data model + architecture for the Level 2 graphics library:
+  - Locked in `docs/spec/GFX_ARCH.md` (layer model, deterministic scene/frame planning, ECS interop, plugin contracts, UI foundation, obligations)
   - scene graph +/or ECS (define which is canonical, and how they interop)
   - render graph / frame graph with explicit passes
   - asset pipeline primitives (images, meshes, fonts) as GenesisGraph artifacts
@@ -201,7 +202,10 @@ and plugin/agent-friendly from day 1.
 
 - [x] Define editor architecture + host capability requirements (draft):
   - `docs/spec/EDITOR_ARCH.md`
-- [ ] Define editor host capabilities (effects) needed beyond graphics:
+- [x] Define editor host capabilities (effects) needed beyond graphics:
+  - Spec: `docs/spec/EDITOR_CAPS.md`
+  - Prelude wrappers added in `prelude/prelude.gc` for `editor/clipboard::*`, `editor/dialog::*`, `editor/task::*`, `editor/watch::*` and `gfx/*`
+  - Request-shape coverage in `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - filesystem (workspace access), store/refs/sync, clipboard, OS dialogs
   - optional: language server–like background tasks (still effect-logged)
 - [ ] Implement editor core (GenesisCode-only):

@@ -28,6 +28,11 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :vcs_log (core/vcs::log "refs/heads/main" 10)
         :pkg_init (core/pkg::init "genesis.lock" "ws" nil nil)
         :gc_plan (core/gc::plan "genesis.lock" ".genesis/pins.toml" 200 true true)
+        :gfx_submit (core/gfx/gpu::submit-frame-graph {:render-passes [] :compute-passes []})
+        :gfx_resize (((core/gfx/window::resize-surface "main-surface") 1280) 720)
+        :editor_clip_set ((core/editor/clipboard::set "text/plain") "hello")
+        :editor_task_spawn (((core/editor/task::spawn 'editor/task::lint) {:path "a.gc"}) 50)
+        :editor_watch_sub ((core/editor/watch::subscribe "/ws") ["*.gc" "*.gcpkg"])
       }
     "#;
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
@@ -116,4 +121,97 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .clone();
     let req = get_req(gc_plan);
     assert_eq!(req.op, "core/gc::plan");
+
+    let gfx_submit = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":gfx_submit",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(gfx_submit);
+    assert_eq!(req.op, "gfx/gpu::submit-frame-graph");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert!(
+        mm.contains_key(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":graph"
+        )))
+    );
+
+    let gfx_resize = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":gfx_resize",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(gfx_resize);
+    assert_eq!(req.op, "gfx/window::resize-surface");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":width"
+        ))),
+        Some(&gc_coreform::Term::Int(1280.into()))
+    );
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":height"
+        ))),
+        Some(&gc_coreform::Term::Int(720.into()))
+    );
+
+    let editor_clip_set = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_clip_set",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_clip_set);
+    assert_eq!(req.op, "editor/clipboard::set");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":mime"))),
+        Some(&gc_coreform::Term::Str("text/plain".to_string()))
+    );
+
+    let editor_task_spawn = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_spawn",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_spawn);
+    assert_eq!(req.op, "editor/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task-kind"
+        ))),
+        Some(&gc_coreform::Term::symbol("editor/task::lint"))
+    );
+
+    let editor_watch_sub = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_watch_sub",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_watch_sub);
+    assert_eq!(req.op, "editor/watch::subscribe");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    let Some(gc_coreform::Term::Vector(globs)) = mm.get(&gc_coreform::TermOrdKey(
+        gc_coreform::Term::symbol(":globs"),
+    )) else {
+        panic!("missing :globs vector");
+    };
+    assert_eq!(globs.len(), 2);
 }
