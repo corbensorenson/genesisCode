@@ -1,4 +1,5 @@
 use assert_cmd::cargo::cargo_bin_cmd;
+use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
@@ -263,6 +264,33 @@ fn eval_stage2_gate_allows_unsupported_module() {
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success();
+}
+
+#[test]
+fn eval_stage2_gate_uses_stage1_transformed_input_for_stage2_report() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("if_fold.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (if true
+            (prim int/add 1 2)
+            (quote {a 1}))
+        "#,
+    )
+    .unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
 }
 
 #[test]

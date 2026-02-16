@@ -30,6 +30,11 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - `--stage1-pipeline` runs Stage-1 CoreForm->CoreForm transforms before evaluation.
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
   - `--stage2-gate` enforces `core/obligation::translation-validation` only when the module is Stage-2 supported.
+  - For Stage-2 gating, validation input is Stage-1 transformed CoreForm (matching package translation-validation flow), even when `--stage1-pipeline` is not requested.
+- `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
+  - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
+  - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.
+  - exits with code `30` when validation fails or configured Stage-2 minimum thresholds are not met.
 - `genesis keygen --out <key.toml>`: generate an Ed25519 signing key (see `docs/spec/SIGNING.md`).
 - `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`:
   - sign the acceptance artifact hash and write a signature artifact into the evidence store

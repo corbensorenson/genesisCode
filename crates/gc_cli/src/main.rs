@@ -173,6 +173,12 @@ enum Cmd {
         /// Output artifact path (CoreForm term file).
         #[arg(long)]
         out: PathBuf,
+        /// Minimum number of modules that must be Stage-2 supported.
+        #[arg(long, default_value_t = 0)]
+        min_stage2_supported_modules: u64,
+        /// Minimum number of modules that must be Stage-2 validated (`supported && ok`).
+        #[arg(long, default_value_t = 0)]
+        min_stage2_validated_modules: u64,
     },
 
     /// Generate a new Ed25519 signing key.
@@ -933,7 +939,16 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store.as_deref()),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
-        Cmd::SelfhostArtifact { out } => cmd_selfhost_artifact(cli, out),
+        Cmd::SelfhostArtifact {
+            out,
+            min_stage2_supported_modules,
+            min_stage2_validated_modules,
+        } => cmd_selfhost_artifact(
+            cli,
+            out,
+            *min_stage2_supported_modules,
+            *min_stage2_validated_modules,
+        ),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,
@@ -1374,8 +1389,23 @@ fn cmd_eval(
         None
     };
 
+    let stage1_for_stage2 = if stage2_gate && stage1.is_none() {
+        Some(
+            gc_opt::stage1_pipeline(&forms)
+                .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?,
+        )
+    } else {
+        None
+    };
+    let stage2_input: &[Term] = if let Some(out) = stage1.as_ref() {
+        &out.transformed_forms
+    } else if let Some(out) = stage1_for_stage2.as_ref() {
+        &out.transformed_forms
+    } else {
+        &forms
+    };
     let stage2 = if stage2_gate {
-        Some(gc_opt::stage2_validation_report(&forms))
+        Some(gc_opt::stage2_validation_report(stage2_input))
     } else {
         None
     };
@@ -4222,11 +4252,17 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     })
 }
 
-fn cmd_selfhost_artifact(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
+fn cmd_selfhost_artifact(
+    cli: &Cli,
+    out: &Path,
+    min_stage2_supported_modules: u64,
+    min_stage2_validated_modules: u64,
+) -> Result<CmdOut, CliError> {
     let mut modules = Vec::new();
     let mut all_ok = true;
     let mut stage2_supported = 0u64;
     let mut stage2_validated = 0u64;
+    let mut gate_errors: Vec<String> = Vec::new();
 
     for (path, src) in selfhost_coreform_toolchain_v1_sources() {
         let forms = parse_module(src)
@@ -4313,6 +4349,21 @@ fn cmd_selfhost_artifact(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
         ));
     }
 
+    if stage2_supported < min_stage2_supported_modules {
+        all_ok = false;
+        gate_errors.push(format!(
+            "stage2 supported modules {} is below required minimum {}",
+            stage2_supported, min_stage2_supported_modules
+        ));
+    }
+    if stage2_validated < min_stage2_validated_modules {
+        all_ok = false;
+        gate_errors.push(format!(
+            "stage2 validated modules {} is below required minimum {}",
+            stage2_validated, min_stage2_validated_modules
+        ));
+    }
+
     let artifact = Term::Map(
         [
             (
@@ -4342,6 +4393,31 @@ fn cmd_selfhost_artifact(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
                     .collect(),
                 ),
             ),
+            (
+                TermOrdKey(Term::symbol(":stage2-requirements")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":min-supported-modules")),
+                            Term::Int((min_stage2_supported_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":min-validated-modules")),
+                            Term::Int((min_stage2_validated_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":ok")),
+                            Term::Bool(gate_errors.is_empty()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":errors")),
+                            Term::Vector(gate_errors.iter().cloned().map(Term::Str).collect()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
             (TermOrdKey(Term::symbol(":modules")), Term::Vector(modules)),
         ]
         .into_iter()
@@ -4363,6 +4439,10 @@ fn cmd_selfhost_artifact(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
             "artifact_hash": hex32(artifact_hash),
             "stage2_supported_modules": stage2_supported,
             "stage2_validated_modules": stage2_validated,
+            "min_stage2_supported_modules": min_stage2_supported_modules,
+            "min_stage2_validated_modules": min_stage2_validated_modules,
+            "stage2_requirements_ok": gate_errors.is_empty(),
+            "stage2_requirement_errors": gate_errors,
         })),
         error: None,
     };

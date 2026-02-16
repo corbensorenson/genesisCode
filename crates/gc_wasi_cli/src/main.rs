@@ -4,13 +4,17 @@ use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
-use gc_coreform::{canonicalize_module, hash_module, parse_module, parse_term, print_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_module,
+    print_term,
+};
 use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module};
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
+    selfhost_coreform_toolchain_v1_sources,
 };
 
 const EX_OK: u8 = 0;
@@ -131,6 +135,19 @@ enum Cmd {
         /// Path to package.toml
         #[arg(long)]
         pkg: PathBuf,
+    },
+
+    /// Build a selfhost CoreForm toolchain artifact for bootstrap cutover.
+    SelfhostArtifact {
+        /// Output artifact path (CoreForm term file).
+        #[arg(long)]
+        out: PathBuf,
+        /// Minimum number of modules that must be Stage-2 supported.
+        #[arg(long, default_value_t = 0)]
+        min_stage2_supported_modules: u64,
+        /// Minimum number of modules that must be Stage-2 validated (`supported && ok`).
+        #[arg(long, default_value_t = 0)]
+        min_stage2_validated_modules: u64,
     },
 
     /// Run an effect program with a deny-by-default capability policy.
@@ -910,8 +927,23 @@ fn cmd_eval(
         None
     };
 
+    let stage1_for_stage2 = if stage2_gate && stage1.is_none() {
+        Some(
+            gc_opt::stage1_pipeline(&forms)
+                .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?,
+        )
+    } else {
+        None
+    };
+    let stage2_input: &[Term] = if let Some(out) = stage1.as_ref() {
+        &out.transformed_forms
+    } else if let Some(out) = stage1_for_stage2.as_ref() {
+        &out.transformed_forms
+    } else {
+        &forms
+    };
     let stage2 = if stage2_gate {
-        Some(gc_opt::stage2_validation_report(&forms))
+        Some(gc_opt::stage2_validation_report(stage2_input))
     } else {
         None
     };
@@ -1027,6 +1059,211 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
             String::new()
         } else {
             format!("{h}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_selfhost_artifact(
+    cli: &Cli,
+    out: &Path,
+    min_stage2_supported_modules: u64,
+    min_stage2_validated_modules: u64,
+) -> Result<CmdOut, CliError> {
+    let mut modules = Vec::new();
+    let mut all_ok = true;
+    let mut stage2_supported = 0u64;
+    let mut stage2_validated = 0u64;
+    let mut gate_errors: Vec<String> = Vec::new();
+
+    for (path, src) in selfhost_coreform_toolchain_v1_sources() {
+        let forms = parse_module(src)
+            .map_err(|e| cli_err(EX_PARSE, "selfhost/parse", format!("{path}: {e}")))?;
+        let forms = canonicalize_module(forms)
+            .map_err(|e| cli_err(EX_PARSE, "selfhost/canon", format!("{path}: {e}")))?;
+        let module_h = hash_module(&forms);
+
+        let stage1 = gc_opt::stage1_pipeline(&forms)
+            .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{path}: {e}")))?;
+        let stage2 = gc_opt::stage2_validation_report(&stage1.transformed_forms);
+        if !stage1.gate_report.ok || (stage2.supported && !stage2.ok) {
+            all_ok = false;
+        }
+        if stage2.supported {
+            stage2_supported = stage2_supported.saturating_add(1);
+            if stage2.ok {
+                stage2_validated = stage2_validated.saturating_add(1);
+            }
+        }
+
+        modules.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str((*path).to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":source")),
+                    Term::Str((*src).to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":module-h")),
+                    Term::Bytes(module_h.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage1-ok")),
+                    Term::Bool(stage1.gate_report.ok),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage1-errors")),
+                    Term::Vector(
+                        stage1
+                            .gate_report
+                            .errors
+                            .into_iter()
+                            .map(Term::Str)
+                            .collect(),
+                    ),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-supported")),
+                    Term::Bool(stage2.supported),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-ok")),
+                    Term::Bool(stage2.ok),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-errors")),
+                    Term::Vector(stage2.errors.into_iter().map(Term::Str).collect()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-module-h")),
+                    Term::Bytes(stage2.module_hash.to_vec().into()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-wasm-h")),
+                    stage2
+                        .wasm_hash
+                        .map(|h| Term::Bytes(h.to_vec().into()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":stage2-wasm-bytes")),
+                    stage2
+                        .wasm_bytes_len
+                        .map(|n| Term::Int((n as i64).into()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    if stage2_supported < min_stage2_supported_modules {
+        all_ok = false;
+        gate_errors.push(format!(
+            "stage2 supported modules {} is below required minimum {}",
+            stage2_supported, min_stage2_supported_modules
+        ));
+    }
+    if stage2_validated < min_stage2_validated_modules {
+        all_ok = false;
+        gate_errors.push(format!(
+            "stage2 validated modules {} is below required minimum {}",
+            stage2_validated, min_stage2_validated_modules
+        ));
+    }
+
+    let artifact = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(all_ok)),
+            (
+                TermOrdKey(Term::symbol(":generated-by")),
+                Term::Str(format!("genesis_wasi {}", env!("CARGO_PKG_VERSION"))),
+            ),
+            (
+                TermOrdKey(Term::symbol(":stage2-summary")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":supported-modules")),
+                            Term::Int((stage2_supported as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":validated-modules")),
+                            Term::Int((stage2_validated as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":stage2-requirements")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":min-supported-modules")),
+                            Term::Int((min_stage2_supported_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":min-validated-modules")),
+                            Term::Int((min_stage2_validated_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":ok")),
+                            Term::Bool(gate_errors.is_empty()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":errors")),
+                            Term::Vector(gate_errors.iter().cloned().map(Term::Str).collect()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (TermOrdKey(Term::symbol(":modules")), Term::Vector(modules)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact_s = print_term(&artifact);
+    std::fs::write(out, artifact_s.as_bytes())
+        .with_context(|| format!("write {}", out.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let artifact_hash = *blake3::hash(artifact_s.as_bytes()).as_bytes();
+    let exit_code = if all_ok { EX_OK } else { EX_OBLIGATIONS };
+    let env = JsonEnvelope {
+        ok: all_ok,
+        kind: "genesis/selfhost-artifact-v0.2",
+        data: Some(serde_json::json!({
+            "out": out.display().to_string(),
+            "ok": all_ok,
+            "artifact_hash": hex32(artifact_hash),
+            "stage2_supported_modules": stage2_supported,
+            "stage2_validated_modules": stage2_validated,
+            "min_stage2_supported_modules": min_stage2_supported_modules,
+            "min_stage2_validated_modules": min_stage2_validated_modules,
+            "stage2_requirements_ok": gate_errors.is_empty(),
+            "stage2_requirement_errors": gate_errors,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", out.display())
         },
         json: serde_json::to_value(env).expect("json"),
     })
@@ -2791,6 +3028,16 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         ),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
+        Cmd::SelfhostArtifact {
+            out,
+            min_stage2_supported_modules,
+            min_stage2_validated_modules,
+        } => cmd_selfhost_artifact(
+            cli,
+            out,
+            *min_stage2_supported_modules,
+            *min_stage2_validated_modules,
+        ),
         Cmd::Run { file, caps, log } => cmd_run(cli, file, caps.as_path(), log),
         Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store),
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps.as_path(), log, cmd),

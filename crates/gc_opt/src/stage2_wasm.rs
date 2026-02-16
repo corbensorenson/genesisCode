@@ -11,6 +11,8 @@ use wasm_encoder::{
 };
 use wasmi::{Engine, Linker, Module as WasmiModule, Store, Val};
 
+const STAGE2_BASELINE_STEP_LIMIT: u64 = 1_000_000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stage2ValueKind {
     Int,
@@ -74,13 +76,35 @@ enum PrimOp {
     Mul,
     EqI64,
     EqI32,
+    EqAlwaysFalse,
     Lt,
+}
+
+#[derive(Debug, Clone)]
+struct InlinableFnDef {
+    param: String,
+    body: Term,
+    capture: FnCapture,
+}
+
+#[derive(Debug, Clone)]
+enum FnCapture {
+    GlobalFrame,
+    Lexical(BTreeMap<String, Local>),
 }
 
 #[derive(Debug, Clone)]
 struct LetBinding {
     idx: u32,
     expr: PExpr,
+}
+
+#[derive(Debug, Clone)]
+struct CallableHead {
+    param: String,
+    body: Term,
+    base_env: BTreeMap<String, Local>,
+    def_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +123,7 @@ enum PExpr {
         cond: Box<PExpr>,
         then_expr: Box<PExpr>,
         else_expr: Box<PExpr>,
+        cond_ty: Ty,
         ty: Ty,
     },
     Begin {
@@ -136,6 +161,7 @@ enum PStmt {
 #[derive(Debug, Default)]
 struct Planner {
     locals: Vec<Ty>,
+    expanding_fn_defs: Vec<String>,
 }
 
 impl Planner {
@@ -210,15 +236,38 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
 
     let mut planner = Planner::default();
     let mut env: BTreeMap<String, Local> = BTreeMap::new();
+    let mut fn_defs: BTreeMap<String, InlinableFnDef> = BTreeMap::new();
+    let empty_local_fns: BTreeMap<String, InlinableFnDef> = BTreeMap::new();
     let mut planned = Vec::with_capacity(statements.len());
     let mut last_expr_ty = None;
 
     for stmt in statements {
         match stmt {
             Stmt::Def(name, expr) => {
-                let pexpr = plan_expr(&expr, &env, &mut planner)?;
+                if let Some((param, body)) = desugar_fn_literal_to_unary(&expr)? {
+                    env.remove(&name);
+                    fn_defs.insert(
+                        name,
+                        InlinableFnDef {
+                            param,
+                            body,
+                            capture: FnCapture::GlobalFrame,
+                        },
+                    );
+                    continue;
+                }
+                if let Term::Symbol(sym) = &expr
+                    && let Some(alias_fn) = resolve_global_inlinable_symbol(sym, &fn_defs)
+                {
+                    env.remove(&name);
+                    fn_defs.insert(name, alias_fn);
+                    continue;
+                }
+
+                let pexpr = plan_expr(&expr, &env, &env, &fn_defs, &empty_local_fns, &mut planner)?;
                 let ty = pexpr.ty();
                 let idx = planner.alloc_local(ty)?;
+                fn_defs.remove(&name);
                 env.insert(name.clone(), Local { idx, ty });
                 planned.push(PStmt::Def {
                     name,
@@ -227,7 +276,7 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
                 });
             }
             Stmt::Expr(expr) => {
-                let pexpr = plan_expr(&expr, &env, &mut planner)?;
+                let pexpr = plan_expr(&expr, &env, &env, &fn_defs, &empty_local_fns, &mut planner)?;
                 last_expr_ty = Some(pexpr.ty());
                 planned.push(PStmt::Expr(pexpr));
             }
@@ -398,7 +447,7 @@ pub fn stage2_validation_report(forms: &[Term]) -> Stage2ValidationReport {
 fn eval_original_data(
     forms: &[Term],
 ) -> Result<(Stage2ValueKind, Term, [u8; 32]), Stage2CompileError> {
-    let mut ctx = EvalCtx::with_step_limit(None);
+    let mut ctx = EvalCtx::with_step_limit(Some(STAGE2_BASELINE_STEP_LIMIT));
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
     let v = eval_module(&mut ctx, &mut env, forms)
@@ -494,6 +543,8 @@ fn try_plan_defs_only_scalar(
 ) -> Result<Option<(Planner, Vec<PStmt>)>, Stage2CompileError> {
     let mut planner = Planner::default();
     let mut env: BTreeMap<String, Local> = BTreeMap::new();
+    let mut fn_defs: BTreeMap<String, InlinableFnDef> = BTreeMap::new();
+    let empty_local_fns: BTreeMap<String, InlinableFnDef> = BTreeMap::new();
     let mut planned = Vec::with_capacity(statements.len());
 
     for stmt in statements {
@@ -503,13 +554,34 @@ fn try_plan_defs_only_scalar(
             ));
         };
 
-        let pexpr = match plan_expr(expr, &env, &mut planner) {
+        if let Some((param, body)) = desugar_fn_literal_to_unary(expr)? {
+            env.remove(name);
+            fn_defs.insert(
+                name.clone(),
+                InlinableFnDef {
+                    param,
+                    body,
+                    capture: FnCapture::GlobalFrame,
+                },
+            );
+            continue;
+        }
+        if let Term::Symbol(sym) = expr
+            && let Some(alias_fn) = resolve_global_inlinable_symbol(sym, &fn_defs)
+        {
+            env.remove(name);
+            fn_defs.insert(name.clone(), alias_fn);
+            continue;
+        }
+
+        let pexpr = match plan_expr(expr, &env, &env, &fn_defs, &empty_local_fns, &mut planner) {
             Ok(v) => v,
             Err(Stage2CompileError::Unsupported(_)) => return Ok(None),
             Err(e) => return Err(e),
         };
         let ty = pexpr.ty();
         let idx = planner.alloc_local(ty)?;
+        fn_defs.remove(name);
         env.insert(name.clone(), Local { idx, ty });
         planned.push(PStmt::Def {
             name: name.clone(),
@@ -590,6 +662,9 @@ fn emit_wasm_module(
 fn plan_expr(
     t: &Term,
     env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
     match t {
@@ -606,13 +681,16 @@ fn plan_expr(
         Term::Symbol(s) => env.get(s).copied().map(PExpr::Local).ok_or_else(|| {
             Stage2CompileError::Unsupported(format!("unknown symbol in stage2: {s}"))
         }),
-        _ => plan_list_expr(t, env, planner),
+        _ => plan_list_expr(t, env, global_env, fn_defs, local_fn_defs, planner),
     }
 }
 
 fn plan_list_expr(
     t: &Term,
     env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
     let xs = t.as_proper_list().ok_or_else(|| {
@@ -631,14 +709,15 @@ fn plan_list_expr(
                 "if must have exactly 3 arguments".to_string(),
             ));
         }
-        let cond = plan_expr(xs[1], env, planner)?;
-        if cond.ty() != Ty::BoolI32 {
+        let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let cond_ty = cond.ty();
+        if !matches!(cond_ty, Ty::BoolI32 | Ty::NilI32 | Ty::I64) {
             return Err(Stage2CompileError::Unsupported(
-                "if condition must be bool".to_string(),
+                "if condition must be scalar (bool, nil, or int)".to_string(),
             ));
         }
-        let then_expr = plan_expr(xs[2], env, planner)?;
-        let else_expr = plan_expr(xs[3], env, planner)?;
+        let then_expr = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let else_expr = plan_expr(xs[3], env, global_env, fn_defs, local_fn_defs, planner)?;
         if then_expr.ty() != else_expr.ty() {
             return Err(Stage2CompileError::Unsupported(
                 "if branches must have matching types".to_string(),
@@ -649,6 +728,7 @@ fn plan_list_expr(
             cond: Box::new(cond),
             then_expr: Box::new(then_expr),
             else_expr: Box::new(else_expr),
+            cond_ty,
             ty,
         });
     }
@@ -660,13 +740,42 @@ fn plan_list_expr(
         }
         let mut exprs = Vec::with_capacity(xs.len() - 1);
         for x in xs.iter().skip(1) {
-            exprs.push(plan_expr(x, env, planner)?);
+            exprs.push(plan_expr(
+                x,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
+                planner,
+            )?);
         }
         let ty = exprs
             .last()
             .map(PExpr::ty)
             .ok_or_else(|| Stage2CompileError::Internal("begin planning failed".to_string()))?;
         return Ok(PExpr::Begin { exprs, ty });
+    }
+    if matches!(xs[0], Term::Symbol(s) if s == "quote") {
+        if xs.len() != 2 {
+            return Err(Stage2CompileError::Unsupported(
+                "quote must have exactly 1 argument".to_string(),
+            ));
+        }
+        return match xs[1] {
+            Term::Nil => Ok(PExpr::Nil),
+            Term::Bool(b) => Ok(PExpr::Bool(*b)),
+            Term::Int(i) => {
+                let n = i.to_i64().ok_or_else(|| {
+                    Stage2CompileError::Unsupported(
+                        "quoted int literal out of i64 range for stage2".to_string(),
+                    )
+                })?;
+                Ok(PExpr::Int(n))
+            }
+            _ => Err(Stage2CompileError::Unsupported(
+                "quote is stage2-supported only for scalar nil/bool/int".to_string(),
+            )),
+        };
     }
     if matches!(xs[0], Term::Symbol(s) if s == "let") {
         if xs.len() < 3 {
@@ -680,6 +789,7 @@ fn plan_list_expr(
             ));
         };
         let mut env2 = env.clone();
+        let mut local_fn_defs2 = local_fn_defs.clone();
         let mut bindings = Vec::with_capacity(bs.len());
         for b in bs {
             let Some(pair) = b.as_proper_list() else {
@@ -697,14 +807,50 @@ fn plan_list_expr(
                     "(let ...) binding name must be symbol".to_string(),
                 ));
             };
-            let rhs = plan_expr(pair[1], &env2, planner)?;
+            if let Some((param, body)) = desugar_fn_literal_to_unary(pair[1])? {
+                env2.remove(name);
+                local_fn_defs2.insert(
+                    name.clone(),
+                    InlinableFnDef {
+                        param,
+                        body,
+                        capture: FnCapture::Lexical(env2.clone()),
+                    },
+                );
+                continue;
+            }
+            if let Term::Symbol(sym) = pair[1]
+                && !env2.contains_key(sym)
+                && let Some(alias_fn) = resolve_inlinable_symbol(sym, fn_defs, &local_fn_defs2)
+            {
+                env2.remove(name);
+                local_fn_defs2.insert(name.clone(), alias_fn);
+                continue;
+            }
+
+            let rhs = plan_expr(
+                pair[1],
+                &env2,
+                global_env,
+                fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?;
             let idx = planner.alloc_local(rhs.ty())?;
             env2.insert(name.clone(), Local { idx, ty: rhs.ty() });
+            local_fn_defs2.remove(name);
             bindings.push(LetBinding { idx, expr: rhs });
         }
         let mut body = Vec::with_capacity(xs.len() - 2);
         for x in xs.iter().skip(2) {
-            body.push(plan_expr(x, &env2, planner)?);
+            body.push(plan_expr(
+                x,
+                &env2,
+                global_env,
+                fn_defs,
+                &local_fn_defs2,
+                planner,
+            )?);
         }
         let ty = body
             .last()
@@ -716,8 +862,8 @@ fn plan_list_expr(
         && matches!(xs[0], Term::Symbol(s) if s == "prim")
         && let Term::Symbol(op) = &xs[1]
     {
-        let lhs = plan_expr(xs[2], env, planner)?;
-        let rhs = plan_expr(xs[3], env, planner)?;
+        let lhs = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        let rhs = plan_expr(xs[3], env, global_env, fn_defs, local_fn_defs, planner)?;
         let (prim_op, ty) = infer_prim(op, lhs.ty(), rhs.ty())?;
         return Ok(PExpr::Prim {
             op: prim_op,
@@ -727,8 +873,8 @@ fn plan_list_expr(
         });
     }
     if let Some((op_sym, lhs_t, rhs_t)) = match_curried_wrapper_call(&xs) {
-        let lhs = plan_expr(&lhs_t, env, planner)?;
-        let rhs = plan_expr(&rhs_t, env, planner)?;
+        let lhs = plan_expr(&lhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+        let rhs = plan_expr(&rhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
         let (op, ty) = infer_prim(op_sym, lhs.ty(), rhs.ty())?;
         return Ok(PExpr::Prim {
             op,
@@ -737,9 +883,276 @@ fn plan_list_expr(
             ty,
         });
     }
+    if let Some(call_chain) =
+        try_plan_application_chain(t, env, global_env, fn_defs, local_fn_defs, planner)?
+    {
+        return Ok(call_chain);
+    }
     Err(Stage2CompileError::Unsupported(
         "unsupported expression form in stage2".to_string(),
     ))
+}
+
+fn try_plan_application_chain(
+    t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<Option<PExpr>, Stage2CompileError> {
+    let Some((head, args)) = flatten_application_chain(t) else {
+        return Ok(None);
+    };
+    if args.is_empty() {
+        return Ok(None);
+    }
+
+    let Some(mut callable) = resolve_callable_head(&head, env, global_env, fn_defs, local_fn_defs)?
+    else {
+        return Ok(None);
+    };
+    let mut pushed_name = None;
+    if let Some(name) = callable.def_name.as_ref() {
+        if planner.expanding_fn_defs.iter().any(|n| n == name) {
+            return Err(Stage2CompileError::Unsupported(format!(
+                "recursive function call is unsupported in stage2: {name}"
+            )));
+        }
+        planner.expanding_fn_defs.push(name.clone());
+        pushed_name = Some(name.clone());
+    }
+
+    let mut bindings: Vec<LetBinding> = Vec::with_capacity(args.len());
+    let mut result_expr = None;
+
+    for (i, arg) in args.iter().enumerate() {
+        let arg_expr = match plan_expr(arg, env, global_env, fn_defs, local_fn_defs, planner) {
+            Ok(v) => v,
+            Err(e) => {
+                if pushed_name.is_some() {
+                    planner.expanding_fn_defs.pop();
+                }
+                return Err(e);
+            }
+        };
+        let idx = planner.alloc_local(arg_expr.ty())?;
+        let mut call_env = callable.base_env.clone();
+        call_env.insert(
+            callable.param.clone(),
+            Local {
+                idx,
+                ty: arg_expr.ty(),
+            },
+        );
+        bindings.push(LetBinding {
+            idx,
+            expr: arg_expr,
+        });
+
+        let is_last = i + 1 == args.len();
+        if is_last {
+            result_expr = Some(
+                match plan_expr(
+                    &callable.body,
+                    &call_env,
+                    global_env,
+                    fn_defs,
+                    local_fn_defs,
+                    planner,
+                ) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        if pushed_name.is_some() {
+                            planner.expanding_fn_defs.pop();
+                        }
+                        return Err(e);
+                    }
+                },
+            );
+            break;
+        }
+
+        let Some((next_param, next_body)) = desugar_fn_literal_to_unary(&callable.body)? else {
+            if pushed_name.is_some() {
+                planner.expanding_fn_defs.pop();
+            }
+            return Err(Stage2CompileError::Unsupported(
+                "application chain expects function result at each intermediate step".to_string(),
+            ));
+        };
+        callable = CallableHead {
+            param: next_param,
+            body: next_body,
+            base_env: call_env,
+            def_name: None,
+        };
+    }
+
+    if pushed_name.is_some() {
+        planner.expanding_fn_defs.pop();
+    }
+
+    let mut out = result_expr.ok_or_else(|| {
+        Stage2CompileError::Internal("application chain planning produced no result".to_string())
+    })?;
+    for binding in bindings.into_iter().rev() {
+        let ty = out.ty();
+        out = PExpr::Let {
+            bindings: vec![binding],
+            body: vec![out],
+            ty,
+        };
+    }
+    Ok(Some(out))
+}
+
+fn flatten_application_chain(t: &Term) -> Option<(Term, Vec<Term>)> {
+    let mut args_rev = Vec::new();
+    let mut cur = t;
+    loop {
+        let Some(xs) = cur.as_proper_list() else {
+            break;
+        };
+        if xs.len() != 2 {
+            break;
+        }
+        args_rev.push(xs[1].clone());
+        cur = xs[0];
+    }
+    if args_rev.is_empty() {
+        return None;
+    }
+    args_rev.reverse();
+    Some((cur.clone(), args_rev))
+}
+
+fn resolve_callable_head(
+    head: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+) -> Result<Option<CallableHead>, Stage2CompileError> {
+    if let Some((param, body)) = desugar_fn_literal_to_unary(head)? {
+        return Ok(Some(CallableHead {
+            param,
+            body,
+            base_env: env.clone(),
+            def_name: None,
+        }));
+    }
+    if let Term::Symbol(name) = head
+        && !env.contains_key(name)
+        && let Some(fn_def) = resolve_inlinable_symbol(name, fn_defs, local_fn_defs)
+    {
+        let base_env = match &fn_def.capture {
+            FnCapture::GlobalFrame => global_env.clone(),
+            FnCapture::Lexical(captured) => captured.clone(),
+        };
+        return Ok(Some(CallableHead {
+            param: fn_def.param.clone(),
+            body: fn_def.body.clone(),
+            base_env,
+            def_name: Some(name.clone()),
+        }));
+    }
+    Ok(None)
+}
+
+fn resolve_inlinable_symbol(
+    sym: &str,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+) -> Option<InlinableFnDef> {
+    if let Some(existing) = local_fn_defs.get(sym) {
+        return Some(existing.clone());
+    }
+    resolve_global_inlinable_symbol(sym, fn_defs)
+}
+
+fn resolve_global_inlinable_symbol(
+    sym: &str,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+) -> Option<InlinableFnDef> {
+    if let Some(existing) = fn_defs.get(sym) {
+        return Some(existing.clone());
+    }
+    builtin_inlinable_fn(sym)
+}
+
+fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
+    let prim = match sym {
+        "core/int::add" => "int/add",
+        "core/int::sub" => "int/sub",
+        "core/int::mul" => "int/mul",
+        "core/int::eq?" => "int/eq?",
+        "core/int::lt?" => "int/lt?",
+        "core/eq?" => "core/eq?",
+        _ => return None,
+    };
+    let body = Term::list(vec![
+        Term::Symbol("fn".to_string()),
+        Term::list(vec![Term::Symbol("b".to_string())]),
+        Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol(prim.to_string()),
+            Term::Symbol("a".to_string()),
+            Term::Symbol("b".to_string()),
+        ]),
+    ]);
+    Some(InlinableFnDef {
+        param: "a".to_string(),
+        body,
+        capture: FnCapture::GlobalFrame,
+    })
+}
+
+fn desugar_fn_literal_to_unary(t: &Term) -> Result<Option<(String, Term)>, Stage2CompileError> {
+    let Some(items) = t.as_proper_list() else {
+        return Ok(None);
+    };
+    if items.len() < 3 || !matches!(items[0], Term::Symbol(s) if s == "fn") {
+        return Ok(None);
+    }
+    let params = items[1].as_proper_list().ok_or_else(|| {
+        Stage2CompileError::Unsupported("(fn ...) params must be a list".to_string())
+    })?;
+    if params.is_empty() {
+        return Err(Stage2CompileError::Unsupported(
+            "(fn ...) requires at least 1 parameter".to_string(),
+        ));
+    }
+
+    let mut body: Term = if items.len() == 3 {
+        items[2].clone()
+    } else {
+        let mut xs = Vec::with_capacity(items.len() - 1);
+        xs.push(Term::Symbol("begin".to_string()));
+        for item in items.iter().skip(2) {
+            xs.push((*item).clone());
+        }
+        Term::list(xs)
+    };
+
+    for p in params.iter().skip(1).rev() {
+        let Term::Symbol(sym) = p else {
+            return Err(Stage2CompileError::Unsupported(
+                "(fn ...) params must be symbols".to_string(),
+            ));
+        };
+        body = Term::list(vec![
+            Term::Symbol("fn".to_string()),
+            Term::list(vec![Term::Symbol(sym.clone())]),
+            body,
+        ]);
+    }
+    let Term::Symbol(param0) = params[0] else {
+        return Err(Stage2CompileError::Unsupported(
+            "(fn ...) params must be symbols".to_string(),
+        ));
+    };
+    Ok(Some((param0.clone(), body)))
 }
 
 fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2CompileError> {
@@ -774,16 +1187,14 @@ fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2CompileError
             }
         }
         "core/eq?" => {
-            if a != b {
-                return Err(Stage2CompileError::Unsupported(
-                    "core/eq? expects both arguments to have the same scalar type in stage2"
-                        .to_string(),
-                ));
-            }
-            match a {
-                Ty::I64 => Ok((PrimOp::EqI64, Ty::BoolI32)),
-                Ty::BoolI32 => Ok((PrimOp::EqI32, Ty::BoolI32)),
-                Ty::NilI32 => Ok((PrimOp::EqI32, Ty::BoolI32)),
+            match (a, b) {
+                (Ty::I64, Ty::I64) => Ok((PrimOp::EqI64, Ty::BoolI32)),
+                (Ty::BoolI32, Ty::BoolI32) | (Ty::NilI32, Ty::NilI32) => {
+                    Ok((PrimOp::EqI32, Ty::BoolI32))
+                }
+                // Kernel structural equality across mixed scalar kinds is always false,
+                // while still evaluating both operands first.
+                _ => Ok((PrimOp::EqAlwaysFalse, Ty::BoolI32)),
             }
         }
         _ => Err(Stage2CompileError::Unsupported(format!(
@@ -836,6 +1247,17 @@ fn emit_expr(f: &mut Function, expr: &PExpr) -> Result<Ty, Stage2CompileError> {
         PExpr::Prim { op, lhs, rhs, ty } => {
             let l = emit_expr(f, lhs)?;
             let r = emit_expr(f, rhs)?;
+            if *op == PrimOp::EqAlwaysFalse {
+                f.instruction(&Instruction::Drop);
+                f.instruction(&Instruction::Drop);
+                f.instruction(&Instruction::I32Const(0));
+                if *ty != Ty::BoolI32 {
+                    return Err(Stage2CompileError::Internal(
+                        "planned core/eq? mixed-type result mismatch".to_string(),
+                    ));
+                }
+                return Ok(Ty::BoolI32);
+            }
             let (expected_op, expected_ty) = match (op, l, r) {
                 (PrimOp::Add, Ty::I64, Ty::I64) => (Instruction::I64Add, Ty::I64),
                 (PrimOp::Sub, Ty::I64, Ty::I64) => (Instruction::I64Sub, Ty::I64),
@@ -862,13 +1284,27 @@ fn emit_expr(f: &mut Function, expr: &PExpr) -> Result<Ty, Stage2CompileError> {
             cond,
             then_expr,
             else_expr,
+            cond_ty,
             ty,
         } => {
             let c = emit_expr(f, cond)?;
-            if c != Ty::BoolI32 {
+            if c != *cond_ty {
                 return Err(Stage2CompileError::Internal(
-                    "planned if condition is not bool".to_string(),
+                    "planned if condition type mismatch".to_string(),
                 ));
+            }
+            // Kernel truthiness for scalar values:
+            // bool(false) and nil are false; ints are always truthy.
+            match cond_ty {
+                Ty::BoolI32 => {}
+                Ty::NilI32 => {
+                    f.instruction(&Instruction::Drop);
+                    f.instruction(&Instruction::I32Const(0));
+                }
+                Ty::I64 => {
+                    f.instruction(&Instruction::Drop);
+                    f.instruction(&Instruction::I32Const(1));
+                }
             }
             f.instruction(&Instruction::If(BlockType::Result(val_ty(*ty))));
             let t_got = emit_expr(f, then_expr)?;
@@ -1040,6 +1476,239 @@ mod tests {
     }
 
     #[test]
+    fn stage2_validates_if_truthiness_for_int_condition() {
+        let src = r#"
+          (if (prim int/sub 3 3)
+            7
+            9)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_if_truthiness_for_nil_condition() {
+        let src = r#"
+          (if nil
+            7
+            9)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_quote_scalar_literals() {
+        let src = r#"
+          (if (quote false)
+            (quote 10)
+            (quote 11))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_immediate_lambda_application() {
+        let src = r#"
+          ((fn (x) (prim int/add x 1)) 41)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_immediate_lambda_application_with_capture() {
+        let src = r#"
+          (def base 40)
+          ((fn (x)
+             (prim int/add base x))
+           2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_immediate_lambda_application_with_multi_body() {
+        let src = r#"
+          ((fn (x)
+             (prim int/add x 1)
+             (prim int/mul x 2))
+           5)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_bound_function_call() {
+        let src = r#"
+          (def add1 (fn (x) (prim int/add x 1)))
+          (add1 41)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_bound_function_call_with_lexical_capture() {
+        let src = r#"
+          (def base 1)
+          (def f (fn (x) (prim int/add x base)))
+          (def base 10)
+          (f base)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_bound_function_call_ignores_let_shadow_for_global_free_var() {
+        let src = r#"
+          (def base 1)
+          (def f (fn (x) (prim int/add x base)))
+          (let ((base 100))
+            (f 1))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_bound_curried_call_chain() {
+        let src = r#"
+          (def add (fn (a b) (prim int/add a b)))
+          ((add 1) 2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_immediate_lambda_curried_call_chain() {
+        let src = r#"
+          (((fn (a b) (prim int/add a b)) 1) 2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_alias_to_builtin_function_chain() {
+        let src = r#"
+          (def add core/int::add)
+          ((add 1) 2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_def_alias_to_user_defined_function() {
+        let src = r#"
+          (def inc (fn (x) (prim int/add x 1)))
+          (def f inc)
+          (f 41)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_let_bound_function_call() {
+        let src = r#"
+          (let ((f (fn (x) (prim int/add x 1))))
+            (f 41))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_let_bound_function_lexical_capture_before_shadow() {
+        let src = r#"
+          (let ((a 1)
+                (f (fn (x) (prim int/add x a)))
+                (a 10))
+            (f 1))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_let_bound_function_alias_chain() {
+        let src = r#"
+          (let ((f (fn (x) (prim int/add x 1)))
+                (g f))
+            (g 41))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_rejects_recursive_def_bound_function_call() {
+        let src = r#"
+          (def f (fn (x) (f x)))
+          (f 1)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(!r.supported, "{r:?}");
+        assert!(!r.ok, "{r:?}");
+    }
+
+    #[test]
     fn stage2_validates_curried_core_int_wrapper_calls() {
         let src = r#"
           (def x ((core/int::add 40) 2))
@@ -1109,6 +1778,34 @@ mod tests {
     }
 
     #[test]
+    fn stage2_validates_core_eq_mixed_scalar_types_as_false() {
+        let src = r#"
+          (def a (prim core/eq? 1 true))
+          (def b (prim core/eq? nil false))
+          (if a
+            1
+            (if b 2 3))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_curried_core_eq_wrapper_call_for_mixed_scalar_types() {
+        let src = r#"
+          ((core/eq? (prim int/add 1 1)) true)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
     fn stage2_validates_defs_only_module_with_safe_rhs_and_nil_result() {
         let src = r#"
           (def add core/int::add)
@@ -1127,6 +1824,19 @@ mod tests {
         let src = r#"
           (def x (prim int/add 1 2))
           (def y (prim int/mul x 10))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Nil));
+    }
+
+    #[test]
+    fn stage2_validates_defs_only_module_with_quoted_scalar_rhs_via_lowering() {
+        let src = r#"
+          (def x (quote 42))
+          (def y (quote true))
         "#;
         let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
         let r = stage2_validation_report(&forms);

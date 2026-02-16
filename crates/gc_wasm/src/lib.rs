@@ -282,10 +282,70 @@ pub fn hash_coreform_term(src: &str) -> Result<String, JsValue> {
     Ok(hex::encode(hash_term(&t)))
 }
 
+fn gate_eval_forms(
+    forms: &mut Vec<Term>,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<(), JsValue> {
+    let mut stage1_for_stage2 = None;
+    if stage1_pipeline || stage1_gate {
+        let out = gc_opt::stage1_pipeline(forms).map_err(|e| js_err("stage1/error", e))?;
+        if stage1_gate && !out.gate_report.ok {
+            let msg = if out.gate_report.errors.is_empty() {
+                "core/obligation::stage1-validation failed".to_string()
+            } else {
+                format!(
+                    "core/obligation::stage1-validation failed: {}",
+                    out.gate_report.errors.join("; ")
+                )
+            };
+            return Err(js_err("obligation/stage1-validation", msg));
+        }
+        *forms = out.transformed_forms;
+    }
+    if stage2_gate && !stage1_pipeline && !stage1_gate {
+        let out = gc_opt::stage1_pipeline(forms).map_err(|e| js_err("stage1/error", e))?;
+        stage1_for_stage2 = Some(out);
+    }
+
+    if stage2_gate {
+        let s2 = match stage1_for_stage2.as_ref() {
+            Some(out) => gc_opt::stage2_validation_report(&out.transformed_forms),
+            None => gc_opt::stage2_validation_report(forms),
+        };
+        if s2.supported && !s2.ok {
+            let msg = if s2.errors.is_empty() {
+                "core/obligation::translation-validation (stage2 CoreForm->WASM) failed".to_string()
+            } else {
+                format!(
+                    "core/obligation::translation-validation (stage2 CoreForm->WASM) failed: {}",
+                    s2.errors.join("; ")
+                )
+            };
+            return Err(js_err("obligation/translation-validation", msg));
+        }
+    }
+
+    Ok(())
+}
+
 #[wasm_bindgen]
 pub fn eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    eval_coreform_module_with_gates(src, step_limit, false, false, false)
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_with_gates(
+    src: &str,
+    step_limit: u32,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
-    let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
+    let mut forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
+    gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
 
     let mut ctx = if step_limit == 0 {
         EvalCtx::with_step_limit(None)
@@ -309,6 +369,17 @@ pub fn eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValu
 
 #[wasm_bindgen]
 pub fn eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    eval_coreform_module_selfhost_with_gates(src, step_limit, false, false, false)
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_selfhost_with_gates(
+    src: &str,
+    step_limit: u32,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<String, JsValue> {
     // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
@@ -319,7 +390,8 @@ pub fn eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<Strin
     // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
     ctx.steps = 0;
     ctx.step_limit = None;
-    let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    let mut forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
 
     ctx.steps = 0;
     ctx.step_limit = if step_limit == 0 {
@@ -345,6 +417,25 @@ pub fn eval_coreform_module_selfhost_with_artifact(
     artifact_src: &str,
     step_limit: u32,
 ) -> Result<String, JsValue> {
+    eval_coreform_module_selfhost_with_artifact_and_gates(
+        src,
+        artifact_src,
+        step_limit,
+        false,
+        false,
+        false,
+    )
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_selfhost_with_artifact_and_gates(
+    src: &str,
+    artifact_src: &str,
+    step_limit: u32,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<String, JsValue> {
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
@@ -352,7 +443,8 @@ pub fn eval_coreform_module_selfhost_with_artifact(
 
     ctx.steps = 0;
     ctx.step_limit = None;
-    let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    let mut forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
 
     ctx.steps = 0;
     ctx.step_limit = if step_limit == 0 {
@@ -434,46 +526,42 @@ impl Runtime {
 
     /// Parse + canonicalize + eval a CoreForm module, then step to the first done/effect result.
     pub fn eval_module(&mut self, src: &str) -> Result<JsValue, JsValue> {
-        // Reset to a clean deterministic state so reusing a Runtime doesn't perturb seal IDs.
-        self.ctx = EvalCtx::with_step_limit(self.step_limit);
-        let prelude = build_prelude(&mut self.ctx);
-        self.env = prelude.env;
-        self.cur = None;
-        self.pending = None;
+        self.eval_module_with_gates(src, false, false, false)
+    }
 
-        let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
-        let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
-        let mh = hash_module(&forms);
-        self.module_h = Some(mh);
-
-        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
-        self.cur = Some(v);
-        self.step()
+    /// Parse + canonicalize + eval with optional Stage-1/Stage-2 gate enforcement, then step.
+    pub fn eval_module_with_gates(
+        &mut self,
+        src: &str,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<JsValue, JsValue> {
+        let r = self.eval_module_internal(src, stage1_pipeline, stage1_gate, stage2_gate)?;
+        serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
     }
 
     /// Self-hosted frontend path: parse + canonicalize inside the kernel, then step.
     pub fn eval_module_selfhost(&mut self, src: &str) -> Result<JsValue, JsValue> {
-        // Bootstrap toolchain without charging user step budgets.
-        self.ctx = EvalCtx::with_step_limit(None);
-        let prelude = build_prelude(&mut self.ctx);
-        self.env = prelude.env;
-        self.cur = None;
-        self.pending = None;
+        self.eval_module_selfhost_with_gates(src, false, false, false)
+    }
 
-        bootstrap_selfhost(&mut self.ctx, &mut self.env, None)?;
-
-        self.ctx.steps = 0;
-        self.ctx.step_limit = None;
-        let forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
-        let mh = hash_module(&forms);
-        self.module_h = Some(mh);
-
-        self.ctx.steps = 0;
-        self.ctx.step_limit = self.step_limit;
-
-        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
-        self.cur = Some(v);
-        self.step()
+    /// Self-hosted frontend path with optional Stage-1/Stage-2 gate enforcement.
+    pub fn eval_module_selfhost_with_gates(
+        &mut self,
+        src: &str,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<JsValue, JsValue> {
+        let r = self.eval_module_selfhost_internal(
+            src,
+            None,
+            stage1_pipeline,
+            stage1_gate,
+            stage2_gate,
+        )?;
+        serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
     }
 
     /// Self-hosted frontend path with explicit artifact source text.
@@ -482,26 +570,26 @@ impl Runtime {
         src: &str,
         artifact_src: &str,
     ) -> Result<JsValue, JsValue> {
-        self.ctx = EvalCtx::with_step_limit(None);
-        let prelude = build_prelude(&mut self.ctx);
-        self.env = prelude.env;
-        self.cur = None;
-        self.pending = None;
+        self.eval_module_selfhost_with_artifact_and_gates(src, artifact_src, false, false, false)
+    }
 
-        bootstrap_selfhost(&mut self.ctx, &mut self.env, Some(artifact_src))?;
-
-        self.ctx.steps = 0;
-        self.ctx.step_limit = None;
-        let forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
-        let mh = hash_module(&forms);
-        self.module_h = Some(mh);
-
-        self.ctx.steps = 0;
-        self.ctx.step_limit = self.step_limit;
-
-        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
-        self.cur = Some(v);
-        self.step()
+    /// Self-hosted artifact path with optional Stage-1/Stage-2 gate enforcement.
+    pub fn eval_module_selfhost_with_artifact_and_gates(
+        &mut self,
+        src: &str,
+        artifact_src: &str,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<JsValue, JsValue> {
+        let r = self.eval_module_selfhost_internal(
+            src,
+            Some(artifact_src),
+            stage1_pipeline,
+            stage1_gate,
+            stage2_gate,
+        )?;
+        serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
     }
 
     /// Step until either the program is done or an effect request is produced.
@@ -556,6 +644,68 @@ impl Runtime {
 }
 
 impl Runtime {
+    fn reset_plain(&mut self) {
+        self.ctx = EvalCtx::with_step_limit(self.step_limit);
+        let prelude = build_prelude(&mut self.ctx);
+        self.env = prelude.env;
+        self.cur = None;
+        self.pending = None;
+    }
+
+    fn reset_selfhost(&mut self, artifact_src: Option<&str>) -> Result<(), JsValue> {
+        self.ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut self.ctx);
+        self.env = prelude.env;
+        self.cur = None;
+        self.pending = None;
+
+        bootstrap_selfhost(&mut self.ctx, &mut self.env, artifact_src)?;
+        Ok(())
+    }
+
+    fn eval_module_internal(
+        &mut self,
+        src: &str,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<StepResult, JsValue> {
+        self.reset_plain();
+
+        let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
+        let mut forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
+        gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
+        self.module_h = Some(hash_module(&forms));
+
+        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
+        self.cur = Some(v);
+        self.step_internal()
+    }
+
+    fn eval_module_selfhost_internal(
+        &mut self,
+        src: &str,
+        artifact_src: Option<&str>,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<StepResult, JsValue> {
+        self.reset_selfhost(artifact_src)?;
+
+        // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
+        self.ctx.steps = 0;
+        self.ctx.step_limit = None;
+        let mut forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
+        gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
+        self.module_h = Some(hash_module(&forms));
+
+        self.ctx.steps = 0;
+        self.ctx.step_limit = self.step_limit;
+        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
+        self.cur = Some(v);
+        self.step_internal()
+    }
+
     fn step_internal(&mut self) -> Result<StepResult, JsValue> {
         let module_h = hex::encode(
             self.module_h
@@ -837,6 +987,62 @@ mod tests {
     }
 
     #[test]
+    fn runtime_eval_module_with_gates_matches_baseline_for_pure_scalar_program() {
+        let src = r#"
+          (def x (prim int/add 20 22))
+          x
+        "#;
+        let mut rt = Runtime::new(0);
+        let base = rt.eval_module_internal(src, false, false, false).unwrap();
+        let gated = rt.eval_module_internal(src, true, true, true).unwrap();
+
+        match (base, gated) {
+            (StepResult::Done { value: a, .. }, StepResult::Done { value: b, .. }) => {
+                assert_eq!(a, b);
+            }
+            (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
+        }
+    }
+
+    #[test]
+    fn runtime_eval_module_with_stage2_gate_allows_unsupported_non_scalar_result() {
+        let src = r#"
+          (quote {a 1 b 2})
+        "#;
+        let mut rt = Runtime::new(0);
+        let gated = rt.eval_module_internal(src, false, false, true).unwrap();
+        match gated {
+            StepResult::Done { value, .. } => assert_eq!(value, "{a 1 b 2}"),
+            other => panic!("expected done, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn runtime_eval_module_selfhost_with_artifact_and_gates_matches_rust_path() {
+        let src = r#"
+          (def x (prim int/add 1 2))
+          (def y (prim int/mul x 7))
+          y
+        "#;
+        let artifact = build_selfhost_artifact_source();
+
+        let mut rt_rust = Runtime::new(0);
+        let rust_step = rt_rust.eval_module_internal(src, true, true, true).unwrap();
+
+        let mut rt_selfhost = Runtime::new(0);
+        let selfhost_step = rt_selfhost
+            .eval_module_selfhost_internal(src, Some(&artifact), true, true, true)
+            .unwrap();
+
+        match (rust_step, selfhost_step) {
+            (StepResult::Done { value: a, .. }, StepResult::Done { value: b, .. }) => {
+                assert_eq!(a, b);
+            }
+            (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
+        }
+    }
+
+    #[test]
     fn runtime_steps_pure_program_to_done() {
         let mut rt = Runtime::new(0);
         let step = eval_to_first_step(
@@ -998,6 +1204,63 @@ mod tests {
         let rust = eval_coreform_module(src, 0).expect("rust eval");
         let selfhost =
             eval_coreform_module_selfhost_with_artifact(src, &artifact, 0).expect("selfhost eval");
+        assert_eq!(rust, selfhost);
+    }
+
+    #[test]
+    fn eval_coreform_module_with_gates_matches_baseline_for_pure_scalar_program() {
+        let src = r#"
+          (def x (prim int/add 20 22))
+          x
+        "#;
+
+        let baseline = eval_coreform_module(src, 0).expect("baseline eval");
+        let gated = eval_coreform_module_with_gates(src, 0, true, true, true).expect("gated eval");
+        assert_eq!(baseline, gated);
+    }
+
+    #[test]
+    fn eval_coreform_module_with_stage2_gate_allows_unsupported_non_scalar_result() {
+        let src = r#"
+          (quote {a 1 b 2})
+        "#;
+
+        let baseline = eval_coreform_module(src, 0).expect("baseline eval");
+        let gated = eval_coreform_module_with_gates(src, 0, false, false, true)
+            .expect("gated eval unsupported module");
+        assert_eq!(baseline, gated);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[test]
+    fn eval_coreform_module_with_stage1_gate_reports_obligation_failure() {
+        let src = r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#;
+
+        let err =
+            eval_coreform_module_with_gates(src, 0, false, true, false).expect_err("must fail");
+        let s = err.as_string().unwrap_or_default();
+        assert!(s.contains("obligation/stage1-validation"), "{s}");
+    }
+
+    #[test]
+    fn eval_coreform_module_selfhost_with_artifact_and_gates_matches_rust_path() {
+        let src = r#"
+          (def x (prim int/add 1 2))
+          (def y (prim int/mul x 7))
+          y
+        "#;
+        let artifact = build_selfhost_artifact_source();
+
+        let rust = eval_coreform_module_with_gates(src, 0, true, true, true).expect("rust gated");
+        let selfhost = eval_coreform_module_selfhost_with_artifact_and_gates(
+            src, &artifact, 0, true, true, true,
+        )
+        .expect("selfhost artifact gated");
         assert_eq!(rust, selfhost);
     }
 

@@ -154,6 +154,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - `--stage2-gate` now fails only for supported-but-invalid Stage-2 translations (unsupported modules are reported but do not fail the command)
       - `--emit-wasm` remains strict and fails on unsupported modules
       - coverage: `crates/gc_cli/tests/cli_stage1_pipeline.rs` tests `optimize_stage2_gate_allows_unsupported_module` and `optimize_emit_wasm_fails_for_unsupported_module`
+      - Stage-2 eval gating now validates the Stage-1 transformed module shape by default (parity with translation-validation obligation flow), even when Stage-1 pipeline is not requested for user-visible eval execution
+      - coverage: `eval_stage2_gate_uses_stage1_transformed_input_for_stage2_report` in both native and WASI CLI gate suites
+      - package translation-validation now also computes Stage-2 evidence from Stage-1 pipeline output (not raw optimizer output), keeping `genesis test` obligation behavior aligned with CLI/WASI/WASM gate semantics
     - [x] eval path now supports Stage-2 obligation gating parity:
       - `genesis eval --stage2-gate` emits Stage-2 report JSON and enforces mismatch failures only for supported Stage-2 translations
       - unsupported Stage-2 modules still evaluate successfully while surfacing `supported=false` in JSON
@@ -161,6 +164,11 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - [x] WASI eval path now mirrors Stage-1/Stage-2 gating semantics:
       - `genesis_wasi eval` supports `--stage1-pipeline`, `--stage1-gate`, and `--stage2-gate`
       - JSON output includes Stage-1/Stage-2 reports for deterministic host parity diagnostics
+      - integration coverage: `crates/gc_wasi_cli/tests/cli_eval_gates.rs` validates help surface, scalar Stage-2 success, unsupported Stage-2 pass-through, and Stage-1 obligation failure behavior
+    - [x] wasm-bindgen eval API now supports Stage-1/Stage-2 obligation gating:
+      - `gc_wasm` exports `eval_coreform_module_with_gates`, `eval_coreform_module_selfhost_with_gates`, and artifact-backed `eval_coreform_module_selfhost_with_artifact_and_gates`
+      - gating semantics match CLI/WASI (`stage1_gate` hard-fails on invalid Stage-1; `stage2_gate` hard-fails only for supported-but-invalid Stage-2 translations)
+      - coverage: `crates/gc_wasm/src/lib.rs` tests `eval_coreform_module_with_gates_matches_baseline_for_pure_scalar_program`, `eval_coreform_module_with_stage2_gate_allows_unsupported_non_scalar_result`, and `eval_coreform_module_selfhost_with_artifact_and_gates_matches_rust_path`
     - expanded supported Stage-2 forms beyond basic scalar prims:
       - `begin` sequencing
       - `let` with sequential bindings and scoped body
@@ -173,6 +181,34 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - curried wrapper form `((core/eq? a) b)` now lowers when scalar-typed (int/bool/nil)
       - coverage: `stage2_validates_core_eq_prim_for_ints_and_bools` and `stage2_validates_curried_core_eq_wrapper_calls`
       - coverage: `stage2_validates_curried_core_eq_wrapper_calls_for_bool_and_nil`
+    - expanded Stage-2 `if` truthiness semantics for scalar conditions:
+      - conditions now accept scalar bool/nil/int and match kernel truthiness (`false` + `nil` are falsey; ints are truthy)
+      - coverage: `stage2_validates_if_truthiness_for_int_condition` and `stage2_validates_if_truthiness_for_nil_condition`
+    - expanded Stage-2 scalar `quote` lowering:
+      - quoted scalar literals `(quote nil|bool|int)` now lower directly instead of forcing unsupported fallback
+      - defs-only modules that bind quoted scalar constants now validate through Stage-2 lowering
+      - coverage: `stage2_validates_quote_scalar_literals` and `stage2_validates_defs_only_module_with_quoted_scalar_rhs_via_lowering`
+    - expanded Stage-2 immediate lambda application support:
+      - direct pure applications `((fn (x) body...) arg)` now lower via typed `let` inlining with lexical capture support
+      - multi-body lambda bodies are handled via canonical `(begin ...)` desugaring before lowering
+      - coverage: `stage2_validates_immediate_lambda_application`, `stage2_validates_immediate_lambda_application_with_capture`, and `stage2_validates_immediate_lambda_application_with_multi_body`
+    - expanded Stage-2 support for top-level def-bound function calls:
+      - calls like `(f arg)` where `f` is defined as `(def f (fn ...))` now lower with global-frame semantics matching kernel closure behavior
+      - local `let` shadows no longer leak into top-level def-bound closure free-variable resolution
+      - recursive def-bound call expansion is rejected deterministically as unsupported
+      - translation-validation baseline evaluation now enforces a deterministic step budget to prevent non-terminating modules from hanging the test/obligation pipeline
+    - expanded Stage-2 support for canonical curried application chains:
+      - call chains like `((f a) b)` now lower for both def-bound function values and immediate lambda literals (including n-ary `fn` canonicalized to unary nesting)
+      - chain lowering preserves left-to-right argument evaluation and lexical parameter capture via nested typed `let` emission
+      - coverage: `stage2_validates_def_bound_curried_call_chain` and `stage2_validates_immediate_lambda_curried_call_chain`
+    - expanded Stage-2 support for function aliases:
+      - top-level aliases like `(def add core/int::add)` and `(def f inc)` now lower as inlinable function values when target symbols are known pure callables
+      - alias lowering applies to both builtin wrapper symbols and previously-defined inlinable user functions
+      - coverage: `stage2_validates_def_alias_to_builtin_function_chain` and `stage2_validates_def_alias_to_user_defined_function`
+    - expanded Stage-2 support for local `let`-bound function values:
+      - local function bindings like `(let ((f (fn ...))) (f x))` now lower through the same application-chain path as top-level callable defs
+      - local aliases to in-scope inlinable functions are resolved with lexical capture semantics preserved across later scalar shadowing
+      - coverage: `stage2_validates_let_bound_function_call`, `stage2_validates_let_bound_function_lexical_capture_before_shadow`, and `stage2_validates_let_bound_function_alias_chain`
     - expanded Stage-2 support for defs-only toolchain modules:
       - defs-only modules with safe RHS forms (`fn`, `quote`, scalar literals, symbol aliases) now validate with `nil` result kind
       - defs-only modules with scalar computed bindings now lower/evaluate in Stage-2 (instead of being conservatively rejected), while retaining safe fallback for non-lowerable `fn`/`quote` bootstrap modules
@@ -180,11 +216,14 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - coverage: `stage2_validates_defs_only_module_with_safe_rhs_and_nil_result`
       - coverage: `stage2_validates_defs_only_module_with_scalar_rhs_via_lowering`
     - remaining scope: widen Stage-2 coverage beyond scalar pure subset to full module/test surface
-  - [ ] Cutover plan:
-    - [x] Rust produces a self-host toolchain artifact:
-      - `genesis selfhost-artifact --out <file>` emits a canonical CoreForm artifact with per-module Stage-1/Stage-2 validation metadata.
-    - [x] Runtime can consume a validated self-host artifact:
-      - `gc_prelude::load_selfhost_coreform_toolchain_v1` now supports `${GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT}` and verifies schema, module hashes, and gate flags before loading.
+    - [x] Cutover plan:
+      - [x] Rust produces a self-host toolchain artifact:
+        - `genesis selfhost-artifact --out <file>` emits a canonical CoreForm artifact with per-module Stage-1/Stage-2 validation metadata.
+      - [x] selfhost artifact now supports explicit Stage-2 cutover thresholds:
+        - `genesis selfhost-artifact --min-stage2-supported-modules <N> --min-stage2-validated-modules <N>`
+        - command exits with obligations failure (`30`) when configured minimums are not met, while recording requirement diagnostics in artifact + JSON output
+      - [x] Runtime can consume a validated self-host artifact:
+        - `gc_prelude::load_selfhost_coreform_toolchain_v1` now supports `${GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT}` and verifies schema, module hashes, and gate flags before loading.
     - [x] make artifact-based bootstrap the default distribution path and reduce embedded-source fallback:
       - host CLIs default selfhost bootstrap mode to `artifact-only` (`--selfhost-bootstrap artifact-only|artifact-preferred|embedded`).
       - `--engine selfhost` now requires a validated artifact by default (`--selfhost-artifact` or `./.genesis/selfhost/toolchain.gc`).
@@ -192,6 +231,7 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - [x] standardize artifact bootstrap across host runtimes:
       - `gc_wasm` exposes explicit artifact APIs (`*_selfhost_with_artifact`) and runtime method `Runtime.eval_module_selfhost_with_artifact`.
       - `gc_prelude` supports loading toolchain from artifact source text (not just filesystem path) for browser/Node hosts.
+      - `gc_wasi_cli` now supports `genesis selfhost-artifact` with the same Stage-2 threshold gating flags as native CLI, so artifact generation/cutover validation can run in WASI workflows.
     - [x] Rust becomes optional tooling only (release hardening complete for bootstrap path):
       - embedded-source bootstrap is feature-gated (`gc_prelude/embedded-bootstrap`) and disabled by default across host crates.
       - release builds reject `embedded-bootstrap` at compile time; runtime defaults are artifact-only.

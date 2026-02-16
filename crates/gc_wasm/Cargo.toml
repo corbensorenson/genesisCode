@@ -21,6 +21,7 @@ serde-wasm-bindgen = "0.6"
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
+gc_opt = { path = "../gc_opt" }
 
 [dev-dependencies]
 gc_effects = { path = "../gc_effects" }

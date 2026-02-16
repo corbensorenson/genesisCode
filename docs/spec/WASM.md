@@ -9,7 +9,7 @@ For wasm-first CLI tooling (WASI), see `docs/spec/WASI.md`.
 ## Crate
 
 - `crates/gc_wasm` builds a `cdylib` for `wasm32-unknown-unknown`.
-- It depends only on `gc_coreform`, `gc_kernel`, and `gc_prelude` (no runner, no filesystem, no networking).
+- It depends on `gc_coreform`, `gc_kernel`, `gc_prelude`, and `gc_opt` (for in-kernel Stage-1/Stage-2 gating paths), with no filesystem/network runners embedded in the module.
 
 ## Exported API
 
@@ -30,10 +30,21 @@ The WASM module exports these functions via `wasm-bindgen`:
 - `eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Pure evaluation (no effects runner). `step_limit=0` means “no limit”.
   - If evaluation produces an effect program, returns an error telling the caller to use the host runner.
+- `eval_coreform_module_with_gates(src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
+  - Pure evaluation with optional Stage-1/Stage-2 obligation gates.
+  - `stage1_gate` enforces `core/obligation::stage1-validation`.
+  - `stage2_gate` enforces Stage-2 translation validation only for Stage-2-supported modules.
+  - Stage-2 validation uses Stage-1 transformed CoreForm input (same policy as package translation-validation), even when `stage1_pipeline=false`.
 - `eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Run self-hosted parse+canonicalize in-kernel, then pure-evaluate the module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to evaluation of the input module.
+- `eval_coreform_module_selfhost_with_gates(src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
+  - Same as `eval_coreform_module_selfhost`, plus Stage-1/Stage-2 gating behavior.
+- `eval_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
+  - Selfhost eval using a caller-supplied toolchain artifact source (no filesystem dependency).
+- `eval_coreform_module_selfhost_with_artifact_and_gates(src: &str, artifact_src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
+  - Artifact-backed selfhost eval with Stage-1/Stage-2 gating.
 
 For effectful programs, the WASM module exports a stateful runtime that supports step/resume:
 
@@ -41,8 +52,17 @@ For effectful programs, the WASM module exports a stateful runtime that supports
   - `step_limit=0` means “no limit”.
 - `Runtime.eval_module(src: &str) -> Result<JsValue, JsValue>`
   - Parses/canonicalizes/evaluates and returns the first step result (`done` or `effect`).
+- `Runtime.eval_module_with_gates(src: &str, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<JsValue, JsValue>`
+  - Same as `Runtime.eval_module`, with optional Stage-1/Stage-2 gate enforcement before first step.
+  - Stage-2 validation uses Stage-1 transformed CoreForm input when enabled.
 - `Runtime.eval_module_selfhost(src: &str) -> Result<JsValue, JsValue>`
   - Uses self-hosted parse/canonicalize in-kernel, then returns the first step result (`done` or `effect`).
+- `Runtime.eval_module_selfhost_with_gates(src: &str, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<JsValue, JsValue>`
+  - Self-hosted frontend path with optional Stage-1/Stage-2 gate enforcement.
+- `Runtime.eval_module_selfhost_with_artifact(src: &str, artifact_src: &str) -> Result<JsValue, JsValue>`
+  - Self-hosted frontend path using caller-supplied artifact source.
+- `Runtime.eval_module_selfhost_with_artifact_and_gates(src: &str, artifact_src: &str, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<JsValue, JsValue>`
+  - Artifact-backed self-hosted frontend path with optional Stage-1/Stage-2 gate enforcement.
 - `Runtime.step() -> Result<JsValue, JsValue>`
   - Advances until `done` or `effect` (errors if a pending effect hasn't been responded to yet).
 - `Runtime.respond_data(resp_term_src: &str) -> Result<JsValue, JsValue>`

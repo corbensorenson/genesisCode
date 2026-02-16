@@ -2012,12 +2012,22 @@ fn obligation_translation_validation(
     let mut mod_terms: Vec<Term> = Vec::new();
     for m in modules {
         let orig_h = hash_module(&m.forms);
-        let (opt_forms, rep) = gc_opt::optimize_module_with_report(&m.forms);
-        opt_stats.egg_runs = opt_stats.egg_runs.saturating_add(rep.stats.egg_runs);
-        opt_stats.iterations = opt_stats.iterations.saturating_add(rep.stats.iterations);
-        opt_stats.eclasses = opt_stats.eclasses.saturating_add(rep.stats.eclasses);
-        opt_stats.enodes = opt_stats.enodes.saturating_add(rep.stats.enodes);
-        for (k, v) in rep.stats.rewrites_applied {
+        let stage1 =
+            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
+        let opt_forms = stage1.transformed_forms;
+        opt_stats.egg_runs = opt_stats
+            .egg_runs
+            .saturating_add(stage1.optimize_report.stats.egg_runs);
+        opt_stats.iterations = opt_stats
+            .iterations
+            .saturating_add(stage1.optimize_report.stats.iterations);
+        opt_stats.eclasses = opt_stats
+            .eclasses
+            .saturating_add(stage1.optimize_report.stats.eclasses);
+        opt_stats.enodes = opt_stats
+            .enodes
+            .saturating_add(stage1.optimize_report.stats.enodes);
+        for (k, v) in stage1.optimize_report.stats.rewrites_applied {
             *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
         }
         let opt_h = hash_module(&opt_forms);
