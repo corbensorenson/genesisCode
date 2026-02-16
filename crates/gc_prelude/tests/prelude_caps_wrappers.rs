@@ -52,6 +52,22 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :editor_vcs_resolve_conflict_with_panel
           (((core/editor/action::vcs-resolve-conflict-with-panel "conflict-h") nil) nil)
         :editor_vcs_conflict_panel (core/editor/action::vcs-conflict-panel "conflict-h")
+        :editor_format_file_task (core/editor/action::format-file-task "a.gc")
+        :editor_lint_module_task ((core/editor/action::lint-module-task "a.gc") [pkg/a::x])
+        :editor_typecheck_pkg_task (core/editor/action::typecheck-pkg-task "package.toml")
+        :editor_optimize_module_task ((core/editor/action::optimize-module-task "a.gc") "a.opt.gc")
+        :editor_test_pkg_task ((core/editor/action::test-pkg-task "package.toml") "caps.toml")
+        :editor_pkg_list_panel (core/editor/action::pkg-list-panel "genesis.lock")
+        :editor_pkg_info_panel ((core/editor/action::pkg-info-panel "genesis.lock") "my-lib")
+        :editor_pkg_lock_panel (core/editor/action::pkg-lock-panel "genesis.lock")
+        :editor_pkg_update_panel (core/editor/action::pkg-update-panel "genesis.lock")
+        :editor_pkg_install_panel (((core/editor/action::pkg-install-panel "genesis.lock") true) false)
+        :editor_pkg_verify_panel ((core/editor/action::pkg-verify-panel "genesis.lock") false)
+        :editor_pkg_snapshot_panel (core/editor/action::pkg-snapshot-panel "package.toml")
+        :editor_gpk_export_panel (((((core/editor/action::gpk-export-panel "root-h") "pkg.gpk") (quote :shallow)) 0) [])
+        :editor_gpk_import_panel (core/editor/action::gpk-import-panel "pkg.gpk")
+        :editor_sync_pull_panel ((((((core/editor/action::sync-pull-panel "origin") []) []) 0) false) false)
+        :editor_sync_push_panel ((((core/editor/action::sync-push-panel "origin") []) []) 0)
       }
     "#;
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
@@ -345,4 +361,157 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .clone();
     let req = get_req(editor_vcs_conflict_panel);
     assert_eq!(req.op, "core/store::get");
+
+    let editor_format_file_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_format_file_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_format_file_task);
+    assert_eq!(req.op, "editor/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task-kind"
+        ))),
+        Some(&gc_coreform::Term::symbol("editor/task::fmt-coreform"))
+    );
+
+    let editor_lint_module_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_lint_module_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_lint_module_task);
+    assert_eq!(req.op, "editor/task::spawn");
+
+    let editor_typecheck_pkg_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_typecheck_pkg_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_typecheck_pkg_task);
+    assert_eq!(req.op, "editor/task::spawn");
+
+    let editor_optimize_module_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_optimize_module_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_optimize_module_task);
+    assert_eq!(req.op, "editor/task::spawn");
+
+    let editor_test_pkg_task = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_test_pkg_task",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_test_pkg_task);
+    assert_eq!(req.op, "editor/task::spawn");
+
+    let editor_pkg_list_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_list_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_list_panel);
+    assert_eq!(req.op, "core/pkg::list");
+
+    let editor_pkg_info_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_info_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_info_panel);
+    assert_eq!(req.op, "core/pkg::info");
+
+    let editor_pkg_lock_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_lock_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_lock_panel);
+    assert_eq!(req.op, "core/pkg::lock");
+
+    let editor_pkg_update_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_update_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_update_panel);
+    assert_eq!(req.op, "core/pkg::update");
+
+    let editor_pkg_install_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_install_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_install_panel);
+    assert_eq!(req.op, "core/pkg::install");
+
+    let editor_pkg_verify_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_verify_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_verify_panel);
+    assert_eq!(req.op, "core/pkg::verify");
+
+    let editor_pkg_snapshot_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_pkg_snapshot_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_pkg_snapshot_panel);
+    assert_eq!(req.op, "core/pkg::snapshot");
+
+    let editor_gpk_export_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_gpk_export_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_gpk_export_panel);
+    assert_eq!(req.op, "core/gpk::export");
+
+    let editor_gpk_import_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_gpk_import_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_gpk_import_panel);
+    assert_eq!(req.op, "core/gpk::import");
+
+    let editor_sync_pull_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_sync_pull_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_sync_pull_panel);
+    assert_eq!(req.op, "core/sync::pull");
+
+    let editor_sync_push_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_sync_push_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_sync_push_panel);
+    assert_eq!(req.op, "core/sync::push");
 }

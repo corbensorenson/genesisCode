@@ -687,3 +687,169 @@
       (fn (resp)
         (let ((artifact ((core/map::get resp) (quote :artifact))))
           (core/effect::pure (core/editor/vcs::conflict-panel-from-artifact artifact)))))))
+
+(def core/editor/action::task
+  (fn (task-kind)
+    (fn (payload) (fn (priority) (((core/editor/task::spawn task-kind) payload) priority)))))
+
+(def core/editor/action::format-source
+  (fn (src)
+    (let ((formatted (core/coreform::fmt-module src)))
+      (if (core/error::is? formatted)
+        {
+          :error (core/error::payload formatted)
+          :formatted nil
+          :hash nil
+          :kind (quote :editor/coreform-format-result)
+          :ok false}
+        {
+          :error nil
+          :formatted formatted
+          :hash (core/coreform::hash-module-src formatted)
+          :kind (quote :editor/coreform-format-result)
+          :ok true}))))
+
+(def core/editor/action::format-file-task
+  (fn (path) (((core/editor/action::task (quote editor/task::fmt-coreform)) {:path path}) 50)))
+
+(def core/editor/action::lint-module-task
+  (fn (path)
+    (fn (changed-syms)
+      (
+        ((core/editor/action::task (quote editor/task::lint-module))
+          {:changed-syms changed-syms :path path})
+        50))))
+
+(def core/editor/action::typecheck-pkg-task
+  (fn (pkg) (((core/editor/action::task (quote editor/task::typecheck-pkg)) {:pkg pkg}) 50)))
+
+(def core/editor/action::optimize-module-task
+  (fn (path)
+    (fn (out)
+      (((core/editor/action::task (quote editor/task::optimize-module)) {:out out :path path}) 50))))
+
+(def core/editor/action::test-pkg-task
+  (fn (pkg)
+    (fn (caps)
+      (((core/editor/action::task (quote editor/task::test-pkg)) {:caps caps :pkg pkg}) 50))))
+
+(def core/editor/pkg::field
+  (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))
+
+(def core/editor/pkg::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
+
+(def core/editor/pkg::list-panel-from-response
+  (fn (resp)
+    (let
+      ((f (core/editor/pkg::field resp))
+        (reqs (core/editor/pkg::vec-or-empty (f (quote :requirements))))
+        (locked (core/editor/pkg::vec-or-empty (f (quote :locked)))))
+      {
+        :kind (quote :editor/pkg-list-panel)
+        :lock (f (quote :lock))
+        :locked locked
+        :locked-count (core/vec::len locked)
+        :ok (f (quote :ok))
+        :requirements reqs
+        :requirements-count (core/vec::len reqs)})))
+
+(def core/editor/pkg::info-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/pkg::field resp)))
+      {
+        :kind (quote :editor/pkg-info-panel)
+        :locked (f (quote :locked))
+        :name (f (quote :name))
+        :ok (f (quote :ok))
+        :requirement (f (quote :requirement))})))
+
+(def core/editor/pkg::status-panel-from-response
+  (fn (kind)
+    (fn (resp)
+      (let
+        ((f (core/editor/pkg::field resp))
+          (missing (core/editor/pkg::vec-or-empty (f (quote :missing)))))
+        {
+          :checked (f (quote :checked))
+          :kind kind
+          :lock (f (quote :lock))
+          :lock-h (f (quote :lock-h))
+          :locked-count (f (quote :locked-count))
+          :missing missing
+          :missing-count (core/vec::len missing)
+          :ok (f (quote :ok))
+          :present (f (quote :present))
+          :refs-updated (f (quote :refs-updated))
+          :remote (f (quote :remote))
+          :snapshot (f (quote :snapshot))
+          :total (f (quote :total))
+          :updated (f (quote :updated))
+          :uploaded (f (quote :uploaded))}))))
+
+(def core/editor/action::pkg-list-panel
+  (fn (lock) ((core/effect::map (core/pkg::list lock)) core/editor/pkg::list-panel-from-response)))
+
+(def core/editor/action::pkg-info-panel
+  (fn (lock)
+    (fn (name)
+      ((core/effect::map ((core/pkg::info lock) name)) core/editor/pkg::info-panel-from-response))))
+
+(def core/editor/action::pkg-lock-panel
+  (fn (lock)
+    ((core/effect::map (core/pkg::lock lock))
+      (core/editor/pkg::status-panel-from-response (quote :editor/pkg-lock-panel)))))
+
+(def core/editor/action::pkg-update-panel
+  (fn (lock)
+    ((core/effect::map (core/pkg::update lock))
+      (core/editor/pkg::status-panel-from-response (quote :editor/pkg-update-panel)))))
+
+(def core/editor/action::pkg-install-panel
+  (fn (lock)
+    (fn (frozen)
+      (fn (strict)
+        ((core/effect::map (((core/pkg::install lock) frozen) strict))
+          (core/editor/pkg::status-panel-from-response (quote :editor/pkg-install-panel)))))))
+
+(def core/editor/action::pkg-verify-panel
+  (fn (lock)
+    (fn (strict)
+      ((core/effect::map ((core/pkg::verify lock) strict))
+        (core/editor/pkg::status-panel-from-response (quote :editor/pkg-verify-panel))))))
+
+(def core/editor/action::pkg-snapshot-panel
+  (fn (pkg-path)
+    ((core/effect::map (core/pkg::snapshot pkg-path))
+      (core/editor/pkg::status-panel-from-response (quote :editor/pkg-snapshot-panel)))))
+
+(def core/editor/action::gpk-export-panel
+  (fn (root)
+    (fn (out)
+      (fn (mode)
+        (fn (depth)
+          (fn (refs)
+            ((core/effect::map (((((core/gpk::export root) out) mode) depth) refs))
+              (core/editor/pkg::status-panel-from-response (quote :editor/gpk-export-panel)))))))))
+
+(def core/editor/action::gpk-import-panel
+  (fn (in)
+    ((core/effect::map (core/gpk::import in))
+      (core/editor/pkg::status-panel-from-response (quote :editor/gpk-import-panel)))))
+
+(def core/editor/action::sync-pull-panel
+  (fn (remote)
+    (fn (refs)
+      (fn (roots)
+        (fn (depth)
+          (fn (force)
+            (fn (set-refs)
+              ((core/effect::map ((((((core/sync::pull remote) refs) roots) depth) force) set-refs))
+                (core/editor/pkg::status-panel-from-response (quote :editor/sync-pull-panel))))))))))
+
+(def core/editor/action::sync-push-panel
+  (fn (remote)
+    (fn (refs)
+      (fn (roots)
+        (fn (depth)
+          ((core/effect::map ((((core/sync::push remote) refs) roots) depth))
+            (core/editor/pkg::status-panel-from-response (quote :editor/sync-push-panel))))))))

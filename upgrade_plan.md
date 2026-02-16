@@ -542,7 +542,14 @@ and plugin/agent-friendly from day 1.
   - optional: language server–like background tasks (still effect-logged)
 - [ ] Implement editor core (GenesisCode-only):
   - incremental parser integration (once self-host parser exists) + AST aware editing
-  - CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
+  - [x] CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
+    - pure formatting action:
+      - `core/editor/action::format-source` (`core/coreform::fmt-module` + stable hash)
+    - editor task actions (effect-logged via `editor/task::spawn`):
+      - `core/editor/action::{format-file-task,lint-module-task,typecheck-pkg-task,optimize-module-task,test-pkg-task}`
+    - request-shape coverage:
+      - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
+      - `crates/gc_prelude/tests/prelude_editor_actions.rs`
   - [x] GenesisGraph/VCS editor adapters in GenesisCode prelude:
     - `core/editor/vcs::{refs-panel-from-response,log-panel-from-response}`
     - `core/editor/action::{vcs-refs-panel,vcs-log-panel}` wrappers over `core/refs::list` and `core/vcs::log`
@@ -557,6 +564,16 @@ and plugin/agent-friendly from day 1.
       - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - GenesisGraph-native UX: commit/log/blame/why/evidence views
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
+    - [x] package/store/sync action coverage in GenesisCode prelude:
+      - list/info/lock/update/install/verify/snapshot panels:
+        - `core/editor/action::{pkg-list-panel,pkg-info-panel,pkg-lock-panel,pkg-update-panel,pkg-install-panel,pkg-verify-panel,pkg-snapshot-panel}`
+      - bundle + sync panels:
+        - `core/editor/action::{gpk-export-panel,gpk-import-panel,sync-pull-panel,sync-push-panel}`
+      - panel adapters:
+        - `core/editor/pkg::{list-panel-from-response,info-panel-from-response,status-panel-from-response}`
+      - coverage:
+        - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
+        - `crates/gc_prelude/tests/prelude_editor_actions.rs`
 - [ ] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
   - [x] ship a baseline GenesisCode linter runtime in Prelude (`core/editor/lint::*`) with module-level checks for:
     - missing `::meta`
