@@ -116,15 +116,16 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Self-hosted CoreForm tooling v1 (no Rust parser dependency):
   - `selfhost/tool_coreform_v1.gc` implements `selfhost/tool::{fmt-module,hash-module-src}` using:
     - self-hosted parsing via `selfhost/parse::*`
-    - bootstrap canonicalize/print/hash via `core/coreform::{canonicalize-module,print-module,hash-module}`
+    - self-hosted canonicalize/print/hash via `selfhost/{canon,printer,hash}.gc` (no `core/coreform::*` on the tool path)
   - Equivalence tests: `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
 - [x] Bootstrap selfhost modules for canon/printer/hash remain available (fast, deterministic):
   - `selfhost/canon.gc`, `selfhost/printer.gc`, `selfhost/hash.gc`
   - Equivalence tests: `crates/gc_prelude/tests/selfhost_{canon,printer,hash}_equivalence.rs`
-- [ ] Implement a truly self-hosted CoreForm frontend (no Rust CoreForm dependency at all):
-  - canonicalization and canonical printing in GenesisCode (no `core/coreform::*` usage)
-  - hashing from canonical bytes in GenesisCode
-  - (parser already done)
+- [x] Implement a truly self-hosted CoreForm frontend (no Rust CoreForm dependency at all on the tool path):
+  - canonicalization and canonical printing in GenesisCode (`selfhost/{canon,printer}.gc`)
+  - hashing from canonical bytes in GenesisCode (`selfhost/hash.gc`)
+  - regression coverage:
+    - singleton list grouping canonicalizes like the kernel (`(y)` formats to `y`) via `crates/gc_prelude/tests/selfhost_singleton_parens_regression.rs`
 - [x] Cutover tooling entrypoints to support a self-host toolchain engine (opt-in):
   - CLI: `genesis fmt --engine selfhost` uses `selfhost/tool::fmt-module` (honors `--step-limit/--no-step-limit`)
   - wasm-bindgen: expose `fmt_coreform_module_selfhost` and `hash_coreform_module_selfhost`

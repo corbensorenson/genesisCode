@@ -919,6 +919,28 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             ctx.mem_observe_vec_len(out.len())?;
             Ok(Value::Data(Term::Vector(out)))
         }
+        "map/from-entries" => {
+            if args.len() != 1 {
+                return type_err(ctx, "map/from-entries expects 1 arg");
+            }
+            let Some(Term::Vector(es)) = args[0].as_data() else {
+                return type_err(ctx, "map/from-entries expects vector datum");
+            };
+            let mut out: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for e in es {
+                let Term::Vector(pair) = e else {
+                    return type_err(ctx, "map/from-entries expects vector of [k v] entries");
+                };
+                if pair.len() != 2 {
+                    return type_err(ctx, "map/from-entries expects entries of length 2");
+                }
+                let k = pair[0].clone();
+                let v = pair[1].clone();
+                out.insert(TermOrdKey(k), v);
+            }
+            ctx.mem_observe_map_len(out.len())?;
+            Ok(Value::Data(Term::Map(out)))
+        }
         "vec/get" => {
             if args.len() != 2 {
                 return type_err(ctx, "vec/get expects 2 args");

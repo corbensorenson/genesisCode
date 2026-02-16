@@ -157,6 +157,8 @@
 
 (def core/map::entries (fn (m) (prim map/entries m)))
 
+(def core/map::from-entries (fn (es) (prim map/from-entries es)))
+
 (def core/vec::get (fn (v) (fn (i) (prim vec/get v i))))
 
 (def core/vec::push (fn (v) (fn (x) (prim vec/push v x))))

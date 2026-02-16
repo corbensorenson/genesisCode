@@ -1,6 +1,28 @@
-; v0.2 bootstrap hashing: delegates to the Rust CoreForm hasher (hex string output).
+(def selfhost/hash::is-error core/error::is?)
 
-(def selfhost/hash::hash-term (fn (t) (core/coreform::hash-term t)))
+(def selfhost/hash::PREFIX_TERM b"GCv0.2\x00")
+(def selfhost/hash::PREFIX_MODULE b"GCv0.2\x00module\x00")
 
-(def selfhost/hash::hash-module (fn (forms) (core/coreform::hash-module forms)))
+(def selfhost/hash::hash-term
+  (fn (t)
+    (let ((s (selfhost/printer::print-term t)))
+      (if (selfhost/hash::is-error s)
+        s
+        (let ((b (core/str::to-utf8 s)))
+          (if (selfhost/hash::is-error b)
+            b
+            (let ((msg ((core/bytes::concat selfhost/hash::PREFIX_TERM) b)))
+              (let ((h (core/crypto::blake3 msg)))
+                (if (selfhost/hash::is-error h) h (core/bytes::to-hex h))))))))))
 
+(def selfhost/hash::hash-module
+  (fn (forms)
+    (let ((s (selfhost/printer::print-module forms)))
+      (if (selfhost/hash::is-error s)
+        s
+        (let ((b (core/str::to-utf8 s)))
+          (if (selfhost/hash::is-error b)
+            b
+            (let ((msg ((core/bytes::concat selfhost/hash::PREFIX_MODULE) b)))
+              (let ((h (core/crypto::blake3 msg)))
+                (if (selfhost/hash::is-error h) h (core/bytes::to-hex h))))))))))

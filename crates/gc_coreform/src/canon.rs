@@ -249,7 +249,11 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         canon_items.push(canon_code(it)?);
     }
 
-    if canon_items.len() <= 2 {
+    // Singleton lists are just redundant grouping; evaluation of `(f)` is the same as `f`.
+    if canon_items.len() == 1 {
+        return Ok(canon_items.into_iter().next().expect("len == 1"));
+    }
+    if canon_items.len() == 2 {
         return Ok(Term::list(canon_items));
     }
 
