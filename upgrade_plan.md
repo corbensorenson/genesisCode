@@ -543,6 +543,18 @@ and plugin/agent-friendly from day 1.
 - [ ] Implement editor core (GenesisCode-only):
   - incremental parser integration (once self-host parser exists) + AST aware editing
   - CoreForm formatting + linting + typecheck + optimize flows as in-editor actions
+  - [x] GenesisGraph/VCS editor adapters in GenesisCode prelude:
+    - `core/editor/vcs::{refs-panel-from-response,log-panel-from-response}`
+    - `core/editor/action::{vcs-refs-panel,vcs-log-panel}` wrappers over `core/refs::list` and `core/vcs::log`
+    - request-shape coverage in `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
+  - [x] Add editor-native semantic VCS workflows for diff/apply/merge/conflict:
+    - response-to-panel adapters:
+      - `core/editor/vcs::{diff-panel-from-response,apply-panel-from-response,merge-panel-from-response,resolve-panel-from-response,conflict-panel-from-artifact}`
+    - effectful editor actions:
+      - `core/editor/action::{vcs-diff-panel,vcs-apply-panel,vcs-merge3-panel,vcs-resolve-conflict-panel,vcs-resolve-conflict-with-panel,vcs-conflict-panel}`
+    - coverage:
+      - `crates/gc_prelude/tests/prelude_editor_vcs.rs`
+      - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - GenesisGraph-native UX: commit/log/blame/why/evidence views
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
 - [ ] Implement a GenesisCode linter (GenesisCode-only) and integrate it into the editor:
@@ -574,9 +586,17 @@ and plugin/agent-friendly from day 1.
     - coverage:
       - `crates/gc_obligations/src/lib.rs` unit tests `lint_autofix_*`
       - CLI e2e `crates/gc_cli/tests/cli_smoke.rs::test_pkg_lint_autofix_emits_patch_artifact`
-  - [ ] editor integration path:
-    - expose lints through editor actions/panels
-    - wire lint outputs into patch/evidence UX
+  - [x] editor integration path:
+    - expose lints through editor actions/panels:
+      - `core/editor/lint::panel-from-report`
+      - `core/editor/action::lint-panel-from-acceptance`
+    - wire lint outputs into patch/evidence UX:
+      - `core/editor/lint::acceptance-lint-artifact-h`
+      - `core/editor/lint::load-panel-from-acceptance`
+      - panel model carries `:autofixes` and per-item `:autofix-patch`
+    - coverage:
+      - `crates/gc_prelude/tests/prelude_editor_lint.rs` (`editor_lint_panel_*`, `editor_lint_acceptance_*`)
+      - `crates/gc_prelude/tests/prelude_caps_wrappers.rs` (`:editor_lint_panel_from_acceptance`)
 - [ ] Plugin + agent architecture (GenesisCode-only):
   - plugin API as contracts; sandboxed capabilities per plugin
   - agent actions as semantic patches + obligation-gated acceptance pipeline

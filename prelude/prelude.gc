@@ -2195,3 +2195,303 @@
                 ((core/editor/lint::filter-diags changed-syms) all)))
             all))))))
 
+(def core/editor/lint::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/editor/lint::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
+
+(def core/editor/lint::module-path
+  (fn (module-report)
+    (let ((p ((core/map::get module-report) (quote :path)))) (if (core/editor/lint::str? p) p nil))))
+
+(def core/editor/lint::module-autofix
+  (fn (module-report) ((core/map::get module-report) (quote :autofix-patch))))
+
+(def core/editor/lint::module-diagnostics
+  (fn (module-report)
+    (core/editor/lint::vec-or-empty ((core/map::get module-report) (quote :diagnostics)))))
+
+(def core/editor/lint::diag-row
+  (fn (path)
+    (fn (autofix-patch)
+      (fn (diag)
+        {
+          :autofix-patch autofix-patch
+          :code ((core/map::get diag) (quote :code))
+          :level ((core/map::get diag) (quote :level))
+          :msg ((core/map::get diag) (quote :msg))
+          :path path
+          :sym ((core/map::get diag) (quote :sym))}))))
+
+(def core/editor/lint::rows-from-module
+  (fn (module-report)
+    (let
+      ((path (core/editor/lint::module-path module-report))
+        (autofix (core/editor/lint::module-autofix module-report))
+        (diags (core/editor/lint::module-diagnostics module-report)))
+      (((((core/editor/lint::rows-from-module-loop path) autofix) diags) 0) []))))
+
+(def core/editor/lint::rows-from-module-loop
+  (fn (path)
+    (fn (autofix)
+      (fn (diags)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) (core/vec::len diags))
+              out
+              (let ((d ((core/vec::get diags) i)))
+                (((((core/editor/lint::rows-from-module-loop path) autofix) diags) ((core/int::add i) 1))
+                  ((core/vec::push out) (((core/editor/lint::diag-row path) autofix) d)))))))))))
+
+(def core/editor/lint::rows-from-report
+  (fn (report)
+    (let ((modules (core/editor/lint::vec-or-empty ((core/map::get report) (quote :modules)))))
+      (((core/editor/lint::rows-from-report-loop modules) 0) []))))
+
+(def core/editor/lint::rows-from-report-loop
+  (fn (modules)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) (core/vec::len modules))
+          out
+          (let ((m ((core/vec::get modules) i)))
+            (((core/editor/lint::rows-from-report-loop modules) ((core/int::add i) 1))
+              ((core/editor/lint::vec-append out) (core/editor/lint::rows-from-module m)))))))))
+
+(def core/editor/lint::count-level
+  (fn (rows) (fn (level) ((((core/editor/lint::count-level-loop rows) level) 0) 0))))
+
+(def core/editor/lint::count-level-loop
+  (fn (rows)
+    (fn (level)
+      (fn (i)
+        (fn (n)
+          (if ((core/int::eq? i) (core/vec::len rows))
+            n
+            (let ((row ((core/vec::get rows) i)))
+              ((((core/editor/lint::count-level-loop rows) level) ((core/int::add i) 1))
+                (if (core/editor/lint::map? row)
+                  (let ((lv ((core/map::get row) (quote :level))))
+                    (if (core/editor/lint::sym? lv)
+                      (if ((core/sym::eq? lv) level) ((core/int::add n) 1) n)
+                      n))
+                  n)))))))))
+
+(def core/editor/lint::autofixes-from-report
+  (fn (report) (core/editor/lint::vec-or-empty ((core/map::get report) (quote :autofix-patches)))))
+
+(def core/editor/lint::panel-from-report
+  (fn (report)
+    (if (core/editor/lint::map? report)
+      (let
+        ((rows (core/editor/lint::rows-from-report report))
+          (autofixes (core/editor/lint::autofixes-from-report report)))
+        {
+          :autofixes autofixes
+          :error-count ((core/editor/lint::count-level rows) (quote :error))
+          :items rows
+          :kind (quote :editor/lint-panel)
+          :obligation ((core/map::get report) (quote :obligation))
+          :ok ((core/map::get report) (quote :ok))
+          :package ((core/map::get report) (quote :package))
+          :warn-count ((core/editor/lint::count-level rows) (quote :warn))})
+      {
+        :autofixes []
+        :error-count 1
+        :items []
+        :kind (quote :editor/lint-panel)
+        :ok false
+        :package nil
+        :warn-count 0})))
+
+(def core/editor/lint::obligations
+  (fn (acceptance)
+    (core/editor/lint::vec-or-empty ((core/map::get acceptance) (quote :obligations)))))
+
+(def core/editor/lint::obligation-artifact-h
+  (fn (acceptance)
+    (fn (obligation-sym)
+      (
+        (
+          ((core/editor/lint::obligation-artifact-h-loop (core/editor/lint::obligations acceptance))
+            obligation-sym)
+          0)
+        nil))))
+
+(def core/editor/lint::obligation-artifact-h-loop
+  (fn (obs)
+    (fn (obligation-sym)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len obs))
+            out
+            (let
+              ((entry ((core/vec::get obs) i))
+                (next
+                  ((((core/editor/lint::obligation-artifact-h-loop obs) obligation-sym) ((core/int::add i) 1))
+                    out)))
+              (if (core/editor/lint::map? entry)
+                (let ((name ((core/map::get entry) (quote :name))))
+                  (if (core/editor/lint::sym? name)
+                    (if ((core/sym::eq? name) obligation-sym)
+                      (let ((h ((core/map::get entry) (quote :artifact))))
+                        (if (core/editor/lint::str? h) h next))
+                      next)
+                    next))
+                next))))))))
+
+(def core/editor/lint::acceptance-lint-artifact-h
+  (fn (acceptance)
+    ((core/editor/lint::obligation-artifact-h acceptance) (quote core/obligation::lint))))
+
+(def core/editor/lint::load-panel-from-acceptance
+  (fn (acceptance)
+    (let ((h (core/editor/lint::acceptance-lint-artifact-h acceptance)))
+      (if (core/editor/lint::str? h)
+        ((core/effect::bind (core/store::get h))
+          (fn (resp)
+            (let ((artifact ((core/map::get resp) (quote :artifact))))
+              (core/effect::pure (core/editor/lint::panel-from-report artifact)))))
+        (core/effect::pure
+          {
+            :autofixes []
+            :error-count 1
+            :items []
+            :kind (quote :editor/lint-panel)
+            :ok false
+            :warn-count 0})))))
+
+(def core/editor/vcs::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
+
+(def core/editor/vcs::refs-panel-from-response
+  (fn (resp)
+    (let ((refs (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :refs)))))
+      {
+        :count (core/vec::len refs)
+        :kind (quote :editor/vcs-refs-panel)
+        :refs refs})))
+
+(def core/editor/vcs::log-panel-from-response
+  (fn (resp)
+    (let ((commits (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :commits)))))
+      {
+        :commits commits
+        :count (core/vec::len commits)
+        :kind (quote :editor/vcs-log-panel)
+        :root ((core/map::get resp) (quote :root))
+        :truncated ((core/map::get resp) (quote :truncated))})))
+
+(def core/editor/action::vcs-refs-panel
+  (fn (prefix)
+    ((core/effect::map (core/refs::list prefix)) core/editor/vcs::refs-panel-from-response)))
+
+(def core/editor/action::vcs-log-panel
+  (fn (root)
+    (fn (max)
+      ((core/effect::map ((core/vcs::log root) max)) core/editor/vcs::log-panel-from-response))))
+
+(def core/editor/action::lint-panel-from-acceptance
+  (fn (acceptance) (core/editor/lint::load-panel-from-acceptance acceptance)))
+
+(def core/editor/vcs::field
+  (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))
+
+(def core/editor/vcs::diff-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :kind (quote :editor/vcs-diff-panel)
+        :ok (f (quote :ok))
+        :patch (f (quote :patch))
+        :values (core/editor/vcs::vec-or-empty (f (quote :values)))})))
+
+(def core/editor/vcs::apply-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :kind (quote :editor/vcs-apply-panel)
+        :ok (f (quote :ok))
+        :snapshot (f (quote :snapshot))})))
+
+(def core/editor/vcs::merge-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :conflict (f (quote :conflict))
+        :kind (quote :editor/vcs-merge-panel)
+        :ok (f (quote :ok))
+        :snapshot (f (quote :snapshot))})))
+
+(def core/editor/vcs::resolve-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :conflict (f (quote :conflict))
+        :kind (quote :editor/vcs-resolve-panel)
+        :ok (f (quote :ok))
+        :patch (f (quote :patch))
+        :snapshot (f (quote :snapshot))
+        :values (core/editor/vcs::vec-or-empty (f (quote :values)))})))
+
+(def core/editor/vcs::conflict-panel-from-artifact
+  (fn (conflict)
+    (let
+      ((f (core/editor/vcs::field conflict))
+        (items (core/editor/vcs::vec-or-empty (f (quote :conflicts)))))
+      {
+        :base (f (quote :base))
+        :conflicts items
+        :count (core/vec::len items)
+        :kind (quote :editor/vcs-conflict-panel)
+        :left (f (quote :left))
+        :ok true
+        :right (f (quote :right))
+        :vcs-kind (f (quote :kind))})))
+
+(def core/editor/action::vcs-diff-panel
+  (fn (base)
+    (fn (to)
+      ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+        core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::vcs-apply-panel
+  (fn (base)
+    (fn (patch)
+      ((core/effect::map ((((core/vcs::apply base) patch) nil) true))
+        core/editor/vcs::apply-panel-from-response))))
+
+(def core/editor/action::vcs-merge3-panel
+  (fn (base)
+    (fn (left)
+      (fn (right)
+        ((core/effect::map (((((core/vcs::merge3 base) left) right) nil) true))
+          core/editor/vcs::merge-panel-from-response)))))
+
+(def core/editor/action::vcs-resolve-conflict-panel
+  (fn (conflict)
+    ((core/effect::map (((core/vcs::resolve-conflict conflict) nil) true))
+      core/editor/vcs::resolve-panel-from-response)))
+
+(def core/editor/action::vcs-resolve-conflict-with-panel
+  (fn (conflict)
+    (fn (strategy)
+      (fn (resolutions)
+        (
+          (core/effect::map
+            (
+              ((core/effect::perform (quote core/vcs::resolve-conflict))
+                {
+                  :conflict conflict
+                  :out nil
+                  :resolutions resolutions
+                  :store true
+                  :strategy strategy})
+              (fn (resp) (core/effect::pure resp))))
+          core/editor/vcs::resolve-panel-from-response)))))
+
+(def core/editor/action::vcs-conflict-panel
+  (fn (conflict-h)
+    ((core/effect::bind (core/store::get conflict-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure (core/editor/vcs::conflict-panel-from-artifact artifact)))))))
+

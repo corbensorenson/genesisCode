@@ -1,0 +1,129 @@
+use gc_coreform::{canonicalize_module, parse_module, Term, TermOrdKey};
+use gc_kernel::{eval_module, EvalCtx};
+use gc_prelude::build_prelude;
+
+fn eval_to_term(src: &str) -> Term {
+    let forms = canonicalize_module(parse_module(src).expect("parse")).expect("canon");
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let v = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    v.to_term_for_log(ctx.protocol.map(|p| p.error))
+}
+
+fn map_get<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
+    let Term::Map(m) = t else { return None };
+    m.get(&TermOrdKey(Term::symbol(key)))
+}
+
+#[test]
+fn editor_vcs_diff_panel_projects_patch_and_values() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::diff-panel-from-response
+          (quote
+            {
+              :ok true
+              :patch "patch-h"
+              :values ["v1" "v2"]
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-diff-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":patch"),
+        Some(&Term::Str("patch-h".to_string()))
+    );
+    let Some(Term::Vector(values)) = map_get(&term, ":values") else {
+        panic!("panel :values must be vector");
+    };
+    assert_eq!(values.len(), 2);
+}
+
+#[test]
+fn editor_vcs_merge_panel_surfaces_conflict_hash() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::merge-panel-from-response
+          (quote
+            {
+              :ok false
+              :conflict "conflict-h"
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-merge-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":conflict"),
+        Some(&Term::Str("conflict-h".to_string()))
+    );
+}
+
+#[test]
+fn editor_vcs_conflict_panel_counts_entries() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::conflict-panel-from-artifact
+          (quote
+            {
+              :type :vcs/conflict
+              :v 1
+              :kind :contract-snapshot-merge3
+              :base "b"
+              :left "l"
+              :right "r"
+              :conflicts [
+                {:op foo/a::x :base "bx" :left "lx" :right "rx"}
+                {:op foo/a::y :base nil :left "ly" :right "ry"}
+              ]
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-conflict-panel"))
+    );
+    assert_eq!(map_get(&term, ":count"), Some(&Term::Int(2.into())));
+    let Some(Term::Vector(conflicts)) = map_get(&term, ":conflicts") else {
+        panic!("panel :conflicts must be vector");
+    };
+    assert_eq!(conflicts.len(), 2);
+}
+
+#[test]
+fn editor_vcs_resolve_panel_projects_snapshot_patch_and_values() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::resolve-panel-from-response
+          (quote
+            {
+              :ok true
+              :snapshot "snap-h"
+              :patch "patch-h"
+              :values ["a" "b" "c"]
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-resolve-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":snapshot"),
+        Some(&Term::Str("snap-h".to_string()))
+    );
+    assert_eq!(
+        map_get(&term, ":patch"),
+        Some(&Term::Str("patch-h".to_string()))
+    );
+    let Some(Term::Vector(values)) = map_get(&term, ":values") else {
+        panic!("panel :values must be vector");
+    };
+    assert_eq!(values.len(), 3);
+}

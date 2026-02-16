@@ -1,5 +1,5 @@
 use gc_coreform::{canonicalize_module, parse_module};
-use gc_kernel::{EffectProgram, EffectRequest, EvalCtx, Value, eval_module};
+use gc_kernel::{eval_module, EffectProgram, EffectRequest, EvalCtx, Value};
 use gc_prelude::build_prelude;
 
 fn get_req(v: Value) -> EffectRequest {
@@ -33,6 +33,25 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :editor_clip_set ((core/editor/clipboard::set "text/plain") "hello")
         :editor_task_spawn (((core/editor/task::spawn 'editor/task::lint) {:path "a.gc"}) 50)
         :editor_watch_sub ((core/editor/watch::subscribe "/ws") ["*.gc" "*.gcpkg"])
+        :editor_lint_panel_from_acceptance
+          (core/editor/action::lint-panel-from-acceptance
+            {
+              :obligations [
+                {
+                  :name core/obligation::lint
+                  :artifact "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                }
+              ]
+            })
+        :editor_vcs_refs_panel (core/editor/action::vcs-refs-panel "refs/heads/")
+        :editor_vcs_log_panel ((core/editor/action::vcs-log-panel "refs/heads/main") 10)
+        :editor_vcs_diff_panel ((core/editor/action::vcs-diff-panel "base-h") "to-h")
+        :editor_vcs_apply_panel ((core/editor/action::vcs-apply-panel "base-h") "patch-h")
+        :editor_vcs_merge3_panel (((core/editor/action::vcs-merge3-panel "base-h") "left-h") "right-h")
+        :editor_vcs_resolve_conflict_panel (core/editor/action::vcs-resolve-conflict-panel "conflict-h")
+        :editor_vcs_resolve_conflict_with_panel
+          (((core/editor/action::vcs-resolve-conflict-with-panel "conflict-h") nil) nil)
+        :editor_vcs_conflict_panel (core/editor/action::vcs-conflict-panel "conflict-h")
       }
     "#;
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
@@ -214,4 +233,116 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         panic!("missing :globs vector");
     };
     assert_eq!(globs.len(), 2);
+
+    let editor_lint_panel_from_acceptance = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_lint_panel_from_acceptance",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_lint_panel_from_acceptance);
+    assert_eq!(req.op, "core/store::get");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":hash"))),
+        Some(&gc_coreform::Term::Str(
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string()
+        ))
+    );
+
+    let editor_vcs_refs_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_refs_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_refs_panel);
+    assert_eq!(req.op, "core/refs::list");
+
+    let editor_vcs_log_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_log_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_log_panel);
+    assert_eq!(req.op, "core/vcs::log");
+
+    let editor_vcs_diff_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_diff_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_diff_panel);
+    assert_eq!(req.op, "core/vcs::diff");
+
+    let editor_vcs_apply_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_apply_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_apply_panel);
+    assert_eq!(req.op, "core/vcs::apply");
+
+    let editor_vcs_merge3_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_merge3_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_merge3_panel);
+    assert_eq!(req.op, "core/vcs::merge3");
+
+    let editor_vcs_resolve_conflict_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_resolve_conflict_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_resolve_conflict_panel);
+    assert_eq!(req.op, "core/vcs::resolve-conflict");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":conflict"
+        ))),
+        Some(&gc_coreform::Term::Str("conflict-h".to_string()))
+    );
+
+    let editor_vcs_resolve_conflict_with_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_resolve_conflict_with_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_resolve_conflict_with_panel);
+    assert_eq!(req.op, "core/vcs::resolve-conflict");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert!(
+        mm.contains_key(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":strategy"
+        )))
+    );
+    assert!(
+        mm.contains_key(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":resolutions"
+        )))
+    );
+
+    let editor_vcs_conflict_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_conflict_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_conflict_panel);
+    assert_eq!(req.op, "core/store::get");
 }

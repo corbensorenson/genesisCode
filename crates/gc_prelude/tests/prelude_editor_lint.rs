@@ -44,6 +44,11 @@ fn diag_len(diags: &Term) -> usize {
     }
 }
 
+fn map_get<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
+    let Term::Map(m) = t else { return None };
+    m.get(&TermOrdKey(Term::symbol(key)))
+}
+
 #[test]
 fn editor_lint_valid_module_has_no_errors() {
     let term = eval_to_term(
@@ -136,4 +141,74 @@ fn editor_lint_delta_preserves_global_missing_meta() {
         "#,
     );
     assert!(diag_has_code(&term, "editor/lint/missing-meta"));
+}
+
+#[test]
+fn editor_lint_panel_from_report_includes_autofix_rows() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/lint::panel-from-report
+          (quote
+            {
+              :ok true
+              :package "pkg/lint"
+              :obligation "core/obligation::lint"
+              :modules [
+                {
+                  :path "a.gc"
+                  :autofix-patch "patch-h"
+                  :diagnostics [
+                    {
+                      :level :warn
+                      :code "editor/lint/missing-type"
+                      :msg "x"
+                      :path "a.gc"
+                      :sym pkg/a::x
+                    }
+                  ]
+                }
+              ]
+              :autofix-patches [
+                {
+                  :path "a.gc"
+                  :patch "patch-h"
+                  :reasons ["editor/lint/missing-type"]
+                }
+              ]
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":warn-count"), Some(&Term::Int(1.into())));
+    assert_eq!(map_get(&term, ":error-count"), Some(&Term::Int(0.into())));
+    let Some(Term::Vector(items)) = map_get(&term, ":items") else {
+        panic!("panel :items must be vector");
+    };
+    assert_eq!(items.len(), 1);
+    let Some(Term::Str(h)) = map_get(&items[0], ":autofix-patch") else {
+        panic!("row :autofix-patch must be string");
+    };
+    assert_eq!(h, "patch-h");
+    let Some(Term::Vector(autofixes)) = map_get(&term, ":autofixes") else {
+        panic!("panel :autofixes must be vector");
+    };
+    assert_eq!(autofixes.len(), 1);
+}
+
+#[test]
+fn editor_lint_acceptance_extracts_lint_artifact_hash() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/lint::acceptance-lint-artifact-h
+          (quote
+            {
+              :obligations [
+                {
+                  :name core/obligation::lint
+                  :artifact "abc123"
+                }
+              ]
+            }))
+        "#,
+    );
+    assert_eq!(term, Term::Str("abc123".to_string()));
 }
