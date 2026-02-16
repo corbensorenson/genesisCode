@@ -28,6 +28,9 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Selfhost Strict Smoke (Native + WASI CLI)
+        run: bash scripts/selfhost_strict_smoke.sh
+
       - name: WASM Build (Pure Kernel)
         run: cargo build -p gc_wasm --target wasm32-unknown-unknown
 

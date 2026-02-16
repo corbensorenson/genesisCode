@@ -18,14 +18,28 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--max-map-len <N>`: maximum observed map length (map literals, `map/put`, `map/merge`).
 - `--max-bytes-len <N>`: maximum observed bytes length (bytes literals and `bytes/concat`).
 - `--max-string-len <N>`: maximum observed string length in UTF-8 bytes (string literals and `str/concat`).
+- `--selfhost-only`: enforce strict selfhost frontend mode.
+  - Also enabled when `GENESIS_SELFHOST_ONLY=1|true|yes|on`.
+  - In this mode:
+    - commands with `--engine` must use `--engine selfhost`
+    - `--selfhost-bootstrap` must be `artifact-only`
+    - commands not yet routed through selfhost frontend return exit code `50`.
+  - Current native routed set: `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`.
+- Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
+  automatically prefer selfhost frontend when a toolchain artifact is configured or present:
+  - `--selfhost-artifact <path>`, or
+  - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
+  - `./.genesis/selfhost/toolchain.gc` exists.
 
 ## Subcommands (Signing + Policy)
 
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`
-  - `--engine rust` is the default.
+  - when `--engine` is omitted, engine is auto-selected:
+    - `selfhost` when a selfhost toolchain artifact is configured/present
+    - otherwise `rust`
   - `--engine selfhost` runs the self-hosted CoreForm toolchain inside the kernel and therefore honors `--step-limit/--no-step-limit`.
 - `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
-  - `--engine rust` is the default.
+  - when `--engine` is omitted, engine is auto-selected with the same rule as `fmt`.
   - `--engine selfhost` runs self-hosted parse+canonicalize in-kernel before evaluation.
   - `--stage1-pipeline` runs Stage-1 CoreForm->CoreForm transforms before evaluation.
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
@@ -42,6 +56,8 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `genesis verify --pkg <package.toml> [--policy <policy.toml>] [--signatures <file>]`:
   - when `--policy` is provided, enforce signature policy (see `docs/spec/REGISTRY_POLICY.md`)
 - `genesis transparency-verify --pkg <package.toml>`: verify the local transparency log chain (see `docs/spec/TRANSPARENCY_LOG.md`)
+- `genesis optimize <file> [--engine rust|selfhost] ...`
+  - when `--engine` is omitted, engine is auto-selected with the same rule as `fmt`.
 
 ## Exit Codes (Stable)
 

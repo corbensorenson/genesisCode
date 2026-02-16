@@ -145,7 +145,14 @@ Host tooling defaults:
 - runtime flags:
   - `--selfhost-artifact <file>` choose artifact explicitly
   - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
+  - `--selfhost-only` enforce hard selfhost mode (also `GENESIS_SELFHOST_ONLY=1`)
 - `embedded` mode remains available as a deliberate bootstrap/development fallback.
+
+Selfhost-only hard mode:
+- commands with `--engine` must use `--engine selfhost`
+- bootstrap mode must be `artifact-only` (no embedded fallback)
+- commands not yet selfhost-routed are rejected early with a stable verification exit code
+  so CI can gate on strict selfhost surface only.
 
 Release hardening:
 - `gc_prelude::load_selfhost_coreform_toolchain_v1` now defaults to `artifact-only`.

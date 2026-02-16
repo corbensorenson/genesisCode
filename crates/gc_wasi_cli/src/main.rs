@@ -73,6 +73,14 @@ struct Cli {
     #[arg(long, global = true, value_enum, default_value_t = SelfhostBootstrapArg::ArtifactOnly)]
     selfhost_bootstrap: SelfhostBootstrapArg,
 
+    /// Enforce selfhost-only execution for frontend paths.
+    ///
+    /// In this mode, commands that accept `--engine` must use `--engine selfhost`, and
+    /// selfhost bootstrap mode must be `artifact-only` (no embedded fallback).
+    /// This can also be enabled via `GENESIS_SELFHOST_ONLY=1`.
+    #[arg(long, global = true, default_value_t = false)]
+    selfhost_only: bool,
+
     #[command(subcommand)]
     cmd: Cmd,
 }
@@ -94,8 +102,8 @@ enum Cmd {
         check: bool,
         /// Formatting engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
         /// self-hosted CoreForm toolchain inside the kernel.
-        #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
-        engine: FmtEngine,
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
     },
 
     /// Evaluate a CoreForm program/module (pure).
@@ -103,8 +111,8 @@ enum Cmd {
         file: PathBuf,
         /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
         /// self-hosted CoreForm parser+canonicalizer inside the kernel.
-        #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
-        engine: FmtEngine,
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
         /// Run the Stage-1 compiler pipeline (CoreForm -> CoreForm validated transforms)
         /// before evaluation.
         #[arg(long)]
@@ -488,18 +496,147 @@ fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
     }
 }
 
+const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
+
+fn parse_truthy_env_flag(s: &str) -> bool {
+    matches!(
+        s.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+fn default_selfhost_artifact_path() -> PathBuf {
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
+}
+
+fn resolved_selfhost_artifact_for_frontend(cli: &Cli) -> Option<PathBuf> {
+    if let Some(p) = cli.selfhost_artifact.clone() {
+        return Some(p);
+    }
+    if let Ok(raw) = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV) {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    let p = default_selfhost_artifact_path();
+    if p.is_file() { Some(p) } else { None }
+}
+
+fn selfhost_only_enabled(cli: &Cli) -> bool {
+    cli.selfhost_only
+        || std::env::var("GENESIS_SELFHOST_ONLY")
+            .map(|v| parse_truthy_env_flag(&v))
+            .unwrap_or(false)
+}
+
+fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFrontend, CliError> {
+    let strict = selfhost_only_enabled(cli);
+    let mode = resolved_selfhost_bootstrap_mode(cli);
+    if strict && mode != SelfhostBootstrapMode::ArtifactOnly {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost-only/bootstrap",
+            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
+        ));
+    }
+    let artifact = resolved_selfhost_artifact_for_frontend(cli);
+    if strict || artifact.is_some() {
+        return Ok(gc_obligations::CoreformFrontend::Selfhost(
+            gc_obligations::SelfhostFrontendConfig {
+                bootstrap_mode: mode,
+                artifact,
+            },
+        ));
+    }
+    Ok(gc_obligations::CoreformFrontend::Rust)
+}
+
+fn enforce_selfhost_engine(
+    cli: &Cli,
+    cmd_name: &str,
+    engine: Option<FmtEngine>,
+) -> Result<(), CliError> {
+    if !selfhost_only_enabled(cli) {
+        return Ok(());
+    }
+    if engine != Some(FmtEngine::Rust) {
+        return Ok(());
+    }
+    Err(cli_err(
+        EX_VERIFY,
+        "selfhost-only/engine",
+        format!(
+            "selfhost-only mode requires --engine selfhost for `{cmd_name}` (got --engine rust)"
+        ),
+    ))
+}
+
+fn resolved_engine(
+    cli: &Cli,
+    cmd_name: &str,
+    engine: Option<FmtEngine>,
+) -> Result<FmtEngine, CliError> {
+    enforce_selfhost_engine(cli, cmd_name, engine)?;
+    if let Some(e) = engine {
+        return Ok(e);
+    }
+    if selfhost_only_enabled(cli) || resolved_selfhost_artifact_for_frontend(cli).is_some() {
+        return Ok(FmtEngine::Selfhost);
+    }
+    Ok(FmtEngine::Rust)
+}
+
+fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
+    if !selfhost_only_enabled(cli) {
+        return Ok(());
+    }
+    match &cli.cmd {
+        Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
+        Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
+        Cmd::Test { .. } => Ok(()),
+        Cmd::Pack { .. } => Ok(()),
+        other => {
+            let cmd = match other {
+                Cmd::Test { .. } | Cmd::Pack { .. } => unreachable!(),
+                Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
+                Cmd::Run { .. } => "run",
+                Cmd::Replay { .. } => "replay",
+                Cmd::Store { .. } => "store",
+                Cmd::Refs { .. } => "refs",
+                Cmd::Pkg { .. } => "pkg",
+                Cmd::Vcs { .. } => "vcs",
+                Cmd::Fmt { .. } | Cmd::Eval { .. } => unreachable!(),
+            };
+            Err(cli_err(
+                EX_VERIFY,
+                "selfhost-only/unsupported-cmd",
+                format!(
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `test`, and `pack`; `{cmd}` is not yet selfhost-routed"
+                ),
+            ))
+        }
+    }
+}
+
 fn load_selfhost_toolchain(
     cli: &Cli,
     ctx: &mut EvalCtx,
     env: &mut gc_kernel::Env,
 ) -> Result<(), CliError> {
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        ctx,
-        env,
-        resolved_selfhost_bootstrap_mode(cli),
-        cli.selfhost_artifact.as_deref(),
-    )
-    .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+    let mode = resolved_selfhost_bootstrap_mode(cli);
+    if selfhost_only_enabled(cli) && mode != SelfhostBootstrapMode::ArtifactOnly {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost-only/bootstrap",
+            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
+        ));
+    }
+    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, cli.selfhost_artifact.as_deref())
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
 }
 
 #[derive(Debug)]
@@ -604,7 +741,13 @@ fn write_effect_log(path: &PathBuf, log: &EffectLog) -> Result<(), CliError> {
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))
 }
 
-fn cmd_fmt(cli: &Cli, file: &PathBuf, check: bool, engine: FmtEngine) -> Result<CmdOut, CliError> {
+fn cmd_fmt(
+    cli: &Cli,
+    file: &PathBuf,
+    check: bool,
+    engine: Option<FmtEngine>,
+) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "fmt", engine)?;
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
@@ -872,11 +1015,12 @@ fn stage2_report_json(r: &gc_opt::Stage2ValidationReport) -> serde_json::Value {
 fn cmd_eval(
     cli: &Cli,
     file: &PathBuf,
-    engine: FmtEngine,
+    engine: Option<FmtEngine>,
     stage1_pipeline: bool,
     stage1_gate: bool,
     stage2_gate: bool,
 ) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "eval", engine)?;
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
@@ -1000,11 +1144,13 @@ fn cmd_eval(
 }
 
 fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
-    let r = gc_obligations::test_package_with_step_limit(
+    let frontend = resolved_coreform_frontend(cli)?;
+    let r = gc_obligations::test_package_with_step_limit_and_frontend(
         pkg,
         caps,
         resolved_step_limit(cli),
         resolved_mem_limits(cli),
+        frontend,
     )
     .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
@@ -1046,7 +1192,8 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
 }
 
 fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
-    let h = gc_obligations::pack(pkg).map_err(obligation_err)?;
+    let frontend = resolved_coreform_frontend(cli)?;
+    let h = gc_obligations::pack_with_frontend(pkg, frontend).map_err(obligation_err)?;
     let env = JsonEnvelope {
         ok: true,
         kind: "genesis/pack-v0.2",
@@ -3009,6 +3156,7 @@ fn cmd_vcs_hash(cli: &Cli, input: &PathBuf) -> Result<CmdOut, CliError> {
 }
 
 fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
+    enforce_selfhost_only_cmd(cli)?;
     match &cli.cmd {
         Cmd::Fmt {
             file,

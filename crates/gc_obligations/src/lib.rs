@@ -13,7 +13,9 @@ use gc_coreform::{
 };
 use gc_effects::{CapsPolicy, EffectLog};
 use gc_kernel::{Apply, Env, EvalCtx, MemLimits, StepLimit, Value, eval_term, value_hash};
-use gc_prelude::build_prelude;
+use gc_prelude::{
+    SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
+};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
@@ -85,6 +87,55 @@ struct KernelLimits {
     mem_limits: MemLimits,
 }
 
+#[derive(Debug, Clone)]
+pub struct SelfhostFrontendConfig {
+    pub bootstrap_mode: SelfhostBootstrapMode,
+    pub artifact: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+pub enum CoreformFrontend {
+    Rust,
+    Selfhost(SelfhostFrontendConfig),
+}
+
+pub fn parse_canonicalize_module_source_with_frontend(
+    src: &str,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<Vec<Term>, ObligationError> {
+    let limits = KernelLimits {
+        step_limit,
+        mem_limits,
+    };
+    match frontend {
+        CoreformFrontend::Rust => {
+            let forms = parse_module(src).map_err(|pe| ObligationError::Module(format!("{pe}")))?;
+            canonicalize_module(forms).map_err(|e| ObligationError::Module(e.to_string()))
+        }
+        CoreformFrontend::Selfhost(cfg) => {
+            // Toolchain bootstrap is trusted and therefore uncharged.
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(limits.mem_limits);
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_coreform_toolchain_v1_with_mode(
+                &mut ctx,
+                &mut env,
+                cfg.bootstrap_mode,
+                cfg.artifact.as_deref(),
+            )
+            .map_err(|e| ObligationError::Module(format!("selfhost/init: {e}")))?;
+
+            // Apply user/configured limits to parse+canonicalize work.
+            ctx.steps = 0;
+            ctx.step_limit = limits.step_limit.resolve();
+            selfhost_parse_canonicalize_module(&mut ctx, &env, src)
+        }
+    }
+}
+
 fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
     let mut ctx = EvalCtx::with_step_limit(limits.step_limit.resolve());
     ctx.set_mem_limits(limits.mem_limits);
@@ -92,12 +143,23 @@ fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
 }
 
 pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
+    pack_with_frontend(pkg_toml, CoreformFrontend::Rust)
+}
+
+pub fn pack_with_frontend(
+    pkg_toml: &Path,
+    frontend: CoreformFrontend,
+) -> Result<String, ObligationError> {
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
-    let modules = load_modules(&pkg_dir, &manifest.modules)?;
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
 
     // Compute dependency package hashes (recursive) to lock.
-    let deps = pack_dep_hashes(&pkg_dir, &manifest.dependencies)?;
+    let deps = pack_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend)?;
 
     // Update package.toml in-place with pinned module + dependency hashes.
     pin_manifest_hashes(pkg_toml, &manifest, &modules, &deps)?;
@@ -113,7 +175,17 @@ pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
 /// This requires pinned module hashes and pinned dependency hashes to match.
 pub fn package_artifact_hash(pkg_toml: &Path) -> Result<String, ObligationError> {
     let mut visited = std::collections::BTreeSet::new();
-    compute_package_artifact_hash(pkg_toml, true, &mut visited)
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    compute_package_artifact_hash(
+        pkg_toml,
+        true,
+        &mut visited,
+        &CoreformFrontend::Rust,
+        limits,
+    )
 }
 
 pub fn test_package(
@@ -134,6 +206,22 @@ pub fn test_package_with_step_limit(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<PackageTestResult, ObligationError> {
+    test_package_with_step_limit_and_frontend(
+        pkg_toml,
+        caps_override,
+        step_limit,
+        mem_limits,
+        CoreformFrontend::Rust,
+    )
+}
+
+pub fn test_package_with_step_limit_and_frontend(
+    pkg_toml: &Path,
+    caps_override: Option<&Path>,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+    frontend: CoreformFrontend,
+) -> Result<PackageTestResult, ObligationError> {
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let step_limit = effective_step_limit(&manifest, step_limit)?;
@@ -147,7 +235,7 @@ pub fn test_package_with_step_limit(
     let mut preflight_errors: Vec<String> = Vec::new();
 
     // Load & hash modules (also validates pinned module hashes if present).
-    let modules = match load_modules(&pkg_dir, &manifest.modules) {
+    let modules = match load_modules(&pkg_dir, &manifest.modules, &frontend, limits) {
         Ok(ms) => ms,
         Err(e) => {
             preflight_errors.push(format!("{e}"));
@@ -177,7 +265,7 @@ pub fn test_package_with_step_limit(
 
     // Validate dependency hashes too.
     if preflight_errors.is_empty()
-        && let Err(e) = check_dep_hashes(&pkg_dir, &manifest.dependencies)
+        && let Err(e) = check_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits)
     {
         preflight_errors.push(format!("{e}"));
     }
@@ -239,18 +327,19 @@ pub fn test_package_with_step_limit(
     }
 
     // Discover test ids (suite_sym + test_name) once.
-    let test_ids = discover_tests(&pkg_dir, &manifest, &modules, limits)?;
+    let test_ids = discover_tests_with_frontend(&pkg_dir, &manifest, &modules, limits, &frontend)?;
 
     // Execute tests (each test gets a fresh ctx/env build).
     let mut test_runs = Vec::new();
     for id in &test_ids {
-        test_runs.push(run_one_test(
+        test_runs.push(run_one_test_with_frontend(
             &pkg_dir,
             &manifest,
             &modules,
             &caps,
             id.clone(),
             limits,
+            &frontend,
         )?);
     }
 
@@ -392,6 +481,84 @@ fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationErro
     Ok(())
 }
 
+fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<String> {
+    let tok = ctx.protocol?.error;
+    let Value::Sealed { token, payload } = v else {
+        return None;
+    };
+    if *token != tok {
+        return None;
+    }
+    let payload_term = payload.to_term_for_log(Some(tok));
+    match &payload_term {
+        Term::Map(m) => {
+            let code = m
+                .get(&TermOrdKey(Term::symbol(":error/code")))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("core/error");
+            let msg = m
+                .get(&TermOrdKey(Term::symbol(":error/message")))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("error");
+            Some(format!("{code}: {msg}"))
+        }
+        _ => Some(print_term(&payload_term)),
+    }
+}
+
+fn selfhost_parse_canonicalize_module(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    src: &str,
+) -> Result<Vec<Term>, ObligationError> {
+    let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
+        ObligationError::Module("missing binding selfhost/parse::parse-module".to_string())
+    })?;
+    let parsed = parse_fn
+        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .map_err(|e| ObligationError::Module(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &parsed) {
+        return Err(ObligationError::Module(format!(
+            "selfhost parse-module failed: {e}"
+        )));
+    }
+    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
+        return Err(ObligationError::Module(format!(
+            "selfhost parse-module returned non-vector: {}",
+            parsed.debug_repr()
+        )));
+    };
+
+    let canon_fn = env
+        .get("selfhost/canon::canonicalize-module")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing binding selfhost/canon::canonicalize-module".to_string(),
+            )
+        })?;
+    let canon = canon_fn
+        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
+        .map_err(|e| ObligationError::Module(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &canon) {
+        return Err(ObligationError::Module(format!(
+            "selfhost canonicalize-module failed: {e}"
+        )));
+    }
+    let Some(Term::Vector(forms)) = canon.as_data() else {
+        return Err(ObligationError::Module(format!(
+            "selfhost canonicalize-module returned non-vector: {}",
+            canon.debug_repr()
+        )));
+    };
+    Ok(forms.clone())
+}
+
 fn pin_manifest_hashes(
     pkg_toml: &Path,
     manifest: &PackageManifest,
@@ -438,21 +605,58 @@ fn pin_manifest_hashes(
 fn load_modules(
     pkg_dir: &Path,
     entries: &[ModuleEntry],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<Vec<LoadedModule>, ObligationError> {
     let mut out = Vec::new();
-    for e in entries {
-        let abs = pkg_dir.join(&e.path);
-        let src = std::fs::read_to_string(&abs)?;
-        let forms = parse_module(&src).map_err(|pe| ObligationError::Module(format!("{pe}")))?;
-        let forms =
-            canonicalize_module(forms).map_err(|e| ObligationError::Module(e.to_string()))?;
-        let h = hash_module(&forms);
-        out.push(LoadedModule {
-            entry: e.clone(),
-            abs_path: abs,
-            forms,
-            hash: h,
-        });
+    match frontend {
+        CoreformFrontend::Rust => {
+            for e in entries {
+                let abs = pkg_dir.join(&e.path);
+                let src = std::fs::read_to_string(&abs)?;
+                let forms =
+                    parse_module(&src).map_err(|pe| ObligationError::Module(format!("{pe}")))?;
+                let forms = canonicalize_module(forms)
+                    .map_err(|e| ObligationError::Module(e.to_string()))?;
+                let h = hash_module(&forms);
+                out.push(LoadedModule {
+                    entry: e.clone(),
+                    abs_path: abs,
+                    forms,
+                    hash: h,
+                });
+            }
+        }
+        CoreformFrontend::Selfhost(cfg) => {
+            // Toolchain bootstrap is trusted and therefore uncharged.
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(limits.mem_limits);
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_coreform_toolchain_v1_with_mode(
+                &mut ctx,
+                &mut env,
+                cfg.bootstrap_mode,
+                cfg.artifact.as_deref(),
+            )
+            .map_err(|e| ObligationError::Module(format!("selfhost/init: {e}")))?;
+
+            // Apply user/configured limits to parse+canonicalize work.
+            ctx.steps = 0;
+            ctx.step_limit = limits.step_limit.resolve();
+            for e in entries {
+                let abs = pkg_dir.join(&e.path);
+                let src = std::fs::read_to_string(&abs)?;
+                let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+                let h = hash_module(&forms);
+                out.push(LoadedModule {
+                    entry: e.clone(),
+                    abs_path: abs,
+                    forms,
+                    hash: h,
+                });
+            }
+        }
     }
     Ok(out)
 }
@@ -460,6 +664,7 @@ fn load_modules(
 fn pack_dep_hashes(
     pkg_dir: &Path,
     deps: &[DepEntry],
+    frontend: &CoreformFrontend,
 ) -> Result<Vec<(String, String, String)>, ObligationError> {
     let mut out = Vec::new();
     for d in deps {
@@ -469,13 +674,18 @@ fn pack_dep_hashes(
         } else {
             dep_path
         };
-        let hex = pack(&dep_pkg)?;
+        let hex = pack_with_frontend(&dep_pkg, frontend.clone())?;
         out.push((d.name.clone(), d.path.clone(), hex));
     }
     Ok(out)
 }
 
-fn check_dep_hashes(pkg_dir: &Path, deps: &[DepEntry]) -> Result<(), ObligationError> {
+fn check_dep_hashes(
+    pkg_dir: &Path,
+    deps: &[DepEntry],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
+) -> Result<(), ObligationError> {
     let mut visited = std::collections::BTreeSet::new();
     for d in deps {
         let want = d.hash.as_deref().unwrap_or("");
@@ -491,7 +701,7 @@ fn check_dep_hashes(pkg_dir: &Path, deps: &[DepEntry]) -> Result<(), ObligationE
         } else {
             dep_path
         };
-        let got = compute_package_artifact_hash(&dep_pkg, true, &mut visited)?;
+        let got = compute_package_artifact_hash(&dep_pkg, true, &mut visited, frontend, limits)?;
         if got != want {
             return Err(ObligationError::Manifest(format!(
                 "dependency hash mismatch for {}: manifest has {}, computed {}",
@@ -506,6 +716,8 @@ fn compute_package_artifact_hash(
     pkg_toml: &Path,
     require_pinned: bool,
     visited: &mut std::collections::BTreeSet<PathBuf>,
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<String, ObligationError> {
     let canon = std::fs::canonicalize(pkg_toml)?;
     if !visited.insert(canon.clone()) {
@@ -517,7 +729,7 @@ fn compute_package_artifact_hash(
 
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
-    let modules = load_modules(&pkg_dir, &manifest.modules)?;
+    let modules = load_modules(&pkg_dir, &manifest.modules, frontend, limits)?;
     if require_pinned {
         for m in &modules {
             let want = m.entry.hash.as_deref().unwrap_or("");
@@ -549,7 +761,8 @@ fn compute_package_artifact_hash(
         } else {
             dep_path
         };
-        let dep_hash = compute_package_artifact_hash(&dep_pkg, require_pinned, visited)?;
+        let dep_hash =
+            compute_package_artifact_hash(&dep_pkg, require_pinned, visited, frontend, limits)?;
         if require_pinned {
             let want = d.hash.as_deref().unwrap_or("");
             if want.is_empty() || want != dep_hash {
@@ -695,17 +908,18 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
     Term::Map(m)
 }
 
-fn discover_tests(
+fn discover_tests_with_frontend(
     pkg_dir: &Path,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     limits: KernelLimits,
+    frontend: &CoreformFrontend,
 ) -> Result<Vec<TestId>, ObligationError> {
     if manifest.tests.is_empty() {
         return Ok(Vec::new());
     }
 
-    let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
+    let eval = eval_package_once_with_frontend(pkg_dir, manifest, modules, limits, frontend)?;
     let mut ids = Vec::new();
     for suite in &manifest.tests {
         let v = eval
@@ -741,12 +955,39 @@ fn run_one_test(
     id: TestId,
     limits: KernelLimits,
 ) -> Result<TestRun, ObligationError> {
+    run_one_test_with_frontend(
+        pkg_dir,
+        manifest,
+        modules,
+        caps,
+        id,
+        limits,
+        &CoreformFrontend::Rust,
+    )
+}
+
+fn run_one_test_with_frontend(
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps: &CapsPolicy,
+    id: TestId,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+) -> Result<TestRun, ObligationError> {
     let mut ctx = mk_eval_ctx(limits);
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
 
     // Evaluate dependencies (export-only) into base env.
-    base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
+    base = eval_dependencies_with_frontend(
+        &mut ctx,
+        pkg_dir,
+        &base,
+        &manifest.dependencies,
+        limits,
+        frontend,
+    )?;
 
     // Evaluate modules and collect module envs for internal lookup.
     let evals = eval_modules(&mut ctx, &base, modules)?;
@@ -3642,10 +3883,27 @@ fn eval_package_once(
     modules: &[LoadedModule],
     limits: KernelLimits,
 ) -> Result<PackageEval, ObligationError> {
+    eval_package_once_with_frontend(pkg_dir, manifest, modules, limits, &CoreformFrontend::Rust)
+}
+
+fn eval_package_once_with_frontend(
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+) -> Result<PackageEval, ObligationError> {
     let mut ctx = mk_eval_ctx(limits);
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
-    base = eval_dependencies(&mut ctx, pkg_dir, &base, &manifest.dependencies)?;
+    base = eval_dependencies_with_frontend(
+        &mut ctx,
+        pkg_dir,
+        &base,
+        &manifest.dependencies,
+        limits,
+        frontend,
+    )?;
     let evals = eval_modules(&mut ctx, &base, modules)?;
     PackageEval::from_modules(base, evals)
 }
@@ -3655,6 +3913,21 @@ fn eval_dependencies(
     pkg_dir: &Path,
     base: &Env,
     deps: &[DepEntry],
+) -> Result<Env, ObligationError> {
+    let limits = KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    eval_dependencies_with_frontend(ctx, pkg_dir, base, deps, limits, &CoreformFrontend::Rust)
+}
+
+fn eval_dependencies_with_frontend(
+    ctx: &mut EvalCtx,
+    pkg_dir: &Path,
+    base: &Env,
+    deps: &[DepEntry],
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
 ) -> Result<Env, ObligationError> {
     let mut cur = base.clone();
     for d in deps {
@@ -3666,7 +3939,7 @@ fn eval_dependencies(
         };
         let (dep_manifest, dep_dir) = PackageManifest::load(&dep_pkg)
             .map_err(|e| ObligationError::Manifest(e.to_string()))?;
-        let dep_modules = load_modules(&dep_dir, &dep_manifest.modules)?;
+        let dep_modules = load_modules(&dep_dir, &dep_manifest.modules, frontend, limits)?;
 
         // Evaluate dependency modules and merge their exports into env.
         let evals = eval_modules(ctx, &cur, &dep_modules)?;

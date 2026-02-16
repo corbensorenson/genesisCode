@@ -41,6 +41,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "--no-step-limit",
         "--selfhost-artifact",
         "--selfhost-bootstrap",
+        "--selfhost-only",
     ] {
         assert!(
             s.contains(needle),

@@ -6,7 +6,8 @@ use gc_coreform::{
 };
 use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
-    EvidenceStore, ObligationError, PackageTestResult, pack, test_package_with_step_limit,
+    CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, pack,
+    parse_canonicalize_module_source_with_frontend, test_package_with_step_limit_and_frontend,
 };
 use gc_pkg::PackageManifest;
 use num_traits::ToPrimitive;
@@ -104,6 +105,24 @@ pub fn apply_patch_with_step_limit(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<PatchApplyResult, PatchError> {
+    apply_patch_with_step_limit_and_frontend(
+        patch_path,
+        pkg_toml,
+        caps_override,
+        step_limit,
+        mem_limits,
+        CoreformFrontend::Rust,
+    )
+}
+
+pub fn apply_patch_with_step_limit_and_frontend(
+    patch_path: &Path,
+    pkg_toml: &Path,
+    caps_override: Option<&Path>,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+    frontend: CoreformFrontend,
+) -> Result<PatchApplyResult, PatchError> {
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
     let patch = Patch::from_term(&patch_term)?;
@@ -123,18 +142,19 @@ pub fn apply_patch_with_step_limit(
 
     // Apply ops.
     for op in &patch.ops {
-        apply_one_op(&pkg_dir, pkg_toml, op)?;
+        apply_one_op(&pkg_dir, pkg_toml, op, &frontend, step_limit, mem_limits)?;
     }
 
     // Re-pack to compute updated package artifact record and module hashes.
     let package_artifact = Some(pack(pkg_toml)?);
 
     // Re-run obligations using updated manifest.
-    let acceptance = Some(test_package_with_step_limit(
+    let acceptance = Some(test_package_with_step_limit_and_frontend(
         pkg_toml,
         caps_override,
         step_limit,
         mem_limits,
+        frontend,
     )?);
 
     let ok = acceptance.as_ref().is_some_and(|r| r.ok);
@@ -196,7 +216,14 @@ fn report_term(
     Term::Map(m)
 }
 
-fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), PatchError> {
+fn apply_one_op(
+    pkg_dir: &Path,
+    pkg_toml: &Path,
+    op: &PatchOp,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<(), PatchError> {
     match op {
         PatchOp::ReplaceNode {
             module_path,
@@ -205,9 +232,7 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
         } => {
             let abs = pkg_dir.join(module_path);
             let src = std::fs::read_to_string(&abs)?;
-            let forms = parse_module(&src).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mut forms =
-                canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let mut forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
 
             apply_replace(&mut forms, path, new_term.clone())?;
             let forms =
@@ -232,8 +257,7 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
             }
             let forms = match content {
                 ModuleContent::Source(s) => {
-                    let forms = parse_module(s).map_err(|e| PatchError::Parse(e.to_string()))?;
-                    canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?
+                    parse_canonicalize_module_src(s, frontend, step_limit, mem_limits)?
                 }
                 ModuleContent::Forms(fs) => canonicalize_module(fs.clone())
                     .map_err(|e| PatchError::Validate(e.to_string()))?,
@@ -311,6 +335,24 @@ fn apply_one_op(pkg_dir: &Path, pkg_toml: &Path, op: &PatchOp) -> Result<(), Pat
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
             Ok(())
+        }
+    }
+}
+
+fn parse_canonicalize_module_src(
+    src: &str,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<Vec<Term>, PatchError> {
+    match frontend {
+        CoreformFrontend::Rust => {
+            let forms = parse_module(src).map_err(|e| PatchError::Parse(e.to_string()))?;
+            canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))
+        }
+        CoreformFrontend::Selfhost(_) => {
+            parse_canonicalize_module_source_with_frontend(src, frontend, step_limit, mem_limits)
+                .map_err(|e| PatchError::Parse(e.to_string()))
         }
     }
 }

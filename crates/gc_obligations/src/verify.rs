@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use gc_kernel::{MemLimits, StepLimit};
 
 use crate::{
     AcceptanceSignature, EvidenceStore, ObligationError, PackageManifest, RegistryPolicy,
@@ -52,7 +53,16 @@ pub fn verify_package_with_policy(
     let checked_deps = manifest.dependencies.len();
 
     // Modules: pinned hashes must exist and match computed hashes.
-    match super::load_modules(&pkg_dir, &manifest.modules) {
+    let limits = super::KernelLimits {
+        step_limit: StepLimit::Default,
+        mem_limits: MemLimits::default(),
+    };
+    match super::load_modules(
+        &pkg_dir,
+        &manifest.modules,
+        &super::CoreformFrontend::Rust,
+        limits,
+    ) {
         Ok(modules) => {
             for m in &modules {
                 checked_modules = checked_modules.saturating_add(1);
@@ -78,7 +88,12 @@ pub fn verify_package_with_policy(
     }
 
     // Dependencies: pinned package hashes must exist and match.
-    if let Err(e) = super::check_dep_hashes(&pkg_dir, &manifest.dependencies) {
+    if let Err(e) = super::check_dep_hashes(
+        &pkg_dir,
+        &manifest.dependencies,
+        &super::CoreformFrontend::Rust,
+        limits,
+    ) {
         errors.push(format!("{e}"));
     }
 

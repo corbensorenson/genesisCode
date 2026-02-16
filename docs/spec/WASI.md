@@ -25,6 +25,14 @@ print results, but kernel evaluation remains pure.
 The interface mirrors the native `genesis` CLI for these commands:
 - stable exit codes (see `docs/spec/CLI.md`)
 - `--json` envelope support
+  - strict selfhost gate available via `--selfhost-only` (or `GENESIS_SELFHOST_ONLY=1`)
+  - requires `--engine selfhost` on frontend commands
+  - requires `--selfhost-bootstrap artifact-only`
+  - rejects commands not yet selfhost-routed with exit code `50`
+  - current WASI routed set: `fmt`, `eval`, `test`, `pack`
+  - for `fmt`/`eval`, when `--engine` is omitted the engine is auto-selected:
+    - `selfhost` when a selfhost toolchain artifact is configured/present (`--selfhost-artifact`, `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`, or `./.genesis/selfhost/toolchain.gc`)
+    - otherwise `rust`
 
 Notes:
 - Networking is denied in the WASI bootstrap. `core/sync::*` is not supported under WASI.
