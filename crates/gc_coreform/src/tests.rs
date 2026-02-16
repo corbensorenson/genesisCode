@@ -74,6 +74,16 @@ fn deep_nesting_parse_print_roundtrip_is_stable() {
     assert_eq!(s1, s2);
 }
 
+#[test]
+fn singleton_list_is_just_grouping_in_canonical_form() {
+    let src = r#"
+      (  y   )
+    "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let out = print_module(&forms);
+    assert_eq!(out, "y\n");
+}
+
 fn normalize(s: &str) -> String {
     s.replace("\r\n", "\n").trim().to_string()
 }
