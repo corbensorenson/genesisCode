@@ -22,18 +22,24 @@ mod tests {
 
     use super::*;
 
-    fn mk_prog() -> (Vec<Term>, [u8; 32]) {
-        let src = r#"
+    fn mk_prog_for(op: &str, payload_src: &str) -> (Vec<Term>, [u8; 32]) {
+        let src = format!(
+            "
             (def prog
               (core/effect::perform
-                'sys/time::now
-                nil
+                '{op}
+                {payload_src}
                 (fn (t) (core/effect::pure t))))
             prog
-        "#;
-        let forms = parse_module(src).expect("parse module");
+        "
+        );
+        let forms = parse_module(&src).expect("parse module");
         let h = hash_module(&forms);
         (forms, h)
+    }
+
+    fn mk_prog() -> (Vec<Term>, [u8; 32]) {
+        mk_prog_for("sys/time::now", "nil")
     }
 
     #[test]
@@ -334,5 +340,62 @@ base_dir = "./sandbox"
             !m.contains_key(&TermOrdKey(Term::symbol(":base-dir"))),
             "cap term must not include :base-dir"
         );
+    }
+
+    #[test]
+    fn gfx_frame_tick_is_supported_and_replayable() {
+        let (forms, h) = mk_prog_for("gfx/time::frame-tick", "{:surface \"main\"}");
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["gfx/time::frame-tick"]"#).unwrap();
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+        match &r1.value {
+            Value::Data(Term::Map(m)) => {
+                assert!(matches!(
+                    m.get(&TermOrdKey(Term::symbol(":time-ms"))),
+                    Some(Term::Int(_))
+                ));
+            }
+            other => panic!("expected frame-tick map, got {}", other.debug_repr()),
+        }
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+        assert_eq!(value_hash(&r1.value), value_hash(&v2));
+    }
+
+    #[test]
+    fn known_editor_capability_returns_not_supported_error() {
+        let (forms, h) = mk_prog_for("editor/clipboard::get", "{}");
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["editor/clipboard::get"]"#).unwrap();
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+        match r.value {
+            Value::Sealed { token, payload } => {
+                assert_eq!(token, ctx.protocol.expect("protocol").error);
+                let Value::Data(Term::Map(m)) = payload.as_ref() else {
+                    panic!("expected error payload map");
+                };
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":error/code"))),
+                    Some(&Term::Str("core/caps/not-supported".to_string()))
+                );
+            }
+            other => panic!("expected sealed error, got {}", other.debug_repr()),
+        }
     }
 }

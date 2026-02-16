@@ -167,6 +167,9 @@ Constraints:
 
 - [x] Define the graphics host capability surface (effects) and policies:
   - Draft spec in `docs/spec/GFX_CAPS.md`
+  - Runtime surface hardened in `gc_effects`:
+    - `gfx/time::frame-tick` implemented with replayable `{:time-ms ...}` responses
+    - remaining `gfx/*` ops return stable sealed `core/caps/not-supported` (not `unknown-op`) until host bridge backends land
   - `gfx/gpu::*` (WebGPU-backed): instance/device/queue, buffers, textures, samplers, shaders, pipelines, bind groups, command encoding, present
   - `gfx/window::*` (browser canvas + later native shell): create/surface resize, pixel ratio
   - `gfx/input::*` (events): pointer/keyboard/gamepad
@@ -205,6 +208,8 @@ and plugin/agent-friendly from day 1.
 - [x] Define editor host capabilities (effects) needed beyond graphics:
   - Spec: `docs/spec/EDITOR_CAPS.md`
   - Prelude wrappers added in `prelude/prelude.gc` for `editor/clipboard::*`, `editor/dialog::*`, `editor/task::*`, `editor/watch::*` and `gfx/*`
+  - Runtime behavior normalized in `gc_effects`:
+    - known editor ops return sealed `core/caps/not-supported` on hosts without editor bridges
   - Request-shape coverage in `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - filesystem (workspace access), store/refs/sync, clipboard, OS dialogs
   - optional: language server–like background tasks (still effect-logged)

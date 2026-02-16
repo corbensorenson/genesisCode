@@ -4741,6 +4741,42 @@ fn call_capability(
                 .as_millis();
             Ok(Value::Data(Term::Int(BigInt::from(t))))
         }
+        "gfx/time::frame-tick" => {
+            if let Some(ms) = timeout_ms {
+                let r = with_timeout(ms, || {
+                    Ok(std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis())
+                })?;
+                return Ok(match r {
+                    Some(t) => {
+                        let mut m = BTreeMap::new();
+                        m.insert(
+                            TermOrdKey(Term::Symbol(":time-ms".to_string())),
+                            Term::Int(BigInt::from(t)),
+                        );
+                        Value::Data(Term::Map(m))
+                    }
+                    None => mk_error(
+                        error_tok,
+                        "core/caps/timeout",
+                        format!("capability timed out after {ms}ms: gfx/time::frame-tick"),
+                        Some(op),
+                    ),
+                });
+            }
+            let t = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            let mut m = BTreeMap::new();
+            m.insert(
+                TermOrdKey(Term::Symbol(":time-ms".to_string())),
+                Term::Int(BigInt::from(t)),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
         "io/fs::read" => {
             let path_s = payload_path(payload)?;
             let base_dir = effective_base_dir(pol)?;
@@ -4799,6 +4835,48 @@ fn call_capability(
                 }),
             }
         }
+        "gfx/gpu::create-buffer"
+        | "gfx/gpu::create-texture"
+        | "gfx/gpu::create-sampler"
+        | "gfx/gpu::create-shader-module"
+        | "gfx/gpu::create-bind-group-layout"
+        | "gfx/gpu::create-bind-group"
+        | "gfx/gpu::create-pipeline-layout"
+        | "gfx/gpu::create-render-pipeline"
+        | "gfx/gpu::create-compute-pipeline"
+        | "gfx/gpu::destroy-resource"
+        | "gfx/gpu::write-buffer"
+        | "gfx/gpu::write-texture"
+        | "gfx/gpu::read-buffer"
+        | "gfx/gpu::read-texture"
+        | "gfx/gpu::submit-frame-graph"
+        | "gfx/gpu::submit-compute-graph"
+        | "gfx/gpu::limits"
+        | "gfx/gpu::features"
+        | "gfx/window::create-surface"
+        | "gfx/window::resize-surface"
+        | "gfx/window::set-title"
+        | "gfx/window::request-redraw"
+        | "gfx/window::surface-info"
+        | "gfx/input::poll-events"
+        | "gfx/input::set-cursor-mode"
+        | "gfx/audio::enqueue"
+        | "gfx/audio::set-master"
+        | "editor/clipboard::get"
+        | "editor/clipboard::set"
+        | "editor/dialog::open"
+        | "editor/dialog::save"
+        | "editor/task::spawn"
+        | "editor/task::poll"
+        | "editor/task::cancel"
+        | "editor/watch::subscribe"
+        | "editor/watch::poll"
+        | "editor/watch::unsubscribe" => Ok(mk_error(
+            error_tok,
+            "core/caps/not-supported",
+            format!("capability not supported in this host runtime: {op}"),
+            Some(op),
+        )),
         _ => Ok(mk_error(
             error_tok,
             "core/caps/unknown-op",
