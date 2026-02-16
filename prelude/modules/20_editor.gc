@@ -317,19 +317,43 @@
             (if (core/editor/lint::map? meta)
               (let
                 ((exports ((core/map::get meta) (quote :exports)))
-                  (types ((core/map::get meta) (quote :types))))
-                (if ((core/sym::eq? (core/data::tag exports)) (quote :vec))
-                  (let ((d3 (((core/editor/lint::lint-exports path) exports) defs)))
-                    (let ((d4 ((core/editor/lint::vec-append d2) d3)))
-                      (if (core/editor/lint::map? types)
-                        ((core/editor/lint::vec-append d4)
-                          (((core/editor/lint::lint-types path) exports) types))
-                        ((core/vec::push d4)
-                          (((core/editor/lint::warn "editor/lint/missing-types-map") path)
-                            "::meta should include :types map")))))
-                  ((core/vec::push d2)
-                    (((core/editor/lint::error "editor/lint/missing-exports") path)
-                      "::meta must include :exports vector"))))
+                  (types ((core/map::get meta) (quote :types)))
+                  (intent ((core/map::get meta) (quote :intent)))
+                  (caps ((core/map::get meta) (quote :caps))))
+                (let
+                  (
+                    (d2a
+                      (if ((core/sym::eq? (core/data::tag intent)) (quote :nil))
+                        ((core/vec::push d2)
+                          (((core/editor/lint::warn "editor/lint/missing-intent") path)
+                            "::meta should include :intent string"))
+                        (if ((core/sym::eq? (core/data::tag intent)) (quote :str))
+                          d2
+                          ((core/vec::push d2)
+                            (((core/editor/lint::warn "editor/lint/intent-not-string") path)
+                              "::meta :intent should be a string")))))
+                    (d2b
+                      (if ((core/sym::eq? (core/data::tag caps)) (quote :nil))
+                        ((core/vec::push d2a)
+                          (((core/editor/lint::warn "editor/lint/missing-caps") path)
+                            "::meta should include :caps vector (empty for pure modules)"))
+                        (if ((core/sym::eq? (core/data::tag caps)) (quote :vec))
+                          d2a
+                          ((core/vec::push d2a)
+                            (((core/editor/lint::warn "editor/lint/caps-not-vector") path)
+                              "::meta :caps should be a vector"))))))
+                  (if ((core/sym::eq? (core/data::tag exports)) (quote :vec))
+                    (let ((d3 (((core/editor/lint::lint-exports path) exports) defs)))
+                      (let ((d4 ((core/editor/lint::vec-append d2b) d3)))
+                        (if (core/editor/lint::map? types)
+                          ((core/editor/lint::vec-append d4)
+                            (((core/editor/lint::lint-types path) exports) types))
+                          ((core/vec::push d4)
+                            (((core/editor/lint::warn "editor/lint/missing-types-map") path)
+                              "::meta should include :types map")))))
+                    ((core/vec::push d2b)
+                      (((core/editor/lint::error "editor/lint/missing-exports") path)
+                        "::meta must include :exports vector")))))
               d2)))))))
 
 (def core/editor/lint::global-code?
@@ -342,7 +366,15 @@
           true
           (if (prim core/eq? code "editor/lint/missing-types-map")
             true
-            (if (prim core/eq? code "editor/lint/export-not-symbol") true false)))))))
+            (if (prim core/eq? code "editor/lint/export-not-symbol")
+              true
+              (if (prim core/eq? code "editor/lint/missing-intent")
+                true
+                (if (prim core/eq? code "editor/lint/intent-not-string")
+                  true
+                  (if (prim core/eq? code "editor/lint/missing-caps")
+                    true
+                    (if (prim core/eq? code "editor/lint/caps-not-vector") true false)))))))))))
 
 (def core/editor/lint::diag-sym (fn (diag) ((core/map::get diag) (quote :sym))))
 
@@ -573,6 +605,52 @@
         :root ((core/map::get resp) (quote :root))
         :truncated ((core/map::get resp) (quote :truncated))})))
 
+(def core/editor/vcs::commit-panel-from-artifact
+  (fn (commit-h)
+    (fn (artifact)
+      (let ((f (core/editor/vcs::field artifact)))
+        {
+          :attestations (core/editor/vcs::vec-or-empty (f (quote :attestations)))
+          :author (f (quote :author))
+          :base (f (quote :base))
+          :evidence (core/editor/vcs::vec-or-empty (f (quote :evidence)))
+          :hash commit-h
+          :kind (quote :editor/vcs-commit-panel)
+          :message (f (quote :message))
+          :obligations (core/editor/vcs::vec-or-empty (f (quote :obligations)))
+          :parents (core/editor/vcs::vec-or-empty (f (quote :parents)))
+          :patch (f (quote :patch))
+          :result (f (quote :result))
+          :target (f (quote :target))}))))
+
+(def core/editor/vcs::evidence-panel-from-artifact
+  (fn (evidence-h)
+    (fn (artifact)
+      (let
+        ((f (core/editor/vcs::field artifact))
+          (inputs (core/editor/vcs::vec-or-empty (f (quote :inputs))))
+          (outputs (core/editor/vcs::vec-or-empty (f (quote :outputs)))))
+        {
+          :data (f (quote :data))
+          :hash evidence-h
+          :input-count (core/vec::len inputs)
+          :inputs inputs
+          :kind (quote :editor/vcs-evidence-panel)
+          :output-count (core/vec::len outputs)
+          :outputs outputs
+          :produced-by (f (quote :produced-by))
+          :vcs-kind (f (quote :kind))}))))
+
+(def core/editor/vcs::evidence-list-panel-from-commit-panel
+  (fn (commit-panel)
+    (let
+      ((evidence (core/editor/vcs::vec-or-empty ((core/map::get commit-panel) (quote :evidence)))))
+      {
+        :commit ((core/map::get commit-panel) (quote :hash))
+        :count (core/vec::len evidence)
+        :evidence evidence
+        :kind (quote :editor/vcs-evidence-list-panel)})))
+
 (def core/editor/action::vcs-refs-panel
   (fn (prefix)
     ((core/effect::map (core/refs::list prefix)) core/editor/vcs::refs-panel-from-response)))
@@ -581,6 +659,26 @@
   (fn (root)
     (fn (max)
       ((core/effect::map ((core/vcs::log root) max)) core/editor/vcs::log-panel-from-response))))
+
+(def core/editor/action::vcs-commit-panel
+  (fn (commit-h)
+    ((core/effect::bind (core/store::get commit-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure ((core/editor/vcs::commit-panel-from-artifact commit-h) artifact)))))))
+
+(def core/editor/action::vcs-evidence-panel
+  (fn (evidence-h)
+    ((core/effect::bind (core/store::get evidence-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure ((core/editor/vcs::evidence-panel-from-artifact evidence-h) artifact)))))))
+
+(def core/editor/action::vcs-evidence-list-panel
+  (fn (commit-h)
+    ((core/effect::bind (core/editor/action::vcs-commit-panel commit-h))
+      (fn (commit-panel)
+        (core/effect::pure (core/editor/vcs::evidence-list-panel-from-commit-panel commit-panel))))))
 
 (def core/editor/action::lint-panel-from-acceptance
   (fn (acceptance) (core/editor/lint::load-panel-from-acceptance acceptance)))

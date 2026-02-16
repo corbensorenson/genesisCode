@@ -127,3 +127,93 @@ fn editor_vcs_resolve_panel_projects_snapshot_patch_and_values() {
     };
     assert_eq!(values.len(), 3);
 }
+
+#[test]
+fn editor_vcs_commit_panel_projects_core_fields() {
+    let term = eval_to_term(
+        r#"
+        ((core/editor/vcs::commit-panel-from-artifact "commit-h")
+          (quote
+            {
+              :type :vcs/commit
+              :v 1
+              :parents ["p1" "p2"]
+              :base "b"
+              :patch "patch-h"
+              :result "result-h"
+              :obligations [core/obligation::unit-tests]
+              :evidence ["ev1"]
+              :attestations ["at1"]
+              :message "msg"
+              :target {:kind :package :name "my-lib"}
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-commit-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":hash"),
+        Some(&Term::Str("commit-h".to_string()))
+    );
+    assert_eq!(
+        map_get(&term, ":patch"),
+        Some(&Term::Str("patch-h".to_string()))
+    );
+    let Some(Term::Vector(evidence)) = map_get(&term, ":evidence") else {
+        panic!("panel :evidence must be vector");
+    };
+    assert_eq!(evidence.len(), 1);
+}
+
+#[test]
+fn editor_vcs_evidence_panel_projects_counts() {
+    let term = eval_to_term(
+        r#"
+        ((core/editor/vcs::evidence-panel-from-artifact "ev-h")
+          (quote
+            {
+              :type :vcs/evidence
+              :v 1
+              :kind :effect-log
+              :inputs ["a" "b"]
+              :outputs ["c"]
+              :data "blob-h"
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-evidence-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":hash"),
+        Some(&Term::Str("ev-h".to_string()))
+    );
+    assert_eq!(map_get(&term, ":input-count"), Some(&Term::Int(2.into())));
+    assert_eq!(map_get(&term, ":output-count"), Some(&Term::Int(1.into())));
+}
+
+#[test]
+fn editor_vcs_evidence_list_panel_from_commit_panel() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::evidence-list-panel-from-commit-panel
+          (quote
+            {
+              :hash "commit-h"
+              :evidence ["ev1" "ev2" "ev3"]
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-evidence-list-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":commit"),
+        Some(&Term::Str("commit-h".to_string()))
+    );
+    assert_eq!(map_get(&term, ":count"), Some(&Term::Int(3.into())));
+}

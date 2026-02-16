@@ -1,5 +1,5 @@
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-use gc_kernel::{EvalCtx, eval_module};
+use gc_coreform::{canonicalize_module, parse_module, Term, TermOrdKey};
+use gc_kernel::{eval_module, EvalCtx};
 use gc_prelude::build_prelude;
 
 fn eval_to_term(src: &str) -> Term {
@@ -102,7 +102,7 @@ fn editor_lint_delta_filters_to_changed_symbols() {
         (core/editor/lint::lint-module-delta
           "delta.gc"
           [
-            (def ::meta (quote {:exports [pkg/delta::a pkg/delta::b] :types {pkg/delta::a Int pkg/delta::b Int}}))
+            (def ::meta (quote {:intent "delta" :caps [] :exports [pkg/delta::a pkg/delta::b] :types {pkg/delta::a Int pkg/delta::b Int}}))
             (def pkg/delta::a 1)
           ]
           [pkg/delta::a])
@@ -141,6 +141,40 @@ fn editor_lint_delta_preserves_global_missing_meta() {
         "#,
     );
     assert!(diag_has_code(&term, "editor/lint/missing-meta"));
+}
+
+#[test]
+fn editor_lint_reports_level1_meta_convention_warnings() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/lint::lint-module
+          "conv.gc"
+          [
+            (def ::meta (quote {:exports [pkg/conv::x] :types {pkg/conv::x Int}}))
+            (def pkg/conv::x 1)
+          ])
+        "#,
+    );
+    assert!(diag_has_code(&term, "editor/lint/missing-intent"));
+    assert!(diag_has_code(&term, "editor/lint/missing-caps"));
+    assert!(count_level(&term, ":warn") >= 2);
+}
+
+#[test]
+fn editor_lint_delta_preserves_global_level1_meta_conventions() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/lint::lint-module-delta
+          "conv.gc"
+          [
+            (def ::meta (quote {:exports [pkg/conv::x] :types {pkg/conv::x Int}}))
+            (def pkg/conv::x 1)
+          ]
+          [pkg/conv::x])
+        "#,
+    );
+    assert!(diag_has_code(&term, "editor/lint/missing-intent"));
+    assert!(diag_has_code(&term, "editor/lint/missing-caps"));
 }
 
 #[test]

@@ -563,6 +563,15 @@ and plugin/agent-friendly from day 1.
       - `crates/gc_prelude/tests/prelude_editor_vcs.rs`
       - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - GenesisGraph-native UX: commit/log/blame/why/evidence views
+    - [x] commit + evidence panel foundations in GenesisCode prelude:
+      - commit/evidence adapters:
+        - `core/editor/vcs::{commit-panel-from-artifact,evidence-panel-from-artifact,evidence-list-panel-from-commit-panel}`
+      - effectful actions:
+        - `core/editor/action::{vcs-commit-panel,vcs-evidence-panel,vcs-evidence-list-panel}`
+      - coverage:
+        - `crates/gc_prelude/tests/prelude_editor_vcs.rs`
+        - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
+    - [ ] add `blame` / `why` panel flows once runtime `core/vcs::blame` + `core/vcs::why` capability ops are available
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
     - [x] package/store/sync action coverage in GenesisCode prelude:
       - list/info/lock/update/install/verify/snapshot panels:
@@ -592,7 +601,16 @@ and plugin/agent-friendly from day 1.
       - global diagnostics (missing/malformed meta, missing exports/types-map, export-not-symbol) are always retained
       - symbol-scoped diagnostics (export-missing-def, missing-type) are filtered to changed symbols
     - coverage: `crates/gc_prelude/tests/prelude_editor_lint.rs` (`editor_lint_delta_*`)
-  - [ ] extend incremental lint to higher-level “Level 1 Foundation” conventions
+  - [x] extend incremental lint to higher-level “Level 1 Foundation” conventions
+    - new module-meta convention diagnostics in Prelude linter:
+      - `editor/lint/missing-intent`
+      - `editor/lint/intent-not-string`
+      - `editor/lint/missing-caps`
+      - `editor/lint/caps-not-vector`
+    - incremental behavior:
+      - these convention diagnostics are treated as global and retained by `lint-module-delta` for any changed-symbol set
+    - coverage:
+      - `crates/gc_prelude/tests/prelude_editor_lint.rs` (`editor_lint_reports_level1_meta_convention_warnings`, `editor_lint_delta_preserves_global_level1_meta_conventions`)
   - [x] includes deterministic autofix patches (semantic patch artifacts) for safe lint classes:
     - `core/obligation::lint` now emits deterministic `.gcpatch` artifacts (`:replace-node` on `::meta`) when fixes are safe:
       - add missing `:types` map

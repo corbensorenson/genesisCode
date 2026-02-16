@@ -52,6 +52,9 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :editor_vcs_resolve_conflict_with_panel
           (((core/editor/action::vcs-resolve-conflict-with-panel "conflict-h") nil) nil)
         :editor_vcs_conflict_panel (core/editor/action::vcs-conflict-panel "conflict-h")
+        :editor_vcs_commit_panel (core/editor/action::vcs-commit-panel "commit-h")
+        :editor_vcs_evidence_panel (core/editor/action::vcs-evidence-panel "evidence-h")
+        :editor_vcs_evidence_list_panel (core/editor/action::vcs-evidence-list-panel "commit-h")
         :editor_format_file_task (core/editor/action::format-file-task "a.gc")
         :editor_lint_module_task ((core/editor/action::lint-module-task "a.gc") [pkg/a::x])
         :editor_typecheck_pkg_task (core/editor/action::typecheck-pkg-task "package.toml")
@@ -360,6 +363,33 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_conflict_panel);
+    assert_eq!(req.op, "core/store::get");
+
+    let editor_vcs_commit_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_commit_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_commit_panel);
+    assert_eq!(req.op, "core/store::get");
+
+    let editor_vcs_evidence_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_evidence_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_evidence_panel);
+    assert_eq!(req.op, "core/store::get");
+
+    let editor_vcs_evidence_list_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_evidence_list_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_evidence_list_panel);
     assert_eq!(req.op, "core/store::get");
 
     let editor_format_file_task = m
