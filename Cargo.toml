@@ -24,6 +24,7 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 anyhow = "1"
 blake3 = "1"
+bytes = "1"
 clap = { version = "4", features = ["derive"] }
 logos = "0.15"
 num-bigint = "0.4"

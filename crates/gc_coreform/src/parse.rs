@@ -2,6 +2,8 @@ use num_bigint::BigInt;
 use num_traits::Num;
 use thiserror::Error;
 
+use bytes::Bytes;
+
 use crate::term::{Term, TermOrdKey};
 
 #[derive(Debug, Error)]
@@ -382,7 +384,7 @@ impl<'a> Parser<'a> {
             Tok::LBrace => self.parse_map(at),
             Tok::Int(x) => Ok(Term::Int(x)),
             Tok::Str(s) => Ok(Term::Str(s)),
-            Tok::Bytes(b) => Ok(Term::Bytes(b)),
+            Tok::Bytes(b) => Ok(Term::Bytes(Bytes::from(b))),
             Tok::Symbol(s) => match s.as_str() {
                 "nil" => Ok(Term::Nil),
                 "true" => Ok(Term::Bool(true)),

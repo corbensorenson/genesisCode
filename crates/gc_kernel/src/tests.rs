@@ -202,11 +202,11 @@ fn bytes_get_slice_utf8_hex_and_blake3_work() {
             let g = m.get(&gc_coreform::TermOrdKey(Term::symbol(":g"))).unwrap();
             assert!(matches!(g, Value::Data(Term::Int(i)) if i == &255.into()));
             let s = m.get(&gc_coreform::TermOrdKey(Term::symbol(":s"))).unwrap();
-            assert!(matches!(s, Value::Data(Term::Bytes(bs)) if bs == b"bc"));
+            assert!(matches!(s, Value::Data(Term::Bytes(bs)) if bs.as_ref() == b"bc"));
             let u = m.get(&gc_coreform::TermOrdKey(Term::symbol(":u"))).unwrap();
             assert!(matches!(u, Value::Data(Term::Str(s)) if s == "hi"));
             let b = m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))).unwrap();
-            assert!(matches!(b, Value::Data(Term::Bytes(bs)) if bs == b"hi"));
+            assert!(matches!(b, Value::Data(Term::Bytes(bs)) if bs.as_ref() == b"hi"));
             let hx = m
                 .get(&gc_coreform::TermOrdKey(Term::symbol(":hx")))
                 .unwrap();
@@ -214,9 +214,9 @@ fn bytes_get_slice_utf8_hex_and_blake3_work() {
             let bh = m
                 .get(&gc_coreform::TermOrdKey(Term::symbol(":bh")))
                 .unwrap();
-            assert!(matches!(bh, Value::Data(Term::Bytes(bs)) if bs == b"\x00\xff"));
+            assert!(matches!(bh, Value::Data(Term::Bytes(bs)) if bs.as_ref() == b"\x00\xff"));
             let h = m.get(&gc_coreform::TermOrdKey(Term::symbol(":h"))).unwrap();
-            assert!(matches!(h, Value::Data(Term::Bytes(bs)) if bs == &want));
+            assert!(matches!(h, Value::Data(Term::Bytes(bs)) if bs.as_ref() == want.as_slice()));
         }
         Value::Data(Term::Map(m)) => {
             assert!(matches!(
@@ -225,7 +225,7 @@ fn bytes_get_slice_utf8_hex_and_blake3_work() {
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":s"))),
-                Some(Term::Bytes(bs)) if bs == b"bc"
+                Some(Term::Bytes(bs)) if bs.as_ref() == b"bc"
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":u"))),
@@ -233,7 +233,7 @@ fn bytes_get_slice_utf8_hex_and_blake3_work() {
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))),
-                Some(Term::Bytes(bs)) if bs == b"hi"
+                Some(Term::Bytes(bs)) if bs.as_ref() == b"hi"
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":hx"))),
@@ -241,11 +241,11 @@ fn bytes_get_slice_utf8_hex_and_blake3_work() {
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":bh"))),
-                Some(Term::Bytes(bs)) if bs == b"\x00\xff"
+                Some(Term::Bytes(bs)) if bs.as_ref() == b"\x00\xff"
             ));
             assert!(matches!(
                 m.get(&gc_coreform::TermOrdKey(Term::symbol(":h"))),
-                Some(Term::Bytes(bs)) if bs == &want
+                Some(Term::Bytes(bs)) if bs.as_ref() == want.as_slice()
             ));
         }
         _ => panic!("expected map, got {}", v.debug_repr()),
@@ -301,11 +301,17 @@ fn utf8_encode_codepoint_produces_expected_bytes_and_rejects_invalid() {
         _ => panic!("expected map, got {}", v.debug_repr()),
     };
     let a = m.get(&gc_coreform::TermOrdKey(Term::symbol(":a"))).unwrap();
-    assert!(matches!(a, Value::Data(Term::Bytes(bs)) if bs == b"$"));
+    assert!(matches!(a, Value::Data(Term::Bytes(bs)) if bs.as_ref() == b"$"));
     let b = m.get(&gc_coreform::TermOrdKey(Term::symbol(":b"))).unwrap();
-    assert!(matches!(b, Value::Data(Term::Bytes(bs)) if bs == &[0xC2, 0x80]));
+    assert!(matches!(
+        b,
+        Value::Data(Term::Bytes(bs)) if bs.as_ref() == &[0xC2, 0x80][..]
+    ));
     let c = m.get(&gc_coreform::TermOrdKey(Term::symbol(":c"))).unwrap();
-    assert!(matches!(c, Value::Data(Term::Bytes(bs)) if bs == &[0xF0, 0x9F, 0x98, 0x80]));
+    assert!(matches!(
+        c,
+        Value::Data(Term::Bytes(bs)) if bs.as_ref() == &[0xF0, 0x9F, 0x98, 0x80][..]
+    ));
     let bad = m
         .get(&gc_coreform::TermOrdKey(Term::symbol(":bad")))
         .unwrap();

@@ -49,10 +49,7 @@ create_dirs = true
         .expect("canonicalize tool");
     let program_h = gc_coreform::hash_module(&tool_forms);
 
-    // Today, the self-hosted CoreForm toolchain is correct but can exceed the v0.2 default step
-    // limit for non-trivial workloads. We run this end-to-end correctness test without a step limit
-    // and track step-limit practicality as an explicit upgrade-plan item.
-    let mut ctx = EvalCtx::with_step_limit(None);
+    let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
@@ -122,10 +119,7 @@ create_dirs = true
         .expect("canonicalize tool");
     let program_h = gc_coreform::hash_module(&tool_forms);
 
-    // Today, the self-hosted CoreForm toolchain is correct but can exceed the v0.2 default step
-    // limit for non-trivial workloads. We run this end-to-end correctness test without a step limit
-    // and track step-limit practicality as an explicit upgrade-plan item.
-    let mut ctx = EvalCtx::with_step_limit(None);
+    let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 

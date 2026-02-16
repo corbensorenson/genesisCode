@@ -107,15 +107,15 @@ path = "./.genesis/refs.gc"
             ),
             (
                 gc_coreform::TermOrdKey(Term::symbol(":signing-h")),
-                Term::Bytes(signing_h.to_vec()),
+                Term::Bytes(signing_h.to_vec().into()),
             ),
             (
                 gc_coreform::TermOrdKey(Term::symbol(":pk")),
-                Term::Bytes(sk.verifying_key().to_bytes().to_vec()),
+                Term::Bytes(sk.verifying_key().to_bytes().to_vec().into()),
             ),
             (
                 gc_coreform::TermOrdKey(Term::symbol(":sig")),
-                Term::Bytes(sig.to_bytes().to_vec()),
+                Term::Bytes(sig.to_bytes().to_vec().into()),
             ),
         ]
         .into_iter()

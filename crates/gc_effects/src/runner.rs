@@ -479,7 +479,7 @@ fn resp_from_log(
                 )
             })?;
             let bytes = store.get_bytes(artifact)?;
-            Ok(Value::Data(Term::Bytes(bytes)))
+            Ok(Value::Data(Term::Bytes(bytes.into())))
         }
         LoggedResp::ErrorBytesArtifact { artifact } => {
             let store = store.ok_or_else(|| {
@@ -490,7 +490,7 @@ fn resp_from_log(
             let bytes = store.get_bytes(artifact)?;
             Ok(Value::Sealed {
                 token: error_tok,
-                payload: Box::new(Value::Data(Term::Bytes(bytes))),
+                payload: Box::new(Value::Data(Term::Bytes(bytes.into()))),
             })
         }
     }
@@ -1930,7 +1930,7 @@ fn call_capability(
                 );
                 mm.insert(
                     TermOrdKey(Term::Symbol(":module-h".to_string())),
-                    Term::Bytes(module_h.to_vec()),
+                    Term::Bytes(module_h.to_vec().into()),
                 );
                 modules_out.push(Term::Map(mm));
             }
@@ -4753,7 +4753,7 @@ fn call_capability(
                     Ok((path, bytes))
                 })?;
                 return Ok(match r {
-                    Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes)),
+                    Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes.into())),
                     Some((path, Err(e))) => Value::Sealed {
                         token: error_tok,
                         payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
@@ -4768,7 +4768,7 @@ fn call_capability(
             }
             let path = sandbox_path_read(&base_dir, &path_s)?;
             match std::fs::read(&path) {
-                Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes))),
+                Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes.into()))),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,
                     payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
@@ -5144,7 +5144,7 @@ fn payload_data(payload: &Term) -> Result<Vec<u8>, EffectsError> {
         .get(&TermOrdKey(Term::Symbol(":data".to_string())))
         .ok_or_else(|| EffectsError::BadPayload("missing :data".to_string()))?;
     match v {
-        Term::Bytes(b) => Ok(b.clone()),
+        Term::Bytes(b) => Ok(b.to_vec()),
         Term::Str(s) => Ok(s.as_bytes().to_vec()),
         _ => Err(EffectsError::BadPayload(format!(
             ":data must be bytes or string, got {}",

@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use blake3::Hasher;
+use bytes::Bytes;
 use num_bigint::BigInt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -10,7 +11,7 @@ pub enum Term {
     Bool(bool),
     Int(BigInt),
     Str(String),
-    Bytes(Vec<u8>),
+    Bytes(Bytes),
     Symbol(String),
     Pair(Box<Term>, Box<Term>),
     Vector(Vec<Term>),
@@ -68,7 +69,7 @@ fn cmp_term_impl(a: &Term, b: &Term) -> Ordering {
         (Term::Bool(x), Term::Bool(y)) => x.cmp(y),
         (Term::Int(x), Term::Int(y)) => x.cmp(y),
         (Term::Str(x), Term::Str(y)) => x.cmp(y),
-        (Term::Bytes(x), Term::Bytes(y)) => x.cmp(y),
+        (Term::Bytes(x), Term::Bytes(y)) => x.as_ref().cmp(y.as_ref()),
         (Term::Symbol(x), Term::Symbol(y)) => x.cmp(y),
         (Term::Pair(ax, ad), Term::Pair(bx, bd)) => {
             let c1 = cmp_term(ax, bx);

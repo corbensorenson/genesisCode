@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+use bytes::{Bytes, BytesMut};
+
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
@@ -330,50 +332,71 @@ pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, Ker
     stacker::maybe_grow(32 * 1024, 1024 * 1024, || eval_term_impl(ctx, env, term))
 }
 
-fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
-    ctx.tick()?;
+enum EvalOutcome {
+    Value(Value),
+    Tail { env: Env, term: Term },
+}
 
-    match term {
-        Term::Nil | Term::Bool(_) | Term::Int(_) => Ok(Value::Data(term.clone())),
-        Term::Str(s) => {
-            ctx.mem_observe_string_len(s.len())?;
-            Ok(Value::Data(term.clone()))
-        }
-        Term::Bytes(b) => {
-            ctx.mem_observe_bytes_len(b.len())?;
-            Ok(Value::Data(term.clone()))
-        }
-        Term::Vector(xs) => {
-            ctx.mem_observe_vec_len(xs.len())?;
-            for x in xs {
-                ctx.mem_observe_data_term(x)?;
+fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
+    // Implement a small tail-call optimization for:
+    // - (if ...) branches
+    // - (begin ...) last form
+    // - general application where the final apply is a closure call
+    //
+    // This makes typical tail-recursive CoreForm code stack-safe without changing semantics.
+    let mut cur_env = env.clone();
+    let mut cur_term = term.clone();
+    loop {
+        ctx.tick()?;
+
+        match &cur_term {
+            Term::Nil | Term::Bool(_) | Term::Int(_) => return Ok(Value::Data(cur_term.clone())),
+            Term::Str(s) => {
+                ctx.mem_observe_string_len(s.len())?;
+                return Ok(Value::Data(cur_term.clone()));
             }
-            Ok(Value::Vector(xs.iter().cloned().map(Value::Data).collect()))
-        }
-        Term::Map(m) => {
-            // Map literal: keys are data terms (not evaluated), values are expressions (evaluated).
-            ctx.mem_observe_map_len(m.len())?;
-            for (k, _v) in m.iter() {
-                ctx.mem_observe_data_term(&k.0)?;
+            Term::Bytes(b) => {
+                ctx.mem_observe_bytes_len(b.len())?;
+                return Ok(Value::Data(cur_term.clone()));
             }
-            let mut out = std::collections::BTreeMap::new();
-            for (k, v) in m.iter() {
-                let vv = eval_term(ctx, env, v)?;
-                out.insert(k.clone(), vv);
+            Term::Vector(xs) => {
+                ctx.mem_observe_vec_len(xs.len())?;
+                for x in xs {
+                    ctx.mem_observe_data_term(x)?;
+                }
+                return Ok(Value::Vector(xs.iter().cloned().map(Value::Data).collect()));
             }
-            Ok(Value::Map(out))
+            Term::Map(m) => {
+                // Map literal: keys are data terms (not evaluated), values are expressions (evaluated).
+                ctx.mem_observe_map_len(m.len())?;
+                for (k, _v) in m.iter() {
+                    ctx.mem_observe_data_term(&k.0)?;
+                }
+                let mut out = std::collections::BTreeMap::new();
+                for (k, v) in m.iter() {
+                    let vv = eval_term(ctx, &cur_env, v)?;
+                    out.insert(k.clone(), vv);
+                }
+                return Ok(Value::Map(out));
+            }
+            Term::Symbol(s) => {
+                ctx.coverage_hit(s);
+                return cur_env.get(s).ok_or_else(|| {
+                    KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {s}"))
+                });
+            }
+            Term::Pair(_, _) => match eval_list_tco(ctx, &cur_env, &cur_term)? {
+                EvalOutcome::Value(v) => return Ok(v),
+                EvalOutcome::Tail { env, term } => {
+                    cur_env = env;
+                    cur_term = term;
+                }
+            },
         }
-        Term::Symbol(s) => {
-            ctx.coverage_hit(s);
-            env.get(s).ok_or_else(|| {
-                KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {s}"))
-            })
-        }
-        Term::Pair(_, _) => eval_list(ctx, env, term),
     }
 }
 
-fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelError> {
+fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, KernelError> {
     let Some(items) = t.as_proper_list() else {
         return Err(KernelError::new(
             KernelErrorKind::BadForm,
@@ -381,7 +404,7 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
         ));
     };
     if items.is_empty() {
-        return Ok(Value::Data(Term::Nil));
+        return Ok(EvalOutcome::Value(Value::Data(Term::Nil)));
     }
 
     // Special forms keyed by head symbol.
@@ -395,10 +418,10 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
                     ));
                 }
                 ctx.mem_observe_data_term(items[1])?;
-                return Ok(Value::Data(items[1].clone()));
+                return Ok(EvalOutcome::Value(Value::Data(items[1].clone())));
             }
             "fn" => {
-                return eval_fn(ctx, env, items);
+                return Ok(EvalOutcome::Value(eval_fn(ctx, env, items)?));
             }
             "if" => {
                 if items.len() != 4 {
@@ -408,10 +431,11 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
                     ));
                 }
                 let c = eval_term(ctx, env, items[1])?;
-                if c.truthy() {
-                    return eval_term(ctx, env, items[2]);
-                }
-                return eval_term(ctx, env, items[3]);
+                let next = if c.truthy() { items[2] } else { items[3] };
+                return Ok(EvalOutcome::Tail {
+                    env: env.clone(),
+                    term: next.clone(),
+                });
             }
             "begin" => {
                 if items.len() < 2 {
@@ -420,23 +444,31 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
                         "(begin ...) expects at least 1 argument",
                     ));
                 }
-                let mut last = Value::Data(Term::Nil);
-                for e in items.iter().skip(1) {
-                    last = eval_term(ctx, env, e)?;
+                if items.len() == 2 {
+                    return Ok(EvalOutcome::Tail {
+                        env: env.clone(),
+                        term: items[1].clone(),
+                    });
                 }
-                return Ok(last);
+                for e in items.iter().skip(1).take(items.len() - 2) {
+                    let _ = eval_term(ctx, env, e)?;
+                }
+                return Ok(EvalOutcome::Tail {
+                    env: env.clone(),
+                    term: items[items.len() - 1].clone(),
+                });
             }
             "let" => {
-                return eval_let(ctx, env, items);
+                return eval_let_tco(ctx, env, items);
             }
             "prim" => {
-                return eval_prim(ctx, env, items);
+                return Ok(EvalOutcome::Value(eval_prim(ctx, env, items)?));
             }
             "seal" => {
-                return eval_seal(ctx, env, items);
+                return Ok(EvalOutcome::Value(eval_seal(ctx, env, items)?));
             }
             "unseal" => {
-                return eval_unseal(ctx, env, items);
+                return Ok(EvalOutcome::Value(eval_unseal(ctx, env, items)?));
             }
             "def" => {
                 return Err(KernelError::new(
@@ -450,12 +482,80 @@ fn eval_list(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<Value, KernelErro
 
     // General application (supports sugar forms with more than one argument).
     let f = eval_term(ctx, env, items[0])?;
+    if items.len() == 1 {
+        return Ok(EvalOutcome::Value(f));
+    }
+
+    // Apply all but the final argument normally.
     let mut acc = f;
-    for a in items.iter().skip(1) {
+    for a in items.iter().skip(1).take(items.len() - 2) {
         let av = eval_term(ctx, env, a)?;
         acc = acc.apply(ctx, av)?;
     }
-    Ok(acc)
+
+    // Tail-call optimize the final apply when it is a closure call.
+    let last_arg = eval_term(ctx, env, items[items.len() - 1])?;
+    match acc {
+        Value::Closure { param, body, env: fenv } => Ok(EvalOutcome::Tail {
+            env: Env::with_binding(&fenv, param, last_arg),
+            term: body,
+        }),
+        other => Ok(EvalOutcome::Value(other.apply(ctx, last_arg)?)),
+    }
+}
+
+fn eval_let_tco(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<EvalOutcome, KernelError> {
+    if items.len() < 3 {
+        return Err(KernelError::new(
+            KernelErrorKind::BadForm,
+            "(let ((x e) ...) body...) expects bindings and body",
+        ));
+    }
+    let bindings = items[1];
+    let Some(bs) = bindings.as_proper_list() else {
+        return Err(KernelError::new(
+            KernelErrorKind::BadForm,
+            "(let ...) bindings must be a list",
+        ));
+    };
+
+    let mut env2 = env.clone();
+    for b in bs {
+        let Some(pair) = b.as_proper_list() else {
+            return Err(KernelError::new(
+                KernelErrorKind::BadForm,
+                "(let ...) binding must be a list (name expr)",
+            ));
+        };
+        if pair.len() != 2 {
+            return Err(KernelError::new(
+                KernelErrorKind::BadForm,
+                "(let ...) binding must have exactly 2 forms",
+            ));
+        }
+        let Term::Symbol(name) = pair[0] else {
+            return Err(KernelError::new(
+                KernelErrorKind::BadForm,
+                "(let ...) binding name must be symbol",
+            ));
+        };
+        let rhs = eval_term(ctx, &env2, pair[1])?;
+        env2 = Env::with_binding(&env2, name.clone(), rhs);
+    }
+
+    // Body: single => that term; multi => (begin ...)
+    let body_term = if items.len() == 3 {
+        items[2].clone()
+    } else {
+        let mut xs = Vec::with_capacity(items.len() - 1);
+        xs.push(Term::Symbol("begin".to_string()));
+        for b in items.iter().skip(2) {
+            xs.push((*b).clone());
+        }
+        Term::list(xs)
+    };
+
+    Ok(EvalOutcome::Tail { env: env2, term: body_term })
 }
 
 fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
@@ -549,58 +649,6 @@ fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, Ke
         body: items2[2].clone(),
         env: env.clone(),
     })
-}
-
-fn eval_let(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
-    if items.len() < 3 {
-        return Err(KernelError::new(
-            KernelErrorKind::BadForm,
-            "(let ((x e) ...) body...) expects bindings and body",
-        ));
-    }
-    let binds = items[1];
-    let Some(bs) = binds.as_proper_list() else {
-        return Err(KernelError::new(
-            KernelErrorKind::BadForm,
-            "(let ...) bindings must be a list",
-        ));
-    };
-
-    let mut cur_env = env.clone();
-    for b in bs {
-        let Some(pair) = b.as_proper_list() else {
-            return Err(KernelError::new(
-                KernelErrorKind::BadForm,
-                "(let ...) binding must be a list (name expr)",
-            ));
-        };
-        if pair.len() != 2 {
-            return Err(KernelError::new(
-                KernelErrorKind::BadForm,
-                "(let ...) binding must have exactly 2 forms",
-            ));
-        }
-        let Term::Symbol(name) = pair[0] else {
-            return Err(KernelError::new(
-                KernelErrorKind::BadForm,
-                "(let ...) binding name must be a symbol",
-            ));
-        };
-        let v = eval_term(ctx, &cur_env, pair[1])?;
-        cur_env = Env::with_binding(&cur_env, name.clone(), v);
-    }
-
-    let body_term = if items.len() == 3 {
-        items[2].clone()
-    } else {
-        let mut xs = Vec::with_capacity(items.len() - 1);
-        xs.push(Term::Symbol("begin".to_string()));
-        for b in items.iter().skip(2) {
-            xs.push((*b).clone());
-        }
-        Term::list(xs)
-    };
-    eval_term(ctx, &cur_env, &body_term)
 }
 
 fn eval_seal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
@@ -1038,7 +1086,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Str(s)) = args[0].as_data() else {
                 return type_err(ctx, "str/to-bytes-utf8 expects string");
             };
-            let bytes = s.as_bytes().to_vec();
+            let bytes = Bytes::copy_from_slice(s.as_bytes());
             ctx.mem_observe_bytes_len(bytes.len())?;
             Ok(Value::Data(Term::Bytes(bytes)))
         }
@@ -1113,7 +1161,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Bytes(b)) = args[0].as_data() else {
                 return type_err(ctx, "coreform/escape-bytes expects bytes");
             };
-            let out = escape_bytes(b);
+            let out = escape_bytes(b.as_ref());
             ctx.mem_observe_string_len(out.len())?;
             Ok(Value::Data(Term::Str(out)))
         }
@@ -1170,7 +1218,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             if start > b.len() || end > b.len() {
                 return type_err(ctx, "bytes/slice out of range");
             }
-            let out = b[start..end].to_vec();
+            let out = b.slice(start..end);
             ctx.mem_observe_bytes_len(out.len())?;
             Ok(Value::Data(Term::Bytes(out)))
         }
@@ -1181,7 +1229,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Bytes(b)) = args[0].as_data() else {
                 return type_err(ctx, "bytes/to-str-utf8 expects bytes");
             };
-            let s = match std::str::from_utf8(b) {
+            let s = match std::str::from_utf8(b.as_ref()) {
                 Ok(x) => x,
                 Err(_) => return type_err(ctx, "bytes/to-str-utf8 invalid utf8"),
             };
@@ -1208,7 +1256,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             };
             const LUT: &[u8; 16] = b"0123456789abcdef";
             let mut out = String::with_capacity(b.len().saturating_mul(2));
-            for x in b {
+            for &x in b.as_ref() {
                 out.push(LUT[(x >> 4) as usize] as char);
                 out.push(LUT[(x & 0x0f) as usize] as char);
             }
@@ -1247,7 +1295,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
                 i = i.saturating_add(2);
             }
             ctx.mem_observe_bytes_len(out.len())?;
-            Ok(Value::Data(Term::Bytes(out)))
+            Ok(Value::Data(Term::Bytes(Bytes::from(out))))
         }
         "utf8/encode-codepoint" => {
             if args.len() != 1 {
@@ -1268,7 +1316,7 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let mut buf = [0u8; 4];
             let s = ch.encode_utf8(&mut buf);
             ctx.mem_observe_bytes_len(s.len())?;
-            Ok(Value::Data(Term::Bytes(s.as_bytes().to_vec())))
+            Ok(Value::Data(Term::Bytes(Bytes::copy_from_slice(s.as_bytes()))))
         }
         "crypto/blake3" => {
             if args.len() != 1 {
@@ -1277,8 +1325,8 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let Some(Term::Bytes(b)) = args[0].as_data() else {
                 return type_err(ctx, "crypto/blake3 expects bytes");
             };
-            let h = blake3::hash(b);
-            let out = h.as_bytes().to_vec();
+            let h = blake3::hash(b.as_ref());
+            let out = Bytes::copy_from_slice(h.as_bytes());
             ctx.mem_observe_bytes_len(out.len())?;
             Ok(Value::Data(Term::Bytes(out)))
         }
@@ -1294,9 +1342,10 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             };
             let new_len = a.len().saturating_add(b.len());
             ctx.mem_observe_bytes_len(new_len)?;
-            let mut out = a.clone();
-            out.extend_from_slice(b);
-            Ok(Value::Data(Term::Bytes(out)))
+            let mut out = BytesMut::with_capacity(new_len);
+            out.extend_from_slice(a.as_ref());
+            out.extend_from_slice(b.as_ref());
+            Ok(Value::Data(Term::Bytes(out.freeze())))
         }
         _ => Err(KernelError::new(
             KernelErrorKind::BadForm,

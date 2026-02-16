@@ -114,15 +114,15 @@ impl AcceptanceSignature {
                 ),
                 (
                     TermOrdKey(Term::symbol(":acceptance-h")),
-                    Term::Bytes(self.acceptance_hash.to_vec()),
+                    Term::Bytes(self.acceptance_hash.to_vec().into()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":pk")),
-                    Term::Bytes(self.pk.to_vec()),
+                    Term::Bytes(self.pk.to_vec().into()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":sig")),
-                    Term::Bytes(self.sig.to_vec()),
+                    Term::Bytes(self.sig.to_vec().into()),
                 ),
             ]
             .into_iter()

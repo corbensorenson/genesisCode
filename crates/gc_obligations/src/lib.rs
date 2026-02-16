@@ -584,7 +584,7 @@ fn package_record_term(
             );
             mm.insert(
                 TermOrdKey(Term::symbol(":hash")),
-                Term::Bytes(x.hash.to_vec()),
+                Term::Bytes(x.hash.to_vec().into()),
             );
             Term::Map(mm)
         })
@@ -1527,7 +1527,7 @@ fn obligation_unit_tests(
         m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t.ok));
         m.insert(
             TermOrdKey(Term::symbol(":value-h")),
-            Term::Bytes(t.value_hash.to_vec()),
+            Term::Bytes(t.value_hash.to_vec().into()),
         );
         if let Some(e) = &t.error {
             m.insert(TermOrdKey(Term::symbol(":error")), Term::Str(e.clone()));
@@ -1895,11 +1895,11 @@ fn obligation_translation_validation(
                 ),
                 (
                     TermOrdKey(Term::symbol(":orig-h")),
-                    Term::Bytes(orig_h.to_vec()),
+                    Term::Bytes(orig_h.to_vec().into()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":opt-h")),
-                    Term::Bytes(opt_h.to_vec()),
+                    Term::Bytes(opt_h.to_vec().into()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":changed")),
@@ -1941,11 +1941,11 @@ fn obligation_translation_validation(
         );
         m.insert(
             TermOrdKey(Term::symbol(":orig-h")),
-            Term::Bytes(orig.value_hash.to_vec()),
+            Term::Bytes(orig.value_hash.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::symbol(":opt-h")),
-            Term::Bytes(opt.value_hash.to_vec()),
+            Term::Bytes(opt.value_hash.to_vec().into()),
         );
         per_test.push(Term::Map(m));
     }

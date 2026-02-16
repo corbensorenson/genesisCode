@@ -51,7 +51,7 @@ impl EffectLog {
         );
         m.insert(
             TermOrdKey(Term::Symbol(":program-hash".to_string())),
-            Term::Bytes(self.program_hash.to_vec()),
+            Term::Bytes(self.program_hash.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":toolchain".to_string())),
@@ -112,15 +112,15 @@ impl EffectLogEntry {
         );
         m.insert(
             TermOrdKey(Term::Symbol(":payload-h".to_string())),
-            Term::Bytes(self.payload_h.to_vec()),
+            Term::Bytes(self.payload_h.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":cont-h".to_string())),
-            Term::Bytes(self.cont_h.to_vec()),
+            Term::Bytes(self.cont_h.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":req-h".to_string())),
-            Term::Bytes(self.req_h.to_vec()),
+            Term::Bytes(self.req_h.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::Symbol(":decision".to_string())),
@@ -152,7 +152,7 @@ impl EffectLogEntry {
         );
         m.insert(
             TermOrdKey(Term::Symbol(":resp-h".to_string())),
-            Term::Bytes(self.resp_h.to_vec()),
+            Term::Bytes(self.resp_h.to_vec().into()),
         );
         Term::Map(m)
     }

@@ -353,7 +353,7 @@ mod tests {
             panic!("expected effect request payload");
         };
 
-        let resp = Value::Data(Term::Bytes(vec![1, 2, 3, 4]));
+        let resp = Value::Data(Term::Bytes(vec![1, 2, 3, 4].into()));
         let next = (*k).clone().apply(&mut ctx, resp).unwrap();
         let Value::EffectProgram(p2) = next else {
             panic!("expected effect program");

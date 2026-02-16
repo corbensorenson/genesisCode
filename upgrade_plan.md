@@ -96,6 +96,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
 - [x] Add a pure CoreForm bootstrap API to the prelude so GenesisCode tooling can be written in GenesisCode:
   - `core/coreform::{parse-term,parse-module,canonicalize-module,print-term,print-module,fmt-module,hash-term,hash-module,hash-module-src}`
   - Spec: `docs/spec/SELF_HOST_BOOTSTRAP_API.md`
+- [x] Harden `core/coreform::*` bootstrap API to be total on user input:
+  - parse/canonicalize failures return sealed protocol ERROR values (not Rust errors)
+  - parse errors use stable `:error/code` (`core/parse/{eof,unexpected,escape,int}`) and `:error/context{:at ...}` for tooling/tests
 - [x] Add pure primitives needed for a self-hosted printer/hash in GenesisCode:
   - UTF-8 conversions, string length, integer formatting
   - bytes indexing/slicing and hex conversion
@@ -104,21 +107,22 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - `data/tag`, `pair/as-proper-list`, `map/entries`, `sym/to-str`
   - `str/repeat`, `str/join`
   - `coreform/escape-str`, `coreform/escape-bytes` (exactly matches canonical printer escaping rules)
-- [x] Implement a self-hosted "frontend v0" in GenesisCode:
-  - [x] CoreForm printer equivalence tests against Rust (see `selfhost/printer.gc` + `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`)
-  - [x] CoreForm canonicalizer equivalence tests against Rust (rewrite-only pass to canonical form) (see `selfhost/canon.gc` + `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`)
-  - [x] CoreForm hashing (term/module) equivalence tests against Rust:
-    - `selfhost/hash.gc`
+- [x] Implement a self-host toolchain surface in GenesisCode (bootstrap wrappers) with equivalence tests:
+  - selfhost modules are stable CoreForm-level entrypoints, delegating to canonical Rust CoreForm frontend:
+    - `selfhost/parse.gc`, `selfhost/canon.gc`, `selfhost/printer.gc`, `selfhost/hash.gc`, `selfhost/tool_coreform_v1.gc`
+  - Equivalence tests against Rust bootstrap API:
+    - `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
+    - `crates/gc_prelude/tests/selfhost_canon_equivalence.rs`
+    - `crates/gc_prelude/tests/selfhost_printer_equivalence.rs`
     - `crates/gc_prelude/tests/selfhost_hash_equivalence.rs`
+    - `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
   - module loader + package resolver over commit/snapshot/module artifacts:
     - `selfhost/frontend_v0.gc`
     - `crates/gc_prelude/tests/selfhost_frontend_loader.rs`
-- [x] Self-hosted CoreForm tooling v1 (no Rust parser dependency):
-  - `selfhost/tool_coreform_v1.gc` implements `selfhost/tool::{fmt-module,hash-module-src}`
-  - Equivalence against Rust bootstrap API: `crates/gc_prelude/tests/selfhost_tool_coreform_equivalence.rs`
-- [x] Self-hosted CoreForm parser v1 (frontend) matching the Rust parser for terms/modules:
-  - `selfhost/parse.gc`
-  - Equivalence tests: `crates/gc_prelude/tests/selfhost_parse_equivalence.rs`
+- [ ] Implement a truly self-hosted CoreForm frontend (no Rust CoreForm dependency):
+  - parsing terms/modules and producing protocol ERROR values with stable codes/at
+  - canonicalization and canonical printing
+  - hashing from canonical bytes
 - [x] Cutover tooling entrypoints to support a self-host toolchain engine (opt-in):
   - CLI: `genesis fmt --engine selfhost` uses `selfhost/tool::fmt-module` (honors `--step-limit/--no-step-limit`)
   - wasm-bindgen: expose `fmt_coreform_module_selfhost` and `hash_coreform_module_selfhost`
@@ -132,7 +136,8 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - Rust becomes optional tooling only
 - [ ] Make self-hosted tooling fast/practical under the kernel step limit:
   - add a compiled execution path (bytecode or WASM) for toolchain-grade workloads
-  - re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
+  - [x] re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
+  - [x] kernel: tail-call optimize final closure applies in tail position (prevents stack overflows on tail recursion)
 
 ---
 

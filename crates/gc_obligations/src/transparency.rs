@@ -46,7 +46,12 @@ pub fn append_transparency_entry(
 
     let prev_bytes = match prev_hex.as_deref() {
         None => Term::Nil,
-        Some(h) => Term::Bytes(hex32_to_bytes(h).map_err(TransparencyError::Log)?.to_vec()),
+        Some(h) => Term::Bytes(
+            hex32_to_bytes(h)
+                .map_err(TransparencyError::Log)?
+                .to_vec()
+                .into(),
+        ),
     };
 
     let entry = Term::Map(

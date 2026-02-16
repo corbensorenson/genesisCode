@@ -291,26 +291,35 @@ fn proto(ctx: &mut EvalCtx) -> ProtocolTokens {
 }
 
 fn mk_error(ctx: &mut EvalCtx, msg: impl Into<String>) -> Value {
+    mk_error_with(ctx, "core/error", msg.into(), None)
+}
+
+fn mk_error_with(ctx: &mut EvalCtx, code: &str, msg: String, at: Option<usize>) -> Value {
     let p = proto(ctx);
     let mut m = BTreeMap::new();
     m.insert(
         TermOrdKey(Term::Symbol(":error/code".to_string())),
-        Term::Str("core/error".to_string()),
+        Term::Str(code.to_string()),
     );
     m.insert(
         TermOrdKey(Term::Symbol(":error/message".to_string())),
-        Term::Str(msg.into()),
+        Term::Str(msg),
     );
+    let mut ctxm: BTreeMap<TermOrdKey, Term> = [(
+        TermOrdKey(Term::Symbol(":subsystem".to_string())),
+        Term::Str("prelude".to_string()),
+    )]
+    .into_iter()
+    .collect();
+    if let Some(at) = at {
+        ctxm.insert(
+            TermOrdKey(Term::Symbol(":at".to_string())),
+            Term::Int((at as i64).into()),
+        );
+    }
     m.insert(
         TermOrdKey(Term::Symbol(":error/context".to_string())),
-        Term::Map(
-            [(
-                TermOrdKey(Term::Symbol(":subsystem".to_string())),
-                Term::Str("prelude".to_string()),
-            )]
-            .into_iter()
-            .collect(),
-        ),
+        Term::Map(ctxm),
     );
     Value::Sealed {
         token: p.error,
@@ -397,80 +406,165 @@ fn term_vec_from_value(v: &Value) -> Result<Vec<Term>, KernelError> {
     }
 }
 
-fn nf_coreform_parse_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let src = arg_utf8_src(&args, 0)?;
-    let t =
-        parse_term(&src).map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
-    Ok(Value::Data(t))
+fn nf_coreform_parse_term(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = match arg_utf8_src(&args, 0) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
+    match parse_term(&src) {
+        Ok(t) => Ok(Value::Data(t)),
+        Err(e) => {
+            let (code, at) = match e {
+                gc_coreform::ParseError::Eof => ("core/parse/eof", 0usize),
+                gc_coreform::ParseError::Unexpected { at, .. } => ("core/parse/unexpected", at),
+                gc_coreform::ParseError::Escape { at, .. } => ("core/parse/escape", at),
+                gc_coreform::ParseError::Int { at, .. } => ("core/parse/int", at),
+            };
+            Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
+        }
+    }
 }
 
-fn nf_coreform_parse_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let src = arg_utf8_src(&args, 0)?;
-    let forms = parse_module(&src)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
-    Ok(Value::Data(Term::Vector(forms)))
+fn nf_coreform_parse_module(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = match arg_utf8_src(&args, 0) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
+    match parse_module(&src) {
+        Ok(forms) => Ok(Value::Data(Term::Vector(forms))),
+        Err(e) => {
+            let (code, at) = match e {
+                gc_coreform::ParseError::Eof => ("core/parse/eof", 0usize),
+                gc_coreform::ParseError::Unexpected { at, .. } => ("core/parse/unexpected", at),
+                gc_coreform::ParseError::Escape { at, .. } => ("core/parse/escape", at),
+                gc_coreform::ParseError::Int { at, .. } => ("core/parse/int", at),
+            };
+            Ok(mk_error_with(ctx, code, e.to_string(), Some(at)))
+        }
+    }
 }
 
 fn nf_coreform_canonicalize_module(
-    _ctx: &mut EvalCtx,
+    ctx: &mut EvalCtx,
     args: Vec<Value>,
 ) -> Result<Value, KernelError> {
-    let forms = term_vec_from_value(
-        args.first()
-            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
-    )?;
-    let canon = canonicalize_module(forms)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
-    Ok(Value::Data(Term::Vector(canon)))
+    let Some(arg0) = args.first() else {
+        return Ok(mk_error_with(
+            ctx,
+            "core/bad-form",
+            "missing argument".to_string(),
+            None,
+        ));
+    };
+    let forms = match term_vec_from_value(arg0) {
+        Ok(x) => x,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
+    match canonicalize_module(forms) {
+        Ok(canon) => Ok(Value::Data(Term::Vector(canon))),
+        Err(e) => Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
+    }
 }
 
-fn nf_coreform_print_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let t = value_to_data_term(
+fn nf_coreform_print_term(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let t = match value_to_data_term(
         args.first()
             .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
-    )?;
+    ) {
+        Ok(t) => t,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(print_term(&t))))
 }
 
-fn nf_coreform_print_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let forms = term_vec_from_value(
+fn nf_coreform_print_module(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let forms = match term_vec_from_value(
         args.first()
             .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
-    )?;
+    ) {
+        Ok(x) => x,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(print_module(&forms))))
 }
 
-fn nf_coreform_fmt_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let src = arg_utf8_src(&args, 0)?;
-    let forms = parse_module(&src)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
-    let canon = canonicalize_module(forms)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+fn nf_coreform_fmt_module(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = match arg_utf8_src(&args, 0) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
+    let forms = match parse_module(&src) {
+        Ok(f) => f,
+        Err(e) => {
+            let (code, at) = match e {
+                gc_coreform::ParseError::Eof => ("core/parse/eof", 0usize),
+                gc_coreform::ParseError::Unexpected { at, .. } => ("core/parse/unexpected", at),
+                gc_coreform::ParseError::Escape { at, .. } => ("core/parse/escape", at),
+                gc_coreform::ParseError::Int { at, .. } => ("core/parse/int", at),
+            };
+            return Ok(mk_error_with(ctx, code, e.to_string(), Some(at)));
+        }
+    };
+    let canon = match canonicalize_module(forms) {
+        Ok(c) => c,
+        Err(e) => return Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(print_module(&canon))))
 }
 
-fn nf_coreform_hash_term(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let t = value_to_data_term(
-        args.first()
-            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
-    )?;
+fn nf_coreform_hash_term(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let Some(arg0) = args.first() else {
+        return Ok(mk_error_with(
+            ctx,
+            "core/bad-form",
+            "missing argument".to_string(),
+            None,
+        ));
+    };
+    let t = match value_to_data_term(arg0) {
+        Ok(x) => x,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(hex32(hash_term(&t)))))
 }
 
-fn nf_coreform_hash_module(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let forms = term_vec_from_value(
-        args.first()
-            .ok_or_else(|| KernelError::new(KernelErrorKind::BadForm, "missing argument"))?,
-    )?;
+fn nf_coreform_hash_module(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let Some(arg0) = args.first() else {
+        return Ok(mk_error_with(
+            ctx,
+            "core/bad-form",
+            "missing argument".to_string(),
+            None,
+        ));
+    };
+    let forms = match term_vec_from_value(arg0) {
+        Ok(x) => x,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(hex32(hash_module(&forms)))))
 }
 
-fn nf_coreform_hash_module_src(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
-    let src = arg_utf8_src(&args, 0)?;
-    let forms = parse_module(&src)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
-    let canon = canonicalize_module(forms)
-        .map_err(|e| KernelError::new(KernelErrorKind::BadForm, e.to_string()))?;
+fn nf_coreform_hash_module_src(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+    let src = match arg_utf8_src(&args, 0) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error_with(ctx, "core/type-error", e.to_string(), None)),
+    };
+    let forms = match parse_module(&src) {
+        Ok(f) => f,
+        Err(e) => {
+            let (code, at) = match e {
+                gc_coreform::ParseError::Eof => ("core/parse/eof", 0usize),
+                gc_coreform::ParseError::Unexpected { at, .. } => ("core/parse/unexpected", at),
+                gc_coreform::ParseError::Escape { at, .. } => ("core/parse/escape", at),
+                gc_coreform::ParseError::Int { at, .. } => ("core/parse/int", at),
+            };
+            return Ok(mk_error_with(ctx, code, e.to_string(), Some(at)));
+        }
+    };
+    let canon = match canonicalize_module(forms) {
+        Ok(c) => c,
+        Err(e) => return Ok(mk_error_with(ctx, "core/bad-form", e.to_string(), None)),
+    };
     Ok(Value::Data(Term::Str(hex32(hash_module(&canon)))))
 }
 

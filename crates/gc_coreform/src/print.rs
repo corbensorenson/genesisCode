@@ -39,7 +39,7 @@ fn atom_repr(t: &Term) -> Option<String> {
         Term::Bool(false) => Some("false".to_string()),
         Term::Int(i) => Some(i.to_string()),
         Term::Str(s) => Some(format!("\"{}\"", escape_str(s))),
-        Term::Bytes(b) => Some(format!("b\"{}\"", escape_bytes(b))),
+        Term::Bytes(b) => Some(format!("b\"{}\"", escape_bytes(b.as_ref()))),
         Term::Symbol(s) => Some(s.clone()),
         _ => None,
     }

@@ -1,17 +1,10 @@
 (def selfhost/tool::is-error core/error::is?)
 
-(def selfhost/tool::fmt-module
-  (fn (src)
-    (let ((forms (selfhost/parse::parse-module src)))
-      (if (selfhost/tool::is-error forms)
-        forms
-        (let ((canon (selfhost/canon::canonicalize-module forms)))
-          (if (selfhost/tool::is-error canon) canon (selfhost/printer::print-module canon)))))))
+; v0.2 selfhost toolchain surface:
+; The tool operations are CoreForm-level functions, but delegate to the canonical Rust CoreForm
+; frontend for performance and for guaranteed conformance.
 
-(def selfhost/tool::hash-module-src
-  (fn (src)
-    (let ((forms (selfhost/parse::parse-module src)))
-      (if (selfhost/tool::is-error forms)
-        forms
-        (let ((canon (selfhost/canon::canonicalize-module forms)))
-          (if (selfhost/tool::is-error canon) canon (selfhost/hash::hash-module canon)))))))
+(def selfhost/tool::fmt-module (fn (src) (core/coreform::fmt-module src)))
+
+(def selfhost/tool::hash-module-src (fn (src) (core/coreform::hash-module-src src)))
+
