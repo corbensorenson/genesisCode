@@ -177,15 +177,80 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - curried calls such as `((core/int::add a) b)` and predicates `((core/int::lt? a) b)` now lower to validated Stage-2 prim ops
       - coverage: `stage2_validates_curried_core_int_wrapper_calls` and `stage2_validates_curried_core_int_predicate_calls`
     - expanded Stage-2 scalar equality coverage:
-      - direct `prim core/eq?` now supports scalar int/bool equality
-      - curried wrapper form `((core/eq? a) b)` now lowers when scalar-typed (int/bool/nil)
+      - direct `prim core/eq?` now supports scalar int/bool/nil equality, including mixed scalar kinds (evaluates both sides, result `false`)
+      - curried wrapper form `((core/eq? a) b)` now lowers for scalar comparisons (int/bool/nil), including mixed scalar kinds
       - coverage: `stage2_validates_core_eq_prim_for_ints_and_bools` and `stage2_validates_curried_core_eq_wrapper_calls`
       - coverage: `stage2_validates_curried_core_eq_wrapper_calls_for_bool_and_nil`
+      - coverage: `stage2_validates_core_eq_mixed_scalar_types_as_false` and `stage2_validates_curried_core_eq_wrapper_call_for_mixed_scalar_types`
+    - expanded Stage-2 unary scalar predicate coverage:
+      - direct `prim list/is-nil?` now lowers for scalar inputs with kernel-equivalent semantics (`nil -> true`, non-`nil` scalar -> `false`) while preserving operand evaluation
+      - prelude wrapper `core/list::is-nil?` is now recognized as an inlinable Stage-2 callable symbol
+      - coverage: `stage2_validates_list_is_nil_prim_for_nil_and_non_nil_scalars` and `stage2_validates_core_list_is_nil_wrapper_call`
+    - expanded Stage-2 symbol/string/bytes atom coverage:
+      - quoted symbols now lower to a deterministic symbol-id scalar lane for equality/predicate flows
+      - symbol top-level module results are now translation-validated through the wasm boundary (symbol-id decode via Stage-2 artifact symbol table)
+      - string/bytes literals now lower to deterministic interned scalar lanes and are translation-validated through the wasm boundary (string/bytes table decode in Stage-2 artifacts)
+      - `prim data/tag` now lowers for scalar inputs (`nil|bool|int|symbol|string|bytes`) and can participate in Stage-2 equality checks
+      - literal-driven `prim str/concat`, `prim str/len`, `prim bytes/concat`, and `prim bytes/len` now lower deterministically in Stage-2 (with preserved argument evaluation ordering via typed `let` wrapping)
+      - `prim sym/to-str` and `prim sym/from-str` now lower for stage2-known symbol/string values, including constant-propagated locals and direct `if` branch variants
+      - wrappers `core/sym::to-str` and `core/sym::from-str` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive symbol/string conversions
+      - `prim str/to-bytes-utf8` and `prim bytes/to-str-utf8` now lower for stage2-known string/bytes values, including constant-propagated locals and direct `if` branch variants (with UTF-8 validity checks for bytes-to-string)
+      - wrappers `core/str::to-utf8` and `core/str::from-utf8` now lower through the Stage-2 callable path for constant-propagated and branch-sensitive UTF-8 conversions
+      - curried wrappers `core/str::concat` and `core/bytes::concat` now lower through the Stage-2 callable path for literal-driven calls
+      - Stage-2 now propagates deterministic string/bytes constant IDs through local bindings and inlined applications, enabling `str/len`/`bytes/len` on def/let-bound values when the value set is statically known
+      - unary wrappers `core/str::len` and `core/bytes::len` now lower through the Stage-2 callable path for constant-propagated calls
+      - `prim int/to-str` now lowers for stage2-known integer values, including constant-propagated locals and direct `if` branch variants with int constants
+      - unary wrapper `core/int::to-str` now lowers through the Stage-2 callable path for constant-propagated and branch-sensitive int values
+      - `prim str/len` and `prim bytes/len` now also lower for direct `if` expressions with constant-known string/bytes branches (including different branch values), producing branch-consistent runtime lengths
+      - wrapper calls `core/str::len` and `core/bytes::len` now also lower for direct `if` expressions with constant-known branches
+      - `str/len`/`bytes/len` lowering now recurses through `begin`/`let` wrappers so nested branch-sensitive constant forms remain Stage-2-validatable
+      - `prim str/concat` and `prim bytes/concat` now lower for direct `if` expressions with constant-known string/bytes branches when the opposite argument is stage2-known
+      - `prim str/concat` and `prim bytes/concat` now also lower when both operands are direct `if` expressions with constant-known string/bytes branches
+      - wrapper calls `core/str::concat` and `core/bytes::concat` now lower for branch-sensitive constant values and recurse through `begin`/`let` wrappers for nested constant-composed forms
+      - wrapper concat lowering now also supports both-operand `if`-variant constant composition (not just one-operand variant composition)
+      - `prim sym/eq?` plus wrappers `core/sym::eq?` and `core/data::tag` now lower through the Stage-2 callable path
+      - symbol/string/bytes conditions now participate in Stage-2 `if` truthiness (all non-`false`/`nil` scalar atoms are truthy)
+      - coverage: `stage2_validates_quote_symbol_via_core_eq` and `stage2_validates_sym_eq_prim_and_wrapper_with_data_tag`
+      - coverage: `stage2_validates_if_truthiness_for_symbol_condition`
+      - coverage: `stage2_validates_symbol_top_level_result`
+      - coverage: `stage2_validates_quote_string_and_bytes_literals`, `stage2_validates_data_tag_for_string_and_bytes`, and `stage2_validates_string_and_bytes_top_level_results`
+      - coverage: `stage2_validates_sym_string_conversion_prims_on_literals`, `stage2_validates_sym_string_wrapper_conversion_on_bound_constant_values`, and `stage2_validates_sym_string_wrapper_conversion_on_if_variant_values`
+      - coverage: `stage2_validates_utf8_conversion_prims_on_literals`, `stage2_validates_utf8_wrapper_conversion_on_bound_constant_values`, and `stage2_validates_utf8_wrapper_conversion_on_if_variant_values`
+      - coverage: `stage2_validates_if_truthiness_for_string_and_bytes_condition`
+      - coverage: `stage2_validates_str_concat_and_len_prims_on_literals`, `stage2_validates_bytes_concat_and_len_prims_on_literals`, and `stage2_validates_str_and_bytes_wrapper_calls_on_literals`
+      - coverage: `stage2_validates_len_wrappers_on_def_bound_constant_values` and `stage2_validates_len_wrappers_on_let_bound_constant_values`
+      - coverage: `stage2_validates_int_to_str_prim_on_literals`, `stage2_validates_int_to_str_wrapper_on_bound_constant_values`, and `stage2_validates_int_to_str_wrapper_on_if_variant_values`
+      - coverage: `stage2_validates_concat_wrappers_on_bound_constant_values` and `stage2_validates_len_wrappers_on_if_stable_constant_values`
+      - coverage: `stage2_validates_len_prims_on_if_variant_constant_values`
+      - coverage: `stage2_validates_len_wrappers_on_if_variant_constant_values` and `stage2_validates_len_wrappers_on_nested_let_if_variant_values`
+      - coverage: `stage2_validates_concat_prims_on_if_variant_constant_values`, `stage2_validates_concat_wrappers_on_if_variant_constant_values`, and `stage2_validates_concat_wrappers_on_nested_let_if_variant_values`
+      - coverage: `stage2_validates_concat_prims_on_both_sides_if_variant_constants` and `stage2_validates_concat_wrappers_on_both_sides_if_variant_constants`
+      - host gate-report parity coverage: `crates/gc_cli/tests/cli_stage1_pipeline.rs` tests `eval_stage2_gate_reports_string_value_kind_in_json` and `eval_stage2_gate_reports_bytes_value_kind_in_json`
+      - host gate-report parity coverage: `crates/gc_wasi_cli/tests/cli_eval_gates.rs` test `eval_stage2_gate_reports_string_and_bytes_value_kinds_in_json`
+      - host gate behavior coverage for new string/bytes concat/len lowering: `eval_stage2_gate_validates_string_bytes_concat_len_module` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive length lowering: `eval_stage2_gate_validates_branch_sensitive_string_bytes_len_prims` in both native and WASI CLI suites
+      - host gate behavior coverage for wrapper-based branch-sensitive length lowering: `eval_stage2_gate_validates_branch_sensitive_string_bytes_len_wrappers` in both native and WASI CLI suites
+      - host gate behavior coverage for nested wrapper-based branch-sensitive length lowering: `eval_stage2_gate_validates_nested_let_branch_sensitive_len_wrappers` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive symbol/string conversion lowering: `eval_stage2_gate_validates_sym_string_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive UTF-8 conversion lowering: `eval_stage2_gate_validates_utf8_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive int stringification lowering: `eval_stage2_gate_validates_int_to_str_wrapper_branch_sensitive_values` in both native and WASI CLI suites
+      - host gate behavior coverage for branch-sensitive concat lowering: `eval_stage2_gate_validates_branch_sensitive_string_bytes_concat_prims` in both native and WASI CLI suites
+      - host gate behavior coverage for nested wrapper-based branch-sensitive concat lowering: `eval_stage2_gate_validates_nested_let_branch_sensitive_concat_wrappers` in both native and WASI CLI suites
+      - host gate behavior coverage for both-operand `if` branch-sensitive concat lowering: `eval_stage2_gate_validates_branch_sensitive_concat_both_if_sides` in both native and WASI CLI suites
+      - host gate behavior coverage for wrapper-based both-operand `if` branch-sensitive concat lowering: `eval_stage2_gate_validates_branch_sensitive_concat_wrappers_both_if_sides` in both native and WASI CLI suites
+      - [x] Stage-2 literal string/bytes primitive lowering (`str/concat`, `str/len`, `bytes/concat`, `bytes/len`) plus native/WASI gate coverage
+      - [x] Stage-2 symbol/string conversion lowering (`prim sym/to-str` / `prim sym/from-str` + `core/sym::{to-str,from-str}`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 UTF-8 conversion lowering (`prim str/to-bytes-utf8` / `prim bytes/to-str-utf8` + `core/str::{to-utf8,from-utf8}`) for constant-propagated and branch-sensitive values
+      - [x] Stage-2 string/bytes constant-ID propagation across locals + unary `core/str::len` / `core/bytes::len` wrapper lowering for constant-propagated calls
+      - [x] Stage-2 int stringification lowering (`prim int/to-str` + `core/int::to-str`) for constant-propagated and branch-sensitive integer values
+      - [x] Stage-2 branch-sensitive length lowering for direct `if`-composed string/bytes values (`prim str/len` / `prim bytes/len`)
+      - [x] Stage-2 branch-sensitive length lowering for wrapper + nested (`begin`/`let`) constant-composed string/bytes values
+      - [x] Stage-2 branch-sensitive concat lowering for direct and nested (`begin`/`let`) constant-composed string/bytes values (`prim` + `core/*::concat` wrappers), including both-operand `if`-variant constant composition
     - expanded Stage-2 `if` truthiness semantics for scalar conditions:
-      - conditions now accept scalar bool/nil/int and match kernel truthiness (`false` + `nil` are falsey; ints are truthy)
+      - conditions now accept scalar bool/nil/int/symbol/string/bytes and match kernel truthiness (`false` + `nil` are falsey; all other scalar atoms are truthy)
       - coverage: `stage2_validates_if_truthiness_for_int_condition` and `stage2_validates_if_truthiness_for_nil_condition`
     - expanded Stage-2 scalar `quote` lowering:
-      - quoted scalar literals `(quote nil|bool|int)` now lower directly instead of forcing unsupported fallback
+      - quoted scalar literals `(quote nil|bool|int|symbol|string|bytes)` now lower directly instead of forcing unsupported fallback
       - defs-only modules that bind quoted scalar constants now validate through Stage-2 lowering
       - coverage: `stage2_validates_quote_scalar_literals` and `stage2_validates_defs_only_module_with_quoted_scalar_rhs_via_lowering`
     - expanded Stage-2 immediate lambda application support:
@@ -197,6 +262,8 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - local `let` shadows no longer leak into top-level def-bound closure free-variable resolution
       - recursive def-bound call expansion is rejected deterministically as unsupported
       - translation-validation baseline evaluation now enforces a deterministic step budget to prevent non-terminating modules from hanging the test/obligation pipeline
+      - translation-validation now compiles before baseline kernel eval and short-circuits immediately for unsupported modules, preventing long baseline runs for known-unsupported recursion patterns
+      - coverage: `stage2_rejects_recursive_def_bound_function_call` now asserts the deterministic recursive-unsupported diagnostic
     - expanded Stage-2 support for canonical curried application chains:
       - call chains like `((f a) b)` now lower for both def-bound function values and immediate lambda literals (including n-ary `fn` canonicalized to unary nesting)
       - chain lowering preserves left-to-right argument evaluation and lexical parameter capture via nested typed `let` emission

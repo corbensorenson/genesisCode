@@ -18,6 +18,9 @@ pub enum Stage2ValueKind {
     Int,
     Bool,
     Nil,
+    Sym,
+    Str,
+    Bytes,
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +29,9 @@ pub struct Stage2CompileArtifact {
     pub wasm_hash: [u8; 32],
     pub module_hash: [u8; 32],
     pub value_kind: Stage2ValueKind,
+    pub symbol_table: Vec<String>,
+    pub string_table: Vec<String>,
+    pub bytes_table: Vec<Vec<u8>>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -61,6 +67,9 @@ enum Ty {
     I64,
     BoolI32,
     NilI32,
+    SymI32,
+    StrI32,
+    BytesI32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -112,6 +121,9 @@ enum PExpr {
     Nil,
     Int(i64),
     Bool(bool),
+    Sym(i32),
+    Str(i32),
+    Bytes(i32),
     Local(Local),
     Prim {
         op: PrimOp,
@@ -143,6 +155,9 @@ impl PExpr {
             PExpr::Nil => Ty::NilI32,
             PExpr::Int(_) => Ty::I64,
             PExpr::Bool(_) => Ty::BoolI32,
+            PExpr::Sym(_) => Ty::SymI32,
+            PExpr::Str(_) => Ty::StrI32,
+            PExpr::Bytes(_) => Ty::BytesI32,
             PExpr::Local(l) => l.ty,
             PExpr::Prim { ty, .. } => *ty,
             PExpr::If { ty, .. } => *ty,
@@ -162,6 +177,13 @@ enum PStmt {
 struct Planner {
     locals: Vec<Ty>,
     expanding_fn_defs: Vec<String>,
+    symbol_ids: BTreeMap<String, i32>,
+    string_ids: BTreeMap<String, i32>,
+    bytes_ids: BTreeMap<Vec<u8>, i32>,
+    local_const_int_values: BTreeMap<u32, i64>,
+    local_const_symbol_ids: BTreeMap<u32, i32>,
+    local_const_string_ids: BTreeMap<u32, i32>,
+    local_const_bytes_ids: BTreeMap<u32, i32>,
 }
 
 impl Planner {
@@ -170,6 +192,278 @@ impl Planner {
             .map_err(|_| Stage2CompileError::Internal("too many wasm locals".to_string()))?;
         self.locals.push(ty);
         Ok(idx)
+    }
+
+    fn intern_symbol(&mut self, sym: &str) -> Result<i32, Stage2CompileError> {
+        if let Some(id) = self.symbol_ids.get(sym) {
+            return Ok(*id);
+        }
+        let next = i32::try_from(self.symbol_ids.len()).map_err(|_| {
+            Stage2CompileError::Internal("too many interned symbols for stage2".to_string())
+        })?;
+        self.symbol_ids.insert(sym.to_string(), next);
+        Ok(next)
+    }
+
+    fn intern_string(&mut self, s: &str) -> Result<i32, Stage2CompileError> {
+        if let Some(id) = self.string_ids.get(s) {
+            return Ok(*id);
+        }
+        let next = i32::try_from(self.string_ids.len()).map_err(|_| {
+            Stage2CompileError::Internal("too many interned strings for stage2".to_string())
+        })?;
+        self.string_ids.insert(s.to_string(), next);
+        Ok(next)
+    }
+
+    fn intern_bytes(&mut self, bs: &[u8]) -> Result<i32, Stage2CompileError> {
+        if let Some(id) = self.bytes_ids.get(bs) {
+            return Ok(*id);
+        }
+        let next = i32::try_from(self.bytes_ids.len()).map_err(|_| {
+            Stage2CompileError::Internal("too many interned byte strings for stage2".to_string())
+        })?;
+        self.bytes_ids.insert(bs.to_vec(), next);
+        Ok(next)
+    }
+}
+
+fn planner_symbol_table(planner: &Planner) -> Result<Vec<String>, Stage2CompileError> {
+    if planner.symbol_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut out = vec![String::new(); planner.symbol_ids.len()];
+    for (sym, id) in &planner.symbol_ids {
+        let idx = usize::try_from(*id)
+            .map_err(|_| Stage2CompileError::Internal("negative symbol id".to_string()))?;
+        if idx >= out.len() {
+            return Err(Stage2CompileError::Internal(
+                "symbol id out of range".to_string(),
+            ));
+        }
+        out[idx] = sym.clone();
+    }
+    Ok(out)
+}
+
+fn planner_string_table(planner: &Planner) -> Result<Vec<String>, Stage2CompileError> {
+    if planner.string_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut out = vec![String::new(); planner.string_ids.len()];
+    for (s, id) in &planner.string_ids {
+        let idx = usize::try_from(*id)
+            .map_err(|_| Stage2CompileError::Internal("negative string id".to_string()))?;
+        if idx >= out.len() {
+            return Err(Stage2CompileError::Internal(
+                "string id out of range".to_string(),
+            ));
+        }
+        out[idx] = s.clone();
+    }
+    Ok(out)
+}
+
+fn planner_bytes_table(planner: &Planner) -> Result<Vec<Vec<u8>>, Stage2CompileError> {
+    if planner.bytes_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut out = vec![Vec::new(); planner.bytes_ids.len()];
+    for (bs, id) in &planner.bytes_ids {
+        let idx = usize::try_from(*id)
+            .map_err(|_| Stage2CompileError::Internal("negative bytes id".to_string()))?;
+        if idx >= out.len() {
+            return Err(Stage2CompileError::Internal(
+                "bytes id out of range".to_string(),
+            ));
+        }
+        out[idx] = bs.clone();
+    }
+    Ok(out)
+}
+
+fn const_string_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) -> Option<i32> {
+    match expr {
+        PExpr::Str(id) => Some(*id),
+        PExpr::Local(local) if local.ty == Ty::StrI32 => map.get(&local.idx).copied(),
+        PExpr::Begin { exprs, ty } if *ty == Ty::StrI32 => {
+            exprs.last().and_then(|e| const_string_id_with_map(e, map))
+        }
+        PExpr::Let { bindings, body, ty } if *ty == Ty::StrI32 => {
+            let mut scoped = map.clone();
+            for b in bindings {
+                if let Some(id) = const_string_id_with_map(&b.expr, &scoped) {
+                    scoped.insert(b.idx, id);
+                } else {
+                    scoped.remove(&b.idx);
+                }
+            }
+            body.last()
+                .and_then(|e| const_string_id_with_map(e, &scoped))
+        }
+        PExpr::If {
+            then_expr,
+            else_expr,
+            ty,
+            ..
+        } if *ty == Ty::StrI32 => {
+            let a = const_string_id_with_map(then_expr, map);
+            let b = const_string_id_with_map(else_expr, map);
+            if a.is_some() && a == b { a } else { None }
+        }
+        _ => None,
+    }
+}
+
+fn const_int_value_with_map(expr: &PExpr, map: &BTreeMap<u32, i64>) -> Option<i64> {
+    match expr {
+        PExpr::Int(n) => Some(*n),
+        PExpr::Local(local) if local.ty == Ty::I64 => map.get(&local.idx).copied(),
+        PExpr::Prim {
+            op: PrimOp::Add,
+            lhs,
+            rhs,
+            ty: Ty::I64,
+        } => {
+            let a = const_int_value_with_map(lhs, map)?;
+            let b = const_int_value_with_map(rhs, map)?;
+            a.checked_add(b)
+        }
+        PExpr::Prim {
+            op: PrimOp::Sub,
+            lhs,
+            rhs,
+            ty: Ty::I64,
+        } => {
+            let a = const_int_value_with_map(lhs, map)?;
+            let b = const_int_value_with_map(rhs, map)?;
+            a.checked_sub(b)
+        }
+        PExpr::Prim {
+            op: PrimOp::Mul,
+            lhs,
+            rhs,
+            ty: Ty::I64,
+        } => {
+            let a = const_int_value_with_map(lhs, map)?;
+            let b = const_int_value_with_map(rhs, map)?;
+            a.checked_mul(b)
+        }
+        PExpr::Begin { exprs, ty } if *ty == Ty::I64 => {
+            exprs.last().and_then(|e| const_int_value_with_map(e, map))
+        }
+        PExpr::Let { bindings, body, ty } if *ty == Ty::I64 => {
+            let mut scoped = map.clone();
+            for b in bindings {
+                if let Some(n) = const_int_value_with_map(&b.expr, &scoped) {
+                    scoped.insert(b.idx, n);
+                } else {
+                    scoped.remove(&b.idx);
+                }
+            }
+            body.last()
+                .and_then(|e| const_int_value_with_map(e, &scoped))
+        }
+        PExpr::If {
+            then_expr,
+            else_expr,
+            ty,
+            ..
+        } if *ty == Ty::I64 => {
+            let a = const_int_value_with_map(then_expr, map);
+            let b = const_int_value_with_map(else_expr, map);
+            if a.is_some() && a == b { a } else { None }
+        }
+        _ => None,
+    }
+}
+
+fn const_symbol_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) -> Option<i32> {
+    match expr {
+        PExpr::Sym(id) => Some(*id),
+        PExpr::Local(local) if local.ty == Ty::SymI32 => map.get(&local.idx).copied(),
+        PExpr::Begin { exprs, ty } if *ty == Ty::SymI32 => {
+            exprs.last().and_then(|e| const_symbol_id_with_map(e, map))
+        }
+        PExpr::Let { bindings, body, ty } if *ty == Ty::SymI32 => {
+            let mut scoped = map.clone();
+            for b in bindings {
+                if let Some(id) = const_symbol_id_with_map(&b.expr, &scoped) {
+                    scoped.insert(b.idx, id);
+                } else {
+                    scoped.remove(&b.idx);
+                }
+            }
+            body.last()
+                .and_then(|e| const_symbol_id_with_map(e, &scoped))
+        }
+        PExpr::If {
+            then_expr,
+            else_expr,
+            ty,
+            ..
+        } if *ty == Ty::SymI32 => {
+            let a = const_symbol_id_with_map(then_expr, map);
+            let b = const_symbol_id_with_map(else_expr, map);
+            if a.is_some() && a == b { a } else { None }
+        }
+        _ => None,
+    }
+}
+
+fn const_bytes_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) -> Option<i32> {
+    match expr {
+        PExpr::Bytes(id) => Some(*id),
+        PExpr::Local(local) if local.ty == Ty::BytesI32 => map.get(&local.idx).copied(),
+        PExpr::Begin { exprs, ty } if *ty == Ty::BytesI32 => {
+            exprs.last().and_then(|e| const_bytes_id_with_map(e, map))
+        }
+        PExpr::Let { bindings, body, ty } if *ty == Ty::BytesI32 => {
+            let mut scoped = map.clone();
+            for b in bindings {
+                if let Some(id) = const_bytes_id_with_map(&b.expr, &scoped) {
+                    scoped.insert(b.idx, id);
+                } else {
+                    scoped.remove(&b.idx);
+                }
+            }
+            body.last()
+                .and_then(|e| const_bytes_id_with_map(e, &scoped))
+        }
+        PExpr::If {
+            then_expr,
+            else_expr,
+            ty,
+            ..
+        } if *ty == Ty::BytesI32 => {
+            let a = const_bytes_id_with_map(then_expr, map);
+            let b = const_bytes_id_with_map(else_expr, map);
+            if a.is_some() && a == b { a } else { None }
+        }
+        _ => None,
+    }
+}
+
+fn record_local_const_ids(planner: &mut Planner, idx: u32, expr: &PExpr) {
+    if let Some(n) = const_int_value_with_map(expr, &planner.local_const_int_values) {
+        planner.local_const_int_values.insert(idx, n);
+    } else {
+        planner.local_const_int_values.remove(&idx);
+    }
+    if let Some(id) = const_symbol_id_with_map(expr, &planner.local_const_symbol_ids) {
+        planner.local_const_symbol_ids.insert(idx, id);
+    } else {
+        planner.local_const_symbol_ids.remove(&idx);
+    }
+    if let Some(id) = const_string_id_with_map(expr, &planner.local_const_string_ids) {
+        planner.local_const_string_ids.insert(idx, id);
+    } else {
+        planner.local_const_string_ids.remove(&idx);
+    }
+    if let Some(id) = const_bytes_id_with_map(expr, &planner.local_const_bytes_ids) {
+        planner.local_const_bytes_ids.insert(idx, id);
+    } else {
+        planner.local_const_bytes_ids.remove(&idx);
     }
 }
 
@@ -187,6 +481,9 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
                 wasm_hash,
                 module_hash,
                 value_kind: Stage2ValueKind::Nil,
+                symbol_table: Vec::new(),
+                string_table: Vec::new(),
+                bytes_table: Vec::new(),
             });
         }
 
@@ -231,6 +528,9 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
             wasm_hash,
             module_hash,
             value_kind: Stage2ValueKind::Nil,
+            symbol_table: Vec::new(),
+            string_table: Vec::new(),
+            bytes_table: Vec::new(),
         });
     }
 
@@ -267,6 +567,7 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
                 let pexpr = plan_expr(&expr, &env, &env, &fn_defs, &empty_local_fns, &mut planner)?;
                 let ty = pexpr.ty();
                 let idx = planner.alloc_local(ty)?;
+                record_local_const_ids(&mut planner, idx, &pexpr);
                 fn_defs.remove(&name);
                 env.insert(name.clone(), Local { idx, ty });
                 planned.push(PStmt::Def {
@@ -293,7 +594,13 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
         Ty::I64 => Stage2ValueKind::Int,
         Ty::BoolI32 => Stage2ValueKind::Bool,
         Ty::NilI32 => Stage2ValueKind::Nil,
+        Ty::SymI32 => Stage2ValueKind::Sym,
+        Ty::StrI32 => Stage2ValueKind::Str,
+        Ty::BytesI32 => Stage2ValueKind::Bytes,
     };
+    let symbol_table = planner_symbol_table(&planner)?;
+    let string_table = planner_string_table(&planner)?;
+    let bytes_table = planner_bytes_table(&planner)?;
 
     let locals_decl: Vec<(u32, ValType)> = planner
         .locals
@@ -355,6 +662,9 @@ pub fn stage2_compile_module(forms: &[Term]) -> Result<Stage2CompileArtifact, St
         wasm_hash,
         module_hash,
         value_kind,
+        symbol_table,
+        string_table,
+        bytes_table,
     })
 }
 
@@ -363,8 +673,8 @@ pub fn stage2_validation_report(forms: &[Term]) -> Stage2ValidationReport {
     let module_hash = hash_module(forms);
     let mut errors = Vec::new();
 
-    let (orig_kind, original_term, original_value_hash) = match eval_original_data(forms) {
-        Ok(v) => v,
+    let artifact = match stage2_compile_module(forms) {
+        Ok(a) => a,
         Err(e) => {
             let supported = !matches!(e, Stage2CompileError::Unsupported(_));
             errors.push(e.to_string());
@@ -383,8 +693,8 @@ pub fn stage2_validation_report(forms: &[Term]) -> Stage2ValidationReport {
         }
     };
 
-    let artifact = match stage2_compile_module(forms) {
-        Ok(a) => a,
+    let (orig_kind, original_term, original_value_hash) = match eval_original_data(forms) {
+        Ok(v) => v,
         Err(e) => {
             let supported = !matches!(e, Stage2CompileError::Unsupported(_));
             errors.push(e.to_string());
@@ -393,17 +703,23 @@ pub fn stage2_validation_report(forms: &[Term]) -> Stage2ValidationReport {
                 supported,
                 ok: false,
                 module_hash,
-                wasm_hash: None,
-                value_kind: Some(orig_kind),
-                original_value_hash: Some(original_value_hash),
+                wasm_hash: Some(artifact.wasm_hash),
+                value_kind: None,
+                original_value_hash: None,
                 wasm_value_hash: None,
-                wasm_bytes_len: None,
+                wasm_bytes_len: Some(artifact.wasm_bytes.len()),
                 errors,
             };
         }
     };
 
-    let wasm_term = match eval_wasm_scalar(&artifact.wasm_bytes, artifact.value_kind) {
+    let wasm_term = match eval_wasm_scalar(
+        &artifact.wasm_bytes,
+        artifact.value_kind,
+        &artifact.symbol_table,
+        &artifact.string_table,
+        &artifact.bytes_table,
+    ) {
         Ok(t) => t,
         Err(e) => {
             errors.push(e.to_string());
@@ -468,6 +784,21 @@ fn eval_original_data(
             let h = value_hash(&Value::Data(term.clone()));
             Ok((Stage2ValueKind::Nil, term, h))
         }
+        Value::Data(Term::Symbol(s)) => {
+            let term = Term::Symbol(s);
+            let h = value_hash(&Value::Data(term.clone()));
+            Ok((Stage2ValueKind::Sym, term, h))
+        }
+        Value::Data(Term::Str(s)) => {
+            let term = Term::Str(s);
+            let h = value_hash(&Value::Data(term.clone()));
+            Ok((Stage2ValueKind::Str, term, h))
+        }
+        Value::Data(Term::Bytes(bs)) => {
+            let term = Term::Bytes(bs);
+            let h = value_hash(&Value::Data(term.clone()));
+            Ok((Stage2ValueKind::Bytes, term, h))
+        }
         Value::EffectProgram(_) => Err(Stage2CompileError::Unsupported(
             "effect program produced (stage2 supports pure scalar results only)".to_string(),
         )),
@@ -478,7 +809,13 @@ fn eval_original_data(
     }
 }
 
-fn eval_wasm_scalar(wasm: &[u8], kind: Stage2ValueKind) -> Result<Term, Stage2CompileError> {
+fn eval_wasm_scalar(
+    wasm: &[u8],
+    kind: Stage2ValueKind,
+    symbol_table: &[String],
+    string_table: &[String],
+    bytes_table: &[Vec<u8>],
+) -> Result<Term, Stage2CompileError> {
     let engine = Engine::default();
     let module = WasmiModule::new(&engine, wasm)
         .map_err(|e| Stage2CompileError::Internal(format!("wasmi module decode: {e}")))?;
@@ -495,6 +832,9 @@ fn eval_wasm_scalar(wasm: &[u8], kind: Stage2ValueKind) -> Result<Term, Stage2Co
         Stage2ValueKind::Int => Val::I64(0),
         Stage2ValueKind::Bool => Val::I32(0),
         Stage2ValueKind::Nil => Val::I32(0),
+        Stage2ValueKind::Sym => Val::I32(0),
+        Stage2ValueKind::Str => Val::I32(0),
+        Stage2ValueKind::Bytes => Val::I32(0),
     }];
     func.call(&mut store, &[], &mut results)
         .map_err(|e| Stage2CompileError::Internal(format!("wasmi call eval: {e}")))?;
@@ -503,6 +843,33 @@ fn eval_wasm_scalar(wasm: &[u8], kind: Stage2ValueKind) -> Result<Term, Stage2Co
         (Stage2ValueKind::Int, Val::I64(v)) => Ok(Term::Int(v.into())),
         (Stage2ValueKind::Bool, Val::I32(v)) => Ok(Term::Bool(v != 0)),
         (Stage2ValueKind::Nil, Val::I32(_)) => Ok(Term::Nil),
+        (Stage2ValueKind::Sym, Val::I32(v)) => {
+            let idx = usize::try_from(v).map_err(|_| {
+                Stage2CompileError::Internal("negative symbol id result".to_string())
+            })?;
+            let sym = symbol_table.get(idx).ok_or_else(|| {
+                Stage2CompileError::Internal("symbol id result out of range".to_string())
+            })?;
+            Ok(Term::Symbol(sym.clone()))
+        }
+        (Stage2ValueKind::Str, Val::I32(v)) => {
+            let idx = usize::try_from(v).map_err(|_| {
+                Stage2CompileError::Internal("negative string id result".to_string())
+            })?;
+            let s = string_table.get(idx).ok_or_else(|| {
+                Stage2CompileError::Internal("string id result out of range".to_string())
+            })?;
+            Ok(Term::Str(s.clone()))
+        }
+        (Stage2ValueKind::Bytes, Val::I32(v)) => {
+            let idx = usize::try_from(v).map_err(|_| {
+                Stage2CompileError::Internal("negative bytes id result".to_string())
+            })?;
+            let bs = bytes_table.get(idx).ok_or_else(|| {
+                Stage2CompileError::Internal("bytes id result out of range".to_string())
+            })?;
+            Ok(Term::Bytes(bs.clone().into()))
+        }
         (k, got) => Err(Stage2CompileError::Internal(format!(
             "unexpected wasm result type for {:?}: {:?}",
             k, got
@@ -581,6 +948,7 @@ fn try_plan_defs_only_scalar(
         };
         let ty = pexpr.ty();
         let idx = planner.alloc_local(ty)?;
+        record_local_const_ids(&mut planner, idx, &pexpr);
         fn_defs.remove(name);
         env.insert(name.clone(), Local { idx, ty });
         planned.push(PStmt::Def {
@@ -678,6 +1046,8 @@ fn plan_expr(
             Ok(PExpr::Int(n))
         }
         Term::Bool(b) => Ok(PExpr::Bool(*b)),
+        Term::Str(s) => Ok(PExpr::Str(planner.intern_string(s)?)),
+        Term::Bytes(bs) => Ok(PExpr::Bytes(planner.intern_bytes(bs)?)),
         Term::Symbol(s) => env.get(s).copied().map(PExpr::Local).ok_or_else(|| {
             Stage2CompileError::Unsupported(format!("unknown symbol in stage2: {s}"))
         }),
@@ -711,9 +1081,13 @@ fn plan_list_expr(
         }
         let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
         let cond_ty = cond.ty();
-        if !matches!(cond_ty, Ty::BoolI32 | Ty::NilI32 | Ty::I64) {
+        if !matches!(
+            cond_ty,
+            Ty::BoolI32 | Ty::NilI32 | Ty::I64 | Ty::SymI32 | Ty::StrI32 | Ty::BytesI32
+        ) {
             return Err(Stage2CompileError::Unsupported(
-                "if condition must be scalar (bool, nil, or int)".to_string(),
+                "if condition must be scalar (bool, nil, int, symbol, string, or bytes)"
+                    .to_string(),
             ));
         }
         let then_expr = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
@@ -772,8 +1146,12 @@ fn plan_list_expr(
                 })?;
                 Ok(PExpr::Int(n))
             }
+            Term::Symbol(sym) => Ok(PExpr::Sym(planner.intern_symbol(sym)?)),
+            Term::Str(s) => Ok(PExpr::Str(planner.intern_string(s)?)),
+            Term::Bytes(bs) => Ok(PExpr::Bytes(planner.intern_bytes(bs)?)),
             _ => Err(Stage2CompileError::Unsupported(
-                "quote is stage2-supported only for scalar nil/bool/int".to_string(),
+                "quote is stage2-supported only for scalar nil/bool/int/symbol/string/bytes"
+                    .to_string(),
             )),
         };
     }
@@ -837,6 +1215,7 @@ fn plan_list_expr(
                 planner,
             )?;
             let idx = planner.alloc_local(rhs.ty())?;
+            record_local_const_ids(planner, idx, &rhs);
             env2.insert(name.clone(), Local { idx, ty: rhs.ty() });
             local_fn_defs2.remove(name);
             bindings.push(LetBinding { idx, expr: rhs });
@@ -864,6 +1243,12 @@ fn plan_list_expr(
     {
         let lhs = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
         let rhs = plan_expr(xs[3], env, global_env, fn_defs, local_fn_defs, planner)?;
+        if op == "str/concat" {
+            return lower_str_concat(lhs, rhs, planner);
+        }
+        if op == "bytes/concat" {
+            return lower_bytes_concat(lhs, rhs, planner);
+        }
         let (prim_op, ty) = infer_prim(op, lhs.ty(), rhs.ty())?;
         return Ok(PExpr::Prim {
             op: prim_op,
@@ -872,9 +1257,139 @@ fn plan_list_expr(
             ty,
         });
     }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "list/is-nil?"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_list_is_nil(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "data/tag"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_data_tag(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "sym/to-str"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_sym_to_str(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "sym/from-str"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_sym_from_str(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "str/to-bytes-utf8"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_str_to_utf8(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "bytes/to-str-utf8"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_to_str_utf8(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "bytes/to-hex"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_to_hex(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "bytes/from-hex"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_from_hex(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "int/to-str"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_int_to_str(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "bytes/len"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_len(arg, planner);
+    }
+    if xs.len() == 3
+        && matches!(xs[0], Term::Symbol(s) if s == "prim")
+        && let Term::Symbol(op) = &xs[1]
+        && op == "str/len"
+    {
+        let arg = plan_expr(xs[2], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_str_len(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/str::len") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_str_len(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/int::to-str") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_int_to_str(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/sym::to-str") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_sym_to_str(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/sym::from-str") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_sym_from_str(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/str::to-utf8") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_str_to_utf8(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/str::from-utf8") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_to_str_utf8(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/bytes::to-hex") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_to_hex(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/bytes::from-hex") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_from_hex(arg, planner);
+    }
+    if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/bytes::len") {
+        let arg = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
+        return lower_bytes_len(arg, planner);
+    }
     if let Some((op_sym, lhs_t, rhs_t)) = match_curried_wrapper_call(&xs) {
         let lhs = plan_expr(&lhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
         let rhs = plan_expr(&rhs_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+        if op_sym == "str/concat" {
+            return lower_str_concat(lhs, rhs, planner);
+        }
+        if op_sym == "bytes/concat" {
+            return lower_bytes_concat(lhs, rhs, planner);
+        }
         let (op, ty) = infer_prim(op_sym, lhs.ty(), rhs.ty())?;
         return Ok(PExpr::Prim {
             op,
@@ -891,6 +1406,1190 @@ fn plan_list_expr(
     Err(Stage2CompileError::Unsupported(
         "unsupported expression form in stage2".to_string(),
     ))
+}
+
+fn lower_list_is_nil(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    let arg_ty = arg.ty();
+    let idx = planner.alloc_local(arg_ty)?;
+    // list/is-nil? only returns true for literal nil; all other scalar kinds are false.
+    let is_nil = matches!(arg_ty, Ty::NilI32);
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding { idx, expr: arg }],
+        body: vec![PExpr::Bool(is_nil)],
+        ty: Ty::BoolI32,
+    })
+}
+
+fn lower_data_tag(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    let arg_ty = arg.ty();
+    let idx = planner.alloc_local(arg_ty)?;
+    let tag_sym = match arg_ty {
+        Ty::NilI32 => ":nil",
+        Ty::BoolI32 => ":bool",
+        Ty::I64 => ":int",
+        Ty::SymI32 => ":sym",
+        Ty::StrI32 => ":str",
+        Ty::BytesI32 => ":bytes",
+    };
+    let tag_id = planner.intern_symbol(tag_sym)?;
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding { idx, expr: arg }],
+        body: vec![PExpr::Sym(tag_id)],
+        ty: Ty::SymI32,
+    })
+}
+
+fn planner_string_for_id(planner: &Planner, id: i32) -> Result<String, Stage2CompileError> {
+    for (s, sid) in &planner.string_ids {
+        if *sid == id {
+            return Ok(s.clone());
+        }
+    }
+    Err(Stage2CompileError::Internal(
+        "string id missing from planner table".to_string(),
+    ))
+}
+
+fn planner_symbol_for_id(planner: &Planner, id: i32) -> Result<String, Stage2CompileError> {
+    for (s, sid) in &planner.symbol_ids {
+        if *sid == id {
+            return Ok(s.clone());
+        }
+    }
+    Err(Stage2CompileError::Internal(
+        "symbol id missing from planner table".to_string(),
+    ))
+}
+
+fn planner_bytes_for_id(planner: &Planner, id: i32) -> Result<Vec<u8>, Stage2CompileError> {
+    for (bs, bid) in &planner.bytes_ids {
+        if *bid == id {
+            return Ok(bs.clone());
+        }
+    }
+    Err(Stage2CompileError::Internal(
+        "bytes id missing from planner table".to_string(),
+    ))
+}
+
+fn planner_const_string_id(planner: &Planner, expr: &PExpr) -> Option<i32> {
+    const_string_id_with_map(expr, &planner.local_const_string_ids)
+}
+
+fn planner_const_int_value(planner: &Planner, expr: &PExpr) -> Option<i64> {
+    const_int_value_with_map(expr, &planner.local_const_int_values)
+}
+
+fn planner_const_symbol_id(planner: &Planner, expr: &PExpr) -> Option<i32> {
+    const_symbol_id_with_map(expr, &planner.local_const_symbol_ids)
+}
+
+fn planner_const_bytes_id(planner: &Planner, expr: &PExpr) -> Option<i32> {
+    const_bytes_id_with_map(expr, &planner.local_const_bytes_ids)
+}
+
+fn lower_str_concat(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if lhs.ty() != Ty::StrI32 || rhs.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "str/concat expects string arguments in stage2".to_string(),
+        ));
+    }
+    lower_str_concat_expr(lhs, rhs, planner)
+}
+
+fn lower_bytes_concat(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if lhs.ty() != Ty::BytesI32 || rhs.ty() != Ty::BytesI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/concat expects bytes arguments in stage2".to_string(),
+        ));
+    }
+    lower_bytes_concat_expr(lhs, rhs, planner)
+}
+
+fn lower_str_concat_const_pair(
+    lhs: PExpr,
+    rhs: PExpr,
+    lhs_id: i32,
+    rhs_id: i32,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let mut out = planner_string_for_id(planner, lhs_id)?;
+    out.push_str(&planner_string_for_id(planner, rhs_id)?);
+    let out_id = planner.intern_string(&out)?;
+    let lhs_idx = planner.alloc_local(Ty::StrI32)?;
+    let rhs_idx = planner.alloc_local(Ty::StrI32)?;
+    Ok(PExpr::Let {
+        bindings: vec![
+            LetBinding {
+                idx: lhs_idx,
+                expr: lhs,
+            },
+            LetBinding {
+                idx: rhs_idx,
+                expr: rhs,
+            },
+        ],
+        body: vec![PExpr::Str(out_id)],
+        ty: Ty::StrI32,
+    })
+}
+
+fn lower_bytes_concat_const_pair(
+    lhs: PExpr,
+    rhs: PExpr,
+    lhs_id: i32,
+    rhs_id: i32,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    let lhs_bytes = planner_bytes_for_id(planner, lhs_id)?;
+    let rhs_bytes = planner_bytes_for_id(planner, rhs_id)?;
+    let mut out = Vec::with_capacity(lhs_bytes.len().saturating_add(rhs_bytes.len()));
+    out.extend_from_slice(&lhs_bytes);
+    out.extend_from_slice(&rhs_bytes);
+    let out_id = planner.intern_bytes(&out)?;
+    let lhs_idx = planner.alloc_local(Ty::BytesI32)?;
+    let rhs_idx = planner.alloc_local(Ty::BytesI32)?;
+    Ok(PExpr::Let {
+        bindings: vec![
+            LetBinding {
+                idx: lhs_idx,
+                expr: lhs,
+            },
+            LetBinding {
+                idx: rhs_idx,
+                expr: rhs,
+            },
+        ],
+        body: vec![PExpr::Bytes(out_id)],
+        ty: Ty::BytesI32,
+    })
+}
+
+fn lower_str_concat_expr(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let (Some(lhs_id), Some(rhs_id)) = (
+        planner_const_string_id(planner, &lhs),
+        planner_const_string_id(planner, &rhs),
+    ) {
+        return lower_str_concat_const_pair(lhs, rhs, lhs_id, rhs_id, planner);
+    }
+
+    let lhs = match lhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/concat lhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_str_concat_expr(last, rhs, planner)?;
+            exprs.push(lowered);
+            return Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            });
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/concat lhs let had empty body".to_string())
+            })?;
+            let lowered = lower_str_concat_expr(last, rhs, planner)?;
+            body.push(lowered);
+            return Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            });
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let then_lowered = lower_str_concat_expr(*then_expr, rhs.clone(), planner)?;
+            let else_lowered = lower_str_concat_expr(*else_expr, rhs, planner)?;
+            return Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::StrI32,
+            });
+        }
+        other => other,
+    };
+
+    match rhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/concat rhs begin had no expressions".to_string())
+            })?;
+            let lowered = lower_str_concat_expr(lhs, last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/concat rhs let had empty body".to_string())
+            })?;
+            let lowered = lower_str_concat_expr(lhs, last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let then_lowered = lower_str_concat_expr(lhs.clone(), *then_expr, planner)?;
+            let else_lowered = lower_str_concat_expr(lhs, *else_expr, planner)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "str/concat currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_concat_expr(
+    lhs: PExpr,
+    rhs: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let (Some(lhs_id), Some(rhs_id)) = (
+        planner_const_bytes_id(planner, &lhs),
+        planner_const_bytes_id(planner, &rhs),
+    ) {
+        return lower_bytes_concat_const_pair(lhs, rhs, lhs_id, rhs_id, planner);
+    }
+
+    let lhs = match lhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "bytes/concat lhs begin had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_bytes_concat_expr(last, rhs, planner)?;
+            exprs.push(lowered);
+            return Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::BytesI32,
+            });
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/concat lhs let had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_concat_expr(last, rhs, planner)?;
+            body.push(lowered);
+            return Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::BytesI32,
+            });
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let then_lowered = lower_bytes_concat_expr(*then_expr, rhs.clone(), planner)?;
+            let else_lowered = lower_bytes_concat_expr(*else_expr, rhs, planner)?;
+            return Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::BytesI32,
+            });
+        }
+        other => other,
+    };
+
+    match rhs {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "bytes/concat rhs begin had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_bytes_concat_expr(lhs, last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/concat rhs let had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_concat_expr(lhs, last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let then_lowered = lower_bytes_concat_expr(lhs.clone(), *then_expr, planner)?;
+            let else_lowered = lower_bytes_concat_expr(lhs, *else_expr, planner)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(then_lowered),
+                else_expr: Box::new(else_lowered),
+                cond_ty,
+                ty: Ty::BytesI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/concat currently requires stage2-known byte values".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_len(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::BytesI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/len expects bytes in stage2".to_string(),
+        ));
+    }
+    lower_bytes_len_expr(arg, planner)
+}
+
+fn lower_str_len(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "str/len expects string in stage2".to_string(),
+        ));
+    }
+    lower_str_len_expr(arg, planner)
+}
+
+fn lower_int_to_str(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::I64 {
+        return Err(Stage2CompileError::Unsupported(
+            "int/to-str expects int in stage2".to_string(),
+        ));
+    }
+    lower_int_to_str_expr(arg, planner)
+}
+
+fn lower_sym_to_str(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::SymI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "sym/to-str expects symbol in stage2".to_string(),
+        ));
+    }
+    lower_sym_to_str_expr(arg, planner)
+}
+
+fn lower_sym_from_str(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "sym/from-str expects string in stage2".to_string(),
+        ));
+    }
+    lower_sym_from_str_expr(arg, planner)
+}
+
+fn lower_str_to_utf8(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "str/to-bytes-utf8 expects string in stage2".to_string(),
+        ));
+    }
+    lower_str_to_utf8_expr(arg, planner)
+}
+
+fn lower_bytes_to_str_utf8(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::BytesI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/to-str-utf8 expects bytes in stage2".to_string(),
+        ));
+    }
+    lower_bytes_to_str_utf8_expr(arg, planner)
+}
+
+fn lower_bytes_to_hex(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::BytesI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/to-hex expects bytes in stage2".to_string(),
+        ));
+    }
+    lower_bytes_to_hex_expr(arg, planner)
+}
+
+fn lower_bytes_from_hex(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if arg.ty() != Ty::StrI32 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/from-hex expects string in stage2".to_string(),
+        ));
+    }
+    lower_bytes_from_hex_expr(arg, planner)
+}
+
+fn string_len_i64_for_id(planner: &Planner, id: i32) -> Result<i64, Stage2CompileError> {
+    let len = planner_string_for_id(planner, id)?.len();
+    i64::try_from(len).map_err(|_| {
+        Stage2CompileError::Unsupported("str/len result out of i64 range in stage2".to_string())
+    })
+}
+
+fn bytes_len_i64_for_id(planner: &Planner, id: i32) -> Result<i64, Stage2CompileError> {
+    let len = planner_bytes_for_id(planner, id)?.len();
+    i64::try_from(len).map_err(|_| {
+        Stage2CompileError::Unsupported("bytes/len result out of i64 range in stage2".to_string())
+    })
+}
+
+fn lower_str_len_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_string_id(planner, &arg) {
+        let n = string_len_i64_for_id(planner, id)?;
+        let idx = planner.alloc_local(Ty::StrI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Int(n)],
+            ty: Ty::I64,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/len begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_str_len_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin { exprs, ty: Ty::I64 })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/len let arg had empty body".to_string())
+            })?;
+            let lowered = lower_str_len_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::I64,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let Some(then_id) = planner_const_string_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "str/len currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_string_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "str/len currently requires stage2-known string values".to_string(),
+                ));
+            };
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Int(string_len_i64_for_id(planner, then_id)?)),
+                else_expr: Box::new(PExpr::Int(string_len_i64_for_id(planner, else_id)?)),
+                cond_ty,
+                ty: Ty::I64,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "str/len currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_len_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_bytes_id(planner, &arg) {
+        let n = bytes_len_i64_for_id(planner, id)?;
+        let idx = planner.alloc_local(Ty::BytesI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Int(n)],
+            ty: Ty::I64,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/len begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_bytes_len_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin { exprs, ty: Ty::I64 })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/len let arg had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_len_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::I64,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let Some(then_id) = planner_const_bytes_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/len currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_bytes_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/len currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Int(bytes_len_i64_for_id(planner, then_id)?)),
+                else_expr: Box::new(PExpr::Int(bytes_len_i64_for_id(planner, else_id)?)),
+                cond_ty,
+                ty: Ty::I64,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/len currently requires stage2-known byte values".to_string(),
+        )),
+    }
+}
+
+fn lower_int_to_str_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(n) = planner_const_int_value(planner, &arg) {
+        let out_id = planner.intern_string(&n.to_string())?;
+        let idx = planner.alloc_local(Ty::I64)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("int/to-str begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_int_to_str_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("int/to-str let arg had empty body".to_string())
+            })?;
+            let lowered = lower_int_to_str_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::I64,
+        } => {
+            let Some(then_n) = planner_const_int_value(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "int/to-str currently requires stage2-known int values".to_string(),
+                ));
+            };
+            let Some(else_n) = planner_const_int_value(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "int/to-str currently requires stage2-known int values".to_string(),
+                ));
+            };
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(planner.intern_string(&then_n.to_string())?)),
+                else_expr: Box::new(PExpr::Str(planner.intern_string(&else_n.to_string())?)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "int/to-str currently requires stage2-known int values".to_string(),
+        )),
+    }
+}
+
+fn lower_sym_to_str_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_symbol_id(planner, &arg) {
+        let out_id = planner.intern_string(&planner_symbol_for_id(planner, id)?)?;
+        let idx = planner.alloc_local(Ty::SymI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("sym/to-str begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_sym_to_str_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("sym/to-str let arg had empty body".to_string())
+            })?;
+            let lowered = lower_sym_to_str_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::SymI32,
+        } => {
+            let Some(then_id) = planner_const_symbol_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "sym/to-str currently requires stage2-known symbol values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_symbol_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "sym/to-str currently requires stage2-known symbol values".to_string(),
+                ));
+            };
+            let then_out = planner.intern_string(&planner_symbol_for_id(planner, then_id)?)?;
+            let else_out = planner.intern_string(&planner_symbol_for_id(planner, else_id)?)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(then_out)),
+                else_expr: Box::new(PExpr::Str(else_out)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "sym/to-str currently requires stage2-known symbol values".to_string(),
+        )),
+    }
+}
+
+fn lower_sym_from_str_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_string_id(planner, &arg) {
+        let out_id = planner.intern_symbol(&planner_string_for_id(planner, id)?)?;
+        let idx = planner.alloc_local(Ty::StrI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Sym(out_id)],
+            ty: Ty::SymI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "sym/from-str begin arg had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_sym_from_str_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::SymI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("sym/from-str let arg had empty body".to_string())
+            })?;
+            let lowered = lower_sym_from_str_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::SymI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let Some(then_id) = planner_const_string_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "sym/from-str currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_string_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "sym/from-str currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let then_out = planner.intern_symbol(&planner_string_for_id(planner, then_id)?)?;
+            let else_out = planner.intern_symbol(&planner_string_for_id(planner, else_id)?)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Sym(then_out)),
+                else_expr: Box::new(PExpr::Sym(else_out)),
+                cond_ty,
+                ty: Ty::SymI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "sym/from-str currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn lower_str_to_utf8_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_string_id(planner, &arg) {
+        let out_id = planner.intern_bytes(planner_string_for_id(planner, id)?.as_bytes())?;
+        let idx = planner.alloc_local(Ty::StrI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Bytes(out_id)],
+            ty: Ty::BytesI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "str/to-bytes-utf8 begin arg had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_str_to_utf8_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("str/to-bytes-utf8 let arg had empty body".to_string())
+            })?;
+            let lowered = lower_str_to_utf8_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let Some(then_id) = planner_const_string_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "str/to-bytes-utf8 currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_string_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "str/to-bytes-utf8 currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let then_out =
+                planner.intern_bytes(planner_string_for_id(planner, then_id)?.as_bytes())?;
+            let else_out =
+                planner.intern_bytes(planner_string_for_id(planner, else_id)?.as_bytes())?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Bytes(then_out)),
+                else_expr: Box::new(PExpr::Bytes(else_out)),
+                cond_ty,
+                ty: Ty::BytesI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "str/to-bytes-utf8 currently requires stage2-known string values".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_to_str_utf8_expr(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_bytes_id(planner, &arg) {
+        let bs = planner_bytes_for_id(planner, id)?;
+        let decoded = String::from_utf8(bs).map_err(|_| {
+            Stage2CompileError::Unsupported(
+                "bytes/to-str-utf8 currently requires valid UTF-8 byte values".to_string(),
+            )
+        })?;
+        let out_id = planner.intern_string(&decoded)?;
+        let idx = planner.alloc_local(Ty::BytesI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal(
+                    "bytes/to-str-utf8 begin arg had no expressions".to_string(),
+                )
+            })?;
+            let lowered = lower_bytes_to_str_utf8_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/to-str-utf8 let arg had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_to_str_utf8_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let Some(then_id) = planner_const_bytes_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/to-str-utf8 currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_bytes_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/to-str-utf8 currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let then_decoded =
+                String::from_utf8(planner_bytes_for_id(planner, then_id)?).map_err(|_| {
+                    Stage2CompileError::Unsupported(
+                        "bytes/to-str-utf8 currently requires valid UTF-8 byte values".to_string(),
+                    )
+                })?;
+            let else_decoded =
+                String::from_utf8(planner_bytes_for_id(planner, else_id)?).map_err(|_| {
+                    Stage2CompileError::Unsupported(
+                        "bytes/to-str-utf8 currently requires valid UTF-8 byte values".to_string(),
+                    )
+                })?;
+            let then_out = planner.intern_string(&then_decoded)?;
+            let else_out = planner.intern_string(&else_decoded)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(then_out)),
+                else_expr: Box::new(PExpr::Str(else_out)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/to-str-utf8 currently requires stage2-known byte values".to_string(),
+        )),
+    }
+}
+
+fn decode_hex_bytes(s: &str) -> Result<Vec<u8>, Stage2CompileError> {
+    if s.len() % 2 != 0 {
+        return Err(Stage2CompileError::Unsupported(
+            "bytes/from-hex currently requires even-length hex strings".to_string(),
+        ));
+    }
+    let mut out = Vec::with_capacity(s.len() / 2);
+    let bytes = s.as_bytes();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        let hi = bytes[i];
+        let lo = bytes[i + 1];
+        let h = match hi {
+            b'0'..=b'9' => hi - b'0',
+            b'a'..=b'f' => hi - b'a' + 10,
+            b'A'..=b'F' => hi - b'A' + 10,
+            _ => {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/from-hex currently requires valid hex strings".to_string(),
+                ));
+            }
+        };
+        let l = match lo {
+            b'0'..=b'9' => lo - b'0',
+            b'a'..=b'f' => lo - b'a' + 10,
+            b'A'..=b'F' => lo - b'A' + 10,
+            _ => {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/from-hex currently requires valid hex strings".to_string(),
+                ));
+            }
+        };
+        out.push((h << 4) | l);
+        i += 2;
+    }
+    Ok(out)
+}
+
+fn lower_bytes_to_hex_expr(arg: PExpr, planner: &mut Planner) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_bytes_id(planner, &arg) {
+        let bs = planner_bytes_for_id(planner, id)?;
+        let mut out = String::with_capacity(bs.len() * 2);
+        for b in &bs {
+            use std::fmt::Write;
+            write!(&mut out, "{:02x}", b).map_err(|_| {
+                Stage2CompileError::Internal("failed to format hex string".to_string())
+            })?;
+        }
+        let out_id = planner.intern_string(&out)?;
+        let idx = planner.alloc_local(Ty::BytesI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Str(out_id)],
+            ty: Ty::StrI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/to-hex begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_bytes_to_hex_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/to-hex let arg had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_to_hex_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::StrI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::BytesI32,
+        } => {
+            let Some(then_id) = planner_const_bytes_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/to-hex currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_bytes_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/to-hex currently requires stage2-known byte values".to_string(),
+                ));
+            };
+            let then_bs = planner_bytes_for_id(planner, then_id)?;
+            let else_bs = planner_bytes_for_id(planner, else_id)?;
+            let mut then_hex = String::with_capacity(then_bs.len() * 2);
+            for b in &then_bs {
+                use std::fmt::Write;
+                write!(&mut then_hex, "{:02x}", b).map_err(|_| {
+                    Stage2CompileError::Internal("failed to format hex string".to_string())
+                })?;
+            }
+            let mut else_hex = String::with_capacity(else_bs.len() * 2);
+            for b in &else_bs {
+                use std::fmt::Write;
+                write!(&mut else_hex, "{:02x}", b).map_err(|_| {
+                    Stage2CompileError::Internal("failed to format hex string".to_string())
+                })?;
+            }
+            let then_out = planner.intern_string(&then_hex)?;
+            let else_out = planner.intern_string(&else_hex)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Str(then_out)),
+                else_expr: Box::new(PExpr::Str(else_out)),
+                cond_ty,
+                ty: Ty::StrI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/to-hex currently requires stage2-known byte values".to_string(),
+        )),
+    }
+}
+
+fn lower_bytes_from_hex_expr(
+    arg: PExpr,
+    planner: &mut Planner,
+) -> Result<PExpr, Stage2CompileError> {
+    if let Some(id) = planner_const_string_id(planner, &arg) {
+        let s = planner_string_for_id(planner, id)?;
+        let out_id = planner.intern_bytes(&decode_hex_bytes(&s)?)?;
+        let idx = planner.alloc_local(Ty::StrI32)?;
+        return Ok(PExpr::Let {
+            bindings: vec![LetBinding { idx, expr: arg }],
+            body: vec![PExpr::Bytes(out_id)],
+            ty: Ty::BytesI32,
+        });
+    }
+    match arg {
+        PExpr::Begin { mut exprs, .. } => {
+            let last = exprs.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/from-hex begin arg had no expressions".to_string())
+            })?;
+            let lowered = lower_bytes_from_hex_expr(last, planner)?;
+            exprs.push(lowered);
+            Ok(PExpr::Begin {
+                exprs,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::Let {
+            bindings, mut body, ..
+        } => {
+            let last = body.pop().ok_or_else(|| {
+                Stage2CompileError::Internal("bytes/from-hex let arg had empty body".to_string())
+            })?;
+            let lowered = lower_bytes_from_hex_expr(last, planner)?;
+            body.push(lowered);
+            Ok(PExpr::Let {
+                bindings,
+                body,
+                ty: Ty::BytesI32,
+            })
+        }
+        PExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            cond_ty,
+            ty: Ty::StrI32,
+        } => {
+            let Some(then_id) = planner_const_string_id(planner, &then_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/from-hex currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let Some(else_id) = planner_const_string_id(planner, &else_expr) else {
+                return Err(Stage2CompileError::Unsupported(
+                    "bytes/from-hex currently requires stage2-known string values".to_string(),
+                ));
+            };
+            let then_s = planner_string_for_id(planner, then_id)?;
+            let else_s = planner_string_for_id(planner, else_id)?;
+            let then_out = planner.intern_bytes(&decode_hex_bytes(&then_s)?)?;
+            let else_out = planner.intern_bytes(&decode_hex_bytes(&else_s)?)?;
+            Ok(PExpr::If {
+                cond,
+                then_expr: Box::new(PExpr::Bytes(then_out)),
+                else_expr: Box::new(PExpr::Bytes(else_out)),
+                cond_ty,
+                ty: Ty::BytesI32,
+            })
+        }
+        _ => Err(Stage2CompileError::Unsupported(
+            "bytes/from-hex currently requires stage2-known string values".to_string(),
+        )),
+    }
 }
 
 fn try_plan_application_chain(
@@ -937,6 +2636,7 @@ fn try_plan_application_chain(
             }
         };
         let idx = planner.alloc_local(arg_expr.ty())?;
+        record_local_const_ids(planner, idx, &arg_expr);
         let mut call_env = callable.base_env.clone();
         call_env.insert(
             callable.param.clone(),
@@ -1082,6 +2782,155 @@ fn resolve_global_inlinable_symbol(
 }
 
 fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
+    if sym == "core/data::tag" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("data/tag".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/sym::eq?" {
+        let body = Term::list(vec![
+            Term::Symbol("fn".to_string()),
+            Term::list(vec![Term::Symbol("b".to_string())]),
+            Term::list(vec![
+                Term::Symbol("prim".to_string()),
+                Term::Symbol("sym/eq?".to_string()),
+                Term::Symbol("a".to_string()),
+                Term::Symbol("b".to_string()),
+            ]),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/sym::to-str" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("sym/to-str".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/sym::from-str" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("sym/from-str".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/str::to-utf8" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("str/to-bytes-utf8".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/str::from-utf8" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("bytes/to-str-utf8".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/bytes::to-hex" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("bytes/to-hex".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/bytes::from-hex" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("bytes/from-hex".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/list::is-nil?" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("list/is-nil?".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/bytes::len" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("bytes/len".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/str::len" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("str/len".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
+    if sym == "core/int::to-str" {
+        let body = Term::list(vec![
+            Term::Symbol("prim".to_string()),
+            Term::Symbol("int/to-str".to_string()),
+            Term::Symbol("a".to_string()),
+        ]);
+        return Some(InlinableFnDef {
+            param: "a".to_string(),
+            body,
+            capture: FnCapture::GlobalFrame,
+        });
+    }
     let prim = match sym {
         "core/int::add" => "int/add",
         "core/int::sub" => "int/sub",
@@ -1089,6 +2938,8 @@ fn builtin_inlinable_fn(sym: &str) -> Option<InlinableFnDef> {
         "core/int::eq?" => "int/eq?",
         "core/int::lt?" => "int/lt?",
         "core/eq?" => "core/eq?",
+        "core/str::concat" => "str/concat",
+        "core/bytes::concat" => "bytes/concat",
         _ => return None,
     };
     let body = Term::list(vec![
@@ -1186,12 +3037,23 @@ fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2CompileError
                 )))
             }
         }
+        "sym/eq?" => {
+            if a == Ty::SymI32 && b == Ty::SymI32 {
+                Ok((PrimOp::EqI32, Ty::BoolI32))
+            } else {
+                Err(Stage2CompileError::Unsupported(
+                    "sym/eq? expects symbol arguments in stage2".to_string(),
+                ))
+            }
+        }
         "core/eq?" => {
             match (a, b) {
                 (Ty::I64, Ty::I64) => Ok((PrimOp::EqI64, Ty::BoolI32)),
-                (Ty::BoolI32, Ty::BoolI32) | (Ty::NilI32, Ty::NilI32) => {
-                    Ok((PrimOp::EqI32, Ty::BoolI32))
-                }
+                (Ty::BoolI32, Ty::BoolI32)
+                | (Ty::NilI32, Ty::NilI32)
+                | (Ty::SymI32, Ty::SymI32)
+                | (Ty::StrI32, Ty::StrI32)
+                | (Ty::BytesI32, Ty::BytesI32) => Ok((PrimOp::EqI32, Ty::BoolI32)),
                 // Kernel structural equality across mixed scalar kinds is always false,
                 // while still evaluating both operands first.
                 _ => Ok((PrimOp::EqAlwaysFalse, Ty::BoolI32)),
@@ -1219,6 +3081,8 @@ fn match_curried_wrapper_call(xs: &[&Term]) -> Option<(&'static str, Term, Term)
             "core/int::eq?" => "int/eq?",
             "core/int::lt?" => "int/lt?",
             "core/eq?" => "core/eq?",
+            "core/str::concat" => "str/concat",
+            "core/bytes::concat" => "bytes/concat",
             _ => return None,
         },
         _ => return None,
@@ -1239,6 +3103,18 @@ fn emit_expr(f: &mut Function, expr: &PExpr) -> Result<Ty, Stage2CompileError> {
         PExpr::Bool(b) => {
             f.instruction(&Instruction::I32Const(if *b { 1 } else { 0 }));
             Ok(Ty::BoolI32)
+        }
+        PExpr::Sym(id) => {
+            f.instruction(&Instruction::I32Const(*id));
+            Ok(Ty::SymI32)
+        }
+        PExpr::Str(id) => {
+            f.instruction(&Instruction::I32Const(*id));
+            Ok(Ty::StrI32)
+        }
+        PExpr::Bytes(id) => {
+            f.instruction(&Instruction::I32Const(*id));
+            Ok(Ty::BytesI32)
         }
         PExpr::Local(local) => {
             f.instruction(&Instruction::LocalGet(local.idx));
@@ -1265,6 +3141,9 @@ fn emit_expr(f: &mut Function, expr: &PExpr) -> Result<Ty, Stage2CompileError> {
                 (PrimOp::EqI64, Ty::I64, Ty::I64) => (Instruction::I64Eq, Ty::BoolI32),
                 (PrimOp::EqI32, Ty::BoolI32, Ty::BoolI32) => (Instruction::I32Eq, Ty::BoolI32),
                 (PrimOp::EqI32, Ty::NilI32, Ty::NilI32) => (Instruction::I32Eq, Ty::BoolI32),
+                (PrimOp::EqI32, Ty::SymI32, Ty::SymI32) => (Instruction::I32Eq, Ty::BoolI32),
+                (PrimOp::EqI32, Ty::StrI32, Ty::StrI32) => (Instruction::I32Eq, Ty::BoolI32),
+                (PrimOp::EqI32, Ty::BytesI32, Ty::BytesI32) => (Instruction::I32Eq, Ty::BoolI32),
                 (PrimOp::Lt, Ty::I64, Ty::I64) => (Instruction::I64LtS, Ty::BoolI32),
                 _ => {
                     return Err(Stage2CompileError::Internal(
@@ -1302,6 +3181,18 @@ fn emit_expr(f: &mut Function, expr: &PExpr) -> Result<Ty, Stage2CompileError> {
                     f.instruction(&Instruction::I32Const(0));
                 }
                 Ty::I64 => {
+                    f.instruction(&Instruction::Drop);
+                    f.instruction(&Instruction::I32Const(1));
+                }
+                Ty::SymI32 => {
+                    f.instruction(&Instruction::Drop);
+                    f.instruction(&Instruction::I32Const(1));
+                }
+                Ty::StrI32 => {
+                    f.instruction(&Instruction::Drop);
+                    f.instruction(&Instruction::I32Const(1));
+                }
+                Ty::BytesI32 => {
                     f.instruction(&Instruction::Drop);
                     f.instruction(&Instruction::I32Const(1));
                 }
@@ -1388,6 +3279,9 @@ fn val_ty(t: Ty) -> ValType {
         Ty::I64 => ValType::I64,
         Ty::BoolI32 => ValType::I32,
         Ty::NilI32 => ValType::I32,
+        Ty::SymI32 => ValType::I32,
+        Ty::StrI32 => ValType::I32,
+        Ty::BytesI32 => ValType::I32,
     }
 }
 
@@ -1494,6 +3388,36 @@ mod tests {
         let src = r#"
           (if nil
             7
+            9)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_if_truthiness_for_symbol_condition() {
+        let src = r#"
+          (if (quote :feature/on)
+            7
+            9)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_if_truthiness_for_string_and_bytes_condition() {
+        let src = r#"
+          (if "x"
+            (if b"\x01"
+              7
+              8)
             9)
         "#;
         let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
@@ -1706,6 +3630,12 @@ mod tests {
         let r = stage2_validation_report(&forms);
         assert!(!r.supported, "{r:?}");
         assert!(!r.ok, "{r:?}");
+        assert!(
+            r.errors
+                .iter()
+                .any(|e| e.contains("recursive function call is unsupported in stage2")),
+            "{r:?}"
+        );
     }
 
     #[test]
@@ -1803,6 +3733,599 @@ mod tests {
         assert!(r.supported, "{r:?}");
         assert!(r.ok, "{r:?}");
         assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_list_is_nil_prim_for_nil_and_non_nil_scalars() {
+        let src = r#"
+          (def a (prim list/is-nil? nil))
+          (def b (prim list/is-nil? false))
+          (if a
+            (if b 0 1)
+            2)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+    }
+
+    #[test]
+    fn stage2_validates_core_list_is_nil_wrapper_call() {
+        let src = r#"
+          (core/list::is-nil? nil)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_quote_symbol_via_core_eq() {
+        let src = r#"
+          (prim core/eq? (quote :k) (quote :k))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_quote_string_and_bytes_literals() {
+        let src = r#"
+          (if (prim core/eq? (quote "alpha") "alpha")
+            (prim core/eq? (quote b"\xAA\xBB") b"\xAA\xBB")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_concat_and_len_prims_on_literals() {
+        let src = r#"
+          (def s (prim str/concat "hello, " "world"))
+          (if (prim core/eq? s "hello, world")
+            (prim int/eq? (prim str/len "hello, world") 12)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_bytes_concat_and_len_prims_on_literals() {
+        let src = r#"
+          (def b (prim bytes/concat b"\x01\x02" b"\x03"))
+          (if (prim core/eq? b b"\x01\x02\x03")
+            (prim int/eq? (prim bytes/len b"\x01\x02\x03") 3)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_str_and_bytes_wrapper_calls_on_literals() {
+        let src = r#"
+          (def s ((core/str::concat "a") "b"))
+          (def b ((core/bytes::concat b"\xAA") b"\xBB"))
+          (if (prim core/eq? s "ab")
+            (if (prim core/eq? b b"\xAA\xBB")
+              (if (prim int/eq? (core/str::len "abc") 3)
+                (prim int/eq? (core/bytes::len b"\x10\x20\x30") 3)
+                false)
+              false)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_wrappers_on_def_bound_constant_values() {
+        let src = r#"
+          (def s ((core/str::concat "ab") "c"))
+          (def b ((core/bytes::concat b"\x01") b"\x02\x03"))
+          (if (prim int/eq? (core/str::len s) 3)
+            (prim int/eq? (core/bytes::len b) 3)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_wrappers_on_let_bound_constant_values() {
+        let src = r#"
+          (let ((s ((core/str::concat "hel") "lo"))
+                (b ((core/bytes::concat b"\xAA") b"\xBB")))
+            (if (prim int/eq? (core/str::len s) 5)
+              (prim int/eq? (core/bytes::len b) 2)
+              false))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_wrappers_on_bound_constant_values() {
+        let src = r#"
+          (def a "hello")
+          (def b ", world")
+          (def x b"\x01")
+          (def y b"\x02\x03")
+          (def s ((core/str::concat a) b))
+          (def bs ((core/bytes::concat x) y))
+          (if (prim core/eq? s "hello, world")
+            (prim core/eq? bs b"\x01\x02\x03")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_wrappers_on_if_stable_constant_values() {
+        let src = r#"
+          (def s (if true "abc" "abc"))
+          (def b (if true b"\x10\x20" b"\x10\x20"))
+          (if (prim int/eq? (core/str::len s) 3)
+            (prim int/eq? (core/bytes::len b) 2)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_prims_on_if_variant_constant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq? (prim str/len (if cond "abc" "abcd")) 3)
+            (prim int/eq? (prim bytes/len (if cond b"\x10\x20" b"\x10\x20\x30")) 2)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_wrappers_on_if_variant_constant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq? (core/str::len (if cond "abc" "abcd")) 3)
+            (prim int/eq? (core/bytes::len (if cond b"\x10\x20" b"\x10\x20\x30")) 2)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_len_wrappers_on_nested_let_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim int/eq?
+                (core/str::len
+                  (let ((x 1))
+                    (if cond "abc" "abcd")))
+                3)
+            (prim int/eq?
+              (core/bytes::len
+                (let ((x 1))
+                  (if cond b"\x10\x20" b"\x10\x20\x30")))
+              2)
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_int_to_str_prim_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim int/to-str 42) "42")
+            (prim core/eq? (prim int/to-str -7) "-7")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_int_to_str_wrapper_on_bound_constant_values() {
+        let src = r#"
+          (def n (prim int/add 40 2))
+          (let ((m (prim int/sub n 10)))
+            (if (prim core/eq? (core/int::to-str n) "42")
+              (prim core/eq? (core/int::to-str m) "32")
+              false))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_int_to_str_wrapper_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/int::to-str
+                  (let ((x 1))
+                    (if cond 42 420)))
+                "42")
+            (prim core/eq? (core/int::to-str (if cond -7 -70)) "-7")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_sym_string_conversion_prims_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim sym/to-str (quote :alpha/ns::k)) ":alpha/ns::k")
+            (prim sym/eq? (prim sym/from-str ":alpha/ns::k") (quote :alpha/ns::k))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_sym_string_wrapper_conversion_on_bound_constant_values() {
+        let src = r#"
+          (def s (core/sym::to-str (quote :alpha/ns::k)))
+          (def k (core/sym::from-str s))
+          (if ((core/sym::eq? k) (quote :alpha/ns::k))
+            (prim core/eq? s ":alpha/ns::k")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_sym_string_wrapper_conversion_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/sym::to-str
+                  (let ((x 1))
+                    (if cond (quote :alpha) (quote :beta))))
+                ":alpha")
+            ((core/sym::eq?
+               (core/sym::from-str
+                 (if cond ":alpha" ":beta")))
+             (quote :alpha))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_utf8_conversion_prims_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim bytes/to-str-utf8 (prim str/to-bytes-utf8 "alpha")) "alpha")
+            (prim core/eq? (prim str/to-bytes-utf8 (prim bytes/to-str-utf8 b"\xCE\xB1")) b"\xCE\xB1")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_utf8_wrapper_conversion_on_bound_constant_values() {
+        let src = r#"
+          (def b (core/str::to-utf8 "hello"))
+          (def s (core/str::from-utf8 b))
+          (if (prim core/eq? s "hello")
+            (prim core/eq? b b"hello")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_utf8_wrapper_conversion_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/str::from-utf8
+                  (let ((x 1))
+                    (if cond b"alpha" b"beta")))
+                "alpha")
+            (prim core/eq?
+              (core/str::to-utf8
+                (if cond "alpha" "beta"))
+              b"alpha")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_hex_conversion_prims_on_literals() {
+        let src = r#"
+          (if (prim core/eq? (prim bytes/to-hex b"\x00\xff") "00ff")
+            (prim core/eq? (prim bytes/from-hex "00ff") b"\x00\xff")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_hex_wrapper_conversion_on_bound_constant_values() {
+        let src = r#"
+          (def hx (core/bytes::to-hex b"\xAA\xBB"))
+          (def bs (core/bytes::from-hex hx))
+          (if (prim core/eq? hx "aabb")
+            (prim core/eq? bs b"\xAA\xBB")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_hex_wrapper_conversion_on_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                (core/bytes::to-hex
+                  (let ((x 1))
+                    (if cond b"\xAA\xBB" b"\xCC\xDD")))
+                "aabb")
+            (prim core/eq?
+              (core/bytes::from-hex
+                (if cond "aabb" "ccdd"))
+              b"\xAA\xBB")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_prims_on_if_variant_constant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq? (prim str/concat (if cond "ab" "abc") "!") "ab!")
+            (prim core/eq? (prim bytes/concat (if cond b"\x01" b"\x01\x02") b"\xFF") b"\x01\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_wrappers_on_if_variant_constant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq? ((core/str::concat (if cond "ab" "abc")) "!") "ab!")
+            (prim core/eq? ((core/bytes::concat (if cond b"\x01" b"\x01\x02")) b"\xFF") b"\x01\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_wrappers_on_nested_let_if_variant_values() {
+        let src = r#"
+          (def cond (prim int/lt? 0 1))
+          (if (prim core/eq?
+                ((core/str::concat
+                   (let ((x 1))
+                     (if cond "ab" "abc")))
+                 (begin 0 "!"))
+                "ab!")
+            (prim core/eq?
+              ((core/bytes::concat
+                 (let ((x 1))
+                   (if cond b"\x01" b"\x01\x02")))
+               (begin 0 b"\xFF"))
+              b"\x01\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_prims_on_both_sides_if_variant_constants() {
+        let src = r#"
+          (def lhs-cond (prim int/lt? 0 1))
+          (def rhs-cond (prim int/lt? 1 2))
+          (if (prim core/eq?
+                (prim str/concat
+                  (if lhs-cond "ab" "abc")
+                  (if rhs-cond "!" "!!"))
+                "ab!")
+            (prim core/eq?
+              (prim bytes/concat
+                (if lhs-cond b"\x01" b"\x01\x02")
+                (if rhs-cond b"\xFF" b"\xFE"))
+              b"\x01\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_concat_wrappers_on_both_sides_if_variant_constants() {
+        let src = r#"
+          (def lhs-cond (prim int/lt? 0 1))
+          (def rhs-cond (prim int/lt? 1 2))
+          (if (prim core/eq?
+                ((core/str::concat (if lhs-cond "ab" "abc"))
+                 (if rhs-cond "!" "!!"))
+                "ab!")
+            (prim core/eq?
+              ((core/bytes::concat (if lhs-cond b"\x01" b"\x01\x02"))
+               (if rhs-cond b"\xFF" b"\xFE"))
+              b"\x01\xFF")
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_symbol_top_level_result() {
+        let src = r#"
+          (quote :hello/world::flag)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Sym));
+    }
+
+    #[test]
+    fn stage2_validates_sym_eq_prim_and_wrapper_with_data_tag() {
+        let src = r#"
+          (def t (prim data/tag 7))
+          (def a (prim sym/eq? t (quote :int)))
+          ((core/sym::eq? (core/data::tag nil)) (quote :nil))
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_data_tag_for_string_and_bytes() {
+        let src = r#"
+          (def a ((core/sym::eq? (core/data::tag "s")) (quote :str)))
+          (if a
+            ((core/sym::eq? (core/data::tag b"\x00")) (quote :bytes))
+            false)
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let r = stage2_validation_report(&forms);
+        assert!(r.supported, "{r:?}");
+        assert!(r.ok, "{r:?}");
+        assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+    }
+
+    #[test]
+    fn stage2_validates_string_and_bytes_top_level_results() {
+        let src_str = r#"
+          "hello/world"
+        "#;
+        let forms_str = canonicalize_module(parse_module(src_str).unwrap()).unwrap();
+        let r_str = stage2_validation_report(&forms_str);
+        assert!(r_str.supported, "{r_str:?}");
+        assert!(r_str.ok, "{r_str:?}");
+        assert_eq!(r_str.value_kind, Some(Stage2ValueKind::Str));
+
+        let src_bytes = r#"
+          b"\x10\x20"
+        "#;
+        let forms_bytes = canonicalize_module(parse_module(src_bytes).unwrap()).unwrap();
+        let r_bytes = stage2_validation_report(&forms_bytes);
+        assert!(r_bytes.supported, "{r_bytes:?}");
+        assert!(r_bytes.ok, "{r_bytes:?}");
+        assert_eq!(r_bytes.value_kind, Some(Stage2ValueKind::Bytes));
     }
 
     #[test]
