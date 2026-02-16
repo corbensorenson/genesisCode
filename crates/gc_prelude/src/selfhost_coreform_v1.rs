@@ -1,8 +1,8 @@
 use anyhow::Context;
 use once_cell::sync::Lazy;
 
-use gc_coreform::{Term, canonicalize_module, parse_module};
-use gc_kernel::{Env, EvalCtx, eval_module};
+use gc_coreform::{canonicalize_module, parse_module};
+use gc_kernel::{CompiledModule, Env, EvalCtx, compile_module, eval_compiled_module};
 
 const PARSE_SRC: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -25,9 +25,9 @@ const TOOL_SRC: &str = include_str!(concat!(
     "/../../selfhost/tool_coreform_v1.gc"
 ));
 
-type SelfhostModuleForms = Vec<(&'static str, Vec<Term>)>;
+type SelfhostCompiledModules = Vec<(&'static str, CompiledModule)>;
 
-static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostModuleForms, String>> = Lazy::new(|| {
+static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Lazy::new(|| {
     let mut out = Vec::new();
     for (name, src) in [
         ("selfhost/parse.gc", PARSE_SRC),
@@ -38,7 +38,8 @@ static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostModuleForms, String>> = Lazy::n
     ] {
         let forms = parse_module(src).map_err(|e| format!("{name}: parse: {e}"))?;
         let forms = canonicalize_module(forms).map_err(|e| format!("{name}: canon: {e}"))?;
-        out.push((name, forms));
+        let compiled = compile_module(&forms).map_err(|e| format!("{name}: compile: {e}"))?;
+        out.push((name, compiled));
     }
     Ok(out)
 });
@@ -58,8 +59,8 @@ pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> 
     ctx.step_limit = None;
     ctx.mem_limits = gc_kernel::MemLimits::default();
 
-    for (name, forms) in mods {
-        eval_module(ctx, env, forms).with_context(|| format!("eval {name}"))?;
+    for (name, module) in mods {
+        eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
     }
 
     ctx.step_limit = saved_step_limit;

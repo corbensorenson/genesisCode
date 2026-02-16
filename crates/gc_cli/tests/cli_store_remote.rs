@@ -79,4 +79,3 @@ fn store_get_and_has_can_read_through_to_remote_registry() {
     let local_bytes = fs::read(local).unwrap();
     assert_eq!(hash_bytes_hex(&local_bytes), hex);
 }
-

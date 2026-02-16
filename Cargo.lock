@@ -620,6 +620,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gc_gfx"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "gc_coreform",
+]
+
+[[package]]
 name = "gc_kernel"
 version = "0.1.0"
 dependencies = [

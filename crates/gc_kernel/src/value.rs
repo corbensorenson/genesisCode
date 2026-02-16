@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use blake3::Hasher;
 
@@ -11,14 +12,46 @@ use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SealId(pub u64);
 
+/// Opaque compiled expression handle.
+///
+/// This is intentionally not constructible by user code; it exists so the runtime can carry
+/// compiled closures without exposing the compiler IR as part of the public API.
+#[derive(Clone, Debug)]
+pub struct CompiledExpr(Arc<crate::compiled::CExpr>);
+
+impl CompiledExpr {
+    pub(crate) fn new(e: Arc<crate::compiled::CExpr>) -> Self {
+        Self(e)
+    }
+
+    pub(crate) fn inner(&self) -> &Arc<crate::compiled::CExpr> {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Value {
     Data(Term),
     Vector(Vec<Value>),
     Map(BTreeMap<TermOrdKey, Value>),
-    Closure { param: String, body: Term, env: Env },
+    Closure {
+        param: String,
+        body: Term,
+        env: Env,
+    },
+    /// A compiled closure stores its original `body` term (for stable hashing/logging) and a
+    /// compiled expression for faster evaluation.
+    CompiledClosure {
+        param: String,
+        body: Term,
+        body_c: CompiledExpr,
+        env: Env,
+    },
     SealToken(SealId),
-    Sealed { token: SealId, payload: Box<Value> },
+    Sealed {
+        token: SealId,
+        payload: Box<Value>,
+    },
     NativeFn(NativeFn),
     Contract(Rc<Contract>),
     EffectProgram(Box<EffectProgram>),
@@ -123,6 +156,15 @@ impl Apply for Value {
                 let env2 = Env::with_binding(&env, param, arg);
                 crate::eval::eval_term(ctx, &env2, &body)
             }
+            Value::CompiledClosure {
+                param,
+                body: _,
+                body_c,
+                env,
+            } => {
+                let env2 = Env::with_binding(&env, param, arg);
+                crate::compiled::eval_cexpr(ctx, &env2, body_c.inner())
+            }
             Value::NativeFn(f) => f.apply(ctx, arg),
             _ => Err(KernelError::new(
                 KernelErrorKind::NotCallable,
@@ -180,6 +222,19 @@ impl ValueHasher {
                 }
             }
             Value::Closure { param, body, env } => {
+                h.update(b"closure\0");
+                h.update(param.as_bytes());
+                h.update(b"\0");
+                h.update(&hash_term(body));
+                let he = self.hash_env(env);
+                h.update(&he);
+            }
+            Value::CompiledClosure {
+                param,
+                body,
+                body_c: _,
+                env,
+            } => {
                 h.update(b"closure\0");
                 h.update(param.as_bytes());
                 h.update(b"\0");
@@ -330,6 +385,9 @@ impl Value {
                 inner
             }
             Value::Closure { param, body, .. } => {
+                format!("(closure {} {})", param, print_term(body))
+            }
+            Value::CompiledClosure { param, body, .. } => {
                 format!("(closure {} {})", param, print_term(body))
             }
             Value::SealToken(SealId(id)) => format!("#<seal-token {}>", id),

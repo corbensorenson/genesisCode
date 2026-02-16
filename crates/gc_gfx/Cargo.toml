@@ -1,0 +1,9 @@
+[package]
+name = "gc_gfx"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+blake3.workspace = true
+gc_coreform = { path = "../gc_coreform" }

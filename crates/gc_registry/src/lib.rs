@@ -240,7 +240,9 @@ impl RegistryClient {
             let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
             let got = blake3::hash(&bytes).to_hex().to_string();
             if got != hash {
-                return Err(RegistryError::Protocol("store/get: hash mismatch".to_string()));
+                return Err(RegistryError::Protocol(
+                    "store/get: hash mismatch".to_string(),
+                ));
             }
             return Ok(bytes);
         }
@@ -285,7 +287,9 @@ impl RegistryClient {
             let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
             let got = blake3::hash(&bytes).to_hex().to_string();
             if got != hash {
-                return Err(RegistryError::Protocol("store/get: hash mismatch".to_string()));
+                return Err(RegistryError::Protocol(
+                    "store/get: hash mismatch".to_string(),
+                ));
             }
             return Ok(Some(bytes));
         }
@@ -324,7 +328,9 @@ impl RegistryClient {
             file_ensure_dirs(root)?;
             let got = blake3::hash(bytes).to_hex().to_string();
             if got != hash {
-                return Err(RegistryError::Protocol("store/put: hash mismatch".to_string()));
+                return Err(RegistryError::Protocol(
+                    "store/put: hash mismatch".to_string(),
+                ));
             }
             let p = file_store_path(root, hash);
             if p.exists() {
@@ -497,9 +503,9 @@ impl RegistryClient {
     fn http(&self) -> &Client {
         match &self.kind {
             RegistryKind::Http { http } => http,
-            RegistryKind::InProc { .. } | RegistryKind::File { .. } => unreachable!(
-                "http client requested for non-http registry"
-            ),
+            RegistryKind::InProc { .. } | RegistryKind::File { .. } => {
+                unreachable!("http client requested for non-http registry")
+            }
         }
     }
 }
@@ -516,7 +522,11 @@ pub fn normalize_remote_base(remote: &str) -> Result<Url, RegistryError> {
     } else {
         Url::parse(t).map_err(|e| RegistryError::RemoteSpec(format!("bad url: {e}")))?
     };
-    if u.scheme() != "https" && u.scheme() != "http" && u.scheme() != "inproc" && u.scheme() != "file" {
+    if u.scheme() != "https"
+        && u.scheme() != "http"
+        && u.scheme() != "inproc"
+        && u.scheme() != "file"
+    {
         return Err(RegistryError::RemoteSpec(format!(
             "unsupported scheme {}",
             u.scheme()
@@ -559,8 +569,7 @@ fn file_ensure_dirs(root: &Path) -> Result<(), RegistryError> {
 
 fn file_atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
+        std::fs::create_dir_all(parent).map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
     }
     let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
     let mut f = OpenOptions::new()
@@ -589,8 +598,7 @@ fn file_atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {
 fn file_refs_lock(root: &Path) -> Result<std::fs::File, RegistryError> {
     let p = file_refs_lock_path(root);
     if let Some(parent) = p.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
+        std::fs::create_dir_all(parent).map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
     }
     let f = OpenOptions::new()
         .read(true)
@@ -617,7 +625,9 @@ fn file_load_refs_locked(root: &Path) -> Result<BTreeMap<String, String>, Regist
     };
     let v = m.get(&TermOrdKey(Term::symbol(":v")));
     if !matches!(v, Some(Term::Int(i)) if i == &1.into()) {
-        return Err(RegistryError::Protocol("refs db: wrong or missing :v".to_string()));
+        return Err(RegistryError::Protocol(
+            "refs db: wrong or missing :v".to_string(),
+        ));
     }
     let kind = m.get(&TermOrdKey(Term::symbol(":kind")));
     if !matches!(kind, Some(Term::Str(s)) if s == "genesis/refs-db-v0.1") {
@@ -626,7 +636,9 @@ fn file_load_refs_locked(root: &Path) -> Result<BTreeMap<String, String>, Regist
         ));
     }
     let Some(Term::Map(refs)) = m.get(&TermOrdKey(Term::symbol(":refs"))) else {
-        return Err(RegistryError::Protocol("refs db: missing :refs map".to_string()));
+        return Err(RegistryError::Protocol(
+            "refs db: missing :refs map".to_string(),
+        ));
     };
     let mut out = BTreeMap::new();
     for (k, v) in refs {
@@ -670,12 +682,19 @@ fn file_write_refs_locked(
     file_atomic_write(&file_refs_path(root), s.as_bytes())
 }
 
-fn file_gate_refs_set(root: &Path, name: &str, commit_h: &str, policy_h: &str) -> Result<(), RegistryError> {
+fn file_gate_refs_set(
+    root: &Path,
+    name: &str,
+    commit_h: &str,
+    policy_h: &str,
+) -> Result<(), RegistryError> {
     // Resolve policy term from remote store.
     let pol_bytes = std::fs::read(file_store_path(root, policy_h))
         .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
     if blake3::hash(&pol_bytes).to_hex().to_string() != policy_h {
-        return Err(RegistryError::Protocol("refs/set: policy corruption".to_string()));
+        return Err(RegistryError::Protocol(
+            "refs/set: policy corruption".to_string(),
+        ));
     }
     let pol_s = String::from_utf8(pol_bytes)
         .map_err(|_| RegistryError::Protocol("refs/set: policy not utf8".to_string()))?;
@@ -686,12 +705,16 @@ fn file_gate_refs_set(root: &Path, name: &str, commit_h: &str, policy_h: &str) -
     if pol.is_frozen_ref(name) {
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
-    let class = pol.class_for_ref(name).ok_or_else(|| RegistryError::Http("refs/set: status 403".to_string()))?;
+    let class = pol
+        .class_for_ref(name)
+        .ok_or_else(|| RegistryError::Http("refs/set: status 403".to_string()))?;
 
     let commit_bytes = std::fs::read(file_store_path(root, commit_h))
         .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
     if blake3::hash(&commit_bytes).to_hex().to_string() != commit_h {
-        return Err(RegistryError::Protocol("refs/set: commit corruption".to_string()));
+        return Err(RegistryError::Protocol(
+            "refs/set: commit corruption".to_string(),
+        ));
     }
     let commit_s = String::from_utf8(commit_bytes)
         .map_err(|_| RegistryError::Protocol("refs/set: commit not utf8".to_string()))?;
@@ -706,7 +729,9 @@ fn file_gate_refs_set(root: &Path, name: &str, commit_h: &str, policy_h: &str) -
     {
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
-    if !file_store_path(root, &commit.patch).exists() || !file_store_path(root, &commit.result).exists() {
+    if !file_store_path(root, &commit.patch).exists()
+        || !file_store_path(root, &commit.result).exists()
+    {
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
 
@@ -722,7 +747,9 @@ fn file_gate_refs_set(root: &Path, name: &str, commit_h: &str, policy_h: &str) -
         let ev_bytes = std::fs::read(file_store_path(root, ev_h))
             .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
         if blake3::hash(&ev_bytes).to_hex().to_string() != *ev_h {
-            return Err(RegistryError::Protocol("refs/set: evidence corruption".to_string()));
+            return Err(RegistryError::Protocol(
+                "refs/set: evidence corruption".to_string(),
+            ));
         }
         let ev_s = String::from_utf8(ev_bytes)
             .map_err(|_| RegistryError::Protocol("refs/set: evidence not utf8".to_string()))?;
@@ -733,26 +760,34 @@ fn file_gate_refs_set(root: &Path, name: &str, commit_h: &str, policy_h: &str) -
     }
 
     if class.require_signatures {
-        let signing_h = gc_vcs::commit_signing_hash(&commit_term)
-            .map_err(|e| RegistryError::Protocol(format!("refs/set: bad commit signing hash: {e}")))?;
+        let signing_h = gc_vcs::commit_signing_hash(&commit_term).map_err(|e| {
+            RegistryError::Protocol(format!("refs/set: bad commit signing hash: {e}"))
+        })?;
         let mut valid: u64 = 0;
         let mut seen_pks: std::collections::BTreeSet<Vec<u8>> = std::collections::BTreeSet::new();
         for at_h in &commit.attestations {
             let at_bytes = std::fs::read(file_store_path(root, at_h))
                 .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
             if blake3::hash(&at_bytes).to_hex().to_string() != *at_h {
-                return Err(RegistryError::Protocol("refs/set: attestation corruption".to_string()));
+                return Err(RegistryError::Protocol(
+                    "refs/set: attestation corruption".to_string(),
+                ));
             }
-            let at_s = String::from_utf8(at_bytes)
-                .map_err(|_| RegistryError::Protocol("refs/set: attestation not utf8".to_string()))?;
-            let at_t = gc_coreform::parse_term(&at_s)
-                .map_err(|e| RegistryError::Protocol(format!("refs/set: bad attestation term: {e}")))?;
-            let att = gc_vcs::Attestation::from_term(&at_t)
-                .map_err(|e| RegistryError::Protocol(format!("refs/set: bad attestation schema: {e}")))?;
+            let at_s = String::from_utf8(at_bytes).map_err(|_| {
+                RegistryError::Protocol("refs/set: attestation not utf8".to_string())
+            })?;
+            let at_t = gc_coreform::parse_term(&at_s).map_err(|e| {
+                RegistryError::Protocol(format!("refs/set: bad attestation term: {e}"))
+            })?;
+            let att = gc_vcs::Attestation::from_term(&at_t).map_err(|e| {
+                RegistryError::Protocol(format!("refs/set: bad attestation schema: {e}"))
+            })?;
             if !seen_pks.insert(att.pk.to_vec()) {
                 continue;
             }
-            if gc_vcs::verify_commit_attestation(&att, &signing_h, &class.allowed_public_keys).is_ok() {
+            if gc_vcs::verify_commit_attestation(&att, &signing_h, &class.allowed_public_keys)
+                .is_ok()
+            {
                 valid = valid.saturating_add(1);
             }
         }

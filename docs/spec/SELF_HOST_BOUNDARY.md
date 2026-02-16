@@ -99,6 +99,21 @@ Execution model:
 - Host (Rust/WASM) provides I/O via effects.
 - Tool commands are pure functions from inputs to outputs + effect requests.
 
+### Phase 3.5: Compiled Evaluator Path (toolchain throughput)
+
+To keep selfhost tooling practical under deterministic step budgets, the kernel provides:
+- `compile_module` (CoreForm terms -> compiled expression graph)
+- `eval_compiled_module` / `eval_module_compiled`
+
+Design constraints:
+- No semantic changes vs tree-walking evaluator.
+- Same protocol/error behavior (`UNHANDLED` / `EFFECT` / `ERROR`).
+- Value hashing/logging remain stable (compiled closures hash like regular closures by source body + env).
+
+Current usage:
+- Prelude bootstrap runs through the compiled evaluator.
+- Selfhost toolchain bootstrap modules (`selfhost/{parse,canon,printer,hash,tool_coreform_v1}.gc`) run through the compiled evaluator.
+
 ### Phase 4: Obligation-Guarded Cutover
 
 Once selfhost tools exist:

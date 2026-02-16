@@ -56,28 +56,41 @@ fn selfhost_canon_collapses_singleton_list_forms() {
     };
 
     let forms2_tag = m
-        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":forms2-tag")))
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":forms2-tag",
+        )))
         .cloned()
         .unwrap_or(Value::Data(gc_coreform::Term::Nil));
     let canon2_tag = m
-        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":canon2-tag")))
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":canon2-tag",
+        )))
         .cloned()
         .unwrap_or(Value::Data(gc_coreform::Term::Nil));
     let canon2 = m
-        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":canon2")))
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":canon2",
+        )))
         .cloned()
         .unwrap_or(Value::Data(gc_coreform::Term::Nil));
 
     let Value::Data(gc_coreform::Term::Symbol(ft)) = forms2_tag else {
-        panic!("expected :forms2-tag symbol, got {}", forms2_tag.debug_repr());
+        panic!(
+            "expected :forms2-tag symbol, got {}",
+            forms2_tag.debug_repr()
+        );
     };
     assert_eq!(ft, ":pair", "expected forms2 to be a list form");
 
     let Value::Data(gc_coreform::Term::Symbol(ct)) = canon2_tag else {
-        panic!("expected :canon2-tag symbol, got {}", canon2_tag.debug_repr());
+        panic!(
+            "expected :canon2-tag symbol, got {}",
+            canon2_tag.debug_repr()
+        );
     };
     assert_eq!(
-        ct, ":sym",
+        ct,
+        ":sym",
         "expected canon2 to collapse to a symbol; canon2 = {}",
         canon2.debug_repr()
     );

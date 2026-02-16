@@ -137,8 +137,10 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - Rust produces the self-host toolchain artifact
   - then runtime uses the self-host toolchain under obligations
   - Rust becomes optional tooling only
-- [ ] Make self-hosted tooling fast/practical under the kernel step limit:
-  - add a compiled execution path (bytecode or WASM) for toolchain-grade workloads
+- [x] Make self-hosted tooling fast/practical under the kernel step limit:
+  - add a compiled execution path (bytecode-like in-kernel compiled evaluator) for toolchain-grade workloads
+  - `gc_kernel::{compile_module, eval_compiled_module, eval_module_compiled}`
+  - prelude + selfhost toolchain bootstrap now execute via compiled evaluator
   - [x] treat toolchain bootstrap as trusted init:
     - prelude + selfhost toolchain evaluation run without step/memory limits
     - user budgets start after init (`EvalCtx::reset_counters`)
@@ -163,13 +165,18 @@ Constraints:
 - runs on WASM (browser first), with a host bridge providing GPU/window/input as capabilities
 - state-of-the-art performance (GPU-first, explicit resource lifetime, predictable allocations)
 
-- [ ] Define the graphics host capability surface (effects) and policies:
+- [x] Define the graphics host capability surface (effects) and policies:
+  - Draft spec in `docs/spec/GFX_CAPS.md`
   - `gfx/gpu::*` (WebGPU-backed): instance/device/queue, buffers, textures, samplers, shaders, pipelines, bind groups, command encoding, present
   - `gfx/window::*` (browser canvas + later native shell): create/surface resize, pixel ratio
   - `gfx/input::*` (events): pointer/keyboard/gamepad
   - `gfx/time::*` (frame time) as an effect input (no ambient time in kernel)
   - `gfx/audio::*` (optional, later)
   - determinism: input/time must be loggable and replayable; rendering is an effect-only sink
+- [x] Introduce deterministic graphics data foundations in Rust (`crates/gc_gfx`):
+  - frame graph + render/compute command schemas
+  - 2D/3D scene graph + PBR material schema
+  - canonical CoreForm term projection + stable hashes (`frame_graph_hash`, `scene_hash`)
 - [ ] Specify core data model + architecture for the Level 2 graphics library:
   - scene graph +/or ECS (define which is canonical, and how they interop)
   - render graph / frame graph with explicit passes
@@ -192,6 +199,8 @@ Constraints:
 Goal: a GUI code editor written exclusively in GenesisCode, designed for GenesisGraph + GenesisPkg workflows,
 and plugin/agent-friendly from day 1.
 
+- [x] Define editor architecture + host capability requirements (draft):
+  - `docs/spec/EDITOR_ARCH.md`
 - [ ] Define editor host capabilities (effects) needed beyond graphics:
   - filesystem (workspace access), store/refs/sync, clipboard, OS dialogs
   - optional: language server–like background tasks (still effect-logged)

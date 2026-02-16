@@ -150,7 +150,7 @@ impl EvalCtx {
             || self.mem_limits.max_string_len.is_some()
     }
 
-    fn mem_observe_data_term(&mut self, t: &Term) -> Result<(), KernelError> {
+    pub(crate) fn mem_observe_data_term(&mut self, t: &Term) -> Result<(), KernelError> {
         if !self.mem_enabled() {
             return Ok(());
         }
@@ -205,7 +205,7 @@ impl EvalCtx {
         self.coverage.as_ref().map(|c| &c.hits)
     }
 
-    fn coverage_hit(&mut self, sym: &str) {
+    pub(crate) fn coverage_hit(&mut self, sym: &str) {
         let Some(c) = &mut self.coverage else { return };
         if !c.tracked.contains(sym) {
             return;
@@ -252,7 +252,7 @@ impl EvalCtx {
         Ok(())
     }
 
-    fn mem_observe_vec_len(&mut self, len: usize) -> Result<(), KernelError> {
+    pub(crate) fn mem_observe_vec_len(&mut self, len: usize) -> Result<(), KernelError> {
         Self::mem_observe_max(
             "vec-len",
             &mut self.mem_state.max_vec_len,
@@ -261,7 +261,7 @@ impl EvalCtx {
         )
     }
 
-    fn mem_observe_map_len(&mut self, len: usize) -> Result<(), KernelError> {
+    pub(crate) fn mem_observe_map_len(&mut self, len: usize) -> Result<(), KernelError> {
         Self::mem_observe_max(
             "map-len",
             &mut self.mem_state.max_map_len,
@@ -270,7 +270,7 @@ impl EvalCtx {
         )
     }
 
-    fn mem_observe_bytes_len(&mut self, len: usize) -> Result<(), KernelError> {
+    pub(crate) fn mem_observe_bytes_len(&mut self, len: usize) -> Result<(), KernelError> {
         Self::mem_observe_max(
             "bytes-len",
             &mut self.mem_state.max_bytes_len,
@@ -279,7 +279,7 @@ impl EvalCtx {
         )
     }
 
-    fn mem_observe_string_len(&mut self, len: usize) -> Result<(), KernelError> {
+    pub(crate) fn mem_observe_string_len(&mut self, len: usize) -> Result<(), KernelError> {
         Self::mem_observe_max(
             "string-len",
             &mut self.mem_state.max_string_len,
@@ -505,7 +505,11 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
     // Tail-call optimize the final apply when it is a closure call.
     let last_arg = eval_term(ctx, env, items[items.len() - 1])?;
     match acc {
-        Value::Closure { param, body, env: fenv } => Ok(EvalOutcome::Tail {
+        Value::Closure {
+            param,
+            body,
+            env: fenv,
+        } => Ok(EvalOutcome::Tail {
             env: Env::with_binding(&fenv, param, last_arg),
             term: body,
         }),
@@ -513,7 +517,11 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
     }
 }
 
-fn eval_let_tco(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<EvalOutcome, KernelError> {
+fn eval_let_tco(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    items: Vec<&Term>,
+) -> Result<EvalOutcome, KernelError> {
     if items.len() < 3 {
         return Err(KernelError::new(
             KernelErrorKind::BadForm,
@@ -564,7 +572,10 @@ fn eval_let_tco(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<EvalO
         Term::list(xs)
     };
 
-    Ok(EvalOutcome::Tail { env: env2, term: body_term })
+    Ok(EvalOutcome::Tail {
+        env: env2,
+        term: body_term,
+    })
 }
 
 fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
@@ -725,7 +736,7 @@ fn eval_prim(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, K
     prim(ctx, op, args)
 }
 
-fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelError> {
     match op {
         "int/add" => prim_int_bin(ctx, &args, |a, b| a + b),
         "int/sub" => prim_int_bin(ctx, &args, |a, b| a - b),
@@ -1347,7 +1358,9 @@ fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Value, KernelEr
             let mut buf = [0u8; 4];
             let s = ch.encode_utf8(&mut buf);
             ctx.mem_observe_bytes_len(s.len())?;
-            Ok(Value::Data(Term::Bytes(Bytes::copy_from_slice(s.as_bytes()))))
+            Ok(Value::Data(Term::Bytes(Bytes::copy_from_slice(
+                s.as_bytes(),
+            ))))
         }
         "crypto/blake3" => {
             if args.len() != 1 {
@@ -1453,7 +1466,7 @@ where
     Ok(Value::Data(Term::Bool(f(a.clone(), b.clone()))))
 }
 
-fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
+pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
     if let Some(p) = ctx.protocol {
         let mut m = BTreeMap::new();
         m.insert(

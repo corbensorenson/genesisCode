@@ -1,7 +1,7 @@
 use gc_coreform::{Term, parse_module};
 use num_bigint::BigInt;
 
-use crate::{Env, EvalCtx, KernelErrorKind, MemLimits, Value, eval_module};
+use crate::{Env, EvalCtx, KernelErrorKind, MemLimits, Value, eval_module, eval_module_compiled};
 
 #[test]
 fn seal_unseal_roundtrip() {
@@ -107,6 +107,46 @@ fn application_sugar_left_associates() {
         let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
         assert_eq!(v.as_data(), Some(&Term::Int(BigInt::from(3))));
     }
+}
+
+#[test]
+fn compiled_eval_matches_treewalk_eval_on_pure_programs() {
+    let src = r#"
+      (def add3 (fn (a b c) (prim int/add a (prim int/add b c))))
+      (def pickx (fn (m) (prim map/get m (quote :x))))
+      (add3 10 (pickx {:x 20 :v [1 2 3]}) ((fn (z) z) 30))
+    "#;
+    let forms = parse_module(src).unwrap();
+
+    let mut ctx_tree = EvalCtx::new();
+    let mut env_tree = Env::empty();
+    let v_tree = eval_module(&mut ctx_tree, &mut env_tree, &forms).unwrap();
+
+    let mut ctx_comp = EvalCtx::new();
+    let mut env_comp = Env::empty();
+    let v_comp = eval_module_compiled(&mut ctx_comp, &mut env_comp, &forms).unwrap();
+
+    assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
+}
+
+#[test]
+fn compiled_eval_matches_treewalk_eval_with_closure_calls() {
+    let src = r#"
+      (def mkadder (fn (a) (fn (b) (prim int/add a b))))
+      (def f (mkadder 7))
+      (f 9)
+    "#;
+    let forms = parse_module(src).unwrap();
+
+    let mut ctx_tree = EvalCtx::new();
+    let mut env_tree = Env::empty();
+    let v_tree = eval_module(&mut ctx_tree, &mut env_tree, &forms).unwrap();
+
+    let mut ctx_comp = EvalCtx::new();
+    let mut env_comp = Env::empty();
+    let v_comp = eval_module_compiled(&mut ctx_comp, &mut env_comp, &forms).unwrap();
+
+    assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
 }
 
 #[test]

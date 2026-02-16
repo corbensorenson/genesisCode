@@ -269,7 +269,8 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
         const PRELUDE_SRC: &str = include_str!("../../../prelude/prelude.gc");
         let forms = parse_module(PRELUDE_SRC).expect("embedded prelude must parse");
         let forms = canonicalize_module(forms).expect("embedded prelude must canonicalize");
-        let _ = gc_kernel::eval_module(ctx, &mut env, &forms).expect("embedded prelude must eval");
+        let _ = gc_kernel::eval_module_compiled(ctx, &mut env, &forms)
+            .expect("embedded prelude must eval");
 
         ctx.step_limit = saved_step_limit;
         ctx.mem_limits = saved_mem_limits;
@@ -734,7 +735,10 @@ fn nf_unerror(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError>
 
 fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let handler = args[0].clone();
-    if !matches!(handler, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !matches!(
+        handler,
+        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+    ) {
         return Ok(mk_error(ctx, "contract handler must be callable"));
     }
     let proto = match &args[1] {
@@ -775,7 +779,10 @@ fn nf_contract_extend(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Kern
         let Term::Symbol(op) = &k.0 else {
             return Ok(mk_error(ctx, "override map keys must be symbols"));
         };
-        if !matches!(v, Value::Closure { .. } | Value::NativeFn(_)) {
+        if !matches!(
+            v,
+            Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+        ) {
             return Ok(mk_error(ctx, format!("override for {op} must be callable")));
         }
         overrides.insert(op.clone(), v.clone());
@@ -1030,7 +1037,10 @@ fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Kerne
     };
     let payload = value_to_data_term(&args[1])?;
     let k = args[2].clone();
-    if !matches!(k, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !matches!(
+        k,
+        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+    ) {
         return Ok(mk_error(ctx, "effect continuation must be callable"));
     }
     let req = Value::EffectRequest(EffectRequest {
@@ -1099,7 +1109,10 @@ fn bind_impl(ctx: &mut EvalCtx, program: Value, f: Value) -> Result<Value, Kerne
 
 fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let f = args[1].clone();
-    if !matches!(f, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !matches!(
+        f,
+        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+    ) {
         return Ok(mk_error(ctx, "bind function must be callable"));
     }
     bind_impl(ctx, args[0].clone(), f)

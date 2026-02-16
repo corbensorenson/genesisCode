@@ -130,12 +130,15 @@ impl gc_registry::InProcRegistry for MemRegistry {
         let pol_bytes = g.store.get(req.policy).ok_or_else(|| {
             gc_registry::RegistryError::Protocol("refs/set: policy not found".to_string())
         })?;
-        let pol_s = String::from_utf8(pol_bytes.clone())
-            .map_err(|_| gc_registry::RegistryError::Protocol("refs/set: bad policy utf8".to_string()))?;
-        let pol_term = parse_term(&pol_s)
-            .map_err(|e| gc_registry::RegistryError::Protocol(format!("refs/set: bad policy term: {e}")))?;
-        let pol = gc_vcs::Policy::from_term(&pol_term)
-            .map_err(|e| gc_registry::RegistryError::Protocol(format!("refs/set: bad policy schema: {e}")))?;
+        let pol_s = String::from_utf8(pol_bytes.clone()).map_err(|_| {
+            gc_registry::RegistryError::Protocol("refs/set: bad policy utf8".to_string())
+        })?;
+        let pol_term = parse_term(&pol_s).map_err(|e| {
+            gc_registry::RegistryError::Protocol(format!("refs/set: bad policy term: {e}"))
+        })?;
+        let pol = gc_vcs::Policy::from_term(&pol_term).map_err(|e| {
+            gc_registry::RegistryError::Protocol(format!("refs/set: bad policy schema: {e}"))
+        })?;
 
         if pol.is_frozen_ref(req.name) {
             return Err(gc_registry::RegistryError::Protocol(
@@ -149,8 +152,9 @@ impl gc_registry::InProcRegistry for MemRegistry {
         let commit_bytes = g.store.get(req.hash).ok_or_else(|| {
             gc_registry::RegistryError::Protocol("refs/set: commit not found".to_string())
         })?;
-        let commit_s = String::from_utf8(commit_bytes.clone())
-            .map_err(|_| gc_registry::RegistryError::Protocol("refs/set: bad commit utf8".to_string()))?;
+        let commit_s = String::from_utf8(commit_bytes.clone()).map_err(|_| {
+            gc_registry::RegistryError::Protocol("refs/set: bad commit utf8".to_string())
+        })?;
         let commit_term = parse_term(&commit_s).map_err(|e| {
             gc_registry::RegistryError::Protocol(format!("refs/set: bad commit term: {e}"))
         })?;
@@ -210,7 +214,9 @@ impl gc_registry::InProcRegistry for MemRegistry {
         if let Some(exp) = req.expected_old
             && cur.as_deref() != Some(exp)
         {
-            return Err(gc_registry::RegistryError::Http("refs/set: status 409".to_string()));
+            return Err(gc_registry::RegistryError::Http(
+                "refs/set: status 409".to_string(),
+            ));
         }
         g.refs.insert(req.name.to_string(), req.hash.to_string());
 
@@ -322,10 +328,16 @@ fn mk_patch_with_value(value_hex: &str) -> Term {
 fn mk_snapshot(module_hex: &str, module_h: [u8; 32]) -> Term {
     Term::Map(
         [
-            (TermOrdKey(Term::symbol(":type")), Term::symbol(":vcs/snapshot")),
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":vcs/snapshot"),
+            ),
             (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
             (TermOrdKey(Term::symbol(":kind")), Term::symbol(":package")),
-            (TermOrdKey(Term::symbol(":pkg/name")), Term::Str("my-lib".to_string())),
+            (
+                TermOrdKey(Term::symbol(":pkg/name")),
+                Term::Str("my-lib".to_string()),
+            ),
             (
                 TermOrdKey(Term::symbol(":pkg/version")),
                 Term::Str("0.1.0".to_string()),
@@ -334,8 +346,14 @@ fn mk_snapshot(module_hex: &str, module_h: [u8; 32]) -> Term {
                 TermOrdKey(Term::symbol(":modules")),
                 Term::Vector(vec![Term::Map(
                     [
-                        (TermOrdKey(Term::symbol(":path")), Term::Str("m.gc".to_string())),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(module_hex.to_string())),
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str("m.gc".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(module_hex.to_string()),
+                        ),
                         (
                             TermOrdKey(Term::symbol(":module-h")),
                             Term::Bytes(module_h.to_vec().into()),
@@ -375,12 +393,18 @@ fn mk_commit(result_hex: &str, patch_hex: &str, evidence_hex: &str) -> Term {
 }
 
 fn is_sealed_error(ctx: &EvalCtx, v: &Value, code: &str) -> bool {
-    let Some(proto) = ctx.protocol else { return false };
-    let Value::Sealed { token, payload } = v else { return false };
+    let Some(proto) = ctx.protocol else {
+        return false;
+    };
+    let Value::Sealed { token, payload } = v else {
+        return false;
+    };
     if *token != proto.error {
         return false;
     }
-    let Value::Data(Term::Map(m)) = payload.as_ref() else { return false };
+    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+        return false;
+    };
     matches!(
         m.get(&TermOrdKey(Term::symbol(":error/code"))),
         Some(Term::Str(s)) if s == code
@@ -431,7 +455,9 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         .unwrap();
 
     let patch_t = mk_patch_with_value(&extra_patch_hex);
-    let patch_hex = local_store.put_bytes(print_term(&patch_t).as_bytes()).unwrap();
+    let patch_hex = local_store
+        .put_bytes(print_term(&patch_t).as_bytes())
+        .unwrap();
 
     let evidence_t = mk_evidence_with_data(&extra_data_hex);
     let evidence_hex = local_store
@@ -439,7 +465,9 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         .unwrap();
 
     let snap_t = mk_snapshot(&module_hex, module_h);
-    let snap_hex = local_store.put_bytes(print_term(&snap_t).as_bytes()).unwrap();
+    let snap_hex = local_store
+        .put_bytes(print_term(&snap_t).as_bytes())
+        .unwrap();
 
     let commit_t = mk_commit(&snap_hex, &patch_hex, &evidence_hex);
     let commit_hex = local_store
@@ -530,7 +558,10 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
         store2.verify_hex(h).unwrap();
     }
     let refs2 = gc_effects::RefsDb::open(&refs_path2).unwrap();
-    assert_eq!(refs2.get("refs/heads/main").unwrap(), Some(commit_hex.clone()));
+    assert_eq!(
+        refs2.get("refs/heads/main").unwrap(),
+        Some(commit_hex.clone())
+    );
 
     // Replay the pull run for determinism.
     let log_term = r2.log.to_term();
@@ -563,7 +594,8 @@ fn sync_pull_ref_conflict_requires_force() {
     let commit_hex = reg.put_artifact(print_term(&commit_t).as_bytes());
     {
         let mut g = reg.st.lock().unwrap();
-        g.refs.insert("refs/heads/main".to_string(), commit_hex.clone());
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
     }
 
     // Local store/refs already have a different main head.
@@ -572,7 +604,8 @@ fn sync_pull_ref_conflict_requires_force() {
     let refs_path = td.path().join("refs.gc");
     let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
     let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
-    refs.set("refs/heads/main", Some(&"0".repeat(64)), None).unwrap();
+    refs.set("refs/heads/main", Some(&"0".repeat(64)), None)
+        .unwrap();
 
     let pull_payload = parse_term(&format!(
         r#"{{
@@ -614,7 +647,10 @@ fn sync_pull_ref_conflict_requires_force() {
         "gc_effects-test".to_string(),
     )
     .unwrap();
-    assert!(!matches!(r2.value, Value::Sealed { .. }), "force pull failed");
+    assert!(
+        !matches!(r2.value, Value::Sealed { .. }),
+        "force pull failed"
+    );
     assert_eq!(refs.get("refs/heads/main").unwrap(), Some(commit_hex));
 }
 
