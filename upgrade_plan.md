@@ -571,7 +571,21 @@ and plugin/agent-friendly from day 1.
       - coverage:
         - `crates/gc_prelude/tests/prelude_editor_vcs.rs`
         - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
-    - [ ] add `blame` / `why` panel flows once runtime `core/vcs::blame` + `core/vcs::why` capability ops are available
+    - [x] add `blame` / `why` panel flows with runtime capability support:
+      - runtime capabilities implemented in `gc_effects`:
+        - `core/vcs::blame` (symbol attribution to introducing commit)
+        - `core/vcs::why` (commit rationale + evidence context)
+      - CLI support added:
+        - `genesis vcs blame --snapshot <hash> --sym <qualified-symbol> [--path ...]`
+        - `genesis vcs why --snapshot <hash> --sym <qualified-symbol> [--op ...]`
+      - Prelude/editor wiring:
+        - `core/vcs::{blame,why}` wrappers
+        - `core/editor/vcs::{blame-panel-from-response,why-panel-from-response}`
+        - `core/editor/action::{vcs-blame-panel,vcs-blame-panel-with-path,vcs-why-panel,vcs-why-panel-with-op}`
+      - coverage:
+        - `crates/gc_cli/tests/cli_vcs_blame_why.rs`
+        - `crates/gc_prelude/tests/prelude_editor_vcs.rs`
+        - `crates/gc_prelude/tests/prelude_caps_wrappers.rs`
   - GenesisPkg UX: lock/install/update/publish/import/export, policy gating UI
     - [x] package/store/sync action coverage in GenesisCode prelude:
       - list/info/lock/update/install/verify/snapshot panels:
