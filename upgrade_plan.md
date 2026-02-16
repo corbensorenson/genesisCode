@@ -145,6 +145,9 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
   - [x] parser perf: `bytes/join` primitive + `core/bytes::join` wrapper to avoid O(n^2) byte concatenation in self-host parsing
   - [x] re-enable an end-to-end `io/fs` formatting test driven by `selfhost/tool_coreform_v1.gc`
   - [x] kernel: tail-call optimize final closure applies in tail position (prevents stack overflows on tail recursion)
+  - [ ] After full self-host cutover (toolchain + compilation stages), archive bootstrap-only implementation artifacts:
+    - add `bootstrap_old/` and move any legacy build scripts/tooling (Python/Node) that are no longer required for the self-hosted workflow
+    - document what remains required for reproducible builds and why (WASM host bridges, etc.)
 
 ---
 
