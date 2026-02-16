@@ -67,6 +67,10 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("--stage1-gate"),
         "eval --help output missing --stage1-gate"
     );
+    assert!(
+        s.contains("--stage2-gate"),
+        "eval --help output missing --stage2-gate"
+    );
 
     let s = stdout_str(&["optimize", "--help"]);
     assert!(

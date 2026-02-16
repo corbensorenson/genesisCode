@@ -101,6 +101,18 @@ enum Cmd {
         /// self-hosted CoreForm parser+canonicalizer inside the kernel.
         #[arg(long, value_enum, default_value_t = FmtEngine::Rust)]
         engine: FmtEngine,
+        /// Run the Stage-1 compiler pipeline (CoreForm -> CoreForm validated transforms)
+        /// before evaluation.
+        #[arg(long)]
+        stage1_pipeline: bool,
+        /// Require `core/obligation::stage1-validation` to pass for the Stage-1 pipeline.
+        /// Implies `--stage1-pipeline`.
+        #[arg(long)]
+        stage1_gate: bool,
+        /// Require stage-2 CoreForm->WASM translation validation to pass when this module is
+        /// supported by stage-2 lowering.
+        #[arg(long)]
+        stage2_gate: bool,
     },
 
     /// Run package obligations (unit tests, determinism, replay checks, etc.) and write evidence into `.genesis/store`.
@@ -801,12 +813,55 @@ fn selfhost_parse_canonicalize_module(
     Ok(forms.clone())
 }
 
-fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliError> {
+fn stage1_pipeline_json(out: &gc_opt::Stage1PipelineOutcome) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": out.gate_report.obligation,
+        "ok": out.gate_report.ok,
+        "errors": out.gate_report.errors,
+        "original_module_hash": hex32(out.gate_report.original_module_hash),
+        "transformed_module_hash": hex32(out.gate_report.transformed_module_hash),
+        "original_value_hash": out.gate_report.original_value_hash.map(hex32),
+        "transformed_value_hash": out.gate_report.transformed_value_hash.map(hex32),
+        "egg_runs": out.optimize_report.stats.egg_runs,
+        "egg_iterations": out.optimize_report.stats.iterations,
+        "egg_eclasses": out.optimize_report.stats.eclasses,
+        "egg_enodes": out.optimize_report.stats.enodes,
+        "egg_rewrites_applied": out.optimize_report.stats.rewrites_applied,
+    })
+}
+
+fn stage2_report_json(r: &gc_opt::Stage2ValidationReport) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": r.obligation,
+        "supported": r.supported,
+        "ok": r.ok,
+        "module_hash": hex32(r.module_hash),
+        "wasm_hash": r.wasm_hash.map(hex32),
+        "value_kind": r.value_kind.map(|k| match k {
+            gc_opt::Stage2ValueKind::Int => "int",
+            gc_opt::Stage2ValueKind::Bool => "bool",
+            gc_opt::Stage2ValueKind::Nil => "nil",
+        }),
+        "original_value_hash": r.original_value_hash.map(hex32),
+        "wasm_value_hash": r.wasm_value_hash.map(hex32),
+        "wasm_bytes_len": r.wasm_bytes_len,
+        "errors": r.errors,
+    })
+}
+
+fn cmd_eval(
+    cli: &Cli,
+    file: &PathBuf,
+    engine: FmtEngine,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
 
-    let (mut ctx, mut env, forms) = match engine {
+    let (mut ctx, mut env, mut forms) = match engine {
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -836,6 +891,48 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
         }
     };
 
+    let stage1 = if stage1_pipeline || stage1_gate {
+        let out = gc_opt::stage1_pipeline(&forms)
+            .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?;
+        if stage1_gate && !out.gate_report.ok {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/stage1-validation",
+                    message: "core/obligation::stage1-validation failed".to_string(),
+                    context: Some(stage1_pipeline_json(&out)),
+                },
+            });
+        }
+        forms = out.transformed_forms.clone();
+        Some(out)
+    } else {
+        None
+    };
+
+    let stage2 = if stage2_gate {
+        Some(gc_opt::stage2_validation_report(&forms))
+    } else {
+        None
+    };
+    if stage2_gate {
+        let s2 = stage2
+            .as_ref()
+            .expect("stage2 report must exist when stage2 gate is enabled");
+        if s2.supported && !s2.ok {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/translation-validation",
+                    message:
+                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+                            .to_string(),
+                    context: Some(stage2_report_json(s2)),
+                },
+            });
+        }
+    }
+
     let v = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
     let (value, value_format) = render_value_for_cli(&ctx, &v);
@@ -849,6 +946,8 @@ fn cmd_eval(cli: &Cli, file: &PathBuf, engine: FmtEngine) -> Result<CmdOut, CliE
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "stage1": stage1.as_ref().map(stage1_pipeline_json),
+            "stage2": stage2.as_ref().map(stage2_report_json),
             "value": value,
             "value_format": value_format,
         })),
@@ -2676,7 +2775,20 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             check,
             engine,
         } => cmd_fmt(cli, file, *check, *engine),
-        Cmd::Eval { file, engine } => cmd_eval(cli, file, *engine),
+        Cmd::Eval {
+            file,
+            engine,
+            stage1_pipeline,
+            stage1_gate,
+            stage2_gate,
+        } => cmd_eval(
+            cli,
+            file,
+            *engine,
+            *stage1_pipeline,
+            *stage1_gate,
+            *stage2_gate,
+        ),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
         Cmd::Run { file, caps, log } => cmd_run(cli, file, caps.as_path(), log),

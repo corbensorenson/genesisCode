@@ -17,4 +17,4 @@ wasmi.workspace = true
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
-gc_prelude = { path = "../gc_prelude" }
+gc_prelude = { path = "../gc_prelude", default-features = false }

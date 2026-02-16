@@ -150,6 +150,35 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
     - `gc_opt::stage2_validation_report` executes lowered WASM and compares kernel vs WASM value hashes
     - `genesis optimize` adds `--stage2-gate` and `--emit-wasm <file>`
     - `core/obligation::translation-validation` now records `:stage2` evidence and fails when supported Stage-2 translations mismatch
+    - Stage-2 gate semantics aligned with obligation contract:
+      - `--stage2-gate` now fails only for supported-but-invalid Stage-2 translations (unsupported modules are reported but do not fail the command)
+      - `--emit-wasm` remains strict and fails on unsupported modules
+      - coverage: `crates/gc_cli/tests/cli_stage1_pipeline.rs` tests `optimize_stage2_gate_allows_unsupported_module` and `optimize_emit_wasm_fails_for_unsupported_module`
+    - [x] eval path now supports Stage-2 obligation gating parity:
+      - `genesis eval --stage2-gate` emits Stage-2 report JSON and enforces mismatch failures only for supported Stage-2 translations
+      - unsupported Stage-2 modules still evaluate successfully while surfacing `supported=false` in JSON
+      - coverage: `crates/gc_cli/tests/cli_stage1_pipeline.rs` tests `eval_stage2_gate_matches_baseline_for_scalar_pure_module` and `eval_stage2_gate_allows_unsupported_module`
+    - [x] WASI eval path now mirrors Stage-1/Stage-2 gating semantics:
+      - `genesis_wasi eval` supports `--stage1-pipeline`, `--stage1-gate`, and `--stage2-gate`
+      - JSON output includes Stage-1/Stage-2 reports for deterministic host parity diagnostics
+    - expanded supported Stage-2 forms beyond basic scalar prims:
+      - `begin` sequencing
+      - `let` with sequential bindings and scoped body
+      - coverage: `crates/gc_opt/src/stage2_wasm.rs` tests `stage2_validates_begin_expression` and `stage2_validates_let_expression`
+    - expanded Stage-2 scalar lowering for canonical prelude integer wrappers:
+      - curried calls such as `((core/int::add a) b)` and predicates `((core/int::lt? a) b)` now lower to validated Stage-2 prim ops
+      - coverage: `stage2_validates_curried_core_int_wrapper_calls` and `stage2_validates_curried_core_int_predicate_calls`
+    - expanded Stage-2 scalar equality coverage:
+      - direct `prim core/eq?` now supports scalar int/bool equality
+      - curried wrapper form `((core/eq? a) b)` now lowers when scalar-typed (int/bool/nil)
+      - coverage: `stage2_validates_core_eq_prim_for_ints_and_bools` and `stage2_validates_curried_core_eq_wrapper_calls`
+      - coverage: `stage2_validates_curried_core_eq_wrapper_calls_for_bool_and_nil`
+    - expanded Stage-2 support for defs-only toolchain modules:
+      - defs-only modules with safe RHS forms (`fn`, `quote`, scalar literals, symbol aliases) now validate with `nil` result kind
+      - defs-only modules with scalar computed bindings now lower/evaluate in Stage-2 (instead of being conservatively rejected), while retaining safe fallback for non-lowerable `fn`/`quote` bootstrap modules
+      - selfhost artifact generation now reports Stage-2 coverage for selfhost modules (`stage2_supported_modules=5`, `stage2_validated_modules=5`)
+      - coverage: `stage2_validates_defs_only_module_with_safe_rhs_and_nil_result`
+      - coverage: `stage2_validates_defs_only_module_with_scalar_rhs_via_lowering`
     - remaining scope: widen Stage-2 coverage beyond scalar pure subset to full module/test surface
   - [ ] Cutover plan:
     - [x] Rust produces a self-host toolchain artifact:
@@ -160,8 +189,12 @@ Goal: "complete enough" day-to-day programming without Level 2 subsystems.
       - host CLIs default selfhost bootstrap mode to `artifact-only` (`--selfhost-bootstrap artifact-only|artifact-preferred|embedded`).
       - `--engine selfhost` now requires a validated artifact by default (`--selfhost-artifact` or `./.genesis/selfhost/toolchain.gc`).
       - embedded bootstrap is now an explicit dev fallback (`--selfhost-bootstrap embedded`).
-    - [ ] Rust becomes optional tooling only (remaining):
-      - remove/feature-gate embedded-source bootstrap from release profiles once artifact distribution is fully standardized across host runtimes.
+    - [x] standardize artifact bootstrap across host runtimes:
+      - `gc_wasm` exposes explicit artifact APIs (`*_selfhost_with_artifact`) and runtime method `Runtime.eval_module_selfhost_with_artifact`.
+      - `gc_prelude` supports loading toolchain from artifact source text (not just filesystem path) for browser/Node hosts.
+    - [x] Rust becomes optional tooling only (release hardening complete for bootstrap path):
+      - embedded-source bootstrap is feature-gated (`gc_prelude/embedded-bootstrap`) and disabled by default across host crates.
+      - release builds reject `embedded-bootstrap` at compile time; runtime defaults are artifact-only.
 - [x] Make self-hosted tooling fast/practical under the kernel step limit:
   - add a compiled execution path (bytecode-like in-kernel compiled evaluator) for toolchain-grade workloads
   - `gc_kernel::{compile_module, eval_compiled_module, eval_module_compiled}`
@@ -213,11 +246,14 @@ Constraints:
   - UI foundation: layout (flex-like), vector graphics, text shaping, accessibility hooks
   - extension mechanism: plugins register render passes, components, and asset types (all via contracts)
 - [ ] Implement the Level 2 graphics stack in GenesisCode:
-  - low-level GPU wrapper layer (thin, stable API over `gfx/gpu::*`)
-  - 2D renderer (shapes, sprites, text) + batching
-  - 3D renderer (PBR baseline), cameras, lights, shadows (phased)
-  - UI toolkit built on 2D primitives (widgets as contracts)
-  - end-to-end demos: 2D UI app, 3D scene, and a hybrid “web app” view
+  - [x] low-level GPU/frame/scene builder layer is now available in GenesisCode prelude:
+    - `core/gfx/frame::{empty,render-pass,compute-pass,add-render-pass,add-compute-pass,submit}`
+    - `core/gfx/scene::{identity-transform,empty,node,add-node,set-roots}`
+    - coverage: `crates/gc_prelude/tests/prelude_gfx_builders.rs`
+  - [ ] 2D renderer (shapes, sprites, text) + batching
+  - [ ] 3D renderer (PBR baseline), cameras, lights, shadows (phased)
+  - [ ] UI toolkit built on 2D primitives (widgets as contracts)
+  - [ ] end-to-end demos: 2D UI app, 3D scene, and a hybrid “web app” view
 - [ ] Add obligations for graphics correctness + performance:
   - golden image tests (headless browser, deterministic input logs)
   - frame time budgets (bench evidence artifacts)

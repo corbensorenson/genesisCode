@@ -1,7 +1,60 @@
-use gc_coreform::{canonicalize_module, parse_module, print_module};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_module, print_term,
+};
 use gc_effects::{CapsPolicy, Decision, run};
 use gc_kernel::{EvalCtx, Value, eval_module};
-use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
+use gc_prelude::{
+    build_prelude, load_selfhost_coreform_toolchain_v1_from_artifact_source,
+    selfhost_coreform_toolchain_v1_sources,
+};
+
+fn build_selfhost_artifact_source() -> String {
+    let modules = selfhost_coreform_toolchain_v1_sources()
+        .iter()
+        .map(|(path, src)| {
+            let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+            let h = hash_module(&forms);
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":path")),
+                        Term::Str((*path).to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source")),
+                        Term::Str((*src).to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":module-h")),
+                        Term::Bytes(h.to_vec().into()),
+                    ),
+                    (TermOrdKey(Term::symbol(":stage1-ok")), Term::Bool(true)),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-supported")),
+                        Term::Bool(false),
+                    ),
+                    (TermOrdKey(Term::symbol(":stage2-ok")), Term::Bool(false)),
+                ]
+                .into_iter()
+                .collect(),
+            )
+        })
+        .collect();
+    let artifact = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            (TermOrdKey(Term::symbol(":modules")), Term::Vector(modules)),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    print_term(&artifact)
+}
 
 #[test]
 fn selfhost_tool_can_format_a_file_via_coreform_bootstrap_api() {
@@ -123,7 +176,9 @@ create_dirs = true
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env).expect("load selfhost toolchain");
+    let artifact = build_selfhost_artifact_source();
+    load_selfhost_coreform_toolchain_v1_from_artifact_source(&mut ctx, &mut env, &artifact)
+        .expect("load selfhost toolchain");
 
     let prog = eval_module(&mut ctx, &mut env, &tool_forms).expect("eval tool");
     assert!(matches!(prog, Value::EffectProgram(_)));

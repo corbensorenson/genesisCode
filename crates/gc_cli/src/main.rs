@@ -112,6 +112,10 @@ enum Cmd {
         /// Implies `--stage1-pipeline`.
         #[arg(long)]
         stage1_gate: bool,
+        /// Require stage-2 CoreForm->WASM translation validation to pass when this module is
+        /// supported by stage-2 lowering.
+        #[arg(long)]
+        stage2_gate: bool,
     },
 
     /// Explain contract dispatch path for a given message.
@@ -911,7 +915,15 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             engine,
             stage1_pipeline,
             stage1_gate,
-        } => cmd_eval(cli, file, *engine, *stage1_pipeline, *stage1_gate),
+            stage2_gate,
+        } => cmd_eval(
+            cli,
+            file,
+            *engine,
+            *stage1_pipeline,
+            *stage1_gate,
+            *stage2_gate,
+        ),
         Cmd::Explain {
             file,
             contract,
@@ -1292,6 +1304,7 @@ fn stage2_report_json(r: &gc_opt::Stage2ValidationReport) -> serde_json::Value {
         "value_kind": r.value_kind.map(|k| match k {
             gc_opt::Stage2ValueKind::Int => "int",
             gc_opt::Stage2ValueKind::Bool => "bool",
+            gc_opt::Stage2ValueKind::Nil => "nil",
         }),
         "original_value_hash": r.original_value_hash.map(hex32),
         "wasm_value_hash": r.wasm_value_hash.map(hex32),
@@ -1306,6 +1319,7 @@ fn cmd_eval(
     engine: FmtEngine,
     stage1_pipeline: bool,
     stage1_gate: bool,
+    stage2_gate: bool,
 ) -> Result<CmdOut, CliError> {
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
@@ -1360,6 +1374,29 @@ fn cmd_eval(
         None
     };
 
+    let stage2 = if stage2_gate {
+        Some(gc_opt::stage2_validation_report(&forms))
+    } else {
+        None
+    };
+    if stage2_gate {
+        let s2 = stage2
+            .as_ref()
+            .expect("stage2 report must exist when stage2 gate is enabled");
+        if s2.supported && !s2.ok {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/translation-validation",
+                    message:
+                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+                            .to_string(),
+                    context: Some(stage2_report_json(s2)),
+                },
+            });
+        }
+    }
+
     let v = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
 
@@ -1374,6 +1411,7 @@ fn cmd_eval(
                 FmtEngine::Selfhost => "selfhost",
             },
             "stage1": stage1.as_ref().map(stage1_pipeline_json),
+            "stage2": stage2.as_ref().map(stage2_report_json),
             "value": value,
             "value_format": value_format,
         })),
@@ -4582,7 +4620,7 @@ fn cmd_optimize(
         let s2 = stage2
             .as_ref()
             .expect("stage2 report must exist when stage2 gate is enabled");
-        if !(s2.supported && s2.ok) {
+        if s2.supported && !s2.ok {
             return Err(CliError {
                 exit_code: EX_OBLIGATIONS,
                 json: JsonError {

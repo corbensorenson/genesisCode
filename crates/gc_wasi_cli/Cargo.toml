@@ -8,6 +8,10 @@ license.workspace = true
 name = "genesis_wasi"
 path = "src/main.rs"
 
+[features]
+default = []
+embedded-bootstrap = ["gc_prelude/embedded-bootstrap"]
+
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
@@ -18,6 +22,7 @@ thiserror.workspace = true
 # local (pure kernel stack)
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
-gc_prelude = { path = "../gc_prelude" }
+gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_effects = { path = "../gc_effects" }
 gc_obligations = { path = "../gc_obligations" }
+gc_opt = { path = "../gc_opt" }

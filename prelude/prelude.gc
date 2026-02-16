@@ -622,6 +622,81 @@
 (def core/gfx/gpu::submit-compute-graph
   (fn (graph) ((core/caps::perform (quote gfx/gpu::submit-compute-graph)) {:graph graph})))
 
+(def core/gfx/frame::empty
+  {:type (quote :gfx/frame-graph) :render-passes [] :compute-passes []})
+
+(def core/gfx/frame::render-pass
+  (fn (label)
+    (fn (color-attachments)
+      (fn (depth-attachment)
+        (fn (commands)
+          {
+            :type (quote :gfx/render-pass)
+            :label label
+            :color-attachments color-attachments
+            :depth-attachment depth-attachment
+            :commands commands})))))
+
+(def core/gfx/frame::compute-pass
+  (fn (label)
+    (fn (commands)
+      {
+        :type (quote :gfx/compute-pass)
+        :label label
+        :commands commands})))
+
+(def core/gfx/frame::add-render-pass
+  (fn (graph)
+    (fn (pass)
+      (((core/map::put graph) (quote :render-passes))
+        ((core/vec::push ((core/map::get graph) (quote :render-passes))) pass)))))
+
+(def core/gfx/frame::add-compute-pass
+  (fn (graph)
+    (fn (pass)
+      (((core/map::put graph) (quote :compute-passes))
+        ((core/vec::push ((core/map::get graph) (quote :compute-passes))) pass)))))
+
+(def core/gfx/frame::submit
+  (fn (graph) (core/gfx/gpu::submit-frame-graph graph)))
+
+(def core/gfx/scene::identity-transform
+  {
+    :translation {:x 0 :y 0 :z 0}
+    :rotation {:x 0 :y 0 :z 0 :w 1000000}
+    :scale {:x 1000000 :y 1000000 :z 1000000}})
+
+(def core/gfx/scene::empty
+  (fn (name)
+    {:type (quote :gfx/scene) :name name :root-nodes [] :nodes []}))
+
+(def core/gfx/scene::node
+  (fn (name)
+    (fn (transform)
+      (fn (mesh)
+        (fn (material)
+          (fn (camera)
+            (fn (light)
+              (fn (children)
+                {
+                  :name name
+                  :transform transform
+                  :mesh mesh
+                  :material material
+                  :camera camera
+                  :light light
+                  :children children}))))))))
+
+(def core/gfx/scene::add-node
+  (fn (scene)
+    (fn (node)
+      (((core/map::put scene) (quote :nodes))
+        ((core/vec::push ((core/map::get scene) (quote :nodes))) node)))))
+
+(def core/gfx/scene::set-roots
+  (fn (scene)
+    (fn (roots) (((core/map::put scene) (quote :root-nodes)) roots))))
+
 (def core/gfx/gpu::limits
   (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
 

@@ -129,3 +129,23 @@ Breaking changes require:
 - schema version bump in docs + data tags
 - migration patch strategy
 - updated translation-validation evidence where applicable
+
+## Current GenesisCode surface (implemented)
+
+The following pure/effect wrappers are currently implemented in `prelude/prelude.gc`:
+
+- Frame graph builders:
+  - `core/gfx/frame::empty`
+  - `core/gfx/frame::render-pass`
+  - `core/gfx/frame::compute-pass`
+  - `core/gfx/frame::add-render-pass`
+  - `core/gfx/frame::add-compute-pass`
+  - `core/gfx/frame::submit`
+- Scene builders:
+  - `core/gfx/scene::identity-transform`
+  - `core/gfx/scene::empty`
+  - `core/gfx/scene::node`
+  - `core/gfx/scene::add-node`
+  - `core/gfx/scene::set-roots`
+- Capability wrappers:
+  - `core/gfx/gpu::*`, `core/gfx/window::*`, `core/gfx/input::*`, `core/gfx/time::*`, `core/gfx/audio::*`

@@ -11,7 +11,10 @@ use gc_coreform::{
 use gc_kernel::{
     Apply, EffectProgram, EffectRequest, Env, EvalCtx, SealId, Value, eval_module, value_hash,
 };
-use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1};
+use gc_prelude::{
+    build_prelude, load_selfhost_coreform_toolchain_v1,
+    load_selfhost_coreform_toolchain_v1_from_artifact_source,
+};
 
 fn js_err(code: &str, msg: impl ToString) -> JsValue {
     JsValue::from_str(&format!("{code}: {}", msg.to_string()))
@@ -99,6 +102,20 @@ fn selfhost_parse_canonicalize_module(
     Ok(forms.clone())
 }
 
+fn bootstrap_selfhost(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    artifact_src: Option<&str>,
+) -> Result<(), JsValue> {
+    match artifact_src {
+        Some(src) => load_selfhost_coreform_toolchain_v1_from_artifact_source(ctx, env, src)
+            .map_err(|e| js_err("selfhost/init", e)),
+        None => {
+            load_selfhost_coreform_toolchain_v1(ctx, env).map_err(|e| js_err("selfhost/init", e))
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
@@ -120,8 +137,7 @@ pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-        .map_err(|e| js_err("selfhost/init", e))?;
+    bootstrap_selfhost(&mut ctx, &mut env, None)?;
 
     ctx.steps = 0;
     ctx.step_limit = if step_limit == 0 {
@@ -150,14 +166,48 @@ pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String
 }
 
 #[wasm_bindgen]
+pub fn fmt_coreform_module_selfhost_with_artifact(
+    src: &str,
+    artifact_src: &str,
+    step_limit: u32,
+) -> Result<String, JsValue> {
+    let mut ctx = EvalCtx::with_step_limit(None);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    bootstrap_selfhost(&mut ctx, &mut env, Some(artifact_src))?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
+    let f = env
+        .get("selfhost/tool::fmt-module")
+        .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::fmt-module"))?;
+    let r = f
+        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
+    if let Some(s) = extract_protocol_error_string(&ctx, &r) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Str(out)) = r.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!("expected string, got {}", r.debug_repr()),
+        ));
+    };
+    Ok(out.clone())
+}
+
+#[wasm_bindgen]
 pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
     // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-        .map_err(|e| js_err("selfhost/init", e))?;
+    bootstrap_selfhost(&mut ctx, &mut env, None)?;
 
     ctx.steps = 0;
     ctx.step_limit = if step_limit == 0 {
@@ -173,6 +223,41 @@ pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<Strin
         .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
         .map_err(|e| js_err("selfhost/eval", e))?;
 
+    if let Some(s) = extract_protocol_error_string(&ctx, &r) {
+        return Err(js_err("selfhost/error", s));
+    }
+    let Some(Term::Str(out)) = r.as_data() else {
+        return Err(js_err(
+            "selfhost/bad_return",
+            format!("expected string, got {}", r.debug_repr()),
+        ));
+    };
+    Ok(out.clone())
+}
+
+#[wasm_bindgen]
+pub fn hash_coreform_module_selfhost_with_artifact(
+    src: &str,
+    artifact_src: &str,
+    step_limit: u32,
+) -> Result<String, JsValue> {
+    let mut ctx = EvalCtx::with_step_limit(None);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    bootstrap_selfhost(&mut ctx, &mut env, Some(artifact_src))?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
+    let f = env
+        .get("selfhost/tool::hash-module-src")
+        .ok_or_else(|| js_err("selfhost/missing", "missing selfhost/tool::hash-module-src"))?;
+    let r = f
+        .apply(&mut ctx, Value::Data(Term::Str(src.to_owned())))
+        .map_err(|e| js_err("selfhost/eval", e))?;
     if let Some(s) = extract_protocol_error_string(&ctx, &r) {
         return Err(js_err("selfhost/error", s));
     }
@@ -229,8 +314,7 @@ pub fn eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<Strin
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    load_selfhost_coreform_toolchain_v1(&mut ctx, &mut env)
-        .map_err(|e| js_err("selfhost/init", e))?;
+    bootstrap_selfhost(&mut ctx, &mut env, None)?;
 
     // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
     ctx.steps = 0;
@@ -251,6 +335,38 @@ pub fn eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<Strin
         ));
     }
 
+    let protocol_error = ctx.protocol.map(|p| p.error);
+    Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_selfhost_with_artifact(
+    src: &str,
+    artifact_src: &str,
+    step_limit: u32,
+) -> Result<String, JsValue> {
+    let mut ctx = EvalCtx::with_step_limit(None);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    bootstrap_selfhost(&mut ctx, &mut env, Some(artifact_src))?;
+
+    ctx.steps = 0;
+    ctx.step_limit = None;
+    let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+
+    ctx.steps = 0;
+    ctx.step_limit = if step_limit == 0 {
+        None
+    } else {
+        Some(step_limit as u64)
+    };
+    let v = eval_module(&mut ctx, &mut env, &forms).map_err(|e| js_err("eval", e))?;
+    if matches!(v, Value::EffectProgram(_)) {
+        return Err(js_err(
+            "eval",
+            "program produced an effect program; use the host runner for effects",
+        ));
+    }
     let protocol_error = ctx.protocol.map(|p| p.error);
     Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
 }
@@ -344,8 +460,35 @@ impl Runtime {
         self.cur = None;
         self.pending = None;
 
-        load_selfhost_coreform_toolchain_v1(&mut self.ctx, &mut self.env)
-            .map_err(|e| js_err("selfhost/init", e))?;
+        bootstrap_selfhost(&mut self.ctx, &mut self.env, None)?;
+
+        self.ctx.steps = 0;
+        self.ctx.step_limit = None;
+        let forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
+        let mh = hash_module(&forms);
+        self.module_h = Some(mh);
+
+        self.ctx.steps = 0;
+        self.ctx.step_limit = self.step_limit;
+
+        let v = eval_module(&mut self.ctx, &mut self.env, &forms).map_err(|e| js_err("eval", e))?;
+        self.cur = Some(v);
+        self.step()
+    }
+
+    /// Self-hosted frontend path with explicit artifact source text.
+    pub fn eval_module_selfhost_with_artifact(
+        &mut self,
+        src: &str,
+        artifact_src: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut self.ctx);
+        self.env = prelude.env;
+        self.cur = None;
+        self.pending = None;
+
+        bootstrap_selfhost(&mut self.ctx, &mut self.env, Some(artifact_src))?;
 
         self.ctx.steps = 0;
         self.ctx.step_limit = None;
@@ -605,6 +748,55 @@ mod hex {
 mod tests {
     use super::*;
     use gc_effects::CapsPolicy;
+    use gc_prelude::selfhost_coreform_toolchain_v1_sources;
+
+    fn build_selfhost_artifact_source() -> String {
+        let modules = selfhost_coreform_toolchain_v1_sources()
+            .iter()
+            .map(|(path, src)| {
+                let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+                let h = hash_module(&forms);
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str((*path).to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":source")),
+                            Term::Str((*src).to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":module-h")),
+                            Term::Bytes(h.to_vec().into()),
+                        ),
+                        (TermOrdKey(Term::symbol(":stage1-ok")), Term::Bool(true)),
+                        (
+                            TermOrdKey(Term::symbol(":stage2-supported")),
+                            Term::Bool(false),
+                        ),
+                        (TermOrdKey(Term::symbol(":stage2-ok")), Term::Bool(false)),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )
+            })
+            .collect();
+        let artifact = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                (TermOrdKey(Term::symbol(":modules")), Term::Vector(modules)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        print_term(&artifact)
+    }
 
     fn eval_to_first_step(rt: &mut Runtime, src: &str) -> StepResult {
         rt.ctx = EvalCtx::with_step_limit(rt.step_limit);
@@ -620,14 +812,18 @@ mod tests {
         rt.step_internal().unwrap()
     }
 
-    fn eval_to_first_step_selfhost(rt: &mut Runtime, src: &str) -> StepResult {
+    fn eval_to_first_step_selfhost_with_artifact(
+        rt: &mut Runtime,
+        src: &str,
+        artifact_src: &str,
+    ) -> StepResult {
         rt.ctx = EvalCtx::with_step_limit(None);
         let prelude = build_prelude(&mut rt.ctx);
         rt.env = prelude.env;
         rt.cur = None;
         rt.pending = None;
 
-        load_selfhost_coreform_toolchain_v1(&mut rt.ctx, &mut rt.env).unwrap();
+        bootstrap_selfhost(&mut rt.ctx, &mut rt.env, Some(artifact_src)).unwrap();
         rt.ctx.steps = 0;
         rt.ctx.step_limit = None;
         let forms = selfhost_parse_canonicalize_module(&mut rt.ctx, &rt.env, src).unwrap();
@@ -798,8 +994,10 @@ mod tests {
           y
         "#;
 
+        let artifact = build_selfhost_artifact_source();
         let rust = eval_coreform_module(src, 0).expect("rust eval");
-        let selfhost = eval_coreform_module_selfhost(src, 0).expect("selfhost eval");
+        let selfhost =
+            eval_coreform_module_selfhost_with_artifact(src, &artifact, 0).expect("selfhost eval");
         assert_eq!(rust, selfhost);
     }
 
@@ -810,12 +1008,14 @@ mod tests {
           (def y (prim int/mul x 9))
           y
         "#;
+        let artifact = build_selfhost_artifact_source();
 
         let mut rt_rust = Runtime::new(0);
         let rust_step = eval_to_first_step(&mut rt_rust, src);
 
         let mut rt_selfhost = Runtime::new(0);
-        let selfhost_step = eval_to_first_step_selfhost(&mut rt_selfhost, src);
+        let selfhost_step =
+            eval_to_first_step_selfhost_with_artifact(&mut rt_selfhost, src, &artifact);
 
         match (rust_step, selfhost_step) {
             (StepResult::Done { value: a, .. }, StepResult::Done { value: b, .. }) => {
@@ -823,5 +1023,54 @@ mod tests {
             }
             (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
         }
+    }
+
+    #[test]
+    fn eval_coreform_module_selfhost_with_artifact_matches_rust_frontend_eval() {
+        let src = r#"
+          (def x 19)
+          (def y (prim int/add x 23))
+          y
+        "#;
+        let artifact = build_selfhost_artifact_source();
+        let rust = eval_coreform_module(src, 0).expect("rust eval");
+        let selfhost = eval_coreform_module_selfhost_with_artifact(src, &artifact, 0)
+            .expect("selfhost artifact eval");
+        assert_eq!(rust, selfhost);
+    }
+
+    #[test]
+    fn runtime_eval_module_selfhost_with_artifact_matches_rust_frontend_path() {
+        let src = r#"
+          (def x 8)
+          (def y (prim int/mul x 11))
+          y
+        "#;
+        let artifact = build_selfhost_artifact_source();
+
+        let mut rt_rust = Runtime::new(0);
+        let rust_step = eval_to_first_step(&mut rt_rust, src);
+
+        let mut rt_selfhost = Runtime::new(0);
+        let selfhost_step =
+            eval_to_first_step_selfhost_with_artifact(&mut rt_selfhost, src, &artifact);
+
+        match (rust_step, selfhost_step) {
+            (StepResult::Done { value: a, .. }, StepResult::Done { value: b, .. }) => {
+                assert_eq!(a, b);
+            }
+            (a, b) => panic!("expected done/done parity, got {:?} vs {:?}", a, b),
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[test]
+    fn selfhost_artifact_loader_rejects_invalid_artifact_in_wasm_api() {
+        let src = "(def x 1)\nx\n";
+        let bad_artifact = "(:kind \"bad\")";
+        let err = eval_coreform_module_selfhost_with_artifact(src, bad_artifact, 0)
+            .expect_err("expected artifact failure");
+        let s = err.as_string().unwrap_or_default();
+        assert!(s.contains("selfhost/init"), "{s}");
     }
 }

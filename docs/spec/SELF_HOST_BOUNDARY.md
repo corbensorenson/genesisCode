@@ -137,7 +137,8 @@ Current cutover mechanism (implemented):
   - `:stage1-ok` must be true for every module
   - when `:stage2-supported` is true, `:stage2-ok` must be true
 
-This makes artifact-based bootstrap testable today while retaining embedded fallback for development.
+This makes artifact-based bootstrap testable today while retaining embedded fallback for explicit
+development builds.
 
 Host tooling defaults:
 - native CLI (`genesis`) and WASI CLI now default to `artifact-only` bootstrap mode for selfhost paths.
@@ -145,6 +146,18 @@ Host tooling defaults:
   - `--selfhost-artifact <file>` choose artifact explicitly
   - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
 - `embedded` mode remains available as a deliberate bootstrap/development fallback.
+
+Release hardening:
+- `gc_prelude::load_selfhost_coreform_toolchain_v1` now defaults to `artifact-only`.
+- feature `gc_prelude/embedded-bootstrap` is development-only and rejected in release builds.
+
+WASM host bridge support:
+- `gc_wasm` now supports explicit artifact bootstrap for selfhost frontend/tooling paths:
+  - `fmt_coreform_module_selfhost_with_artifact`
+  - `hash_coreform_module_selfhost_with_artifact`
+  - `eval_coreform_module_selfhost_with_artifact`
+  - `Runtime.eval_module_selfhost_with_artifact`
+- This allows browser/Node hosts to pass a verified artifact directly without filesystem coupling.
 
 ## Translation Validation Strategy
 

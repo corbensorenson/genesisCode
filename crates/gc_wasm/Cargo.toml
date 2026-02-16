@@ -7,6 +7,10 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+embedded-bootstrap = ["gc_prelude/embedded-bootstrap"]
+
 [dependencies]
 wasm-bindgen = "0.2"
 serde.workspace = true
@@ -16,7 +20,7 @@ serde-wasm-bindgen = "0.6"
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
-gc_prelude = { path = "../gc_prelude" }
+gc_prelude = { path = "../gc_prelude", default-features = false }
 
 [dev-dependencies]
 gc_effects = { path = "../gc_effects" }

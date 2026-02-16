@@ -212,7 +212,61 @@ fn optimize_stage2_gate_and_emit_wasm_succeeds_for_scalar_pure_module() {
 }
 
 #[test]
-fn optimize_stage2_gate_fails_for_unsupported_module() {
+fn eval_stage2_gate_matches_baseline_for_scalar_pure_module() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def x (prim int/add 20 22))
+          x
+        "#,
+    )
+    .unwrap();
+
+    let base = cargo_bin_cmd!("genesis")
+        .args(["eval", file.to_str().unwrap()])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let gated = cargo_bin_cmd!("genesis")
+        .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let base_s = String::from_utf8(base).unwrap();
+    let gated_s = String::from_utf8(gated).unwrap();
+    assert_eq!(base_s.trim(), gated_s.trim());
+}
+
+#[test]
+fn eval_stage2_gate_allows_unsupported_module() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("effect.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn optimize_stage2_gate_allows_unsupported_module() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("effect.gc");
     std::fs::write(
@@ -228,6 +282,33 @@ fn optimize_stage2_gate_fails_for_unsupported_module() {
 
     cargo_bin_cmd!("genesis")
         .args(["optimize", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn optimize_emit_wasm_fails_for_unsupported_module() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("effect.gc");
+    let wasm = dir.path().join("effect.wasm");
+    std::fs::write(
+        &file,
+        r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "optimize",
+            file.to_str().unwrap(),
+            "--emit-wasm",
+            wasm.to_str().unwrap(),
+        ])
         .assert()
         .failure()
         .code(30);

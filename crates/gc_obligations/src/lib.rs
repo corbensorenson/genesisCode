@@ -2060,6 +2060,7 @@ fn obligation_translation_validation(
                     match s2.value_kind {
                         Some(gc_opt::Stage2ValueKind::Int) => Term::Symbol(":int".to_string()),
                         Some(gc_opt::Stage2ValueKind::Bool) => Term::Symbol(":bool".to_string()),
+                        Some(gc_opt::Stage2ValueKind::Nil) => Term::Symbol(":nil".to_string()),
                         None => Term::Nil,
                     },
                 ),

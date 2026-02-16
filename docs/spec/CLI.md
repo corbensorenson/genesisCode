@@ -24,9 +24,12 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`
   - `--engine rust` is the default.
   - `--engine selfhost` runs the self-hosted CoreForm toolchain inside the kernel and therefore honors `--step-limit/--no-step-limit`.
-- `genesis eval <file> [--engine rust|selfhost]`
+- `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
   - `--engine rust` is the default.
   - `--engine selfhost` runs self-hosted parse+canonicalize in-kernel before evaluation.
+  - `--stage1-pipeline` runs Stage-1 CoreForm->CoreForm transforms before evaluation.
+  - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
+  - `--stage2-gate` enforces `core/obligation::translation-validation` only when the module is Stage-2 supported.
 - `genesis keygen --out <key.toml>`: generate an Ed25519 signing key (see `docs/spec/SIGNING.md`).
 - `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`:
   - sign the acceptance artifact hash and write a signature artifact into the evidence store

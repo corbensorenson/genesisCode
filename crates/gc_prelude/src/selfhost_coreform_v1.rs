@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
+#[cfg(feature = "embedded-bootstrap")]
 use once_cell::sync::Lazy;
 
 use gc_coreform::{
@@ -42,8 +43,10 @@ const MODULE_SOURCES: [(&str, &str); 5] = [
     ("selfhost/tool_coreform_v1.gc", TOOL_SRC),
 ];
 
+#[cfg(feature = "embedded-bootstrap")]
 type SelfhostCompiledModules = Vec<(&'static str, CompiledModule)>;
 
+#[cfg(feature = "embedded-bootstrap")]
 static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Lazy::new(|| {
     let mut out = Vec::new();
     for (name, src) in MODULE_SOURCES {
@@ -109,7 +112,20 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact(
 ) -> anyhow::Result<()> {
     let src = std::fs::read_to_string(artifact_path)
         .with_context(|| format!("read {}", artifact_path.display()))?;
-    let term = parse_term(&src).map_err(|e| anyhow::anyhow!("artifact parse: {e}"))?;
+    load_selfhost_coreform_toolchain_v1_from_artifact_source(ctx, env, &src)
+        .with_context(|| format!("decode {}", artifact_path.display()))
+}
+
+/// Load the self-hosted CoreForm toolchain v1 from artifact source text.
+///
+/// This is intended for hosts that do not expose filesystem access to the runtime (e.g. wasm-bindgen),
+/// where the host can supply the artifact bytes/string directly.
+pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    src: &str,
+) -> anyhow::Result<()> {
+    let term = parse_term(src).map_err(|e| anyhow::anyhow!("artifact parse: {e}"))?;
     let root = match term {
         Term::Map(m) => m,
         _ => {
@@ -241,15 +257,26 @@ fn load_selfhost_coreform_toolchain_v1_embedded(
     ctx: &mut EvalCtx,
     env: &mut Env,
 ) -> anyhow::Result<()> {
-    let mods = SELFHOST_COREFORM_V1
-        .as_ref()
-        .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
-    with_trusted_bootstrap_limits(ctx, |ctx| {
-        for (name, module) in mods {
-            eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
-        }
-        Ok(())
-    })
+    #[cfg(feature = "embedded-bootstrap")]
+    {
+        let mods = SELFHOST_COREFORM_V1
+            .as_ref()
+            .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
+        return with_trusted_bootstrap_limits(ctx, |ctx| {
+            for (name, module) in mods {
+                eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
+            }
+            Ok(())
+        });
+    }
+
+    #[cfg(not(feature = "embedded-bootstrap"))]
+    {
+        let _ = (ctx, env);
+        Err(anyhow::anyhow!(
+            "embedded selfhost bootstrap is disabled at compile time; rebuild with feature `gc_prelude/embedded-bootstrap`"
+        ))
+    }
 }
 
 fn resolve_default_artifact_path() -> PathBuf {
@@ -306,7 +333,7 @@ pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> 
     load_selfhost_coreform_toolchain_v1_with_mode(
         ctx,
         env,
-        SelfhostBootstrapMode::ArtifactPreferred,
+        SelfhostBootstrapMode::ArtifactOnly,
         None,
     )
 }

@@ -1,10 +1,16 @@
 mod prelude;
 mod selfhost_coreform_v1;
 
+#[cfg(all(feature = "embedded-bootstrap", not(debug_assertions), not(test)))]
+compile_error!(
+    "feature `embedded-bootstrap` is development-only and cannot be enabled in release builds"
+);
+
 pub use prelude::{Prelude, build_prelude};
 pub use selfhost_coreform_v1::{
     SelfhostBootstrapMode, load_selfhost_coreform_toolchain_v1,
     load_selfhost_coreform_toolchain_v1_from_artifact,
+    load_selfhost_coreform_toolchain_v1_from_artifact_source,
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 

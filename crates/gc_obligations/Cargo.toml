@@ -21,7 +21,7 @@ zeroize.workspace = true
 # local
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
-gc_prelude = { path = "../gc_prelude" }
+gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_effects = { path = "../gc_effects" }
 gc_pkg = { path = "../gc_pkg" }
 gc_types = { path = "../gc_types" }
