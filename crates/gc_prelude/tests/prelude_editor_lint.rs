@@ -1,5 +1,5 @@
-use gc_coreform::{canonicalize_module, parse_module, Term, TermOrdKey};
-use gc_kernel::{eval_module, EvalCtx};
+use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
+use gc_kernel::{EvalCtx, eval_module};
 use gc_prelude::build_prelude;
 
 fn eval_to_term(src: &str) -> Term {

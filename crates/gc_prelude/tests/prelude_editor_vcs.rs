@@ -1,5 +1,5 @@
-use gc_coreform::{canonicalize_module, parse_module, Term, TermOrdKey};
-use gc_kernel::{eval_module, EvalCtx};
+use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
+use gc_kernel::{EvalCtx, eval_module};
 use gc_prelude::build_prelude;
 
 fn eval_to_term(src: &str) -> Term {
@@ -216,4 +216,61 @@ fn editor_vcs_evidence_list_panel_from_commit_panel() {
         Some(&Term::Str("commit-h".to_string()))
     );
     assert_eq!(map_get(&term, ":count"), Some(&Term::Int(3.into())));
+}
+
+#[test]
+fn editor_vcs_blame_panel_projects_identity_fields() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::blame-panel-from-response
+          (quote
+            {
+              :commit "c-h"
+              :snapshot "s-h"
+              :sym pkg/mod::x
+              :value "v-h"
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-blame-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":commit"),
+        Some(&Term::Str("c-h".to_string()))
+    );
+    assert_eq!(map_get(&term, ":sym"), Some(&Term::symbol("pkg/mod::x")));
+}
+
+#[test]
+fn editor_vcs_why_panel_projects_context_fields() {
+    let term = eval_to_term(
+        r#"
+        (core/editor/vcs::why-panel-from-response
+          (quote
+            {
+              :commit "c-h"
+              :snapshot "s-h"
+              :sym pkg/mod::x
+              :value "v-h"
+              :message "updated"
+              :why "because"
+              :evidence ["e1"]
+              :obligations [core/obligation::unit-tests]
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/vcs-why-panel"))
+    );
+    assert_eq!(
+        map_get(&term, ":message"),
+        Some(&Term::Str("updated".to_string()))
+    );
+    let Some(Term::Vector(ev)) = map_get(&term, ":evidence") else {
+        panic!("panel :evidence must be vector");
+    };
+    assert_eq!(ev.len(), 1);
 }

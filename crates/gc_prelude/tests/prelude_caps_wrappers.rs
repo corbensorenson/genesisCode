@@ -1,5 +1,5 @@
 use gc_coreform::{canonicalize_module, parse_module};
-use gc_kernel::{eval_module, EffectProgram, EffectRequest, EvalCtx, Value};
+use gc_kernel::{EffectProgram, EffectRequest, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
 fn get_req(v: Value) -> EffectRequest {
@@ -55,6 +55,12 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :editor_vcs_commit_panel (core/editor/action::vcs-commit-panel "commit-h")
         :editor_vcs_evidence_panel (core/editor/action::vcs-evidence-panel "evidence-h")
         :editor_vcs_evidence_list_panel (core/editor/action::vcs-evidence-list-panel "commit-h")
+        :editor_vcs_blame_panel ((core/editor/action::vcs-blame-panel "snapshot-h") "pkg/mod::x")
+        :editor_vcs_blame_panel_with_path
+          (((core/editor/action::vcs-blame-panel-with-path "snapshot-h") "pkg/mod::x") "[:defs pkg/mod::x]")
+        :editor_vcs_why_panel ((core/editor/action::vcs-why-panel "snapshot-h") "pkg/mod::x")
+        :editor_vcs_why_panel_with_op
+          (((core/editor/action::vcs-why-panel-with-op "snapshot-h") "pkg/mod::x") "pkg/mod::op")
         :editor_format_file_task (core/editor/action::format-file-task "a.gc")
         :editor_lint_module_task ((core/editor/action::lint-module-task "a.gc") [pkg/a::x])
         :editor_typecheck_pkg_task (core/editor/action::typecheck-pkg-task "package.toml")
@@ -391,6 +397,42 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .clone();
     let req = get_req(editor_vcs_evidence_list_panel);
     assert_eq!(req.op, "core/store::get");
+
+    let editor_vcs_blame_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_blame_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_blame_panel);
+    assert_eq!(req.op, "core/vcs::blame");
+
+    let editor_vcs_blame_panel_with_path = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_blame_panel_with_path",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_blame_panel_with_path);
+    assert_eq!(req.op, "core/vcs::blame");
+
+    let editor_vcs_why_panel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_why_panel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_why_panel);
+    assert_eq!(req.op, "core/vcs::why");
+
+    let editor_vcs_why_panel_with_op = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_vcs_why_panel_with_op",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_vcs_why_panel_with_op);
+    assert_eq!(req.op, "core/vcs::why");
 
     let editor_format_file_task = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

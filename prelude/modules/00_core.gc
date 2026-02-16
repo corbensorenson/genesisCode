@@ -301,6 +301,30 @@
       (((core/effect::perform (quote core/vcs::log)) {:max max :root root})
         (fn (resp) (core/effect::pure resp))))))
 
+(def core/vcs::blame
+  (fn (snapshot)
+    (fn (sym)
+      (fn (path)
+        (
+          ((core/effect::perform (quote core/vcs::blame))
+            {
+              :path path
+              :snapshot snapshot
+              :sym sym})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/vcs::why
+  (fn (snapshot)
+    (fn (sym)
+      (fn (op)
+        (
+          ((core/effect::perform (quote core/vcs::why))
+            {
+              :op op
+              :snapshot snapshot
+              :sym sym})
+          (fn (resp) (core/effect::pure resp)))))))
+
 (def core/vcs::diff
   (fn (base)
     (fn (to)
@@ -542,4 +566,3 @@
               :quarantine-dir quarantine-dir
               :ttl-days ttl-days})
           (fn (resp) (core/effect::pure resp)))))))
-

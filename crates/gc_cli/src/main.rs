@@ -793,6 +793,36 @@ enum VcsCmd {
         max: u64,
     },
 
+    /// Attribute a symbol in a snapshot to the commit that introduced its current artifact hash.
+    Blame {
+        /// Snapshot hash (hex).
+        #[arg(long)]
+        snapshot: String,
+
+        /// Qualified symbol to attribute.
+        #[arg(long)]
+        sym: String,
+
+        /// Optional structural path hint (forwarded to the capability payload).
+        #[arg(long)]
+        path: Option<String>,
+    },
+
+    /// Explain symbol provenance and evidence context for a snapshot.
+    Why {
+        /// Snapshot hash (hex).
+        #[arg(long)]
+        snapshot: String,
+
+        /// Qualified symbol to explain.
+        #[arg(long)]
+        sym: String,
+
+        /// Optional op symbol for additional context.
+        #[arg(long)]
+        op: Option<String>,
+    },
+
     /// 3-way semantic merge of contract snapshots (op-table merge; emits conflict artifact on divergence).
     Merge3 {
         /// Base snapshot hash (hex).
@@ -2592,6 +2622,20 @@ fn cmd_vcs(
             "genesis/vcs-log-v0.1",
             "vcs-log",
         ),
+        VcsCmd::Blame {
+            snapshot,
+            sym,
+            path,
+        } => (
+            mk_vcs_blame_program(snapshot, sym, path.as_deref())?,
+            "genesis/vcs-blame-v0.1",
+            "vcs-blame",
+        ),
+        VcsCmd::Why { snapshot, sym, op } => (
+            mk_vcs_why_program(snapshot, sym, op.as_deref())?,
+            "genesis/vcs-why-v0.1",
+            "vcs-why",
+        ),
         VcsCmd::Merge3 {
             base,
             left,
@@ -2683,6 +2727,9 @@ fn cmd_vcs(
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             VcsCmd::Apply { .. } => extract_vcs_snapshot_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            VcsCmd::Blame { .. } => extract_vcs_commit_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             _ => format!("{value}\n"),
@@ -3800,6 +3847,89 @@ fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
     ]
 }
 
+fn mk_vcs_blame_program(
+    snapshot: &str,
+    sym: &str,
+    path: Option<&str>,
+) -> Result<Vec<Term>, CliError> {
+    gc_vcs::validate_hex_hash(snapshot)
+        .map_err(|e| cli_err(EX_PARSE, "vcs/blame", format!("invalid --snapshot: {e}")))?;
+    if sym.trim().is_empty() {
+        return Err(cli_err(EX_PARSE, "vcs/blame", "invalid --sym: empty value"));
+    }
+
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::blame")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":snapshot")),
+        Term::Str(snapshot.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":sym")),
+        Term::Str(sym.to_string()),
+    );
+    if let Some(path) = path {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":path")),
+            Term::Str(path.to_string()),
+        );
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
+}
+
+fn mk_vcs_why_program(
+    snapshot: &str,
+    sym: &str,
+    op_sym: Option<&str>,
+) -> Result<Vec<Term>, CliError> {
+    gc_vcs::validate_hex_hash(snapshot)
+        .map_err(|e| cli_err(EX_PARSE, "vcs/why", format!("invalid --snapshot: {e}")))?;
+    if sym.trim().is_empty() {
+        return Err(cli_err(EX_PARSE, "vcs/why", "invalid --sym: empty value"));
+    }
+
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::why")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":snapshot")),
+        Term::Str(snapshot.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":sym")),
+        Term::Str(sym.to_string()),
+    );
+    if let Some(op_sym) = op_sym {
+        if op_sym.trim().is_empty() {
+            return Err(cli_err(EX_PARSE, "vcs/why", "invalid --op: empty value"));
+        }
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":op")),
+            Term::Str(op_sym.to_string()),
+        );
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
+}
+
 fn mk_vcs_diff_program(base: &str, to: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::diff")]);
     let mut m = std::collections::BTreeMap::new();
@@ -4062,6 +4192,15 @@ fn extract_vcs_snapshot_hash(v: &Value) -> Option<String> {
     let t = v.to_term_for_log(None);
     let Term::Map(m) = t else { return None };
     match m.get(&gc_coreform::TermOrdKey(Term::symbol(":snapshot"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_vcs_commit_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&gc_coreform::TermOrdKey(Term::symbol(":commit"))) {
         Some(Term::Str(s)) => Some(s.clone()),
         _ => None,
     }

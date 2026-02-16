@@ -2353,6 +2353,371 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":commits")), Term::Vector(out));
             Ok(Value::Data(Term::Map(m)))
         }
+        "core/vcs::blame" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/vcs::blame".to_string())
+            })?;
+
+            let sym = match payload_vcs_sym(payload, ":sym") {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let path = match payload_vcs_opt_sym_or_str(payload, ":path") {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let snapshot_h = match payload_vcs_opt_hash(payload, ":snapshot") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let commit_h = match payload_vcs_opt_hash(payload, ":commit") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            if snapshot_h.is_none() && commit_h.is_none() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :snapshot or :commit".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let start_commit = if let Some(ch) = commit_h {
+                ch
+            } else {
+                let Some(rdb) = refs else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/missing-refs-db",
+                        "snapshot lookup requires refs db".to_string(),
+                        Some(op),
+                    ));
+                };
+                let Some(sh) = snapshot_h.clone() else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        "missing :snapshot".to_string(),
+                        Some(op),
+                    ));
+                };
+                let found = match vcs_find_commit_for_snapshot(store, rdb, &sh) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op)));
+                    }
+                };
+                let Some(h) = found else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/no-commit-for-snapshot",
+                        format!("no commit found for snapshot: {sh}"),
+                        Some(op),
+                    ));
+                };
+                h
+            };
+
+            let (start_commit_obj, _) = match vcs_load_commit(store, &start_commit) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+            };
+
+            if let Some(sh) = &snapshot_h
+                && &start_commit_obj.result != sh
+            {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "provided :commit does not resolve to provided :snapshot".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let query_snapshot = snapshot_h.unwrap_or(start_commit_obj.result.clone());
+            let value_h = match vcs_snapshot_symbol_ref(store, &query_snapshot, &sym) {
+                Ok(Some(h)) => h,
+                Ok(None) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/symbol-not-found",
+                        format!("symbol not found in snapshot: {sym}"),
+                        Some(op),
+                    ));
+                }
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
+            };
+
+            let blame_h = match vcs_blame_commit_for_symbol(store, &start_commit, &sym, &value_h) {
+                Ok(h) => h,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
+            };
+            let (blame_commit, _) = match vcs_load_commit(store, &blame_h) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+            };
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":sym")), Term::Str(sym));
+            m.insert(TermOrdKey(Term::symbol(":value")), Term::Str(value_h));
+            m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(blame_h));
+            m.insert(
+                TermOrdKey(Term::symbol(":snapshot")),
+                Term::Str(blame_commit.result),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":query-snapshot")),
+                Term::Str(query_snapshot),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":path")),
+                path.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            Ok(Value::Data(Term::Map(m)))
+        }
+        "core/vcs::why" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/vcs::why".to_string())
+            })?;
+
+            let sym = match payload_vcs_sym(payload, ":sym") {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let op_sym = match payload_vcs_opt_sym_or_str(payload, ":op") {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let path = match payload_vcs_opt_sym_or_str(payload, ":path") {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let snapshot_h = match payload_vcs_opt_hash(payload, ":snapshot") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let commit_h = match payload_vcs_opt_hash(payload, ":commit") {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            if snapshot_h.is_none() && commit_h.is_none() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :snapshot or :commit".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let start_commit = if let Some(ch) = commit_h {
+                ch
+            } else {
+                let Some(rdb) = refs else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/missing-refs-db",
+                        "snapshot lookup requires refs db".to_string(),
+                        Some(op),
+                    ));
+                };
+                let Some(sh) = snapshot_h.clone() else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        "missing :snapshot".to_string(),
+                        Some(op),
+                    ));
+                };
+                let found = match vcs_find_commit_for_snapshot(store, rdb, &sh) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op)));
+                    }
+                };
+                let Some(h) = found else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/no-commit-for-snapshot",
+                        format!("no commit found for snapshot: {sh}"),
+                        Some(op),
+                    ));
+                };
+                h
+            };
+
+            let (start_commit_obj, _) = match vcs_load_commit(store, &start_commit) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+            };
+            if let Some(sh) = &snapshot_h
+                && &start_commit_obj.result != sh
+            {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "provided :commit does not resolve to provided :snapshot".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let query_snapshot = snapshot_h.unwrap_or(start_commit_obj.result.clone());
+            let value_h = match vcs_snapshot_symbol_ref(store, &query_snapshot, &sym) {
+                Ok(Some(h)) => h,
+                Ok(None) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/symbol-not-found",
+                        format!("symbol not found in snapshot: {sym}"),
+                        Some(op),
+                    ));
+                }
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
+            };
+            let blame_h = match vcs_blame_commit_for_symbol(store, &start_commit, &sym, &value_h) {
+                Ok(h) => h,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
+            };
+
+            let (blame_commit, blame_term) = match vcs_load_commit(store, &blame_h) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+            };
+            let (target, author, why) = match &blame_term {
+                Term::Map(mm) => (
+                    mm.get(&TermOrdKey(Term::symbol(":target")))
+                        .cloned()
+                        .unwrap_or(Term::Nil),
+                    mm.get(&TermOrdKey(Term::symbol(":author")))
+                        .cloned()
+                        .unwrap_or(Term::Nil),
+                    mm.get(&TermOrdKey(Term::symbol(":why")))
+                        .cloned()
+                        .unwrap_or(Term::Nil),
+                ),
+                _ => (Term::Nil, Term::Nil, Term::Nil),
+            };
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":sym")), Term::Str(sym));
+            m.insert(TermOrdKey(Term::symbol(":value")), Term::Str(value_h));
+            m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(blame_h));
+            m.insert(
+                TermOrdKey(Term::symbol(":snapshot")),
+                Term::Str(blame_commit.result),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":query-snapshot")),
+                Term::Str(query_snapshot),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":message")),
+                Term::Str(blame_commit.message),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":obligations")),
+                Term::Vector(
+                    blame_commit
+                        .obligations
+                        .into_iter()
+                        .map(Term::Str)
+                        .collect(),
+                ),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":evidence")),
+                Term::Vector(blame_commit.evidence.into_iter().map(Term::Str).collect()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":attestations")),
+                Term::Vector(
+                    blame_commit
+                        .attestations
+                        .into_iter()
+                        .map(Term::Str)
+                        .collect(),
+                ),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":path")),
+                path.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":op")),
+                op_sym.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            m.insert(TermOrdKey(Term::symbol(":target")), target);
+            m.insert(TermOrdKey(Term::symbol(":author")), author);
+            m.insert(TermOrdKey(Term::symbol(":why")), why);
+            Ok(Value::Data(Term::Map(m)))
+        }
         "core/vcs::diff" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::diff".to_string())
@@ -5320,6 +5685,158 @@ fn payload_vcs_hash(payload: &Term, key: &str) -> Result<String, EffectsError> {
             "{key} must be hex string, got {}",
             print_term(other)
         ))),
+    }
+}
+
+fn payload_vcs_opt_hash(payload: &Term, key: &str) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => {
+            gc_vcs::validate_hex_hash(s)
+                .map_err(|e| EffectsError::BadPayload(format!("{key}: {e}")))?;
+            Ok(Some(s.clone()))
+        }
+        Some(other) => Err(EffectsError::BadPayload(format!(
+            "{key} must be hex string or nil, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+fn payload_vcs_sym(payload: &Term, key: &str) -> Result<String, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m
+        .get(&TermOrdKey(Term::symbol(key)))
+        .ok_or_else(|| EffectsError::BadPayload(format!("missing {key}")))?;
+    match v {
+        Term::Symbol(s) => Ok(s.clone()),
+        Term::Str(s) => Ok(s.clone()),
+        other => Err(EffectsError::BadPayload(format!(
+            "{key} must be symbol/string, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+fn payload_vcs_opt_sym_or_str(payload: &Term, key: &str) -> Result<Option<String>, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Symbol(s)) => Ok(Some(s.clone())),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(other) => Err(EffectsError::BadPayload(format!(
+            "{key} must be symbol/string or nil, got {}",
+            print_term(other)
+        ))),
+    }
+}
+
+fn vcs_load_commit(
+    store: &ArtifactStore,
+    commit_h: &str,
+) -> Result<(gc_vcs::Commit, Term), String> {
+    let t = store_get_term(store, commit_h).map_err(|e| e.to_string())?;
+    let c = gc_vcs::Commit::from_term(&t).map_err(|e| format!("bad commit {commit_h}: {e}"))?;
+    Ok((c, t))
+}
+
+fn vcs_snapshot_symbol_ref(
+    store: &ArtifactStore,
+    snapshot_h: &str,
+    sym: &str,
+) -> Result<Option<String>, String> {
+    let t = store_get_term(store, snapshot_h).map_err(|e| e.to_string())?;
+    let snap =
+        gc_vcs::Snapshot::from_term(&t).map_err(|e| format!("bad snapshot {snapshot_h}: {e}"))?;
+    match snap.kind {
+        gc_vcs::SnapshotKind::Module(m) => Ok(m.defs.get(sym).cloned()),
+        gc_vcs::SnapshotKind::Contract(c) => Ok(c.overrides.get(sym).cloned()),
+        gc_vcs::SnapshotKind::Workspace(w) => Ok(w.modules.get(sym).cloned()),
+        gc_vcs::SnapshotKind::Package(p) => {
+            for me in p.modules {
+                if me.path == sym {
+                    return Ok(Some(me.hash_hex));
+                }
+            }
+            Ok(None)
+        }
+    }
+}
+
+fn vcs_find_commit_for_snapshot(
+    store: &ArtifactStore,
+    refs: &RefsDb,
+    snapshot_h: &str,
+) -> Result<Option<String>, String> {
+    use std::collections::HashSet;
+
+    let refs = refs.list(None).map_err(|e| e.to_string())?;
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut stack: Vec<String> = refs
+        .into_iter()
+        .filter_map(|r| r.hash)
+        .filter(|h| gc_vcs::validate_hex_hash(h).is_ok())
+        .collect();
+
+    stack.sort();
+    stack.dedup();
+
+    while let Some(h) = stack.pop() {
+        if !visited.insert(h.clone()) {
+            continue;
+        }
+        let (c, _) = vcs_load_commit(store, &h)?;
+        if c.result == snapshot_h {
+            return Ok(Some(h));
+        }
+        for parent in c.parents.iter().rev() {
+            stack.push(parent.clone());
+        }
+    }
+    Ok(None)
+}
+
+fn vcs_blame_commit_for_symbol(
+    store: &ArtifactStore,
+    start_commit_h: &str,
+    sym: &str,
+    value_h: &str,
+) -> Result<String, String> {
+    use std::collections::HashSet;
+
+    let mut cur = start_commit_h.to_string();
+    let mut seen: HashSet<String> = HashSet::new();
+    loop {
+        if !seen.insert(cur.clone()) {
+            return Ok(cur);
+        }
+        let (c, _) = vcs_load_commit(store, &cur)?;
+        let mut next_parent: Option<String> = None;
+        for p in &c.parents {
+            let (pc, _) = vcs_load_commit(store, p)?;
+            let pref = vcs_snapshot_symbol_ref(store, &pc.result, sym)?;
+            if pref.as_deref() == Some(value_h) {
+                next_parent = Some(p.clone());
+                break;
+            }
+        }
+        match next_parent {
+            Some(n) => cur = n,
+            None => return Ok(cur),
+        }
     }
 }
 

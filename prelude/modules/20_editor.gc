@@ -605,6 +605,32 @@
         :root ((core/map::get resp) (quote :root))
         :truncated ((core/map::get resp) (quote :truncated))})))
 
+(def core/editor/vcs::blame-panel-from-response
+  (fn (resp)
+    {
+      :commit ((core/map::get resp) (quote :commit))
+      :kind (quote :editor/vcs-blame-panel)
+      :path ((core/map::get resp) (quote :path))
+      :snapshot ((core/map::get resp) (quote :snapshot))
+      :sym ((core/map::get resp) (quote :sym))
+      :value ((core/map::get resp) (quote :value))}))
+
+(def core/editor/vcs::why-panel-from-response
+  (fn (resp)
+    {
+      :attestations (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :attestations)))
+      :commit ((core/map::get resp) (quote :commit))
+      :evidence (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :evidence)))
+      :kind (quote :editor/vcs-why-panel)
+      :message ((core/map::get resp) (quote :message))
+      :obligations (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :obligations)))
+      :op ((core/map::get resp) (quote :op))
+      :path ((core/map::get resp) (quote :path))
+      :snapshot ((core/map::get resp) (quote :snapshot))
+      :sym ((core/map::get resp) (quote :sym))
+      :value ((core/map::get resp) (quote :value))
+      :why ((core/map::get resp) (quote :why))}))
+
 (def core/editor/vcs::commit-panel-from-artifact
   (fn (commit-h)
     (fn (artifact)
@@ -659,6 +685,32 @@
   (fn (root)
     (fn (max)
       ((core/effect::map ((core/vcs::log root) max)) core/editor/vcs::log-panel-from-response))))
+
+(def core/editor/action::vcs-blame-panel
+  (fn (snapshot)
+    (fn (sym)
+      ((core/effect::map (((core/vcs::blame snapshot) sym) nil))
+        core/editor/vcs::blame-panel-from-response))))
+
+(def core/editor/action::vcs-blame-panel-with-path
+  (fn (snapshot)
+    (fn (sym)
+      (fn (path)
+        ((core/effect::map (((core/vcs::blame snapshot) sym) path))
+          core/editor/vcs::blame-panel-from-response)))))
+
+(def core/editor/action::vcs-why-panel
+  (fn (snapshot)
+    (fn (sym)
+      ((core/effect::map (((core/vcs::why snapshot) sym) nil))
+        core/editor/vcs::why-panel-from-response))))
+
+(def core/editor/action::vcs-why-panel-with-op
+  (fn (snapshot)
+    (fn (sym)
+      (fn (op)
+        ((core/effect::map (((core/vcs::why snapshot) sym) op))
+          core/editor/vcs::why-panel-from-response)))))
 
 (def core/editor/action::vcs-commit-panel
   (fn (commit-h)
