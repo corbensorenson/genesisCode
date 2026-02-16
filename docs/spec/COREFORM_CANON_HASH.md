@@ -19,6 +19,7 @@ Canonicalization must:
 - Normalize multi-arg `(fn (x y z) body)` into nested unary functions.
 - Normalize multi-body forms into `(begin ...)`.
 - Normalize n-ary application `(f a b c)` into nested binary application `(((f a) b) c)`.
+- Normalize singleton list grouping `(f)` into `f`.
 - Preserve data literals: vectors/maps are treated as data; canonicalization must not desugar application sugar inside them.
 - Quote sugar `'x` parses as `(quote x)`.
 
@@ -59,4 +60,3 @@ The hash of a module (vector of top-level forms) is:
 
 - Any change to canonical printing changes hashes and therefore invalidates pinned manifests and evidence; such changes must be treated as a versioned surface change.
 - If canonical printing changes intentionally, bump the prefix tag (e.g. `GCv0.3\\0`) and keep v0.2 behavior available if compatibility is required.
-
