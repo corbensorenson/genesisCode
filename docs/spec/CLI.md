@@ -24,7 +24,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - commands with `--engine` must use `--engine selfhost`
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
-  - Current native routed set: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
+  - Current routed set:
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store/*`, `refs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
+    - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*`, `policy/*`, `gc/*`, `vcs/*`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
   - Toolchain artifact resolution still follows:

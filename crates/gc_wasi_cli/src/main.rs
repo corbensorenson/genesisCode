@@ -252,8 +252,18 @@ enum Cmd {
         cmd: GcCmd,
     },
 
-    /// GenesisGraph pure ops subset.
+    /// GenesisGraph commit DAG operations.
     Vcs {
+        /// Capability policy TOML (deny-by-default allowlist).
+        ///
+        /// Required for effectful VCS operations; omitted for pure ops like `vcs hash`.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<pid>-<seq>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
         #[command(subcommand)]
         cmd: VcsCmd,
     },
@@ -270,6 +280,127 @@ enum VcsCmd {
         /// self-hosted CoreForm toolchain inside the kernel.
         #[arg(long, value_enum)]
         engine: Option<FmtEngine>,
+    },
+
+    /// Compute a semantic patch between two snapshot hashes.
+    Diff {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Target snapshot hash (hex).
+        #[arg(long)]
+        to: String,
+
+        /// Optional output path for the patch term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// If set, do not store the patch artifact (value artifacts may still be stored).
+        #[arg(long)]
+        no_store: bool,
+    },
+
+    /// Apply a patch to a base snapshot.
+    Apply {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Patch hash (hex) or a patch file path (relative to capability base_dir).
+        #[arg(long)]
+        patch: String,
+
+        /// Optional output path for the resulting snapshot term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// If set, do not store the resulting snapshot artifact.
+        #[arg(long)]
+        no_store: bool,
+    },
+
+    /// Walk the commit DAG starting from a commit hash or ref name and print the visited commits.
+    Log {
+        /// Commit hash (hex) or ref name (refs/...).
+        root: String,
+
+        /// Maximum number of commits to emit before truncating.
+        #[arg(long, default_value_t = 1000)]
+        max: u64,
+    },
+
+    /// Attribute a symbol in a snapshot to the commit that introduced its current artifact hash.
+    Blame {
+        /// Snapshot hash (hex).
+        #[arg(long)]
+        snapshot: String,
+
+        /// Qualified symbol to attribute.
+        #[arg(long)]
+        sym: String,
+
+        /// Optional structural path hint (forwarded to the capability payload).
+        #[arg(long)]
+        path: Option<String>,
+    },
+
+    /// Explain symbol provenance and evidence context for a snapshot.
+    Why {
+        /// Snapshot hash (hex).
+        #[arg(long)]
+        snapshot: String,
+
+        /// Qualified symbol to explain.
+        #[arg(long)]
+        sym: String,
+
+        /// Optional op symbol for additional context.
+        #[arg(long)]
+        op: Option<String>,
+    },
+
+    /// 3-way semantic merge of contract snapshots (op-table merge; emits conflict artifact on divergence).
+    Merge3 {
+        /// Base snapshot hash (hex).
+        #[arg(long)]
+        base: String,
+
+        /// Left snapshot hash (hex).
+        #[arg(long)]
+        left: String,
+
+        /// Right snapshot hash (hex).
+        #[arg(long)]
+        right: String,
+
+        /// Optional output path for the merged snapshot or conflict term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+
+    /// Resolve a `:vcs/conflict` artifact (currently supports `:kind :contract`) into a merged snapshot and patch.
+    ResolveConflict {
+        /// Conflict artifact hash (hex).
+        #[arg(long)]
+        conflict: String,
+
+        /// Default conflict resolution strategy for all ops without an explicit `--pick/--set` override.
+        /// One of: left, right, base.
+        #[arg(long)]
+        strategy: Option<String>,
+
+        /// Per-op side pick in the form `op=left|right|base`. May be repeated.
+        #[arg(long = "pick")]
+        picks: Vec<String>,
+
+        /// Per-op explicit handler hash in the form `op=<64-hex>`. May be repeated.
+        #[arg(long = "set")]
+        sets: Vec<String>,
+
+        /// Optional output path for the resulting patch term (relative to capability base_dir).
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -799,12 +930,13 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Gc { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
+            ..
         } => enforce_selfhost_engine(cli, "vcs hash", *engine),
+        Cmd::Vcs { .. } => Ok(()),
         other => {
             let cmd = match other {
                 Cmd::Test { .. } | Cmd::Pack { .. } => unreachable!(),
                 Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
-                Cmd::Vcs { .. } => "vcs (non-hash)",
                 Cmd::Fmt { .. }
                 | Cmd::Eval { .. }
                 | Cmd::Run { .. }
@@ -813,13 +945,14 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
                 | Cmd::Policy { .. }
-                | Cmd::Gc { .. } => unreachable!(),
+                | Cmd::Gc { .. }
+                | Cmd::Vcs { .. } => unreachable!(),
             };
             Err(cli_err(
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -3114,6 +3247,373 @@ fn mk_gc_purge_program(ttl_days: u64, quarantine_dir: Option<&Path>) -> Vec<gc_c
     ]
 }
 
+fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::log")]);
+    let payload = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":root")),
+                Term::Str(root.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max")),
+                Term::Int((max as i64).into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_blame_program(
+    snapshot: &str,
+    sym: &str,
+    path: Option<&str>,
+) -> Result<Vec<Term>, CliError> {
+    gc_vcs::validate_hex_hash(snapshot)
+        .map_err(|e| cli_err(EX_PARSE, "vcs/blame", format!("invalid --snapshot: {e}")))?;
+    if sym.trim().is_empty() {
+        return Err(cli_err(EX_PARSE, "vcs/blame", "invalid --sym: empty value"));
+    }
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::blame")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":snapshot")),
+        Term::Str(snapshot.to_string()),
+    );
+    m.insert(TermOrdKey(Term::symbol(":sym")), Term::Str(sym.to_string()));
+    if let Some(path) = path {
+        m.insert(
+            TermOrdKey(Term::symbol(":path")),
+            Term::Str(path.to_string()),
+        );
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
+}
+
+fn mk_vcs_why_program(
+    snapshot: &str,
+    sym: &str,
+    op_sym: Option<&str>,
+) -> Result<Vec<Term>, CliError> {
+    gc_vcs::validate_hex_hash(snapshot)
+        .map_err(|e| cli_err(EX_PARSE, "vcs/why", format!("invalid --snapshot: {e}")))?;
+    if sym.trim().is_empty() {
+        return Err(cli_err(EX_PARSE, "vcs/why", "invalid --sym: empty value"));
+    }
+
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::why")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":snapshot")),
+        Term::Str(snapshot.to_string()),
+    );
+    m.insert(TermOrdKey(Term::symbol(":sym")), Term::Str(sym.to_string()));
+    if let Some(op_sym) = op_sym {
+        if op_sym.trim().is_empty() {
+            return Err(cli_err(EX_PARSE, "vcs/why", "invalid --op: empty value"));
+        }
+        m.insert(
+            TermOrdKey(Term::symbol(":op")),
+            Term::Str(op_sym.to_string()),
+        );
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
+}
+
+fn mk_vcs_diff_program(base: &str, to: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::diff")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
+    );
+    m.insert(TermOrdKey(Term::symbol(":to")), Term::Str(to.to_string()));
+    if let Some(out) = out {
+        m.insert(
+            TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    m.insert(TermOrdKey(Term::symbol(":store")), Term::Bool(store));
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_apply_program(base: &str, patch: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
+    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs::apply")]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":patch")),
+        Term::Str(patch.to_string()),
+    );
+    if let Some(out) = out {
+        m.insert(
+            TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    m.insert(TermOrdKey(Term::symbol(":store")), Term::Bool(store));
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_merge3_program(base: &str, left: &str, right: &str, out: Option<&Path>) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs::merge3"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":base")),
+        Term::Str(base.to_string()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":left")),
+        Term::Str(left.to_string()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":right")),
+        Term::Str(right.to_string()),
+    );
+    if let Some(out) = out {
+        m.insert(
+            TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+    let payload = Term::Map(m);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
+fn mk_vcs_resolve_conflict_program(
+    conflict: &str,
+    strategy: Option<&str>,
+    picks: &[String],
+    sets: &[String],
+    out: Option<&Path>,
+) -> Result<Vec<Term>, CliError> {
+    if strategy.is_none() && picks.is_empty() && sets.is_empty() {
+        return Err(cli_err(
+            EX_PARSE,
+            "vcs/resolve-conflict",
+            "must provide --strategy and/or --pick/--set overrides",
+        ));
+    }
+
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs::resolve-conflict"),
+    ]);
+    let mut payload: std::collections::BTreeMap<TermOrdKey, Term> =
+        std::collections::BTreeMap::new();
+    payload.insert(
+        TermOrdKey(Term::symbol(":conflict")),
+        Term::Str(conflict.to_string()),
+    );
+    if let Some(s) = strategy {
+        let s = s.trim();
+        let sym = match s {
+            "left" | ":left" => ":left",
+            "right" | ":right" => ":right",
+            "base" | ":base" => ":base",
+            other => {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "vcs/resolve-conflict",
+                    format!("unsupported --strategy {other} (expected left|right|base)"),
+                ));
+            }
+        };
+        payload.insert(
+            TermOrdKey(Term::symbol(":strategy")),
+            Term::Str(sym.to_string()),
+        );
+    }
+    if let Some(out) = out {
+        payload.insert(
+            TermOrdKey(Term::symbol(":out")),
+            Term::Str(out.display().to_string()),
+        );
+    }
+
+    let mut res: std::collections::BTreeMap<String, Term> = std::collections::BTreeMap::new();
+    for p in picks {
+        let (opk, side) = p.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("bad --pick {p}; expected op=left|right|base"),
+            )
+        })?;
+        let opk = opk.trim();
+        if opk.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                "bad --pick: empty op",
+            ));
+        }
+        if res.contains_key(opk) {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("duplicate resolution for op {opk}"),
+            ));
+        }
+        let side = side.trim();
+        let sym = match side {
+            "left" | ":left" => ":left",
+            "right" | ":right" => ":right",
+            "base" | ":base" => ":base",
+            other => {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "vcs/resolve-conflict",
+                    format!("bad --pick {p}; unsupported side {other}"),
+                ));
+            }
+        };
+        res.insert(opk.to_string(), Term::Str(sym.to_string()));
+    }
+    for s in sets {
+        let (opk, hv) = s.split_once('=').ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("bad --set {s}; expected op=<64-hex>"),
+            )
+        })?;
+        let opk = opk.trim();
+        if opk.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                "bad --set: empty op",
+            ));
+        }
+        if res.contains_key(opk) {
+            return Err(cli_err(
+                EX_PARSE,
+                "vcs/resolve-conflict",
+                format!("duplicate resolution for op {opk}"),
+            ));
+        }
+        let hv = hv.trim();
+        gc_vcs::validate_hex_hash(hv)
+            .map_err(|e| cli_err(EX_PARSE, "vcs/resolve-conflict", e.to_string()))?;
+        res.insert(opk.to_string(), Term::Str(hv.to_string()));
+    }
+    if !res.is_empty() {
+        let mut rm: std::collections::BTreeMap<TermOrdKey, Term> =
+            std::collections::BTreeMap::new();
+        for (k, v) in res {
+            rm.insert(TermOrdKey(Term::Symbol(k)), v);
+        }
+        payload.insert(TermOrdKey(Term::symbol(":resolutions")), Term::Map(rm));
+    }
+
+    let payload = Term::Map(payload);
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    Ok(vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ])
+}
+
+fn extract_vcs_patch_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":patch"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_vcs_snapshot_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":snapshot"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_vcs_commit_hash(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let Term::Map(m) = t else { return None };
+    match m.get(&TermOrdKey(Term::symbol(":commit"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn extract_pkg_snapshot_hash(v: &Value) -> Option<String> {
     let t = v.to_term_for_log(None);
     let gc_coreform::Term::Map(m) = t else {
@@ -4070,6 +4570,193 @@ fn cmd_refs(
     })
 }
 
+fn cmd_vcs(
+    cli: &Cli,
+    caps: Option<&Path>,
+    log: &Option<PathBuf>,
+    cmd: &VcsCmd,
+) -> Result<CmdOut, CliError> {
+    if let VcsCmd::Hash { input, engine } = cmd {
+        return cmd_vcs_hash(cli, input, *engine);
+    }
+
+    let caps = caps.ok_or_else(|| {
+        cli_err(
+            EX_PARSE,
+            "caps/missing",
+            "missing --caps (required for effectful vcs operations)",
+        )
+    })?;
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        VcsCmd::Hash { .. } => unreachable!("handled above"),
+        VcsCmd::Diff {
+            base,
+            to,
+            out,
+            no_store,
+        } => (
+            mk_vcs_diff_program(base, to, out.as_deref(), !*no_store),
+            "genesis/vcs-diff-v0.1",
+            "vcs-diff",
+        ),
+        VcsCmd::Apply {
+            base,
+            patch,
+            out,
+            no_store,
+        } => (
+            mk_vcs_apply_program(base, patch, out.as_deref(), !*no_store),
+            "genesis/vcs-apply-v0.1",
+            "vcs-apply",
+        ),
+        VcsCmd::Log { root, max } => (
+            mk_vcs_log_program(root, *max),
+            "genesis/vcs-log-v0.1",
+            "vcs-log",
+        ),
+        VcsCmd::Blame {
+            snapshot,
+            sym,
+            path,
+        } => (
+            mk_vcs_blame_program(snapshot, sym, path.as_deref())?,
+            "genesis/vcs-blame-v0.1",
+            "vcs-blame",
+        ),
+        VcsCmd::Why { snapshot, sym, op } => (
+            mk_vcs_why_program(snapshot, sym, op.as_deref())?,
+            "genesis/vcs-why-v0.1",
+            "vcs-why",
+        ),
+        VcsCmd::Merge3 {
+            base,
+            left,
+            right,
+            out,
+        } => (
+            mk_vcs_merge3_program(base, left, right, out.as_deref()),
+            "genesis/vcs-merge3-v0.1",
+            "vcs-merge3",
+        ),
+        VcsCmd::ResolveConflict {
+            conflict,
+            strategy,
+            picks,
+            sets,
+            out,
+        } => (
+            mk_vcs_resolve_conflict_program(
+                conflict,
+                strategy.as_deref(),
+                picks,
+                sets,
+                out.as_deref(),
+            )?,
+            "genesis/vcs-resolve-conflict-v0.1",
+            "vcs-resolve-conflict",
+        ),
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis_wasi/{} (wasi)", env!("CARGO_PKG_VERSION"));
+    let r = run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = match log {
+        Some(p) => p.clone(),
+        None => default_effect_log_path(log_op)?,
+    };
+    write_effect_log(&log_path, &r.log)?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENY;
+        }
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+
+    if matches!(cmd, VcsCmd::Merge3 { .. } | VcsCmd::ResolveConflict { .. })
+        && let Value::Data(Term::Map(m)) = &r.value
+        && matches!(
+            m.get(&TermOrdKey(Term::symbol(":ok"))),
+            Some(Term::Bool(false))
+        )
+        && m.contains_key(&TermOrdKey(Term::symbol(":conflict")))
+    {
+        ok = false;
+        exit_code = 3;
+    }
+
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        match cmd {
+            VcsCmd::Diff { .. } => extract_vcs_patch_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            VcsCmd::Apply { .. } => extract_vcs_snapshot_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            VcsCmd::Blame { .. } => extract_vcs_commit_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
+            _ => format!("{value}\n"),
+        }
+    };
+
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "vcs/error",
+                message: "vcs operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
 fn cmd_vcs_hash(cli: &Cli, input: &PathBuf, engine: Option<FmtEngine>) -> Result<CmdOut, CliError> {
     let engine = resolved_engine(cli, "vcs hash", engine)?;
     let src = std::fs::read_to_string(input)
@@ -4260,9 +4947,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps.as_path(), log, cmd),
         Cmd::Policy { cmd } => cmd_policy(cli, cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps.as_path(), log, cmd),
-        Cmd::Vcs { cmd } => match cmd {
-            VcsCmd::Hash { input, engine } => cmd_vcs_hash(cli, input, *engine),
-        },
+        Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps.as_deref(), log, cmd),
     }
 }
 

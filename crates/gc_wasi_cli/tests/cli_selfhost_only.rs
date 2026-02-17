@@ -33,6 +33,21 @@ fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
     caps
 }
 
+fn write_vcs_caps(dir: &Path) -> PathBuf {
+    let caps = dir.join("caps_vcs.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/vcs::log"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    caps
+}
+
 #[test]
 fn top_level_help_exposes_selfhost_only_flag() {
     cargo_bin_cmd!("genesis_wasi")
@@ -80,7 +95,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -154,6 +169,23 @@ fn selfhost_only_accepts_policy_command_group() {
         .assert()
         .success()
         .stdout(predicate::str::contains("default"));
+}
+
+#[test]
+fn selfhost_only_accepts_vcs_command_group() {
+    let td = tempdir().unwrap();
+    let caps = write_vcs_caps(td.path());
+    let root_h = "0".repeat(64);
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "vcs", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["log"])
+        .arg(&root_h)
+        .assert()
+        .failure()
+        .code(20);
 }
 
 #[test]

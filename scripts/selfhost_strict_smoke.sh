@@ -176,6 +176,16 @@ wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --works
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.wasi.lock >/dev/null
 wasi_native --selfhost-only policy list --policies "$TMP_DIR/policies.wasi.toml" >/dev/null
 wasi_native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/wasi.pins.toml >/dev/null
+if wasi_native --selfhost-only vcs --caps "$TMP_DIR/caps.effects.toml" log "$SYNC_ROOT" >/dev/null 2>&1; then
+  echo "WASI strict vcs log unexpectedly succeeded for missing commit root" >&2
+  exit 1
+else
+  w_vcs_log_rc=$?
+  if [[ "$w_vcs_log_rc" -ne 20 ]]; then
+    echo "WASI strict vcs log failed with unexpected exit code: $w_vcs_log_rc" >&2
+    exit 1
+  fi
+fi
 W_N_VCS_HASH="$(wasi_native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
 W_S_VCS_HASH="$(wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost | tr -d '\n')"
 if [[ "$W_N_VCS_HASH" != "$W_S_VCS_HASH" ]]; then
