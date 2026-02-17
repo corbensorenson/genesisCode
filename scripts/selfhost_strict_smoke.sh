@@ -35,6 +35,12 @@ if [[ "$N_EVAL" != "$S_EVAL" ]]; then
   exit 1
 fi
 
+cat >"$TMP_DIR/explain.gc" <<'GC'
+(def c (core/contract::make (fn (msg) nil) nil {}))
+c
+GC
+native --selfhost-only --selfhost-artifact "$ART" explain "$TMP_DIR/explain.gc" --engine selfhost --contract c --msg "(msg foo nil)" >/dev/null
+
 N_OPT="$TMP_DIR/opt.native.gc"
 S_OPT="$TMP_DIR/opt.strict.gc"
 native optimize "$TMP_DIR/mod.gc" --out "$N_OPT" >/dev/null
@@ -169,6 +175,7 @@ if [[ "$N_EVAL" != "$W_N_EVAL" ]]; then
   echo "WASI rust eval mismatch native=$N_EVAL wasi=$W_N_EVAL" >&2
   exit 1
 fi
+wasi_native --selfhost-only --selfhost-artifact "$ART" explain "$TMP_DIR/explain.gc" --engine selfhost --contract c --msg "(msg foo nil)" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --input "$TMP_DIR/value.gc" >/dev/null

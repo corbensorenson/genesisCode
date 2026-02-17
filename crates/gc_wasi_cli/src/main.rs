@@ -11,7 +11,7 @@ use gc_coreform::{
 use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
-use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module};
+use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module, eval_term};
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
     selfhost_coreform_toolchain_v1_sources,
@@ -125,6 +125,21 @@ enum Cmd {
         /// supported by stage-2 lowering.
         #[arg(long)]
         stage2_gate: bool,
+    },
+
+    /// Explain contract dispatch path for a given message.
+    Explain {
+        file: PathBuf,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
+        /// Contract expression or symbol (CoreForm).
+        #[arg(long)]
+        contract: String,
+        /// Message datum (CoreForm term, usually (msg op payload)).
+        #[arg(long)]
+        msg: String,
     },
 
     /// Run package obligations (unit tests, determinism, replay checks, etc.) and write evidence into `.genesis/store`.
@@ -1010,6 +1025,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
     match &cli.cmd {
         Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
+        Cmd::Explain { engine, .. } => enforce_selfhost_engine(cli, "explain", *engine),
         Cmd::Run { engine, .. } => enforce_selfhost_engine(cli, "run", *engine),
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Test { .. } => Ok(()),
@@ -1031,6 +1047,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
                 Cmd::Fmt { .. }
                 | Cmd::Eval { .. }
+                | Cmd::Explain { .. }
                 | Cmd::Run { .. }
                 | Cmd::Replay { .. }
                 | Cmd::Store { .. }
@@ -1045,7 +1062,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -1404,6 +1421,53 @@ fn selfhost_parse_canonicalize_module(
     Ok(forms.clone())
 }
 
+fn selfhost_parse_term(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    src: &str,
+    arg_name: &str,
+) -> Result<Term, CliError> {
+    let parse_fn = env.get("selfhost/parse::parse-term").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "selfhost/missing",
+            "missing binding selfhost/parse::parse-term",
+        )
+    })?;
+    let parsed = parse_fn
+        .apply(ctx, Value::Data(Term::Str(src.to_string())))
+        .map_err(|e| {
+            cli_err(
+                EX_EVAL,
+                "eval/error",
+                format!("selfhost parse-term failed for {arg_name}: {e}"),
+            )
+        })?;
+
+    if let Some((code, message, payload)) = extract_protocol_error(ctx, &parsed) {
+        return Err(CliError {
+            exit_code: EX_PARSE,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{arg_name}: {code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+
+    let Some(term) = parsed.as_data() else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            format!(
+                "selfhost parse-term returned non-data for {arg_name}: {}",
+                parsed.debug_repr()
+            ),
+        ));
+    };
+    Ok(term.clone())
+}
+
 fn stage1_pipeline_json(out: &gc_opt::Stage1PipelineOutcome) -> serde_json::Value {
     serde_json::json!({
         "obligation": out.gate_report.obligation,
@@ -1560,6 +1624,99 @@ fn cmd_eval(
             "stage2": stage2.as_ref().map(stage2_report_json),
             "value": value,
             "value_format": value_format,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{value}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_explain(
+    cli: &Cli,
+    file: &PathBuf,
+    engine: Option<FmtEngine>,
+    contract_src: &str,
+    msg_src: &str,
+) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "explain", engine)?;
+    let src = std::fs::read_to_string(file)
+        .with_context(|| format!("read {}", file.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let (mut ctx, mut env, forms, contract_term, msg_term) = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let contract_term = parse_term(contract_src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--contract: {e}")))?;
+            let msg_term = parse_term(msg_src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--msg: {e}")))?;
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            (ctx, prelude.env, forms, contract_term, msg_term)
+        }
+        FmtEngine::Selfhost => {
+            let mut parse_ctx = EvalCtx::with_step_limit(None);
+            parse_ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut parse_ctx);
+            let mut parse_env = prelude.env;
+            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+
+            parse_ctx.steps = 0;
+            parse_ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
+            let contract_term =
+                selfhost_parse_term(&mut parse_ctx, &parse_env, contract_src, "--contract")?;
+            let msg_term = selfhost_parse_term(&mut parse_ctx, &parse_env, msg_src, "--msg")?;
+
+            let mut eval_ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut eval_ctx);
+            (eval_ctx, prelude.env, forms, contract_term, msg_term)
+        }
+    };
+
+    eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let contract = eval_term(&mut ctx, &env, &contract_term)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
+    let msg_val = Value::Data(msg_term);
+
+    let explain = env.get("core/contract::explain").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "prelude/missing",
+            "missing prelude binding core/contract::explain",
+        )
+    })?;
+    let r = explain
+        .apply(&mut ctx, contract)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("apply contract: {e}")))?
+        .apply(&mut ctx, msg_val)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("explain failed: {e}")))?;
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r);
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/explain-v0.2",
+        data: Some(serde_json::json!({
+            "file": file.display().to_string(),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
+            "contract": contract_src,
+            "msg": msg_src,
+            "trace": value,
+            "trace_format": value_format,
         })),
         error: None,
     };
@@ -5484,6 +5641,12 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             *stage1_gate,
             *stage2_gate,
         ),
+        Cmd::Explain {
+            file,
+            engine,
+            contract,
+            msg,
+        } => cmd_explain(cli, file, *engine, contract, msg),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
         Cmd::SelfhostArtifact {

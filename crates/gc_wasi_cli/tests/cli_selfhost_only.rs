@@ -116,7 +116,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -227,6 +227,36 @@ fn selfhost_only_accepts_sync_command_group() {
         .assert()
         .failure()
         .code(20);
+}
+
+#[test]
+fn selfhost_only_rejects_rust_engine_for_explain() {
+    let td = tempdir().unwrap();
+    let file = td.path().join("m.gc");
+    std::fs::write(
+        &file,
+        "(def c (core/contract::make (fn (msg) nil) nil {}))\nc\n",
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "explain",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--contract",
+            "c",
+            "--msg",
+            "(msg foo nil)",
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode requires --engine selfhost",
+        ));
 }
 
 #[test]

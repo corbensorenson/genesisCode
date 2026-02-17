@@ -43,9 +43,11 @@ Acceptance gate:
   - [x] covered now: `selfhost-dashboard` runs in strict mode and emits content-addressed dashboard artifacts
   - [x] covered now: `vcs hash` strict mode executes through selfhost tool handlers in native + WASI CLI tests
   - [x] covered now: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `vcs hash` strict-mode routing in WASI CLI tests
+  - [x] covered now: `explain` strict-mode engine gating in WASI CLI tests
   - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
   - [x] covered now: native + WASI `run`/`replay` auto-select selfhost when a toolchain artifact is configured (guarded by bad-artifact bootstrap tests)
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
+  - [x] covered now: strict smoke executes `explain` under `--selfhost-only` for native + WASI CLIs with selfhost artifact bootstrap.
   - [x] covered now: strict smoke exercises non-frontend command groups under `--selfhost-only` (`store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and effectful `vcs`) on native + WASI.
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
   - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
@@ -75,6 +77,7 @@ Acceptance gate:
   - progress: native + WASI parity tests now cover denied-effect programs (`sys/time::now` with deny-by-default caps), asserting exit-code/output/log/replay parity across `rust` and `selfhost`.
   - progress: fixed run/replay selfhost hash divergence root cause by parsing in a bootstrap env and evaluating in a fresh prelude-only env (prevents selfhost tool bindings from contaminating continuation/request hashes).
   - progress: applied the same parse-bootstrap/eval-fresh env split to native `eval` and `explain` selfhost routes; `cli_explain_engine` now enforces `:contract-id` parity across `rust` and `selfhost`.
+  - progress: added WASI `cli_explain_engine.rs` parity coverage for `explain` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
   - progress: `gc_wasm` now has explicit selfhost effect-runtime parity coverage (`wasm_runtime_selfhost_hashes_match_native_effect_runner_entry`) matching payload/continuation/request/response hashes against native runner for the same selfhost-parsed forms.
   - progress: strict golden CI now includes native+WASI selfhost parity checks for `run`/`replay` against Rust baseline outputs and host-local `.gclog` parity (`rust` vs `selfhost`).
   - progress: strict smoke/golden scripts now enforce WASI `eval` parity against both WASI rust baseline and native rust baseline (not just strict selfhost output), tightening cross-engine/cross-host guardrails.
@@ -116,8 +119,10 @@ Acceptance gate:
     - progress: `vcs hash` now routes through `.gc` (`selfhost/tool::hash-src-with-kind`) by default (native + WASI), with `--engine rust` available for parity checks.
     - progress: `--selfhost-only` now permits command groups `store`, `refs`, `pkg`, `policy`, `sync`, and `gc` in native + WASI CLIs; regression coverage executes these groups end-to-end under strict mode (`sync` asserted by strict-gate tests + smoke on both CLIs).
     - progress: added concrete `policy` command surface in native + WASI CLIs (`policy list`, `policy show`, `policy set-default`) with deterministic local config management and schema-validated policy artifact resolution from the content-addressed store.
+    - progress: added missing WASI `explain` command surface with native-parity engine routing and output schema (`genesis/explain-v0.2`), including selfhost term parsing for `--contract`/`--msg`.
     - progress: added missing WASI `pkg publish` command surface with native-parity runtime routing (`core/pkg::publish` effect op), including obligation-failure exit semantics and commit-hash stdout behavior parity.
     - progress: strict selfhost smoke now explicitly validates `pkg publish --help` availability on both native and WASI CLIs to prevent command-surface regressions.
+    - progress: added WASI `cli_spec_surface.rs` to lock top-level/subcommand help surfaces (including `explain` and `pkg publish`) and prevent future command-surface regressions.
     - progress: `--selfhost-only` now also permits effectful `vcs/*` in native + WASI CLIs (with `vcs hash` still engine-validated), with regression coverage for strict-gate acceptance and strict-smoke execution of `vcs log`.
     - progress: added executable WASI `vcs` effectful conformance tests covering `vcs diff/apply` snapshot roundtrip and `vcs log` commit-history traversal with content-addressed artifacts.
     - progress: added executable WASI conformance coverage for `vcs blame` and `vcs why`, including commit-attribution for unchanged vs changed symbols across commit ancestry and provenance message/why extraction.
