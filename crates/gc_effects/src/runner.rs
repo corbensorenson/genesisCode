@@ -11,7 +11,7 @@ use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
-use crate::refs::{RefsDb, SetResult};
+use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::store::ArtifactStore;
 
 type GcStoreLock = ExclusiveLock;
@@ -5262,47 +5262,54 @@ fn call_capability(
             if let Some(refs_db) = refs_db {
                 let mut sorted = set_refs;
                 sorted.sort_by(|a, b| a.name.cmp(&b.name));
-                let mut updated: u64 = 0;
+                let mut ops: Vec<SetInput> = Vec::with_capacity(sorted.len());
                 for sr in &sorted {
-                    let result = match local_refs_set_policy_gated(
+                    if let Err(v) = local_refs_validate_policy_gate(
                         store,
-                        refs_db,
-                        LocalRefSetRequest {
-                            name: &sr.name,
-                            new_hash: sr.hash.as_deref(),
-                            expected_old: sr.expected_old.as_ref().map(|x| x.as_deref()),
-                            policy_h: &sr.policy,
-                        },
+                        &sr.name,
+                        sr.hash.as_deref(),
+                        &sr.policy,
                         error_tok,
                         op,
                     ) {
-                        Ok(v) => v,
-                        Err(v) => return Ok(v),
-                    };
-                    match result {
-                        SetResult::Updated => updated = updated.saturating_add(1),
-                        SetResult::Conflict { current } => {
-                            return Ok(mk_error_with_ctx(
-                                error_tok,
-                                "core/refs/conflict",
-                                "ref update conflict".to_string(),
-                                Some(op),
-                                Term::Map(
-                                    [(
+                        return Ok(v);
+                    }
+                    ops.push(SetInput {
+                        name: sr.name.clone(),
+                        new_hash: sr.hash.clone(),
+                        expected_old: sr.expected_old.clone(),
+                    });
+                }
+                match refs_db.set_many(&ops)? {
+                    SetManyResult::Updated => {
+                        m.insert(
+                            TermOrdKey(Term::symbol(":refs-updated")),
+                            Term::Int((ops.len() as i64).into()),
+                        );
+                    }
+                    SetManyResult::Conflict { name, current } => {
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/refs/conflict",
+                            "ref update conflict".to_string(),
+                            Some(op),
+                            Term::Map(
+                                [
+                                    (
+                                        TermOrdKey(Term::Symbol(":refs/name".to_string())),
+                                        Term::Str(name),
+                                    ),
+                                    (
                                         TermOrdKey(Term::Symbol(":refs/current".to_string())),
                                         current.map(Term::Str).unwrap_or(Term::Nil),
-                                    )]
-                                    .into_iter()
-                                    .collect(),
-                                ),
-                            ));
-                        }
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ));
                     }
                 }
-                m.insert(
-                    TermOrdKey(Term::symbol(":refs-updated")),
-                    Term::Int((updated as i64).into()),
-                );
             }
             Ok(Value::Data(Term::Map(m)))
         }
@@ -5707,13 +5714,26 @@ fn local_refs_set_policy_gated(
     error_tok: SealId,
     op: &str,
 ) -> Result<SetResult, Value> {
-    let pol_term = match store_get_term(store, req.policy_h) {
+    local_refs_validate_policy_gate(store, req.name, req.new_hash, req.policy_h, error_tok, op)?;
+    refs.set(req.name, req.new_hash, req.expected_old)
+        .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))
+}
+
+fn local_refs_validate_policy_gate(
+    store: &ArtifactStore,
+    name: &str,
+    new_hash: Option<&str>,
+    policy_h: &str,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    let pol_term = match store_get_term(store, policy_h) {
         Ok(t) => t,
         Err(_) => {
             return Err(mk_error(
                 error_tok,
                 "core/refs/policy-not-found",
-                format!("policy artifact not found: {}", req.policy_h),
+                format!("policy artifact not found: {policy_h}"),
                 Some(op),
             ));
         }
@@ -5729,27 +5749,27 @@ fn local_refs_set_policy_gated(
             ));
         }
     };
-    if pol.is_frozen_ref(req.name) {
+    if pol.is_frozen_ref(name) {
         return Err(mk_error(
             error_tok,
             "core/refs/frozen",
-            format!("ref is frozen by policy: {}", req.name),
+            format!("ref is frozen by policy: {name}"),
             Some(op),
         ));
     }
-    let class = match pol.class_for_ref(req.name) {
+    let class = match pol.class_for_ref(name) {
         Some(c) => c,
         None => {
             return Err(mk_error(
                 error_tok,
                 "core/refs/no-class",
-                format!("policy has no matching class for ref {}", req.name),
+                format!("policy has no matching class for ref {name}"),
                 Some(op),
             ));
         }
     };
 
-    if let Some(h) = req.new_hash {
+    if let Some(h) = new_hash {
         let commit_term = match store_get_term(store, h) {
             Ok(t) => t,
             Err(_) => {
@@ -5909,9 +5929,7 @@ fn local_refs_set_policy_gated(
             }
         }
     }
-
-    refs.set(req.name, req.new_hash, req.expected_old)
-        .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))
+    Ok(())
 }
 
 fn payload_refs_name(payload: &Term) -> Result<String, EffectsError> {

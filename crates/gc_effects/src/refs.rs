@@ -26,6 +26,22 @@ pub enum SetResult {
     Conflict { current: Option<String> },
 }
 
+#[derive(Debug, Clone)]
+pub struct SetInput {
+    pub name: String,
+    pub new_hash: Option<String>,
+    pub expected_old: Option<Option<String>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum SetManyResult {
+    Updated,
+    Conflict {
+        name: String,
+        current: Option<String>,
+    },
+}
+
 impl RefsDb {
     pub fn open(path: &Path) -> Result<Self, EffectsError> {
         if let Some(p) = path.parent() {
@@ -96,6 +112,40 @@ impl RefsDb {
 
         self.write_locked(&db)?;
         Ok(SetResult::Updated)
+    }
+
+    pub fn set_many(&self, ops: &[SetInput]) -> Result<SetManyResult, EffectsError> {
+        let _lk = self.lock_exclusive()?;
+        let mut db = self.load_locked()?;
+
+        for op in ops {
+            let cur = db.get(&op.name).map(|s| s.as_str());
+            if let Some(exp) = op.expected_old.as_ref() {
+                match (exp.as_deref(), cur) {
+                    (None, None) => {}
+                    (Some(e), Some(c)) if e == c => {}
+                    _ => {
+                        return Ok(SetManyResult::Conflict {
+                            name: op.name.clone(),
+                            current: cur.map(|s| s.to_string()),
+                        });
+                    }
+                }
+            }
+        }
+
+        for op in ops {
+            match &op.new_hash {
+                Some(h) => {
+                    db.insert(op.name.clone(), h.clone());
+                }
+                None => {
+                    db.remove(&op.name);
+                }
+            }
+        }
+        self.write_locked(&db)?;
+        Ok(SetManyResult::Updated)
     }
 
     fn lock_exclusive(&self) -> Result<ExclusiveLock, EffectsError> {
@@ -196,5 +246,77 @@ impl RefsDb {
                 Err(e.into())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_many_is_atomic_on_conflict() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let db = RefsDb::open(&td.path().join("refs.gc")).expect("open");
+
+        let r = db
+            .set("refs/heads/main", Some("aaa"), None)
+            .expect("seed set");
+        assert!(matches!(r, SetResult::Updated));
+
+        let ops = vec![
+            SetInput {
+                name: "refs/heads/dev".to_string(),
+                new_hash: Some("bbb".to_string()),
+                expected_old: Some(None),
+            },
+            SetInput {
+                name: "refs/heads/main".to_string(),
+                new_hash: Some("ccc".to_string()),
+                expected_old: Some(Some("wrong".to_string())),
+            },
+        ];
+        let r = db.set_many(&ops).expect("set_many");
+        assert!(matches!(
+            r,
+            SetManyResult::Conflict {
+                name,
+                current: Some(cur)
+            } if name == "refs/heads/main" && cur == "aaa"
+        ));
+
+        assert_eq!(
+            db.get("refs/heads/main").expect("get main"),
+            Some("aaa".to_string())
+        );
+        assert_eq!(db.get("refs/heads/dev").expect("get dev"), None);
+    }
+
+    #[test]
+    fn set_many_updates_all_when_preconditions_hold() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let db = RefsDb::open(&td.path().join("refs.gc")).expect("open");
+
+        let ops = vec![
+            SetInput {
+                name: "refs/heads/dev".to_string(),
+                new_hash: Some("111".to_string()),
+                expected_old: Some(None),
+            },
+            SetInput {
+                name: "refs/heads/main".to_string(),
+                new_hash: Some("222".to_string()),
+                expected_old: Some(None),
+            },
+        ];
+        let r = db.set_many(&ops).expect("set_many");
+        assert!(matches!(r, SetManyResult::Updated));
+        assert_eq!(
+            db.get("refs/heads/dev").expect("get dev"),
+            Some("111".to_string())
+        );
+        assert_eq!(
+            db.get("refs/heads/main").expect("get main"),
+            Some("222".to_string())
+        );
     }
 }

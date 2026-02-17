@@ -269,3 +269,108 @@ fn pkg_import_set_ref_enforces_policy_gate_and_rejects_invalid_commit() {
     };
     assert_eq!(m.get(&TermOrdKey(Term::symbol(":hash"))), Some(&Term::Nil));
 }
+
+#[test]
+fn pkg_import_set_ref_is_atomic_across_multiple_targets() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let patch = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "patch_atomic.gc",
+    );
+    let snap = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap_atomic.gc",
+    );
+    let commit = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{:kind :package :name "x"}}
+  :base nil
+  :patch "{patch}"
+  :result "{snap}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "atomic-bad"
+}}"#
+        ),
+        "c_atomic_bad.gc",
+    );
+
+    let policy_h = store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+        "policy_atomic.gc",
+    );
+
+    let bundle = dir.join("x-full-atomic-bad.gpk");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["export", "--snapshot", &commit, "--out"])
+        .arg(&bundle)
+        .args(["--full", "--depth", "0"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["import", "--input"])
+        .arg(&bundle)
+        .args([
+            "--set-ref",
+            &format!("refs/heads/dev={commit}"),
+            "--set-ref",
+            &format!("refs/heads/main={commit}"),
+        ])
+        .args(["--policy", &policy_h])
+        .assert()
+        .code(20);
+
+    for name in ["refs/heads/dev", "refs/heads/main"] {
+        let out = cargo_bin_cmd!("genesis")
+            .current_dir(dir)
+            .arg("--json")
+            .args(["refs", "--caps"])
+            .arg(&caps)
+            .args(["get", name])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let t = parse_term(&json_value(&out)).unwrap();
+        let Term::Map(m) = t else {
+            panic!("expected map");
+        };
+        assert_eq!(m.get(&TermOrdKey(Term::symbol(":hash"))), Some(&Term::Nil));
+    }
+}
