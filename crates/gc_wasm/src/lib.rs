@@ -1217,6 +1217,7 @@ mod tests {
         let mut rt = Runtime::new(0);
         let step = eval_to_first_step(&mut rt, src);
         let StepResult::Effect {
+            module_h,
             op,
             payload_h,
             cont_h,
@@ -1231,6 +1232,7 @@ mod tests {
         // Native runner first entry (deny-by-default, so response is deterministic).
         let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
         let program_hash = hash_module(&forms);
+        assert_eq!(module_h, hex::encode(program_hash));
         let mut ctx = EvalCtx::with_step_limit(None);
         let prelude = build_prelude(&mut ctx);
         let mut env = prelude.env;
@@ -1255,6 +1257,70 @@ mod tests {
         match resumed.next {
             StepResult::Done { value, .. } => {
                 // Deny produces a sealed ERROR; log serialization for ERROR drops the seal and records payload map.
+                assert!(value.contains(":error/code"));
+                assert!(value.contains("core/caps/denied"));
+            }
+            other => panic!("expected done after denied, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn wasm_runtime_selfhost_hashes_match_native_effect_runner_entry() {
+        let src = r#"
+          (core/effect::perform
+            'sys/time::now
+            nil
+            (fn (t) (core/effect::pure t)))
+        "#;
+
+        let artifact = build_selfhost_artifact_source();
+
+        // WASM-side first step through selfhost frontend path.
+        let mut rt = Runtime::new(0);
+        let step = eval_to_first_step_selfhost_with_artifact(&mut rt, src, &artifact);
+        let StepResult::Effect {
+            op,
+            payload_h,
+            cont_h,
+            req_h,
+            ..
+        } = step
+        else {
+            panic!("expected effect");
+        };
+        assert_eq!(op, "sys/time::now");
+
+        // Native runner entry for the same selfhost frontend forms.
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        bootstrap_selfhost(&mut ctx, &mut env, Some(&artifact)).unwrap();
+        ctx.steps = 0;
+        ctx.step_limit = None;
+        let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src).unwrap();
+        let program_hash = hash_module(&forms);
+        ctx.steps = 0;
+        ctx.step_limit = None;
+        let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+
+        let policy = CapsPolicy::empty(); // deny everything
+        let r = gc_effects::run(&mut ctx, &policy, v, program_hash, "test".to_string()).unwrap();
+        assert_eq!(r.log.entries.len(), 1);
+        let e = &r.log.entries[0];
+
+        assert_eq!(hex::encode(e.payload_h), payload_h);
+        assert_eq!(hex::encode(e.cont_h), cont_h);
+        assert_eq!(hex::encode(e.req_h), req_h);
+
+        // Resume in wasm runtime with denied and compare response hash deterministically.
+        let error_tok = rt.ctx.protocol.unwrap().error;
+        let resumed = rt
+            .respond_value_internal(mk_caps_denied(error_tok, "sys/time::now"))
+            .unwrap();
+        assert_eq!(hex::encode(e.resp_h), resumed.resp_h);
+
+        match resumed.next {
+            StepResult::Done { value, .. } => {
                 assert!(value.contains(":error/code"));
                 assert!(value.contains("core/caps/denied"));
             }
