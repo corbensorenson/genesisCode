@@ -77,6 +77,8 @@ Acceptance gate:
   - progress: added native + WASI `cli_pack_test_engine.rs` parity suites proving `pack` package artifacts and `test` acceptance artifacts are identical between rust and selfhost frontend paths on `pkg_basic`.
   - progress: added native `cli_typecheck_apply_patch_engine.rs` parity tests proving `typecheck` report output and `apply-patch` report/acceptance/package artifacts are identical between rust and selfhost frontend paths on `pkg_basic`.
   - progress: strict smoke script now enforces native `typecheck` parity (`rust` baseline vs strict selfhost) in addition to command-success checks.
+  - progress: added WASI `cli_vcs_hash.rs` parity coverage for rust/selfhost engines on both term and module inputs.
+  - progress: fixed a WASI/native divergence in `vcs hash` rust-engine parse precedence (now term-first, matching native CLI + selfhost handler) to eliminate cross-host hash-kind drift.
 
 ---
 

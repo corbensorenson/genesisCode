@@ -3290,18 +3290,16 @@ fn cmd_vcs_hash(cli: &Cli, input: &PathBuf, engine: Option<FmtEngine>) -> Result
         };
         (hex, kind)
     } else {
-        // Prefer parsing as module (more common for `.gc` files).
-        let (h, kind) = match parse_module(&src) {
-            Ok(forms) => {
+        // Keep precedence aligned with native CLI and selfhost handler: try term first,
+        // then fall back to module hashing when term parsing fails.
+        let (h, kind) = match parse_term(&src) {
+            Ok(t) => (gc_coreform::hash_term(&t), "term"),
+            Err(_) => {
+                let forms = parse_module(&src)
+                    .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
                 let canon = canonicalize_module(forms)
                     .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
                 (hash_module(&canon), "module")
-            }
-            Err(_) => {
-                let t = parse_term(&src)
-                    .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-                // Hash terms using the same scheme as the canonical term hasher.
-                (gc_coreform::hash_term(&t), "term")
             }
         };
         (hex32(h), kind.to_string())
