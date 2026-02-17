@@ -188,3 +188,146 @@
               payload
               (fn (r) (core/effect::pure r))))))
       ((core/error::make2 "core/type-error") "core/cli::refs-delete-program expects map"))))
+
+(def core/cli::sync-pull-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (remote ((core/map::get req) (quote :remote)))
+          (refs ((core/map::get req) (quote :refs)))
+          (roots ((core/map::get req) (quote :roots)))
+          (depth ((core/map::get req) (quote :depth)))
+          (force ((core/map::get req) (quote :force)))
+        )
+        (let ((payload0 {:remote remote}))
+          (let
+            ((payload1
+               (if ((core/int::eq? (core/vec::len refs)) 0)
+                 payload0
+                 (((core/map::put payload0) (quote :refs)) refs))))
+            (let
+              ((payload2
+                 (if ((core/int::eq? (core/vec::len roots)) 0)
+                   payload1
+                   (((core/map::put payload1) (quote :roots)) roots))))
+              (let
+                ((payload3
+                   (if ((core/int::eq? depth) 0)
+                     payload2
+                     (((core/map::put payload2) (quote :depth)) depth))))
+                (let
+                  ((payload
+                     (if force (((core/map::put payload3) (quote :force)) true) payload3)))
+                  (core/effect::perform
+                    (quote core/sync::pull)
+                    payload
+                    (fn (r) (core/effect::pure r)))))))))
+      ((core/error::make2 "core/type-error") "core/cli::sync-pull-program expects map"))))
+
+(def core/cli::sync-push-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (remote ((core/map::get req) (quote :remote)))
+          (roots ((core/map::get req) (quote :roots)))
+          (depth ((core/map::get req) (quote :depth)))
+          (set-refs ((core/map::get req) (quote :set-refs)))
+        )
+        (let ((payload0 {:remote remote :roots roots}))
+          (let
+            ((payload1
+               (if ((core/int::eq? depth) 0)
+                 payload0
+                 (((core/map::put payload0) (quote :depth)) depth))))
+            (let
+              ((payload
+                 (if ((core/int::eq? (core/vec::len set-refs)) 0)
+                   payload1
+                   (((core/map::put payload1) (quote :set-refs)) set-refs))))
+              (core/effect::perform
+                (quote core/sync::push)
+                payload
+                (fn (r) (core/effect::pure r)))))))
+      ((core/error::make2 "core/type-error") "core/cli::sync-push-program expects map"))))
+
+(def core/cli::gc-plan-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/gc::plan)
+        {
+          :lock ((core/map::get req) (quote :lock))
+          :pins ((core/map::get req) (quote :pins))
+          :depth ((core/map::get req) (quote :depth))
+          :include-lock ((core/map::get req) (quote :include-lock))
+          :include-refs ((core/map::get req) (quote :include-refs))
+        }
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::gc-plan-program expects map"))))
+
+(def core/cli::gc-run-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :lock ((core/map::get req) (quote :lock))
+              :pins ((core/map::get req) (quote :pins))
+              :depth ((core/map::get req) (quote :depth))
+              :include-lock ((core/map::get req) (quote :include-lock))
+              :include-refs ((core/map::get req) (quote :include-refs))
+              :quarantine ((core/map::get req) (quote :quarantine))
+            }
+          )
+          (qd ((core/map::get req) (quote :quarantine-dir)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? qd)
+               payload0
+               (((core/map::put payload0) (quote :quarantine-dir)) qd))))
+          (core/effect::perform
+            (quote core/gc::run)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::gc-run-program expects map"))))
+
+(def core/cli::gc-pin-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/gc::pin)
+        {:target ((core/map::get req) (quote :target)) :pins ((core/map::get req) (quote :pins))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::gc-pin-program expects map"))))
+
+(def core/cli::gc-unpin-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/gc::unpin)
+        {:target ((core/map::get req) (quote :target)) :pins ((core/map::get req) (quote :pins))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::gc-unpin-program expects map"))))
+
+(def core/cli::gc-purge-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0 {:ttl-days ((core/map::get req) (quote :ttl-days))})
+          (qd ((core/map::get req) (quote :quarantine-dir)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? qd)
+               payload0
+               (((core/map::put payload0) (quote :quarantine-dir)) qd))))
+          (core/effect::perform
+            (quote core/gc::purge)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))

@@ -3347,46 +3347,233 @@ fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError> {
 }
 
 fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
+
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
-    let (forms, kind, log_op) = match cmd {
-        SyncCmd::Pull {
-            remote,
-            refs,
-            roots,
-            depth,
-            force,
-        } => (
-            mk_sync_pull_program(remote, refs, roots, *depth, *force),
-            "genesis/sync-pull-v0.1",
-            "sync-pull",
-        ),
-        SyncCmd::Push {
-            remote,
-            roots,
-            depth,
-            set_refs,
-        } => {
-            let parsed = parse_sync_set_refs(set_refs)?;
-            (
-                mk_sync_push_program(remote, roots, *depth, &parsed),
-                "genesis/sync-push-v0.1",
-                "sync-push",
-            )
-        }
-    };
-
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-    let program_hash = hash_module(&forms);
-
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let prog = eval_module(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let (prog, kind, log_op, program_hash) = match frontend {
+        gc_obligations::CoreformFrontend::Rust => {
+            let (forms, kind, log_op) = match cmd {
+                SyncCmd::Pull {
+                    remote,
+                    refs,
+                    roots,
+                    depth,
+                    force,
+                } => (
+                    mk_sync_pull_program(remote, refs, roots, *depth, *force),
+                    "genesis/sync-pull-v0.1",
+                    "sync-pull",
+                ),
+                SyncCmd::Push {
+                    remote,
+                    roots,
+                    depth,
+                    set_refs,
+                } => {
+                    let parsed = parse_sync_set_refs(set_refs)?;
+                    (
+                        mk_sync_push_program(remote, roots, *depth, &parsed),
+                        "genesis/sync-push-v0.1",
+                        "sync-push",
+                    )
+                }
+            };
+
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let program_hash = hash_module(&forms);
+            let prog = eval_module(&mut ctx, &mut env, &forms)
+                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+            (prog, kind, log_op, program_hash)
+        }
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+            let (prog, kind, log_op, desc) = match cmd {
+                SyncCmd::Pull {
+                    remote,
+                    refs,
+                    roots,
+                    depth,
+                    force,
+                } => {
+                    let f = env.get("core/cli::sync-pull-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::sync-pull-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":refs")),
+                                Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":roots")),
+                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli sync-pull-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("sync/pull".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":refs")),
+                                Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":roots")),
+                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/sync-pull-v0.1", "sync-pull", desc)
+                }
+                SyncCmd::Push {
+                    remote,
+                    roots,
+                    depth,
+                    set_refs,
+                } => {
+                    let f = env.get("core/cli::sync-push-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::sync-push-program",
+                        )
+                    })?;
+                    let parsed = parse_sync_set_refs(set_refs)?;
+
+                    let mut set_refs_term: Vec<Term> = Vec::new();
+                    for sr in &parsed {
+                        let mut mm = std::collections::BTreeMap::new();
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(sr.name.clone()),
+                        );
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(sr.hash.clone()),
+                        );
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":policy")),
+                            Term::Str(sr.policy.clone()),
+                        );
+                        if let Some(e) = &sr.expected_old {
+                            let v = if e == "nil" {
+                                Term::Nil
+                            } else {
+                                Term::Str(e.clone())
+                            };
+                            mm.insert(TermOrdKey(Term::symbol(":expected-old")), v);
+                        }
+                        set_refs_term.push(Term::Map(mm));
+                    }
+
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":roots")),
+                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":set-refs")),
+                                Term::Vector(set_refs_term),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli sync-push-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("sync/push".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":roots")),
+                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":set-refs-len")),
+                                Term::Int((parsed.len() as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/sync-push-v0.1", "sync-push", desc)
+                }
+            };
+            let program_hash = gc_coreform::hash_term(&desc);
+            (prog, kind, log_op, program_hash)
+        }
+    };
 
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
@@ -3427,6 +3614,7 @@ fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result
         ok,
         kind,
         data: Some(serde_json::json!({
+            "coreform_frontend": frontend_info,
             "caps": caps.display().to_string(),
             "log": log_path.display().to_string(),
             "value": value,
@@ -3451,72 +3639,411 @@ fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result
 }
 
 fn cmd_gc(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &GcCmd) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
+
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
-    let (forms, kind, log_op) = match cmd {
-        GcCmd::Plan {
-            lock,
-            pins,
-            depth,
-            no_lock,
-            no_refs,
-        } => (
-            mk_gc_plan_program(lock, pins, *depth, !*no_lock, !*no_refs),
-            "genesis/gc-plan-v0.1",
-            "gc-plan",
-        ),
-        GcCmd::Run {
-            lock,
-            pins,
-            depth,
-            no_lock,
-            no_refs,
-            quarantine,
-            quarantine_dir,
-        } => (
-            mk_gc_run_program(
-                lock,
-                pins,
-                *depth,
-                !*no_lock,
-                !*no_refs,
-                *quarantine,
-                quarantine_dir.as_deref(),
-            ),
-            "genesis/gc-run-v0.1",
-            "gc-run",
-        ),
-        GcCmd::Pin { target, pins } => (
-            mk_gc_pin_program(target, pins),
-            "genesis/gc-pin-v0.1",
-            "gc-pin",
-        ),
-        GcCmd::Unpin { target, pins } => (
-            mk_gc_unpin_program(target, pins),
-            "genesis/gc-unpin-v0.1",
-            "gc-unpin",
-        ),
-        GcCmd::Purge {
-            ttl_days,
-            quarantine_dir,
-        } => (
-            mk_gc_purge_program(*ttl_days, quarantine_dir.as_deref()),
-            "genesis/gc-purge-v0.1",
-            "gc-purge",
-        ),
-    };
-
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-    let program_hash = hash_module(&forms);
-
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let prog = eval_module(&mut ctx, &mut env, &forms)
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let (prog, kind, log_op, program_hash) = match frontend {
+        gc_obligations::CoreformFrontend::Rust => {
+            let (forms, kind, log_op) = match cmd {
+                GcCmd::Plan {
+                    lock,
+                    pins,
+                    depth,
+                    no_lock,
+                    no_refs,
+                } => (
+                    mk_gc_plan_program(lock, pins, *depth, !*no_lock, !*no_refs),
+                    "genesis/gc-plan-v0.1",
+                    "gc-plan",
+                ),
+                GcCmd::Run {
+                    lock,
+                    pins,
+                    depth,
+                    no_lock,
+                    no_refs,
+                    quarantine,
+                    quarantine_dir,
+                } => (
+                    mk_gc_run_program(
+                        lock,
+                        pins,
+                        *depth,
+                        !*no_lock,
+                        !*no_refs,
+                        *quarantine,
+                        quarantine_dir.as_deref(),
+                    ),
+                    "genesis/gc-run-v0.1",
+                    "gc-run",
+                ),
+                GcCmd::Pin { target, pins } => (
+                    mk_gc_pin_program(target, pins),
+                    "genesis/gc-pin-v0.1",
+                    "gc-pin",
+                ),
+                GcCmd::Unpin { target, pins } => (
+                    mk_gc_unpin_program(target, pins),
+                    "genesis/gc-unpin-v0.1",
+                    "gc-unpin",
+                ),
+                GcCmd::Purge {
+                    ttl_days,
+                    quarantine_dir,
+                } => (
+                    mk_gc_purge_program(*ttl_days, quarantine_dir.as_deref()),
+                    "genesis/gc-purge-v0.1",
+                    "gc-purge",
+                ),
+            };
+
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let program_hash = hash_module(&forms);
+            let prog = eval_module(&mut ctx, &mut env, &forms)
+                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+            (prog, kind, log_op, program_hash)
+        }
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+            let (prog, kind, log_op, desc) = match cmd {
+                GcCmd::Plan {
+                    lock,
+                    pins,
+                    depth,
+                    no_lock,
+                    no_refs,
+                } => {
+                    let f = env.get("core/cli::gc-plan-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::gc-plan-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":lock")),
+                                Term::Str(lock.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-lock")),
+                                Term::Bool(!*no_lock),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-refs")),
+                                Term::Bool(!*no_refs),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli gc-plan-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("gc/plan".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":lock")),
+                                Term::Str(lock.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-lock")),
+                                Term::Bool(!*no_lock),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-refs")),
+                                Term::Bool(!*no_refs),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/gc-plan-v0.1", "gc-plan", desc)
+                }
+                GcCmd::Run {
+                    lock,
+                    pins,
+                    depth,
+                    no_lock,
+                    no_refs,
+                    quarantine,
+                    quarantine_dir,
+                } => {
+                    let f = env.get("core/cli::gc-run-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::gc-run-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":lock")),
+                                Term::Str(lock.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-lock")),
+                                Term::Bool(!*no_lock),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-refs")),
+                                Term::Bool(!*no_refs),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":quarantine")),
+                                Term::Bool(*quarantine),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":quarantine-dir")),
+                                quarantine_dir
+                                    .as_deref()
+                                    .map(|p| Term::Str(p.display().to_string()))
+                                    .unwrap_or(Term::Nil),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli gc-run-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("gc/run".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":lock")),
+                                Term::Str(lock.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-lock")),
+                                Term::Bool(!*no_lock),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":include-refs")),
+                                Term::Bool(!*no_refs),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":quarantine")),
+                                Term::Bool(*quarantine),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":quarantine-dir")),
+                                quarantine_dir
+                                    .as_deref()
+                                    .map(|p| Term::Str(p.display().to_string()))
+                                    .unwrap_or(Term::Nil),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/gc-run-v0.1", "gc-run", desc)
+                }
+                GcCmd::Pin { target, pins } => {
+                    let f = env.get("core/cli::gc-pin-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::gc-pin-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":target")),
+                                Term::Str(target.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli gc-pin-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("gc/pin".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":target")),
+                                Term::Str(target.to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/gc-pin-v0.1", "gc-pin", desc)
+                }
+                GcCmd::Unpin { target, pins } => {
+                    let f = env.get("core/cli::gc-unpin-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::gc-unpin-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":target")),
+                                Term::Str(target.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":pins")),
+                                Term::Str(pins.display().to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli gc-unpin-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("gc/unpin".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":target")),
+                                Term::Str(target.to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/gc-unpin-v0.1", "gc-unpin", desc)
+                }
+                GcCmd::Purge {
+                    ttl_days,
+                    quarantine_dir,
+                } => {
+                    let f = env.get("core/cli::gc-purge-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::gc-purge-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":ttl-days")),
+                                Term::Int((*ttl_days as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":quarantine-dir")),
+                                quarantine_dir
+                                    .as_deref()
+                                    .map(|p| Term::Str(p.display().to_string()))
+                                    .unwrap_or(Term::Nil),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli gc-purge-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("gc/purge".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":ttl-days")),
+                                Term::Int((*ttl_days as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/gc-purge-v0.1", "gc-purge", desc)
+                }
+            };
+            let program_hash = gc_coreform::hash_term(&desc);
+            (prog, kind, log_op, program_hash)
+        }
+    };
 
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
@@ -3558,6 +4085,7 @@ fn cmd_gc(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &GcCmd) -> Result<Cmd
         ok,
         kind,
         data: Some(serde_json::json!({
+            "coreform_frontend": frontend_info,
             "caps": caps.display().to_string(),
             "log": log_path.display().to_string(),
             "value": value,
