@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_module,
@@ -230,6 +230,12 @@ enum Cmd {
 
         #[command(subcommand)]
         cmd: PkgCmd,
+    },
+
+    /// Local policy alias/default management.
+    Policy {
+        #[command(subcommand)]
+        cmd: PolicyCmd,
     },
 
     /// Local artifact-store garbage collection workflows (policy-gated).
@@ -484,6 +490,40 @@ enum PkgCmd {
         /// Policy artifact hash (hex) used by the local refs/set gate (required when using --set-ref).
         #[arg(long)]
         policy: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum PolicyCmd {
+    /// List configured policy aliases and default selection.
+    List {
+        /// Policy config TOML path.
+        #[arg(long, default_value = ".genesis/policies.toml")]
+        policies: PathBuf,
+    },
+
+    /// Show a policy artifact by alias or hash.
+    Show {
+        /// Alias name from policies config, `default`, or 64-hex policy hash.
+        name_or_hash: String,
+
+        /// Policy config TOML path.
+        #[arg(long, default_value = ".genesis/policies.toml")]
+        policies: PathBuf,
+
+        /// Artifact store directory containing policy objects.
+        #[arg(long, default_value = ".genesis/store")]
+        store: PathBuf,
+    },
+
+    /// Set the default policy alias/hash.
+    SetDefault {
+        /// Alias name from policies config or 64-hex policy hash.
+        name_or_hash: String,
+
+        /// Policy config TOML path.
+        #[arg(long, default_value = ".genesis/policies.toml")]
+        policies: PathBuf,
     },
 }
 
@@ -755,6 +795,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
+        Cmd::Policy { .. } => Ok(()),
         Cmd::Gc { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
@@ -771,13 +812,14 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Store { .. }
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
+                | Cmd::Policy { .. }
                 | Cmd::Gc { .. } => unreachable!(),
             };
             Err(cli_err(
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `gc`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -3473,6 +3515,279 @@ fn cmd_gc(cli: &Cli, caps: &Path, log: &Option<PathBuf>, cmd: &GcCmd) -> Result<
     })
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PoliciesConfig {
+    #[serde(default = "policy_config_version_one")]
+    version: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    default: Option<String>,
+    #[serde(default)]
+    aliases: std::collections::BTreeMap<String, String>,
+}
+
+fn policy_config_version_one() -> u64 {
+    1
+}
+
+impl Default for PoliciesConfig {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            default: None,
+            aliases: std::collections::BTreeMap::new(),
+        }
+    }
+}
+
+fn normalize_policies_config(mut cfg: PoliciesConfig) -> Result<PoliciesConfig, String> {
+    if cfg.version != 1 {
+        return Err(format!(
+            "unsupported policies config version {} (expected 1)",
+            cfg.version
+        ));
+    }
+    let mut aliases = std::collections::BTreeMap::new();
+    for (name_raw, hash_raw) in cfg.aliases {
+        let name = name_raw.trim();
+        if name.is_empty() {
+            return Err("policy alias names must be non-empty".to_string());
+        }
+        let hash = hash_raw.trim();
+        if !is_hex64(hash) {
+            return Err(format!("policy alias `{name}` must map to a 64-hex hash"));
+        }
+        if aliases
+            .insert(name.to_string(), hash.to_ascii_lowercase())
+            .is_some()
+        {
+            return Err(format!("duplicate policy alias `{name}`"));
+        }
+    }
+    cfg.aliases = aliases;
+    if let Some(default_raw) = cfg.default.take() {
+        let d = default_raw.trim();
+        if d.is_empty() {
+            return Err("default policy selector must be non-empty".to_string());
+        }
+        cfg.default = Some(if is_hex64(d) {
+            d.to_ascii_lowercase()
+        } else {
+            d.to_string()
+        });
+    } else {
+        cfg.default = None;
+    }
+    Ok(cfg)
+}
+
+fn load_policies_config(path: &Path) -> Result<PoliciesConfig, CliError> {
+    if !path.exists() {
+        return Ok(PoliciesConfig::default());
+    }
+    let s = std::fs::read_to_string(path)
+        .with_context(|| format!("read {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let cfg: PoliciesConfig =
+        toml::from_str(&s).map_err(|e| cli_err(EX_PARSE, "policy/parse", format!("{e}")))?;
+    normalize_policies_config(cfg).map_err(|e| cli_err(EX_PARSE, "policy/parse", e))
+}
+
+fn save_policies_config(path: &Path, cfg: &PoliciesConfig) -> Result<(), CliError> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("create {}", parent.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+    let s = toml::to_string_pretty(cfg)
+        .map_err(|e| cli_err(EX_INTERNAL, "policy/serialize", format!("{e}")))?;
+    std::fs::write(path, s)
+        .with_context(|| format!("write {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))
+}
+
+fn resolve_policy_selector(query: &str, cfg: &PoliciesConfig) -> Result<(String, String), String> {
+    let q = query.trim();
+    if q.is_empty() {
+        return Err("policy selector must be non-empty".to_string());
+    }
+    if q == "default" {
+        let Some(def) = cfg.default.as_deref() else {
+            return Err("no default policy configured".to_string());
+        };
+        return resolve_policy_selector(def, cfg);
+    }
+    if is_hex64(q) {
+        let h = q.to_ascii_lowercase();
+        return Ok((h.clone(), h));
+    }
+    let h = cfg
+        .aliases
+        .get(q)
+        .ok_or_else(|| format!("unknown policy alias `{q}`"))?;
+    Ok((q.to_string(), h.clone()))
+}
+
+fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError> {
+    match cmd {
+        PolicyCmd::List { policies } => {
+            let cfg = load_policies_config(policies)?;
+            let default_resolved = cfg
+                .default
+                .as_deref()
+                .and_then(|d| resolve_policy_selector(d, &cfg).ok().map(|(_, h)| h));
+            let stdout = if cli.json {
+                String::new()
+            } else {
+                let mut s = String::new();
+                s.push_str("default ");
+                match cfg.default.as_deref() {
+                    Some(d) => s.push_str(d),
+                    None => s.push_str("nil"),
+                }
+                s.push('\n');
+                if let Some(h) = &default_resolved {
+                    s.push_str("default-resolved ");
+                    s.push_str(h);
+                    s.push('\n');
+                }
+                for (name, hash) in &cfg.aliases {
+                    s.push_str(name);
+                    s.push(' ');
+                    s.push_str(hash);
+                    s.push('\n');
+                }
+                s
+            };
+            let env = JsonEnvelope {
+                ok: true,
+                kind: "genesis/policy-list-v0.1",
+                data: Some(serde_json::json!({
+                    "policies": policies.display().to_string(),
+                    "default": cfg.default,
+                    "default_resolved": default_resolved,
+                    "aliases": cfg.aliases.iter().map(|(k, v)| serde_json::json!({"name": k, "hash": v})).collect::<Vec<_>>(),
+                })),
+                error: None,
+            };
+            Ok(CmdOut {
+                exit_code: EX_OK,
+                stdout,
+                json: serde_json::to_value(env).expect("json"),
+            })
+        }
+        PolicyCmd::Show {
+            name_or_hash,
+            policies,
+            store,
+        } => {
+            let cfg = load_policies_config(policies)?;
+            let (resolved, hash) = resolve_policy_selector(name_or_hash, &cfg)
+                .map_err(|e| cli_err(EX_VERIFY, "policy/resolve", e))?;
+            let p = store.join(&hash);
+            let bytes = std::fs::read(&p)
+                .with_context(|| format!("read {}", p.display()))
+                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+            let src = String::from_utf8(bytes).map_err(|e| {
+                cli_err(
+                    EX_PARSE,
+                    "policy/parse",
+                    format!("policy artifact {} is not utf-8: {e}", p.display()),
+                )
+            })?;
+            let t =
+                parse_term(&src).map_err(|e| cli_err(EX_PARSE, "policy/parse", format!("{e}")))?;
+            let pol = gc_vcs::Policy::from_term(&t)
+                .map_err(|e| cli_err(EX_PARSE, "policy/schema", format!("{e}")))?;
+            let printed = print_term(&t);
+            let stdout = if cli.json {
+                String::new()
+            } else {
+                format!("{printed}\n")
+            };
+            let env = JsonEnvelope {
+                ok: true,
+                kind: "genesis/policy-show-v0.1",
+                data: Some(serde_json::json!({
+                    "query": name_or_hash,
+                    "resolved": resolved,
+                    "hash": hash,
+                    "store": store.display().to_string(),
+                    "term": printed,
+                    "name": pol.name,
+                    "frozen_prefixes": pol.frozen_prefixes,
+                    "classes": {
+                        "dev": pol.dev.is_some(),
+                        "main": pol.main.is_some(),
+                        "tags": pol.tags.is_some(),
+                    }
+                })),
+                error: None,
+            };
+            Ok(CmdOut {
+                exit_code: EX_OK,
+                stdout,
+                json: serde_json::to_value(env).expect("json"),
+            })
+        }
+        PolicyCmd::SetDefault {
+            name_or_hash,
+            policies,
+        } => {
+            let mut cfg = load_policies_config(policies)?;
+            if is_hex64(name_or_hash) {
+                cfg.default = Some(name_or_hash.to_ascii_lowercase());
+            } else {
+                let alias = name_or_hash.trim();
+                if alias.is_empty() {
+                    return Err(cli_err(
+                        EX_PARSE,
+                        "policy/set-default",
+                        "policy selector must be non-empty",
+                    ));
+                }
+                if !cfg.aliases.contains_key(alias) {
+                    return Err(cli_err(
+                        EX_VERIFY,
+                        "policy/set-default",
+                        format!("unknown policy alias `{alias}`"),
+                    ));
+                }
+                cfg.default = Some(alias.to_string());
+            }
+            save_policies_config(policies, &cfg)?;
+            let (_, resolved_hash) =
+                resolve_policy_selector(cfg.default.as_deref().unwrap_or(""), &cfg)
+                    .map_err(|e| cli_err(EX_VERIFY, "policy/set-default", e))?;
+            let stdout = if cli.json {
+                String::new()
+            } else {
+                format!(
+                    "default {}\ndefault-resolved {}\n",
+                    cfg.default.as_deref().unwrap_or("nil"),
+                    resolved_hash
+                )
+            };
+            let env = JsonEnvelope {
+                ok: true,
+                kind: "genesis/policy-set-default-v0.1",
+                data: Some(serde_json::json!({
+                    "policies": policies.display().to_string(),
+                    "default": cfg.default,
+                    "default_resolved": resolved_hash,
+                })),
+                error: None,
+            };
+            Ok(CmdOut {
+                exit_code: EX_OK,
+                stdout,
+                json: serde_json::to_value(env).expect("json"),
+            })
+        }
+    }
+}
+
 fn cmd_store(
     cli: &Cli,
     caps: &Path,
@@ -3943,6 +4258,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps.as_path(), log, cmd),
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps.as_path(), log, cmd),
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps.as_path(), log, cmd),
+        Cmd::Policy { cmd } => cmd_policy(cli, cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps.as_path(), log, cmd),
         Cmd::Vcs { cmd } => match cmd {
             VcsCmd::Hash { input, engine } => cmd_vcs_hash(cli, input, *engine),

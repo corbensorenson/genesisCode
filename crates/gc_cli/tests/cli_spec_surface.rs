@@ -33,6 +33,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "store",
         "refs",
         "pkg",
+        "policy",
         "sync",
         "gc",
         "vcs",

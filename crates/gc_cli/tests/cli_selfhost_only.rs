@@ -153,7 +153,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `sync`, `gc`, `selfhost-dashboard`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, `selfhost-dashboard`, and `vcs/*`",
         ));
 }
 
@@ -233,6 +233,19 @@ fn selfhost_only_accepts_sync_command_group() {
         .assert()
         .failure()
         .code(20);
+}
+
+#[test]
+fn selfhost_only_accepts_policy_command_group() {
+    let dir = tempdir().unwrap();
+    let policies = dir.path().join("policies.toml");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "policy", "list", "--policies"])
+        .arg(&policies)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("default"));
 }
 
 #[test]

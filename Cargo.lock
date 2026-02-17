@@ -616,6 +616,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "toml",
 ]
 
 [[package]]
@@ -822,11 +823,13 @@ dependencies = [
  "gc_obligations",
  "gc_opt",
  "gc_prelude",
+ "gc_vcs",
  "predicates",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "toml",
 ]
 
 [[package]]

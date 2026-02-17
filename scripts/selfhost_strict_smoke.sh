@@ -96,6 +96,7 @@ native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --input "$T
 native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/main >/dev/null
 native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke --lock genesis.lock >/dev/null
 native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.lock >/dev/null
+native --selfhost-only policy list --policies "$TMP_DIR/policies.native.toml" >/dev/null
 native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/pins.toml >/dev/null
 SYNC_ROOT="$(printf '0%.0s' {1..64})"
 if native --selfhost-only sync --caps "$TMP_DIR/caps.effects.toml" pull --remote "file://$TMP_DIR/remote-registry" --root "$SYNC_ROOT" >/dev/null 2>&1; then
@@ -173,6 +174,7 @@ wasi_native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --inpu
 wasi_native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/main >/dev/null
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke-wasi --lock genesis.wasi.lock >/dev/null
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.wasi.lock >/dev/null
+wasi_native --selfhost-only policy list --policies "$TMP_DIR/policies.wasi.toml" >/dev/null
 wasi_native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/wasi.pins.toml >/dev/null
 W_N_VCS_HASH="$(wasi_native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
 W_S_VCS_HASH="$(wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost | tr -d '\n')"

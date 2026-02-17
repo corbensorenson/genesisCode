@@ -80,7 +80,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `gc`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs hash`",
         ));
 }
 
@@ -140,6 +140,20 @@ fn selfhost_only_accepts_store_refs_pkg_and_gc() {
         .args(["pin", "refs/heads/main", "--pins", ".genesis/pins.toml"])
         .assert()
         .success();
+}
+
+#[test]
+fn selfhost_only_accepts_policy_command_group() {
+    let td = tempdir().unwrap();
+    let policies = td.path().join("policies.toml");
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "policy", "list", "--policies"])
+        .arg(&policies)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("default"));
 }
 
 #[test]
