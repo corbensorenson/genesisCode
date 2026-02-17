@@ -215,24 +215,35 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             ));
         }
 
-        let forms = if let Some(v) = forms_from_artifact {
-            v
+        let forms = if let Some(v) = &forms_from_artifact {
+            v.clone()
         } else {
             let src = src.ok_or_else(|| {
                 anyhow::anyhow!("artifact module {path} missing :source string or :forms vector")
             })?;
-            let forms = parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?;
-            let forms =
-                canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?;
-            let got_h = hash_module(&forms);
-            if got_h != module_h {
-                return Err(anyhow::anyhow!(
-                    "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
-                    module_h,
-                    got_h
-                ));
-            }
+            parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?
+        };
+
+        // Validate the module hash against the canonical printed bytes. This is the stable
+        // content-addressed identity for toolchain modules in artifact-only mode.
+        //
+        // Note: if `:forms` is present, we still validate against `:module-h` to prevent
+        // tampering with forms while keeping the hash unchanged.
+        let got_h = hash_module(&forms);
+        if got_h != module_h {
+            return Err(anyhow::anyhow!(
+                "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
+                module_h,
+                got_h
+            ));
+        }
+
+        // If the artifact did not include canonical forms, canonicalize now so the compiled module
+        // matches the semantics of the artifact producer.
+        let forms = if forms_from_artifact.is_some() {
             forms
+        } else {
+            canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?
         };
         let compiled =
             compile_module(&forms).map_err(|e| anyhow::anyhow!("{path}: compile: {e}"))?;

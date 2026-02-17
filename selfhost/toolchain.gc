@@ -4,6 +4,579 @@
   :modules
     [
       {
+        :forms
+          [
+            (def selfhost/parse::error
+              (fn (code) (fn (msg) (fn (at) (((core/error::make code) msg) {:at at})))))
+            (def selfhost/parse::is-error core/error::is?)
+            (def selfhost/parse::SYM_QUOTE (quote quote))
+            (def selfhost/parse::byte
+              (fn (bs)
+                (fn (i) (if ((core/int::lt? i) (core/bytes::len bs)) ((core/bytes::get bs) i) nil))))
+            (def selfhost/parse::is-ws?
+              (fn (b)
+                (if (core/list::is-nil? b)
+                  false
+                  (if ((core/int::eq? b) 32)
+                    true
+                    (if ((core/int::eq? b) 9)
+                      true
+                      (if ((core/int::eq? b) 10) true ((core/int::eq? b) 13)))))))
+            (def selfhost/parse::is-delim?
+              (fn (b)
+                (if (selfhost/parse::is-ws? b)
+                  true
+                  (if ((core/int::eq? b) 40)
+                    true
+                    (if ((core/int::eq? b) 41)
+                      true
+                      (if ((core/int::eq? b) 91)
+                        true
+                        (if ((core/int::eq? b) 93)
+                          true
+                          (if ((core/int::eq? b) 123)
+                            true
+                            (if ((core/int::eq? b) 125)
+                              true
+                              (if ((core/int::eq? b) 39)
+                                true
+                                (if ((core/int::eq? b) 34) true ((core/int::eq? b) 59))))))))))))
+            (def selfhost/parse::skip-ws-and-comments
+              (fn (bs)
+                (fn (i)
+                  (let ((b ((selfhost/parse::byte bs) i)))
+                    (if (core/list::is-nil? b)
+                      i
+                      (if (selfhost/parse::is-ws? b)
+                        ((selfhost/parse::skip-ws-and-comments bs) ((core/int::add i) 1))
+                        (if ((core/int::eq? b) 59)
+                          ((selfhost/parse::skip-comment bs) ((core/int::add i) 1))
+                          i)))))))
+            (def selfhost/parse::skip-comment
+              (fn (bs)
+                (fn (i)
+                  (let ((b ((selfhost/parse::byte bs) i)))
+                    (if (core/list::is-nil? b)
+                      i
+                      (if ((core/int::eq? b) 10)
+                        ((selfhost/parse::skip-ws-and-comments bs) ((core/int::add i) 1))
+                        ((selfhost/parse::skip-comment bs) ((core/int::add i) 1))))))))
+            (def selfhost/parse::bytes-slice
+              (fn (bs)
+                (fn (start) (fn (end) (((core/bytes::slice bs) start) ((core/int::sub end) start))))))
+            (def selfhost/parse::push-raw-part
+              (fn (bs)
+                (fn (raw-start)
+                  (fn (i)
+                    (fn (parts)
+                      (if ((core/int::eq? raw-start) i)
+                        parts
+                        ((core/vec::push parts) (((selfhost/parse::bytes-slice bs) raw-start) i))))))))
+            (def selfhost/parse::concat-bytes-parts (fn (parts) (core/bytes::join parts)))
+            (def selfhost/parse::hex-val
+              (fn (b)
+                (if (core/list::is-nil? b)
+                  nil
+                  (if (if ((core/int::lt? 47) b) ((core/int::lt? b) 58) false)
+                    ((core/int::sub b) 48)
+                    (if (if ((core/int::lt? 64) b) ((core/int::lt? b) 71) false)
+                      ((core/int::add ((core/int::sub b) 65)) 10)
+                      (if (if ((core/int::lt? 96) b) ((core/int::lt? b) 103) false)
+                        ((core/int::add ((core/int::sub b) 97)) 10)
+                        nil))))))
+            (def selfhost/parse::read-hex-u32
+              (fn (bs)
+                (fn (i) (fn (n) (fn (at) (((((selfhost/parse::read-hex-u32-2 bs) i) n) at) 0))))))
+            (def selfhost/parse::read-hex-u32-2
+              (fn (bs)
+                (fn (i)
+                  (fn (n)
+                    (fn (at)
+                      (fn (acc)
+                        (if ((core/int::eq? n) 0)
+                          {:i i :v acc}
+                          (let ((d (selfhost/parse::hex-val ((selfhost/parse::byte bs) i))))
+                            (if (core/list::is-nil? d)
+                              (((selfhost/parse::error "core/parse/escape") "invalid hex digit") at)
+                              (((((selfhost/parse::read-hex-u32-2 bs) ((core/int::add i) 1)) ((core/int::sub n) 1)) at)
+                                ((core/int::add ((core/int::mul acc) 16)) d)))))))))))
+            (def selfhost/parse::read-string
+              (fn (bs) (fn (i) (fn (at) (((((selfhost/parse::read-string2 bs) i) at) i) [])))))
+            (def selfhost/parse::read-string2
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (raw-start)
+                      (fn (parts)
+                        (let ((b ((selfhost/parse::byte bs) i)))
+                          (if (core/list::is-nil? b)
+                            (((selfhost/parse::error "core/parse/unexpected") "unterminated string")
+                              at)
+                            (if ((core/int::eq? b) 34)
+                              (let
+                                ((parts2 ((((selfhost/parse::push-raw-part bs) raw-start) i) parts)))
+                                (let ((outb (selfhost/parse::concat-bytes-parts parts2)))
+                                  (let ((s (core/str::from-utf8 outb)))
+                                    (if (selfhost/parse::is-error s)
+                                      (((selfhost/parse::error "core/parse/unexpected") "invalid utf-8 string")
+                                        at)
+                                      {
+                                        :i ((core/int::add i) 1)
+                                        :s s}))))
+                              (if ((core/int::eq? b) 92)
+                                (((((selfhost/parse::read-string-escape bs) i) at) raw-start) parts)
+                                (((((selfhost/parse::read-string2 bs) ((core/int::add i) 1)) at) raw-start)
+                                  parts)))))))))))
+            (def selfhost/parse::read-string-escape
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (raw-start)
+                      (fn (parts)
+                        (let ((esc-at i))
+                          (let ((parts2 ((((selfhost/parse::push-raw-part bs) raw-start) i) parts)))
+                            (let ((e ((selfhost/parse::byte bs) ((core/int::add i) 1))))
+                              (if (core/list::is-nil? e)
+                                (((selfhost/parse::error "core/parse/escape") "unterminated escape")
+                                  esc-at)
+                                (if ((core/int::eq? e) 92)
+                                  (((((selfhost/parse::read-string2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                    ((core/vec::push parts2) b"\\"))
+                                  (if ((core/int::eq? e) 34)
+                                    (((((selfhost/parse::read-string2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                      ((core/vec::push parts2) b"\""))
+                                    (if ((core/int::eq? e) 110)
+                                      (((((selfhost/parse::read-string2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                        ((core/vec::push parts2) b"\n"))
+                                      (if ((core/int::eq? e) 114)
+                                        (((((selfhost/parse::read-string2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                          ((core/vec::push parts2) b"\r"))
+                                        (if ((core/int::eq? e) 116)
+                                          (((((selfhost/parse::read-string2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                            ((core/vec::push parts2) b"\t"))
+                                          (if ((core/int::eq? e) 117)
+                                            (((((selfhost/parse::read-string-unicode bs) ((core/int::add i) 2)) at) esc-at)
+                                              parts2)
+                                            (if ((core/int::eq? e) 120)
+                                              (((((selfhost/parse::read-string-hex-byte bs) ((core/int::add i) 2)) at) esc-at)
+                                                parts2)
+                                              (((selfhost/parse::error "core/parse/escape") "unknown escape")
+                                                esc-at))))))))))))))))))
+            (def selfhost/parse::read-string-unicode
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (esc-at)
+                      (fn (parts)
+                        (let ((r ((((selfhost/parse::read-hex-u32 bs) i) 4) esc-at)))
+                          (if (selfhost/parse::is-error r)
+                            r
+                            (let ((cp ((core/map::get r) (quote :v))))
+                              (let ((nb (core/utf8::encode-codepoint cp)))
+                                (if (selfhost/parse::is-error nb)
+                                  (((selfhost/parse::error "core/parse/escape") "invalid unicode codepoint")
+                                    esc-at)
+                                  (let ((j ((core/map::get r) (quote :i))))
+                                    (((((selfhost/parse::read-string2 bs) j) at) j)
+                                      ((core/vec::push parts) nb))))))))))))))
+            (def selfhost/parse::read-string-hex-byte
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (esc-at)
+                      (fn (parts)
+                        (let ((r ((((selfhost/parse::read-hex-u32 bs) i) 2) esc-at)))
+                          (if (selfhost/parse::is-error r)
+                            r
+                            (let ((cp ((core/map::get r) (quote :v))))
+                              (let ((nb (core/utf8::encode-codepoint cp)))
+                                (if (selfhost/parse::is-error nb)
+                                  (((selfhost/parse::error "core/parse/escape") "invalid unicode codepoint")
+                                    esc-at)
+                                  (let ((j ((core/map::get r) (quote :i))))
+                                    (((((selfhost/parse::read-string2 bs) j) at) j)
+                                      ((core/vec::push parts) nb))))))))))))))
+            (def selfhost/parse::read-bytes
+              (fn (bs) (fn (i) (fn (at) (((((selfhost/parse::read-bytes2 bs) i) at) i) [])))))
+            (def selfhost/parse::read-bytes2
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (raw-start)
+                      (fn (parts)
+                        (let ((b ((selfhost/parse::byte bs) i)))
+                          (if (core/list::is-nil? b)
+                            (((selfhost/parse::error "core/parse/unexpected") "unterminated bytes literal")
+                              at)
+                            (if ((core/int::eq? b) 34)
+                              (let
+                                ((parts2 ((((selfhost/parse::push-raw-part bs) raw-start) i) parts)))
+                                {
+                                  :b (selfhost/parse::concat-bytes-parts parts2)
+                                  :i ((core/int::add i) 1)})
+                              (if ((core/int::eq? b) 92)
+                                (((((selfhost/parse::read-bytes-escape bs) i) at) raw-start) parts)
+                                (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 1)) at) raw-start)
+                                  parts)))))))))))
+            (def selfhost/parse::read-bytes-escape
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (raw-start)
+                      (fn (parts)
+                        (let ((esc-at i))
+                          (let ((parts2 ((((selfhost/parse::push-raw-part bs) raw-start) i) parts)))
+                            (let ((e ((selfhost/parse::byte bs) ((core/int::add i) 1))))
+                              (if (core/list::is-nil? e)
+                                (((selfhost/parse::error "core/parse/escape") "unterminated escape")
+                                  esc-at)
+                                (if ((core/int::eq? e) 92)
+                                  (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                    ((core/vec::push parts2) b"\\"))
+                                  (if ((core/int::eq? e) 34)
+                                    (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                      ((core/vec::push parts2) b"\""))
+                                    (if ((core/int::eq? e) 110)
+                                      (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                        ((core/vec::push parts2) b"\n"))
+                                      (if ((core/int::eq? e) 114)
+                                        (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                          ((core/vec::push parts2) b"\r"))
+                                        (if ((core/int::eq? e) 116)
+                                          (((((selfhost/parse::read-bytes2 bs) ((core/int::add i) 2)) at) ((core/int::add i) 2))
+                                            ((core/vec::push parts2) b"\t"))
+                                          (if ((core/int::eq? e) 120)
+                                            (((((selfhost/parse::read-bytes-hex-byte bs) ((core/int::add i) 2)) at) esc-at)
+                                              parts2)
+                                            (if ((core/int::eq? e) 117)
+                                              (((((selfhost/parse::read-bytes-unicode bs) ((core/int::add i) 2)) at) esc-at)
+                                                parts2)
+                                              (((selfhost/parse::error "core/parse/escape") "unknown escape")
+                                                esc-at))))))))))))))))))
+            (def selfhost/parse::read-bytes-hex-byte
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (esc-at)
+                      (fn (parts)
+                        (let ((digits (((selfhost/parse::bytes-slice bs) i) ((core/int::add i) 2))))
+                          (let ((hx (core/str::from-utf8 digits)))
+                            (if (selfhost/parse::is-error hx)
+                              (((selfhost/parse::error "core/parse/escape") "invalid hex digit")
+                                esc-at)
+                              (let ((b1 (core/bytes::from-hex hx)))
+                                (if (selfhost/parse::is-error b1)
+                                  (((selfhost/parse::error "core/parse/escape") "invalid hex digit")
+                                    esc-at)
+                                  (let ((j ((core/int::add i) 2)))
+                                    (((((selfhost/parse::read-bytes2 bs) j) at) j)
+                                      ((core/vec::push parts) b1))))))))))))))
+            (def selfhost/parse::read-bytes-unicode
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (esc-at)
+                      (fn (parts)
+                        (let ((r ((((selfhost/parse::read-hex-u32 bs) i) 4) esc-at)))
+                          (if (selfhost/parse::is-error r)
+                            r
+                            (let ((cp ((core/map::get r) (quote :v))))
+                              (let ((nb (core/utf8::encode-codepoint cp)))
+                                (if (selfhost/parse::is-error nb)
+                                  (((selfhost/parse::error "core/parse/escape") "invalid unicode codepoint")
+                                    esc-at)
+                                  (let ((j ((core/map::get r) (quote :i))))
+                                    (((((selfhost/parse::read-bytes2 bs) j) at) j)
+                                      ((core/vec::push parts) nb))))))))))))))
+            (def selfhost/parse::is-digit?
+              (fn (b)
+                (if (core/list::is-nil? b)
+                  false
+                  (if ((core/int::lt? 47) b) ((core/int::lt? b) 58) false))))
+            (def selfhost/parse::read-int
+              (fn (bs)
+                (fn (i)
+                  (let ((neg ((core/int::eq? ((selfhost/parse::byte bs) i)) 45)))
+                    (let ((j (if neg ((core/int::add i) 1) i)))
+                      ((((selfhost/parse::read-int2 bs) j) (if neg -1 1)) 0))))))
+            (def selfhost/parse::read-int2
+              (fn (bs)
+                (fn (i)
+                  (fn (sign)
+                    (fn (acc)
+                      (let ((b ((selfhost/parse::byte bs) i)))
+                        (if (selfhost/parse::is-digit? b)
+                          ((((selfhost/parse::read-int2 bs) ((core/int::add i) 1)) sign)
+                            ((core/int::add ((core/int::mul acc) 10)) ((core/int::sub b) 48)))
+                          {
+                            :i i
+                            :v ((core/int::mul sign) acc)})))))))
+            (def selfhost/parse::read-symbol
+              (fn (bs) (fn (i) (((selfhost/parse::read-symbol2 bs) i) i))))
+            (def selfhost/parse::read-symbol2
+              (fn (bs)
+                (fn (start)
+                  (fn (i)
+                    (let ((b ((selfhost/parse::byte bs) i)))
+                      (if (core/list::is-nil? b)
+                        {
+                          :i i
+                          :s (core/str::from-utf8 (((selfhost/parse::bytes-slice bs) start) i))}
+                        (if (selfhost/parse::is-delim? b)
+                          {
+                            :i i
+                            :s (core/str::from-utf8 (((selfhost/parse::bytes-slice bs) start) i))}
+                          (((selfhost/parse::read-symbol2 bs) start) ((core/int::add i) 1)))))))))
+            (def selfhost/parse::list-from-vec
+              (fn (xs) (((selfhost/parse::list-from-vec2 xs) (core/vec::len xs)) nil)))
+            (def selfhost/parse::list-from-vec2
+              (fn (xs)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (((selfhost/parse::list-from-vec2 xs) i)
+                          ((core/pair::cons ((core/vec::get xs) i)) acc))))))))
+            (def selfhost/parse::parse-term-at
+              (fn (bs)
+                (fn (i0)
+                  (let ((i ((selfhost/parse::skip-ws-and-comments bs) i0)))
+                    (let ((b ((selfhost/parse::byte bs) i)))
+                      (if (core/list::is-nil? b)
+                        (((selfhost/parse::error "core/parse/eof") "unexpected end of input") i)
+                        (if ((core/int::eq? b) 39)
+                          (let ((inner ((selfhost/parse::parse-term-at bs) ((core/int::add i) 1))))
+                            (if (selfhost/parse::is-error inner)
+                              inner
+                              (let ((t ((core/map::get inner) (quote :t))))
+                                (let ((xs ((core/vec::push (quote [])) selfhost/parse::SYM_QUOTE)))
+                                  (let ((xs2 ((core/vec::push xs) t)))
+                                    {
+                                      :i ((core/map::get inner) (quote :i))
+                                      :t (selfhost/parse::list-from-vec xs2)})))))
+                          (if ((core/int::eq? b) 40)
+                            (((selfhost/parse::parse-list bs) ((core/int::add i) 1)) i)
+                            (if ((core/int::eq? b) 91)
+                              ((((selfhost/parse::parse-vector bs) ((core/int::add i) 1)) i)
+                                (quote []))
+                              (if ((core/int::eq? b) 123)
+                                ((((selfhost/parse::parse-map bs) ((core/int::add i) 1)) i)
+                                  (quote {}))
+                                (if ((core/int::eq? b) 34)
+                                  (let
+                                    ((r (((selfhost/parse::read-string bs) ((core/int::add i) 1)) i)))
+                                    (if (selfhost/parse::is-error r)
+                                      r
+                                      {
+                                        :i ((core/map::get r) (quote :i))
+                                        :t ((core/map::get r) (quote :s))}))
+                                  (if ((core/int::eq? b) 98)
+                                    (let ((b2 ((selfhost/parse::byte bs) ((core/int::add i) 1))))
+                                      (if ((core/int::eq? b2) 34)
+                                        (let
+                                          ((r (((selfhost/parse::read-bytes bs) ((core/int::add i) 2)) i)))
+                                          (if (selfhost/parse::is-error r)
+                                            r
+                                            {
+                                              :i ((core/map::get r) (quote :i))
+                                              :t ((core/map::get r) (quote :b))}))
+                                        ((selfhost/parse::parse-symbol-or-int bs) i)))
+                                    (if ((core/int::eq? b) 41)
+                                      (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                        i)
+                                      (if ((core/int::eq? b) 93)
+                                        (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                          i)
+                                        (if ((core/int::eq? b) 125)
+                                          (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                            i)
+                                          ((selfhost/parse::parse-symbol-or-int bs) i))))))))))))))))
+            (def selfhost/parse::parse-symbol-or-int
+              (fn (bs)
+                (fn (i)
+                  (let ((b ((selfhost/parse::byte bs) i)))
+                    (if ((core/int::eq? b) 45)
+                      (let ((b2 ((selfhost/parse::byte bs) ((core/int::add i) 1))))
+                        (if (selfhost/parse::is-digit? b2)
+                          (let ((r ((selfhost/parse::read-int bs) i)))
+                            {
+                              :i ((core/map::get r) (quote :i))
+                              :t ((core/map::get r) (quote :v))})
+                          ((selfhost/parse::parse-symbol bs) i)))
+                      (if (selfhost/parse::is-digit? b)
+                        (let ((r ((selfhost/parse::read-int bs) i)))
+                          {
+                            :i ((core/map::get r) (quote :i))
+                            :t ((core/map::get r) (quote :v))})
+                        ((selfhost/parse::parse-symbol bs) i)))))))
+            (def selfhost/parse::parse-symbol
+              (fn (bs)
+                (fn (i)
+                  (let ((r ((selfhost/parse::read-symbol bs) i)))
+                    (if (selfhost/parse::is-error r)
+                      r
+                      (let ((s ((core/map::get r) (quote :s))))
+                        (if (selfhost/parse::is-error s)
+                          s
+                          (if ((core/eq? s) "nil")
+                            {
+                              :i ((core/map::get r) (quote :i))
+                              :t nil}
+                            (if ((core/eq? s) "true")
+                              {
+                                :i ((core/map::get r) (quote :i))
+                                :t true}
+                              (if ((core/eq? s) "false")
+                                {
+                                  :i ((core/map::get r) (quote :i))
+                                  :t false}
+                                (let ((sym (core/sym::from-str s)))
+                                  (if (selfhost/parse::is-error sym)
+                                    sym
+                                    {
+                                      :i ((core/map::get r) (quote :i))
+                                      :t sym}))))))))))))
+            (def selfhost/parse::parse-list
+              (fn (bs) (fn (i) (fn (at) ((((selfhost/parse::parse-list2 bs) i) at) [])))))
+            (def selfhost/parse::parse-list2
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (items)
+                      (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+                        (let ((b ((selfhost/parse::byte bs) j)))
+                          (if (core/list::is-nil? b)
+                            (((selfhost/parse::error "core/parse/unexpected") "unterminated list")
+                              at)
+                            (if ((core/int::eq? b) 41)
+                              {
+                                :i ((core/int::add j) 1)
+                                :t (selfhost/parse::list-from-vec items)}
+                              (if ((core/int::eq? b) 93)
+                                (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                  j)
+                                (if ((core/int::eq? b) 125)
+                                  (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                    j)
+                                  (let ((r ((selfhost/parse::parse-term-at bs) j)))
+                                    (if (selfhost/parse::is-error r)
+                                      r
+                                      ((((selfhost/parse::parse-list2 bs) ((core/map::get r) (quote :i))) at)
+                                        ((core/vec::push items) ((core/map::get r) (quote :t)))))))))))))))))
+            (def selfhost/parse::parse-vector
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (out)
+                      (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+                        (let ((b ((selfhost/parse::byte bs) j)))
+                          (if (core/list::is-nil? b)
+                            (((selfhost/parse::error "core/parse/unexpected") "unterminated vector")
+                              at)
+                            (if ((core/int::eq? b) 93)
+                              {
+                                :i ((core/int::add j) 1)
+                                :t out}
+                              (if ((core/int::eq? b) 41)
+                                (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                  j)
+                                (if ((core/int::eq? b) 125)
+                                  (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                    j)
+                                  (let ((r ((selfhost/parse::parse-term-at bs) j)))
+                                    (if (selfhost/parse::is-error r)
+                                      r
+                                      ((((selfhost/parse::parse-vector bs) ((core/map::get r) (quote :i))) at)
+                                        ((core/vec::push out) ((core/map::get r) (quote :t)))))))))))))))))
+            (def selfhost/parse::parse-map
+              (fn (bs)
+                (fn (i)
+                  (fn (at)
+                    (fn (out)
+                      (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+                        (let ((b ((selfhost/parse::byte bs) j)))
+                          (if (core/list::is-nil? b)
+                            (((selfhost/parse::error "core/parse/unexpected") "unterminated map") at)
+                            (if ((core/int::eq? b) 125)
+                              {
+                                :i ((core/int::add j) 1)
+                                :t out}
+                              (if ((core/int::eq? b) 41)
+                                (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                  j)
+                                (if ((core/int::eq? b) 93)
+                                  (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                                    j)
+                                  (let ((rk ((selfhost/parse::parse-term-at bs) j)))
+                                    (if (selfhost/parse::is-error rk)
+                                      rk
+                                      (let ((k ((core/map::get rk) (quote :t))))
+                                        (let
+                                          ((j2 ((selfhost/parse::skip-ws-and-comments bs) ((core/map::get rk) (quote :i)))))
+                                          (let ((b2 ((selfhost/parse::byte bs) j2)))
+                                            (if (core/list::is-nil? b2)
+                                              (((selfhost/parse::error "core/parse/unexpected") "unterminated map")
+                                                at)
+                                              (if ((core/int::eq? b2) 125)
+                                                (((selfhost/parse::error "core/parse/unexpected") "map literal must have even number of forms")
+                                                  at)
+                                                (let ((rv ((selfhost/parse::parse-term-at bs) j2)))
+                                                  (if (selfhost/parse::is-error rv)
+                                                    rv
+                                                    ((((selfhost/parse::parse-map bs) ((core/map::get rv) (quote :i))) at)
+                                                      (((core/map::put out) k)
+                                                        ((core/map::get rv) (quote :t))))))))))))))))))))))))
+            (def selfhost/parse::parse-term
+              (fn (src)
+                (let
+                  (
+                    (bs
+                      (let ((tag (core/data::tag src)))
+                        (if ((core/sym::eq? tag) (quote :bytes))
+                          src
+                          (if ((core/sym::eq? tag) (quote :str))
+                            (core/str::to-utf8 src)
+                            ((core/error::make2 "core/type-error")
+                              "parse-term expects string or bytes"))))))
+                  (if (selfhost/parse::is-error bs)
+                    bs
+                    (let ((r ((selfhost/parse::parse-term-at bs) 0)))
+                      (if (selfhost/parse::is-error r)
+                        r
+                        (let
+                          ((j ((selfhost/parse::skip-ws-and-comments bs) ((core/map::get r) (quote :i)))))
+                          (if (core/list::is-nil? ((selfhost/parse::byte bs) j))
+                            ((core/map::get r) (quote :t))
+                            (((selfhost/parse::error "core/parse/unexpected") "trailing tokens after term")
+                              j)))))))))
+            (def selfhost/parse::parse-module
+              (fn (src)
+                (let
+                  (
+                    (bs
+                      (let ((tag (core/data::tag src)))
+                        (if ((core/sym::eq? tag) (quote :bytes))
+                          src
+                          (if ((core/sym::eq? tag) (quote :str))
+                            (core/str::to-utf8 src)
+                            ((core/error::make2 "core/type-error")
+                              "parse-module expects string or bytes"))))))
+                  (if (selfhost/parse::is-error bs)
+                    bs
+                    (((selfhost/parse::parse-module2 bs) 0) (quote []))))))
+            (def selfhost/parse::parse-module2
+              (fn (bs)
+                (fn (i)
+                  (fn (forms)
+                    (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+                      (if (core/list::is-nil? ((selfhost/parse::byte bs) j))
+                        forms
+                        (let ((r ((selfhost/parse::parse-term-at bs) j)))
+                          (if (selfhost/parse::is-error r)
+                            r
+                            (((selfhost/parse::parse-module2 bs) ((core/map::get r) (quote :i)))
+                              ((core/vec::push forms) ((core/map::get r) (quote :t))))))))))))]
         :module-h b"\xEESw\xA7X\xDF\xC6\xCA\xF0\xE2u\xF9\x111{\x1D\xCEa\x100,mL2&\x7Fdhb\xAA{#"
         :path "selfhost/parse.gc"
         :source
@@ -19,6 +592,470 @@
         :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
       {
+        :forms
+          [
+            (def selfhost/canon::is-error core/error::is?)
+            (def selfhost/canon::bad-form (fn (msg) ((core/error::make2 "core/bad-form") msg)))
+            (def selfhost/canon::type-error (fn (msg) ((core/error::make2 "core/type-error") msg)))
+            (def selfhost/canon::tag core/data::tag)
+            (def selfhost/canon::SYM_QUOTE (quote quote))
+            (def selfhost/canon::SYM_DEF (quote def))
+            (def selfhost/canon::SYM_FN (quote fn))
+            (def selfhost/canon::SYM_IF (quote if))
+            (def selfhost/canon::SYM_BEGIN (quote begin))
+            (def selfhost/canon::SYM_LET (quote let))
+            (def selfhost/canon::SYM_PRIM (quote prim))
+            (def selfhost/canon::SYM_SEAL (quote seal))
+            (def selfhost/canon::SYM_UNSEAL (quote unseal))
+            (def selfhost/canon::is-sym?
+              (fn (t)
+                (fn (name)
+                  (let ((tg (selfhost/canon::tag t)))
+                    (if (selfhost/canon::is-error tg)
+                      tg
+                      (if ((core/sym::eq? tg) (quote :sym)) ((core/sym::eq? t) name) false))))))
+            (def selfhost/canon::list1 (fn (a) ((core/pair::cons a) nil)))
+            (def selfhost/canon::list2
+              (fn (a) (fn (b) ((core/pair::cons a) ((core/pair::cons b) nil)))))
+            (def selfhost/canon::list3
+              (fn (a)
+                (fn (b)
+                  (fn (c) ((core/pair::cons a) ((core/pair::cons b) ((core/pair::cons c) nil)))))))
+            (def selfhost/canon::list4
+              (fn (a)
+                (fn (b)
+                  (fn (c)
+                    (fn (d)
+                      ((core/pair::cons a)
+                        ((core/pair::cons b) ((core/pair::cons c) ((core/pair::cons d) nil)))))))))
+            (def selfhost/canon::vec2
+              (fn (a)
+                (fn (b) (core/pair::as-proper-list ((core/pair::cons a) ((core/pair::cons b) nil))))))
+            (def selfhost/canon::list-rev (fn (xs) ((selfhost/canon::list-rev2 xs) nil)))
+            (def selfhost/canon::list-rev2
+              (fn (xs)
+                (fn (acc)
+                  (if (core/list::is-nil? xs)
+                    acc
+                    ((selfhost/canon::list-rev2 (core/pair::cdr xs))
+                      ((core/pair::cons (core/pair::car xs)) acc))))))
+            (def selfhost/canon::list->vec core/pair::as-proper-list)
+            (def selfhost/canon::vec->list
+              (fn (v) (((selfhost/canon::vec->list2 v) (core/vec::len v)) nil)))
+            (def selfhost/canon::vec->list2
+              (fn (v)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (((selfhost/canon::vec->list2 v) i)
+                          ((core/pair::cons ((core/vec::get v) i)) acc))))))))
+            (def selfhost/canon::vec-map-data
+              (fn (v)
+                (fn (f)
+                  (let ((n (core/vec::len v)))
+                    (let ((lst ((((selfhost/canon::vec-map-data2 v) f) n) nil)))
+                      (if (selfhost/canon::is-error lst) lst (selfhost/canon::list->vec lst)))))))
+            (def selfhost/canon::vec-map-data2
+              (fn (v)
+                (fn (f)
+                  (fn (n)
+                    (fn (acc)
+                      (if ((core/int::eq? n) 0)
+                        acc
+                        (let ((i ((core/int::sub n) 1)))
+                          (let ((x ((core/vec::get v) i)))
+                            (let ((y (f x)))
+                              (if (selfhost/canon::is-error y)
+                                y
+                                ((((selfhost/canon::vec-map-data2 v) f) i) ((core/pair::cons y) acc))))))))))))
+            (def selfhost/canon::canon-data
+              (fn (t)
+                (let ((tg (selfhost/canon::tag t)))
+                  (if (selfhost/canon::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :pair))
+                      (let ((v (core/pair::as-proper-list t)))
+                        (if (core/list::is-nil? v)
+                          t
+                          (let ((nv ((selfhost/canon::vec-map-data v) selfhost/canon::canon-data)))
+                            (if (selfhost/canon::is-error nv) nv (selfhost/canon::vec->list nv)))))
+                      (if ((core/sym::eq? tg) (quote :vec))
+                        ((selfhost/canon::vec-map-data t) selfhost/canon::canon-data)
+                        (if ((core/sym::eq? tg) (quote :map)) t t)))))))
+            (def selfhost/canon::canon-code
+              (fn (t)
+                (let ((tg (selfhost/canon::tag t)))
+                  (if (selfhost/canon::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :pair))
+                      (let ((v (core/pair::as-proper-list t)))
+                        (if (core/list::is-nil? v)
+                          (selfhost/canon::bad-form "improper list in source form")
+                          (if ((core/int::eq? (core/vec::len v)) 1)
+                            (selfhost/canon::canon-code ((core/vec::get v) 0))
+                            (selfhost/canon::canon-list-code v))))
+                      (if ((core/sym::eq? tg) (quote :vec))
+                        ((selfhost/canon::vec-map-data t) selfhost/canon::canon-data)
+                        (if ((core/sym::eq? tg) (quote :map)) (selfhost/canon::canon-map-code t) t)))))))
+            (def selfhost/canon::canon-map-code
+              (fn (m)
+                (let ((entries (core/map::entries m)))
+                  (let ((n (core/vec::len entries)))
+                    (let ((out-list (((selfhost/canon::canon-map-code2 entries) n) nil)))
+                      (if (selfhost/canon::is-error out-list)
+                        out-list
+                        (let ((outv (selfhost/canon::list->vec out-list)))
+                          (if (selfhost/canon::is-error outv) outv (core/map::from-entries outv)))))))))
+            (def selfhost/canon::canon-map-code2
+              (fn (entries)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((e ((core/vec::get entries) i)))
+                          (let ((k ((core/vec::get e) 0)))
+                            (let ((v ((core/vec::get e) 1)))
+                              (let ((k2 (selfhost/canon::canon-data k)))
+                                (if (selfhost/canon::is-error k2)
+                                  k2
+                                  (let ((v2 (selfhost/canon::canon-code v)))
+                                    (if (selfhost/canon::is-error v2)
+                                      v2
+                                      (let ((entry ((selfhost/canon::vec2 k2) v2)))
+                                        (if (selfhost/canon::is-error entry)
+                                          entry
+                                          (((selfhost/canon::canon-map-code2 entries) i)
+                                            ((core/pair::cons entry) acc)))))))))))))))))
+            (def selfhost/canon::canon-list-code
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if ((core/int::eq? n) 0)
+                    nil
+                    (let ((head ((core/vec::get items) 0)))
+                      (let ((ht (selfhost/canon::tag head)))
+                        (if (selfhost/canon::is-error ht)
+                          ht
+                          (if ((core/sym::eq? ht) (quote :sym))
+                            ((selfhost/canon::canon-list-code-sym head) items)
+                            (selfhost/canon::canon-app items)))))))))
+            (def selfhost/canon::canon-list-code-sym
+              (fn (head)
+                (fn (items)
+                  (if ((core/sym::eq? head) selfhost/canon::SYM_QUOTE)
+                    (selfhost/canon::canon-quote items)
+                    (if ((core/sym::eq? head) selfhost/canon::SYM_DEF)
+                      (selfhost/canon::canon-def items)
+                      (if ((core/sym::eq? head) selfhost/canon::SYM_FN)
+                        (selfhost/canon::canon-fn items)
+                        (if ((core/sym::eq? head) selfhost/canon::SYM_IF)
+                          (selfhost/canon::canon-if items)
+                          (if ((core/sym::eq? head) selfhost/canon::SYM_BEGIN)
+                            (selfhost/canon::canon-begin items)
+                            (if ((core/sym::eq? head) selfhost/canon::SYM_LET)
+                              (selfhost/canon::canon-let items)
+                              (if ((core/sym::eq? head) selfhost/canon::SYM_PRIM)
+                                (selfhost/canon::canon-prim items)
+                                (if ((core/sym::eq? head) selfhost/canon::SYM_SEAL)
+                                  (selfhost/canon::canon-seal items)
+                                  (if ((core/sym::eq? head) selfhost/canon::SYM_UNSEAL)
+                                    (selfhost/canon::canon-unseal items)
+                                    (selfhost/canon::canon-app items)))))))))))))
+            (def selfhost/canon::canon-quote
+              (fn (items)
+                (if (if ((core/int::eq? (core/vec::len items)) 2) true false)
+                  (let ((d (selfhost/canon::canon-data ((core/vec::get items) 1))))
+                    (if (selfhost/canon::is-error d)
+                      d
+                      ((selfhost/canon::list2 selfhost/canon::SYM_QUOTE) d)))
+                  (selfhost/canon::bad-form "(quote ...) expects exactly 1 argument"))))
+            (def selfhost/canon::canon-def
+              (fn (items)
+                (if (if ((core/int::eq? (core/vec::len items)) 3) true false)
+                  (let ((name ((core/vec::get items) 1)))
+                    (let ((tg (selfhost/canon::tag name)))
+                      (if (selfhost/canon::is-error tg)
+                        tg
+                        (if ((core/sym::eq? tg) (quote :sym))
+                          (let ((e (selfhost/canon::canon-code ((core/vec::get items) 2))))
+                            (if (selfhost/canon::is-error e)
+                              e
+                              (((selfhost/canon::list3 selfhost/canon::SYM_DEF) name) e)))
+                          (selfhost/canon::bad-form "(def ...) name must be a symbol")))))
+                  (selfhost/canon::bad-form "(def name expr) expects exactly 2 arguments"))))
+            (def selfhost/canon::canon-fn
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if (if ((core/int::lt? n) 3) true false)
+                    (selfhost/canon::bad-form "(fn (x) body) expects at least 2 arguments")
+                    (let ((params ((core/vec::get items) 1)))
+                      (let ((params_v (core/pair::as-proper-list params)))
+                        (if (core/list::is-nil? params_v)
+                          (selfhost/canon::bad-form "(fn ...) parameter list must be a list")
+                          (let ((pn (core/vec::len params_v)))
+                            (if ((core/int::eq? pn) 0)
+                              (selfhost/canon::bad-form "(fn ...) requires at least 1 parameter")
+                              (let ((pcheck ((selfhost/canon::check-params params_v) pn)))
+                                (if (selfhost/canon::is-error pcheck)
+                                  pcheck
+                                  (let
+                                    ((body (selfhost/canon::canon-body (selfhost/canon::slice-body items))))
+                                    (if (selfhost/canon::is-error body)
+                                      body
+                                      ((selfhost/canon::nest-fn params_v) body))))))))))))))
+            (def selfhost/canon::vec-slice-from
+              (fn (v)
+                (fn (start)
+                  (let ((n (core/vec::len v)))
+                    (let ((rev ((((selfhost/canon::vec-slice-from2 v) start) n) nil)))
+                      (if (selfhost/canon::is-error rev)
+                        rev
+                        (selfhost/canon::list->vec (selfhost/canon::list-rev rev))))))))
+            (def selfhost/canon::vec-slice-from2
+              (fn (v)
+                (fn (i)
+                  (fn (n)
+                    (fn (acc)
+                      (if ((core/int::eq? i) n)
+                        acc
+                        (let ((x ((core/vec::get v) i)))
+                          ((((selfhost/canon::vec-slice-from2 v) ((core/int::add i) 1)) n)
+                            ((core/pair::cons x) acc)))))))))
+            (def selfhost/canon::slice-body (fn (items) ((selfhost/canon::vec-slice-from items) 2)))
+            (def selfhost/canon::canon-body
+              (fn (body_terms)
+                (let ((n (core/vec::len body_terms)))
+                  (if ((core/int::eq? n) 1)
+                    (selfhost/canon::canon-code ((core/vec::get body_terms) 0))
+                    (let ((canon (selfhost/canon::canon-begin-body body_terms)))
+                      (if (selfhost/canon::is-error canon) canon canon))))))
+            (def selfhost/canon::canon-begin-body
+              (fn (body_terms)
+                (let ((n (core/vec::len body_terms)))
+                  (let ((rev (((selfhost/canon::canon-begin-body2 body_terms) n) nil)))
+                    (if (selfhost/canon::is-error rev)
+                      rev
+                      ((core/pair::cons selfhost/canon::SYM_BEGIN) rev))))))
+            (def selfhost/canon::canon-begin-body2
+              (fn (body_terms)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((t (selfhost/canon::canon-code ((core/vec::get body_terms) i))))
+                          (if (selfhost/canon::is-error t)
+                            t
+                            (((selfhost/canon::canon-begin-body2 body_terms) i)
+                              ((core/pair::cons t) acc))))))))))
+            (def selfhost/canon::check-params
+              (fn (params_v)
+                (fn (n)
+                  (if ((core/int::eq? n) 0)
+                    true
+                    (let ((i ((core/int::sub n) 1)))
+                      (let ((p ((core/vec::get params_v) i)))
+                        (let ((tg (selfhost/canon::tag p)))
+                          (if (selfhost/canon::is-error tg)
+                            tg
+                            (if ((core/sym::eq? tg) (quote :sym))
+                              ((selfhost/canon::check-params params_v) i)
+                              (selfhost/canon::bad-form "(fn ...) parameters must be symbols"))))))))))
+            (def selfhost/canon::nest-fn
+              (fn (params_v)
+                (fn (body)
+                  (let ((n (core/vec::len params_v)))
+                    (((selfhost/canon::nest-fn2 params_v) n) body)))))
+            (def selfhost/canon::nest-fn2
+              (fn (params_v)
+                (fn (n)
+                  (fn (out)
+                    (if ((core/int::eq? n) 0)
+                      out
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((p ((core/vec::get params_v) i)))
+                          (((selfhost/canon::nest-fn2 params_v) i)
+                            (((selfhost/canon::list3 selfhost/canon::SYM_FN) (selfhost/canon::list1 p))
+                              out)))))))))
+            (def selfhost/canon::canon-if
+              (fn (items)
+                (if (if ((core/int::eq? (core/vec::len items)) 4) true false)
+                  (let ((c (selfhost/canon::canon-code ((core/vec::get items) 1))))
+                    (if (selfhost/canon::is-error c)
+                      c
+                      (let ((t (selfhost/canon::canon-code ((core/vec::get items) 2))))
+                        (if (selfhost/canon::is-error t)
+                          t
+                          (let ((e (selfhost/canon::canon-code ((core/vec::get items) 3))))
+                            (if (selfhost/canon::is-error e)
+                              e
+                              ((((selfhost/canon::list4 selfhost/canon::SYM_IF) c) t) e)))))))
+                  (selfhost/canon::bad-form "(if cond then else) expects exactly 3 arguments"))))
+            (def selfhost/canon::canon-begin
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if (if ((core/int::lt? n) 2) true false)
+                    (selfhost/canon::bad-form "(begin ...) expects at least 1 argument")
+                    (let ((body_terms ((selfhost/canon::vec-slice-from items) 1)))
+                      (if (selfhost/canon::is-error body_terms)
+                        body_terms
+                        (selfhost/canon::canon-begin-body body_terms)))))))
+            (def selfhost/canon::canon-let
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if (if ((core/int::lt? n) 3) true false)
+                    (selfhost/canon::bad-form "(let ((x e) ...) body...) expects bindings and body")
+                    (let ((bindings ((core/vec::get items) 1)))
+                      (let ((bind_v (core/pair::as-proper-list bindings)))
+                        (if (core/list::is-nil? bind_v)
+                          (selfhost/canon::bad-form "(let ...) bindings must be a list")
+                          (let ((canon_binds (selfhost/canon::canon-bindings bind_v)))
+                            (if (selfhost/canon::is-error canon_binds)
+                              canon_binds
+                              (let ((body_terms (selfhost/canon::slice-body items)))
+                                (if (selfhost/canon::is-error body_terms)
+                                  body_terms
+                                  (let ((body (selfhost/canon::canon-body body_terms)))
+                                    (if (selfhost/canon::is-error body)
+                                      body
+                                      (((selfhost/canon::list3 selfhost/canon::SYM_LET) canon_binds)
+                                        body))))))))))))))
+            (def selfhost/canon::canon-bindings
+              (fn (bind_v)
+                (let ((n (core/vec::len bind_v)))
+                  (let ((rev (((selfhost/canon::canon-bindings2 bind_v) n) nil)))
+                    (if (selfhost/canon::is-error rev) rev rev)))))
+            (def selfhost/canon::canon-bindings2
+              (fn (bind_v)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((b ((core/vec::get bind_v) i)))
+                          (let ((pair_v (core/pair::as-proper-list b)))
+                            (if (core/list::is-nil? pair_v)
+                              (selfhost/canon::bad-form
+                                "(let ...) binding must be a list (name expr)")
+                              (if (if ((core/int::eq? (core/vec::len pair_v)) 2) true false)
+                                (let ((name ((core/vec::get pair_v) 0)))
+                                  (let ((tg (selfhost/canon::tag name)))
+                                    (if (selfhost/canon::is-error tg)
+                                      tg
+                                      (if ((core/sym::eq? tg) (quote :sym))
+                                        (let
+                                          ((rhs (selfhost/canon::canon-code ((core/vec::get pair_v) 1))))
+                                          (if (selfhost/canon::is-error rhs)
+                                            rhs
+                                            (((selfhost/canon::canon-bindings2 bind_v) i)
+                                              ((core/pair::cons ((selfhost/canon::list2 name) rhs))
+                                                acc))))
+                                        (selfhost/canon::bad-form
+                                          "(let ...) binding name must be symbol")))))
+                                (selfhost/canon::bad-form
+                                  "(let ...) binding must have exactly 2 forms")))))))))))
+            (def selfhost/canon::canon-prim
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if (if ((core/int::lt? n) 2) true false)
+                    (selfhost/canon::bad-form "(prim op ...) expects op")
+                    (let ((op ((core/vec::get items) 1)))
+                      (let ((tg (selfhost/canon::tag op)))
+                        (if (selfhost/canon::is-error tg)
+                          tg
+                          (if ((core/sym::eq? tg) (quote :sym))
+                            (let ((args (selfhost/canon::slice-body items)))
+                              (if (selfhost/canon::is-error args)
+                                args
+                                (let ((canon_args (selfhost/canon::canon-list-of-code args)))
+                                  (if (selfhost/canon::is-error canon_args)
+                                    canon_args
+                                    (let ((args_list (selfhost/canon::vec->list canon_args)))
+                                      ((core/pair::cons selfhost/canon::SYM_PRIM)
+                                        ((core/pair::cons op) args_list)))))))
+                            (selfhost/canon::bad-form "(prim ...) op must be a symbol")))))))))
+            (def selfhost/canon::canon-list-of-code
+              (fn (v) ((selfhost/canon::vec-map-data v) selfhost/canon::canon-code)))
+            (def selfhost/canon::canon-seal
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if ((core/int::eq? n) 1)
+                    (selfhost/canon::list1 selfhost/canon::SYM_SEAL)
+                    (if ((core/int::eq? n) 3)
+                      (let ((v (selfhost/canon::canon-code ((core/vec::get items) 1))))
+                        (if (selfhost/canon::is-error v)
+                          v
+                          (let ((tok (selfhost/canon::canon-code ((core/vec::get items) 2))))
+                            (if (selfhost/canon::is-error tok)
+                              tok
+                              (((selfhost/canon::list3 selfhost/canon::SYM_SEAL) v) tok)))))
+                      (selfhost/canon::bad-form "(seal) or (seal v tok)"))))))
+            (def selfhost/canon::canon-unseal
+              (fn (items)
+                (if (if ((core/int::eq? (core/vec::len items)) 3) true false)
+                  (let ((w (selfhost/canon::canon-code ((core/vec::get items) 1))))
+                    (if (selfhost/canon::is-error w)
+                      w
+                      (let ((tok (selfhost/canon::canon-code ((core/vec::get items) 2))))
+                        (if (selfhost/canon::is-error tok)
+                          tok
+                          (((selfhost/canon::list3 selfhost/canon::SYM_UNSEAL) w) tok)))))
+                  (selfhost/canon::bad-form "(unseal w tok) expects exactly 2 arguments"))))
+            (def selfhost/canon::canon-app
+              (fn (items)
+                (let ((n (core/vec::len items)))
+                  (if ((core/int::eq? n) 1)
+                    (selfhost/canon::canon-code ((core/vec::get items) 0))
+                    (if ((core/int::eq? n) 2)
+                      (let ((f (selfhost/canon::canon-code ((core/vec::get items) 0))))
+                        (if (selfhost/canon::is-error f)
+                          f
+                          (let ((x (selfhost/canon::canon-code ((core/vec::get items) 1))))
+                            (if (selfhost/canon::is-error x) x ((selfhost/canon::list2 f) x)))))
+                      (let ((f (selfhost/canon::canon-code ((core/vec::get items) 0))))
+                        (if (selfhost/canon::is-error f)
+                          f
+                          (let ((x (selfhost/canon::canon-code ((core/vec::get items) 1))))
+                            (if (selfhost/canon::is-error x)
+                              x
+                              (let ((acc ((selfhost/canon::list2 f) x)))
+                                (((selfhost/canon::canon-app2 items) 2) acc)))))))))))
+            (def selfhost/canon::canon-app2
+              (fn (items)
+                (fn (i)
+                  (fn (acc)
+                    (let ((n (core/vec::len items)))
+                      (if ((core/int::eq? i) n)
+                        acc
+                        (let ((arg (selfhost/canon::canon-code ((core/vec::get items) i))))
+                          (if (selfhost/canon::is-error arg)
+                            arg
+                            (((selfhost/canon::canon-app2 items) ((core/int::add i) 1))
+                              ((selfhost/canon::list2 acc) arg))))))))))
+            (def selfhost/canon::canonicalize-module
+              (fn (forms)
+                (let ((tg (selfhost/canon::tag forms)))
+                  (if (selfhost/canon::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :vec))
+                      (let ((n (core/vec::len forms)))
+                        (let ((rev (((selfhost/canon::canonicalize-module2 forms) n) nil)))
+                          (if (selfhost/canon::is-error rev) rev (selfhost/canon::list->vec rev))))
+                      (selfhost/canon::type-error "canonicalize-module expects vector of terms"))))))
+            (def selfhost/canon::canonicalize-module2
+              (fn (forms)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((t (selfhost/canon::canon-code ((core/vec::get forms) i))))
+                          (if (selfhost/canon::is-error t)
+                            t
+                            (((selfhost/canon::canonicalize-module2 forms) i)
+                              ((core/pair::cons t) acc))))))))))]
         :module-h
           b"R?=\xC2\x0E\x0F\"\xE3@\xEB$\xB1\xF1\x95f\xEF\xA8\xAB\x9C\xA23\xE2\xFC\x84\xBB\xD5_\xB5%5{\x85"
         :path "selfhost/canon.gc"
@@ -35,6 +1072,512 @@
         :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
       {
+        :forms
+          [
+            (def selfhost/printer::is-error core/error::is?)
+            (def selfhost/printer::tag
+              (fn (x)
+                (let ((tg (core/data::tag x)))
+                  (if (selfhost/printer::is-error tg)
+                    (let ((vn (core/vec::len x)))
+                      (if (selfhost/printer::is-error vn)
+                        (let ((mn (core/map::len x)))
+                          (if (selfhost/printer::is-error mn) tg (quote :map)))
+                        (quote :vec)))
+                    tg))))
+            (def selfhost/printer::INDENT 2)
+            (def selfhost/printer::MAX_WIDTH 100)
+            (def selfhost/printer::spaces (fn (n) ((core/str::repeat " ") n)))
+            (def selfhost/printer::list-rev (fn (xs) ((selfhost/printer::list-rev2 xs) nil)))
+            (def selfhost/printer::list-rev2
+              (fn (xs)
+                (fn (acc)
+                  (if (core/list::is-nil? xs)
+                    acc
+                    ((selfhost/printer::list-rev2 (core/pair::cdr xs))
+                      ((core/pair::cons (core/pair::car xs)) acc))))))
+            (def selfhost/printer::append-lines-to-rev
+              (fn (out_rev)
+                (fn (lines)
+                  (if (core/list::is-nil? lines)
+                    out_rev
+                    ((selfhost/printer::append-lines-to-rev ((core/pair::cons (core/pair::car lines)) out_rev))
+                      (core/pair::cdr lines))))))
+            (def selfhost/printer::join-lines
+              (fn (lines)
+                (let ((v (core/pair::as-proper-list lines)))
+                  (if (selfhost/printer::is-error v) v ((core/str::join v) "\n")))))
+            (def selfhost/printer::atom-repr
+              (fn (t)
+                (let ((tg (selfhost/printer::tag t)))
+                  (if (selfhost/printer::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :nil))
+                      "nil"
+                      (if ((core/sym::eq? tg) (quote :bool))
+                        (if t "true" "false")
+                        (if ((core/sym::eq? tg) (quote :int))
+                          (core/int::to-str t)
+                          (if ((core/sym::eq? tg) (quote :str))
+                            ((core/str::concat "\"")
+                              ((core/str::concat (core/coreform::escape-str t)) "\""))
+                            (if ((core/sym::eq? tg) (quote :bytes))
+                              ((core/str::concat "b\"")
+                                ((core/str::concat (core/coreform::escape-bytes t)) "\""))
+                              (if ((core/sym::eq? tg) (quote :sym)) (core/sym::to-str t) nil))))))))))
+            (def selfhost/printer::is-atom?
+              (fn (t)
+                (let ((a (selfhost/printer::atom-repr t)))
+                  (if (selfhost/printer::is-error a) a (if (core/list::is-nil? a) false true)))))
+            (def selfhost/printer::single-line
+              (fn (t)
+                (let ((a (selfhost/printer::atom-repr t)))
+                  (if (selfhost/printer::is-error a)
+                    a
+                    (if (core/list::is-nil? a) (selfhost/printer::single-line2 t) a)))))
+            (def selfhost/printer::single-line2
+              (fn (t)
+                (let ((tg (selfhost/printer::tag t)))
+                  (if (selfhost/printer::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :vec))
+                      (selfhost/printer::single-line-vec t)
+                      (if ((core/sym::eq? tg) (quote :map))
+                        (selfhost/printer::single-line-map t)
+                        (if ((core/sym::eq? tg) (quote :pair))
+                          (selfhost/printer::single-line-list t)
+                          nil)))))))
+            (def selfhost/printer::single-line-vec
+              (fn (v)
+                (let ((n (core/vec::len v)))
+                  (if ((core/int::lt? 3) n)
+                    nil
+                    (let ((ok ((selfhost/printer::vec-all-atoms? v) n)))
+                      (if (selfhost/printer::is-error ok)
+                        ok
+                        (if ok
+                          (let ((parts ((selfhost/printer::vec-atom-reprs v) n)))
+                            (if (selfhost/printer::is-error parts)
+                              parts
+                              (let ((mid ((core/str::join parts) " ")))
+                                ((core/str::concat "[") ((core/str::concat mid) "]")))))
+                          nil)))))))
+            (def selfhost/printer::vec-all-atoms?
+              (fn (v) (fn (n) (((selfhost/printer::vec-all-atoms2 v) n) true))))
+            (def selfhost/printer::vec-all-atoms2
+              (fn (v)
+                (fn (n)
+                  (fn (acc)
+                    (if (if (core/list::is-nil? acc) true false)
+                      false
+                      (if ((core/int::eq? n) 0)
+                        true
+                        (let ((i ((core/int::sub n) 1)))
+                          (let ((x ((core/vec::get v) i)))
+                            (let ((a (selfhost/printer::is-atom? x)))
+                              (if (selfhost/printer::is-error a)
+                                a
+                                (((selfhost/printer::vec-all-atoms2 v) i) (if a true nil))))))))))))
+            (def selfhost/printer::vec-atom-reprs
+              (fn (v)
+                (fn (n)
+                  (let ((lst (((selfhost/printer::vec-atom-reprs2 v) n) nil)))
+                    (if (selfhost/printer::is-error lst) lst (core/pair::as-proper-list lst))))))
+            (def selfhost/printer::vec-atom-reprs2
+              (fn (v)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((x ((core/vec::get v) i)))
+                          (let ((a (selfhost/printer::atom-repr x)))
+                            (if (selfhost/printer::is-error a)
+                              a
+                              (((selfhost/printer::vec-atom-reprs2 v) i) ((core/pair::cons a) acc)))))))))))
+            (def selfhost/printer::single-line-map
+              (fn (m)
+                (let ((n (core/map::len m)))
+                  (if ((core/int::eq? n) 0)
+                    "{}"
+                    (if ((core/int::lt? 2) n)
+                      nil
+                      (let ((entries (core/map::entries m)))
+                        (let
+                          ((ok ((selfhost/printer::map-entries-are-atom-pairs? entries) (core/vec::len entries))))
+                          (if (selfhost/printer::is-error ok)
+                            ok
+                            (if ok
+                              (let
+                                ((parts ((selfhost/printer::map-atom-parts entries) (core/vec::len entries))))
+                                (if (selfhost/printer::is-error parts)
+                                  parts
+                                  (let ((mid ((core/str::join parts) " ")))
+                                    ((core/str::concat "{") ((core/str::concat mid) "}")))))
+                              nil)))))))))
+            (def selfhost/printer::map-entries-are-atom-pairs?
+              (fn (entries)
+                (fn (n) (((selfhost/printer::map-entries-are-atom-pairs2 entries) n) true))))
+            (def selfhost/printer::map-entries-are-atom-pairs2
+              (fn (entries)
+                (fn (n)
+                  (fn (acc)
+                    (if (if (core/list::is-nil? acc) true false)
+                      false
+                      (if ((core/int::eq? n) 0)
+                        true
+                        (let ((i ((core/int::sub n) 1)))
+                          (let ((e ((core/vec::get entries) i)))
+                            (let ((k ((core/vec::get e) 0)))
+                              (let ((v ((core/vec::get e) 1)))
+                                (let ((ka (selfhost/printer::is-atom? k)))
+                                  (if (selfhost/printer::is-error ka)
+                                    ka
+                                    (let ((va (selfhost/printer::is-atom? v)))
+                                      (if (selfhost/printer::is-error va)
+                                        va
+                                        (((selfhost/printer::map-entries-are-atom-pairs2 entries) i)
+                                          (if (if ka va false) true nil))))))))))))))))
+            (def selfhost/printer::map-atom-parts
+              (fn (entries)
+                (fn (n)
+                  (let ((lst (((selfhost/printer::map-atom-parts2 entries) n) nil)))
+                    (if (selfhost/printer::is-error lst) lst (core/pair::as-proper-list lst))))))
+            (def selfhost/printer::map-atom-parts2
+              (fn (entries)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((e ((core/vec::get entries) i)))
+                          (let ((k ((core/vec::get e) 0)))
+                            (let ((v ((core/vec::get e) 1)))
+                              (let ((ks (selfhost/printer::atom-repr k)))
+                                (if (selfhost/printer::is-error ks)
+                                  ks
+                                  (let ((vs (selfhost/printer::atom-repr v)))
+                                    (if (selfhost/printer::is-error vs)
+                                      vs
+                                      (((selfhost/printer::map-atom-parts2 entries) i)
+                                        ((core/pair::cons ks) ((core/pair::cons vs) acc))))))))))))))))
+            (def selfhost/printer::single-line-list
+              (fn (t)
+                (let ((items (core/pair::as-proper-list t)))
+                  (if (core/list::is-nil? items)
+                    nil
+                    (let
+                      ((parts ((selfhost/printer::vec-single-lines items) (core/vec::len items))))
+                      (if (selfhost/printer::is-error parts)
+                        parts
+                        (if (core/list::is-nil? parts)
+                          nil
+                          (let ((mid ((core/str::join parts) " ")))
+                            (let ((s ((core/str::concat "(") ((core/str::concat mid) ")"))))
+                              (if
+                                ((core/int::lt? (core/str::len s))
+                                  ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                                s
+                                nil))))))))))
+            (def selfhost/printer::vec-single-lines
+              (fn (v)
+                (fn (n)
+                  (let ((lst (((selfhost/printer::vec-single-lines2 v) n) nil)))
+                    (if (selfhost/printer::is-error lst)
+                      lst
+                      (if (core/list::is-nil? lst) nil (core/pair::as-proper-list lst)))))))
+            (def selfhost/printer::vec-single-lines2
+              (fn (v)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((x ((core/vec::get v) i)))
+                          (let ((s (selfhost/printer::single-line x)))
+                            (if (selfhost/printer::is-error s)
+                              s
+                              (if (core/list::is-nil? s)
+                                nil
+                                (((selfhost/printer::vec-single-lines2 v) i)
+                                  ((core/pair::cons s) acc))))))))))))
+            (def selfhost/printer::fmt-term
+              (fn (t)
+                (fn (indent)
+                  (let ((s (selfhost/printer::single-line t)))
+                    (if (selfhost/printer::is-error s)
+                      s
+                      (if
+                        (if (core/list::is-nil? s)
+                          true
+                          (if
+                            ((core/int::lt? ((core/int::add (core/str::len s)) indent))
+                              ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                            false
+                            true))
+                        ((selfhost/printer::fmt-term2 t) indent)
+                        ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) s))
+                          nil)))))))
+            (def selfhost/printer::fmt-term2
+              (fn (t)
+                (fn (indent)
+                  (let ((a (selfhost/printer::atom-repr t)))
+                    (if (selfhost/printer::is-error a)
+                      a
+                      (if (core/list::is-nil? a)
+                        (let ((tg (selfhost/printer::tag t)))
+                          (if (selfhost/printer::is-error tg)
+                            tg
+                            (if ((core/sym::eq? tg) (quote :vec))
+                              ((selfhost/printer::fmt-vector t) indent)
+                              (if ((core/sym::eq? tg) (quote :map))
+                                ((selfhost/printer::fmt-map t) indent)
+                                (if ((core/sym::eq? tg) (quote :pair))
+                                  ((selfhost/printer::fmt-list t) indent)
+                                  ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "<unknown>"))
+                                    nil))))))
+                        ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) a))
+                          nil)))))))
+            (def selfhost/printer::fmt-vector
+              (fn (v)
+                (fn (indent)
+                  (if ((core/int::eq? (core/vec::len v)) 0)
+                    ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "[]"))
+                      nil)
+                    (let ((open ((core/str::concat (selfhost/printer::spaces indent)) "[")))
+                      (let ((out_rev ((core/pair::cons open) nil)))
+                        (let ((out_rev2 ((((selfhost/printer::fmt-vector2 v) indent) 0) out_rev)))
+                          (if (selfhost/printer::is-error out_rev2)
+                            out_rev2
+                            (let ((last (core/pair::car out_rev2)))
+                              (let ((rest (core/pair::cdr out_rev2)))
+                                (selfhost/printer::list-rev
+                                  ((core/pair::cons ((core/str::concat last) "]")) rest))))))))))))
+            (def selfhost/printer::fmt-vector2
+              (fn (v)
+                (fn (indent)
+                  (fn (i)
+                    (fn (out_rev)
+                      (let ((n (core/vec::len v)))
+                        (if ((core/int::eq? i) n)
+                          out_rev
+                          (let ((x ((core/vec::get v) i)))
+                            (let
+                              ((lines ((selfhost/printer::fmt-term x) ((core/int::add indent) selfhost/printer::INDENT))))
+                              (if (selfhost/printer::is-error lines)
+                                lines
+                                ((((selfhost/printer::fmt-vector2 v) indent) ((core/int::add i) 1))
+                                  ((selfhost/printer::append-lines-to-rev out_rev) lines))))))))))))
+            (def selfhost/printer::fmt-map
+              (fn (m)
+                (fn (indent)
+                  (if ((core/int::eq? (core/map::len m)) 0)
+                    ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "{}"))
+                      nil)
+                    (let ((open ((core/str::concat (selfhost/printer::spaces indent)) "{")))
+                      (let ((entries (core/map::entries m)))
+                        (let ((out_rev ((core/pair::cons open) nil)))
+                          (let
+                            ((out_rev2 ((((selfhost/printer::fmt-map2 entries) indent) 0) out_rev)))
+                            (if (selfhost/printer::is-error out_rev2)
+                              out_rev2
+                              (let ((last (core/pair::car out_rev2)))
+                                (let ((rest (core/pair::cdr out_rev2)))
+                                  (selfhost/printer::list-rev
+                                    ((core/pair::cons ((core/str::concat last) "}")) rest)))))))))))))
+            (def selfhost/printer::fmt-map2
+              (fn (entries)
+                (fn (indent)
+                  (fn (i)
+                    (fn (out_rev)
+                      (let ((n (core/vec::len entries)))
+                        (if ((core/int::eq? i) n)
+                          out_rev
+                          (let ((e ((core/vec::get entries) i)))
+                            (let ((k ((core/vec::get e) 0)))
+                              (let ((v ((core/vec::get e) 1)))
+                                (let ((ks (selfhost/printer::single-line k)))
+                                  (if (selfhost/printer::is-error ks)
+                                    ks
+                                    (let ((vs (selfhost/printer::single-line v)))
+                                      (if (selfhost/printer::is-error vs)
+                                        vs
+                                        (let
+                                          ((lines (((((selfhost/printer::fmt-map-entry k) v) indent) ks) vs)))
+                                          (if (selfhost/printer::is-error lines)
+                                            lines
+                                            ((((selfhost/printer::fmt-map2 entries) indent) ((core/int::add i) 1))
+                                              ((selfhost/printer::append-lines-to-rev out_rev) lines))))))))))))))))))
+            (def selfhost/printer::fmt-map-entry
+              (fn (k)
+                (fn (v)
+                  (fn (indent)
+                    (fn (ks)
+                      (fn (vs)
+                        (if
+                          (if (core/list::is-nil? ks) false (if (core/list::is-nil? vs) false true))
+                          (let
+                            (
+                              (line
+                                ((core/str::concat (selfhost/printer::spaces ((core/int::add indent) selfhost/printer::INDENT)))
+                                  ((core/str::concat ks) ((core/str::concat " ") vs)))))
+                            (if
+                              ((core/int::lt? (core/str::len line))
+                                ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                              ((core/pair::cons line) nil)
+                              (((selfhost/printer::fmt-map-entry-multiline k) v) indent)))
+                          (((selfhost/printer::fmt-map-entry-multiline k) v) indent))))))))
+            (def selfhost/printer::fmt-map-entry-multiline
+              (fn (k)
+                (fn (v)
+                  (fn (indent)
+                    (let
+                      ((kl ((selfhost/printer::fmt-term k) ((core/int::add indent) selfhost/printer::INDENT))))
+                      (if (selfhost/printer::is-error kl)
+                        kl
+                        (let
+                          (
+                            (vl
+                              ((selfhost/printer::fmt-term v)
+                                ((core/int::add indent) ((core/int::mul selfhost/printer::INDENT) 2)))))
+                          (if (selfhost/printer::is-error vl)
+                            vl
+                            (let ((out_rev (selfhost/printer::list-rev kl)))
+                              (if (selfhost/printer::is-error out_rev)
+                                out_rev
+                                (let
+                                  ((out_rev2 ((selfhost/printer::append-lines-to-rev out_rev) vl)))
+                                  (if (selfhost/printer::is-error out_rev2)
+                                    out_rev2
+                                    (selfhost/printer::list-rev out_rev2)))))))))))))
+            (def selfhost/printer::fmt-list
+              (fn (t)
+                (fn (indent)
+                  (let ((items (core/pair::as-proper-list t)))
+                    (if (core/list::is-nil? items)
+                      ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "(pair <improper>)"))
+                        nil)
+                      ((selfhost/printer::fmt-list-items items) indent))))))
+            (def selfhost/printer::fmt-list-items
+              (fn (items)
+                (fn (indent)
+                  (let ((n (core/vec::len items)))
+                    (let ((head0 (selfhost/printer::single-line ((core/vec::get items) 0))))
+                      (if (selfhost/printer::is-error head0)
+                        head0
+                        (if (core/list::is-nil? head0)
+                          (((selfhost/printer::fmt-list-headless items) indent) n)
+                          ((((selfhost/printer::fmt-list-headed items) indent) n) head0))))))))
+            (def selfhost/printer::fmt-list-headless
+              (fn (items)
+                (fn (indent)
+                  (fn (n)
+                    (let ((open ((core/str::concat (selfhost/printer::spaces indent)) "(")))
+                      (let ((out_rev ((core/pair::cons open) nil)))
+                        (let
+                          ((out_rev2 ((((selfhost/printer::fmt-list-tail items) indent) 0) out_rev)))
+                          (if (selfhost/printer::is-error out_rev2)
+                            out_rev2
+                            (let ((last (core/pair::car out_rev2)))
+                              (let ((rest (core/pair::cdr out_rev2)))
+                                (selfhost/printer::list-rev
+                                  ((core/pair::cons ((core/str::concat last) ")")) rest))))))))))))
+            (def selfhost/printer::fmt-list-headed
+              (fn (items)
+                (fn (indent)
+                  (fn (n)
+                    (fn (head0)
+                      (let
+                        ((first ((core/str::concat (selfhost/printer::spaces indent)) ((core/str::concat "(") head0))))
+                        (let ((head_count (((selfhost/printer::list-head-count items) n) first)))
+                          (if (selfhost/printer::is-error head_count)
+                            head_count
+                            (let
+                              ((first2 (((selfhost/printer::list-first-line items) head_count) first)))
+                              (let ((out_rev ((core/pair::cons first2) nil)))
+                                (if ((core/int::eq? head_count) n)
+                                  (selfhost/printer::list-rev
+                                    ((core/pair::cons ((core/str::concat (core/pair::car out_rev)) ")"))
+                                      (core/pair::cdr out_rev)))
+                                  (let
+                                    ((out_rev2 ((((selfhost/printer::fmt-list-tail items) indent) head_count) out_rev)))
+                                    (if (selfhost/printer::is-error out_rev2)
+                                      out_rev2
+                                      (let ((last (core/pair::car out_rev2)))
+                                        (let ((rest (core/pair::cdr out_rev2)))
+                                          (selfhost/printer::list-rev
+                                            ((core/pair::cons ((core/str::concat last) ")")) rest)))))))))))))))))
+            (def selfhost/printer::list-head-count
+              (fn (items)
+                (fn (n)
+                  (fn (first)
+                    (if ((core/int::lt? n) 2)
+                      1
+                      (let ((h1 (selfhost/printer::single-line ((core/vec::get items) 1))))
+                        (if (selfhost/printer::is-error h1)
+                          h1
+                          (if (core/list::is-nil? h1)
+                            1
+                            (if
+                              ((core/int::lt? (core/str::len ((core/str::concat first) ((core/str::concat " ") h1))))
+                                ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                              2
+                              1)))))))))
+            (def selfhost/printer::list-first-line
+              (fn (items)
+                (fn (head_count)
+                  (fn (first)
+                    (if ((core/int::eq? head_count) 2)
+                      (let ((h1 (selfhost/printer::single-line ((core/vec::get items) 1))))
+                        ((core/str::concat first) ((core/str::concat " ") h1)))
+                      first)))))
+            (def selfhost/printer::fmt-list-tail
+              (fn (items)
+                (fn (indent)
+                  (fn (i)
+                    (fn (out_rev)
+                      (let ((n (core/vec::len items)))
+                        (if ((core/int::eq? i) n)
+                          out_rev
+                          (let ((x ((core/vec::get items) i)))
+                            (let
+                              ((lines ((selfhost/printer::fmt-term x) ((core/int::add indent) selfhost/printer::INDENT))))
+                              (if (selfhost/printer::is-error lines)
+                                lines
+                                ((((selfhost/printer::fmt-list-tail items) indent) ((core/int::add i) 1))
+                                  ((selfhost/printer::append-lines-to-rev out_rev) lines))))))))))))
+            (def selfhost/printer::print-term
+              (fn (t)
+                (let ((lines ((selfhost/printer::fmt-term t) 0)))
+                  (if (selfhost/printer::is-error lines) lines (selfhost/printer::join-lines lines)))))
+            (def selfhost/printer::print-module
+              (fn (forms)
+                (let ((tg (selfhost/printer::tag forms)))
+                  (if (selfhost/printer::is-error tg)
+                    tg
+                    (if ((core/sym::eq? tg) (quote :vec))
+                      (let ((n (core/vec::len forms)))
+                        (if ((core/int::eq? n) 0)
+                          ""
+                          (let ((lst (((selfhost/printer::print-module2 forms) n) nil)))
+                            (if (selfhost/printer::is-error lst)
+                              lst
+                              (let ((v (core/pair::as-proper-list lst)))
+                                (if (selfhost/printer::is-error v)
+                                  v
+                                  ((core/str::concat ((core/str::join v) "\n\n")) "\n")))))))
+                      ((core/error::make2 "core/type-error") "print-module expects vector of forms"))))))
+            (def selfhost/printer::print-module2
+              (fn (forms)
+                (fn (n)
+                  (fn (acc)
+                    (if ((core/int::eq? n) 0)
+                      acc
+                      (let ((i ((core/int::sub n) 1)))
+                        (let ((s (selfhost/printer::print-term ((core/vec::get forms) i))))
+                          (if (selfhost/printer::is-error s)
+                            s
+                            (((selfhost/printer::print-module2 forms) i) ((core/pair::cons s) acc))))))))))]
         :module-h
           b"!q\xA7M\xCA\x89h\xAF\xA6m\x8D\x1E)\x13:9\xA79\x82_r\xDE\x10D\x16\xB3\xF0P\x9B\x86\xC7r"
         :path "selfhost/printer.gc"
@@ -51,6 +1594,33 @@
         :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
       {
+        :forms
+          [
+            (def selfhost/hash::is-error core/error::is?)
+            (def selfhost/hash::PREFIX_TERM b"GCv0.2\x00")
+            (def selfhost/hash::PREFIX_MODULE b"GCv0.2\x00module\x00")
+            (def selfhost/hash::hash-term
+              (fn (t)
+                (let ((s (selfhost/printer::print-term t)))
+                  (if (selfhost/hash::is-error s)
+                    s
+                    (let ((b (core/str::to-utf8 s)))
+                      (if (selfhost/hash::is-error b)
+                        b
+                        (let ((msg ((core/bytes::concat selfhost/hash::PREFIX_TERM) b)))
+                          (let ((h (core/crypto::blake3 msg)))
+                            (if (selfhost/hash::is-error h) h (core/bytes::to-hex h))))))))))
+            (def selfhost/hash::hash-module
+              (fn (forms)
+                (let ((s (selfhost/printer::print-module forms)))
+                  (if (selfhost/hash::is-error s)
+                    s
+                    (let ((b (core/str::to-utf8 s)))
+                      (if (selfhost/hash::is-error b)
+                        b
+                        (let ((msg ((core/bytes::concat selfhost/hash::PREFIX_MODULE) b)))
+                          (let ((h (core/crypto::blake3 msg)))
+                            (if (selfhost/hash::is-error h) h (core/bytes::to-hex h))))))))))]
         :module-h
           b"\x1A\xFC\xAB\xB7[\xF4\x8F\x8E\xC2\x8E\x1EFy;\xA0\xA8\xA9\xEF\xEE\xCD\xAB\xB6M\xFF\xD5d{t\x94/\xA9N"
         :path "selfhost/hash.gc"
@@ -67,6 +1637,33 @@
         :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
       {
+        :forms
+          [
+            (def selfhost/tool::is-error core/error::is?)
+            (def selfhost/tool::fmt-module
+              (fn (src)
+                (let ((forms (selfhost/parse::parse-module src)))
+                  (if (selfhost/tool::is-error forms)
+                    forms
+                    (let ((canon (selfhost/canon::canonicalize-module forms)))
+                      (if (selfhost/tool::is-error canon)
+                        canon
+                        (selfhost/printer::print-module canon)))))))
+            (def selfhost/tool::hash-module-src
+              (fn (src)
+                (let ((forms (selfhost/parse::parse-module src)))
+                  (if (selfhost/tool::is-error forms)
+                    forms
+                    (let ((canon (selfhost/canon::canonicalize-module forms)))
+                      (if (selfhost/tool::is-error canon) canon (selfhost/hash::hash-module canon)))))))
+            (def selfhost/tool::hash-src-with-kind
+              (fn (src)
+                (let ((t (selfhost/parse::parse-term src)))
+                  (if (selfhost/tool::is-error t)
+                    (let ((hm (selfhost/tool::hash-module-src src)))
+                      (if (selfhost/tool::is-error hm) hm {:hash hm :kind "module"}))
+                    (let ((ht (selfhost/hash::hash-term t)))
+                      (if (selfhost/tool::is-error ht) ht {:hash ht :kind "term"}))))))]
         :module-h
           b"\xBA\xBF\x04\x94z`n\xD9\x14\x1C\xAB\xE6\x8B\xC1\x98.\x1B\xBF\xACf\xA1\n\xC0\x9C\xA4\x8BM\xA0\xD0\xD1\x97\xD0"
         :path "selfhost/tool_coreform_v1.gc"
@@ -83,6 +1680,586 @@
         :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
       {
+        :forms
+          [
+            (def core/cli::is-error core/error::is?)
+            (def core/cli::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+            (def core/cli::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+            (def core/cli::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+            (def core/cli::pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+            (def core/cli::def-name-or-nil
+              (fn (form)
+                (if (core/cli::pair? form)
+                  (let ((items (core/pair::as-proper-list form)))
+                    (if (core/cli::vec? items)
+                      (if ((core/int::eq? (core/vec::len items)) 3)
+                        (let ((h ((core/vec::get items) 0)) (n ((core/vec::get items) 1)))
+                          (if (core/cli::sym? h)
+                            (if ((core/sym::eq? h) (quote def)) (if (core/cli::sym? n) n nil) nil)
+                            nil))
+                        nil)
+                      nil))
+                  nil)))
+            (def core/cli::def-expr-or-nil
+              (fn (form)
+                (if (core/cli::pair? form)
+                  (let ((items (core/pair::as-proper-list form)))
+                    (if (core/cli::vec? items)
+                      (if ((core/int::eq? (core/vec::len items)) 3) ((core/vec::get items) 2) nil)
+                      nil))
+                  nil)))
+            (def core/cli::quote-map-or-nil
+              (fn (expr)
+                (if (core/cli::pair? expr)
+                  (let ((qitems (core/pair::as-proper-list expr)))
+                    (if (core/cli::vec? qitems)
+                      (if ((core/int::eq? (core/vec::len qitems)) 2)
+                        (let ((qh ((core/vec::get qitems) 0)) (qv ((core/vec::get qitems) 1)))
+                          (if (core/cli::sym? qh)
+                            (if ((core/sym::eq? qh) (quote quote))
+                              (if (core/cli::map? qv) qv nil)
+                              nil)
+                            nil))
+                        nil)
+                      nil))
+                  nil)))
+            (def core/cli::module-meta-loop
+              (fn (forms)
+                (fn (i)
+                  (if ((core/int::eq? i) (core/vec::len forms))
+                    nil
+                    (let ((form ((core/vec::get forms) i)))
+                      (let ((name (core/cli::def-name-or-nil form)))
+                        (if (core/cli::sym? name)
+                          (if ((core/sym::eq? name) (quote ::meta))
+                            (let ((m (core/cli::quote-map-or-nil (core/cli::def-expr-or-nil form))))
+                              (if (core/list::is-nil? m)
+                                ((core/cli::module-meta-loop forms) ((core/int::add i) 1))
+                                m))
+                            ((core/cli::module-meta-loop forms) ((core/int::add i) 1)))
+                          ((core/cli::module-meta-loop forms) ((core/int::add i) 1)))))))))
+            (def core/cli::module-meta
+              (fn (forms)
+                (if (core/cli::vec? forms)
+                  ((core/cli::module-meta-loop forms) 0)
+                  ((core/error::make2 "core/type-error")
+                    "core/cli::module-meta expects vector of forms"))))
+            (def core/cli::canonicalize-module-src
+              (fn (src)
+                (let ((forms (selfhost/parse::parse-module src)))
+                  (if (core/cli::is-error forms) forms (selfhost/canon::canonicalize-module forms)))))
+            (def core/cli::fmt-module
+              (fn (src)
+                (let ((forms (core/cli::canonicalize-module-src src)))
+                  (if (core/cli::is-error forms) forms (selfhost/printer::print-module forms)))))
+            (def core/cli::hash-module-src
+              (fn (src)
+                (let ((forms (core/cli::canonicalize-module-src src)))
+                  (if (core/cli::is-error forms) forms (core/cli::hash-module-forms forms)))))
+            (def core/cli::hash-module-forms
+              (fn (forms)
+                (if (core/cli::vec? forms)
+                  (selfhost/hash::hash-module forms)
+                  ((core/error::make2 "core/type-error")
+                    "core/cli::hash-module-forms expects vector of forms"))))
+            (def core/cli::hash-src-with-kind
+              (fn (src)
+                (let ((t (selfhost/parse::parse-term src)))
+                  (if (core/cli::is-error t)
+                    (let ((hm (core/cli::hash-module-src src)))
+                      (if (core/cli::is-error hm) hm {:hash hm :kind "module"}))
+                    (let ((ht (selfhost/hash::hash-term t)))
+                      (if (core/cli::is-error ht) ht {:hash ht :kind "term"}))))))
+            (def core/cli::store-put-program
+              (fn (artifact)
+                (((core/effect::perform (quote core/store::put)) {:artifact artifact})
+                  (fn (r) (core/effect::pure r)))))
+            (def core/cli::store-get-program
+              (fn (hash)
+                (((core/effect::perform (quote core/store::get)) {:hash hash})
+                  (fn (r) (core/effect::pure r)))))
+            (def core/cli::store-has-program
+              (fn (hash)
+                (((core/effect::perform (quote core/store::has)) {:hash hash})
+                  (fn (r) (core/effect::pure r)))))
+            (def core/cli::refs-get-program
+              (fn (name)
+                (((core/effect::perform (quote core/refs::get)) {:name name})
+                  (fn (r) (core/effect::pure r)))))
+            (def core/cli::refs-list-program
+              (fn (prefix)
+                (((core/effect::perform (quote core/refs::list)) {:prefix prefix})
+                  (fn (r) (core/effect::pure r)))))
+            (def core/cli::refs-set-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((name ((core/map::get req) (quote :name)))
+                      (hash ((core/map::get req) (quote :hash)))
+                      (policy ((core/map::get req) (quote :policy)))
+                      (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+                      (expected-old ((core/map::get req) (quote :expected-old))))
+                    (let
+                      (
+                        (payload0
+                          {
+                            :hash hash
+                            :name name
+                            :policy policy}))
+                      (let
+                        (
+                          (payload
+                            (if expected-old-present
+                              (((core/map::put payload0) (quote :expected-old)) expected-old)
+                              payload0)))
+                        (((core/effect::perform (quote core/refs::set)) payload)
+                          (fn (r) (core/effect::pure r))))))
+                  ((core/error::make2 "core/type-error") "core/cli::refs-set-program expects map"))))
+            (def core/cli::refs-delete-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((name ((core/map::get req) (quote :name)))
+                      (policy ((core/map::get req) (quote :policy)))
+                      (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+                      (expected-old ((core/map::get req) (quote :expected-old))))
+                    (let ((payload0 {:name name :policy policy}))
+                      (let
+                        (
+                          (payload
+                            (if expected-old-present
+                              (((core/map::put payload0) (quote :expected-old)) expected-old)
+                              payload0)))
+                        (((core/effect::perform (quote core/refs::delete)) payload)
+                          (fn (r) (core/effect::pure r))))))
+                  ((core/error::make2 "core/type-error") "core/cli::refs-delete-program expects map"))))
+            (def core/cli::sync-pull-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((remote ((core/map::get req) (quote :remote)))
+                      (refs ((core/map::get req) (quote :refs)))
+                      (roots ((core/map::get req) (quote :roots)))
+                      (depth ((core/map::get req) (quote :depth)))
+                      (force ((core/map::get req) (quote :force))))
+                    (let ((payload0 {:remote remote}))
+                      (let
+                        (
+                          (payload1
+                            (if ((core/int::eq? (core/vec::len refs)) 0)
+                              payload0
+                              (((core/map::put payload0) (quote :refs)) refs))))
+                        (let
+                          (
+                            (payload2
+                              (if ((core/int::eq? (core/vec::len roots)) 0)
+                                payload1
+                                (((core/map::put payload1) (quote :roots)) roots))))
+                          (let
+                            ((payload3 (if ((core/int::eq? depth) 0) payload2 (((core/map::put payload2) (quote :depth)) depth))))
+                            (let
+                              ((payload (if force (((core/map::put payload3) (quote :force)) true) payload3)))
+                              (((core/effect::perform (quote core/sync::pull)) payload)
+                                (fn (r) (core/effect::pure r)))))))))
+                  ((core/error::make2 "core/type-error") "core/cli::sync-pull-program expects map"))))
+            (def core/cli::sync-push-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((remote ((core/map::get req) (quote :remote)))
+                      (roots ((core/map::get req) (quote :roots)))
+                      (depth ((core/map::get req) (quote :depth)))
+                      (set-refs ((core/map::get req) (quote :set-refs))))
+                    (let ((payload0 {:remote remote :roots roots}))
+                      (let
+                        ((payload1 (if ((core/int::eq? depth) 0) payload0 (((core/map::put payload0) (quote :depth)) depth))))
+                        (let
+                          (
+                            (payload
+                              (if ((core/int::eq? (core/vec::len set-refs)) 0)
+                                payload1
+                                (((core/map::put payload1) (quote :set-refs)) set-refs))))
+                          (((core/effect::perform (quote core/sync::push)) payload)
+                            (fn (r) (core/effect::pure r)))))))
+                  ((core/error::make2 "core/type-error") "core/cli::sync-push-program expects map"))))
+            (def core/cli::gc-plan-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/gc::plan))
+                      {
+                        :depth ((core/map::get req) (quote :depth))
+                        :include-lock ((core/map::get req) (quote :include-lock))
+                        :include-refs ((core/map::get req) (quote :include-refs))
+                        :lock ((core/map::get req) (quote :lock))
+                        :pins ((core/map::get req) (quote :pins))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::gc-plan-program expects map"))))
+            (def core/cli::gc-run-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :depth ((core/map::get req) (quote :depth))
+                          :include-lock ((core/map::get req) (quote :include-lock))
+                          :include-refs ((core/map::get req) (quote :include-refs))
+                          :lock ((core/map::get req) (quote :lock))
+                          :pins ((core/map::get req) (quote :pins))
+                          :quarantine ((core/map::get req) (quote :quarantine))})
+                      (qd ((core/map::get req) (quote :quarantine-dir))))
+                    (let
+                      (
+                        (payload
+                          (if (core/list::is-nil? qd)
+                            payload0
+                            (((core/map::put payload0) (quote :quarantine-dir)) qd))))
+                      (((core/effect::perform (quote core/gc::run)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::gc-run-program expects map"))))
+            (def core/cli::gc-pin-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/gc::pin))
+                      {
+                        :pins ((core/map::get req) (quote :pins))
+                        :target ((core/map::get req) (quote :target))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::gc-pin-program expects map"))))
+            (def core/cli::gc-unpin-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/gc::unpin))
+                      {
+                        :pins ((core/map::get req) (quote :pins))
+                        :target ((core/map::get req) (quote :target))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::gc-unpin-program expects map"))))
+            (def core/cli::gc-purge-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :ttl-days ((core/map::get req) (quote :ttl-days))})
+                      (qd ((core/map::get req) (quote :quarantine-dir))))
+                    (let
+                      (
+                        (payload
+                          (if (core/list::is-nil? qd)
+                            payload0
+                            (((core/map::put payload0) (quote :quarantine-dir)) qd))))
+                      (((core/effect::perform (quote core/gc::purge)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))
+            (def core/cli::vcs-log-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/vcs::log))
+                      {
+                        :max ((core/map::get req) (quote :max))
+                        :root ((core/map::get req) (quote :root))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-log-program expects map"))))
+            (def core/cli::vcs-blame-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :snapshot ((core/map::get req) (quote :snapshot))
+                          :sym ((core/map::get req) (quote :sym))})
+                      (path ((core/map::get req) (quote :path))))
+                    (let
+                      ((payload (if (core/list::is-nil? path) payload0 (((core/map::put payload0) (quote :path)) path))))
+                      (((core/effect::perform (quote core/vcs::blame)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-blame-program expects map"))))
+            (def core/cli::vcs-why-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :snapshot ((core/map::get req) (quote :snapshot))
+                          :sym ((core/map::get req) (quote :sym))})
+                      (op ((core/map::get req) (quote :op))))
+                    (let
+                      ((payload (if (core/list::is-nil? op) payload0 (((core/map::put payload0) (quote :op)) op))))
+                      (((core/effect::perform (quote core/vcs::why)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-why-program expects map"))))
+            (def core/cli::vcs-diff-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :base ((core/map::get req) (quote :base))
+                          :store ((core/map::get req) (quote :store))
+                          :to ((core/map::get req) (quote :to))})
+                      (out ((core/map::get req) (quote :out))))
+                    (let
+                      ((payload (if (core/list::is-nil? out) payload0 (((core/map::put payload0) (quote :out)) out))))
+                      (((core/effect::perform (quote core/vcs::diff)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-diff-program expects map"))))
+            (def core/cli::vcs-apply-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :base ((core/map::get req) (quote :base))
+                          :patch ((core/map::get req) (quote :patch))
+                          :store ((core/map::get req) (quote :store))})
+                      (out ((core/map::get req) (quote :out))))
+                    (let
+                      ((payload (if (core/list::is-nil? out) payload0 (((core/map::put payload0) (quote :out)) out))))
+                      (((core/effect::perform (quote core/vcs::apply)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-apply-program expects map"))))
+            (def core/cli::vcs-merge3-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :base ((core/map::get req) (quote :base))
+                          :left ((core/map::get req) (quote :left))
+                          :right ((core/map::get req) (quote :right))})
+                      (out ((core/map::get req) (quote :out))))
+                    (let
+                      ((payload (if (core/list::is-nil? out) payload0 (((core/map::put payload0) (quote :out)) out))))
+                      (((core/effect::perform (quote core/vcs::merge3)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::vcs-merge3-program expects map"))))
+            (def core/cli::vcs-resolve-conflict-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :conflict ((core/map::get req) (quote :conflict))})
+                      (strategy ((core/map::get req) (quote :strategy)))
+                      (resolutions ((core/map::get req) (quote :resolutions)))
+                      (out ((core/map::get req) (quote :out))))
+                    (let
+                      (
+                        (payload1
+                          (if (core/list::is-nil? strategy)
+                            payload0
+                            (((core/map::put payload0) (quote :strategy)) strategy))))
+                      (let
+                        (
+                          (payload2
+                            (if (core/list::is-nil? resolutions)
+                              payload1
+                              (((core/map::put payload1) (quote :resolutions)) resolutions))))
+                        (let
+                          ((payload (if (core/list::is-nil? out) payload2 (((core/map::put payload2) (quote :out)) out))))
+                          (((core/effect::perform (quote core/vcs::resolve-conflict)) payload)
+                            (fn (r) (core/effect::pure r)))))))
+                  ((core/error::make2 "core/type-error")
+                    "core/cli::vcs-resolve-conflict-program expects map"))))
+            (def core/cli::pkg-init-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :lock ((core/map::get req) (quote :lock))
+                          :policy ((core/map::get req) (quote :policy))
+                          :workspace ((core/map::get req) (quote :workspace))})
+                      (rd ((core/map::get req) (quote :registry-default))))
+                    (let
+                      (
+                        (payload
+                          (if (core/list::is-nil? rd)
+                            payload0
+                            (((core/map::put payload0) (quote :registry-default)) rd))))
+                      (((core/effect::perform (quote core/pkg::init)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-init-program expects map"))))
+            (def core/cli::pkg-add-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    (
+                      (payload0
+                        {
+                          :lock ((core/map::get req) (quote :lock))
+                          :name ((core/map::get req) (quote :name))
+                          :selector ((core/map::get req) (quote :selector))
+                          :update-policy ((core/map::get req) (quote :update-policy))})
+                      (reg ((core/map::get req) (quote :registry))))
+                    (let
+                      ((payload (if (core/list::is-nil? reg) payload0 (((core/map::put payload0) (quote :registry)) reg))))
+                      (((core/effect::perform (quote core/pkg::add)) payload)
+                        (fn (r) (core/effect::pure r)))))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-add-program expects map"))))
+            (def core/cli::pkg-lock-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::lock))
+                      {
+                        :lock ((core/map::get req) (quote :lock))
+                        :strict ((core/map::get req) (quote :strict))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-lock-program expects map"))))
+            (def core/cli::pkg-update-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::update))
+                      {
+                        :lock ((core/map::get req) (quote :lock))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-update-program expects map"))))
+            (def core/cli::pkg-install-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::install))
+                      {
+                        :frozen ((core/map::get req) (quote :frozen))
+                        :lock ((core/map::get req) (quote :lock))
+                        :strict ((core/map::get req) (quote :strict))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-install-program expects map"))))
+            (def core/cli::pkg-verify-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::verify))
+                      {
+                        :lock ((core/map::get req) (quote :lock))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-verify-program expects map"))))
+            (def core/cli::pkg-list-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::list))
+                      {
+                        :lock ((core/map::get req) (quote :lock))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-list-program expects map"))))
+            (def core/cli::pkg-info-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::info))
+                      {
+                        :lock ((core/map::get req) (quote :lock))
+                        :name ((core/map::get req) (quote :name))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-info-program expects map"))))
+            (def core/cli::pkg-snapshot-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (
+                    ((core/effect::perform (quote core/pkg::snapshot))
+                      {
+                        :pkg ((core/map::get req) (quote :pkg))})
+                    (fn (r) (core/effect::pure r)))
+                  ((core/error::make2 "core/type-error")
+                    "core/cli::pkg-snapshot-program expects map"))))
+            (def core/cli::pkg-export-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((root ((core/map::get req) (quote :root)))
+                      (out ((core/map::get req) (quote :out)))
+                      (mode ((core/map::get req) (quote :mode)))
+                      (depth ((core/map::get req) (quote :depth)))
+                      (include-evidence ((core/map::get req) (quote :include-evidence)))
+                      (include-deps ((core/map::get req) (quote :include-deps)))
+                      (refs ((core/map::get req) (quote :refs))))
+                    (let
+                      (
+                        (payload0
+                          {
+                            :include-deps include-deps
+                            :include-evidence include-evidence
+                            :mode mode
+                            :out out
+                            :root root}))
+                      (let
+                        ((payload1 (if ((core/int::eq? depth) 0) payload0 (((core/map::put payload0) (quote :depth)) depth))))
+                        (let
+                          (
+                            (payload
+                              (if ((core/int::eq? (core/vec::len refs)) 0)
+                                payload1
+                                (((core/map::put payload1) (quote :refs)) refs))))
+                          (((core/effect::perform (quote core/gpk::export)) payload)
+                            (fn (r) (core/effect::pure r)))))))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-export-program expects map"))))
+            (def core/cli::pkg-import-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((inp ((core/map::get req) (quote :in)))
+                      (set-refs ((core/map::get req) (quote :set-refs))))
+                    (let ((payload0 {:in inp}))
+                      (let
+                        (
+                          (payload
+                            (if ((core/int::eq? (core/vec::len set-refs)) 0)
+                              payload0
+                              (((core/map::put payload0) (quote :set-refs)) set-refs))))
+                        (((core/effect::perform (quote core/gpk::import)) payload)
+                          (fn (r) (core/effect::pure r))))))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-import-program expects map"))))
+            (def core/cli::pkg-publish-program
+              (fn (req)
+                (if (core/cli::map? req)
+                  (let
+                    ((remote ((core/map::get req) (quote :remote)))
+                      (ref ((core/map::get req) (quote :ref)))
+                      (policy ((core/map::get req) (quote :policy)))
+                      (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+                      (expected-old ((core/map::get req) (quote :expected-old)))
+                      (depth ((core/map::get req) (quote :depth)))
+                      (commit ((core/map::get req) (quote :commit))))
+                    (let
+                      (
+                        (payload0
+                          {
+                            :policy policy
+                            :ref ref
+                            :remote remote}))
+                      (let
+                        (
+                          (payload1
+                            (if expected-old-present
+                              (((core/map::put payload0) (quote :expected-old)) expected-old)
+                              payload0)))
+                        (let
+                          ((payload2 (if ((core/int::eq? depth) 0) payload1 (((core/map::put payload1) (quote :depth)) depth))))
+                          (let
+                            (
+                              (payload
+                                (if (core/list::is-nil? commit)
+                                  payload2
+                                  (((core/map::put payload2) (quote :commit)) commit))))
+                            (((core/effect::perform (quote core/pkg::publish)) payload)
+                              (fn (r) (core/effect::pure r))))))))
+                  ((core/error::make2 "core/type-error") "core/cli::pkg-publish-program expects map"))))]
         :module-h
           b"\x9F\x9F\xC5\x16\x1ER\\3-\x05\x9D]\xAC\x10\x1CE{\xD9\xA1\xD9E\xBBD\x19\x85\xBA\x8A\x18w\x9D\x83\xF2"
         :path "selfhost/cli_coreform_v1.gc"

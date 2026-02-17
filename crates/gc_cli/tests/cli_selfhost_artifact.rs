@@ -98,6 +98,50 @@ fn invalid_selfhost_artifact_is_rejected_by_loader() {
         .code(1);
 }
 
+#[test]
+fn selfhost_artifact_tampered_forms_are_rejected_even_if_module_hash_is_unchanged() {
+    let td = tempdir().unwrap();
+    let artifact = td.path().join("selfhost_toolchain.gc");
+    let file = td.path().join("m.gc");
+
+    cargo_bin_cmd!("genesis")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact)
+        .assert()
+        .success();
+
+    let artifact_s = fs::read_to_string(&artifact).unwrap();
+    let mut term = parse_term(&artifact_s).unwrap();
+    let Term::Map(root) = &mut term else {
+        panic!("artifact must be map");
+    };
+    let modules = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("modules");
+    let Term::Vector(mods) = modules else {
+        panic!("modules must be vector");
+    };
+    let Term::Map(first) = mods.first_mut().expect("first module") else {
+        panic!("first module must be map");
+    };
+
+    // Replace canonical forms but keep :module-h intact.
+    first.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(vec![Term::Nil]),
+    );
+    fs::write(&artifact, print_term(&term)).unwrap();
+
+    fs::write(&file, "(def x 1)\nx\n").unwrap();
+    cargo_bin_cmd!("genesis")
+        .env("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT", &artifact)
+        .args(["fmt", "--engine", "selfhost"])
+        .arg(&file)
+        .assert()
+        .failure()
+        .code(1);
+}
+
 fn artifact_summary_counts(v: &JsonValue) -> (u64, u64) {
     let data = v
         .get("data")
