@@ -86,7 +86,7 @@ Acceptance gate:
 - [ ] `cargo test --workspace --profile selfhost-strict` passes without invoking bootstrap semantics from `/old_bootstrap`.
 
 ### D) Final Cutover Proof
-- [ ] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) passes via selfhost-first paths.
+- [x] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) passes via selfhost-first paths.
 - [x] Toolchain artifact can be rebuilt from `.gc` sources (host bridge allowed, no Rust semantic dependency).
 - [ ] Cutover dashboard and CI checks confirm selfhost default path is authoritative.
 
