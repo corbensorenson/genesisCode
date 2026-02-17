@@ -47,24 +47,20 @@ fn selfhost_only_rejects_rust_engine_for_eval() {
 #[test]
 fn selfhost_only_rejects_non_routed_commands() {
     let td = tempdir().unwrap();
-    let file = td.path().join("m.gc");
-    let caps = td.path().join("caps.toml");
-    std::fs::write(&file, "(core/effect::pure 1)\n").unwrap();
-    std::fs::write(&caps, "allow = []\n").unwrap();
+    let out = td.path().join("selfhost_toolchain.gc");
 
     cargo_bin_cmd!("genesis_wasi")
         .args([
             "--selfhost-only",
-            "run",
-            file.to_str().unwrap(),
-            "--caps",
-            caps.to_str().unwrap(),
+            "selfhost-artifact",
+            "--out",
+            out.to_str().unwrap(),
         ])
         .assert()
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `test`, `pack`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, and `vcs hash`",
         ));
 }
 
@@ -188,6 +184,91 @@ fn selfhost_only_accepts_vcs_hash_with_selfhost_artifact() {
         .and_then(JsonValue::as_str)
         .unwrap();
     assert_eq!(kind, "module");
+}
+
+#[test]
+fn selfhost_only_rejects_rust_engine_for_run() {
+    let td = tempdir().unwrap();
+    let file = td.path().join("prog.gc");
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 1))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode requires --engine selfhost",
+        ));
+}
+
+#[test]
+fn selfhost_only_accepts_run_and_replay_with_selfhost_artifact() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    let file = td.path().join("prog.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 42))
+          prog
+        "#,
+    )
+    .unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(&caps, "allow = []\n").unwrap();
+    let log = td.path().join("out.gclog");
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "replay",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
 }
 
 #[test]
