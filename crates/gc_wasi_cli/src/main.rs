@@ -2345,60 +2345,54 @@ fn cmd_optimize(
             selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?
         }
     };
-    let orig_h = hash_module(&forms);
-
-    let stage1 = gc_opt::stage1_pipeline(&forms)
-        .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?;
-    if stage1_gate && !stage1.gate_report.ok {
-        return Err(CliError {
-            exit_code: EX_OBLIGATIONS,
-            json: JsonError {
-                code: "obligation/stage1-validation",
-                message: "core/obligation::stage1-validation failed".to_string(),
-                context: Some(stage1_pipeline_json(&stage1)),
-            },
-        });
-    }
-    let opt = stage1.transformed_forms.clone();
-    let opt_report = stage1.optimize_report.clone();
-    let opt_h = hash_module(&opt);
-    let stage2 = if stage2_gate || emit_wasm.is_some() {
-        Some(gc_opt::stage2_validation_report(&opt))
-    } else {
-        None
-    };
-    if stage2_gate {
-        let s2 = stage2
-            .as_ref()
-            .expect("stage2 report must exist when stage2 gate is enabled");
-        if s2.supported && !s2.ok {
-            return Err(CliError {
-                exit_code: EX_OBLIGATIONS,
-                json: JsonError {
-                    code: "obligation/translation-validation",
-                    message:
-                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
-                            .to_string(),
-                    context: Some(stage2_report_json(s2)),
+    let pipeline =
+        gc_opt::optimize_command_pipeline(&forms, stage1_gate, stage2_gate, emit_wasm.is_some())
+            .map_err(|e| match e {
+                gc_opt::OptimizeCommandError::Stage1Build(msg) => {
+                    cli_err(EX_INTERNAL, "stage1/error", msg)
+                }
+                gc_opt::OptimizeCommandError::Stage1Gate(out) => CliError {
+                    exit_code: EX_OBLIGATIONS,
+                    json: JsonError {
+                        code: "obligation/stage1-validation",
+                        message: "core/obligation::stage1-validation failed".to_string(),
+                        context: Some(stage1_pipeline_json(&out)),
+                    },
                 },
-            });
-        }
-    }
+                gc_opt::OptimizeCommandError::Stage2Gate(s2) => CliError {
+                    exit_code: EX_OBLIGATIONS,
+                    json: JsonError {
+                        code: "obligation/translation-validation",
+                        message:
+                            "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+                                .to_string(),
+                        context: Some(stage2_report_json(&s2)),
+                    },
+                },
+                gc_opt::OptimizeCommandError::Stage2Compile(e) => match e {
+                    gc_opt::Stage2CompileError::Unsupported(msg) => {
+                        cli_err(EX_OBLIGATIONS, "stage2/unsupported", msg)
+                    }
+                    gc_opt::Stage2CompileError::Internal(msg) => {
+                        cli_err(EX_INTERNAL, "stage2/error", msg)
+                    }
+                },
+            })?;
 
     if let Some(p) = emit_wasm {
-        let art = gc_opt::stage2_compile_module(&opt).map_err(|e| match e {
-            gc_opt::Stage2CompileError::Unsupported(msg) => {
-                cli_err(EX_OBLIGATIONS, "stage2/unsupported", msg)
-            }
-            gc_opt::Stage2CompileError::Internal(msg) => cli_err(EX_INTERNAL, "stage2/error", msg),
+        let art = pipeline.wasm_artifact.as_ref().ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "stage2/error",
+                "missing wasm artifact from optimize pipeline",
+            )
         })?;
         std::fs::write(p, &art.wasm_bytes)
             .with_context(|| format!("write {}", p.display()))
             .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
     }
 
-    let out_s = print_module(&opt);
-    let changed = orig_h != opt_h;
+    let out_s = print_module(&pipeline.optimized_forms);
 
     if let Some(p) = out {
         std::fs::write(p, out_s.as_bytes())
@@ -2423,16 +2417,16 @@ fn cmd_optimize(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
-            "stage1": stage1_pipeline_json(&stage1),
-            "stage2": stage2.as_ref().map(stage2_report_json),
-            "changed": changed,
-            "original_hash": hex32(orig_h),
-            "optimized_hash": hex32(opt_h),
-            "egg_runs": opt_report.stats.egg_runs,
-            "egg_iterations": opt_report.stats.iterations,
-            "egg_eclasses": opt_report.stats.eclasses,
-            "egg_enodes": opt_report.stats.enodes,
-            "egg_rewrites_applied": opt_report.stats.rewrites_applied,
+            "stage1": stage1_pipeline_json(&pipeline.stage1),
+            "stage2": pipeline.stage2.as_ref().map(stage2_report_json),
+            "changed": pipeline.changed,
+            "original_hash": hex32(pipeline.original_hash),
+            "optimized_hash": hex32(pipeline.optimized_hash),
+            "egg_runs": pipeline.stage1.optimize_report.stats.egg_runs,
+            "egg_iterations": pipeline.stage1.optimize_report.stats.iterations,
+            "egg_eclasses": pipeline.stage1.optimize_report.stats.eclasses,
+            "egg_enodes": pipeline.stage1.optimize_report.stats.enodes,
+            "egg_rewrites_applied": pipeline.stage1.optimize_report.stats.rewrites_applied,
             "optimized_coreform": out_s,
         })),
         error: None,

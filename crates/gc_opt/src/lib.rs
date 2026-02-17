@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt;
 
 use egg::{CostFunction, EGraph, Extractor, Id, RecExpr, Rewrite, Runner, Symbol, rewrite};
 use gc_coreform::{Term, canonicalize_module, hash_module};
@@ -45,6 +46,93 @@ pub struct Stage1PipelineOutcome {
     pub transformed_forms: Vec<Term>,
     pub optimize_report: OptimizeReport,
     pub gate_report: Stage1GateReport,
+}
+
+#[derive(Debug, Clone)]
+pub struct OptimizeCommandOutcome {
+    pub optimized_forms: Vec<Term>,
+    pub stage1: Stage1PipelineOutcome,
+    pub stage2: Option<Stage2ValidationReport>,
+    pub wasm_artifact: Option<Stage2CompileArtifact>,
+    pub original_hash: [u8; 32],
+    pub optimized_hash: [u8; 32],
+    pub changed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub enum OptimizeCommandError {
+    Stage1Build(String),
+    Stage1Gate(Box<Stage1PipelineOutcome>),
+    Stage2Gate(Box<Stage2ValidationReport>),
+    Stage2Compile(Stage2CompileError),
+}
+
+impl fmt::Display for OptimizeCommandError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Stage1Build(msg) => write!(f, "stage1/error: {msg}"),
+            Self::Stage1Gate(_) => {
+                write!(f, "core/obligation::stage1-validation failed")
+            }
+            Self::Stage2Gate(_) => write!(
+                f,
+                "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+            ),
+            Self::Stage2Compile(e) => write!(f, "stage2/error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for OptimizeCommandError {}
+
+/// Shared optimize command pipeline used by native and WASI CLIs.
+///
+/// This performs stage1 optimization + optional gate checks + optional stage2 analysis/compile.
+pub fn optimize_command_pipeline(
+    forms: &[Term],
+    stage1_gate: bool,
+    stage2_gate: bool,
+    emit_wasm: bool,
+) -> Result<OptimizeCommandOutcome, OptimizeCommandError> {
+    let original_hash = hash_module(forms);
+    let stage1 =
+        stage1_pipeline(forms).map_err(|e| OptimizeCommandError::Stage1Build(e.to_string()))?;
+    if stage1_gate && !stage1.gate_report.ok {
+        return Err(OptimizeCommandError::Stage1Gate(Box::new(stage1)));
+    }
+
+    let optimized_forms = stage1.transformed_forms.clone();
+    let optimized_hash = hash_module(&optimized_forms);
+    let changed = optimized_hash != original_hash;
+
+    let stage2 = if stage2_gate || emit_wasm {
+        Some(stage2_validation_report(&optimized_forms))
+    } else {
+        None
+    };
+    if stage2_gate
+        && let Some(s2) = &stage2
+        && s2.supported
+        && !s2.ok
+    {
+        return Err(OptimizeCommandError::Stage2Gate(Box::new(s2.clone())));
+    }
+
+    let wasm_artifact = if emit_wasm {
+        Some(stage2_compile_module(&optimized_forms).map_err(OptimizeCommandError::Stage2Compile)?)
+    } else {
+        None
+    };
+
+    Ok(OptimizeCommandOutcome {
+        optimized_forms,
+        stage1,
+        stage2,
+        wasm_artifact,
+        original_hash,
+        optimized_hash,
+        changed,
+    })
 }
 
 /// Stage-1 compiler pipeline (CoreForm -> CoreForm) with built-in validation gate report.

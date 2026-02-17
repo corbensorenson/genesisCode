@@ -23,6 +23,7 @@ A fast-path cutover is complete when all of the following are true:
 - Native + WASI `typecheck` command paths now call a shared `gc_obligations` implementation, removing duplicated CLI semantics for that command family.
 - Selfhost `core/cli` now owns module `::meta` extraction via `core/cli::module-meta`, and obligations typecheck prefers that contract path.
 - Native + WASI parity tests now assert selfhost typecheck fails deterministically when `core/cli::module-meta` is poisoned in generated artifacts.
+- Native + WASI `optimize` command semantics now run through shared `gc_opt::optimize_command_pipeline` (stage1/stage2/emit-wasm gating unified).
 
 ---
 
@@ -91,7 +92,7 @@ Acceptance gate:
 - [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
   - [x] 6a) Deduplicate native + WASI `typecheck` command semantics by routing through `gc_obligations::typecheck_package_with_step_limit_and_frontend`.
   - [x] 6b) Deduplicate `pack` + `apply-patch` command families via shared `gc_obligations` / `gc_patches` entrypoints on native + WASI.
-  - [ ] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
+  - [x] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
   - [ ] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
@@ -108,8 +109,8 @@ Acceptance gate:
 - [x] T5: Start `.gc` semantic ownership migration for typecheck obligation path beyond shared Rust wrapper (module metadata now extracted through `core/cli::module-meta` when selfhost frontend is active).
 
 ### Execution Sprint (Next)
-- N1: Deduplicate `optimize` command family into a shared library path for native + WASI.
-- N2: Deduplicate any remaining `test` CLI-local semantic logic into shared library path.
+- [x] N1: Deduplicate `optimize` command family into a shared library path for native + WASI.
+- [x] N2: Deduplicate any remaining `test` CLI-local semantic logic into shared library path.
 - [x] N3: Add parity tests asserting `core/cli::module-meta` contract path is active for generated selfhost artifacts.
 
 ---
