@@ -120,6 +120,7 @@ Acceptance gate:
     - progress: strict selfhost smoke now explicitly validates `pkg publish --help` availability on both native and WASI CLIs to prevent command-surface regressions.
     - progress: `--selfhost-only` now also permits effectful `vcs/*` in native + WASI CLIs (with `vcs hash` still engine-validated), with regression coverage for strict-gate acceptance and strict-smoke execution of `vcs log`.
     - progress: added executable WASI `vcs` effectful conformance tests covering `vcs diff/apply` snapshot roundtrip and `vcs log` commit-history traversal with content-addressed artifacts.
+    - progress: added executable WASI conformance coverage for `vcs blame` and `vcs why`, including commit-attribution for unchanged vs changed symbols across commit ancestry and provenance message/why extraction.
     - progress: added executable WASI semantic-merge coverage for `vcs merge3` and `vcs resolve-conflict`, including disjoint-op contract merges, conflict artifact emission, left-strategy resolution, and patch/apply equivalence checks.
     - progress: added executable native + WASI `sync` conformance tests covering `sync push`/`sync pull` roundtrips with policy-gated remote `--set-ref` CAS, closure transfer verification, local/remote ref updates, and idempotent second-pull behavior.
     - progress: expanded native + WASI `sync` failure-path conformance to cover policy preflight hard-fail before any remote upload and `sync pull` local-ref conflict handling (`--force` required to overwrite divergent local heads).
