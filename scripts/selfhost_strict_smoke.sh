@@ -175,6 +175,16 @@ wasi_native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/he
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke-wasi --lock genesis.wasi.lock >/dev/null
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.wasi.lock >/dev/null
 wasi_native --selfhost-only policy list --policies "$TMP_DIR/policies.wasi.toml" >/dev/null
+if wasi_native --selfhost-only sync --caps "$TMP_DIR/caps.effects.toml" pull --remote "file://$TMP_DIR/remote-registry" --root "$SYNC_ROOT" >/dev/null 2>&1; then
+  echo "WASI strict sync unexpectedly succeeded against missing remote registry" >&2
+  exit 1
+else
+  w_sync_rc=$?
+  if [[ "$w_sync_rc" -ne 20 ]]; then
+    echo "WASI strict sync failed with unexpected exit code: $w_sync_rc" >&2
+    exit 1
+  fi
+fi
 wasi_native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/wasi.pins.toml >/dev/null
 if wasi_native --selfhost-only vcs --caps "$TMP_DIR/caps.effects.toml" log "$SYNC_ROOT" >/dev/null 2>&1; then
   echo "WASI strict vcs log unexpectedly succeeded for missing commit root" >&2

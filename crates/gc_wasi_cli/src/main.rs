@@ -238,6 +238,20 @@ enum Cmd {
         cmd: PolicyCmd,
     },
 
+    /// Sync artifacts and refs with a remote registry (effectful; policy-gated).
+    Sync {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<pid>-<seq>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: SyncCmd,
+    },
+
     /// Local artifact-store garbage collection workflows (policy-gated).
     Gc {
         /// Capability policy TOML (deny-by-default allowlist).
@@ -465,6 +479,53 @@ enum RefsCmd {
         /// to require the ref to be unset.
         #[arg(long)]
         expected_old: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum SyncCmd {
+    /// Pull artifacts reachable from refs and/or explicit roots, and optionally update local refs.
+    Pull {
+        /// Remote spec (e.g. gen://example.com/registry or https://...).
+        #[arg(long)]
+        remote: String,
+
+        /// Refs to pull from the remote (may be repeated).
+        #[arg(long = "ref")]
+        refs: Vec<String>,
+
+        /// Explicit root hashes to pull (may be repeated).
+        #[arg(long = "root")]
+        roots: Vec<String>,
+
+        /// Commit parent depth to include when roots are commits (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Overwrite local refs if they differ from the remote.
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Push artifacts reachable from explicit roots, and optionally advance remote refs (CAS).
+    Push {
+        /// Remote spec (e.g. gen://example.com/registry or https://...).
+        #[arg(long)]
+        remote: String,
+
+        /// Explicit root hashes to push (may be repeated).
+        #[arg(long = "root")]
+        roots: Vec<String>,
+
+        /// Commit parent depth to include when roots are commits (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Optionally advance remote refs after uploading artifacts.
+        ///
+        /// Format: `<refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]`
+        #[arg(long = "set-ref")]
+        set_refs: Vec<String>,
     },
 }
 
@@ -927,6 +988,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
         Cmd::Policy { .. } => Ok(()),
+        Cmd::Sync { .. } => Ok(()),
         Cmd::Gc { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
@@ -945,6 +1007,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
                 | Cmd::Policy { .. }
+                | Cmd::Sync { .. }
                 | Cmd::Gc { .. }
                 | Cmd::Vcs { .. } => unreachable!(),
             };
@@ -952,7 +1015,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -2359,6 +2422,112 @@ fn is_hex64(s: &str) -> bool {
     s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
 }
 
+fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
+    let (base, expected_old_raw) = match spec.split_once('@') {
+        None => (spec, None),
+        Some((lhs, rhs)) => (lhs, Some(rhs)),
+    };
+
+    let mut it = base.rsplitn(3, ':');
+    let Some(policy) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let Some(hash) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let Some(name) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let name = name.trim();
+    let hash = hash.trim();
+    let policy = policy.trim();
+
+    if name.is_empty() || hash.is_empty() || policy.is_empty() {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref fields must be non-empty".to_string(),
+        ));
+    }
+    if !is_hex64(hash) {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref commit hash must be 64-hex".to_string(),
+        ));
+    }
+    if !is_hex64(policy) {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref policy hash must be 64-hex".to_string(),
+        ));
+    }
+    let expected_old = match expected_old_raw.map(str::trim) {
+        None => None,
+        Some("") => {
+            return Err(cli_err(
+                EX_PARSE,
+                "sync/set-ref",
+                "set-ref expected-old must be non-empty when provided".to_string(),
+            ));
+        }
+        Some(s) => {
+            if s != "nil" && !is_hex64(s) {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "sync/set-ref",
+                    "set-ref expected-old must be 64-hex or `nil`".to_string(),
+                ));
+            }
+            Some(if s == "nil" {
+                "nil".to_string()
+            } else {
+                s.to_ascii_lowercase()
+            })
+        }
+    };
+
+    Ok(SetRefSpec {
+        name: name.to_string(),
+        hash: hash.to_ascii_lowercase(),
+        policy: policy.to_ascii_lowercase(),
+        expected_old,
+    })
+}
+
+fn parse_sync_set_refs(specs: &[String]) -> Result<Vec<SetRefSpec>, CliError> {
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut out = Vec::with_capacity(specs.len());
+    for spec in specs {
+        let parsed = parse_set_ref_spec(spec)?;
+        if !seen.insert(parsed.name.clone()) {
+            return Err(cli_err(
+                EX_PARSE,
+                "sync/set-ref",
+                format!("duplicate set-ref target: {}", parsed.name),
+            ));
+        }
+        out.push(parsed);
+    }
+    Ok(out)
+}
+
 fn parse_local_set_refs(
     specs: &[String],
     policy: Option<&str>,
@@ -2970,6 +3139,144 @@ fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Vec<gc_corefo
         );
     }
     let payload = gc_coreform::Term::Map(payload_m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_sync_pull_program(
+    remote: &str,
+    refs: &[String],
+    roots: &[String],
+    depth: u64,
+    force: bool,
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/sync::pull"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":remote")),
+        gc_coreform::Term::Str(remote.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":refs")),
+        gc_coreform::Term::Vector(refs.iter().cloned().map(gc_coreform::Term::Str).collect()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":roots")),
+        gc_coreform::Term::Vector(roots.iter().cloned().map(gc_coreform::Term::Str).collect()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":depth")),
+        gc_coreform::Term::Int((depth as i64).into()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":force")),
+        gc_coreform::Term::Bool(force),
+    );
+    let payload = gc_coreform::Term::Map(m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
+fn mk_sync_push_program(
+    remote: &str,
+    roots: &[String],
+    depth: u64,
+    set_refs: &[SetRefSpec],
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/sync::push"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":remote")),
+        gc_coreform::Term::Str(remote.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":roots")),
+        gc_coreform::Term::Vector(roots.iter().cloned().map(gc_coreform::Term::Str).collect()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":depth")),
+        gc_coreform::Term::Int((depth as i64).into()),
+    );
+    if !set_refs.is_empty() {
+        let mut entries = Vec::with_capacity(set_refs.len());
+        for sr in set_refs {
+            let mut em = std::collections::BTreeMap::new();
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
+                gc_coreform::Term::Str(sr.name.clone()),
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":hash")),
+                gc_coreform::Term::Str(sr.hash.clone()),
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
+                gc_coreform::Term::Str(sr.policy.clone()),
+            );
+            if let Some(exp) = &sr.expected_old {
+                em.insert(
+                    gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":expected-old")),
+                    if exp == "nil" {
+                        gc_coreform::Term::Nil
+                    } else {
+                        gc_coreform::Term::Str(exp.clone())
+                    },
+                );
+            }
+            entries.push(gc_coreform::Term::Map(em));
+        }
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":set-refs")),
+            gc_coreform::Term::Vector(entries),
+        );
+    }
+    let payload = gc_coreform::Term::Map(m);
     let k = gc_coreform::Term::list(vec![
         gc_coreform::Term::symbol("fn"),
         gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
@@ -3873,6 +4180,114 @@ fn cmd_pkg(
             Some(JsonError {
                 code: "pkg/error",
                 message: "pkg operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_sync(
+    cli: &Cli,
+    caps: &Path,
+    log: &Option<PathBuf>,
+    cmd: &SyncCmd,
+) -> Result<CmdOut, CliError> {
+    let policy = CapsPolicy::load(caps)
+        .with_context(|| format!("read {}", caps.display()))
+        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+
+    let (forms, kind, log_op) = match cmd {
+        SyncCmd::Pull {
+            remote,
+            refs,
+            roots,
+            depth,
+            force,
+        } => (
+            mk_sync_pull_program(remote, refs, roots, *depth, *force),
+            "genesis/sync-pull-v0.1",
+            "sync-pull",
+        ),
+        SyncCmd::Push {
+            remote,
+            roots,
+            depth,
+            set_refs,
+        } => {
+            let parsed = parse_sync_set_refs(set_refs)?;
+            (
+                mk_sync_push_program(remote, roots, *depth, &parsed),
+                "genesis/sync-push-v0.1",
+                "sync-push",
+            )
+        }
+    };
+
+    let forms = canonicalize_module(forms)
+        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let program_hash = hash_module(&forms);
+
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+
+    let toolchain = format!("genesis_wasi/{} (wasi)", env!("CARGO_PKG_VERSION"));
+    let r = run(&mut ctx, &policy, prog, program_hash, toolchain)
+        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+
+    let log_path = match log {
+        Some(p) => p.clone(),
+        None => default_effect_log_path(log_op)?,
+    };
+    write_effect_log(&log_path, &r.log)?;
+
+    let mut ok = true;
+    let mut exit_code = EX_OK;
+    if let Some(proto) = ctx.protocol
+        && let Value::Sealed { token, payload } = &r.value
+        && *token == proto.error
+    {
+        ok = false;
+        exit_code = EX_EVAL;
+        if let Value::Data(Term::Map(m)) = payload.as_ref()
+            && matches!(
+                m.get(&TermOrdKey(Term::symbol(":error/code"))),
+                Some(Term::Str(s)) if s == "core/caps/denied"
+            )
+        {
+            exit_code = EX_CAPS_DENY;
+        }
+    }
+
+    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        format!("{value}\n")
+    };
+    let env = JsonEnvelope {
+        ok,
+        kind,
+        data: Some(serde_json::json!({
+            "caps": caps.display().to_string(),
+            "log": log_path.display().to_string(),
+            "value": value,
+            "value_format": value_format,
+        })),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "sync/error",
+                message: "sync operation failed".to_string(),
                 context: None,
             })
         },
@@ -4946,6 +5361,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps.as_path(), log, cmd),
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps.as_path(), log, cmd),
         Cmd::Policy { cmd } => cmd_policy(cli, cmd),
+        Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps.as_path(), log, cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps.as_path(), log, cmd),
         Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps.as_deref(), log, cmd),
     }
