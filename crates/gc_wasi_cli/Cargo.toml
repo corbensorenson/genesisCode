@@ -27,6 +27,7 @@ gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_effects = { path = "../gc_effects" }
 gc_obligations = { path = "../gc_obligations" }
+gc_patches = { path = "../gc_patches" }
 gc_opt = { path = "../gc_opt" }
 gc_types = { path = "../gc_types" }
 gc_vcs = { path = "../gc_vcs" }

@@ -116,7 +116,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -427,6 +427,60 @@ fn selfhost_only_accepts_typecheck_with_selfhost_artifact() {
             "typecheck",
             "--pkg",
             pkg,
+        ])
+        .assert()
+        .success();
+}
+
+#[test]
+fn selfhost_only_accepts_apply_patch_with_selfhost_artifact() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    let pkg_dir = td.path().join("pkg");
+    std::fs::create_dir_all(&pkg_dir).unwrap();
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/spec/pkg_basic/basic.gc"
+        ),
+        pkg_dir.join("basic.gc"),
+    )
+    .unwrap();
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/spec/pkg_basic/package.toml"
+        ),
+        pkg_dir.join("package.toml"),
+    )
+    .unwrap();
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/spec/pkg_basic/caps.toml"
+        ),
+        pkg_dir.join("caps.toml"),
+    )
+    .unwrap();
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/spec/pkg_basic/pure.gcpatch"
+        ),
+        pkg_dir.join("pure.gcpatch"),
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(&pkg_dir)
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "apply-patch",
+            "pure.gcpatch",
+            "--pkg",
+            "package.toml",
         ])
         .assert()
         .success();

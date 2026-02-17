@@ -233,6 +233,7 @@ mkdir -p "$PKG_W"
 cp tests/spec/pkg_basic/basic.gc "$PKG_W/basic.gc"
 cp tests/spec/pkg_basic/caps.toml "$PKG_W/caps.toml"
 cp tests/spec/pkg_basic/package.toml "$PKG_W/package.toml"
+cp tests/spec/pkg_basic/pure.gcpatch "$PKG_W/pure.gcpatch"
 W_N_PACK="$(wasi_native pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
 W_S_PACK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
 if [[ "$W_N_PACK" != "$W_S_PACK" ]]; then
@@ -263,5 +264,6 @@ if [[ "$N_TEST" != "$W_N_TEST" ]]; then
   echo "WASI rust test mismatch native=$N_TEST wasi=$W_N_TEST" >&2
   exit 1
 fi
+wasi_native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_W/pure.gcpatch" --pkg "$PKG_W/package.toml" >/dev/null
 
 echo "selfhost-strict smoke: ok"

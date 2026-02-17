@@ -24,6 +24,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "test",
         "pack",
         "typecheck",
+        "apply-patch",
         "selfhost-artifact",
         "store",
         "refs",
@@ -109,6 +110,16 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
 
     let s = stdout_str(&["typecheck", "--help"]);
     assert!(s.contains("--pkg"), "typecheck --help output missing --pkg");
+
+    let s = stdout_str(&["apply-patch", "--help"]);
+    assert!(
+        s.contains("--pkg"),
+        "apply-patch --help output missing --pkg"
+    );
+    assert!(
+        s.contains("--caps"),
+        "apply-patch --help output missing --caps"
+    );
 
     let s = stdout_str(&["selfhost-artifact", "--help"]);
     assert!(

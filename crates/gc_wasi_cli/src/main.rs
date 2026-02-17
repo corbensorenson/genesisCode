@@ -189,6 +189,17 @@ enum Cmd {
         stage2_gate: bool,
     },
 
+    /// Validate and apply a semantic patch, then re-run package obligations.
+    ApplyPatch {
+        patch: PathBuf,
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Override capability policy TOML for effectful tests.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+    },
+
     /// Build a selfhost CoreForm toolchain artifact for bootstrap cutover.
     SelfhostArtifact {
         /// Output artifact path (CoreForm term file).
@@ -1061,6 +1072,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Test { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
         Cmd::Typecheck { .. } => Ok(()),
+        Cmd::ApplyPatch { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
@@ -1083,6 +1095,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Run { .. }
                 | Cmd::Replay { .. }
                 | Cmd::Typecheck { .. }
+                | Cmd::ApplyPatch { .. }
                 | Cmd::Store { .. }
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
@@ -1095,7 +1108,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -2063,6 +2076,56 @@ fn cmd_optimize(
     Ok(CmdOut {
         exit_code: EX_OK,
         stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_apply_patch(
+    cli: &Cli,
+    patch: &Path,
+    pkg: &Path,
+    caps: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+
+    let r = gc_patches::apply_patch_with_step_limit_and_frontend(
+        patch,
+        pkg,
+        caps,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+        frontend,
+    )
+    .map_err(|e| match e {
+        gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
+            cli_err(EX_PARSE, "patch/invalid", format!("{e}"))
+        }
+        gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
+        gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
+    })?;
+
+    let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
+    let env = JsonEnvelope {
+        ok: r.ok,
+        kind: "genesis/apply-patch-v0.2",
+        data: Some(serde_json::json!({
+            "patch": patch.display().to_string(),
+            "pkg": pkg.display().to_string(),
+            "caps": caps.map(|p| p.display().to_string()),
+            "patch_artifact": r.patch_artifact,
+            "report_artifact": r.report_artifact,
+            "acceptance_artifact": r.acceptance_artifact,
+            "package_artifact": r.package_artifact,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", r.report_artifact)
+        },
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -5931,6 +5994,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             *stage1_gate,
             *stage2_gate,
         ),
+        Cmd::ApplyPatch { patch, pkg, caps } => cmd_apply_patch(cli, patch, pkg, caps.as_deref()),
         Cmd::SelfhostArtifact {
             out,
             min_stage2_supported_modules,
