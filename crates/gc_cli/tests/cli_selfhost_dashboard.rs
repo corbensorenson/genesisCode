@@ -45,7 +45,14 @@ fn selfhost_dashboard_writes_store_artifact_and_markdown_mirror() {
     assert!(total > 0);
     assert!(routed <= total);
 
+    let fast_path_ok = summary
+        .get("fast_path_default_ok")
+        .and_then(JsonValue::as_bool)
+        .unwrap();
+    assert!(fast_path_ok, "fast-path default routing must be selfhost");
+
     let md = std::fs::read_to_string(markdown).unwrap();
     assert!(md.contains("Selfhost Cutover Dashboard"));
     assert!(md.contains("`policy/*`"));
+    assert!(md.contains("`store/*` | true | true | true"));
 }

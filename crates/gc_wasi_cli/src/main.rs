@@ -2029,85 +2029,125 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
 #[derive(Clone, Copy)]
 struct SelfhostCutoverRow {
     cmd: &'static str,
+    fast_path_required: bool,
     selfhost_routed: bool,
+    default_selfhost: bool,
 }
 
 const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     SelfhostCutoverRow {
         cmd: "fmt",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "eval",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "explain",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "run",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "replay",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "test",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "pack",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "selfhost-artifact",
-        selfhost_routed: false,
+        fast_path_required: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "selfhost-dashboard",
+        fast_path_required: false,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "typecheck",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "optimize",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "apply-patch",
+        fast_path_required: true,
         selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "store/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "refs/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "pkg/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "policy/*",
+        fast_path_required: false,
         selfhost_routed: false,
+        default_selfhost: false,
     },
     SelfhostCutoverRow {
         cmd: "sync/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "gc/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "vcs/*",
-        selfhost_routed: false,
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
 ];
 
@@ -2157,15 +2197,22 @@ fn cmd_selfhost_dashboard(
         .count();
     let default_selfhost_count = SELFHOST_CUTOVER_ROWS
         .iter()
-        .filter(|r| r.selfhost_routed)
+        .filter(|r| r.default_selfhost)
         .count();
+    let fast_path_total = SELFHOST_CUTOVER_ROWS
+        .iter()
+        .filter(|r| r.fast_path_required)
+        .count();
+    let fast_path_default_ok = SELFHOST_CUTOVER_ROWS
+        .iter()
+        .filter(|r| r.fast_path_required)
+        .all(|r| r.default_selfhost && r.selfhost_routed);
     let routed_bps = percent_basis_points(routed_count, total_commands);
     let default_bps = percent_basis_points(default_selfhost_count, total_commands);
 
     let rows_term: Vec<Term> = SELFHOST_CUTOVER_ROWS
         .iter()
         .map(|row| {
-            let default_selfhost = row.selfhost_routed;
             Term::Map(
                 [
                     (
@@ -2173,12 +2220,16 @@ fn cmd_selfhost_dashboard(
                         Term::Str(row.cmd.to_string()),
                     ),
                     (
+                        TermOrdKey(Term::symbol(":fast-path-required")),
+                        Term::Bool(row.fast_path_required),
+                    ),
+                    (
                         TermOrdKey(Term::symbol(":selfhost-routed")),
                         Term::Bool(row.selfhost_routed),
                     ),
                     (
                         TermOrdKey(Term::symbol(":default-selfhost")),
-                        Term::Bool(default_selfhost),
+                        Term::Bool(row.default_selfhost),
                     ),
                 ]
                 .into_iter()
@@ -2225,6 +2276,14 @@ fn cmd_selfhost_dashboard(
                         (
                             TermOrdKey(Term::symbol(":selfhost-default-commands")),
                             Term::Int((default_selfhost_count as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":fast-path-required-commands")),
+                            Term::Int((fast_path_total as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":fast-path-default-ok")),
+                            Term::Bool(fast_path_default_ok),
                         ),
                         (
                             TermOrdKey(Term::symbol(":selfhost-routed-bps")),
@@ -2284,17 +2343,17 @@ fn cmd_selfhost_dashboard(
                 "| Default selfhost coverage | {} |",
                 percent_string_from_bps(default_bps)
             ),
+            format!("| Fast-path default OK | {} |", fast_path_default_ok),
             "".to_string(),
             "## Command Coverage".to_string(),
             "".to_string(),
-            "| Command | Selfhost Routed | Default Selfhost |".to_string(),
-            "| --- | --- | --- |".to_string(),
+            "| Command | Fast Path | Selfhost Routed | Default Selfhost |".to_string(),
+            "| --- | --- | --- | --- |".to_string(),
         ];
         for row in SELFHOST_CUTOVER_ROWS {
-            let default_selfhost = row.selfhost_routed;
             lines.push(format!(
-                "| `{}` | {} | {} |",
-                row.cmd, row.selfhost_routed, default_selfhost
+                "| `{}` | {} | {} | {} |",
+                row.cmd, row.fast_path_required, row.selfhost_routed, row.default_selfhost
             ));
         }
         lines.push(String::new());
@@ -2326,6 +2385,8 @@ fn cmd_selfhost_dashboard(
                 "total_commands": total_commands,
                 "selfhost_routed_commands": routed_count,
                 "selfhost_default_commands": default_selfhost_count,
+                "fast_path_required_commands": fast_path_total,
+                "fast_path_default_ok": fast_path_default_ok,
                 "selfhost_routed_percent": percent_string_from_bps(routed_bps),
                 "selfhost_default_percent": percent_string_from_bps(default_bps),
             }
