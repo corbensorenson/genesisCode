@@ -65,6 +65,27 @@ self_eval="$("$GEN" --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/ev
 wasi_eval="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/eval_pure.gc" | tr -d '\n')"
 [[ "$rust_eval" == "$wasi_eval" ]] || fail "WASI strict eval mismatch on pure parity module"
 
+# Dedicated run/replay parity module (native rust baseline vs native/WASI strict selfhost).
+cat >"$TMP_DIR/run_pure.gc" <<'GC'
+(def prog (core/effect::pure 99))
+prog
+GC
+cat >"$TMP_DIR/run_caps.toml" <<'TOML'
+allow = []
+TOML
+
+rust_run="$("$GEN" run "$TMP_DIR/run_pure.gc" --engine rust --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.rust.gclog" | tr -d '\n')"
+self_run="$("$GEN" --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run_pure.gc" --engine selfhost --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.self.gclog" | tr -d '\n')"
+wasi_run="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run_pure.gc" --engine selfhost --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.wasi.gclog" | tr -d '\n')"
+[[ "$rust_run" == "$self_run" ]] || fail "native strict run mismatch on pure parity module"
+[[ "$rust_run" == "$wasi_run" ]] || fail "WASI strict run mismatch on pure parity module"
+
+rust_replay="$("$GEN" replay "$TMP_DIR/run_pure.gc" --engine rust --log "$TMP_DIR/run_pure.rust.gclog" | tr -d '\n')"
+self_replay="$("$GEN" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run_pure.gc" --engine selfhost --log "$TMP_DIR/run_pure.self.gclog" | tr -d '\n')"
+wasi_replay="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run_pure.gc" --engine selfhost --log "$TMP_DIR/run_pure.wasi.gclog" | tr -d '\n')"
+[[ "$rust_replay" == "$self_replay" ]] || fail "native strict replay mismatch on pure parity module"
+[[ "$rust_replay" == "$wasi_replay" ]] || fail "WASI strict replay mismatch on pure parity module"
+
 # Package golden sweep (selfhost strict) over every package fixture.
 PKGS_TMP="$TMP_DIR/pkgs"
 mkdir -p "$PKGS_TMP"

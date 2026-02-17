@@ -45,7 +45,7 @@ Acceptance gate:
   - [x] covered now: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `vcs hash` strict-mode routing in WASI CLI tests
   - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
-  - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including WASI strict coverage for available routed commands
+  - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
 
 ---
 
@@ -63,6 +63,7 @@ Acceptance gate:
 Acceptance gate:
 - [ ] Native and WASM runs produce identical hashes/evidence between Rust fallback and `.gc` self-host path on conformance suites.
   - progress: added WASI `cli_run_replay_engine.rs` parity tests for `run`/`replay` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
+  - progress: strict golden CI now includes native+WASI selfhost parity checks for `run`/`replay` against Rust baseline outputs.
 
 ---
 
