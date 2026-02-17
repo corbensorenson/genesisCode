@@ -78,6 +78,10 @@ fn poison_cli_binding(artifact: &Path, binding: &str) {
         Term::Str(poisoned_src.to_string()),
     );
     cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
+    cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
     );

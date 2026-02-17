@@ -75,6 +75,10 @@ fn poison_cli_vcs_log_program(artifact: &Path) {
         Term::Str(poisoned_src.to_string()),
     );
     cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
+    cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
     );

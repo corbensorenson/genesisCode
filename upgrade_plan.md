@@ -106,7 +106,7 @@ Acceptance gate:
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
   - [x] 7b) Module-loading hash derivation now prefers selfhost `core/cli::hash-module-forms` instead of Rust-only hashing in selfhost frontend paths.
-- [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
+- [x] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
 - [x] 11) Strengthen strict smoke/golden parity harnesses to force explicit `--coreform-frontend rust|selfhost` selection for package/obligation/patch command families.

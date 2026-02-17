@@ -80,6 +80,10 @@ fn poison_cli_module_meta_contract(artifact: &std::path::Path) {
         Term::Str(poisoned_src.to_string()),
     );
     cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
+    cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
     );
@@ -119,6 +123,10 @@ fn poison_cli_hash_module_forms_contract(artifact: &std::path::Path) {
     cli_mod.insert(
         TermOrdKey(Term::symbol(":source")),
         Term::Str(poisoned_src.to_string()),
+    );
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
     );
     cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),

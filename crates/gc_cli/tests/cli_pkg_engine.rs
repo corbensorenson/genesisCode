@@ -74,6 +74,12 @@ fn poison_cli_pkg_init_program(artifact: &Path) {
         TermOrdKey(Term::symbol(":source")),
         Term::Str(poisoned_src.to_string()),
     );
+    // Toolchain artifacts prefer `:forms` over `:source`. Keep them consistent so the loader
+    // accepts the poisoned module and the test can validate that the selfhost frontend is active.
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
     cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),

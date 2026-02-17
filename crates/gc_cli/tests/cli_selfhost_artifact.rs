@@ -10,6 +10,31 @@ fn map_get<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> 
 }
 
 #[test]
+fn selfhost_artifact_is_byte_for_byte_deterministic_across_rebuilds() {
+    let td = tempdir().unwrap();
+    let artifact_a = td.path().join("a.gc");
+    let artifact_b = td.path().join("b.gc");
+
+    cargo_bin_cmd!("genesis")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact_a)
+        .assert()
+        .success();
+    cargo_bin_cmd!("genesis")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact_b)
+        .assert()
+        .success();
+
+    let a = fs::read(&artifact_a).unwrap();
+    let b = fs::read(&artifact_b).unwrap();
+    assert_eq!(
+        a, b,
+        "selfhost-artifact output must be deterministic (byte-for-byte)"
+    );
+}
+
+#[test]
 fn selfhost_artifact_can_be_built_and_used_for_selfhost_fmt() {
     let td = tempdir().unwrap();
     let artifact = td.path().join("selfhost_toolchain.gc");
