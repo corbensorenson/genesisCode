@@ -62,14 +62,24 @@ cp tests/spec/pkg_basic/caps.toml "$PKG_N/caps.toml"
 cp tests/spec/pkg_basic/package.toml "$PKG_N/package.toml"
 cp tests/spec/pkg_basic/pure.gcpatch "$PKG_N/pure.gcpatch"
 
-native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_N/package.toml" >/dev/null
+N_PACK="$(native pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_PACK="$(native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
+if [[ "$N_PACK" != "$S_PACK" ]]; then
+  echo "native strict pack mismatch rust=$N_PACK strict=$S_PACK" >&2
+  exit 1
+fi
 N_TYPECHECK="$(native typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
 S_TYPECHECK="$(native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
 if [[ "$N_TYPECHECK" != "$S_TYPECHECK" ]]; then
   echo "native strict typecheck mismatch native=$N_TYPECHECK strict=$S_TYPECHECK" >&2
   exit 1
 fi
-native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.toml" >/dev/null
+N_TEST="$(native test --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_TEST="$(native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.toml" | tr -d '\n')"
+if [[ "$N_TEST" != "$S_TEST" ]]; then
+  echo "native strict test mismatch rust=$N_TEST strict=$S_TEST" >&2
+  exit 1
+fi
 native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
@@ -110,7 +120,25 @@ mkdir -p "$PKG_W"
 cp tests/spec/pkg_basic/basic.gc "$PKG_W/basic.gc"
 cp tests/spec/pkg_basic/caps.toml "$PKG_W/caps.toml"
 cp tests/spec/pkg_basic/package.toml "$PKG_W/package.toml"
-wasi_native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" >/dev/null
-wasi_native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" >/dev/null
+W_N_PACK="$(wasi_native pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_PACK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+if [[ "$W_N_PACK" != "$W_S_PACK" ]]; then
+  echo "WASI strict pack mismatch rust=$W_N_PACK strict=$W_S_PACK" >&2
+  exit 1
+fi
+if [[ "$N_PACK" != "$W_N_PACK" ]]; then
+  echo "WASI rust pack mismatch native=$N_PACK wasi=$W_N_PACK" >&2
+  exit 1
+fi
+W_N_TEST="$(wasi_native test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_TEST="$(wasi_native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+if [[ "$W_N_TEST" != "$W_S_TEST" ]]; then
+  echo "WASI strict test mismatch rust=$W_N_TEST strict=$W_S_TEST" >&2
+  exit 1
+fi
+if [[ "$N_TEST" != "$W_N_TEST" ]]; then
+  echo "WASI rust test mismatch native=$N_TEST wasi=$W_N_TEST" >&2
+  exit 1
+fi
 
 echo "selfhost-strict smoke: ok"
