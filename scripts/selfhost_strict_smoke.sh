@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+export GENESIS_ALLOW_RUST_ENGINE=1
 
 native() {
   cargo run -p gc_cli --quiet -- "$@"

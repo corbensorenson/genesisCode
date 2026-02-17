@@ -26,6 +26,7 @@ fn eval_selfhost_engine_matches_rust_engine_output() {
     std::fs::write(&file, src).unwrap();
 
     let rust_out = cargo_bin_cmd!("genesis_wasi")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["eval", file.to_str().unwrap(), "--engine", "rust"])
         .assert()
         .success()

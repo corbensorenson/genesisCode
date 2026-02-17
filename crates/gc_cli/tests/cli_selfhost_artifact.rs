@@ -38,6 +38,7 @@ fn selfhost_artifact_can_be_built_and_used_for_selfhost_fmt() {
     "#;
     fs::write(&file, src).unwrap();
     cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["fmt", "--engine", "rust"])
         .arg(&file)
         .assert()

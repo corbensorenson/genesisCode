@@ -109,6 +109,7 @@ fn optimize_selfhost_engine_matches_rust_stage1_output() {
     .unwrap();
 
     let rust = cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["optimize", file.to_str().unwrap(), "--engine", "rust"])
         .assert()
         .success()
@@ -150,6 +151,7 @@ fn eval_selfhost_engine_stage1_gate_matches_rust() {
     .unwrap();
 
     let rust = cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args([
             "eval",
             file.to_str().unwrap(),

@@ -2,9 +2,15 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
+fn cmd() -> assert_cmd::Command {
+    let mut c = cargo_bin_cmd!("genesis");
+    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    c
+}
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact)
         .assert()
@@ -30,7 +36,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
     std::fs::write(&caps, "allow = []\n").unwrap();
 
     let rust_log = dir.path().join("rust.gclog");
-    let rust_out = cargo_bin_cmd!("genesis")
+    let rust_out = cmd()
         .args([
             "run",
             file.to_str().unwrap(),
@@ -48,7 +54,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
         .clone();
 
     let selfhost_log = dir.path().join("selfhost.gclog");
-    let selfhost_out = cargo_bin_cmd!("genesis")
+    let selfhost_out = cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -98,7 +104,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
     std::fs::write(&caps, "allow = []\n").unwrap();
 
     let rust_log = dir.path().join("rust.gclog");
-    let rust_out = cargo_bin_cmd!("genesis")
+    let rust_out = cmd()
         .args([
             "run",
             file.to_str().unwrap(),
@@ -117,7 +123,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
         .clone();
 
     let selfhost_log = dir.path().join("selfhost.gclog");
-    let selfhost_out = cargo_bin_cmd!("genesis")
+    let selfhost_out = cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -145,7 +151,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
     let selfhost_log_s = std::fs::read_to_string(&selfhost_log).unwrap();
     assert_eq!(rust_log_s, selfhost_log_s);
 
-    let rust_replay_out = cargo_bin_cmd!("genesis")
+    let rust_replay_out = cmd()
         .args([
             "replay",
             file.to_str().unwrap(),
@@ -159,7 +165,7 @@ fn run_selfhost_engine_matches_rust_engine_output_for_denied_effect_program() {
         .get_output()
         .stdout
         .clone();
-    let selfhost_replay_out = cargo_bin_cmd!("genesis")
+    let selfhost_replay_out = cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -200,7 +206,7 @@ fn replay_selfhost_engine_matches_rust_engine_output() {
     std::fs::write(&caps, "allow = []\n").unwrap();
 
     let log = dir.path().join("out.gclog");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "run",
             file.to_str().unwrap(),
@@ -214,7 +220,7 @@ fn replay_selfhost_engine_matches_rust_engine_output() {
         .assert()
         .success();
 
-    let rust_out = cargo_bin_cmd!("genesis")
+    let rust_out = cmd()
         .args([
             "replay",
             file.to_str().unwrap(),
@@ -229,7 +235,7 @@ fn replay_selfhost_engine_matches_rust_engine_output() {
         .stdout
         .clone();
 
-    let selfhost_out = cargo_bin_cmd!("genesis")
+    let selfhost_out = cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -261,7 +267,7 @@ fn run_selfhost_engine_surfaces_parse_errors() {
     std::fs::write(&file, "(def prog (core/effect::pure 1)").unwrap();
     std::fs::write(&caps, "allow = []\n").unwrap();
 
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -296,7 +302,7 @@ fn run_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
     std::fs::write(&caps, "allow = []\n").unwrap();
     std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
 
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "--selfhost-artifact",
             bad_artifact.to_str().unwrap(),
@@ -330,7 +336,7 @@ fn replay_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
     std::fs::write(&caps, "allow = []\n").unwrap();
     std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
     let log = dir.path().join("out.gclog");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "run",
             file.to_str().unwrap(),
@@ -344,7 +350,7 @@ fn replay_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
         .assert()
         .success();
 
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "--selfhost-artifact",
             bad_artifact.to_str().unwrap(),

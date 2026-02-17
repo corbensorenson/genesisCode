@@ -3,9 +3,15 @@ use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 use tempfile::tempdir;
 
+fn cmd() -> assert_cmd::Command {
+    let mut c = cargo_bin_cmd!("genesis");
+    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    c
+}
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact)
         .assert()
@@ -28,7 +34,7 @@ fn explain_selfhost_engine_matches_rust_engine_output() {
     )
     .unwrap();
 
-    let rust_out = cargo_bin_cmd!("genesis")
+    let rust_out = cmd()
         .args([
             "explain",
             file.to_str().unwrap(),
@@ -45,7 +51,7 @@ fn explain_selfhost_engine_matches_rust_engine_output() {
         .stdout
         .clone();
 
-    let selfhost_out = cargo_bin_cmd!("genesis")
+    let selfhost_out = cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",
@@ -128,7 +134,7 @@ fn explain_selfhost_engine_surfaces_parse_errors() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args([
             "--no-step-limit",
             "--selfhost-artifact",

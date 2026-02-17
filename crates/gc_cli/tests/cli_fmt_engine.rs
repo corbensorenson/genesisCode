@@ -2,7 +2,11 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
 
 fn run_ok(args: &[&str]) {
-    cargo_bin_cmd!("genesis").args(args).assert().success();
+    cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(args)
+        .assert()
+        .success();
 }
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
@@ -57,6 +61,7 @@ fn fmt_selfhost_check_agrees_with_rust_check() {
     std::fs::write(&file, noncanon).unwrap();
 
     cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["fmt", file.to_str().unwrap(), "--check", "--engine", "rust"])
         .assert()
         .failure()

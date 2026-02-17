@@ -465,7 +465,7 @@ fn optimize_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
 }
 
 #[test]
-fn explicit_rust_engine_overrides_auto_selfhost_preference() {
+fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("m.gc");
     let bad_artifact = dir.path().join("bad_toolchain.gc");
@@ -473,6 +473,23 @@ fn explicit_rust_engine_overrides_auto_selfhost_preference() {
     std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
 
     cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-artifact",
+            bad_artifact.to_str().unwrap(),
+            "fmt",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "--engine rust` is disabled in the default selfhost profile",
+        ));
+
+    cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args([
             "--selfhost-artifact",
             bad_artifact.to_str().unwrap(),

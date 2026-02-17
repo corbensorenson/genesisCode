@@ -509,6 +509,7 @@ fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
 }
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -559,6 +560,12 @@ fn selfhost_only_enabled(cli: &Cli) -> bool {
             .unwrap_or(false)
 }
 
+fn rust_engine_compat_enabled() -> bool {
+    std::env::var(ALLOW_RUST_ENGINE_ENV)
+        .map(|v| parse_truthy_env_flag(&v))
+        .unwrap_or(false)
+}
+
 fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFrontend, CliError> {
     let strict = selfhost_only_enabled(cli);
     let mode = resolved_selfhost_bootstrap_mode(cli);
@@ -605,6 +612,15 @@ fn resolved_engine(
 ) -> Result<FmtEngine, CliError> {
     enforce_selfhost_engine(cli, cmd_name, engine)?;
     if let Some(e) = engine {
+        if e == FmtEngine::Rust && !rust_engine_compat_enabled() {
+            return Err(cli_err(
+                EX_VERIFY,
+                "compat/rust-engine-disabled",
+                format!(
+                    "`--engine rust` is disabled in the default selfhost profile for `{cmd_name}`; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
+                ),
+            ));
+        }
         return Ok(e);
     }
     Ok(FmtEngine::Selfhost)
