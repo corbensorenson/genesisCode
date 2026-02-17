@@ -61,8 +61,11 @@ m::x
 GC
 rust_eval="$("$GEN" eval "$TMP_DIR/eval_pure.gc" | tr -d '\n')"
 self_eval="$("$GEN" --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/eval_pure.gc" | tr -d '\n')"
+wasi_rust_eval="$("$GWASI" eval "$TMP_DIR/eval_pure.gc" --engine rust | tr -d '\n')"
 [[ "$rust_eval" == "$self_eval" ]] || fail "native strict eval mismatch on pure parity module"
 wasi_eval="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/eval_pure.gc" | tr -d '\n')"
+[[ "$wasi_rust_eval" == "$wasi_eval" ]] || fail "WASI strict eval mismatch vs WASI rust baseline on pure parity module"
+[[ "$rust_eval" == "$wasi_rust_eval" ]] || fail "WASI rust eval mismatch on pure parity module"
 [[ "$rust_eval" == "$wasi_eval" ]] || fail "WASI strict eval mismatch on pure parity module"
 
 # Dedicated run/replay parity module (native rust baseline vs native/WASI strict selfhost).

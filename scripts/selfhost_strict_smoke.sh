@@ -71,7 +71,16 @@ native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc
 
 # strict selfhost smoke (WASI CLI native-host binary)
 wasi_native --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/mod.gc" >/dev/null
-wasi_native --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" >/dev/null
+W_N_EVAL="$(wasi_native eval "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
+W_S_EVAL="$(wasi_native --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" | tr -d '\n')"
+if [[ "$W_N_EVAL" != "$W_S_EVAL" ]]; then
+  echo "WASI strict eval mismatch rust=$W_N_EVAL strict=$W_S_EVAL" >&2
+  exit 1
+fi
+if [[ "$N_EVAL" != "$W_N_EVAL" ]]; then
+  echo "WASI rust eval mismatch native=$N_EVAL wasi=$W_N_EVAL" >&2
+  exit 1
+fi
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null

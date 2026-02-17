@@ -72,6 +72,7 @@ Acceptance gate:
   - progress: applied the same parse-bootstrap/eval-fresh env split to native `eval` and `explain` selfhost routes; `cli_explain_engine` now enforces `:contract-id` parity across `rust` and `selfhost`.
   - progress: `gc_wasm` now has explicit selfhost effect-runtime parity coverage (`wasm_runtime_selfhost_hashes_match_native_effect_runner_entry`) matching payload/continuation/request/response hashes against native runner for the same selfhost-parsed forms.
   - progress: strict golden CI now includes native+WASI selfhost parity checks for `run`/`replay` against Rust baseline outputs and host-local `.gclog` parity (`rust` vs `selfhost`).
+  - progress: strict smoke/golden scripts now enforce WASI `eval` parity against both WASI rust baseline and native rust baseline (not just strict selfhost output), tightening cross-engine/cross-host guardrails.
 
 ---
 
