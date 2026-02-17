@@ -99,6 +99,47 @@ pub enum CoreformFrontend {
     Selfhost(SelfhostFrontendConfig),
 }
 
+const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
+const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
+
+fn default_selfhost_artifact_path() -> PathBuf {
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
+}
+
+fn workspace_selfhost_artifact_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
+}
+
+fn resolved_selfhost_artifact_for_frontend() -> Option<PathBuf> {
+    if let Ok(raw) = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV) {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    let p = default_selfhost_artifact_path();
+    if p.is_file() {
+        return Some(p);
+    }
+    let wp = workspace_selfhost_artifact_path();
+    if wp.is_file() {
+        return Some(wp);
+    }
+    None
+}
+
+fn default_coreform_frontend() -> CoreformFrontend {
+    CoreformFrontend::Selfhost(SelfhostFrontendConfig {
+        bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
+        artifact: resolved_selfhost_artifact_for_frontend(),
+    })
+}
+
 pub fn parse_canonicalize_module_source_with_frontend(
     src: &str,
     frontend: &CoreformFrontend,
@@ -143,7 +184,7 @@ fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
 }
 
 pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
-    pack_with_frontend(pkg_toml, CoreformFrontend::Rust)
+    pack_with_frontend(pkg_toml, default_coreform_frontend())
 }
 
 pub fn pack_with_frontend(
@@ -183,7 +224,7 @@ pub fn package_artifact_hash(pkg_toml: &Path) -> Result<String, ObligationError>
         pkg_toml,
         true,
         &mut visited,
-        &CoreformFrontend::Rust,
+        &default_coreform_frontend(),
         limits,
     )
 }
@@ -211,7 +252,7 @@ pub fn test_package_with_step_limit(
         caps_override,
         step_limit,
         mem_limits,
-        CoreformFrontend::Rust,
+        default_coreform_frontend(),
     )
 }
 
