@@ -53,6 +53,7 @@ A fast-path cutover is complete when all of the following are true:
   - [x] `test`, `typecheck`, `optimize`, `pack`, `apply-patch` selfhost frontend paths now prefer `core/cli::*` canonicalization handlers.
 - [ ] Route effectful command groups through `.gc` command contracts:
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`
+  - [x] Incremental: `store/*` now routes through `core/cli::store-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
   - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
 - [ ] Reduce Rust CLI to arg parsing + host bridge only.
 - [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.

@@ -108,3 +108,24 @@
             {:hash hm :kind "module"}))
         (let ((ht (selfhost/hash::hash-term t)))
           (if (core/cli::is-error ht) ht {:hash ht :kind "term"}))))))
+
+(def core/cli::store-put-program
+  (fn (artifact)
+    (core/effect::perform
+      (quote core/store::put)
+      {:artifact artifact}
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::store-get-program
+  (fn (hash)
+    (core/effect::perform
+      (quote core/store::get)
+      {:hash hash}
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::store-has-program
+  (fn (hash)
+    (core/effect::perform
+      (quote core/store::has)
+      {:hash hash}
+      (fn (r) (core/effect::pure r)))))
