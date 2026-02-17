@@ -145,6 +145,7 @@ Acceptance gate:
     - regression coverage added for evidence exclusion, ref-root export, and dependency-closure mode differences (`none` vs `locked`)
     - added WASI parity coverage for shallow export dependency closure policy (`--include-deps none|locked`), verifying import/store reachability differences match native behavior.
     - added WASI parity coverage for full export evidence policy (`--include-evidence none` from `refs/...` root), verifying patch/snapshot closure inclusion while excluding evidence/data artifacts on import.
+    - added WASI parity coverage for full export/import closure with embedded refs, verifying commit+snapshot+patch+evidence transitive inclusion and `.gpk` v2 ref section semantics match native behavior.
 - [ ] Implement ref-policy gating in `.gc` per `docs/POLICY_DEFAULTS_v0.1.md`.
   - progress: moved `pkg publish` policy preflight/gating out of native CLI into capability runtime op `core/pkg::publish` (effect-runner path), so publish gate decisions are now enforced at the host capability boundary with deterministic logs.
   - progress: moved `pkg import --set-ref` local ref mutation chain out of CLI continuation logic into `core/gpk::import` runtime handling:
