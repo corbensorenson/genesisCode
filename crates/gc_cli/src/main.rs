@@ -2992,11 +2992,14 @@ fn cmd_vcs(
 
         let env = JsonEnvelope {
             ok: true,
-            kind: "genesis/vcs-hash-v0.1",
+            kind: "genesis/vcs-hash-v0.2",
             data: Some(serde_json::json!({
+                "in": input.display().to_string(),
+                // Keep legacy field for backward-compat while standardizing on `in`.
                 "input": input.display().to_string(),
                 "hash": hash_hex,
                 "hash_kind": hk,
+                "hash_format": "hex",
                 "engine": if engine == FmtEngine::Selfhost { "selfhost" } else { "rust" },
             })),
             error: None,

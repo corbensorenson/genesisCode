@@ -2,6 +2,17 @@ use std::fs;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{canonicalize_module, hash_module, hash_term, parse_module, parse_term};
+use serde_json::Value as JsonValue;
+
+fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
+    let artifact = dir.join("selfhost_toolchain.gc");
+    cargo_bin_cmd!("genesis")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact)
+        .assert()
+        .success();
+    artifact
+}
 
 #[test]
 fn vcs_hash_hashes_terms_and_modules_deterministically() {
@@ -45,4 +56,66 @@ fn vcs_hash_hashes_terms_and_modules_deterministically() {
         .clone();
     let got = String::from_utf8(out).unwrap().trim().to_string();
     assert_eq!(got, expected_mod);
+}
+
+#[test]
+fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let artifact = build_selfhost_artifact(dir);
+    fs::write(dir.join("t.gc"), "{:k 1}").unwrap();
+
+    let rust_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "vcs", "hash", "--in", "t.gc", "--engine", "rust"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let selfhost_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "vcs",
+            "hash",
+            "--in",
+            "t.gc",
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let rust_v: JsonValue = serde_json::from_slice(&rust_out).unwrap();
+    let self_v: JsonValue = serde_json::from_slice(&selfhost_out).unwrap();
+
+    assert_eq!(
+        rust_v.get("kind").and_then(JsonValue::as_str),
+        Some("genesis/vcs-hash-v0.2")
+    );
+    assert_eq!(rust_v.get("kind"), self_v.get("kind"));
+
+    let rust_d = rust_v.get("data").unwrap();
+    let self_d = self_v.get("data").unwrap();
+    for key in ["hash", "hash_kind", "hash_format", "in", "input"] {
+        assert_eq!(
+            rust_d.get(key),
+            self_d.get(key),
+            "engine mismatch for JSON field {key}"
+        );
+    }
+    assert_eq!(
+        rust_d.get("hash_format").and_then(JsonValue::as_str),
+        Some("hex")
+    );
+    assert_eq!(
+        rust_d.get("hash_kind").and_then(JsonValue::as_str),
+        Some("term")
+    );
 }
