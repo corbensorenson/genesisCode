@@ -180,4 +180,3 @@ fn pkg_init_selfhost_frontend_fails_when_contract_is_poisoned() {
         .code(20)
         .stderr(predicate::str::contains("pkg-init-program"));
 }
-

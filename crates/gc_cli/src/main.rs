@@ -3092,16 +3092,16 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/add".to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/add".to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
                             ),
                             (TermOrdKey(Term::symbol(":name")), Term::Str(name)),
-                            (
-                                TermOrdKey(Term::symbol(":selector")),
-                                Term::Str(selector),
-                            ),
+                            (TermOrdKey(Term::symbol(":selector")), Term::Str(selector)),
                             (
                                 TermOrdKey(Term::symbol(":update-policy")),
                                 Term::Str(update_policy.to_string()),
@@ -3335,7 +3335,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
                             ),
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(name.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str(name.to_string()),
+                            ),
                         ]
                         .into_iter()
                         .collect(),
@@ -3357,7 +3360,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
                             ),
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(name.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str(name.to_string()),
+                            ),
                         ]
                         .into_iter()
                         .collect(),
@@ -3421,7 +3427,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     })?;
                     let req = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":root")), Term::Str(root.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":root")),
+                                Term::Str(root.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":out")),
                                 Term::Str(out.display().to_string()),
@@ -3434,7 +3443,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                     ":shallow".to_string()
                                 }),
                             ),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":include-evidence")),
                                 Term::Str(include_evidence.to_string()),
@@ -3464,16 +3476,19 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                 TermOrdKey(Term::symbol(":cmd")),
                                 Term::Str("pkg/export".to_string()),
                             ),
-                            (TermOrdKey(Term::symbol(":root")), Term::Str(root.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":root")),
+                                Term::Str(root.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":out")),
                                 Term::Str(out.display().to_string()),
                             ),
+                            (TermOrdKey(Term::symbol(":full")), Term::Bool(*full)),
                             (
-                                TermOrdKey(Term::symbol(":full")),
-                                Term::Bool(*full),
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
                             ),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
                             (
                                 TermOrdKey(Term::symbol(":include-evidence")),
                                 Term::Str(include_evidence.to_string()),
@@ -3623,7 +3638,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                 Term::Bool(present),
                             ),
                             (TermOrdKey(Term::symbol(":expected-old")), expected),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":commit")),
                                 commit
@@ -3664,7 +3682,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                                 TermOrdKey(Term::symbol(":expected-old-present")),
                                 Term::Bool(present),
                             ),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":commit-present")),
                                 Term::Bool(commit.is_some()),

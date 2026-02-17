@@ -5252,7 +5252,10 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/init".to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/init".to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":workspace")),
                                 Term::Str(workspace.to_string()),
@@ -5292,7 +5295,10 @@ fn cmd_pkg(
                         Term::Str(lock.display().to_string()),
                     );
                     mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name.clone()));
-                    mm.insert(TermOrdKey(Term::symbol(":selector")), Term::Str(selector.clone()));
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":selector")),
+                        Term::Str(selector.clone()),
+                    );
                     mm.insert(
                         TermOrdKey(Term::symbol(":update-policy")),
                         Term::Str(update_policy.to_string()),
@@ -5314,7 +5320,10 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/add".to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/add".to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
@@ -5554,7 +5563,10 @@ fn cmd_pkg(
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
                             ),
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(name.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str(name.to_string()),
+                            ),
                         ]
                         .into_iter()
                         .collect(),
@@ -5568,12 +5580,18 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/info".to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/info".to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":lock")),
                                 Term::Str(lock.display().to_string()),
                             ),
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(name.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str(name.to_string()),
+                            ),
                         ]
                         .into_iter()
                         .collect(),
@@ -5637,16 +5655,26 @@ fn cmd_pkg(
                     })?;
                     let req = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":root")), Term::Str(root.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":root")),
+                                Term::Str(root.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":out")),
                                 Term::Str(out.display().to_string()),
                             ),
                             (
                                 TermOrdKey(Term::symbol(":mode")),
-                                Term::Str(if *full { ":full".to_string() } else { ":shallow".to_string() }),
+                                Term::Str(if *full {
+                                    ":full".to_string()
+                                } else {
+                                    ":shallow".to_string()
+                                }),
                             ),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":include-evidence")),
                                 Term::Str(include_evidence.to_string()),
@@ -5672,14 +5700,23 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/export".to_string())),
-                            (TermOrdKey(Term::symbol(":root")), Term::Str(root.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/export".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":root")),
+                                Term::Str(root.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":out")),
                                 Term::Str(out.display().to_string()),
                             ),
                             (TermOrdKey(Term::symbol(":full")), Term::Bool(*full)),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":include-evidence")),
                                 Term::Str(include_evidence.to_string()),
@@ -5715,10 +5752,17 @@ fn cmd_pkg(
                     let mut set_refs_term: Vec<Term> = Vec::new();
                     for sr in &parsed {
                         let mut mm = std::collections::BTreeMap::new();
-                        mm.insert(TermOrdKey(Term::symbol(":name")), Term::Str(sr.name.clone()));
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(sr.name.clone()),
+                        );
                         mm.insert(
                             TermOrdKey(Term::symbol(":hash")),
-                            if sr.hash == "nil" { Term::Nil } else { Term::Str(sr.hash.clone()) },
+                            if sr.hash == "nil" {
+                                Term::Nil
+                            } else {
+                                Term::Str(sr.hash.clone())
+                            },
                         );
                         mm.insert(
                             TermOrdKey(Term::symbol(":policy")),
@@ -5727,7 +5771,11 @@ fn cmd_pkg(
                         if let Some(exp) = &sr.expected_old {
                             mm.insert(
                                 TermOrdKey(Term::symbol(":expected-old")),
-                                if exp == "nil" { Term::Nil } else { Term::Str(exp.clone()) },
+                                if exp == "nil" {
+                                    Term::Nil
+                                } else {
+                                    Term::Str(exp.clone())
+                                },
                             );
                         }
                         set_refs_term.push(Term::Map(mm));
@@ -5756,7 +5804,10 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/import".to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/import".to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":in")),
                                 Term::Str(input.display().to_string()),
@@ -5798,18 +5849,33 @@ fn cmd_pkg(
                     };
                     let req = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":remote")), Term::Str(remote.to_string())),
-                            (TermOrdKey(Term::symbol(":ref")), Term::Str(refname.to_string())),
-                            (TermOrdKey(Term::symbol(":policy")), Term::Str(policy_h.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":ref")),
+                                Term::Str(refname.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":policy")),
+                                Term::Str(policy_h.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":expected-old-present")),
                                 Term::Bool(present),
                             ),
                             (TermOrdKey(Term::symbol(":expected-old")), expected),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":commit")),
-                                commit.as_deref().map(|s| Term::Str(s.to_string())).unwrap_or(Term::Nil),
+                                commit
+                                    .as_deref()
+                                    .map(|s| Term::Str(s.to_string()))
+                                    .unwrap_or(Term::Nil),
                             ),
                         ]
                         .into_iter()
@@ -5824,15 +5890,30 @@ fn cmd_pkg(
                     })?;
                     let desc = Term::Map(
                         [
-                            (TermOrdKey(Term::symbol(":cmd")), Term::Str("pkg/publish".to_string())),
-                            (TermOrdKey(Term::symbol(":remote")), Term::Str(remote.to_string())),
-                            (TermOrdKey(Term::symbol(":ref")), Term::Str(refname.to_string())),
-                            (TermOrdKey(Term::symbol(":policy")), Term::Str(policy_h.to_string())),
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/publish".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":remote")),
+                                Term::Str(remote.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":ref")),
+                                Term::Str(refname.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":policy")),
+                                Term::Str(policy_h.to_string()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":expected-old-present")),
                                 Term::Bool(present),
                             ),
-                            (TermOrdKey(Term::symbol(":depth")), Term::Int((*depth as i64).into())),
+                            (
+                                TermOrdKey(Term::symbol(":depth")),
+                                Term::Int((*depth as i64).into()),
+                            ),
                             (
                                 TermOrdKey(Term::symbol(":commit-present")),
                                 Term::Bool(commit.is_some()),
