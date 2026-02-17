@@ -256,6 +256,31 @@ remote_allow = ["{remote_allow}"]
     CapsPolicy::from_toml_str(&s).expect("caps")
 }
 
+fn mk_caps_for_pkg_publish(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+) -> CapsPolicy {
+    let s = format!(
+        r#"
+allow = ["core/pkg::publish"]
+
+[store]
+dir = "{store_dir}"
+
+[refs]
+path = "{refs_path}"
+
+[op."core/pkg::publish"]
+remote_allow = ["{remote_allow}"]
+"#,
+        store_dir = store_dir.display(),
+        refs_path = refs_path.display(),
+        remote_allow = remote_allow
+    );
+    CapsPolicy::from_toml_str(&s).expect("caps")
+}
+
 fn mk_prog(op: &str, payload: &Term) -> (Vec<Term>, [u8; 32]) {
     // (def prog (core/effect::perform 'op (quote payload) (fn (r) (core/effect::pure r)))) prog
     let op_t = Term::list(vec![Term::symbol("quote"), Term::symbol(op)]);
@@ -572,6 +597,146 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let prog3 = eval_module(&mut ctx3, &mut env3, &pull_forms).unwrap();
     let v3 = replay(&mut ctx3, prog3, &log2).unwrap();
     assert_eq!(value_hash(&r2.value), value_hash(&v3));
+}
+
+#[test]
+fn pkg_publish_validates_policy_and_pushes_commit_closure() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_pkg_publish", reg.clone());
+    let (remote, remote_allow) = mk_remote("t_pkg_publish");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_pkg_publish(&store_dir, &refs_path, &remote_allow);
+    let local_store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+
+    let policy_t = mk_policy_artifact();
+    let policy_hex = local_store
+        .put_bytes(print_term(&policy_t).as_bytes())
+        .unwrap();
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = local_store
+        .put_bytes(print_term(&module_art).as_bytes())
+        .unwrap();
+    let module_h = gc_coreform::hash_term(&module_art);
+
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = local_store
+        .put_bytes(print_term(&patch_t).as_bytes())
+        .unwrap();
+
+    let evidence_t =
+        parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let evidence_hex = local_store
+        .put_bytes(print_term(&evidence_t).as_bytes())
+        .unwrap();
+
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = local_store
+        .put_bytes(print_term(&snap_t).as_bytes())
+        .unwrap();
+
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &evidence_hex);
+    let commit_hex = local_store
+        .put_bytes(print_term(&commit_t).as_bytes())
+        .unwrap();
+    let refs_db = gc_effects::RefsDb::open(&refs_path).unwrap();
+    refs_db
+        .set("refs/heads/main", Some(&commit_hex), None)
+        .unwrap();
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :ref "refs/heads/main"
+          :policy "{policy_hex}"
+          :depth 0
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/pkg::publish", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "publish returned error: {}",
+        r.value.debug_repr()
+    );
+    assert_eq!(reg.ref_get("refs/heads/main"), Some(commit_hex.clone()));
+    assert!(reg.has(&commit_hex));
+    assert!(reg.has(&policy_hex));
+    let Term::Map(publish_map) = r.value.to_term_for_log(None) else {
+        panic!("publish result should be a map");
+    };
+    assert_eq!(
+        publish_map.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+    assert_eq!(
+        publish_map.get(&TermOrdKey(Term::symbol(":commit"))),
+        Some(&Term::Str(commit_hex.clone()))
+    );
+    assert_eq!(
+        publish_map.get(&TermOrdKey(Term::symbol(":ref"))),
+        Some(&Term::Str("refs/heads/main".to_string()))
+    );
+
+    // Swap local head to a commit missing evidence; publish must fail before remote mutation.
+    let bad_commit_t = parse_term(&format!(
+        r#"{{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :target {{ :kind :package :name "my-lib" }}
+          :base nil
+          :patch "{patch_hex}"
+          :result "{snap_hex}"
+          :obligations [core/obligation::unit-tests]
+          :evidence []
+          :attestations []
+          :message "missing evidence"
+        }}"#
+    ))
+    .unwrap();
+    let bad_commit_hex = local_store
+        .put_bytes(print_term(&bad_commit_t).as_bytes())
+        .unwrap();
+    refs_db
+        .set("refs/heads/main", Some(&bad_commit_hex), None)
+        .unwrap();
+
+    let payload_bad = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :ref "refs/heads/main"
+          :policy "{policy_hex}"
+        }}"#
+    ))
+    .unwrap();
+    let (forms_bad, h_bad) = mk_prog("core/pkg::publish", &payload_bad);
+    let mut ctx_bad = EvalCtx::new();
+    let prelude_bad = build_prelude(&mut ctx_bad);
+    let mut env_bad = prelude_bad.env;
+    let prog_bad = eval_module(&mut ctx_bad, &mut env_bad, &forms_bad).unwrap();
+    let r_bad = run(
+        &mut ctx_bad,
+        &caps,
+        prog_bad,
+        h_bad,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error(
+        &ctx_bad,
+        &r_bad.value,
+        "core/pkg/missing-evidence"
+    ));
+    assert_eq!(reg.ref_get("refs/heads/main"), Some(commit_hex));
 }
 
 #[test]

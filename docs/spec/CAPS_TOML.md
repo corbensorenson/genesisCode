@@ -75,8 +75,8 @@ Supported keys:
 - `create_dirs` (bool): if true, `io/fs::write` may create parent directories.
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
-- `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` ops (see below).
-- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` (default is false).
+- `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg::publish` (see below).
+- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg::publish` (default is false).
 
 Note: the effect log (`.gclog`) does not record `base_dir` values.
 
@@ -93,9 +93,9 @@ base_dir = "./sandbox"
 create_dirs = true
 ```
 
-## Sync Remotes (`core/sync::*`)
+## Sync/Publish Remotes (`core/sync::*`, `core/pkg::publish`)
 
-`core/sync::pull` and `core/sync::push` are **secure-by-default**:
+`core/sync::pull`, `core/sync::push`, and `core/pkg::publish` are **secure-by-default**:
 - They require a per-op `remote_allow` allowlist (deny otherwise).
 - `http://` is rejected unless `allow_http = true`.
 
@@ -106,12 +106,15 @@ Remote normalization:
 
 Example:
 ```toml
-allow = ["core/sync::pull", "core/sync::push"]
+allow = ["core/sync::pull", "core/sync::push", "core/pkg::publish"]
 
 [op."core/sync::pull"]
 remote_allow = ["https://registry.example.com/v1/"]
 
 [op."core/sync::push"]
+remote_allow = ["https://registry.example.com/v1/"]
+
+[op."core/pkg::publish"]
 remote_allow = ["https://registry.example.com/v1/"]
 ```
 

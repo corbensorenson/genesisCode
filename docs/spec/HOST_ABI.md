@@ -31,6 +31,7 @@ Compatibility notes:
 - `core/pkg::install`
 - `core/pkg::list`
 - `core/pkg::lock`
+- `core/pkg::publish`
 - `core/pkg::snapshot`
 - `core/pkg::update`
 - `core/pkg::verify`
