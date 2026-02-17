@@ -23,22 +23,27 @@ Date: 2026-02-16
 ---
 
 ## P0: Freeze Bootstrap Surface
-- [ ] Declare bootstrap boundary in `docs/spec/SELF_HOST_BOUNDARY.md` with a strict "Rust host only" ABI list.
-- [ ] Add CI guard: fail PRs that add new language semantics in Rust crates outside approved host ABI modules.
+- [x] Declare bootstrap boundary in `docs/spec/SELF_HOST_BOUNDARY.md` with a strict "Rust host only" ABI list.
+- [x] Add CI guard: fail PRs that add new language semantics in Rust crates outside approved host ABI modules.
+  - enforced by `scripts/check_selfhost_boundary.sh` and `.github/workflows/ci.yml` (`Selfhost Boundary Guard` step)
 - [x] Add `--selfhost-only` mode that hard-fails if any Rust semantic fallback is invoked (for routed commands).
   - implemented in native + WASI CLIs, with env alias `GENESIS_SELFHOST_ONLY=1|true|yes|on`
   - strict mode enforces `--engine selfhost`, requires `--selfhost-bootstrap artifact-only`, and rejects non-routed commands
-- [ ] Add a cutover dashboard artifact (`.genesis/store` + markdown mirror) tracking % of commands executing through `.gc` path.
+- [x] Add a cutover dashboard artifact (`.genesis/store` + markdown mirror) tracking % of commands executing through `.gc` path.
+  - implemented as `genesis selfhost-dashboard [--markdown <file>] [--store <dir>]`
 
 Acceptance gate:
-- [ ] CI proves `selfhost-only` mode works for `fmt`, `eval`, `typecheck`, `optimize`, `test`, `apply-patch` on golden suites.
+- [x] CI proves `selfhost-only` mode works for `fmt`, `eval`, `typecheck`, `optimize`, `test`, `apply-patch` on golden suites.
   - [x] covered now: `fmt`, `eval`, `optimize` strict-mode gating in native CLI tests
   - [x] covered now: `typecheck` strict mode executes through selfhost parse/canonicalize path in native CLI tests
   - [x] covered now: `test` strict mode executes through selfhost frontend module-loading path in native CLI tests
   - [x] covered now: `apply-patch` strict mode executes through selfhost frontend parse/canonicalize path in native CLI tests
-  - [x] covered now: `fmt`, `eval`, `test`, `pack` strict-mode routing in WASI CLI tests
+  - [x] covered now: `selfhost-dashboard` runs in strict mode and emits content-addressed dashboard artifacts
+  - [x] covered now: `vcs hash` strict mode executes through selfhost tool handlers in native + WASI CLI tests
+  - [x] covered now: `fmt`, `eval`, `test`, `pack`, `vcs hash` strict-mode routing in WASI CLI tests
+  - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path)
-  - [ ] remaining for this gate: run the full golden suites under `--selfhost-only` and expand WASI command coverage as available
+  - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including WASI strict coverage for available routed commands
 
 ---
 
@@ -69,6 +74,7 @@ Acceptance gate:
   - [ ] `pack`
   - [ ] `apply-patch`
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `gc/*`
+    - progress: `vcs hash` now routes through `.gc` (`selfhost/tool::hash-src-with-kind`) by default (native + WASI), with `--engine rust` available for parity checks.
 - [ ] Keep Rust CLI as thin argument parser + host bridge only.
 - [ ] Remove duplicated Rust command logic once parity is proven.
 
@@ -152,20 +158,22 @@ Acceptance gate:
   - native + WASI CLIs now support `--selfhost-only` (also `GENESIS_SELFHOST_ONLY=1|true|yes|on`)
   - strict mode requires `--engine selfhost`, forbids non-`artifact-only` bootstrap, and rejects non-routed commands
   - CI gate coverage added via CLI tests: `cli_selfhost_only.rs` (native + WASI)
-- [ ] 2) Route `fmt/eval/optimize/typecheck` through `.gc` command handlers by default.
+- [x] 2) Route `fmt/eval/optimize/typecheck` through `.gc` command handlers by default.
   - [x] `typecheck` now uses selfhost parse/canonicalize in native CLI when `--selfhost-only` is enabled
   - [x] `typecheck` now auto-prefers selfhost frontend when a toolchain artifact is configured/present (without `--selfhost-only`)
   - [x] `fmt`, `eval`, and `optimize` now auto-select `selfhost` engine when a toolchain artifact is configured/present (explicit `--engine rust` still supported)
   - [x] WASI `fmt`/`eval` now match native auto-engine selection behavior
-  - [ ] remaining: make selfhost path unconditional default for this command set
+  - [x] native + WASI now also discover workspace fallback artifact `selfhost/toolchain.gc` (in addition to `./.genesis/selfhost/toolchain.gc`)
+  - [x] selfhost path is now the unconditional default for this command set (explicit `--engine rust` still supported for parity checks)
 - [ ] 3) Remove Rust fallback path for parser/printer/hash in default profile.
-- [ ] 4) Route `test/apply-patch/pack` through `.gc`.
+- [x] 4) Route `test/apply-patch/pack` through `.gc`.
   - [x] `test`, `apply-patch`, and `pack` now have strict-mode selfhost frontend routing in native CLI
   - [x] `test`, `apply-patch`, and `pack` now auto-prefer selfhost frontend when a toolchain artifact is configured/present
-  - [ ] remaining: make selfhost path unconditional default for this command set
+  - [x] selfhost frontend is now the unconditional default for this command set in CLI frontend resolution
 - [ ] 5) Move replaced Rust semantic modules to `/deprecated`.
 - [ ] 6) Enable `selfhost-strict` profile in CI as required.
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
+  - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
 - [ ] 9) Add host ABI conformance harness.
 - [ ] 10) Start P6 optimization wave in `.gc` (profiling + incremental build graph).

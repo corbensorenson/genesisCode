@@ -31,6 +31,46 @@ Under WASI, this layer runs as `genesis_wasi.wasm`.
 Self-hosting targets this layer first: we want tooling logic (formatter, packager, optimizer passes, etc.)
 to be written *in GenesisCode* and run on TCB-A.
 
+## Rust Host-Only ABI (Strict)
+
+The Rust host boundary is intentionally narrow and versioned. Rust is allowed to provide only
+transport/adaptation for effectful capabilities and embedding glue. Language semantics must not
+expand in Rust beyond existing TCB-A crates during cutover.
+
+Approved Rust host-side modules (v0.2):
+- `crates/gc_effects/src/lib.rs`
+- `crates/gc_effects/src/runner.rs`
+- `crates/gc_effects/src/store.rs`
+- `crates/gc_effects/src/refs.rs`
+- `crates/gc_effects/src/policy.rs`
+- `crates/gc_effects/src/log.rs`
+- `crates/gc_effects/src/lock.rs`
+- `crates/gc_obligations/src/store.rs`
+- `crates/gc_cli/src/main.rs`
+- `crates/gc_wasi_cli/src/main.rs`
+- `crates/gc_wasm/src/lib.rs`
+
+Approved host ABI operation families (qualified op names):
+- `core/store::*`
+- `core/refs::*`
+- `core/sync::*`
+- `io/fs::*`
+- `sys/time::now`
+- `io/window::*` (planned)
+- `io/gpu::*` (planned)
+- `io/input::*` (planned)
+- `io/audio::*` (planned)
+
+Guardrail rule:
+- New parser/canonicalizer/typechecker/optimizer/contract semantics should be implemented in `.gc`
+  modules and routed through selfhost execution paths; Rust host modules may only marshal inputs,
+  call the kernel/runtime, and materialize capability effects.
+
+CI enforcement:
+- `scripts/check_selfhost_boundary.sh` fails when a change adds core semantic API usage
+  (`parse_module`, `canonicalize_module`, `print_module`, `hash_module`, `eval_module`, `eval_term`)
+  in non-approved Rust files.
+
 ## Self-Host Definition (v0.2)
 
 We call the toolchain “self-hosted” when:
@@ -142,6 +182,8 @@ development builds.
 
 Host tooling defaults:
 - native CLI (`genesis`) and WASI CLI now default to `artifact-only` bootstrap mode for selfhost paths.
+- routed frontend commands now default to selfhost execution; explicit Rust engine selection is
+  retained only for parity/comparison workflows.
 - runtime flags:
   - `--selfhost-artifact <file>` choose artifact explicitly
   - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`

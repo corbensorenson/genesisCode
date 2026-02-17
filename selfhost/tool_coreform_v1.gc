@@ -15,3 +15,14 @@
         forms
         (let ((canon (selfhost/canon::canonicalize-module forms)))
           (if (selfhost/tool::is-error canon) canon (selfhost/hash::hash-module canon)))))))
+
+(def selfhost/tool::hash-src-with-kind
+  (fn (src)
+    (let ((t (selfhost/parse::parse-term src)))
+      (if (selfhost/tool::is-error t)
+        (let ((hm (selfhost/tool::hash-module-src src)))
+          (if (selfhost/tool::is-error hm)
+            hm
+            {:hash hm :kind "module"}))
+        (let ((ht (selfhost/hash::hash-term t)))
+          (if (selfhost/tool::is-error ht) ht {:hash ht :kind "term"}))))))

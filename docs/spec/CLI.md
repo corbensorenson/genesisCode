@@ -24,22 +24,23 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - commands with `--engine` must use `--engine selfhost`
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
-  - Current native routed set: `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`.
+  - Current native routed set: `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
-  automatically prefer selfhost frontend when a toolchain artifact is configured or present:
-  - `--selfhost-artifact <path>`, or
-  - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
-  - `./.genesis/selfhost/toolchain.gc` exists.
+  default to the selfhost frontend.
+  - Toolchain artifact resolution still follows:
+    - `--selfhost-artifact <path>`, or
+    - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
+    - `./.genesis/selfhost/toolchain.gc` if present, or
+    - workspace fallback `selfhost/toolchain.gc` if present.
 
 ## Subcommands (Signing + Policy)
 
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`
-  - when `--engine` is omitted, engine is auto-selected:
-    - `selfhost` when a selfhost toolchain artifact is configured/present
-    - otherwise `rust`
+  - when `--engine` is omitted, engine defaults to `selfhost`.
+  - `--engine rust` remains available for parity/comparison workflows.
   - `--engine selfhost` runs the self-hosted CoreForm toolchain inside the kernel and therefore honors `--step-limit/--no-step-limit`.
 - `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
-  - when `--engine` is omitted, engine is auto-selected with the same rule as `fmt`.
+  - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
   - `--engine selfhost` runs self-hosted parse+canonicalize in-kernel before evaluation.
   - `--stage1-pipeline` runs Stage-1 CoreForm->CoreForm transforms before evaluation.
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
@@ -49,6 +50,13 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
   - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.
   - exits with code `30` when validation fails or configured Stage-2 minimum thresholds are not met.
+- `genesis selfhost-dashboard [--markdown <file>] [--store <dir>]`
+  - emits a cutover dashboard artifact (`genesis/selfhost-cutover-dashboard-v0.2`) into a content-addressed store path.
+  - writes a markdown mirror (default: `docs/status/SELFHOST_CUTOVER.md`) with routed/default selfhost coverage.
+
+CI strict selfhost gates:
+- `scripts/selfhost_strict_smoke.sh`: fast strict routing health check.
+- `scripts/selfhost_strict_golden.sh`: strict golden sweep across `tests/spec/coreform/*` and `tests/spec/pkg_*` fixtures, including WASI strict checks for available routed commands.
 - `genesis keygen --out <key.toml>`: generate an Ed25519 signing key (see `docs/spec/SIGNING.md`).
 - `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`:
   - sign the acceptance artifact hash and write a signature artifact into the evidence store
@@ -57,7 +65,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - when `--policy` is provided, enforce signature policy (see `docs/spec/REGISTRY_POLICY.md`)
 - `genesis transparency-verify --pkg <package.toml>`: verify the local transparency log chain (see `docs/spec/TRANSPARENCY_LOG.md`)
 - `genesis optimize <file> [--engine rust|selfhost] ...`
-  - when `--engine` is omitted, engine is auto-selected with the same rule as `fmt`.
+  - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
+- `genesis vcs hash --in <file> [--engine rust|selfhost]`
+  - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
 
 ## Exit Codes (Stable)
 

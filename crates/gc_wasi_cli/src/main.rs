@@ -238,6 +238,10 @@ enum VcsCmd {
         /// Input file containing a single CoreForm term or a CoreForm module.
         #[arg(long = "in", alias = "input")]
         input: PathBuf,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm toolchain inside the kernel.
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
     },
 }
 
@@ -498,6 +502,7 @@ fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
+const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
 fn parse_truthy_env_flag(s: &str) -> bool {
     matches!(
@@ -512,6 +517,12 @@ fn default_selfhost_artifact_path() -> PathBuf {
         .join(DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
 }
 
+fn workspace_selfhost_artifact_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
+}
+
 fn resolved_selfhost_artifact_for_frontend(cli: &Cli) -> Option<PathBuf> {
     if let Some(p) = cli.selfhost_artifact.clone() {
         return Some(p);
@@ -523,7 +534,14 @@ fn resolved_selfhost_artifact_for_frontend(cli: &Cli) -> Option<PathBuf> {
         }
     }
     let p = default_selfhost_artifact_path();
-    if p.is_file() { Some(p) } else { None }
+    if p.is_file() {
+        return Some(p);
+    }
+    let wp = workspace_selfhost_artifact_path();
+    if wp.is_file() {
+        return Some(wp);
+    }
+    None
 }
 
 fn selfhost_only_enabled(cli: &Cli) -> bool {
@@ -544,15 +562,12 @@ fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFront
         ));
     }
     let artifact = resolved_selfhost_artifact_for_frontend(cli);
-    if strict || artifact.is_some() {
-        return Ok(gc_obligations::CoreformFrontend::Selfhost(
-            gc_obligations::SelfhostFrontendConfig {
-                bootstrap_mode: mode,
-                artifact,
-            },
-        ));
-    }
-    Ok(gc_obligations::CoreformFrontend::Rust)
+    Ok(gc_obligations::CoreformFrontend::Selfhost(
+        gc_obligations::SelfhostFrontendConfig {
+            bootstrap_mode: mode,
+            artifact,
+        },
+    ))
 }
 
 fn enforce_selfhost_engine(
@@ -584,10 +599,7 @@ fn resolved_engine(
     if let Some(e) = engine {
         return Ok(e);
     }
-    if selfhost_only_enabled(cli) || resolved_selfhost_artifact_for_frontend(cli).is_some() {
-        return Ok(FmtEngine::Selfhost);
-    }
-    Ok(FmtEngine::Rust)
+    Ok(FmtEngine::Selfhost)
 }
 
 fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
@@ -599,6 +611,9 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
         Cmd::Test { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
+        Cmd::Vcs {
+            cmd: VcsCmd::Hash { engine, .. },
+        } => enforce_selfhost_engine(cli, "vcs hash", *engine),
         other => {
             let cmd = match other {
                 Cmd::Test { .. } | Cmd::Pack { .. } => unreachable!(),
@@ -608,14 +623,14 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 Cmd::Store { .. } => "store",
                 Cmd::Refs { .. } => "refs",
                 Cmd::Pkg { .. } => "pkg",
-                Cmd::Vcs { .. } => "vcs",
+                Cmd::Vcs { .. } => "vcs (non-hash)",
                 Cmd::Fmt { .. } | Cmd::Eval { .. } => unreachable!(),
             };
             Err(cli_err(
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `test`, and `pack`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `test`, `pack`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -635,7 +650,8 @@ fn load_selfhost_toolchain(
             "selfhost-only mode requires --selfhost-bootstrap artifact-only",
         ));
     }
-    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, cli.selfhost_artifact.as_deref())
+    let artifact = resolved_selfhost_artifact_for_frontend(cli);
+    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
         .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
 }
 
@@ -3111,27 +3127,122 @@ fn cmd_refs(
     })
 }
 
-fn cmd_vcs_hash(cli: &Cli, input: &PathBuf) -> Result<CmdOut, CliError> {
+fn cmd_vcs_hash(cli: &Cli, input: &PathBuf, engine: Option<FmtEngine>) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "vcs hash", engine)?;
     let src = std::fs::read_to_string(input)
         .with_context(|| format!("read {}", input.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let (hex, kind) = if engine == FmtEngine::Selfhost {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        ctx.set_mem_limits(resolved_mem_limits(cli));
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
-    // Prefer parsing as module (more common for `.gc` files).
-    let h = match parse_module(&src) {
-        Ok(forms) => {
-            let canon = canonicalize_module(forms)
-                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            hash_module(&canon)
+        let f = env
+            .get("selfhost/tool::hash-src-with-kind")
+            .ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "selfhost/missing",
+                    "missing binding selfhost/tool::hash-src-with-kind",
+                )
+            })?;
+
+        ctx.steps = 0;
+        ctx.step_limit = resolved_step_limit(cli).resolve();
+        let r = f
+            .apply(&mut ctx, Value::Data(Term::Str(src.clone())))
+            .map_err(|e| {
+                cli_err(
+                    EX_EVAL,
+                    "eval/error",
+                    format!("selfhost vcs hash failed: {e}"),
+                )
+            })?;
+        if let Some((code, message, payload)) = extract_protocol_error(&ctx, &r) {
+            return Err(CliError {
+                exit_code: EX_PARSE,
+                json: JsonError {
+                    code: "selfhost/error",
+                    message: format!("{code}: {message}"),
+                    context: payload.map(serde_json::Value::String),
+                },
+            });
         }
-        Err(_) => {
-            let t =
-                parse_term(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-            // Hash terms using the same scheme as the canonical term hasher.
-            gc_coreform::hash_term(&t)
-        }
+        let (hex, kind) = match r {
+            Value::Data(Term::Map(m)) => {
+                let hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
+                    Some(Term::Str(s)) => s.clone(),
+                    _ => {
+                        return Err(cli_err(
+                            EX_INTERNAL,
+                            "selfhost/bad-return",
+                            "selfhost vcs hash return missing :hash string",
+                        ));
+                    }
+                };
+                let kind = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
+                    Some(Term::Str(s)) if s == "term" || s == "module" => s.clone(),
+                    _ => {
+                        return Err(cli_err(
+                            EX_INTERNAL,
+                            "selfhost/bad-return",
+                            "selfhost vcs hash return missing :kind string",
+                        ));
+                    }
+                };
+                (hex, kind)
+            }
+            Value::Map(m) => {
+                let hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
+                    Some(Value::Data(Term::Str(s))) => s.clone(),
+                    _ => {
+                        return Err(cli_err(
+                            EX_INTERNAL,
+                            "selfhost/bad-return",
+                            "selfhost vcs hash return missing :hash string",
+                        ));
+                    }
+                };
+                let kind = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
+                    Some(Value::Data(Term::Str(s))) if s == "term" || s == "module" => s.clone(),
+                    _ => {
+                        return Err(cli_err(
+                            EX_INTERNAL,
+                            "selfhost/bad-return",
+                            "selfhost vcs hash return missing :kind string",
+                        ));
+                    }
+                };
+                (hex, kind)
+            }
+            _ => {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "selfhost/bad-return",
+                    format!("selfhost vcs hash returned non-map: {}", r.debug_repr()),
+                ));
+            }
+        };
+        (hex, kind)
+    } else {
+        // Prefer parsing as module (more common for `.gc` files).
+        let (h, kind) = match parse_module(&src) {
+            Ok(forms) => {
+                let canon = canonicalize_module(forms)
+                    .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+                (hash_module(&canon), "module")
+            }
+            Err(_) => {
+                let t = parse_term(&src)
+                    .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+                // Hash terms using the same scheme as the canonical term hasher.
+                (gc_coreform::hash_term(&t), "term")
+            }
+        };
+        (hex32(h), kind.to_string())
     };
-
-    let hex = hex32(h);
 
     let env = JsonEnvelope {
         ok: true,
@@ -3139,7 +3250,9 @@ fn cmd_vcs_hash(cli: &Cli, input: &PathBuf) -> Result<CmdOut, CliError> {
         data: Some(serde_json::json!({
             "in": input.display().to_string(),
             "hash": hex,
+            "hash_kind": kind,
             "hash_format": "hex",
+            "engine": if engine == FmtEngine::Selfhost { "selfhost" } else { "rust" },
         })),
         error: None,
     };
@@ -3195,7 +3308,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps.as_path(), log, cmd),
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps.as_path(), log, cmd),
         Cmd::Vcs { cmd } => match cmd {
-            VcsCmd::Hash { input } => cmd_vcs_hash(cli, input),
+            VcsCmd::Hash { input, engine } => cmd_vcs_hash(cli, input, *engine),
         },
     }
 }

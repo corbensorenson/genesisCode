@@ -10,26 +10,11 @@ use gc_coreform::{
 };
 use gc_kernel::{CompiledModule, Env, EvalCtx, compile_module, eval_compiled_module};
 
-const PARSE_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../selfhost/parse.gc"
-));
-const CANON_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../selfhost/canon.gc"
-));
-const PRINTER_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../selfhost/printer.gc"
-));
-const HASH_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../selfhost/hash.gc"
-));
-const TOOL_SRC: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../selfhost/tool_coreform_v1.gc"
-));
+const PARSE_SRC: &str = include_str!("../../../selfhost/parse.gc");
+const CANON_SRC: &str = include_str!("../../../selfhost/canon.gc");
+const PRINTER_SRC: &str = include_str!("../../../selfhost/printer.gc");
+const HASH_SRC: &str = include_str!("../../../selfhost/hash.gc");
+const TOOL_SRC: &str = include_str!("../../../selfhost/tool_coreform_v1.gc");
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";

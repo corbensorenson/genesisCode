@@ -20,7 +20,7 @@ print results, but kernel evaluation remains pure.
   - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has} ...` (local store only)
   - `genesis refs --caps <caps.toml> [--log <out.gclog>] {get|list|set|delete} ...` (local refs only)
   - `genesis pkg --caps <caps.toml> [--log <out.gclog>] {init|add|lock|update|install|verify|list|info|snapshot|export|import} ...` (local-only; no sync)
-  - `genesis vcs hash --in <file>`
+  - `genesis vcs hash --in <file> [--engine rust|selfhost]`
 
 The interface mirrors the native `genesis` CLI for these commands:
 - stable exit codes (see `docs/spec/CLI.md`)
@@ -29,10 +29,14 @@ The interface mirrors the native `genesis` CLI for these commands:
   - requires `--engine selfhost` on frontend commands
   - requires `--selfhost-bootstrap artifact-only`
   - rejects commands not yet selfhost-routed with exit code `50`
-  - current WASI routed set: `fmt`, `eval`, `test`, `pack`
-  - for `fmt`/`eval`, when `--engine` is omitted the engine is auto-selected:
-    - `selfhost` when a selfhost toolchain artifact is configured/present (`--selfhost-artifact`, `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`, or `./.genesis/selfhost/toolchain.gc`)
-    - otherwise `rust`
+  - current WASI routed set: `fmt`, `eval`, `test`, `pack`, `vcs hash`
+  - for `fmt`/`eval` (and `vcs hash`), when `--engine` is omitted the engine defaults to `selfhost`
+  - `--engine rust` remains available for parity/comparison workflows
+  - artifact resolution for selfhost bootstrap remains:
+    - `--selfhost-artifact`
+    - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`
+    - `./.genesis/selfhost/toolchain.gc`
+    - workspace fallback `selfhost/toolchain.gc`
 
 Notes:
 - Networking is denied in the WASI bootstrap. `core/sync::*` is not supported under WASI.

@@ -55,10 +55,13 @@ native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_N/package.tom
 native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
+native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
+native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
 
 # strict selfhost smoke (WASI CLI native-host binary)
 wasi_native --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/mod.gc" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" >/dev/null
+wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
 
 PKG_W="$TMP_DIR/pkg_wasi"
 mkdir -p "$PKG_W"

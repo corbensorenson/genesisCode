@@ -1,5 +1,6 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
+use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
@@ -100,7 +101,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, and `pack`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, and `vcs hash`",
         ));
 }
 
@@ -223,6 +224,38 @@ fn selfhost_only_accepts_pack_with_selfhost_artifact() {
         ])
         .assert()
         .success();
+}
+
+#[test]
+fn selfhost_only_accepts_vcs_hash_with_selfhost_artifact() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let file = dir.path().join("m.gc");
+    std::fs::write(&file, "(def x 1)\nx\n").unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "vcs",
+            "hash",
+            "--in",
+            file.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let kind = v
+        .get("data")
+        .and_then(|d| d.get("hash_kind"))
+        .and_then(JsonValue::as_str)
+        .unwrap();
+    assert_eq!(kind, "module");
 }
 
 #[test]
@@ -369,4 +402,27 @@ fn explicit_rust_engine_overrides_auto_selfhost_preference() {
         ])
         .assert()
         .success();
+}
+
+#[test]
+fn fmt_defaults_to_selfhost_via_workspace_artifact_fallback() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+    std::fs::write(&file, "(def x 1)\n").unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args(["--json", "fmt", file.to_str().unwrap()])
+        .current_dir(dir.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let engine = v
+        .get("data")
+        .and_then(|d| d.get("engine"))
+        .and_then(JsonValue::as_str)
+        .unwrap();
+    assert_eq!(engine, "selfhost");
 }
