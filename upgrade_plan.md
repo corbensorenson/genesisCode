@@ -47,6 +47,7 @@ Acceptance gate:
   - [x] covered now: native + WASI `run`/`replay` auto-select selfhost when a toolchain artifact is configured (guarded by bad-artifact bootstrap tests)
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
+  - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
 
 ---
 

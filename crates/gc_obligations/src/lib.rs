@@ -100,6 +100,7 @@ pub enum CoreformFrontend {
 }
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -140,12 +141,46 @@ pub fn default_coreform_frontend() -> CoreformFrontend {
     })
 }
 
+fn env_truthy(name: &str) -> bool {
+    fn is_truthy(value: &str) -> bool {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    }
+    std::env::var(name)
+        .ok()
+        .map(|v| is_truthy(&v))
+        .unwrap_or(false)
+}
+
+fn enforce_frontend_allowed_with_flag(
+    frontend: &CoreformFrontend,
+    context: &str,
+    selfhost_only: bool,
+) -> Result<(), ObligationError> {
+    if selfhost_only && matches!(frontend, CoreformFrontend::Rust) {
+        return Err(ObligationError::Module(format!(
+            "selfhost-only mode forbids Rust frontend in {context}; use CoreformFrontend::Selfhost"
+        )));
+    }
+    Ok(())
+}
+
+fn enforce_frontend_allowed(
+    frontend: &CoreformFrontend,
+    context: &str,
+) -> Result<(), ObligationError> {
+    enforce_frontend_allowed_with_flag(frontend, context, env_truthy(SELFHOST_ONLY_ENV))
+}
+
 pub fn parse_canonicalize_module_source_with_frontend(
     src: &str,
     frontend: &CoreformFrontend,
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<Vec<Term>, ObligationError> {
+    enforce_frontend_allowed(frontend, "parse/canonicalize")?;
     let limits = KernelLimits {
         step_limit,
         mem_limits,
@@ -649,6 +684,7 @@ fn load_modules(
     frontend: &CoreformFrontend,
     limits: KernelLimits,
 ) -> Result<Vec<LoadedModule>, ObligationError> {
+    enforce_frontend_allowed(frontend, "module loading")?;
     let mut out = Vec::new();
     match frontend {
         CoreformFrontend::Rust => {
@@ -4219,5 +4255,30 @@ mod tests {
         "#;
         let forms = parse_module(src).unwrap();
         assert!(lint_autofix_patch_for_module("lint.gc", &forms).is_none());
+    }
+
+    #[test]
+    fn env_truthy_accepts_expected_values() {
+        let is_truthy = |v: &str| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        };
+        for v in ["1", "true", "TRUE", " yes ", "On"] {
+            assert!(is_truthy(v), "expected truthy: {v}");
+        }
+        for v in ["0", "false", "no", "", "off", "wat"] {
+            assert!(!is_truthy(v), "expected falsey: {v}");
+        }
+    }
+
+    #[test]
+    fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
+        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", true)
+            .expect_err("rust frontend must be blocked in selfhost-only mode");
+        assert!(format!("{err}").contains("selfhost-only mode forbids Rust frontend"));
+        enforce_frontend_allowed_with_flag(&default_coreform_frontend(), "test", true)
+            .expect("selfhost frontend must be allowed");
     }
 }
