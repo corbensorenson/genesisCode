@@ -752,6 +752,10 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Test { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
+        Cmd::Store { .. } => Ok(()),
+        Cmd::Refs { .. } => Ok(()),
+        Cmd::Pkg { .. } => Ok(()),
+        Cmd::Gc { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
         } => enforce_selfhost_engine(cli, "vcs hash", *engine),
@@ -759,20 +763,21 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
             let cmd = match other {
                 Cmd::Test { .. } | Cmd::Pack { .. } => unreachable!(),
                 Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
-                Cmd::Store { .. } => "store",
-                Cmd::Refs { .. } => "refs",
-                Cmd::Pkg { .. } => "pkg",
-                Cmd::Gc { .. } => "gc",
                 Cmd::Vcs { .. } => "vcs (non-hash)",
-                Cmd::Fmt { .. } | Cmd::Eval { .. } | Cmd::Run { .. } | Cmd::Replay { .. } => {
-                    unreachable!()
-                }
+                Cmd::Fmt { .. }
+                | Cmd::Eval { .. }
+                | Cmd::Run { .. }
+                | Cmd::Replay { .. }
+                | Cmd::Store { .. }
+                | Cmd::Refs { .. }
+                | Cmd::Pkg { .. }
+                | Cmd::Gc { .. } => unreachable!(),
             };
             Err(cli_err(
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `gc`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }

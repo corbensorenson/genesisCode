@@ -113,6 +113,7 @@ Acceptance gate:
   - [ ] `apply-patch`
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `gc/*`
     - progress: `vcs hash` now routes through `.gc` (`selfhost/tool::hash-src-with-kind`) by default (native + WASI), with `--engine rust` available for parity checks.
+    - progress: `--selfhost-only` now permits capability command groups `store`, `refs`, `pkg`, and `gc` in native + WASI CLIs, with regression coverage that executes all four command groups end-to-end under strict mode.
 - [ ] Keep Rust CLI as thin argument parser + host bridge only.
 - [ ] Remove duplicated Rust command logic once parity is proven.
 

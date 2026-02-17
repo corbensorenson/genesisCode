@@ -1,6 +1,7 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use serde_json::Value as JsonValue;
+use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
@@ -11,6 +12,25 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
         .assert()
         .success();
     artifact
+}
+
+fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
+    let caps = dir.join("caps.toml");
+    let mut s = String::new();
+    s.push_str("allow = [");
+    for (i, op) in allow.iter().enumerate() {
+        if i != 0 {
+            s.push_str(", ");
+        }
+        s.push('"');
+        s.push_str(op);
+        s.push('"');
+    }
+    s.push_str(
+        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n\n[op.\"core/pkg::init\"]\nbase_dir = \".\"\ncreate_dirs = true\n\n[op.\"core/pkg::list\"]\nbase_dir = \".\"\n",
+    );
+    std::fs::write(&caps, s).unwrap();
+    caps
 }
 
 #[test]
@@ -60,8 +80,66 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `gc`, and `vcs hash`",
         ));
+}
+
+#[test]
+fn selfhost_only_accepts_store_refs_pkg_and_gc() {
+    let td = tempdir().unwrap();
+    let caps = write_effect_caps(
+        td.path(),
+        &[
+            "core/store::put",
+            "core/refs::get",
+            "core/pkg::init",
+            "core/pkg::list",
+            "core/gc::pin",
+        ],
+    );
+    let term = td.path().join("value.gc");
+    std::fs::write(&term, "{:hello true}\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "store", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["put", "--input"])
+        .arg(term.to_str().unwrap())
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "refs", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["get", "refs/heads/main"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["list"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "gc", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["pin", "refs/heads/main", "--pins", ".genesis/pins.toml"])
+        .assert()
+        .success();
 }
 
 #[test]
