@@ -116,6 +116,7 @@ Acceptance gate:
     - progress: `vcs hash` now routes through `.gc` (`selfhost/tool::hash-src-with-kind`) by default (native + WASI), with `--engine rust` available for parity checks.
     - progress: `--selfhost-only` now permits command groups `store`, `refs`, `pkg`, `policy`, `sync`, and `gc` in native + WASI CLIs; regression coverage executes these groups end-to-end under strict mode (`sync` asserted by strict-gate tests + smoke on both CLIs).
     - progress: added concrete `policy` command surface in native + WASI CLIs (`policy list`, `policy show`, `policy set-default`) with deterministic local config management and schema-validated policy artifact resolution from the content-addressed store.
+    - progress: added missing WASI `pkg publish` command surface with native-parity runtime routing (`core/pkg::publish` effect op), including obligation-failure exit semantics and commit-hash stdout behavior parity.
     - progress: `--selfhost-only` now also permits effectful `vcs/*` in native + WASI CLIs (with `vcs hash` still engine-validated), with regression coverage for strict-gate acceptance and strict-smoke execution of `vcs log`.
     - progress: added executable WASI `vcs` effectful conformance tests covering `vcs diff/apply` snapshot roundtrip and `vcs log` commit-history traversal with content-addressed artifacts.
     - progress: added executable WASI semantic-merge coverage for `vcs merge3` and `vcs resolve-conflict`, including disjoint-op contract merges, conflict artifact emission, left-strategy resolution, and patch/apply equivalence checks.
@@ -265,6 +266,7 @@ Acceptance gate:
 - [x] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
   - [x] `pkg publish` now delegates policy preflight + ref-class obligation checks to runtime capability op `core/pkg::publish` (instead of native CLI-local preflight), preserving `EX_OBLIGATIONS` on publish gate failures.
+  - [x] added executable WASI `pkg publish` conformance coverage for policy-gated failure/success behavior against file-backed remotes (missing evidence rejected; valid evidence advances remote ref deterministically).
   - [x] `pkg import --set-ref` now delegates local refs updates to runtime capability handling in `core/gpk::import` (policy-gated via shared refs gate logic), eliminating CLI continuation-based `core/refs::set` orchestration.
   - [x] added runtime-gated import failure-path parity tests (native + WASI) for policy rejection and ref non-advancement, tightening ref-policy gate conformance coverage.
   - [x] hardened multi-ref import semantics with atomic local refs commit + native/WASI atomicity tests (no partial ref updates when one target fails policy).

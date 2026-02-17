@@ -683,6 +683,36 @@ enum PkgCmd {
         #[arg(long)]
         policy: Option<String>,
     },
+
+    /// Publish a commit to a remote registry and advance a remote ref (policy-gated).
+    ///
+    /// This is the "pip publish" equivalent: upload reachable artifacts and set the remote ref.
+    Publish {
+        /// Remote spec (e.g. gen://example.com/registry or https://...).
+        #[arg(long)]
+        remote: String,
+
+        /// Remote ref to advance (e.g. refs/heads/main, refs/tags/v1.0.0).
+        #[arg(long = "ref")]
+        refname: String,
+
+        /// Policy artifact hash (hex) used by the remote refs/set gate.
+        #[arg(long)]
+        policy: String,
+
+        /// Optional optimistic concurrency check for the remote ref.
+        /// Pass a hex hash, or the literal string `nil` to require the ref to be unset.
+        #[arg(long)]
+        expected_old: Option<String>,
+
+        /// Commit parent depth to include when publishing (0 = no parents).
+        #[arg(long, default_value_t = 0)]
+        depth: u64,
+
+        /// Commit hash to publish. If omitted, resolves from the local `refname` in the refs db.
+        #[arg(long)]
+        commit: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3014,6 +3044,79 @@ fn mk_pkg_snapshot_program(pkg: &Path) -> Vec<gc_coreform::Term> {
     ]
 }
 
+fn mk_pkg_publish_program(
+    remote: &str,
+    refname: &str,
+    policy_h: &str,
+    expected_old: Option<&str>,
+    depth: u64,
+    commit: Option<&str>,
+) -> Vec<gc_coreform::Term> {
+    let op = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("quote"),
+        gc_coreform::Term::symbol("core/pkg::publish"),
+    ]);
+    let mut m = std::collections::BTreeMap::new();
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":remote")),
+        gc_coreform::Term::Str(remote.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":ref")),
+        gc_coreform::Term::Str(refname.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
+        gc_coreform::Term::Str(policy_h.to_string()),
+    );
+    if let Some(e) = expected_old {
+        let v = if e == "nil" {
+            gc_coreform::Term::Nil
+        } else {
+            gc_coreform::Term::Str(e.to_string())
+        };
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":expected-old")),
+            v,
+        );
+    }
+    if depth > 0 {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":depth")),
+            gc_coreform::Term::Int((depth as i64).into()),
+        );
+    }
+    if let Some(h) = commit {
+        m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":commit")),
+            gc_coreform::Term::Str(h.to_string()),
+        );
+    }
+    let payload = gc_coreform::Term::Map(m);
+    let k = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("fn"),
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
+    ]);
+    let perform = gc_coreform::Term::list(vec![
+        gc_coreform::Term::symbol("core/effect::perform"),
+        op,
+        payload,
+        k,
+    ]);
+    vec![
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("def"),
+            gc_coreform::Term::symbol("prog"),
+            perform,
+        ]),
+        gc_coreform::Term::symbol("prog"),
+    ]
+}
+
 fn mk_gpk_export_program(
     root: &str,
     out: &Path,
@@ -3958,6 +4061,19 @@ fn extract_pkg_import_root(v: &Value) -> Option<String> {
     }
 }
 
+fn extract_pkg_publish_commit(v: &Value) -> Option<String> {
+    let t = v.to_term_for_log(None);
+    let gc_coreform::Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+        ":commit",
+    ))) {
+        Some(gc_coreform::Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn extract_pkg_lock_hash(v: &Value) -> Option<String> {
     let t = v.to_term_for_log(None);
     let gc_coreform::Term::Map(m) = t else {
@@ -4089,6 +4205,25 @@ fn cmd_pkg(
                 "pkg-import",
             )
         }
+        PkgCmd::Publish {
+            remote,
+            refname,
+            policy: policy_h,
+            expected_old,
+            depth,
+            commit,
+        } => (
+            mk_pkg_publish_program(
+                remote,
+                refname,
+                policy_h,
+                expected_old.as_deref(),
+                *depth,
+                commit.as_deref(),
+            ),
+            "genesis/pkg-publish-v0.1",
+            "pkg-publish",
+        ),
     };
 
     let forms = canonicalize_module(forms)
@@ -4120,12 +4255,19 @@ fn cmd_pkg(
         ok = false;
         exit_code = EX_EVAL;
         if let Value::Data(gc_coreform::Term::Map(m)) = payload.as_ref()
-            && matches!(
-                m.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":error/code"))),
-                Some(gc_coreform::Term::Str(s)) if s == "core/caps/denied"
-            )
+            && let Some(gc_coreform::Term::Str(code)) = m.get(&gc_coreform::TermOrdKey(
+                gc_coreform::Term::symbol(":error/code"),
+            ))
         {
-            exit_code = EX_CAPS_DENY;
+            if code == "core/caps/denied" {
+                exit_code = EX_CAPS_DENY;
+            } else if matches!(cmd, PkgCmd::Publish { .. })
+                && (code.starts_with("core/pkg/")
+                    || code.starts_with("core/refs/")
+                    || code == "core/store/not-found")
+            {
+                exit_code = EX_OBLIGATIONS;
+            }
         }
     } else if matches!(cmd, PkgCmd::Install { .. } | PkgCmd::Verify { .. })
         && let Some(false) = extract_pkg_ok_bool(&r.value)
@@ -4162,6 +4304,15 @@ fn cmd_pkg(
             PkgCmd::Import { .. } => extract_pkg_import_root(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
+            PkgCmd::Publish { .. } => extract_pkg_publish_commit(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| {
+                    if ok {
+                        "ok\n".to_string()
+                    } else {
+                        format!("{value}\n")
+                    }
+                }),
         }
     };
 
