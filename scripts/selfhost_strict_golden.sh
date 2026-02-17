@@ -109,11 +109,20 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   pkg_toml="$dst_dir/package.toml"
 
   if [[ "$name" == pkg_fail_* ]]; then
+    if "$GEN" test --pkg "$pkg_toml" >/dev/null 2>&1; then
+      fail "expected rust test failure for fixture ${name}"
+    fi
     if "$GEN" --selfhost-only --selfhost-artifact "$ART" test --pkg "$pkg_toml" >/dev/null 2>&1; then
       fail "expected strict selfhost test failure for fixture ${name}"
     fi
   else
-    "$GEN" --selfhost-only --selfhost-artifact "$ART" test --pkg "$pkg_toml" >/dev/null
+    rust_pack="$("$GEN" pack --pkg "$pkg_toml" | tr -d '\n')"
+    self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" pack --pkg "$pkg_toml" | tr -d '\n')"
+    [[ "$rust_pack" == "$self_pack" ]] || fail "native strict pack mismatch for fixture ${name}"
+
+    rust_test="$("$GEN" test --pkg "$pkg_toml" | tr -d '\n')"
+    self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" test --pkg "$pkg_toml" | tr -d '\n')"
+    [[ "$rust_test" == "$self_test" ]] || fail "native strict test mismatch for fixture ${name}"
   fi
 done
 

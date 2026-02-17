@@ -81,6 +81,7 @@ Acceptance gate:
   - progress: fixed a WASI/native divergence in `vcs hash` rust-engine parse precedence (now term-first, matching native CLI + selfhost handler) to eliminate cross-host hash-kind drift.
   - progress: strict smoke/golden scripts now enforce `vcs hash` parity for native and WASI rust baselines against strict selfhost outputs, and native-vs-WASI rust baseline parity.
   - progress: strict smoke script now enforces native+WASI parity for `pack` and `test` (rust baseline vs strict selfhost, plus native-vs-WASI rust baseline parity for package and acceptance artifacts).
+  - progress: strict golden package sweep now enforces rust-vs-selfhost artifact parity for `pack` and `test` on all passing `tests/spec/pkg_*` fixtures, and confirms both engines fail expected `pkg_fail_*` fixtures.
 
 ---
 
