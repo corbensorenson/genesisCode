@@ -135,6 +135,7 @@ Acceptance gate:
 - [ ] Implement lock generator/resolver in `.gc` per `docs/LOCK_GENERATOR_RULESET_v0.1.md`.
   - progress: added `pkg lock --strict` (native + WASI) and runner-level strict validation in `core/pkg::lock` for commit/snapshot/evidence integrity; strict lock now fails on obligation-bearing commits missing evidence.
   - progress: added executable WASI parity coverage for lock update semantics (`pin` vs tracked `ref`): pinned `commit:<hash>` dependencies remain stable while tracked `refs/...` dependencies advance deterministically on `pkg update`.
+  - progress: added executable WASI roundtrip coverage for `pkg init/add(lock by snapshot selector)/lock/install --frozen/verify`, including deterministic repeated-lock hash behavior and install failure on missing store artifacts.
 - [ ] Implement `.gpk` import/export planner in `.gc` (shallow + full history modes).
   - progress: upgraded `core/gpk::export` planner controls in capability runtime with explicit closure policy knobs:
     - root selectors now accept hashes plus `refs/...` / `ref:refs/...` (resolved through refs DB, policy-gated capability context)

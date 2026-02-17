@@ -64,6 +64,10 @@ fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String 
     String::from_utf8(out).unwrap().trim().to_string()
 }
 
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
+}
+
 fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &str) -> String {
     let snap_h = store_put(
         dir,
@@ -120,6 +124,111 @@ fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &st
         .success();
 
     commit_h
+}
+
+#[test]
+fn wasi_pkg_lock_install_verify_roundtrip_snapshot_selector() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let snapshot_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "mini" :pkg/version "0.0.1" :modules [] :obligations []}"#,
+        "mini_snapshot.gc",
+    );
+    assert!(is_hex64(&snapshot_h));
+
+    let lock_h1 = String::from_utf8(
+        cmd()
+            .current_dir(dir)
+            .args(["pkg", "--caps"])
+            .arg(&caps)
+            .args(["init", "--workspace", "ws"])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+    assert!(is_hex64(&lock_h1));
+
+    let lock_h2 = String::from_utf8(
+        cmd()
+            .current_dir(dir)
+            .args(["pkg", "--caps"])
+            .arg(&caps)
+            .args(["add"])
+            .arg(format!("mini@snapshot:{snapshot_h}"))
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+    assert!(is_hex64(&lock_h2));
+
+    let lock_h3 = String::from_utf8(
+        cmd()
+            .current_dir(dir)
+            .args(["pkg", "--caps"])
+            .arg(&caps)
+            .args(["lock"])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+    assert!(is_hex64(&lock_h3));
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock"])
+        .assert()
+        .success()
+        .stdout(format!("{lock_h3}\n"));
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["install", "--frozen"])
+        .assert()
+        .success()
+        .stdout("ok\n");
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["verify"])
+        .assert()
+        .success()
+        .stdout("ok\n");
+
+    let store_dir = dir.join(".genesis").join("store");
+    fs::remove_dir_all(&store_dir).unwrap();
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["install", "--frozen"])
+        .assert()
+        .failure()
+        .code(50);
 }
 
 #[test]
