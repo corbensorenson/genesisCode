@@ -133,6 +133,12 @@ Acceptance gate:
 - [ ] Implement lock generator/resolver in `.gc` per `docs/LOCK_GENERATOR_RULESET_v0.1.md`.
   - progress: added `pkg lock --strict` (native + WASI) and runner-level strict validation in `core/pkg::lock` for commit/snapshot/evidence integrity; strict lock now fails on obligation-bearing commits missing evidence.
 - [ ] Implement `.gpk` import/export planner in `.gc` (shallow + full history modes).
+  - progress: upgraded `core/gpk::export` planner controls in capability runtime with explicit closure policy knobs:
+    - root selectors now accept hashes plus `refs/...` / `ref:refs/...` (resolved through refs DB, policy-gated capability context)
+    - `--include-evidence {required|all|none}` now maps to deterministic full-history evidence inclusion behavior (root-only required vs full vs none)
+    - `--include-deps {none|locked|all}` now controls snapshot dependency-edge closure traversal (including lock-style `:deps` pointers)
+    - native + WASI CLI surfaces now expose `--root` alias and include flags, with parity wiring into `core/gpk::export` payloads
+    - regression coverage added for evidence exclusion, ref-root export, and dependency-closure mode differences (`none` vs `locked`)
 - [ ] Implement ref-policy gating in `.gc` per `docs/POLICY_DEFAULTS_v0.1.md`.
   - progress: moved `pkg publish` policy preflight/gating out of native CLI into capability runtime op `core/pkg::publish` (effect-runner path), so publish gate decisions are now enforced at the host capability boundary with deterministic logs.
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
@@ -226,6 +232,7 @@ Acceptance gate:
   - [x] strict smoke/golden parity paths explicitly opt into compatibility mode (`GENESIS_ALLOW_RUST_ENGINE=1`) where Rust baseline comparison is required.
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
   - [x] added `pkg lock --strict` surface (native + WASI) and strict resolver checks in `core/pkg::lock`, with regression tests for missing-evidence failure paths.
+  - [x] added `.gpk` export closure controls (ref-root resolution, evidence/dependency inclusion modes) and end-to-end CLI tests proving deterministic inclusion/exclusion behavior across shallow/full export modes.
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
   - [x] `pkg publish` now delegates policy preflight + ref-class obligation checks to runtime capability op `core/pkg::publish` (instead of native CLI-local preflight), preserving `EX_OBLIGATIONS` on publish gate failures.

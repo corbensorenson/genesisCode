@@ -131,6 +131,13 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("--set-ref"),
         "pkg import --help output missing --set-ref"
     );
+    let s = stdout_str(&["pkg", "export", "--help"]);
+    for needle in ["--include-evidence", "--include-deps", "--root"] {
+        assert!(
+            s.contains(needle),
+            "pkg export --help output missing {needle}"
+        );
+    }
 
     let s = stdout_str(&["vcs", "--help"]);
     assert!(

@@ -617,9 +617,12 @@ enum PkgCmd {
 
     /// Export a shallow `.gpk` bundle from a snapshot hash.
     Export {
-        /// Root hash (hex). For shallow bundles this is a snapshot hash; for full bundles this is usually a commit hash.
-        #[arg(long)]
-        snapshot: String,
+        /// Root identifier. Accepts a hash, `refs/...`, or `ref:refs/...`.
+        ///
+        /// For shallow bundles this must resolve to a snapshot hash.
+        /// For full bundles this is usually a commit hash.
+        #[arg(long = "snapshot", visible_alias = "root")]
+        root: String,
         /// Output bundle path (relative to capability base_dir).
         #[arg(long)]
         out: PathBuf,
@@ -631,6 +634,14 @@ enum PkgCmd {
         /// Parent depth when the root is a commit hash (0 = no parents).
         #[arg(long, default_value_t = 0)]
         depth: u64,
+
+        /// Evidence inclusion policy for full bundles: `required`, `all`, or `none`.
+        #[arg(long, default_value = "required")]
+        include_evidence: String,
+
+        /// Dependency inclusion policy for snapshot deps: `none`, `locked`, or `all`.
+        #[arg(long, default_value = "locked")]
+        include_deps: String,
 
         /// Include named refs in the bundle (requires `.gpk` v2).
         #[arg(long = "include-ref")]
@@ -2330,13 +2341,23 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             "pkg-snapshot",
         ),
         PkgCmd::Export {
-            snapshot,
+            root,
             out,
             full,
             depth,
+            include_evidence,
+            include_deps,
             include_refs,
         } => (
-            mk_gpk_export_program(snapshot, out, *full, *depth, include_refs),
+            mk_gpk_export_program(
+                root,
+                out,
+                *full,
+                *depth,
+                include_evidence,
+                include_deps,
+                include_refs,
+            ),
             "genesis/pkg-export-v0.1",
             "pkg-export",
         ),
@@ -3803,6 +3824,8 @@ fn mk_gpk_export_program(
     out: &Path,
     full: bool,
     depth: u64,
+    include_evidence: &str,
+    include_deps: &str,
     include_refs: &[String],
 ) -> Vec<Term> {
     let op = Term::list(vec![
@@ -3835,6 +3858,14 @@ fn mk_gpk_export_program(
             Term::Int((depth as i64).into()),
         );
     }
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":include-evidence")),
+        Term::Str(include_evidence.to_string()),
+    );
+    m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":include-deps")),
+        Term::Str(include_deps.to_string()),
+    );
     if !include_refs.is_empty() {
         m.insert(
             gc_coreform::TermOrdKey(Term::symbol(":refs")),

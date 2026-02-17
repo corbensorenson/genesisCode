@@ -4824,7 +4824,7 @@ fn call_capability(
             let refs = refs.ok_or_else(|| {
                 EffectsError::Log("missing refs db for core/gpk::export".to_string())
             });
-            let root_hex = match payload_gpk_root(payload) {
+            let root_spec = match payload_gpk_root(payload) {
                 Ok(s) => s,
                 Err(e) => {
                     return Ok(mk_error(
@@ -4862,7 +4862,41 @@ fn call_capability(
                     ));
                 }
             };
+            let mode = match mode.as_str() {
+                ":shallow" => GpkMode::Shallow,
+                ":full" => GpkMode::Full,
+                other => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("unsupported :mode {other}"),
+                        Some(op),
+                    ));
+                }
+            };
             let depth = payload_gpk_depth(payload).unwrap_or(0);
+            let include_evidence = match payload_gpk_include_evidence(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let include_deps = match payload_gpk_include_deps(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/gpk/bad-payload",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
             let embed_refnames = match payload_gpk_refs(payload) {
                 Ok(xs) => xs,
                 Err(e) => {
@@ -4875,52 +4909,72 @@ fn call_capability(
                 }
             };
 
-            let root_term = match store_get_term(store, &root_hex) {
+            let resolved_root = match resolve_gpk_root_for_export(
+                store,
+                refs.as_ref().ok().copied(),
+                &root_spec,
+                mode,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let root_term = match store_get_term(store, &resolved_root) {
                 Ok(t) => t,
                 Err(_) => {
                     return Ok(mk_error(
                         error_tok,
                         "core/store/not-found",
-                        format!("artifact not found: {root_hex}"),
+                        format!("artifact not found: {resolved_root}"),
                         Some(op),
                     ));
                 }
             };
 
-            let hashes: Vec<String> = if mode == ":shallow" {
-                // Root must be a snapshot.
-                let _snap = match gc_vcs::Snapshot::from_term(&root_term) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/gpk/bad-root",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
-                };
-                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-                match sync_closure_local(store, &root_hex, 0, &mut all, error_tok, op) {
-                    Ok(()) => {}
-                    Err(v) => return Ok(v),
-                }
-                all.into_iter().collect()
-            } else if mode == ":full" {
-                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-                match sync_closure_local(store, &root_hex, depth, &mut all, error_tok, op) {
-                    Ok(()) => {}
-                    Err(v) => return Ok(v),
-                }
-                all.into_iter().collect()
-            } else {
+            if mode == GpkMode::Shallow
+                && let Err(e) = gc_vcs::Snapshot::from_term(&root_term)
+            {
                 return Ok(mk_error(
                     error_tok,
-                    "core/gpk/bad-payload",
-                    format!("unsupported :mode {mode}"),
+                    "core/gpk/bad-root",
+                    format!("{e}"),
                     Some(op),
                 ));
+            }
+
+            let root_snapshot_for_locked_deps = match mode {
+                GpkMode::Shallow => Some(resolved_root.clone()),
+                GpkMode::Full => {
+                    if let Ok(c) = gc_vcs::Commit::from_term(&root_term) {
+                        Some(c.result)
+                    } else if gc_vcs::Snapshot::from_term(&root_term).is_ok() {
+                        Some(resolved_root.clone())
+                    } else {
+                        None
+                    }
+                }
             };
+            let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            match gpk_export_closure_local(
+                store,
+                &resolved_root,
+                GpkClosureOptions {
+                    depth: if mode == GpkMode::Shallow { 0 } else { depth },
+                    mode,
+                    include_evidence,
+                    include_deps,
+                    root_snapshot_for_locked_deps: root_snapshot_for_locked_deps.as_deref(),
+                },
+                &mut all,
+                error_tok,
+                op,
+            ) {
+                Ok(()) => {}
+                Err(v) => return Ok(v),
+            }
+            let hashes: Vec<String> = all.into_iter().collect();
 
             let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
             for h in &hashes {
@@ -4954,7 +5008,7 @@ fn call_capability(
                 entries.push((h.clone(), bytes));
             }
 
-            let root_b = match gc_vcs::hex_to_bytes32(&root_hex) {
+            let root_b = match gc_vcs::hex_to_bytes32(&resolved_root) {
                 Ok(b) => b,
                 Err(e) => {
                     return Ok(mk_error(error_tok, "core/gpk/bad-root", e, Some(op)));
@@ -5054,11 +5108,19 @@ fn call_capability(
             );
             m.insert(
                 TermOrdKey(Term::Symbol(":root".to_string())),
-                Term::Str(root_hex),
+                Term::Str(resolved_root),
             );
             m.insert(
                 TermOrdKey(Term::Symbol(":count".to_string())),
                 Term::Int((hashes.len() as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":include-evidence")),
+                Term::Symbol(include_evidence.to_symbol().to_string()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":include-deps")),
+                Term::Symbol(include_deps.to_symbol().to_string()),
             );
             if bundle_version == 2 {
                 let out_refs: Vec<Term> = refs_section
@@ -6017,6 +6079,64 @@ fn payload_gpk_mode(payload: &Term) -> Result<Option<String>, EffectsError> {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum GpkMode {
+    Shallow,
+    Full,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum GpkIncludeEvidence {
+    Required,
+    All,
+    None,
+}
+
+impl GpkIncludeEvidence {
+    fn from_token(s: &str) -> Option<Self> {
+        match s {
+            "required" | ":required" => Some(Self::Required),
+            "all" | ":all" => Some(Self::All),
+            "none" | ":none" => Some(Self::None),
+            _ => None,
+        }
+    }
+
+    fn to_symbol(self) -> &'static str {
+        match self {
+            Self::Required => ":required",
+            Self::All => ":all",
+            Self::None => ":none",
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum GpkIncludeDeps {
+    None,
+    Locked,
+    All,
+}
+
+impl GpkIncludeDeps {
+    fn from_token(s: &str) -> Option<Self> {
+        match s {
+            "none" | ":none" => Some(Self::None),
+            "locked" | ":locked" => Some(Self::Locked),
+            "all" | ":all" => Some(Self::All),
+            _ => None,
+        }
+    }
+
+    fn to_symbol(self) -> &'static str {
+        match self {
+            Self::None => ":none",
+            Self::Locked => ":locked",
+            Self::All => ":all",
+        }
+    }
+}
+
 fn payload_gpk_depth(payload: &Term) -> Option<u64> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":depth"))) {
@@ -6054,6 +6174,58 @@ fn payload_gpk_refs(payload: &Term) -> Result<Vec<String>, EffectsError> {
         }
     }
     Ok(out)
+}
+
+fn payload_gpk_include_evidence(payload: &Term) -> Result<GpkIncludeEvidence, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m.get(&TermOrdKey(Term::symbol(":include-evidence")));
+    let Some(v) = v else {
+        return Ok(GpkIncludeEvidence::Required);
+    };
+    let token = match v {
+        Term::Str(s) | Term::Symbol(s) => s.as_str(),
+        other => {
+            return Err(EffectsError::BadPayload(format!(
+                ":include-evidence must be symbol/string, got {}",
+                print_term(other)
+            )));
+        }
+    };
+    GpkIncludeEvidence::from_token(token).ok_or_else(|| {
+        EffectsError::BadPayload(format!(
+            ":include-evidence must be one of required|all|none, got {token}"
+        ))
+    })
+}
+
+fn payload_gpk_include_deps(payload: &Term) -> Result<GpkIncludeDeps, EffectsError> {
+    let Term::Map(m) = payload else {
+        return Err(EffectsError::BadPayload(
+            "payload must be a map".to_string(),
+        ));
+    };
+    let v = m.get(&TermOrdKey(Term::symbol(":include-deps")));
+    let Some(v) = v else {
+        return Ok(GpkIncludeDeps::Locked);
+    };
+    let token = match v {
+        Term::Str(s) | Term::Symbol(s) => s.as_str(),
+        other => {
+            return Err(EffectsError::BadPayload(format!(
+                ":include-deps must be symbol/string, got {}",
+                print_term(other)
+            )));
+        }
+    };
+    GpkIncludeDeps::from_token(token).ok_or_else(|| {
+        EffectsError::BadPayload(format!(
+            ":include-deps must be one of none|locked|all, got {token}"
+        ))
+    })
 }
 
 fn payload_data(payload: &Term) -> Result<Vec<u8>, EffectsError> {
@@ -7338,6 +7510,233 @@ fn sync_closure_local(
         if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
             for x in s.shallow_refs() {
                 q.push_back((x, dleft));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn snapshot_dep_refs_from_term(t: &Term) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let Term::Map(m) = t else {
+        return out;
+    };
+    let Some(Term::Symbol(ty)) = m.get(&TermOrdKey(Term::symbol(":type"))) else {
+        return out;
+    };
+    if ty != ":vcs/snapshot" {
+        return out;
+    }
+    let Some(Term::Vector(deps)) = m.get(&TermOrdKey(Term::symbol(":deps"))) else {
+        return out;
+    };
+    for dep in deps {
+        let Term::Map(dm) = dep else {
+            continue;
+        };
+        for key in [":dep/commit", ":dep/snapshot", ":commit", ":snapshot"] {
+            let Some(Term::Str(h)) = dm.get(&TermOrdKey(Term::symbol(key))) else {
+                continue;
+            };
+            if gc_vcs::validate_hex_hash(h).is_ok() {
+                out.push(h.to_ascii_lowercase());
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn resolve_gpk_root_for_export(
+    store: &ArtifactStore,
+    refs: Option<&RefsDb>,
+    root_spec: &str,
+    mode: GpkMode,
+    error_tok: SealId,
+    op: &str,
+) -> Result<String, Value> {
+    let mut root = root_spec.trim().to_string();
+    if let Some(s) = root.strip_prefix("h:") {
+        root = s.to_string();
+    }
+    if gc_vcs::validate_hex_hash(&root).is_ok() {
+        return Ok(root.to_ascii_lowercase());
+    }
+    if let Some(s) = root.strip_prefix("ref:") {
+        root = s.to_string();
+    }
+    if !root.starts_with("refs/") {
+        return Err(mk_error(
+            error_tok,
+            "core/gpk/bad-root",
+            "root must be a hash or refs/...".to_string(),
+            Some(op),
+        ));
+    }
+    let refs = refs.ok_or_else(|| {
+        mk_error(
+            error_tok,
+            "core/gpk/missing-refs-db",
+            "refs db required when root is a ref".to_string(),
+            Some(op),
+        )
+    })?;
+    let resolved = refs
+        .get(&root)
+        .map_err(|e| mk_error(error_tok, "core/gpk/refs-io-error", e.to_string(), Some(op)))?;
+    let Some(hash) = resolved else {
+        return Err(mk_error(
+            error_tok,
+            "core/gpk/ref-not-found",
+            format!("ref not found: {root}"),
+            Some(op),
+        ));
+    };
+    let hash = hash.to_ascii_lowercase();
+    let root_term = match store_get_term(store, &hash) {
+        Ok(t) => t,
+        Err(_) => {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {hash}"),
+                Some(op),
+            ));
+        }
+    };
+    if mode == GpkMode::Shallow && gc_vcs::Snapshot::from_term(&root_term).is_err() {
+        return Err(mk_error(
+            error_tok,
+            "core/gpk/bad-root",
+            "shallow export root must resolve to a :vcs/snapshot".to_string(),
+            Some(op),
+        ));
+    }
+    Ok(hash)
+}
+
+#[derive(Copy, Clone, Debug)]
+struct GpkClosureOptions<'a> {
+    depth: u64,
+    mode: GpkMode,
+    include_evidence: GpkIncludeEvidence,
+    include_deps: GpkIncludeDeps,
+    root_snapshot_for_locked_deps: Option<&'a str>,
+}
+
+fn gpk_export_closure_local(
+    store: &ArtifactStore,
+    root: &str,
+    opts: GpkClosureOptions<'_>,
+    out: &mut std::collections::BTreeSet<String>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    use std::collections::{HashSet, VecDeque};
+
+    let mut q: VecDeque<(String, u64, bool)> = VecDeque::new();
+    q.push_back((root.to_string(), opts.depth, true));
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut obj_count: u64 = 0;
+
+    while let Some((h, dleft, is_root)) = q.pop_front() {
+        if !seen.insert(h.clone()) {
+            continue;
+        }
+        obj_count = obj_count.saturating_add(1);
+        if obj_count > 50_000 {
+            return Err(mk_error(
+                error_tok,
+                "core/sync/too-many-objects",
+                "closure exceeded 50k objects".to_string(),
+                Some(op),
+            ));
+        }
+        if !store.path_for(&h).exists() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {h}"),
+                Some(op),
+            ));
+        }
+        if store.verify_hex(&h).is_err() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/corruption",
+                format!("artifact store corruption: {h}"),
+                Some(op),
+            ));
+        }
+        out.insert(h.clone());
+
+        let t = match store_get_term(store, &h) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+            if let Some(b) = c.base {
+                q.push_back((b, dleft, false));
+            }
+            q.push_back((c.patch, dleft, false));
+            q.push_back((c.result, dleft, false));
+            let include_commit_evidence = match opts.include_evidence {
+                GpkIncludeEvidence::None => false,
+                GpkIncludeEvidence::Required => is_root,
+                GpkIncludeEvidence::All => true,
+            };
+            if include_commit_evidence {
+                for x in c.evidence {
+                    q.push_back((x, dleft, false));
+                }
+            }
+            for x in c.attestations {
+                q.push_back((x, dleft, false));
+            }
+            if opts.mode == GpkMode::Full && dleft > 0 {
+                for p in c.parents {
+                    q.push_back((p, dleft - 1, false));
+                }
+            }
+            continue;
+        }
+        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
+            for x in p.refs() {
+                q.push_back((x, dleft, false));
+            }
+            continue;
+        }
+        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
+            if opts.include_evidence != GpkIncludeEvidence::None {
+                for x in e.refs() {
+                    q.push_back((x, dleft, false));
+                }
+            }
+            continue;
+        }
+        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
+            for x in c.refs() {
+                q.push_back((x, dleft, false));
+            }
+            continue;
+        }
+        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
+            for x in s.shallow_refs() {
+                q.push_back((x, dleft, false));
+            }
+            let follow_deps = match opts.include_deps {
+                GpkIncludeDeps::None => false,
+                GpkIncludeDeps::Locked => opts
+                    .root_snapshot_for_locked_deps
+                    .map(|hh| hh.eq_ignore_ascii_case(&h))
+                    .unwrap_or(false),
+                GpkIncludeDeps::All => true,
+            };
+            if follow_deps {
+                for dep in snapshot_dep_refs_from_term(&t) {
+                    q.push_back((dep, dleft, false));
+                }
             }
         }
     }
