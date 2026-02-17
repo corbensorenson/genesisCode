@@ -55,6 +55,44 @@ TOML
 native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/native.strict.gclog" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/native.strict.gclog" >/dev/null
 
+# capability command-group strict selfhost smoke (native CLI)
+cat >"$TMP_DIR/caps.effects.toml" <<TOML
+allow = [
+  "core/store::put",
+  "core/refs::get",
+  "core/pkg::init",
+  "core/pkg::list",
+  "core/gc::pin",
+]
+
+[store]
+dir = "$TMP_DIR/store.effects"
+
+[refs]
+path = "$TMP_DIR/refs.effects.gc"
+
+[op."core/pkg::init"]
+base_dir = "$TMP_DIR"
+create_dirs = true
+
+[op."core/pkg::list"]
+base_dir = "$TMP_DIR"
+
+[op."core/gc::pin"]
+base_dir = "$TMP_DIR"
+create_dirs = true
+TOML
+
+cat >"$TMP_DIR/value.gc" <<'GC'
+{:smoke true}
+GC
+
+native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --input "$TMP_DIR/value.gc" >/dev/null
+native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/main >/dev/null
+native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke --lock genesis.lock >/dev/null
+native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.lock >/dev/null
+native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/pins.toml >/dev/null
+
 # package strict selfhost smoke (native CLI)
 PKG_N="$TMP_DIR/pkg_native"
 mkdir -p "$PKG_N"
@@ -105,6 +143,11 @@ if [[ "$N_EVAL" != "$W_N_EVAL" ]]; then
 fi
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
+wasi_native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --input "$TMP_DIR/value.gc" >/dev/null
+wasi_native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/main >/dev/null
+wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke-wasi --lock genesis.wasi.lock >/dev/null
+wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.wasi.lock >/dev/null
+wasi_native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/wasi.pins.toml >/dev/null
 W_N_VCS_HASH="$(wasi_native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
 W_S_VCS_HASH="$(wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost | tr -d '\n')"
 if [[ "$W_N_VCS_HASH" != "$W_S_VCS_HASH" ]]; then
