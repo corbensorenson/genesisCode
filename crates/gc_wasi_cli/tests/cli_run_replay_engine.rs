@@ -71,6 +71,9 @@ fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
     let rust_s = String::from_utf8(rust_out).unwrap();
     let selfhost_s = String::from_utf8(selfhost_out).unwrap();
     assert_eq!(rust_s.trim(), selfhost_s.trim());
+    let rust_log_s = std::fs::read_to_string(&rust_log).unwrap();
+    let selfhost_log_s = std::fs::read_to_string(&selfhost_log).unwrap();
+    assert_eq!(rust_log_s, selfhost_log_s);
 }
 
 #[test]
@@ -168,4 +171,86 @@ fn run_selfhost_engine_surfaces_parse_errors() {
         .failure()
         .code(10)
         .stderr(predicate::str::contains("core/parse/"));
+}
+
+#[test]
+fn run_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("prog.gc");
+    let caps = dir.path().join("caps.toml");
+    let bad_artifact = dir.path().join("bad_toolchain.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 1))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+    std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-artifact",
+            bad_artifact.to_str().unwrap(),
+            "run",
+            file.to_str().unwrap(),
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "selfhost artifact bootstrap required",
+        ));
+}
+
+#[test]
+fn replay_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("prog.gc");
+    let caps = dir.path().join("caps.toml");
+    let bad_artifact = dir.path().join("bad_toolchain.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 7))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+    std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
+    let log = dir.path().join("out.gclog");
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--caps",
+            caps.to_str().unwrap(),
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-artifact",
+            bad_artifact.to_str().unwrap(),
+            "replay",
+            file.to_str().unwrap(),
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "selfhost artifact bootstrap required",
+        ));
 }
