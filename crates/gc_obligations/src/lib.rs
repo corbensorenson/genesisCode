@@ -605,6 +605,24 @@ fn selfhost_parse_canonicalize_module(
     env: &Env,
     src: &str,
 ) -> Result<Vec<Term>, ObligationError> {
+    if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
+        let out = canon_src_fn
+            .apply(ctx, Value::Data(Term::Str(src.to_string())))
+            .map_err(|e| ObligationError::Module(e.to_string()))?;
+        if let Some(e) = extract_protocol_error(ctx, &out) {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli canonicalize-module-src failed: {e}"
+            )));
+        }
+        let Some(Term::Vector(forms)) = out.as_data() else {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli canonicalize-module-src returned non-vector: {}",
+                out.debug_repr()
+            )));
+        };
+        return Ok(forms.clone());
+    }
+
     let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
         ObligationError::Module("missing binding selfhost/parse::parse-module".to_string())
     })?;
@@ -4301,5 +4319,36 @@ mod tests {
         assert!(format!("{err}").contains("Rust frontend is disabled by default"));
         enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, true)
             .expect("rust frontend should be permitted when compatibility mode is enabled");
+    }
+
+    #[test]
+    fn selfhost_parse_prefers_core_cli_canonicalize_handler_when_present() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        // Shadow the core/cli binding with an invalid value. If the function prefers
+        // core/cli when present, this must fail before falling back to low-level bindings.
+        env.set_local(
+            "core/cli::canonicalize-module-src",
+            Value::Data(Term::Str("shadowed".to_string())),
+        );
+
+        let err =
+            selfhost_parse_canonicalize_module(&mut ctx, &env, "(def x 1)\n x\n").unwrap_err();
+        assert!(
+            format!("{err}").contains("not callable"),
+            "expected core/cli path to be attempted first, got: {err}"
+        );
     }
 }

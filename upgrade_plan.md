@@ -42,7 +42,7 @@ A fast-path cutover is complete when all of the following are true:
 - [x] Define initial `core/cli::*` contract interface for frontend parse/canon/fmt/hash.
 - [ ] Route core commands through `.gc` handlers by default:
   - [x] `fmt`, `eval` route through `core/cli::*` frontend handlers (with compatibility fallback).
-  - [ ] `test`, `typecheck`, `optimize`, `pack`, `apply-patch`
+  - [x] `test`, `typecheck`, `optimize`, `pack`, `apply-patch` selfhost frontend paths now prefer `core/cli::*` canonicalization handlers.
 - [ ] Route effectful command groups through `.gc` command contracts:
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`
   - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
@@ -83,7 +83,7 @@ Acceptance gate:
 - [x] 1) Implement `core/cli::*` interface in `.gc` and wire `fmt/eval` through it.
 - [x] 2) Regenerate `selfhost/toolchain.gc` and add native+WASI regression tests that require `selfhost/cli_coreform_v1.gc` with passing stage1 gate.
 - [x] 3) Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch commands, plus strict-mode guard tests.
-- [ ] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
+- [x] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
 - [x] 5) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
 - [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
