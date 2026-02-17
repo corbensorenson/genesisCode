@@ -51,7 +51,7 @@ A fast-path cutover is complete when all of the following are true:
 - [x] Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch paths to support deterministic AI parity checks.
 
 Acceptance gate:
-- [ ] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
+- [x] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
 
 ### B) `.gc` Semantic Source-of-Truth
 - [ ] Finalize self-host parser/canon/printer/hash as canonical source of truth.
@@ -90,6 +90,7 @@ Acceptance gate:
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
+- [x] 11) Strengthen strict smoke/golden parity harnesses to force explicit `--coreform-frontend rust|selfhost` selection for package/obligation/patch command families.
 
 ---
 

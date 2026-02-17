@@ -29,9 +29,9 @@ check_typecheck_parity() {
   self_out="$TMP_DIR/typecheck.${name}.selfhost.out"
 
   set +e
-  "$GEN" typecheck --pkg "$pkg_toml" >"$rust_out" 2>&1
+  "$GEN" --coreform-frontend rust typecheck --pkg "$pkg_toml" >"$rust_out" 2>&1
   rust_code=$?
-  "$GEN" --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$pkg_toml" >"$self_out" 2>&1
+  "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost typecheck --pkg "$pkg_toml" >"$self_out" 2>&1
   self_code=$?
   set -e
 
@@ -135,19 +135,19 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   check_typecheck_parity "$pkg_toml" "$name"
 
   if [[ "$name" == pkg_fail_* ]]; then
-    if "$GEN" test --pkg "$pkg_toml" >/dev/null 2>&1; then
+    if "$GEN" --coreform-frontend rust test --pkg "$pkg_toml" >/dev/null 2>&1; then
       fail "expected rust test failure for fixture ${name}"
     fi
-    if "$GEN" --selfhost-only --selfhost-artifact "$ART" test --pkg "$pkg_toml" >/dev/null 2>&1; then
+    if "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" >/dev/null 2>&1; then
       fail "expected strict selfhost test failure for fixture ${name}"
     fi
   else
-    rust_pack="$("$GEN" pack --pkg "$pkg_toml" | tr -d '\n')"
-    self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" pack --pkg "$pkg_toml" | tr -d '\n')"
+    rust_pack="$("$GEN" --coreform-frontend rust pack --pkg "$pkg_toml" | tr -d '\n')"
+    self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$pkg_toml" | tr -d '\n')"
     [[ "$rust_pack" == "$self_pack" ]] || fail "native strict pack mismatch for fixture ${name}"
 
-    rust_test="$("$GEN" test --pkg "$pkg_toml" | tr -d '\n')"
-    self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" test --pkg "$pkg_toml" | tr -d '\n')"
+    rust_test="$("$GEN" --coreform-frontend rust test --pkg "$pkg_toml" | tr -d '\n')"
+    self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" | tr -d '\n')"
     [[ "$rust_test" == "$self_test" ]] || fail "native strict test mismatch for fixture ${name}"
   fi
 done
@@ -155,15 +155,15 @@ done
 # Ensure strict selfhost package paths in WASI remain healthy on canonical baseline fixture.
 PKG_W="$TMP_DIR/pkg_wasi"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W"
-wasi_rust_pack="$("$GWASI" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
-wasi_self_pack="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_rust_pack="$("$GWASI" --coreform-frontend rust pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_pack="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_pack" == "$wasi_self_pack" ]] || fail "WASI strict pack mismatch for pkg_basic fixture"
 
-wasi_rust_test="$("$GWASI" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
-wasi_self_test="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_rust_test="$("$GWASI" --coreform-frontend rust test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_test="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_test" == "$wasi_self_test" ]] || fail "WASI strict test mismatch for pkg_basic fixture"
-wasi_rust_typecheck="$("$GWASI" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
-wasi_self_typecheck="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_rust_typecheck="$("$GWASI" --coreform-frontend rust typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_typecheck="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_typecheck" == "$wasi_self_typecheck" ]] || fail "WASI strict typecheck mismatch for pkg_basic fixture"
 
 # Strict apply-patch + dashboard on native and WASI paths.
@@ -171,16 +171,16 @@ PKG_N_R="$TMP_DIR/pkg_native_rust"
 PKG_N_S="$TMP_DIR/pkg_native_selfhost"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N_R"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N_S"
-rust_patch="$("$GEN" apply-patch "$PKG_N_R/pure.gcpatch" --pkg "$PKG_N_R/package.toml" | tr -d '\n')"
-self_patch="$("$GEN" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N_S/pure.gcpatch" --pkg "$PKG_N_S/package.toml" | tr -d '\n')"
+rust_patch="$("$GEN" --coreform-frontend rust apply-patch "$PKG_N_R/pure.gcpatch" --pkg "$PKG_N_R/package.toml" | tr -d '\n')"
+self_patch="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost apply-patch "$PKG_N_S/pure.gcpatch" --pkg "$PKG_N_S/package.toml" | tr -d '\n')"
 [[ "$rust_patch" == "$self_patch" ]] || fail "native strict apply-patch mismatch for pkg_basic fixture"
 
 PKG_W_R="$TMP_DIR/pkg_wasi_rust"
 PKG_W_S="$TMP_DIR/pkg_wasi_selfhost"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W_R"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W_S"
-wasi_rust_patch="$("$GWASI" apply-patch "$PKG_W_R/pure.gcpatch" --pkg "$PKG_W_R/package.toml" | tr -d '\n')"
-wasi_self_patch="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_W_S/pure.gcpatch" --pkg "$PKG_W_S/package.toml" | tr -d '\n')"
+wasi_rust_patch="$("$GWASI" --coreform-frontend rust apply-patch "$PKG_W_R/pure.gcpatch" --pkg "$PKG_W_R/package.toml" | tr -d '\n')"
+wasi_self_patch="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost apply-patch "$PKG_W_S/pure.gcpatch" --pkg "$PKG_W_S/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_patch" == "$wasi_self_patch" ]] || fail "WASI strict apply-patch mismatch for pkg_basic fixture"
 [[ "$rust_patch" == "$wasi_rust_patch" ]] || fail "WASI rust apply-patch mismatch for pkg_basic fixture"
 

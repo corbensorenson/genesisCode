@@ -135,20 +135,20 @@ cp tests/spec/pkg_basic/caps.toml "$PKG_N/caps.toml"
 cp tests/spec/pkg_basic/package.toml "$PKG_N/package.toml"
 cp tests/spec/pkg_basic/pure.gcpatch "$PKG_N/pure.gcpatch"
 
-N_PACK="$(native pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
-S_PACK="$(native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
+N_PACK="$(native --coreform-frontend rust pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_PACK="$(native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$PKG_N/package.toml" | tr -d '\n')"
 if [[ "$N_PACK" != "$S_PACK" ]]; then
   echo "native strict pack mismatch rust=$N_PACK strict=$S_PACK" >&2
   exit 1
 fi
-N_TYPECHECK="$(native typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
-S_TYPECHECK="$(native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
+N_TYPECHECK="$(native --coreform-frontend rust typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_TYPECHECK="$(native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
 if [[ "$N_TYPECHECK" != "$S_TYPECHECK" ]]; then
   echo "native strict typecheck mismatch native=$N_TYPECHECK strict=$S_TYPECHECK" >&2
   exit 1
 fi
-N_TEST="$(native test --pkg "$PKG_N/package.toml" | tr -d '\n')"
-S_TEST="$(native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.toml" | tr -d '\n')"
+N_TEST="$(native --coreform-frontend rust test --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_TEST="$(native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$PKG_N/package.toml" | tr -d '\n')"
 if [[ "$N_TEST" != "$S_TEST" ]]; then
   echo "native strict test mismatch rust=$N_TEST strict=$S_TEST" >&2
   exit 1
@@ -162,8 +162,8 @@ for P in "$PKG_APPLY_N_BASE" "$PKG_APPLY_N_STRICT"; do
   cp tests/spec/pkg_basic/package.toml "$P/package.toml"
   cp tests/spec/pkg_basic/pure.gcpatch "$P/pure.gcpatch"
 done
-N_APPLY="$(native apply-patch "$PKG_APPLY_N_BASE/pure.gcpatch" --pkg "$PKG_APPLY_N_BASE/package.toml" | tr -d '\n')"
-S_APPLY="$(native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_APPLY_N_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_N_STRICT/package.toml" | tr -d '\n')"
+N_APPLY="$(native --coreform-frontend rust apply-patch "$PKG_APPLY_N_BASE/pure.gcpatch" --pkg "$PKG_APPLY_N_BASE/package.toml" | tr -d '\n')"
+S_APPLY="$(native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost apply-patch "$PKG_APPLY_N_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_N_STRICT/package.toml" | tr -d '\n')"
 if [[ "$N_APPLY" != "$S_APPLY" ]]; then
   echo "native strict apply-patch mismatch rust=$N_APPLY strict=$S_APPLY" >&2
   exit 1
@@ -249,8 +249,8 @@ cp tests/spec/pkg_basic/basic.gc "$PKG_W/basic.gc"
 cp tests/spec/pkg_basic/caps.toml "$PKG_W/caps.toml"
 cp tests/spec/pkg_basic/package.toml "$PKG_W/package.toml"
 cp tests/spec/pkg_basic/pure.gcpatch "$PKG_W/pure.gcpatch"
-W_N_PACK="$(wasi_native pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
-W_S_PACK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_N_PACK="$(wasi_native --coreform-frontend rust pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_PACK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
 if [[ "$W_N_PACK" != "$W_S_PACK" ]]; then
   echo "WASI strict pack mismatch rust=$W_N_PACK strict=$W_S_PACK" >&2
   exit 1
@@ -259,8 +259,8 @@ if [[ "$N_PACK" != "$W_N_PACK" ]]; then
   echo "WASI rust pack mismatch native=$N_PACK wasi=$W_N_PACK" >&2
   exit 1
 fi
-W_N_TYPECHECK="$(wasi_native typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
-W_S_TYPECHECK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_N_TYPECHECK="$(wasi_native --coreform-frontend rust typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_TYPECHECK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
 if [[ "$W_N_TYPECHECK" != "$W_S_TYPECHECK" ]]; then
   echo "WASI strict typecheck mismatch rust=$W_N_TYPECHECK strict=$W_S_TYPECHECK" >&2
   exit 1
@@ -269,8 +269,8 @@ if [[ "$N_TYPECHECK" != "$W_N_TYPECHECK" ]]; then
   echo "WASI rust typecheck mismatch native=$N_TYPECHECK wasi=$W_N_TYPECHECK" >&2
   exit 1
 fi
-W_N_TEST="$(wasi_native test --pkg "$PKG_W/package.toml" | tr -d '\n')"
-W_S_TEST="$(wasi_native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_N_TEST="$(wasi_native --coreform-frontend rust test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_TEST="$(wasi_native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 if [[ "$W_N_TEST" != "$W_S_TEST" ]]; then
   echo "WASI strict test mismatch rust=$W_N_TEST strict=$W_S_TEST" >&2
   exit 1
@@ -288,8 +288,8 @@ for P in "$PKG_APPLY_W_BASE" "$PKG_APPLY_W_STRICT"; do
   cp tests/spec/pkg_basic/package.toml "$P/package.toml"
   cp tests/spec/pkg_basic/pure.gcpatch "$P/pure.gcpatch"
 done
-W_N_APPLY="$(wasi_native apply-patch "$PKG_APPLY_W_BASE/pure.gcpatch" --pkg "$PKG_APPLY_W_BASE/package.toml" | tr -d '\n')"
-W_S_APPLY="$(wasi_native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_APPLY_W_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_W_STRICT/package.toml" | tr -d '\n')"
+W_N_APPLY="$(wasi_native --coreform-frontend rust apply-patch "$PKG_APPLY_W_BASE/pure.gcpatch" --pkg "$PKG_APPLY_W_BASE/package.toml" | tr -d '\n')"
+W_S_APPLY="$(wasi_native --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost apply-patch "$PKG_APPLY_W_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_W_STRICT/package.toml" | tr -d '\n')"
 if [[ "$W_N_APPLY" != "$W_S_APPLY" ]]; then
   echo "WASI strict apply-patch mismatch rust=$W_N_APPLY strict=$W_S_APPLY" >&2
   exit 1
