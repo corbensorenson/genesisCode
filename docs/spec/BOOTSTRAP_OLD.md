@@ -3,9 +3,9 @@
 This document records which bootstrap-era artifacts have been archived and which
 ones remain required for reproducible host/runtime verification.
 
-## Archived (`bootstrap_old/`)
+## Archived (`old_bootstrap/`)
 
-- `bootstrap_old/scripts/build_wasi.sh`
+- `old_bootstrap/scripts/build_wasi.sh`
   - reason: legacy convenience wrapper only
   - replacement:
     - direct build command:
@@ -32,7 +32,7 @@ ones remain required for reproducible host/runtime verification.
 
 ## Policy for future archival
 
-Move artifacts to `bootstrap_old/` only when all are true:
+Move artifacts to `old_bootstrap/` only when all are true:
 
 1. The self-hosted or direct command path is available and tested.
 2. CI no longer references the archived path.

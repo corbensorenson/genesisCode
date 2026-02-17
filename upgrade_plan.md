@@ -78,7 +78,7 @@ Acceptance gate:
 - [ ] Native + WASI parity suites remain green when Rust semantic fallbacks are removed from default path.
 
 ### C) Bootstrap Extraction (`/old_bootstrap`)
-- [ ] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.
+- [x] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.
 - [ ] Exclude `/old_bootstrap` from default build/test paths.
 - [ ] Keep compatibility profile for historical comparisons only.
 
