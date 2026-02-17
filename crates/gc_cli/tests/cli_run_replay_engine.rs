@@ -1,0 +1,171 @@
+use assert_cmd::cargo::cargo_bin_cmd;
+use predicates::prelude::*;
+use tempfile::tempdir;
+
+fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
+    let artifact = dir.join("selfhost_toolchain.gc");
+    cargo_bin_cmd!("genesis")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact)
+        .assert()
+        .success();
+    artifact
+}
+
+#[test]
+fn run_selfhost_engine_matches_rust_engine_output_for_pure_effect_program() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("prog.gc");
+    let caps = dir.path().join("caps.toml");
+    let artifact = build_selfhost_artifact(dir.path());
+
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 42))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+
+    let rust_log = dir.path().join("rust.gclog");
+    let rust_out = cargo_bin_cmd!("genesis")
+        .args([
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--caps",
+            caps.to_str().unwrap(),
+            "--log",
+            rust_log.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let selfhost_log = dir.path().join("selfhost.gclog");
+    let selfhost_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--no-step-limit",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+            "--log",
+            selfhost_log.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let rust_s = String::from_utf8(rust_out).unwrap();
+    let selfhost_s = String::from_utf8(selfhost_out).unwrap();
+    assert_eq!(rust_s.trim(), selfhost_s.trim());
+}
+
+#[test]
+fn replay_selfhost_engine_matches_rust_engine_output() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("prog.gc");
+    let caps = dir.path().join("caps.toml");
+    let artifact = build_selfhost_artifact(dir.path());
+
+    std::fs::write(
+        &file,
+        r#"
+          (def prog (core/effect::pure 7))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+
+    let log = dir.path().join("out.gclog");
+    cargo_bin_cmd!("genesis")
+        .args([
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--caps",
+            caps.to_str().unwrap(),
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let rust_out = cargo_bin_cmd!("genesis")
+        .args([
+            "replay",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let selfhost_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--no-step-limit",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "replay",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--log",
+            log.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let rust_s = String::from_utf8(rust_out).unwrap();
+    let selfhost_s = String::from_utf8(selfhost_out).unwrap();
+    assert_eq!(rust_s.trim(), selfhost_s.trim());
+}
+
+#[test]
+fn run_selfhost_engine_surfaces_parse_errors() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("bad.gc");
+    let caps = dir.path().join("caps.toml");
+    let artifact = build_selfhost_artifact(dir.path());
+    std::fs::write(&file, "(def prog (core/effect::pure 1)").unwrap();
+    std::fs::write(&caps, "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--no-step-limit",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(10)
+        .stderr(predicate::str::contains("core/parse/"));
+}

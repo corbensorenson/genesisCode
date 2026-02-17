@@ -24,7 +24,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - commands with `--engine` must use `--engine selfhost`
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
-  - Current native routed set: `fmt`, `eval`, `explain`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
+  - Current native routed set: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
   - Toolchain artifact resolution still follows:
@@ -49,6 +49,12 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize for the input module and self-hosted parse for `--contract`/`--msg`.
+- `genesis run <file> --caps <policy.toml> [--log <out.gclog>] [--engine rust|selfhost]`
+  - when `--engine` is omitted, engine defaults to `selfhost`.
+  - `--engine selfhost` runs self-hosted parse/canonicalize before evaluating the effect program.
+- `genesis replay <file> --log <log.gclog> [--store <dir>] [--engine rust|selfhost]`
+  - when `--engine` is omitted, engine defaults to `selfhost`.
+  - `--engine selfhost` runs self-hosted parse/canonicalize before replaying against the deterministic log.
 - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
   - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.

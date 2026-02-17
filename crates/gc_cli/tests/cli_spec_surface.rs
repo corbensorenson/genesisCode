@@ -79,6 +79,15 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         "explain --help output missing --engine"
     );
 
+    let s = stdout_str(&["run", "--help"]);
+    assert!(s.contains("--engine"), "run --help output missing --engine");
+
+    let s = stdout_str(&["replay", "--help"]);
+    assert!(
+        s.contains("--engine"),
+        "replay --help output missing --engine"
+    );
+
     let s = stdout_str(&["optimize", "--help"]);
     assert!(
         s.contains("--engine"),

@@ -144,6 +144,10 @@ enum Cmd {
     /// Run an effect program with a capability policy and emit a deterministic log.
     Run {
         file: PathBuf,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
         /// Capability policy TOML (deny-by-default allowlist).
         #[arg(long)]
         caps: PathBuf,
@@ -155,6 +159,10 @@ enum Cmd {
     /// Replay an effect program deterministically from a log (hard-fails on mismatch).
     Replay {
         file: PathBuf,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
         /// Input effect log path (.gclog).
         #[arg(long)]
         log: PathBuf,
@@ -994,8 +1002,18 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             contract,
             msg,
         } => cmd_explain(cli, file, *engine, contract, msg),
-        Cmd::Run { file, caps, log } => cmd_run(cli, file, caps, log.as_deref()),
-        Cmd::Replay { file, log, store } => cmd_replay(cli, file, log, store.as_deref()),
+        Cmd::Run {
+            file,
+            engine,
+            caps,
+            log,
+        } => cmd_run(cli, file, *engine, caps, log.as_deref()),
+        Cmd::Replay {
+            file,
+            engine,
+            log,
+            store,
+        } => cmd_replay(cli, file, *engine, log, store.as_deref()),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
         Cmd::SelfhostArtifact {
@@ -1207,6 +1225,8 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
         Cmd::Explain { engine, .. } => enforce_selfhost_engine(cli, "explain", *engine),
+        Cmd::Run { engine, .. } => enforce_selfhost_engine(cli, "run", *engine),
+        Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Optimize { engine, .. } => enforce_selfhost_engine(cli, "optimize", *engine),
         Cmd::Typecheck { .. } => Ok(()),
         Cmd::Test { .. } => Ok(()),
@@ -1246,7 +1266,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -1835,23 +1855,48 @@ fn cmd_explain(
     })
 }
 
-fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<CmdOut, CliError> {
+fn cmd_run(
+    cli: &Cli,
+    file: &Path,
+    engine: Option<FmtEngine>,
+    caps: &Path,
+    log: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "run", engine)?;
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms =
-        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let (mut ctx, mut env, forms) = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            (ctx, prelude.env, forms)
+        }
+        FmtEngine::Selfhost => {
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+            ctx.steps = 0;
+            ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+
+            ctx.steps = 0;
+            ctx.step_limit = resolved_step_limit(cli).resolve();
+            (ctx, env, forms)
+        }
+    };
     let program_hash = hash_module(&forms);
 
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
-
-    let mut ctx = mk_ctx(cli);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
 
     let prog = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
@@ -1876,6 +1921,10 @@ fn cmd_run(cli: &Cli, file: &Path, caps: &Path, log: Option<&Path>) -> Result<Cm
         kind: "genesis/run-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
             "caps": caps.display().to_string(),
             "log": log_path.display().to_string(),
             "denied": denied,
@@ -4631,16 +4680,40 @@ fn extract_pkg_ok_bool(v: &Value) -> Option<bool> {
 fn cmd_replay(
     cli: &Cli,
     file: &PathBuf,
+    engine: Option<FmtEngine>,
     log_path: &PathBuf,
     store_dir: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "replay", engine)?;
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let forms =
-        parse_module(&src).map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-    let forms = canonicalize_module(forms)
-        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+    let (mut ctx, mut env, forms) = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            (ctx, prelude.env, forms)
+        }
+        FmtEngine::Selfhost => {
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+            ctx.steps = 0;
+            ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+
+            ctx.steps = 0;
+            ctx.step_limit = resolved_step_limit(cli).resolve();
+            (ctx, env, forms)
+        }
+    };
     let program_hash = hash_module(&forms);
 
     let log_src = std::fs::read_to_string(log_path)
@@ -4657,10 +4730,6 @@ fn cmd_replay(
             "program hash mismatch: log is for different program",
         ));
     }
-
-    let mut ctx = mk_ctx(cli);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
 
     let prog = eval_module(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
@@ -4685,6 +4754,10 @@ fn cmd_replay(
         kind: "genesis/replay-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
             "log": log_path.display().to_string(),
             "store": store_dir.map(|p| p.display().to_string()),
             "value": value,
@@ -4797,11 +4870,11 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     },
     SelfhostCutoverRow {
         cmd: "run",
-        selfhost_routed: false,
+        selfhost_routed: true,
     },
     SelfhostCutoverRow {
         cmd: "replay",
-        selfhost_routed: false,
+        selfhost_routed: true,
     },
     SelfhostCutoverRow {
         cmd: "test",

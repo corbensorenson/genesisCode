@@ -36,6 +36,7 @@ Acceptance gate:
 - [x] CI proves `selfhost-only` mode works for `fmt`, `eval`, `typecheck`, `optimize`, `test`, `apply-patch` on golden suites.
   - [x] covered now: `fmt`, `eval`, `optimize` strict-mode gating in native CLI tests
   - [x] covered now: `explain` strict-mode gating and engine routing in native CLI tests
+  - [x] covered now: `run`, `replay` strict-mode gating and engine routing in native CLI tests
   - [x] covered now: `typecheck` strict mode executes through selfhost parse/canonicalize path in native CLI tests
   - [x] covered now: `test` strict mode executes through selfhost frontend module-loading path in native CLI tests
   - [x] covered now: `apply-patch` strict mode executes through selfhost frontend parse/canonicalize path in native CLI tests
@@ -70,8 +71,8 @@ Acceptance gate:
   - [ ] `fmt`
   - [ ] `eval`
   - [x] `explain`
-  - [ ] `run`
-  - [ ] `replay`
+  - [x] `run`
+  - [x] `replay`
   - [ ] `test`
   - [ ] `typecheck`
   - [ ] `optimize`
