@@ -1408,148 +1408,18 @@ fn call_capability(
                         ));
                     }
 
-                    if let Some(commit_hex) = &le.commit {
-                        if !store.path_for(commit_hex).exists() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("artifact not found: {commit_hex}"),
-                                Some(op),
-                            ));
-                        }
-                        if store.verify_hex(commit_hex).is_err() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/corruption",
-                                format!("artifact store corruption: {commit_hex}"),
-                                Some(op),
-                            ));
-                        }
-                        let commit_term = match store_get_term(store, commit_hex) {
-                            Ok(t) => t,
-                            Err(_) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/not-found",
-                                    format!("artifact not found: {commit_hex}"),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        let c = match gc_vcs::Commit::from_term(&commit_term) {
-                            Ok(c) => c,
-                            Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/pkg/bad-commit",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        if let Some(base) = &c.base {
-                            if !store.path_for(base).exists() {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/not-found",
-                                    format!("artifact not found: {base}"),
-                                    Some(op),
-                                ));
-                            }
-                            if store.verify_hex(base).is_err() {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/corruption",
-                                    format!("artifact store corruption: {base}"),
-                                    Some(op),
-                                ));
-                            }
-                        }
-                        if !store.path_for(&c.patch).exists() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("artifact not found: {}", c.patch),
-                                Some(op),
-                            ));
-                        }
-                        if store.verify_hex(&c.patch).is_err() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/corruption",
-                                format!("artifact store corruption: {}", c.patch),
-                                Some(op),
-                            ));
-                        }
-                        if !store.path_for(&c.result).exists() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("artifact not found: {}", c.result),
-                                Some(op),
-                            ));
-                        }
-                        if store.verify_hex(&c.result).is_err() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/corruption",
-                                format!("artifact store corruption: {}", c.result),
-                                Some(op),
-                            ));
-                        }
-                        if c.result != le.snapshot {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/commit-snapshot-mismatch",
-                                format!("commit.result != locked.snapshot for {name}"),
-                                Some(op),
-                            ));
-                        }
-                        if !c.obligations.is_empty() && c.evidence.is_empty() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/missing-evidence",
-                                format!("commit has obligations but no evidence for {name}"),
-                                Some(op),
-                            ));
-                        }
-                        for evh in &c.evidence {
-                            if !store.path_for(evh).exists() {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/not-found",
-                                    format!("artifact not found: {evh}"),
-                                    Some(op),
-                                ));
-                            }
-                            if store.verify_hex(evh).is_err() {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/corruption",
-                                    format!("artifact store corruption: {evh}"),
-                                    Some(op),
-                                ));
-                            }
-                            let ev_term = match store_get_term(store, evh) {
-                                Ok(t) => t,
-                                Err(e) => {
-                                    return Ok(mk_error(
-                                        error_tok,
-                                        "core/pkg/bad-evidence",
-                                        e.to_string(),
-                                        Some(op),
-                                    ));
-                                }
-                            };
-                            if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/pkg/bad-evidence",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
-                        }
+                    if let Some(commit_hex) = &le.commit
+                        && let Err(v) = validate_commit_artifact_closure(
+                            store,
+                            name,
+                            &le.snapshot,
+                            commit_hex,
+                            true,
+                            error_tok,
+                            op,
+                        )
+                    {
+                        return Ok(v);
                     }
                 }
             }
@@ -1795,70 +1665,17 @@ fn call_capability(
                 }
 
                 if strict && let Some(commit_hex) = &le.commit {
-                    let commit_term = match store_get_term(store, commit_hex) {
-                        Ok(t) => t,
-                        Err(_) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("artifact not found: {commit_hex}"),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let c = match gc_vcs::Commit::from_term(&commit_term) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/bad-commit",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    if c.result != *snapshot_hex {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/commit-snapshot-mismatch",
-                            format!("commit.result != locked.snapshot for {name}"),
-                            Some(op),
-                        ));
-                    }
-                    for evh in &c.evidence {
-                        if !store.path_for(evh).exists() {
-                            ok = false;
-                            missing_hashes.push(Term::Str(evh.clone()));
-                            continue;
-                        }
-                        if store.verify_hex(evh).is_err() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/corruption",
-                                format!("artifact store corruption: {evh}"),
-                                Some(op),
-                            ));
-                        }
-                        let ev_term = match store_get_term(store, evh) {
-                            Ok(t) => t,
-                            Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/pkg/bad-evidence",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/bad-evidence",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                        checked = checked.saturating_add(1);
+                    match validate_commit_artifact_closure(
+                        store,
+                        name,
+                        snapshot_hex,
+                        commit_hex,
+                        true,
+                        error_tok,
+                        op,
+                    ) {
+                        Ok(n) => checked = checked.saturating_add(n),
+                        Err(v) => return Ok(v),
                     }
                 }
             }
@@ -1974,70 +1791,17 @@ fn call_capability(
                 }
 
                 if let Some(commit_hex) = &le.commit {
-                    let commit_term = match store_get_term(store, commit_hex) {
-                        Ok(t) => t,
-                        Err(_) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("artifact not found: {commit_hex}"),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let c = match gc_vcs::Commit::from_term(&commit_term) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/bad-commit",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    if c.result != *snapshot_hex {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/commit-snapshot-mismatch",
-                            format!("commit.result != locked.snapshot for {name}"),
-                            Some(op),
-                        ));
-                    }
-                    for evh in &c.evidence {
-                        if !store.path_for(evh).exists() {
-                            ok = false;
-                            missing_hashes.push(Term::Str(evh.clone()));
-                            continue;
-                        }
-                        if store.verify_hex(evh).is_err() {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/corruption",
-                                format!("artifact store corruption: {evh}"),
-                                Some(op),
-                            ));
-                        }
-                        let ev_term = match store_get_term(store, evh) {
-                            Ok(t) => t,
-                            Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/pkg/bad-evidence",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/bad-evidence",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                        checked = checked.saturating_add(1);
+                    match validate_commit_artifact_closure(
+                        store,
+                        name,
+                        snapshot_hex,
+                        commit_hex,
+                        true,
+                        error_tok,
+                        op,
+                    ) {
+                        Ok(n) => checked = checked.saturating_add(n),
+                        Err(v) => return Ok(v),
                     }
                 }
             }
@@ -7138,6 +6902,133 @@ fn parse_selector(s: &str) -> Option<Selector> {
         return Some(Selector::Commit(t.to_string()));
     }
     None
+}
+
+fn validate_commit_artifact_closure(
+    store: &ArtifactStore,
+    dep_name: &str,
+    snapshot_hex: &str,
+    commit_hex: &str,
+    require_evidence_for_obligations: bool,
+    error_tok: SealId,
+    op: &str,
+) -> Result<u64, Value> {
+    let mut checked: u64 = 0;
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut ensure_hash = |h: &str| -> Result<(), Value> {
+        if !store.path_for(h).exists() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {h}"),
+                Some(op),
+            ));
+        }
+        if store.verify_hex(h).is_err() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/corruption",
+                format!("artifact store corruption: {h}"),
+                Some(op),
+            ));
+        }
+        if seen.insert(h.to_string()) {
+            checked = checked.saturating_add(1);
+        }
+        Ok(())
+    };
+
+    ensure_hash(commit_hex)?;
+    let commit_term = match store_get_term(store, commit_hex) {
+        Ok(t) => t,
+        Err(_) => {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {commit_hex}"),
+                Some(op),
+            ));
+        }
+    };
+    let c = match gc_vcs::Commit::from_term(&commit_term) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(mk_error(
+                error_tok,
+                "core/pkg/bad-commit",
+                e.to_string(),
+                Some(op),
+            ));
+        }
+    };
+    if c.result != snapshot_hex {
+        return Err(mk_error(
+            error_tok,
+            "core/pkg/commit-snapshot-mismatch",
+            format!("commit.result != locked.snapshot for {dep_name}"),
+            Some(op),
+        ));
+    }
+    if let Some(base) = c.base.as_deref() {
+        ensure_hash(base)?;
+    }
+    ensure_hash(&c.patch)?;
+    ensure_hash(&c.result)?;
+
+    if require_evidence_for_obligations && !c.obligations.is_empty() && c.evidence.is_empty() {
+        return Err(mk_error(
+            error_tok,
+            "core/pkg/missing-evidence",
+            format!("commit has obligations but no evidence for {dep_name}"),
+            Some(op),
+        ));
+    }
+
+    for evh in &c.evidence {
+        ensure_hash(evh)?;
+        let ev_term = match store_get_term(store, evh) {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/pkg/bad-evidence",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+        };
+        if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
+            return Err(mk_error(
+                error_tok,
+                "core/pkg/bad-evidence",
+                e.to_string(),
+                Some(op),
+            ));
+        }
+    }
+    for at_h in &c.attestations {
+        ensure_hash(at_h)?;
+        let at_term = match store_get_term(store, at_h) {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/pkg/bad-attestation",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+        };
+        if let Err(e) = gc_vcs::Attestation::from_term(&at_term) {
+            return Err(mk_error(
+                error_tok,
+                "core/pkg/bad-attestation",
+                e.to_string(),
+                Some(op),
+            ));
+        }
+    }
+    Ok(checked)
 }
 
 fn resolve_requirement(
