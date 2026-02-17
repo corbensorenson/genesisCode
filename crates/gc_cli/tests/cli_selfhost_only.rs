@@ -54,6 +54,21 @@ remote_allow = ["file://"]
     caps
 }
 
+fn write_vcs_caps(dir: &Path) -> PathBuf {
+    let caps = dir.join("caps_vcs.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/vcs::log"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    caps
+}
+
 #[test]
 fn selfhost_only_rejects_rust_engine_for_fmt() {
     let dir = tempdir().unwrap();
@@ -138,7 +153,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `sync`, `gc`, `selfhost-dashboard`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `sync`, `gc`, `selfhost-dashboard`, and `vcs/*`",
         ));
 }
 
@@ -214,6 +229,23 @@ fn selfhost_only_accepts_sync_command_group() {
         .args(["pull", "--remote"])
         .arg(remote)
         .args(["--root"])
+        .arg(&root_h)
+        .assert()
+        .failure()
+        .code(20);
+}
+
+#[test]
+fn selfhost_only_accepts_vcs_command_group() {
+    let dir = tempdir().unwrap();
+    let caps = write_vcs_caps(dir.path());
+    let root_h = "0".repeat(64);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "vcs", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["log"])
         .arg(&root_h)
         .assert()
         .failure()

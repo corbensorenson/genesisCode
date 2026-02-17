@@ -63,6 +63,7 @@ allow = [
   "core/pkg::init",
   "core/pkg::list",
   "core/sync::pull",
+  "core/vcs::log",
   "core/gc::pin",
 ]
 
@@ -104,6 +105,16 @@ else
   sync_rc=$?
   if [[ "$sync_rc" -ne 20 ]]; then
     echo "native strict sync failed with unexpected exit code: $sync_rc" >&2
+    exit 1
+  fi
+fi
+if native --selfhost-only vcs --caps "$TMP_DIR/caps.effects.toml" log "$SYNC_ROOT" >/dev/null 2>&1; then
+  echo "native strict vcs log unexpectedly succeeded for missing commit root" >&2
+  exit 1
+else
+  vcs_log_rc=$?
+  if [[ "$vcs_log_rc" -ne 20 ]]; then
+    echo "native strict vcs log failed with unexpected exit code: $vcs_log_rc" >&2
     exit 1
   fi
 fi

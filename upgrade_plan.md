@@ -46,7 +46,7 @@ Acceptance gate:
   - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
   - [x] covered now: native + WASI `run`/`replay` auto-select selfhost when a toolchain artifact is configured (guarded by bad-artifact bootstrap tests)
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
-  - [x] covered now: strict smoke exercises capability command groups under `--selfhost-only` (`store`, `refs`, `pkg`, `gc` on native + WASI; `sync` on native where the command surface exists).
+  - [x] covered now: strict smoke exercises capability command groups under `--selfhost-only` (`store`, `refs`, `pkg`, `gc` on native + WASI; `sync` and effectful `vcs` on native where those command surfaces exist).
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
   - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
   - [x] covered now: CI default job env sets `GENESIS_ALLOW_RUST_ENGINE=0` and runs `scripts/selfhost_default_profile_guard.sh`, enforcing rust-engine rejection in the default selfhost profile for native + WASI CLIs.
@@ -115,6 +115,7 @@ Acceptance gate:
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `gc/*`
     - progress: `vcs hash` now routes through `.gc` (`selfhost/tool::hash-src-with-kind`) by default (native + WASI), with `--engine rust` available for parity checks.
     - progress: `--selfhost-only` now permits capability command groups `store`, `refs`, `pkg`, and `gc` in native + WASI CLIs, plus `sync` in native CLI; regression coverage executes these groups end-to-end under strict mode (native `sync` asserted by strict-gate test + smoke).
+    - progress: `--selfhost-only` now also permits effectful `vcs/*` in native CLI (with `vcs hash` still engine-validated), with regression coverage for strict-gate acceptance and strict-smoke execution of `vcs log`.
 - [ ] Keep Rust CLI as thin argument parser + host bridge only.
 - [ ] Remove duplicated Rust command logic once parity is proven.
 
