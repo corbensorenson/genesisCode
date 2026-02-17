@@ -100,13 +100,14 @@ fn explain_selfhost_engine_matches_rust_engine_output() {
         );
     }
     let k_contract_id = TermOrdKey(Term::symbol(":contract-id"));
-    for step in [rstep, sstep] {
-        let Some(Term::Str(cid)) = step.get(&k_contract_id) else {
-            panic!(":contract-id must be string");
-        };
-        assert_eq!(cid.len(), 64);
-        assert!(cid.chars().all(|c| c.is_ascii_hexdigit()));
-    }
+    let (Some(Term::Str(rid)), Some(Term::Str(sid))) =
+        (rstep.get(&k_contract_id), sstep.get(&k_contract_id))
+    else {
+        panic!(":contract-id must be string");
+    };
+    assert_eq!(rid, sid, "engine mismatch for explain step field :contract-id");
+    assert_eq!(rid.len(), 64);
+    assert!(rid.chars().all(|c| c.is_ascii_hexdigit()));
 }
 
 #[test]
