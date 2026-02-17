@@ -48,6 +48,7 @@ Acceptance gate:
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
   - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
+  - [x] covered now: CI default job env sets `GENESIS_ALLOW_RUST_ENGINE=0` and runs `scripts/selfhost_default_profile_guard.sh`, enforcing rust-engine rejection in the default selfhost profile for native + WASI CLIs.
 
 ---
 
@@ -145,6 +146,7 @@ Acceptance gate:
   - [ ] Any Rust-only pipeline no longer used by default runtime path
 - [ ] Add build profile `selfhost-strict` that excludes deprecated semantic crates/modules.
 - [ ] Make `selfhost-strict` the default CI profile.
+  - progress: CI now enforces strict default selfhost behavior with `GENESIS_ALLOW_RUST_ENGINE=0` and an explicit default-profile guard step (`scripts/selfhost_default_profile_guard.sh`).
 - [ ] Keep a compatibility profile only for historical comparison tests.
 
 Acceptance gate:
@@ -210,7 +212,9 @@ Acceptance gate:
   - [x] `test`, `apply-patch`, and `pack` now auto-prefer selfhost frontend when a toolchain artifact is configured/present
   - [x] selfhost frontend is now the unconditional default for this command set in CLI frontend resolution
 - [ ] 5) Move replaced Rust semantic modules to `/deprecated`.
-- [ ] 6) Enable `selfhost-strict` profile in CI as required.
+- [x] 6) Enable `selfhost-strict` profile in CI as required.
+  - [x] CI job now sets `GENESIS_ALLOW_RUST_ENGINE=0` by default and runs `scripts/selfhost_default_profile_guard.sh`.
+  - [x] strict smoke/golden parity paths explicitly opt into compatibility mode (`GENESIS_ALLOW_RUST_ENGINE=1`) where Rust baseline comparison is required.
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override

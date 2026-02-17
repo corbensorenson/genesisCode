@@ -7,6 +7,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +26,9 @@ jobs:
 
       - name: Selfhost Boundary Guard
         run: bash scripts/check_selfhost_boundary.sh
+
+      - name: Selfhost Default Profile Guard
+        run: bash scripts/selfhost_default_profile_guard.sh
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
