@@ -65,6 +65,7 @@ Acceptance gate:
 - [ ] Native and WASM runs produce identical hashes/evidence between Rust fallback and `.gc` self-host path on conformance suites.
   - progress: added WASI `cli_run_replay_engine.rs` parity tests for `run`/`replay` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
   - progress: added WASI `cli_eval_engine.rs` parity tests for `eval` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
+  - progress: added WASI `cli_fmt_engine.rs` parity tests for `fmt` (`rust` vs `selfhost`) including `--check` exit-code parity.
   - progress: native `cli_run_replay_engine.rs` now enforces deterministic `.gclog` parity between `--engine rust` and `--engine selfhost`.
   - progress: WASI `cli_run_replay_engine.rs` now enforces deterministic `.gclog` parity between `--engine rust` and `--engine selfhost`.
   - progress: native + WASI parity tests now cover denied-effect programs (`sys/time::now` with deny-by-default caps), asserting exit-code/output/log/replay parity across `rust` and `selfhost`.
