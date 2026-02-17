@@ -159,12 +159,13 @@ Acceptance gate:
 ---
 
 ## P5: Runtime Host Decomposition (Rust No Longer Language-Critical)
-- [ ] Publish stable host ABI spec (`docs/spec/HOST_ABI.md`) for capabilities and runtime embedding.
+- [x] Publish stable host ABI spec (`docs/spec/HOST_ABI.md`) for capabilities and runtime embedding.
 - [ ] Restrict Rust responsibilities to:
   - [ ] capability IO adapters (fs/net/time/window/gpu/input/audio)
   - [ ] store/ref physical persistence drivers
   - [ ] wasm/native embedding and process shell
 - [ ] Add alternative host conformance harness (second host implementation can be minimal) proving ABI portability.
+  - progress: added CI host ABI surface conformance guard (`scripts/check_host_abi_conformance.sh`) that enforces exact parity between documented ABI ops (`docs/spec/HOST_ABI.md`) and `gc_effects` dispatch surface.
 
 Acceptance gate:
 - [ ] Language/toolchain `.gc` code runs unchanged on at least two host implementations via same ABI.
@@ -223,5 +224,6 @@ Acceptance gate:
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
-- [ ] 9) Add host ABI conformance harness.
+- [x] 9) Add host ABI conformance harness.
+  - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
 - [ ] 10) Start P6 optimization wave in `.gc` (profiling + incremental build graph).

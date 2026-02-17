@@ -27,6 +27,9 @@ jobs:
       - name: Selfhost Boundary Guard
         run: bash scripts/check_selfhost_boundary.sh
 
+      - name: Host ABI Conformance Guard
+        run: bash scripts/check_host_abi_conformance.sh
+
       - name: Rust Engine Compat Guard
         run: bash scripts/check_rust_engine_compat.sh
 
