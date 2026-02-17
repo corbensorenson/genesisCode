@@ -2,9 +2,15 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
+fn cmd() -> assert_cmd::Command {
+    let mut c = cargo_bin_cmd!("genesis_wasi");
+    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    c
+}
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis_wasi")
+    cmd()
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact)
         .assert()
@@ -24,7 +30,7 @@ fn copy_pkg_basic_fixture(dst: &std::path::Path) {
 }
 
 fn run_json(current_dir: &std::path::Path, args: &[&str]) -> JsonValue {
-    let out = cargo_bin_cmd!("genesis_wasi")
+    let out = cmd()
         .current_dir(current_dir)
         .args(args)
         .assert()
@@ -53,18 +59,20 @@ fn assert_artifact_fields_equal(lhs: &JsonValue, rhs: &JsonValue) {
 }
 
 #[test]
-fn apply_patch_selfhost_artifact_matches_default_frontend_artifacts() {
+fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
     let td = tempdir().unwrap();
     let artifact = build_selfhost_artifact(td.path());
-    let default_dir = td.path().join("pkg_default");
+    let rust_dir = td.path().join("pkg_rust");
     let artifact_dir = td.path().join("pkg_artifact");
-    copy_pkg_basic_fixture(&default_dir);
+    copy_pkg_basic_fixture(&rust_dir);
     copy_pkg_basic_fixture(&artifact_dir);
 
-    let default_v = run_json(
-        &default_dir,
+    let rust_v = run_json(
+        &rust_dir,
         &[
             "--json",
+            "--coreform-frontend",
+            "rust",
             "apply-patch",
             "pure.gcpatch",
             "--pkg",
@@ -75,6 +83,8 @@ fn apply_patch_selfhost_artifact_matches_default_frontend_artifacts() {
         &artifact_dir,
         &[
             "--json",
+            "--coreform-frontend",
+            "selfhost",
             "--selfhost-artifact",
             artifact.to_str().unwrap(),
             "apply-patch",
@@ -84,7 +94,7 @@ fn apply_patch_selfhost_artifact_matches_default_frontend_artifacts() {
         ],
     );
 
-    assert_artifact_fields_equal(&default_v, &artifact_v);
+    assert_artifact_fields_equal(&rust_v, &artifact_v);
 }
 
 #[test]

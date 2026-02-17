@@ -1,9 +1,15 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
 
+fn cmd() -> assert_cmd::Command {
+    let mut c = cargo_bin_cmd!("genesis");
+    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    c
+}
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact)
         .assert()
@@ -24,7 +30,7 @@ fn copy_pkg_basic_fixture(dst: &std::path::Path) -> std::path::PathBuf {
 }
 
 fn run_stdout(args: &[&str]) -> String {
-    let out = cargo_bin_cmd!("genesis")
+    let out = cmd()
         .args(args)
         .assert()
         .success()
@@ -41,8 +47,16 @@ fn pack_selfhost_frontend_matches_rust_frontend_artifact() {
     let rust_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_rust"));
     let self_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost"));
 
-    let rust_h = run_stdout(&["pack", "--pkg", rust_pkg.to_str().unwrap()]);
+    let rust_h = run_stdout(&[
+        "--coreform-frontend",
+        "rust",
+        "pack",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
     let self_h = run_stdout(&[
+        "--coreform-frontend",
+        "selfhost",
         "--selfhost-artifact",
         artifact.to_str().unwrap(),
         "pack",
@@ -60,8 +74,16 @@ fn test_selfhost_frontend_matches_rust_frontend_acceptance_artifact() {
     let rust_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_rust"));
     let self_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost"));
 
-    let rust_h = run_stdout(&["test", "--pkg", rust_pkg.to_str().unwrap()]);
+    let rust_h = run_stdout(&[
+        "--coreform-frontend",
+        "rust",
+        "test",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
     let self_h = run_stdout(&[
+        "--coreform-frontend",
+        "selfhost",
         "--selfhost-artifact",
         artifact.to_str().unwrap(),
         "test",

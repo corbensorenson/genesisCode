@@ -82,6 +82,11 @@ struct Cli {
     #[arg(long, global = true, default_value_t = false)]
     selfhost_only: bool,
 
+    /// CoreForm frontend for command groups that do not expose `--engine`.
+    /// Defaults to `selfhost` in the fast-path profile.
+    #[arg(long, global = true, value_enum)]
+    coreform_frontend: Option<CoreformFrontendArg>,
+
     #[command(subcommand)]
     cmd: Cmd,
 }
@@ -91,6 +96,12 @@ enum SelfhostBootstrapArg {
     ArtifactOnly,
     ArtifactPreferred,
     Embedded,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum CoreformFrontendArg {
+    Rust,
+    Selfhost,
 }
 
 #[derive(Subcommand)]
@@ -1013,21 +1024,47 @@ fn rust_engine_compat_enabled() -> bool {
 
 fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFrontend, CliError> {
     let strict = selfhost_only_enabled(cli);
-    let mode = resolved_selfhost_bootstrap_mode(cli);
-    if strict && mode != SelfhostBootstrapMode::ArtifactOnly {
-        return Err(cli_err(
-            EX_VERIFY,
-            "selfhost-only/bootstrap",
-            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
-        ));
+    let selected = cli
+        .coreform_frontend
+        .unwrap_or(CoreformFrontendArg::Selfhost);
+    match selected {
+        CoreformFrontendArg::Rust => {
+            if strict {
+                return Err(cli_err(
+                    EX_VERIFY,
+                    "selfhost-only/frontend",
+                    "selfhost-only mode requires --coreform-frontend selfhost",
+                ));
+            }
+            if !rust_engine_compat_enabled() {
+                return Err(cli_err(
+                    EX_VERIFY,
+                    "engine/rust-disabled",
+                    format!(
+                        "`--coreform-frontend rust` is disabled in the default selfhost profile; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
+                    ),
+                ));
+            }
+            Ok(gc_obligations::CoreformFrontend::Rust)
+        }
+        CoreformFrontendArg::Selfhost => {
+            let mode = resolved_selfhost_bootstrap_mode(cli);
+            if strict && mode != SelfhostBootstrapMode::ArtifactOnly {
+                return Err(cli_err(
+                    EX_VERIFY,
+                    "selfhost-only/bootstrap",
+                    "selfhost-only mode requires --selfhost-bootstrap artifact-only",
+                ));
+            }
+            let artifact = resolved_selfhost_artifact_for_frontend(cli);
+            Ok(gc_obligations::CoreformFrontend::Selfhost(
+                gc_obligations::SelfhostFrontendConfig {
+                    bootstrap_mode: mode,
+                    artifact,
+                },
+            ))
+        }
     }
-    let artifact = resolved_selfhost_artifact_for_frontend(cli);
-    Ok(gc_obligations::CoreformFrontend::Selfhost(
-        gc_obligations::SelfhostFrontendConfig {
-            bootstrap_mode: mode,
-            artifact,
-        },
-    ))
 }
 
 fn enforce_selfhost_engine(

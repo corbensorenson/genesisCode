@@ -389,6 +389,30 @@ fn selfhost_only_accepts_test_with_selfhost_artifact() {
 }
 
 #[test]
+fn selfhost_only_rejects_rust_coreform_frontend_for_pack() {
+    let pkg = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/spec/pkg_basic/package.toml"
+    );
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "--coreform-frontend",
+            "rust",
+            "pack",
+            "--pkg",
+            pkg,
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode requires --coreform-frontend selfhost",
+        ));
+}
+
+#[test]
 fn selfhost_only_accepts_pack_with_selfhost_artifact() {
     let td = tempdir().unwrap();
     let artifact = build_selfhost_artifact(td.path());

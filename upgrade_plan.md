@@ -4,6 +4,7 @@ Last updated: 2026-02-17
 
 ## Objective
 Ship a fully self-hosted GenesisCode core as quickly as possible, then move Rust bootstrap semantics out of the active path.
+AI-first constraint: command surfaces and diagnostics must remain deterministic, machine-parseable, and easy for autonomous agents to drive end-to-end.
 
 ## Definition of Done (Fast Path)
 A fast-path cutover is complete when all of the following are true:
@@ -17,6 +18,7 @@ A fast-path cutover is complete when all of the following are true:
 - Core command parity coverage has expanded significantly (including `optimize`, `apply-patch`, and `selfhost-dashboard` on WASI).
 - Strict smoke and strict golden now enforce cross-host/cross-engine parity on key paths.
 - Main blockers are now structural: `.gc` command contract ownership, `.gc` semantic ownership of toolchain passes, and bootstrap extraction.
+- Rust-vs-selfhost frontend parity for package/obligation/patch flows is now explicit via `--coreform-frontend`.
 
 ---
 
@@ -45,6 +47,7 @@ A fast-path cutover is complete when all of the following are true:
   - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
 - [ ] Reduce Rust CLI to arg parsing + host bridge only.
 - [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
+- [x] Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch paths to support deterministic AI parity checks.
 
 Acceptance gate:
 - [ ] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
@@ -78,12 +81,13 @@ Acceptance gate:
 ## Task List (Current Execution Queue)
 - [x] 1) Implement `core/cli::*` interface in `.gc` and wire `fmt/eval` through it.
 - [x] 2) Regenerate `selfhost/toolchain.gc` and add native+WASI regression tests that require `selfhost/cli_coreform_v1.gc` with passing stage1 gate.
-- [ ] 3) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
-- [ ] 4) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
-- [ ] 5) Remove duplicated Rust command semantics once parity gate is green.
-- [ ] 6) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
-- [ ] 7) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
-- [ ] 8) Run strict full cutover rehearsal (native + WASI) and freeze.
+- [x] 3) Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch commands, plus strict-mode guard tests.
+- [ ] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
+- [x] 5) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
+- [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
+- [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
+- [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
+- [ ] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 
 ---
 

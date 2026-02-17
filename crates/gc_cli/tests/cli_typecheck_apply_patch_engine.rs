@@ -2,9 +2,15 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
+fn cmd() -> assert_cmd::Command {
+    let mut c = cargo_bin_cmd!("genesis");
+    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    c
+}
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis")
+    cmd()
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact)
         .assert()
@@ -25,7 +31,7 @@ fn copy_pkg_basic_fixture(dst: &std::path::Path) -> std::path::PathBuf {
 }
 
 fn run_json(args: &[&str]) -> JsonValue {
-    let out = cargo_bin_cmd!("genesis")
+    let out = cmd()
         .args(args)
         .assert()
         .success()
@@ -42,9 +48,18 @@ fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     let rust_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_rust"));
     let self_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost"));
 
-    let rust_v = run_json(&["--json", "typecheck", "--pkg", rust_pkg.to_str().unwrap()]);
+    let rust_v = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "rust",
+        "typecheck",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
     let self_v = run_json(&[
         "--json",
+        "--coreform-frontend",
+        "selfhost",
         "--selfhost-artifact",
         artifact.to_str().unwrap(),
         "typecheck",
@@ -78,6 +93,8 @@ fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
 
     let rust_v = run_json(&[
         "--json",
+        "--coreform-frontend",
+        "rust",
         "apply-patch",
         rust_patch.to_str().unwrap(),
         "--pkg",
@@ -85,6 +102,8 @@ fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
     ]);
     let self_v = run_json(&[
         "--json",
+        "--coreform-frontend",
+        "selfhost",
         "--selfhost-artifact",
         artifact.to_str().unwrap(),
         "apply-patch",

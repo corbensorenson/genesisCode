@@ -48,9 +48,18 @@ fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     let rust_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_rust"));
     let self_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost"));
 
-    let rust_v = run_json(&["--json", "typecheck", "--pkg", rust_pkg.to_str().unwrap()]);
+    let rust_v = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "rust",
+        "typecheck",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
     let self_v = run_json(&[
         "--json",
+        "--coreform-frontend",
+        "selfhost",
         "--selfhost-artifact",
         artifact.to_str().unwrap(),
         "typecheck",
