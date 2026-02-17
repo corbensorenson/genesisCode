@@ -1266,6 +1266,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
+        Cmd::Sync { .. } => Ok(()),
         Cmd::Gc { .. } => Ok(()),
         Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Vcs {
@@ -1285,7 +1286,6 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 Cmd::TransparencyVerify { .. } => "transparency-verify",
                 Cmd::ApplyPatch { .. } => unreachable!(),
                 Cmd::Verify { .. } => "verify",
-                Cmd::Sync { .. } => "sync",
                 Cmd::Vcs { .. } => "vcs (non-hash)",
                 Cmd::Fmt { .. }
                 | Cmd::Eval { .. }
@@ -1295,13 +1295,14 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Store { .. }
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
+                | Cmd::Sync { .. }
                 | Cmd::Gc { .. } => unreachable!(),
             };
             Err(cli_err(
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `gc`, `selfhost-dashboard`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `sync`, `gc`, `selfhost-dashboard`, and `vcs hash`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }

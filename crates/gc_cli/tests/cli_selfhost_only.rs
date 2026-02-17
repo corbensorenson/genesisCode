@@ -33,6 +33,27 @@ fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
     caps
 }
 
+fn write_sync_caps(dir: &Path) -> PathBuf {
+    let caps = dir.join("caps_sync.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/sync::pull"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/sync::pull"]
+remote_allow = ["file://"]
+"#,
+    )
+    .unwrap();
+    caps
+}
+
 #[test]
 fn selfhost_only_rejects_rust_engine_for_fmt() {
     let dir = tempdir().unwrap();
@@ -117,7 +138,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `gc`, `selfhost-dashboard`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `sync`, `gc`, `selfhost-dashboard`, and `vcs hash`",
         ));
 }
 
@@ -177,6 +198,26 @@ fn selfhost_only_accepts_store_refs_pkg_and_gc() {
         .args(["pin", "refs/heads/main", "--pins", ".genesis/pins.toml"])
         .assert()
         .success();
+}
+
+#[test]
+fn selfhost_only_accepts_sync_command_group() {
+    let dir = tempdir().unwrap();
+    let caps = write_sync_caps(dir.path());
+    let remote = format!("file://{}", dir.path().join("remote-registry").display());
+    let root_h = "0".repeat(64);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "sync", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["pull", "--remote"])
+        .arg(remote)
+        .args(["--root"])
+        .arg(&root_h)
+        .assert()
+        .failure()
+        .code(20);
 }
 
 #[test]

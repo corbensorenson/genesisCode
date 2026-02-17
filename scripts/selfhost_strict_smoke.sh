@@ -62,6 +62,7 @@ allow = [
   "core/refs::get",
   "core/pkg::init",
   "core/pkg::list",
+  "core/sync::pull",
   "core/gc::pin",
 ]
 
@@ -78,6 +79,9 @@ create_dirs = true
 [op."core/pkg::list"]
 base_dir = "$TMP_DIR"
 
+[op."core/sync::pull"]
+remote_allow = ["file://"]
+
 [op."core/gc::pin"]
 base_dir = "$TMP_DIR"
 create_dirs = true
@@ -92,6 +96,17 @@ native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/m
 native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke --lock genesis.lock >/dev/null
 native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" list --lock genesis.lock >/dev/null
 native --selfhost-only gc --caps "$TMP_DIR/caps.effects.toml" pin refs/heads/main --pins .genesis/pins.toml >/dev/null
+SYNC_ROOT="$(printf '0%.0s' {1..64})"
+if native --selfhost-only sync --caps "$TMP_DIR/caps.effects.toml" pull --remote "file://$TMP_DIR/remote-registry" --root "$SYNC_ROOT" >/dev/null 2>&1; then
+  echo "native strict sync unexpectedly succeeded against missing remote registry" >&2
+  exit 1
+else
+  sync_rc=$?
+  if [[ "$sync_rc" -ne 20 ]]; then
+    echo "native strict sync failed with unexpected exit code: $sync_rc" >&2
+    exit 1
+  fi
+fi
 
 # package strict selfhost smoke (native CLI)
 PKG_N="$TMP_DIR/pkg_native"
