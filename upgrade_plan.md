@@ -51,8 +51,7 @@ A fast-path cutover is complete when all of the following are true:
 - [x] Route core commands through `.gc` handlers by default:
   - [x] `fmt`, `eval` route through `core/cli::*` frontend handlers (with compatibility fallback).
   - [x] `test`, `typecheck`, `optimize`, `pack`, `apply-patch` selfhost frontend paths now prefer `core/cli::*` canonicalization handlers.
-- [ ] Route effectful command groups through `.gc` command contracts:
-  - [ ] Remaining: `policy/*`
+- [x] Route effectful command groups through `.gc` command contracts:
   - [x] Incremental: `store/*` now routes through `core/cli::store-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
   - [x] Incremental: `refs/*` now routes through `core/cli::refs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
   - [x] Incremental: `sync/*` now routes through `core/cli::sync-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
