@@ -190,6 +190,7 @@ fi
 wasi_native --selfhost-only --selfhost-artifact "$ART" explain "$TMP_DIR/explain.gc" --engine selfhost --contract c --msg "(msg foo nil)" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
+wasi_native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/wasi.store" --markdown "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" >/dev/null
 wasi_native --selfhost-only store --caps "$TMP_DIR/caps.effects.toml" put --input "$TMP_DIR/value.gc" >/dev/null
 wasi_native --selfhost-only refs --caps "$TMP_DIR/caps.effects.toml" get refs/heads/main >/dev/null
 wasi_native --selfhost-only pkg --caps "$TMP_DIR/caps.effects.toml" init --workspace strict-smoke-wasi --lock genesis.wasi.lock >/dev/null

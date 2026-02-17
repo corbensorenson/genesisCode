@@ -116,7 +116,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `selfhost-dashboard`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -481,6 +481,28 @@ fn selfhost_only_accepts_apply_patch_with_selfhost_artifact() {
             "pure.gcpatch",
             "--pkg",
             "package.toml",
+        ])
+        .assert()
+        .success();
+}
+
+#[test]
+fn selfhost_only_accepts_selfhost_dashboard_with_selfhost_artifact() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    let store = td.path().join("store");
+    let markdown = td.path().join("status").join("SELFHOST_CUTOVER.md");
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "selfhost-dashboard",
+            "--store",
+            store.to_str().unwrap(),
+            "--markdown",
+            markdown.to_str().unwrap(),
         ])
         .assert()
         .success();

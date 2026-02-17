@@ -213,6 +213,17 @@ enum Cmd {
         min_stage2_validated_modules: u64,
     },
 
+    /// Emit a selfhost cutover dashboard artifact and markdown status mirror.
+    SelfhostDashboard {
+        /// Output markdown path (defaults to docs/status/SELFHOST_CUTOVER.md).
+        #[arg(long)]
+        markdown: Option<PathBuf>,
+        /// Store dir for content-addressed dashboard artifact
+        /// (defaults to .genesis/store).
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+
     /// Run an effect program with a deny-by-default capability policy.
     Run {
         file: PathBuf,
@@ -944,6 +955,8 @@ const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFA
 const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
+const DASHBOARD_MARKDOWN_DEFAULT_REL: &str = "docs/status/SELFHOST_CUTOVER.md";
+const DASHBOARD_STORE_DEFAULT_REL: &str = ".genesis/store";
 
 fn parse_truthy_env_flag(s: &str) -> bool {
     matches!(
@@ -1073,6 +1086,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Pack { .. } => Ok(()),
         Cmd::Typecheck { .. } => Ok(()),
         Cmd::ApplyPatch { .. } => Ok(()),
+        Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
@@ -1088,6 +1102,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
             let cmd = match other {
                 Cmd::Test { .. } | Cmd::Pack { .. } => unreachable!(),
                 Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
+                Cmd::SelfhostDashboard { .. } => unreachable!(),
                 Cmd::Fmt { .. }
                 | Cmd::Eval { .. }
                 | Cmd::Explain { .. }
@@ -1108,7 +1123,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `selfhost-dashboard`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -1870,6 +1885,327 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
             String::new()
         } else {
             format!("{h}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+#[derive(Clone, Copy)]
+struct SelfhostCutoverRow {
+    cmd: &'static str,
+    selfhost_routed: bool,
+}
+
+const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
+    SelfhostCutoverRow {
+        cmd: "fmt",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "eval",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "explain",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "run",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "replay",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "test",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "pack",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "selfhost-artifact",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "selfhost-dashboard",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "typecheck",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "optimize",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "apply-patch",
+        selfhost_routed: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "store/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "refs/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "pkg/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "policy/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "sync/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "gc/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
+        cmd: "vcs/*",
+        selfhost_routed: false,
+    },
+];
+
+fn percent_basis_points(part: usize, total: usize) -> u64 {
+    if total == 0 {
+        return 0;
+    }
+    ((part as u128 * 10_000u128) / total as u128) as u64
+}
+
+fn percent_string_from_bps(bps: u64) -> String {
+    format!("{}.{:02}%", bps / 100, bps % 100)
+}
+
+fn write_content_addressed_artifact(
+    store_dir: &Path,
+    bytes: &[u8],
+) -> Result<(String, PathBuf), CliError> {
+    std::fs::create_dir_all(store_dir)
+        .with_context(|| format!("create {}", store_dir.display()))
+        .map_err(|e| cli_err(EX_IO, "io/mkdir", format!("{e}")))?;
+
+    let hex = blake3::hash(bytes).to_hex().to_string();
+    let path = store_dir.join(&hex);
+    if !path.is_file() {
+        std::fs::write(&path, bytes)
+            .with_context(|| format!("write {}", path.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+    Ok((hex, path))
+}
+
+fn cmd_selfhost_dashboard(
+    cli: &Cli,
+    markdown: Option<&Path>,
+    store: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let artifact = resolved_selfhost_artifact_for_frontend(cli);
+    let artifact_path = artifact.as_ref().map(|p| p.display().to_string());
+    let artifact_exists = artifact.as_ref().is_some_and(|p| p.is_file());
+    let strict = selfhost_only_enabled(cli);
+
+    let total_commands = SELFHOST_CUTOVER_ROWS.len();
+    let routed_count = SELFHOST_CUTOVER_ROWS
+        .iter()
+        .filter(|r| r.selfhost_routed)
+        .count();
+    let default_selfhost_count = SELFHOST_CUTOVER_ROWS
+        .iter()
+        .filter(|r| r.selfhost_routed)
+        .count();
+    let routed_bps = percent_basis_points(routed_count, total_commands);
+    let default_bps = percent_basis_points(default_selfhost_count, total_commands);
+
+    let rows_term: Vec<Term> = SELFHOST_CUTOVER_ROWS
+        .iter()
+        .map(|row| {
+            let default_selfhost = row.selfhost_routed;
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":cmd")),
+                        Term::Str(row.cmd.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":selfhost-routed")),
+                        Term::Bool(row.selfhost_routed),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":default-selfhost")),
+                        Term::Bool(default_selfhost),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            )
+        })
+        .collect();
+
+    let dashboard_term = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/selfhost-cutover-dashboard-v0.2".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":strict")), Term::Bool(strict)),
+            (
+                TermOrdKey(Term::symbol(":artifact-configured")),
+                Term::Bool(artifact.is_some()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":artifact-exists")),
+                Term::Bool(artifact_exists),
+            ),
+            (
+                TermOrdKey(Term::symbol(":artifact-path")),
+                artifact
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":summary")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":total-commands")),
+                            Term::Int((total_commands as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":selfhost-routed-commands")),
+                            Term::Int((routed_count as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":selfhost-default-commands")),
+                            Term::Int((default_selfhost_count as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":selfhost-routed-bps")),
+                            Term::Int((routed_bps as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":selfhost-default-bps")),
+                            Term::Int((default_bps as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":commands")),
+                Term::Vector(rows_term),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let artifact_bytes = print_term(&dashboard_term);
+
+    let store_dir = store
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from(DASHBOARD_STORE_DEFAULT_REL));
+    let (artifact_hash, artifact_path_fs) =
+        write_content_addressed_artifact(&store_dir, artifact_bytes.as_bytes())?;
+
+    let markdown_path = markdown
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from(DASHBOARD_MARKDOWN_DEFAULT_REL));
+    let markdown_body = {
+        let mut lines = vec![
+            "# Selfhost Cutover Dashboard (v0.2)".to_string(),
+            "".to_string(),
+            format!("- Artifact hash: `{artifact_hash}`"),
+            format!("- Store artifact: `{}`", artifact_path_fs.display()),
+            format!(
+                "- Selfhost toolchain artifact configured: `{}`",
+                artifact_path.as_deref().unwrap_or("none")
+            ),
+            format!("- Selfhost toolchain artifact exists: `{artifact_exists}`"),
+            "".to_string(),
+            "## Summary".to_string(),
+            "".to_string(),
+            "| Metric | Value |".to_string(),
+            "| --- | --- |".to_string(),
+            format!("| Total command groups | {} |", total_commands),
+            format!("| Selfhost-routed command groups | {} |", routed_count),
+            format!(
+                "| Selfhost-routed coverage | {} |",
+                percent_string_from_bps(routed_bps)
+            ),
+            format!(
+                "| Default selfhost coverage | {} |",
+                percent_string_from_bps(default_bps)
+            ),
+            "".to_string(),
+            "## Command Coverage".to_string(),
+            "".to_string(),
+            "| Command | Selfhost Routed | Default Selfhost |".to_string(),
+            "| --- | --- | --- |".to_string(),
+        ];
+        for row in SELFHOST_CUTOVER_ROWS {
+            let default_selfhost = row.selfhost_routed;
+            lines.push(format!(
+                "| `{}` | {} | {} |",
+                row.cmd, row.selfhost_routed, default_selfhost
+            ));
+        }
+        lines.push(String::new());
+        lines.join("\n")
+    };
+    if let Some(parent) = markdown_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("create {}", parent.display()))
+            .map_err(|e| cli_err(EX_IO, "io/mkdir", format!("{e}")))?;
+    }
+    std::fs::write(&markdown_path, markdown_body.as_bytes())
+        .with_context(|| format!("write {}", markdown_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/selfhost-dashboard-v0.2",
+        data: Some(serde_json::json!({
+            "artifact_hash": artifact_hash,
+            "store_artifact": artifact_path_fs.display().to_string(),
+            "store_dir": store_dir.display().to_string(),
+            "markdown": markdown_path.display().to_string(),
+            "artifact_configured": artifact.is_some(),
+            "artifact_exists": artifact_exists,
+            "artifact_path": artifact_path,
+            "summary": {
+                "total_commands": total_commands,
+                "selfhost_routed_commands": routed_count,
+                "selfhost_default_commands": default_selfhost_count,
+                "selfhost_routed_percent": percent_string_from_bps(routed_bps),
+                "selfhost_default_percent": percent_string_from_bps(default_bps),
+            }
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!(
+                "{}\n{}\n",
+                artifact_path_fs.display(),
+                markdown_path.display()
+            )
         },
         json: serde_json::to_value(env).expect("json"),
     })
@@ -6005,6 +6341,9 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
             *min_stage2_supported_modules,
             *min_stage2_validated_modules,
         ),
+        Cmd::SelfhostDashboard { markdown, store } => {
+            cmd_selfhost_dashboard(cli, markdown.as_deref(), store.as_deref())
+        }
         Cmd::Run {
             file,
             engine,

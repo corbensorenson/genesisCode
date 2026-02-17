@@ -26,6 +26,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "typecheck",
         "apply-patch",
         "selfhost-artifact",
+        "selfhost-dashboard",
         "store",
         "refs",
         "pkg",
@@ -133,6 +134,16 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
     assert!(
         s.contains("--min-stage2-validated-modules"),
         "selfhost-artifact --help output missing --min-stage2-validated-modules"
+    );
+
+    let s = stdout_str(&["selfhost-dashboard", "--help"]);
+    assert!(
+        s.contains("--markdown"),
+        "selfhost-dashboard --help output missing --markdown"
+    );
+    assert!(
+        s.contains("--store"),
+        "selfhost-dashboard --help output missing --store"
     );
 
     let s = stdout_str(&["pkg", "--help"]);
