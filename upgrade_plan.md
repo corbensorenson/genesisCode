@@ -36,12 +36,14 @@ A fast-path cutover is complete when all of the following are true:
 ## Fast Path Workstreams
 
 ### A) `.gc` CLI Contract Ownership (Highest Priority)
-- [ ] Define `core/cli::*` contract interface as the canonical command contract surface.
+- [x] Define initial `core/cli::*` contract interface for frontend parse/canon/fmt/hash.
 - [ ] Route core commands through `.gc` handlers by default:
-  - [ ] `fmt`, `eval`, `test`, `typecheck`, `optimize`, `pack`, `apply-patch`
+  - [x] `fmt`, `eval` route through `core/cli::*` frontend handlers (with compatibility fallback).
+  - [ ] `test`, `typecheck`, `optimize`, `pack`, `apply-patch`
 - [ ] Route effectful command groups through `.gc` command contracts:
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`
 - [ ] Reduce Rust CLI to arg parsing + host bridge only.
+- [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
 
 Acceptance gate:
 - [ ] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
@@ -72,14 +74,15 @@ Acceptance gate:
 
 ---
 
-## Immediate Next Pushes (Fast Path)
-- [ ] 1) Implement `core/cli::*` interface in `.gc` and wire `fmt/eval` through it.
-- [ ] 2) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch`.
-- [ ] 3) Add CLI golden tests that compare Rust route vs `.gc` contract route for the command set above.
-- [ ] 4) Remove duplicated Rust command semantics once parity gate is green.
-- [ ] 5) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
-- [ ] 6) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
-- [ ] 7) Run strict full cutover rehearsal (native + WASI) and freeze.
+## Task List (Current Execution Queue)
+- [x] 1) Implement `core/cli::*` interface in `.gc` and wire `fmt/eval` through it.
+- [x] 2) Regenerate `selfhost/toolchain.gc` and add native+WASI regression tests that require `selfhost/cli_coreform_v1.gc` with passing stage1 gate.
+- [ ] 3) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
+- [ ] 4) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
+- [ ] 5) Remove duplicated Rust command semantics once parity gate is green.
+- [ ] 6) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
+- [ ] 7) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
+- [ ] 8) Run strict full cutover rehearsal (native + WASI) and freeze.
 
 ---
 

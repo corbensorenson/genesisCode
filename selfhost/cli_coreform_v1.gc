@@ -1,0 +1,33 @@
+(def core/cli::is-error core/error::is?)
+
+(def core/cli::canonicalize-module-src
+  (fn (src)
+    (let ((forms (selfhost/parse::parse-module src)))
+      (if (core/cli::is-error forms)
+        forms
+        (selfhost/canon::canonicalize-module forms)))))
+
+(def core/cli::fmt-module
+  (fn (src)
+    (let ((forms (core/cli::canonicalize-module-src src)))
+      (if (core/cli::is-error forms)
+        forms
+        (selfhost/printer::print-module forms)))))
+
+(def core/cli::hash-module-src
+  (fn (src)
+    (let ((forms (core/cli::canonicalize-module-src src)))
+      (if (core/cli::is-error forms)
+        forms
+        (selfhost/hash::hash-module forms)))))
+
+(def core/cli::hash-src-with-kind
+  (fn (src)
+    (let ((t (selfhost/parse::parse-term src)))
+      (if (core/cli::is-error t)
+        (let ((hm (core/cli::hash-module-src src)))
+          (if (core/cli::is-error hm)
+            hm
+            {:hash hm :kind "module"}))
+        (let ((ht (selfhost/hash::hash-term t)))
+          (if (core/cli::is-error ht) ht {:hash ht :kind "term"}))))))

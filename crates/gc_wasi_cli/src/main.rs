@@ -1306,13 +1306,16 @@ fn cmd_fmt(
 
             load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
-            let f = env.get("selfhost/tool::fmt-module").ok_or_else(|| {
-                cli_err(
-                    EX_INTERNAL,
-                    "selfhost/missing",
-                    "missing binding selfhost/tool::fmt-module",
-                )
-            })?;
+            let f = env
+                .get("core/cli::fmt-module")
+                .or_else(|| env.get("selfhost/tool::fmt-module"))
+                .ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::fmt-module (or fallback selfhost/tool::fmt-module)",
+                    )
+                })?;
             // Now apply the user-configured step limit to the formatting work itself.
             ctx.steps = 0;
             ctx.step_limit = resolved_step_limit(cli).resolve();
@@ -1424,6 +1427,41 @@ fn selfhost_parse_canonicalize_module(
     env: &gc_kernel::Env,
     src: &str,
 ) -> Result<Vec<gc_coreform::Term>, CliError> {
+    if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
+        let canon = canon_src_fn
+            .apply(ctx, Value::Data(gc_coreform::Term::Str(src.to_string())))
+            .map_err(|e| {
+                cli_err(
+                    EX_EVAL,
+                    "eval/error",
+                    format!("core/cli canonicalize-module-src failed: {e}"),
+                )
+            })?;
+
+        if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
+            return Err(CliError {
+                exit_code: EX_PARSE,
+                json: JsonError {
+                    code: "selfhost/error",
+                    message: format!("{code}: {message}"),
+                    context: payload.map(serde_json::Value::String),
+                },
+            });
+        }
+
+        let Some(gc_coreform::Term::Vector(forms)) = canon.as_data() else {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                format!(
+                    "core/cli canonicalize-module-src returned non-vector: {}",
+                    canon.debug_repr()
+                ),
+            ));
+        };
+        return Ok(forms.clone());
+    }
+
     let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
         cli_err(
             EX_INTERNAL,

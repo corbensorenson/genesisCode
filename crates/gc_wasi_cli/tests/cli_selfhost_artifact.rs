@@ -161,3 +161,46 @@ fn selfhost_artifact_wasi_thresholds_fail_when_minimums_exceed_observed_coverage
     };
     assert!(matches!(map_get(req_map, ":ok"), Some(Term::Bool(false))));
 }
+
+#[test]
+fn selfhost_artifact_wasi_includes_cli_core_module_with_passing_stage1_gate() {
+    let td = tempdir().unwrap();
+    let artifact = td.path().join("selfhost_toolchain.gc");
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args(["selfhost-artifact", "--out"])
+        .arg(&artifact)
+        .assert()
+        .success();
+
+    let artifact_s = std::fs::read_to_string(&artifact).unwrap();
+    let term = parse_term(&artifact_s).unwrap();
+    let Term::Map(root) = term else {
+        panic!("artifact must be map");
+    };
+    let modules = map_get(&root, ":modules").expect("modules");
+    let Term::Vector(mods) = modules else {
+        panic!(":modules must be vector");
+    };
+    let cli_module = mods
+        .iter()
+        .find_map(|m| {
+            let Term::Map(mm) = m else {
+                return None;
+            };
+            match map_get(mm, ":path") {
+                Some(Term::Str(path)) if path == "selfhost/cli_coreform_v1.gc" => Some(mm),
+                _ => None,
+            }
+        })
+        .expect("artifact must contain selfhost/cli_coreform_v1.gc entry");
+
+    assert!(matches!(
+        map_get(cli_module, ":stage1-ok"),
+        Some(Term::Bool(true))
+    ));
+    assert!(matches!(
+        map_get(cli_module, ":stage1-errors"),
+        Some(Term::Vector(v)) if v.is_empty()
+    ));
+}

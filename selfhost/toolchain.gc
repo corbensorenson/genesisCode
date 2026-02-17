@@ -81,6 +81,22 @@
         :stage2-supported true
         :stage2-wasm-bytes 37
         :stage2-wasm-h
+          b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}
+      {
+        :module-h
+          b"\x0EW`=\xEB\x81>\xBF\x81~\x08\xAE\xF7\x9AH\xAE\xD8\xEB'\xE0\xCA\xE5(u\xDD\xEA\xC2h\xD87\x07&"
+        :path "selfhost/cli_coreform_v1.gc"
+        :source
+          "(def core/cli::is-error core/error::is?)\n\n(def core/cli::canonicalize-module-src\n  (fn (src)\n    (let ((forms (selfhost/parse::parse-module src)))\n      (if (core/cli::is-error forms)\n        forms\n        (selfhost/canon::canonicalize-module forms)))))\n\n(def core/cli::fmt-module\n  (fn (src)\n    (let ((forms (core/cli::canonicalize-module-src src)))\n      (if (core/cli::is-error forms)\n        forms\n        (selfhost/printer::print-module forms)))))\n\n(def core/cli::hash-module-src\n  (fn (src)\n    (let ((forms (core/cli::canonicalize-module-src src)))\n      (if (core/cli::is-error forms)\n        forms\n        (selfhost/hash::hash-module forms)))))\n\n(def core/cli::hash-src-with-kind\n  (fn (src)\n    (let ((t (selfhost/parse::parse-term src)))\n      (if (core/cli::is-error t)\n        (let ((hm (core/cli::hash-module-src src)))\n          (if (core/cli::is-error hm)\n            hm\n            {:hash hm :kind \"module\"}))\n        (let ((ht (selfhost/hash::hash-term t)))\n          (if (core/cli::is-error ht) ht {:hash ht :kind \"term\"}))))))\n"
+        :stage1-errors []
+        :stage1-ok true
+        :stage2-errors []
+        :stage2-module-h
+          b"\x0EW`=\xEB\x81>\xBF\x81~\x08\xAE\xF7\x9AH\xAE\xD8\xEB'\xE0\xCA\xE5(u\xDD\xEA\xC2h\xD87\x07&"
+        :stage2-ok true
+        :stage2-supported true
+        :stage2-wasm-bytes 37
+        :stage2-wasm-h
           b"\xE2\x94\xB6\xE2\x84\xA7\xAE\x01\xDD\x82\xB7\xC6\xA3\x8B\xEF\x16#g\x84\xEB\xEE\xFF[\xA2c\xCDe\x90\xF6\xD3s\xBC"}]
   :ok true
   :stage2-requirements
@@ -89,5 +105,5 @@
       :min-supported-modules 0
       :min-validated-modules 0
       :ok true}
-  :stage2-summary {:supported-modules 5 :validated-modules 5}
+  :stage2-summary {:supported-modules 6 :validated-modules 6}
   :v 1}
