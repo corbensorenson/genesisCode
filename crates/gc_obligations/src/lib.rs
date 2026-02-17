@@ -133,7 +133,7 @@ fn resolved_selfhost_artifact_for_frontend() -> Option<PathBuf> {
     None
 }
 
-fn default_coreform_frontend() -> CoreformFrontend {
+pub fn default_coreform_frontend() -> CoreformFrontend {
     CoreformFrontend::Selfhost(SelfhostFrontendConfig {
         bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
         artifact: resolved_selfhost_artifact_for_frontend(),

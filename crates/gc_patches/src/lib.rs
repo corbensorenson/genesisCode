@@ -6,7 +6,8 @@ use gc_coreform::{
 };
 use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
-    CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, pack,
+    CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult,
+    default_coreform_frontend, pack,
     parse_canonicalize_module_source_with_frontend, test_package_with_step_limit_and_frontend,
 };
 use gc_pkg::PackageManifest;
@@ -111,7 +112,7 @@ pub fn apply_patch_with_step_limit(
         caps_override,
         step_limit,
         mem_limits,
-        CoreformFrontend::Rust,
+        default_coreform_frontend(),
     )
 }
 
