@@ -127,6 +127,7 @@ Acceptance gate:
     - progress: added missing WASI `optimize` command surface with native-parity engine routing, stage1/stage2 gate semantics, wasm emission, and JSON envelope (`genesis/optimize-v0.2`).
     - progress: added missing WASI `pkg publish` command surface with native-parity runtime routing (`core/pkg::publish` effect op), including obligation-failure exit semantics and commit-hash stdout behavior parity.
     - progress: added missing WASI `apply-patch` command surface with native-parity frontend routing and output schema (`genesis/apply-patch-v0.2`).
+    - progress: added executable WASI `apply-patch` conformance coverage for JSON schema and content-addressed artifact emission (`patch/report/acceptance/package` artifacts in `.genesis/store`).
     - progress: added missing WASI `selfhost-dashboard` command surface with native-parity artifact/markdown emission and output schema (`genesis/selfhost-dashboard-v0.2`).
     - progress: strict selfhost smoke now explicitly validates `pkg publish --help` availability on both native and WASI CLIs to prevent command-surface regressions.
     - progress: added WASI `cli_spec_surface.rs` to lock top-level/subcommand help surfaces (including `explain` and `pkg publish`) and prevent future command-surface regressions.
