@@ -5403,3 +5403,65 @@ fn main() -> std::process::ExitCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{EX_PARSE, parse_set_ref_spec, parse_sync_set_refs};
+
+    #[test]
+    fn parse_set_ref_spec_supports_contract_refs_with_colons() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let expected_old = "c".repeat(64);
+        let spec = format!(
+            "refs/contracts/my-lib/counter::Counter/heads/dev:{commit}:{policy}@{expected_old}"
+        );
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(
+            parsed.name,
+            "refs/contracts/my-lib/counter::Counter/heads/dev"
+        );
+        assert_eq!(parsed.hash, commit);
+        assert_eq!(parsed.policy, policy);
+        assert_eq!(parsed.expected_old.as_deref(), Some(expected_old.as_str()));
+    }
+
+    #[test]
+    fn parse_set_ref_spec_rejects_invalid_hashes() {
+        let err = parse_set_ref_spec("refs/heads/main:nothex:alsonothex").expect_err("must fail");
+        assert_eq!(err.exit_code, EX_PARSE);
+    }
+
+    #[test]
+    fn parse_set_ref_spec_accepts_expected_old_nil() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let spec = format!("refs/heads/main:{commit}:{policy}@nil");
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(parsed.expected_old.as_deref(), Some("nil"));
+    }
+
+    #[test]
+    fn parse_set_ref_spec_supports_contract_refs_without_expected_old() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let spec = format!("refs/contracts/p::q/heads/dev:{commit}:{policy}");
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(parsed.name, "refs/contracts/p::q/heads/dev");
+        assert_eq!(parsed.hash, commit);
+        assert_eq!(parsed.policy, policy);
+        assert_eq!(parsed.expected_old, None);
+    }
+
+    #[test]
+    fn parse_sync_set_refs_rejects_duplicate_targets() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let specs = vec![
+            format!("refs/heads/main:{commit}:{policy}"),
+            format!("refs/heads/main:{commit}:{policy}@nil"),
+        ];
+        let err = parse_sync_set_refs(&specs).expect_err("must fail");
+        assert_eq!(err.exit_code, EX_PARSE);
+    }
+}
