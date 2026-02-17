@@ -1762,45 +1762,6 @@ fn selfhost_parse_term(
     Ok(term.clone())
 }
 
-fn stage1_pipeline_json(out: &gc_opt::Stage1PipelineOutcome) -> serde_json::Value {
-    serde_json::json!({
-        "obligation": out.gate_report.obligation,
-        "ok": out.gate_report.ok,
-        "errors": out.gate_report.errors,
-        "original_module_hash": hex32(out.gate_report.original_module_hash),
-        "transformed_module_hash": hex32(out.gate_report.transformed_module_hash),
-        "original_value_hash": out.gate_report.original_value_hash.map(hex32),
-        "transformed_value_hash": out.gate_report.transformed_value_hash.map(hex32),
-        "egg_runs": out.optimize_report.stats.egg_runs,
-        "egg_iterations": out.optimize_report.stats.iterations,
-        "egg_eclasses": out.optimize_report.stats.eclasses,
-        "egg_enodes": out.optimize_report.stats.enodes,
-        "egg_rewrites_applied": out.optimize_report.stats.rewrites_applied,
-    })
-}
-
-fn stage2_report_json(r: &gc_opt::Stage2ValidationReport) -> serde_json::Value {
-    serde_json::json!({
-        "obligation": r.obligation,
-        "supported": r.supported,
-        "ok": r.ok,
-        "module_hash": hex32(r.module_hash),
-        "wasm_hash": r.wasm_hash.map(hex32),
-        "value_kind": r.value_kind.map(|k| match k {
-            gc_opt::Stage2ValueKind::Int => "int",
-            gc_opt::Stage2ValueKind::Bool => "bool",
-            gc_opt::Stage2ValueKind::Nil => "nil",
-            gc_opt::Stage2ValueKind::Sym => "sym",
-            gc_opt::Stage2ValueKind::Str => "str",
-            gc_opt::Stage2ValueKind::Bytes => "bytes",
-        }),
-        "original_value_hash": r.original_value_hash.map(hex32),
-        "wasm_value_hash": r.wasm_value_hash.map(hex32),
-        "wasm_bytes_len": r.wasm_bytes_len,
-        "errors": r.errors,
-    })
-}
-
 fn cmd_eval(
     cli: &Cli,
     file: &PathBuf,
@@ -1853,7 +1814,7 @@ fn cmd_eval(
                 json: JsonError {
                     code: "obligation/stage1-validation",
                     message: "core/obligation::stage1-validation failed".to_string(),
-                    context: Some(stage1_pipeline_json(&out)),
+                    context: Some(gc_opt::stage1_pipeline_json(&out)),
                 },
             });
         }
@@ -1895,7 +1856,7 @@ fn cmd_eval(
                     message:
                         "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
                             .to_string(),
-                    context: Some(stage2_report_json(s2)),
+                    context: Some(gc_opt::stage2_report_json(s2)),
                 },
             });
         }
@@ -1914,8 +1875,8 @@ fn cmd_eval(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
-            "stage1": stage1.as_ref().map(stage1_pipeline_json),
-            "stage2": stage2.as_ref().map(stage2_report_json),
+            "stage1": stage1.as_ref().map(gc_opt::stage1_pipeline_json),
+            "stage2": stage2.as_ref().map(gc_opt::stage2_report_json),
             "value": value,
             "value_format": value_format,
         })),
@@ -6095,7 +6056,7 @@ fn cmd_optimize(
                     json: JsonError {
                         code: "obligation/stage1-validation",
                         message: "core/obligation::stage1-validation failed".to_string(),
-                        context: Some(stage1_pipeline_json(&out)),
+                        context: Some(gc_opt::stage1_pipeline_json(&out)),
                     },
                 },
                 gc_opt::OptimizeCommandError::Stage2Gate(s2) => CliError {
@@ -6105,7 +6066,7 @@ fn cmd_optimize(
                         message:
                             "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
                                 .to_string(),
-                        context: Some(stage2_report_json(&s2)),
+                        context: Some(gc_opt::stage2_report_json(&s2)),
                     },
                 },
                 gc_opt::OptimizeCommandError::Stage2Compile(e) => match e {
@@ -6156,8 +6117,8 @@ fn cmd_optimize(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
-            "stage1": stage1_pipeline_json(&pipeline.stage1),
-            "stage2": pipeline.stage2.as_ref().map(stage2_report_json),
+            "stage1": gc_opt::stage1_pipeline_json(&pipeline.stage1),
+            "stage2": pipeline.stage2.as_ref().map(gc_opt::stage2_report_json),
             "changed": pipeline.changed,
             "original_hash": hex32(pipeline.original_hash),
             "optimized_hash": hex32(pipeline.optimized_hash),

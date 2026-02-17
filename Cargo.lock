@@ -722,6 +722,7 @@ dependencies = [
  "gc_prelude",
  "num-bigint",
  "num-traits",
+ "serde_json",
  "thiserror 2.0.18",
  "wasm-encoder 0.245.1",
  "wasmi",

@@ -24,6 +24,7 @@ A fast-path cutover is complete when all of the following are true:
 - Selfhost `core/cli` now owns module `::meta` extraction via `core/cli::module-meta`, and obligations typecheck prefers that contract path.
 - Native + WASI parity tests now assert selfhost typecheck fails deterministically when `core/cli::module-meta` is poisoned in generated artifacts.
 - Native + WASI `optimize` command semantics now run through shared `gc_opt::optimize_command_pipeline` (stage1/stage2/emit-wasm gating unified).
+- Obsolete CLI-local optimize JSON helper logic is now centralized in `gc_opt` and shared by native + WASI paths.
 
 ---
 
@@ -89,11 +90,11 @@ Acceptance gate:
 - [x] 3) Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch commands, plus strict-mode guard tests.
 - [x] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
 - [x] 5) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
-- [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
+- [x] 6) Remove duplicated Rust command semantics once parity gate is green.
   - [x] 6a) Deduplicate native + WASI `typecheck` command semantics by routing through `gc_obligations::typecheck_package_with_step_limit_and_frontend`.
   - [x] 6b) Deduplicate `pack` + `apply-patch` command families via shared `gc_obligations` / `gc_patches` entrypoints on native + WASI.
   - [x] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
-  - [ ] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
+  - [x] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.

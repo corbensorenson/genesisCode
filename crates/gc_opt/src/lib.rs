@@ -85,6 +85,55 @@ impl fmt::Display for OptimizeCommandError {
 
 impl std::error::Error for OptimizeCommandError {}
 
+fn hex32(h: [u8; 32]) -> String {
+    const LUT: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(64);
+    for b in h {
+        out.push(LUT[(b >> 4) as usize] as char);
+        out.push(LUT[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+pub fn stage1_pipeline_json(out: &Stage1PipelineOutcome) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": out.gate_report.obligation,
+        "ok": out.gate_report.ok,
+        "errors": out.gate_report.errors,
+        "original_module_hash": hex32(out.gate_report.original_module_hash),
+        "transformed_module_hash": hex32(out.gate_report.transformed_module_hash),
+        "original_value_hash": out.gate_report.original_value_hash.map(hex32),
+        "transformed_value_hash": out.gate_report.transformed_value_hash.map(hex32),
+        "egg_runs": out.optimize_report.stats.egg_runs,
+        "egg_iterations": out.optimize_report.stats.iterations,
+        "egg_eclasses": out.optimize_report.stats.eclasses,
+        "egg_enodes": out.optimize_report.stats.enodes,
+        "egg_rewrites_applied": out.optimize_report.stats.rewrites_applied,
+    })
+}
+
+pub fn stage2_report_json(r: &Stage2ValidationReport) -> serde_json::Value {
+    serde_json::json!({
+        "obligation": r.obligation,
+        "supported": r.supported,
+        "ok": r.ok,
+        "module_hash": hex32(r.module_hash),
+        "wasm_hash": r.wasm_hash.map(hex32),
+        "value_kind": r.value_kind.map(|k| match k {
+            Stage2ValueKind::Int => "int",
+            Stage2ValueKind::Bool => "bool",
+            Stage2ValueKind::Nil => "nil",
+            Stage2ValueKind::Sym => "sym",
+            Stage2ValueKind::Str => "str",
+            Stage2ValueKind::Bytes => "bytes",
+        }),
+        "original_value_hash": r.original_value_hash.map(hex32),
+        "wasm_value_hash": r.wasm_value_hash.map(hex32),
+        "wasm_bytes_len": r.wasm_bytes_len,
+        "errors": r.errors,
+    })
+}
+
 /// Shared optimize command pipeline used by native and WASI CLIs.
 ///
 /// This performs stage1 optimization + optional gate checks + optional stage2 analysis/compile.
