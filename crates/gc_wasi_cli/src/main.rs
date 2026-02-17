@@ -463,7 +463,7 @@ enum PkgCmd {
 
         /// Update local refs after import.
         ///
-        /// Format: `<refname>=<commit-hash>` (hash may be `nil` to delete).
+        /// Format: `<refname>=<commit-hash|nil>[@<expected-old-hash|nil>]`.
         #[arg(long = "set-ref")]
         set_refs: Vec<String>,
 
@@ -2100,24 +2100,46 @@ fn parse_local_set_refs(
         ));
     }
 
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     let mut out = Vec::new();
     for s in specs {
-        let (name, hash) = s.split_once('=').ok_or_else(|| {
+        let (name, rhs) = s.split_once('=').ok_or_else(|| {
             cli_err(
                 EX_PARSE,
                 "pkg/import",
-                "set-ref must be <refname>=<commit-hash|nil>".to_string(),
+                "set-ref must be <refname>=<commit-hash|nil>[@<expected-old-hash|nil>]".to_string(),
             )
         })?;
         let name = name.trim();
-        let hash = hash.trim();
-        if name.is_empty() || hash.is_empty() {
+        let rhs = rhs.trim();
+        if name.is_empty() || rhs.is_empty() {
             return Err(cli_err(
                 EX_PARSE,
                 "pkg/import",
                 "set-ref fields must be non-empty".to_string(),
             ));
         }
+        if !seen.insert(name.to_string()) {
+            return Err(cli_err(
+                EX_PARSE,
+                "pkg/import",
+                format!("duplicate set-ref target: {name}"),
+            ));
+        }
+        let (hash, expected_old) = match rhs.split_once('@') {
+            None => (rhs, None),
+            Some((h, eo)) => {
+                let eo = eo.trim();
+                if eo.is_empty() {
+                    return Err(cli_err(
+                        EX_PARSE,
+                        "pkg/import",
+                        "set-ref expected-old must be non-empty when @ is used".to_string(),
+                    ));
+                }
+                (h.trim(), Some(eo))
+            }
+        };
         if hash != "nil" && !is_hex64(hash) {
             return Err(cli_err(
                 EX_PARSE,
@@ -2125,11 +2147,24 @@ fn parse_local_set_refs(
                 "set-ref hash must be 64-hex or `nil`".to_string(),
             ));
         }
+        let expected_old = match expected_old {
+            None => None,
+            Some(eo) => {
+                if eo != "nil" && !is_hex64(eo) {
+                    return Err(cli_err(
+                        EX_PARSE,
+                        "pkg/import",
+                        "set-ref expected-old must be 64-hex or `nil`".to_string(),
+                    ));
+                }
+                Some(eo.to_string())
+            }
+        };
         out.push(SetRefSpec {
             name: name.to_string(),
             hash: hash.to_string(),
             policy: pol.to_string(),
-            expected_old: None,
+            expected_old,
         });
     }
     Ok(out)

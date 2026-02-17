@@ -147,6 +147,7 @@ Acceptance gate:
     - import ref updates remain policy-gated and covered by regression tests, including operation under caps that allow `core/gpk::import` without separately exposing `core/refs::set` to user programs
     - added explicit rejection coverage (native + WASI) proving `pkg import --set-ref` hard-fails and preserves ref state when commit artifacts do not satisfy policy-required obligations for protected refs
     - local refs storage now supports atomic batch updates (`RefsDb::set_many`), and `core/gpk::import` validates all `:set-refs` policy gates before committing refs in one write, preventing partial ref advancement on multi-ref failures
+    - native + WASI `pkg import --set-ref` now support optimistic compare-and-set syntax (`<ref>=<hash|nil>@<expected-old|nil>`) with strict validation and regression coverage for success/failure paths
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
 
 Acceptance gate:
@@ -245,6 +246,7 @@ Acceptance gate:
   - [x] `pkg import --set-ref` now delegates local refs updates to runtime capability handling in `core/gpk::import` (policy-gated via shared refs gate logic), eliminating CLI continuation-based `core/refs::set` orchestration.
   - [x] added runtime-gated import failure-path parity tests (native + WASI) for policy rejection and ref non-advancement, tightening ref-policy gate conformance coverage.
   - [x] hardened multi-ref import semantics with atomic local refs commit + native/WASI atomicity tests (no partial ref updates when one target fails policy).
+  - [x] added native/WASI optimistic CAS support for `pkg import --set-ref` (`@<expected-old|nil>`) with strict parser validation and compare-and-set regression coverage.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
   - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.
