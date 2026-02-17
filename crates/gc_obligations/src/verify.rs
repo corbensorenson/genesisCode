@@ -57,10 +57,11 @@ pub fn verify_package_with_policy(
         step_limit: StepLimit::Default,
         mem_limits: MemLimits::default(),
     };
+    let frontend = super::default_coreform_frontend();
     match super::load_modules(
         &pkg_dir,
         &manifest.modules,
-        &super::CoreformFrontend::Rust,
+        &frontend,
         limits,
     ) {
         Ok(modules) => {
@@ -91,7 +92,7 @@ pub fn verify_package_with_policy(
     if let Err(e) = super::check_dep_hashes(
         &pkg_dir,
         &manifest.dependencies,
-        &super::CoreformFrontend::Rust,
+        &frontend,
         limits,
     ) {
         errors.push(format!("{e}"));
