@@ -22,6 +22,7 @@ A fast-path cutover is complete when all of the following are true:
 - Strict full-cutover rehearsal scripts (`selfhost_strict_smoke` + `selfhost_strict_golden`) are passing on native + WASI.
 - Native + WASI `typecheck` command paths now call a shared `gc_obligations` implementation, removing duplicated CLI semantics for that command family.
 - Selfhost `core/cli` now owns module `::meta` extraction via `core/cli::module-meta`, and obligations typecheck prefers that contract path.
+- Native + WASI parity tests now assert selfhost typecheck fails deterministically when `core/cli::module-meta` is poisoned in generated artifacts.
 
 ---
 
@@ -109,7 +110,7 @@ Acceptance gate:
 ### Execution Sprint (Next)
 - N1: Deduplicate `optimize` command family into a shared library path for native + WASI.
 - N2: Deduplicate any remaining `test` CLI-local semantic logic into shared library path.
-- N3: Add parity tests asserting `core/cli::module-meta` contract path is active for generated selfhost artifacts.
+- [x] N3: Add parity tests asserting `core/cli::module-meta` contract path is active for generated selfhost artifacts.
 
 ---
 
