@@ -129,3 +129,62 @@
       (quote core/store::has)
       {:hash hash}
       (fn (r) (core/effect::pure r)))))
+
+(def core/cli::refs-get-program
+  (fn (name)
+    (core/effect::perform
+      (quote core/refs::get)
+      {:name name}
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::refs-list-program
+  (fn (prefix)
+    (core/effect::perform
+      (quote core/refs::list)
+      {:prefix prefix}
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::refs-set-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (name ((core/map::get req) (quote :name)))
+          (hash ((core/map::get req) (quote :hash)))
+          (policy ((core/map::get req) (quote :policy)))
+          (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+          (expected-old ((core/map::get req) (quote :expected-old)))
+        )
+        (let ((payload0 {:name name :hash hash :policy policy}))
+          (let
+            ((payload
+               (if expected-old-present
+                 (((core/map::put payload0) (quote :expected-old)) expected-old)
+                 payload0)))
+            (core/effect::perform
+              (quote core/refs::set)
+              payload
+              (fn (r) (core/effect::pure r))))))
+      ((core/error::make2 "core/type-error") "core/cli::refs-set-program expects map"))))
+
+(def core/cli::refs-delete-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (name ((core/map::get req) (quote :name)))
+          (policy ((core/map::get req) (quote :policy)))
+          (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+          (expected-old ((core/map::get req) (quote :expected-old)))
+        )
+        (let ((payload0 {:name name :policy policy}))
+          (let
+            ((payload
+               (if expected-old-present
+                 (((core/map::put payload0) (quote :expected-old)) expected-old)
+                 payload0)))
+            (core/effect::perform
+              (quote core/refs::delete)
+              payload
+              (fn (r) (core/effect::pure r))))))
+      ((core/error::make2 "core/type-error") "core/cli::refs-delete-program expects map"))))
