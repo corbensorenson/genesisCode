@@ -41,7 +41,7 @@ check_typecheck_parity() {
 
 check_coreform_fixture() {
   local in_file="$1"
-  local base expected staged rust_opt self_opt rust_h self_h wasi_h wasi_rust_h
+  local base expected staged rust_opt self_opt rust_h self_h wasi_h wasi_rust_h wasi_rust_opt wasi_self_opt
   base="$(basename "$in_file" .in.gc)"
   expected="$ROOT_DIR/tests/spec/coreform/${base}.out.gc"
   staged="$TMP_DIR/${base}.gc"
@@ -61,7 +61,7 @@ check_coreform_fixture() {
   "$GEN" --selfhost-only --selfhost-artifact "$ART" optimize "$expected" --out "$self_opt" >/dev/null
   diff -u "$rust_opt" "$self_opt" >/dev/null || fail "optimize mismatch for ${base}.out.gc"
 
-  # WASI bootstrap currently routes fmt/eval/test/pack in strict mode.
+  # WASI strict parity checks for canonicalized fixture outputs.
   cp "$in_file" "$TMP_DIR/${base}.wasi.gc"
   "$GWASI" --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/${base}.wasi.gc" >/dev/null
   diff -u "$expected" "$TMP_DIR/${base}.wasi.gc" >/dev/null || fail "WASI fmt mismatch for ${base}.in.gc"
@@ -69,6 +69,12 @@ check_coreform_fixture() {
   wasi_h="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$expected" --engine selfhost | tr -d '\n')"
   [[ "$rust_h" == "$wasi_rust_h" ]] || fail "WASI rust vcs hash mismatch for ${base}.out.gc"
   [[ "$rust_h" == "$wasi_h" ]] || fail "WASI strict vcs hash mismatch for ${base}.out.gc"
+  wasi_rust_opt="$TMP_DIR/${base}.opt.wasi.rust.gc"
+  wasi_self_opt="$TMP_DIR/${base}.opt.wasi.self.gc"
+  "$GWASI" optimize "$expected" --engine rust --out "$wasi_rust_opt" >/dev/null
+  "$GWASI" --selfhost-only --selfhost-artifact "$ART" optimize "$expected" --out "$wasi_self_opt" >/dev/null
+  diff -u "$wasi_rust_opt" "$wasi_self_opt" >/dev/null || fail "WASI strict optimize mismatch for ${base}.out.gc"
+  diff -u "$rust_opt" "$wasi_rust_opt" >/dev/null || fail "WASI rust optimize mismatch for ${base}.out.gc"
 }
 
 for in_file in "$ROOT_DIR"/tests/spec/coreform/*.in.gc; do
@@ -156,6 +162,9 @@ wasi_self_pack="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" pack --pkg
 wasi_rust_test="$("$GWASI" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 wasi_self_test="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_test" == "$wasi_self_test" ]] || fail "WASI strict test mismatch for pkg_basic fixture"
+wasi_rust_typecheck="$("$GWASI" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_typecheck="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+[[ "$wasi_rust_typecheck" == "$wasi_self_typecheck" ]] || fail "WASI strict typecheck mismatch for pkg_basic fixture"
 
 # Strict apply-patch + dashboard on native and WASI paths.
 PKG_N_R="$TMP_DIR/pkg_native_rust"
