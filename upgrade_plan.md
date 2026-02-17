@@ -166,6 +166,7 @@ Acceptance gate:
   - [ ] wasm/native embedding and process shell
 - [ ] Add alternative host conformance harness (second host implementation can be minimal) proving ABI portability.
   - progress: added CI host ABI surface conformance guard (`scripts/check_host_abi_conformance.sh`) that enforces exact parity between documented ABI ops (`docs/spec/HOST_ABI.md`) and `gc_effects` dispatch surface.
+  - progress: added executable runner conformance tests (`crates/gc_effects/tests/host_abi_surface.rs`) that iterate every documented host ABI op and fail if any op falls through to `core/caps/unknown-op`.
 
 Acceptance gate:
 - [ ] Language/toolchain `.gc` code runs unchanged on at least two host implementations via same ABI.
@@ -226,4 +227,5 @@ Acceptance gate:
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
+  - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.
 - [ ] 10) Start P6 optimization wave in `.gc` (profiling + incremental build graph).
