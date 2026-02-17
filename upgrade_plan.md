@@ -58,8 +58,8 @@ A fast-path cutover is complete when all of the following are true:
   - [x] Incremental: `gc/*` now routes through `core/cli::gc-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
   - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
   - [x] Incremental: `vcs/*` now routes through `core/cli::vcs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-  - [x] Incremental: `pkg/*` now routes through `core/cli::pkg-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-- [ ] Reduce Rust CLI to arg parsing + host bridge only.
+- [x] Incremental: `pkg/*` now routes through `core/cli::pkg-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
+- [x] Reduce Rust CLI to arg parsing + host bridge only.
 - [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
 - [x] Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch paths to support deterministic AI parity checks.
 

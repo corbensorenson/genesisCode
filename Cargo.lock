@@ -598,8 +598,22 @@ dependencies = [
 name = "gc_cli"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "assert_cmd",
+ "blake3",
+ "gc_cli_driver",
+ "gc_coreform",
+ "gc_effects",
+ "gc_vcs",
+ "predicates",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "gc_cli_driver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "blake3",
  "clap",
  "gc_coreform",
@@ -611,10 +625,8 @@ dependencies = [
  "gc_prelude",
  "gc_types",
  "gc_vcs",
- "predicates",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror 2.0.18",
  "toml",
 ]
@@ -814,25 +826,15 @@ dependencies = [
 name = "gc_wasi_cli"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "assert_cmd",
  "blake3",
- "clap",
+ "gc_cli_driver",
  "gc_coreform",
  "gc_effects",
- "gc_kernel",
- "gc_obligations",
- "gc_opt",
- "gc_patches",
- "gc_prelude",
- "gc_types",
  "gc_vcs",
  "predicates",
- "serde",
  "serde_json",
  "tempfile",
- "thiserror 2.0.18",
- "toml",
 ]
 
 [[package]]
