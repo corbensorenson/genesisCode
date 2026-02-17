@@ -43,6 +43,17 @@ if ! diff -u "$N_OPT" "$S_OPT" >/dev/null; then
   exit 1
 fi
 
+cat >"$TMP_DIR/run.gc" <<'GC'
+(def prog (core/effect::pure 42))
+prog
+GC
+cat >"$TMP_DIR/caps.toml" <<'TOML'
+allow = []
+TOML
+
+native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/native.strict.gclog" >/dev/null
+native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/native.strict.gclog" >/dev/null
+
 # package strict selfhost smoke (native CLI)
 PKG_N="$TMP_DIR/pkg_native"
 mkdir -p "$PKG_N"
@@ -61,6 +72,8 @@ native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc
 # strict selfhost smoke (WASI CLI native-host binary)
 wasi_native --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/mod.gc" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" >/dev/null
+wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
+wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
 
 PKG_W="$TMP_DIR/pkg_wasi"

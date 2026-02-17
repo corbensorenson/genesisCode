@@ -44,7 +44,7 @@ Acceptance gate:
   - [x] covered now: `vcs hash` strict mode executes through selfhost tool handlers in native + WASI CLI tests
   - [x] covered now: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `vcs hash` strict-mode routing in WASI CLI tests
   - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
-  - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path)
+  - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including WASI strict coverage for available routed commands
 
 ---
