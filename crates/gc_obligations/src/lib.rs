@@ -58,6 +58,7 @@ struct LoadedModule {
     entry: ModuleEntry,
     abs_path: PathBuf,
     forms: Vec<Term>,
+    meta: Option<Term>,
     hash: [u8; 32],
 }
 
@@ -512,11 +513,10 @@ pub fn typecheck_package_with_step_limit_and_frontend(
     let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
     let mut mods = Vec::new();
     for m in &modules {
-        let meta = extract_meta_static(&m.forms);
         mods.push(gc_types::ModuleForTypecheck {
             path: m.entry.path.clone(),
             forms: m.forms.clone(),
-            meta,
+            meta: m.meta.clone(),
         });
     }
     let report = gc_types::typecheck_package(&mods);
@@ -701,6 +701,38 @@ fn selfhost_parse_canonicalize_module(
     Ok(forms.clone())
 }
 
+fn selfhost_extract_module_meta(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    forms: &[Term],
+) -> Result<Option<Term>, ObligationError> {
+    if let Some(meta_fn) = env.get("core/cli::module-meta") {
+        let out = meta_fn
+            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .map_err(|e| ObligationError::Module(e.to_string()))?;
+        if let Some(e) = extract_protocol_error(ctx, &out) {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli module-meta failed: {e}"
+            )));
+        }
+        let Some(meta_term) = out.as_data() else {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli module-meta returned non-data: {}",
+                out.debug_repr()
+            )));
+        };
+        return match meta_term {
+            Term::Map(m) => Ok(Some(Term::Map(m.clone()))),
+            Term::Nil => Ok(None),
+            _ => Err(ObligationError::Module(format!(
+                "selfhost core/cli module-meta returned non-map/non-nil: {}",
+                out.debug_repr()
+            ))),
+        };
+    }
+    Ok(extract_meta_static(forms))
+}
+
 fn pin_manifest_hashes(
     pkg_toml: &Path,
     manifest: &PackageManifest,
@@ -761,11 +793,13 @@ fn load_modules(
                     parse_module(&src).map_err(|pe| ObligationError::Module(format!("{pe}")))?;
                 let forms = canonicalize_module(forms)
                     .map_err(|e| ObligationError::Module(e.to_string()))?;
+                let meta = extract_meta_static(&forms);
                 let h = hash_module(&forms);
                 out.push(LoadedModule {
                     entry: e.clone(),
                     abs_path: abs,
                     forms,
+                    meta,
                     hash: h,
                 });
             }
@@ -791,11 +825,13 @@ fn load_modules(
                 let abs = pkg_dir.join(&e.path);
                 let src = std::fs::read_to_string(&abs)?;
                 let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+                let meta = selfhost_extract_module_meta(&mut ctx, &env, &forms)?;
                 let h = hash_module(&forms);
                 out.push(LoadedModule {
                     entry: e.clone(),
                     abs_path: abs,
                     forms,
+                    meta,
                     hash: h,
                 });
             }
@@ -2794,11 +2830,13 @@ fn obligation_translation_validation(
             .into_iter()
             .collect(),
         ));
+        let opt_meta = extract_meta_static(&opt_forms);
         opt_modules.push(LoadedModule {
             entry: m.entry.clone(),
             abs_path: m.abs_path.clone(),
             hash: opt_h,
             forms: opt_forms,
+            meta: opt_meta,
         });
     }
 
@@ -4385,6 +4423,38 @@ mod tests {
         assert!(
             format!("{err}").contains("not callable"),
             "expected core/cli path to be attempted first, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_meta_prefers_core_cli_module_meta_handler_when_present() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        // Shadow the core/cli meta extractor with invalid data. If module-meta prefers
+        // core/cli when present, this must fail before any static fallback path.
+        env.set_local(
+            "core/cli::module-meta",
+            Value::Data(Term::Str("shadowed".to_string())),
+        );
+
+        let forms = canonicalize_module(parse_module("(def ::meta (quote {:caps []}))\n").unwrap())
+            .expect("canonical module");
+        let err = selfhost_extract_module_meta(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("not callable"),
+            "expected core/cli module-meta path to be attempted first, got: {err}"
         );
     }
 }

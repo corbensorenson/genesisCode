@@ -21,6 +21,7 @@ A fast-path cutover is complete when all of the following are true:
 - Rust-vs-selfhost frontend parity for package/obligation/patch flows is now explicit via `--coreform-frontend`.
 - Strict full-cutover rehearsal scripts (`selfhost_strict_smoke` + `selfhost_strict_golden`) are passing on native + WASI.
 - Native + WASI `typecheck` command paths now call a shared `gc_obligations` implementation, removing duplicated CLI semantics for that command family.
+- Selfhost `core/cli` now owns module `::meta` extraction via `core/cli::module-meta`, and obligations typecheck prefers that contract path.
 
 ---
 
@@ -92,6 +93,7 @@ Acceptance gate:
   - [ ] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
   - [ ] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
+  - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
@@ -102,7 +104,12 @@ Acceptance gate:
 - [x] T2: Enforce clean build quality for this migration (`cargo fmt`, targeted tests, and `clippy -D warnings` for native + WASI CLIs).
 - [x] T3: Confirm `genesis pack` uses shared `gc_obligations::pack_with_frontend` path on native + WASI (no duplicated CLI semantics).
 - [x] T4: Confirm `genesis apply-patch` uses shared `gc_patches::apply_patch_with_step_limit_and_frontend` path on native + WASI (no duplicated CLI semantics).
-- [ ] T5: Start `.gc` semantic ownership migration for typecheck obligation path beyond shared Rust wrapper (next).
+- [x] T5: Start `.gc` semantic ownership migration for typecheck obligation path beyond shared Rust wrapper (module metadata now extracted through `core/cli::module-meta` when selfhost frontend is active).
+
+### Execution Sprint (Next)
+- N1: Deduplicate `optimize` command family into a shared library path for native + WASI.
+- N2: Deduplicate any remaining `test` CLI-local semantic logic into shared library path.
+- N3: Add parity tests asserting `core/cli::module-meta` contract path is active for generated selfhost artifacts.
 
 ---
 

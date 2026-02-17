@@ -1,5 +1,76 @@
 (def core/cli::is-error core/error::is?)
 
+(def core/cli::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/cli::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/cli::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/cli::pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+
+(def core/cli::def-name-or-nil
+  (fn (form)
+    (if (core/cli::pair? form)
+      (let ((items (core/pair::as-proper-list form)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 3)
+            (let ((h ((core/vec::get items) 0)) (n ((core/vec::get items) 1)))
+              (if (core/cli::sym? h)
+                (if ((core/sym::eq? h) (quote def))
+                  (if (core/cli::sym? n) n nil)
+                  nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def core/cli::def-expr-or-nil
+  (fn (form)
+    (if (core/cli::pair? form)
+      (let ((items (core/pair::as-proper-list form)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 3) ((core/vec::get items) 2) nil)
+          nil))
+      nil)))
+
+(def core/cli::quote-map-or-nil
+  (fn (expr)
+    (if (core/cli::pair? expr)
+      (let ((qitems (core/pair::as-proper-list expr)))
+        (if (core/cli::vec? qitems)
+          (if ((core/int::eq? (core/vec::len qitems)) 2)
+            (let ((qh ((core/vec::get qitems) 0)) (qv ((core/vec::get qitems) 1)))
+              (if (core/cli::sym? qh)
+                (if ((core/sym::eq? qh) (quote quote))
+                  (if (core/cli::map? qv) qv nil)
+                  nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def core/cli::module-meta-loop
+  (fn (forms)
+    (fn (i)
+      (if ((core/int::eq? i) (core/vec::len forms))
+        nil
+        (let ((form ((core/vec::get forms) i)))
+          (let ((name (core/cli::def-name-or-nil form)))
+            (if (core/cli::sym? name)
+              (if ((core/sym::eq? name) (quote ::meta))
+                (let ((m (core/cli::quote-map-or-nil (core/cli::def-expr-or-nil form))))
+                  (if (core/list::is-nil? m)
+                    ((core/cli::module-meta-loop forms) ((core/int::add i) 1))
+                    m))
+                ((core/cli::module-meta-loop forms) ((core/int::add i) 1)))
+              ((core/cli::module-meta-loop forms) ((core/int::add i) 1)))))))))
+
+(def core/cli::module-meta
+  (fn (forms)
+    (if (core/cli::vec? forms)
+      ((core/cli::module-meta-loop forms) 0)
+      ((core/error::make2 "core/type-error") "core/cli::module-meta expects vector of forms"))))
+
 (def core/cli::canonicalize-module-src
   (fn (src)
     (let ((forms (selfhost/parse::parse-module src)))
