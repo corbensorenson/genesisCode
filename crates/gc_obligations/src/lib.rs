@@ -48,6 +48,12 @@ pub struct PackageTestResult {
 }
 
 #[derive(Debug, Clone)]
+pub struct PackageTypecheckResult {
+    pub ok: bool,
+    pub report_coreform: String,
+}
+
+#[derive(Debug, Clone)]
 struct LoadedModule {
     entry: ModuleEntry,
     abs_path: PathBuf,
@@ -488,6 +494,36 @@ pub fn test_package_with_step_limit_and_frontend(
         ok: ok_all,
         acceptance_artifact,
         obligation_results,
+    })
+}
+
+pub fn typecheck_package_with_step_limit_and_frontend(
+    pkg_toml: &Path,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+    frontend: CoreformFrontend,
+) -> Result<PackageTypecheckResult, ObligationError> {
+    let (manifest, pkg_dir) =
+        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let limits = KernelLimits {
+        step_limit,
+        mem_limits,
+    };
+    let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
+    let mut mods = Vec::new();
+    for m in &modules {
+        let meta = extract_meta_static(&m.forms);
+        mods.push(gc_types::ModuleForTypecheck {
+            path: m.entry.path.clone(),
+            forms: m.forms.clone(),
+            meta,
+        });
+    }
+    let report = gc_types::typecheck_package(&mods);
+    let report_coreform = print_term(&report.to_term());
+    Ok(PackageTypecheckResult {
+        ok: report.ok,
+        report_coreform,
     })
 }
 

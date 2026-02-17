@@ -12,7 +12,6 @@ use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module, eval_term};
-use gc_obligations::PackageManifest;
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
     selfhost_coreform_toolchain_v1_sources,
@@ -1274,33 +1273,6 @@ fn render_value_for_cli(ctx: &EvalCtx, v: &Value) -> (String, &'static str) {
     (gc_coreform::print_term(&t), "coreform/term")
 }
 
-fn extract_meta_static(forms: &[Term]) -> Option<Term> {
-    for f in forms {
-        let Some(items) = f.as_proper_list() else {
-            continue;
-        };
-        if items.len() != 3 {
-            continue;
-        }
-        if !matches!(items[0], Term::Symbol(s) if s == "def") {
-            continue;
-        }
-        if !matches!(items[1], Term::Symbol(s) if s == "::meta") {
-            continue;
-        }
-        let Some(q) = items[2].as_proper_list() else {
-            continue;
-        };
-        if q.len() == 2
-            && matches!(q[0], Term::Symbol(s) if s == "quote")
-            && let Term::Map(m) = q[1]
-        {
-            return Some(Term::Map(m.clone()));
-        }
-    }
-    None
-}
-
 fn default_effect_log_path(op: &str) -> Result<PathBuf, CliError> {
     use std::fs::OpenOptions;
     use std::io::Write;
@@ -2308,62 +2280,20 @@ fn cmd_selfhost_dashboard(
 }
 
 fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg)
-        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
+    let result = gc_obligations::typecheck_package_with_step_limit_and_frontend(
+        pkg,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+        frontend,
+    )
+    .map_err(obligation_err)?;
+    let report_s = result.report_coreform;
 
-    let mut mods = Vec::new();
-    if matches!(frontend, gc_obligations::CoreformFrontend::Selfhost(_)) {
-        // Toolchain bootstrap is trusted; do not charge it against parse/canonicalize limits.
-        let mut ctx = EvalCtx::with_step_limit(None);
-        ctx.set_mem_limits(resolved_mem_limits(cli));
-        let prelude = build_prelude(&mut ctx);
-        let mut env = prelude.env;
-        load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-
-        // Charge user-configured limits to module parse/canonicalize work.
-        ctx.steps = 0;
-        ctx.step_limit = resolved_step_limit(cli).resolve();
-        for m in &manifest.modules {
-            let abs = pkg_dir.join(&m.path);
-            let src = std::fs::read_to_string(&abs)
-                .with_context(|| format!("read {}", abs.display()))
-                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
-            let meta = extract_meta_static(&forms);
-            mods.push(gc_types::ModuleForTypecheck {
-                path: m.path.clone(),
-                forms,
-                meta,
-            });
-        }
-    } else {
-        for m in &manifest.modules {
-            let abs = pkg_dir.join(&m.path);
-            let src = std::fs::read_to_string(&abs)
-                .with_context(|| format!("read {}", abs.display()))
-                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-            let forms = parse_module(&src)
-                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-            let forms = canonicalize_module(forms)
-                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            let meta = extract_meta_static(&forms);
-            mods.push(gc_types::ModuleForTypecheck {
-                path: m.path.clone(),
-                forms,
-                meta,
-            });
-        }
-    }
-
-    let report = gc_types::typecheck_package(&mods);
-    let report_term = report.to_term();
-    let report_s = gc_coreform::print_term(&report_term);
-
-    let exit_code = if report.ok { EX_OK } else { EX_OBLIGATIONS };
+    let exit_code = if result.ok { EX_OK } else { EX_OBLIGATIONS };
     let env = JsonEnvelope {
-        ok: report.ok,
+        ok: result.ok,
         kind: "genesis/typecheck-v0.2",
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),

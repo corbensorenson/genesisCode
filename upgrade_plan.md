@@ -20,6 +20,7 @@ A fast-path cutover is complete when all of the following are true:
 - Main blockers are now structural: `.gc` command contract ownership, `.gc` semantic ownership of toolchain passes, and bootstrap extraction.
 - Rust-vs-selfhost frontend parity for package/obligation/patch flows is now explicit via `--coreform-frontend`.
 - Strict full-cutover rehearsal scripts (`selfhost_strict_smoke` + `selfhost_strict_golden`) are passing on native + WASI.
+- Native + WASI `typecheck` command paths now call a shared `gc_obligations` implementation, removing duplicated CLI semantics for that command family.
 
 ---
 
@@ -86,11 +87,22 @@ Acceptance gate:
 - [x] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
 - [x] 5) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
 - [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
+  - [x] 6a) Deduplicate native + WASI `typecheck` command semantics by routing through `gc_obligations::typecheck_package_with_step_limit_and_frontend`.
+  - [x] 6b) Deduplicate `pack` + `apply-patch` command families via shared `gc_obligations` / `gc_patches` entrypoints on native + WASI.
+  - [ ] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
+  - [ ] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
 - [x] 11) Strengthen strict smoke/golden parity harnesses to force explicit `--coreform-frontend rust|selfhost` selection for package/obligation/patch command families.
+
+### Execution Sprint (Now)
+- [x] T1: Route native + WASI `genesis typecheck` through shared obligations implementation and remove duplicate per-CLI logic.
+- [x] T2: Enforce clean build quality for this migration (`cargo fmt`, targeted tests, and `clippy -D warnings` for native + WASI CLIs).
+- [x] T3: Confirm `genesis pack` uses shared `gc_obligations::pack_with_frontend` path on native + WASI (no duplicated CLI semantics).
+- [x] T4: Confirm `genesis apply-patch` uses shared `gc_patches::apply_patch_with_step_limit_and_frontend` path on native + WASI (no duplicated CLI semantics).
+- [ ] T5: Start `.gc` semantic ownership migration for typecheck obligation path beyond shared Rust wrapper (next).
 
 ---
 
