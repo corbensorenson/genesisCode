@@ -3125,12 +3125,13 @@ fn cmd_vcs(
             load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             let f = env
-                .get("selfhost/tool::hash-src-with-kind")
+                .get("core/cli::hash-src-with-kind")
+                .or_else(|| env.get("selfhost/tool::hash-src-with-kind"))
                 .ok_or_else(|| {
                     cli_err(
                         EX_INTERNAL,
                         "selfhost/missing",
-                        "missing binding selfhost/tool::hash-src-with-kind",
+                        "missing binding core/cli::hash-src-with-kind (or fallback selfhost/tool::hash-src-with-kind)",
                     )
                 })?;
 

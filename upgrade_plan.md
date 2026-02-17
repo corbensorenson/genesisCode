@@ -42,6 +42,7 @@ A fast-path cutover is complete when all of the following are true:
   - [ ] `test`, `typecheck`, `optimize`, `pack`, `apply-patch`
 - [ ] Route effectful command groups through `.gc` command contracts:
   - [ ] `store/*`, `refs/*`, `vcs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`
+  - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
 - [ ] Reduce Rust CLI to arg parsing + host bridge only.
 - [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
 
