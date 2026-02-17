@@ -146,12 +146,14 @@ Acceptance gate:
   - [ ] Rust-side toolchain command logic replaced by `.gc` handlers
   - [ ] Any Rust-only pipeline no longer used by default runtime path
 - [ ] Add build profile `selfhost-strict` that excludes deprecated semantic crates/modules.
-- [ ] Make `selfhost-strict` the default CI profile.
+- [x] Make `selfhost-strict` the default CI profile.
+  - progress: workspace now defines `[profile.selfhost-strict]` in `Cargo.toml` (inherits `test`, deterministic-oriented settings), and CI `Test` runs `cargo test --workspace --profile selfhost-strict`.
   - progress: CI now enforces strict default selfhost behavior with `GENESIS_ALLOW_RUST_ENGINE=0` and an explicit default-profile guard step (`scripts/selfhost_default_profile_guard.sh`).
 - [ ] Keep a compatibility profile only for historical comparison tests.
 
 Acceptance gate:
 - [ ] `cargo test` in `selfhost-strict` passes without invoking deprecated Rust semantics.
+  - progress: validated with `GENESIS_ALLOW_RUST_ENGINE=0 cargo test --workspace --profile selfhost-strict` (full workspace pass) plus compat-usage guardrails.
 - [ ] GenesisCode can rebuild its own toolchain artifacts from `.gc` sources only (host bridge allowed).
 
 ---
@@ -214,6 +216,7 @@ Acceptance gate:
   - [x] selfhost frontend is now the unconditional default for this command set in CLI frontend resolution
 - [ ] 5) Move replaced Rust semantic modules to `/deprecated`.
 - [x] 6) Enable `selfhost-strict` profile in CI as required.
+  - [x] CI `Test` now executes `cargo test --workspace --profile selfhost-strict`.
   - [x] CI job now sets `GENESIS_ALLOW_RUST_ENGINE=0` by default and runs `scripts/selfhost_default_profile_guard.sh`.
   - [x] CI now also runs `scripts/check_rust_engine_compat.sh` to prevent implicit rust-engine fallback regressions in test/script surfaces.
   - [x] strict smoke/golden parity paths explicitly opt into compatibility mode (`GENESIS_ALLOW_RUST_ENGINE=1`) where Rust baseline comparison is required.

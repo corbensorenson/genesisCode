@@ -37,7 +37,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
-        run: cargo test --workspace
+        run: cargo test --workspace --profile selfhost-strict
 
       - name: Selfhost Strict Smoke (Native + WASI CLI)
         run: bash scripts/selfhost_strict_smoke.sh
