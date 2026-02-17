@@ -1877,19 +1877,21 @@ fn cmd_run(
             (ctx, prelude.env, forms)
         }
         FmtEngine::Selfhost => {
-            let mut ctx = EvalCtx::with_step_limit(None);
-            ctx.set_mem_limits(resolved_mem_limits(cli));
-            let prelude = build_prelude(&mut ctx);
-            let mut env = prelude.env;
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            // Parse/canonicalize with selfhost bindings loaded, then evaluate in a fresh
+            // prelude-only env so closure/request hashing matches the rust frontend path.
+            let mut parse_ctx = EvalCtx::with_step_limit(None);
+            parse_ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut parse_ctx);
+            let mut parse_env = prelude.env;
+            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
-            ctx.steps = 0;
-            ctx.step_limit = None;
-            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+            parse_ctx.steps = 0;
+            parse_ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
 
-            ctx.steps = 0;
-            ctx.step_limit = resolved_step_limit(cli).resolve();
-            (ctx, env, forms)
+            let mut eval_ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut eval_ctx);
+            (eval_ctx, prelude.env, forms)
         }
     };
     let program_hash = hash_module(&forms);
@@ -4699,19 +4701,21 @@ fn cmd_replay(
             (ctx, prelude.env, forms)
         }
         FmtEngine::Selfhost => {
-            let mut ctx = EvalCtx::with_step_limit(None);
-            ctx.set_mem_limits(resolved_mem_limits(cli));
-            let prelude = build_prelude(&mut ctx);
-            let mut env = prelude.env;
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            // Parse/canonicalize with selfhost bindings loaded, then evaluate in a fresh
+            // prelude-only env so closure/request hashing matches the rust frontend path.
+            let mut parse_ctx = EvalCtx::with_step_limit(None);
+            parse_ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut parse_ctx);
+            let mut parse_env = prelude.env;
+            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
-            ctx.steps = 0;
-            ctx.step_limit = None;
-            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+            parse_ctx.steps = 0;
+            parse_ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
 
-            ctx.steps = 0;
-            ctx.step_limit = resolved_step_limit(cli).resolve();
-            (ctx, env, forms)
+            let mut eval_ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut eval_ctx);
+            (eval_ctx, prelude.env, forms)
         }
     };
     let program_hash = hash_module(&forms);
