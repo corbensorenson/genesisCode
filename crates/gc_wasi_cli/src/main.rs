@@ -168,6 +168,27 @@ enum Cmd {
         pkg: PathBuf,
     },
 
+    /// Optimize a CoreForm module/program (pure subset only).
+    Optimize {
+        file: PathBuf,
+        /// Write optimized CoreForm output to this file. If omitted, prints to stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Emit stage-2 compiled WASM artifact to this path.
+        #[arg(long)]
+        emit_wasm: Option<PathBuf>,
+        /// Frontend engine. `rust` uses the Rust CoreForm frontend; `selfhost` runs the
+        /// self-hosted CoreForm parser+canonicalizer inside the kernel.
+        #[arg(long, value_enum)]
+        engine: Option<FmtEngine>,
+        /// Require `core/obligation::stage1-validation` to pass.
+        #[arg(long)]
+        stage1_gate: bool,
+        /// Require stage-2 translation validation to pass when supported.
+        #[arg(long)]
+        stage2_gate: bool,
+    },
+
     /// Build a selfhost CoreForm toolchain artifact for bootstrap cutover.
     SelfhostArtifact {
         /// Output artifact path (CoreForm term file).
@@ -1034,6 +1055,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
         Cmd::Explain { engine, .. } => enforce_selfhost_engine(cli, "explain", *engine),
+        Cmd::Optimize { engine, .. } => enforce_selfhost_engine(cli, "optimize", *engine),
         Cmd::Run { engine, .. } => enforce_selfhost_engine(cli, "run", *engine),
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Test { .. } => Ok(()),
@@ -1057,6 +1079,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 Cmd::Fmt { .. }
                 | Cmd::Eval { .. }
                 | Cmd::Explain { .. }
+                | Cmd::Optimize { .. }
                 | Cmd::Run { .. }
                 | Cmd::Replay { .. }
                 | Cmd::Typecheck { .. }
@@ -1072,7 +1095,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -1909,6 +1932,137 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         } else {
             format!("{report_s}\n")
         },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_optimize(
+    cli: &Cli,
+    file: &PathBuf,
+    out: Option<&PathBuf>,
+    emit_wasm: Option<&PathBuf>,
+    engine: Option<FmtEngine>,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<CmdOut, CliError> {
+    let engine = resolved_engine(cli, "optimize", engine)?;
+    let src = std::fs::read_to_string(file)
+        .with_context(|| format!("read {}", file.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+
+    let forms = match engine {
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?
+        }
+        FmtEngine::Selfhost => {
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            ctx.steps = 0;
+            ctx.step_limit = None;
+            selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?
+        }
+    };
+    let orig_h = hash_module(&forms);
+
+    let stage1 = gc_opt::stage1_pipeline(&forms)
+        .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{e}")))?;
+    if stage1_gate && !stage1.gate_report.ok {
+        return Err(CliError {
+            exit_code: EX_OBLIGATIONS,
+            json: JsonError {
+                code: "obligation/stage1-validation",
+                message: "core/obligation::stage1-validation failed".to_string(),
+                context: Some(stage1_pipeline_json(&stage1)),
+            },
+        });
+    }
+    let opt = stage1.transformed_forms.clone();
+    let opt_report = stage1.optimize_report.clone();
+    let opt_h = hash_module(&opt);
+    let stage2 = if stage2_gate || emit_wasm.is_some() {
+        Some(gc_opt::stage2_validation_report(&opt))
+    } else {
+        None
+    };
+    if stage2_gate {
+        let s2 = stage2
+            .as_ref()
+            .expect("stage2 report must exist when stage2 gate is enabled");
+        if s2.supported && !s2.ok {
+            return Err(CliError {
+                exit_code: EX_OBLIGATIONS,
+                json: JsonError {
+                    code: "obligation/translation-validation",
+                    message:
+                        "core/obligation::translation-validation (stage2 CoreForm->WASM) failed"
+                            .to_string(),
+                    context: Some(stage2_report_json(s2)),
+                },
+            });
+        }
+    }
+
+    if let Some(p) = emit_wasm {
+        let art = gc_opt::stage2_compile_module(&opt).map_err(|e| match e {
+            gc_opt::Stage2CompileError::Unsupported(msg) => {
+                cli_err(EX_OBLIGATIONS, "stage2/unsupported", msg)
+            }
+            gc_opt::Stage2CompileError::Internal(msg) => cli_err(EX_INTERNAL, "stage2/error", msg),
+        })?;
+        std::fs::write(p, &art.wasm_bytes)
+            .with_context(|| format!("write {}", p.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+
+    let out_s = print_module(&opt);
+    let changed = orig_h != opt_h;
+
+    if let Some(p) = out {
+        std::fs::write(p, out_s.as_bytes())
+            .with_context(|| format!("write {}", p.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+
+    let stdout = if cli.json || out.is_some() {
+        String::new()
+    } else {
+        out_s.clone()
+    };
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/optimize-v0.2",
+        data: Some(serde_json::json!({
+            "file": file.display().to_string(),
+            "out": out.map(|p| p.display().to_string()),
+            "wasm_out": emit_wasm.map(|p| p.display().to_string()),
+            "engine": match engine {
+                FmtEngine::Rust => "rust",
+                FmtEngine::Selfhost => "selfhost",
+            },
+            "stage1": stage1_pipeline_json(&stage1),
+            "stage2": stage2.as_ref().map(stage2_report_json),
+            "changed": changed,
+            "original_hash": hex32(orig_h),
+            "optimized_hash": hex32(opt_h),
+            "egg_runs": opt_report.stats.egg_runs,
+            "egg_iterations": opt_report.stats.iterations,
+            "egg_eclasses": opt_report.stats.eclasses,
+            "egg_enodes": opt_report.stats.enodes,
+            "egg_rewrites_applied": opt_report.stats.rewrites_applied,
+            "optimized_coreform": out_s,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout,
         json: serde_json::to_value(env).expect("json"),
     })
 }
@@ -5761,6 +5915,22 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
         Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg.as_path()),
+        Cmd::Optimize {
+            file,
+            out,
+            emit_wasm,
+            engine,
+            stage1_gate,
+            stage2_gate,
+        } => cmd_optimize(
+            cli,
+            file,
+            out.as_ref(),
+            emit_wasm.as_ref(),
+            *engine,
+            *stage1_gate,
+            *stage2_gate,
+        ),
         Cmd::SelfhostArtifact {
             out,
             min_stage2_supported_modules,

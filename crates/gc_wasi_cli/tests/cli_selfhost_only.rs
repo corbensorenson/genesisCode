@@ -116,7 +116,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -306,6 +306,29 @@ fn eval_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
 }
 
 #[test]
+fn optimize_prefers_selfhost_when_artifact_flag_is_set_without_engine() {
+    let td = tempdir().unwrap();
+    let file = td.path().join("m.gc");
+    let bad_artifact = td.path().join("bad_toolchain.gc");
+    std::fs::write(&file, "(def x 1)\nx\n").unwrap();
+    std::fs::write(&bad_artifact, "{ :kind \"bad\" }\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-artifact",
+            bad_artifact.to_str().unwrap(),
+            "optimize",
+            file.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "selfhost artifact bootstrap required",
+        ));
+}
+
+#[test]
 fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
     let td = tempdir().unwrap();
     let file = td.path().join("m.gc");
@@ -465,6 +488,35 @@ fn selfhost_only_rejects_rust_engine_for_run() {
             "rust",
             "--caps",
             caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode requires --engine selfhost",
+        ));
+}
+
+#[test]
+fn selfhost_only_rejects_rust_engine_for_optimize() {
+    let td = tempdir().unwrap();
+    let file = td.path().join("prog.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def x (prim int/add 40 2))
+          x
+        "#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "optimize",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
         ])
         .assert()
         .failure()

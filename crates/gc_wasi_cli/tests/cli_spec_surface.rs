@@ -18,6 +18,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "fmt",
         "eval",
         "explain",
+        "optimize",
         "run",
         "replay",
         "test",
@@ -81,6 +82,24 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
 
     let s = stdout_str(&["run", "--help"]);
     assert!(s.contains("--engine"), "run --help output missing --engine");
+
+    let s = stdout_str(&["optimize", "--help"]);
+    assert!(
+        s.contains("--engine"),
+        "optimize --help output missing --engine"
+    );
+    assert!(
+        s.contains("--stage1-gate"),
+        "optimize --help output missing --stage1-gate"
+    );
+    assert!(
+        s.contains("--stage2-gate"),
+        "optimize --help output missing --stage2-gate"
+    );
+    assert!(
+        s.contains("--emit-wasm"),
+        "optimize --help output missing --emit-wasm"
+    );
 
     let s = stdout_str(&["replay", "--help"]);
     assert!(

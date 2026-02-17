@@ -175,6 +175,18 @@ if [[ "$N_EVAL" != "$W_N_EVAL" ]]; then
   echo "WASI rust eval mismatch native=$N_EVAL wasi=$W_N_EVAL" >&2
   exit 1
 fi
+W_N_OPT="$TMP_DIR/wasi.opt.native.gc"
+W_S_OPT="$TMP_DIR/wasi.opt.strict.gc"
+wasi_native optimize "$TMP_DIR/mod.gc" --engine rust --out "$W_N_OPT" >/dev/null
+wasi_native --selfhost-only --selfhost-artifact "$ART" optimize "$TMP_DIR/mod.gc" --out "$W_S_OPT" >/dev/null
+if ! diff -u "$W_N_OPT" "$W_S_OPT" >/dev/null; then
+  echo "WASI strict optimize output mismatch" >&2
+  exit 1
+fi
+if ! diff -u "$N_OPT" "$W_N_OPT" >/dev/null; then
+  echo "WASI rust optimize output mismatch native=$N_OPT wasi=$W_N_OPT" >&2
+  exit 1
+fi
 wasi_native --selfhost-only --selfhost-artifact "$ART" explain "$TMP_DIR/explain.gc" --engine selfhost --contract c --msg "(msg foo nil)" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
