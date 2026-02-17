@@ -91,6 +91,7 @@ Acceptance gate:
   - progress: `gc_obligations::verify_package_with_policy` now validates module/dependency hashes via the selfhost default frontend path instead of a hard-coded Rust frontend.
   - progress: remaining internal `gc_obligations` wrappers (`run_one_test`, `eval_package_once`, `eval_dependencies`) now default through `default_coreform_frontend()`, removing additional implicit Rust-frontend fallback from translation-validation and dependency-eval paths.
   - progress: native + WASI CLIs now disable `--engine rust` by default and require explicit compatibility opt-in (`GENESIS_ALLOW_RUST_ENGINE=1`), making selfhost the default profile path while preserving parity tooling.
+  - progress: `gc_obligations` frontend guards now also require `GENESIS_ALLOW_RUST_ENGINE=1` for `CoreformFrontend::Rust`, so non-CLI library entry points match default-profile selfhost semantics.
   - progress: parity tests and strict smoke/golden scripts now opt into rust-engine compatibility mode explicitly, and new native+WASI tests assert rust-engine rejection without the compatibility env.
 
 ---
@@ -202,6 +203,7 @@ Acceptance gate:
   - [x] selfhost path is now the unconditional default for this command set (explicit `--engine rust` still supported for parity checks)
 - [x] 3) Remove Rust fallback path for parser/printer/hash in default profile.
   - [x] default profile now rejects `--engine rust` unless `GENESIS_ALLOW_RUST_ENGINE=1` is set (native + WASI).
+  - [x] default profile now rejects `CoreformFrontend::Rust` in obligations library entry points unless `GENESIS_ALLOW_RUST_ENGINE=1` is set.
   - [x] parity suites/scripts now declare rust-engine compatibility mode explicitly instead of relying on default fallback behavior.
 - [x] 4) Route `test/apply-patch/pack` through `.gc`.
   - [x] `test`, `apply-patch`, and `pack` now have strict-mode selfhost frontend routing in native CLI

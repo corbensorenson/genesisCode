@@ -101,6 +101,7 @@ pub enum CoreformFrontend {
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
+const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -158,10 +159,16 @@ fn enforce_frontend_allowed_with_flag(
     frontend: &CoreformFrontend,
     context: &str,
     selfhost_only: bool,
+    rust_compat_enabled: bool,
 ) -> Result<(), ObligationError> {
     if selfhost_only && matches!(frontend, CoreformFrontend::Rust) {
         return Err(ObligationError::Module(format!(
             "selfhost-only mode forbids Rust frontend in {context}; use CoreformFrontend::Selfhost"
+        )));
+    }
+    if !rust_compat_enabled && matches!(frontend, CoreformFrontend::Rust) {
+        return Err(ObligationError::Module(format!(
+            "Rust frontend is disabled by default in {context}; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
         )));
     }
     Ok(())
@@ -171,7 +178,12 @@ fn enforce_frontend_allowed(
     frontend: &CoreformFrontend,
     context: &str,
 ) -> Result<(), ObligationError> {
-    enforce_frontend_allowed_with_flag(frontend, context, env_truthy(SELFHOST_ONLY_ENV))
+    enforce_frontend_allowed_with_flag(
+        frontend,
+        context,
+        env_truthy(SELFHOST_ONLY_ENV),
+        env_truthy(ALLOW_RUST_ENGINE_ENV),
+    )
 }
 
 pub fn parse_canonicalize_module_source_with_frontend(
@@ -4275,10 +4287,19 @@ mod tests {
 
     #[test]
     fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
-        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", true)
+        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", true, true)
             .expect_err("rust frontend must be blocked in selfhost-only mode");
         assert!(format!("{err}").contains("selfhost-only mode forbids Rust frontend"));
-        enforce_frontend_allowed_with_flag(&default_coreform_frontend(), "test", true)
+        enforce_frontend_allowed_with_flag(&default_coreform_frontend(), "test", true, true)
             .expect("selfhost frontend must be allowed");
+    }
+
+    #[test]
+    fn rust_frontend_requires_compat_flag_at_library_boundary() {
+        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, false)
+            .expect_err("rust frontend must require explicit compatibility mode");
+        assert!(format!("{err}").contains("Rust frontend is disabled by default"));
+        enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, true)
+            .expect("rust frontend should be permitted when compatibility mode is enabled");
     }
 }
