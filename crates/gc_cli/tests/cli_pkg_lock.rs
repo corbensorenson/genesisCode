@@ -317,3 +317,74 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .failure()
         .code(20);
 }
+
+#[test]
+fn pkg_lock_strict_rejects_commit_with_missing_patch_closure() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let snap_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap_missing_patch.gc",
+    );
+    let missing_patch = "f".repeat(64);
+    let commit_h = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{missing_patch}"
+  :result "{snap_h}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "bad-closure"
+}}"#
+        ),
+        "commit_missing_patch.gc",
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["add"])
+        .arg(format!("badpatch@commit:{commit_h}"))
+        .assert()
+        .success();
+
+    // Non-strict lock resolves selector to commit/snapshot.
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock"])
+        .assert()
+        .success();
+
+    // Strict lock enforces closure integrity and rejects missing commit.patch artifact.
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock", "--strict"])
+        .assert()
+        .failure()
+        .code(20);
+}

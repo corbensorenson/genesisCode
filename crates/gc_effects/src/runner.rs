@@ -1286,6 +1286,92 @@ fn call_capability(
 
             if strict {
                 for (name, le) in &out_locked {
+                    let req = match l.requirements.get(name) {
+                        Some(r) => r,
+                        None => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/lock-invariant",
+                                format!("missing requirement entry for locked dependency: {name}"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if le.source_selector != req.selector {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/lock-invariant",
+                            format!("locked.source_selector mismatch for {name}"),
+                            Some(op),
+                        ));
+                    }
+                    match parse_selector(&req.selector) {
+                        Some(Selector::Snapshot(_)) => {
+                            if le.resolved_ref.is_some() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!(
+                                        "snapshot selector must not set resolved_ref for {name}"
+                                    ),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                        Some(Selector::Commit(sel_h)) => {
+                            if le.resolved_ref.is_some() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!("commit selector must not set resolved_ref for {name}"),
+                                    Some(op),
+                                ));
+                            }
+                            let Some(locked_commit) = &le.commit else {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!("commit selector resolved without commit for {name}"),
+                                    Some(op),
+                                ));
+                            };
+                            if !locked_commit.eq_ignore_ascii_case(&sel_h) {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!("commit selector hash mismatch for {name}"),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                        Some(Selector::Ref(ref_name)) => {
+                            if le.resolved_ref.as_deref() != Some(ref_name.as_str()) {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!("ref selector resolved_ref mismatch for {name}"),
+                                    Some(op),
+                                ));
+                            }
+                            if le.commit.is_none() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/lock-invariant",
+                                    format!("ref selector resolved without commit for {name}"),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                        None => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-selector",
+                                format!("unsupported selector: {}", req.selector),
+                                Some(op),
+                            ));
+                        }
+                    }
+
                     if !store.path_for(&le.snapshot).exists() {
                         return Ok(mk_error(
                             error_tok,
@@ -1323,6 +1409,22 @@ fn call_capability(
                     }
 
                     if let Some(commit_hex) = &le.commit {
+                        if !store.path_for(commit_hex).exists() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("artifact not found: {commit_hex}"),
+                                Some(op),
+                            ));
+                        }
+                        if store.verify_hex(commit_hex).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("artifact store corruption: {commit_hex}"),
+                                Some(op),
+                            ));
+                        }
                         let commit_term = match store_get_term(store, commit_hex) {
                             Ok(t) => t,
                             Err(_) => {
@@ -1345,6 +1447,56 @@ fn call_capability(
                                 ));
                             }
                         };
+                        if let Some(base) = &c.base {
+                            if !store.path_for(base).exists() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/not-found",
+                                    format!("artifact not found: {base}"),
+                                    Some(op),
+                                ));
+                            }
+                            if store.verify_hex(base).is_err() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/corruption",
+                                    format!("artifact store corruption: {base}"),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                        if !store.path_for(&c.patch).exists() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("artifact not found: {}", c.patch),
+                                Some(op),
+                            ));
+                        }
+                        if store.verify_hex(&c.patch).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("artifact store corruption: {}", c.patch),
+                                Some(op),
+                            ));
+                        }
+                        if !store.path_for(&c.result).exists() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/not-found",
+                                format!("artifact not found: {}", c.result),
+                                Some(op),
+                            ));
+                        }
+                        if store.verify_hex(&c.result).is_err() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/store/corruption",
+                                format!("artifact store corruption: {}", c.result),
+                                Some(op),
+                            ));
+                        }
                         if c.result != le.snapshot {
                             return Ok(mk_error(
                                 error_tok,
