@@ -19,6 +19,7 @@ A fast-path cutover is complete when all of the following are true:
 - Strict smoke and strict golden now enforce cross-host/cross-engine parity on key paths.
 - Main blockers are now structural: `.gc` command contract ownership, `.gc` semantic ownership of toolchain passes, and bootstrap extraction.
 - Rust-vs-selfhost frontend parity for package/obligation/patch flows is now explicit via `--coreform-frontend`.
+- Strict full-cutover rehearsal scripts (`selfhost_strict_smoke` + `selfhost_strict_golden`) are passing on native + WASI.
 
 ---
 
@@ -87,7 +88,8 @@ Acceptance gate:
 - [ ] 6) Remove duplicated Rust command semantics once parity gate is green.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
-- [ ] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
+- [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
+- [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
 
 ---
 

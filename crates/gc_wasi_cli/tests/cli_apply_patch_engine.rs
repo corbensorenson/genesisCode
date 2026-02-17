@@ -56,6 +56,20 @@ fn assert_artifact_fields_equal(lhs: &JsonValue, rhs: &JsonValue) {
             "artifact mismatch for {key}"
         );
     }
+    assert_eq!(
+        lhs_data
+            .get("coreform_frontend")
+            .and_then(|v| v.get("name"))
+            .and_then(JsonValue::as_str),
+        Some("rust")
+    );
+    assert_eq!(
+        rhs_data
+            .get("coreform_frontend")
+            .and_then(|v| v.get("name"))
+            .and_then(JsonValue::as_str),
+        Some("selfhost")
+    );
 }
 
 #[test]
@@ -110,6 +124,8 @@ fn apply_patch_selfhost_only_matches_default_frontend_artifacts() {
         &default_dir,
         &[
             "--json",
+            "--coreform-frontend",
+            "rust",
             "apply-patch",
             "pure.gcpatch",
             "--pkg",
@@ -123,6 +139,8 @@ fn apply_patch_selfhost_only_matches_default_frontend_artifacts() {
             "--selfhost-only",
             "--selfhost-artifact",
             artifact.to_str().unwrap(),
+            "--coreform-frontend",
+            "selfhost",
             "apply-patch",
             "pure.gcpatch",
             "--pkg",

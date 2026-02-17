@@ -1284,6 +1284,23 @@ fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFront
     }
 }
 
+fn coreform_frontend_json(frontend: &gc_obligations::CoreformFrontend) -> serde_json::Value {
+    match frontend {
+        gc_obligations::CoreformFrontend::Rust => serde_json::json!({
+            "name": "rust"
+        }),
+        gc_obligations::CoreformFrontend::Selfhost(cfg) => serde_json::json!({
+            "name": "selfhost",
+            "bootstrap_mode": match cfg.bootstrap_mode {
+                SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
+                SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
+                SelfhostBootstrapMode::Embedded => "embedded",
+            },
+            "artifact": cfg.artifact.as_ref().map(|p| p.display().to_string()),
+        }),
+    }
+}
+
 fn enforce_selfhost_engine(
     cli: &Cli,
     cmd_name: &str,
@@ -5245,13 +5262,14 @@ fn cmd_replay(
 
 fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
 
     let r = gc_obligations::test_package_with_step_limit_and_frontend(
         pkg,
         caps,
         resolved_step_limit(cli),
         resolved_mem_limits(cli),
-        frontend,
+        frontend.clone(),
     )
     .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
@@ -5275,6 +5293,7 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
             "caps": caps.map(|p| p.display().to_string()),
+            "coreform_frontend": frontend_info,
             "acceptance_artifact": r.acceptance_artifact,
             "obligations": obligations,
         })),
@@ -5294,6 +5313,7 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
 
 fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
 
     let h = gc_obligations::pack_with_frontend(pkg, frontend).map_err(obligation_err)?;
     let env = JsonEnvelope {
@@ -5301,6 +5321,7 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         kind: "genesis/pack-v0.2",
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
+            "coreform_frontend": frontend_info,
             "package_artifact": h,
         })),
         error: None,
@@ -6001,6 +6022,7 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let (manifest, pkg_dir) = PackageManifest::load(pkg)
         .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
 
     let mut mods = Vec::new();
     if matches!(frontend, gc_obligations::CoreformFrontend::Selfhost(_)) {
@@ -6056,6 +6078,7 @@ fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         kind: "genesis/typecheck-v0.2",
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
+            "coreform_frontend": frontend_info,
             "report_coreform": report_s,
         })),
         error: None,
@@ -6209,6 +6232,7 @@ fn cmd_apply_patch(
     caps: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
 
     let r = gc_patches::apply_patch_with_step_limit_and_frontend(
         patch,
@@ -6234,6 +6258,7 @@ fn cmd_apply_patch(
             "patch": patch.display().to_string(),
             "pkg": pkg.display().to_string(),
             "caps": caps.map(|p| p.display().to_string()),
+            "coreform_frontend": frontend_info,
             "patch_artifact": r.patch_artifact,
             "report_artifact": r.report_artifact,
             "acceptance_artifact": r.acceptance_artifact,

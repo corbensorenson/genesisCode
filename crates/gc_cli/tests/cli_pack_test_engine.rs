@@ -1,4 +1,5 @@
 use assert_cmd::cargo::cargo_bin_cmd;
+use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
 fn cmd() -> assert_cmd::Command {
@@ -38,6 +39,17 @@ fn run_stdout(args: &[&str]) -> String {
         .stdout
         .clone();
     String::from_utf8(out).unwrap().trim().to_string()
+}
+
+fn run_json(args: &[&str]) -> JsonValue {
+    let out = cmd()
+        .args(args)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    serde_json::from_slice(&out).unwrap()
 }
 
 #[test]
@@ -92,4 +104,66 @@ fn test_selfhost_frontend_matches_rust_frontend_acceptance_artifact() {
     ]);
 
     assert_eq!(rust_h, self_h);
+}
+
+#[test]
+fn pack_and_test_json_report_explicit_coreform_frontend_for_ai_drivers() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    let rust_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_rust"));
+    let self_pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost"));
+
+    let rust_pack = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "rust",
+        "pack",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
+    let self_pack = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "pack",
+        "--pkg",
+        self_pkg.to_str().unwrap(),
+    ]);
+    assert_eq!(
+        rust_pack["data"]["coreform_frontend"]["name"].as_str(),
+        Some("rust")
+    );
+    assert_eq!(
+        self_pack["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
+
+    let rust_test = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "rust",
+        "test",
+        "--pkg",
+        rust_pkg.to_str().unwrap(),
+    ]);
+    let self_test = run_json(&[
+        "--json",
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "test",
+        "--pkg",
+        self_pkg.to_str().unwrap(),
+    ]);
+    assert_eq!(
+        rust_test["data"]["coreform_frontend"]["name"].as_str(),
+        Some("rust")
+    );
+    assert_eq!(
+        self_test["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
 }

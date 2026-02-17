@@ -78,6 +78,14 @@ fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
         .and_then(JsonValue::as_str)
         .unwrap();
     assert_eq!(rust_report, self_report);
+    assert_eq!(
+        rust_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("rust")
+    );
+    assert_eq!(
+        self_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
 }
 
 #[test]
@@ -126,4 +134,12 @@ fn apply_patch_selfhost_frontend_matches_rust_frontend_artifacts() {
             "engine mismatch for {key}"
         );
     }
+    assert_eq!(
+        rust_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("rust")
+    );
+    assert_eq!(
+        self_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
 }
