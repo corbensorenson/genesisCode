@@ -153,7 +153,21 @@ if [[ "$N_TEST" != "$S_TEST" ]]; then
   echo "native strict test mismatch rust=$N_TEST strict=$S_TEST" >&2
   exit 1
 fi
-native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
+PKG_APPLY_N_BASE="$TMP_DIR/pkg_apply_native_base"
+PKG_APPLY_N_STRICT="$TMP_DIR/pkg_apply_native_strict"
+for P in "$PKG_APPLY_N_BASE" "$PKG_APPLY_N_STRICT"; do
+  mkdir -p "$P"
+  cp tests/spec/pkg_basic/basic.gc "$P/basic.gc"
+  cp tests/spec/pkg_basic/caps.toml "$P/caps.toml"
+  cp tests/spec/pkg_basic/package.toml "$P/package.toml"
+  cp tests/spec/pkg_basic/pure.gcpatch "$P/pure.gcpatch"
+done
+N_APPLY="$(native apply-patch "$PKG_APPLY_N_BASE/pure.gcpatch" --pkg "$PKG_APPLY_N_BASE/package.toml" | tr -d '\n')"
+S_APPLY="$(native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_APPLY_N_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_N_STRICT/package.toml" | tr -d '\n')"
+if [[ "$N_APPLY" != "$S_APPLY" ]]; then
+  echo "native strict apply-patch mismatch rust=$N_APPLY strict=$S_APPLY" >&2
+  exit 1
+fi
 native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
 N_VCS_HASH="$(native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
@@ -265,6 +279,24 @@ if [[ "$N_TEST" != "$W_N_TEST" ]]; then
   echo "WASI rust test mismatch native=$N_TEST wasi=$W_N_TEST" >&2
   exit 1
 fi
-wasi_native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_W/pure.gcpatch" --pkg "$PKG_W/package.toml" >/dev/null
+PKG_APPLY_W_BASE="$TMP_DIR/pkg_apply_wasi_base"
+PKG_APPLY_W_STRICT="$TMP_DIR/pkg_apply_wasi_strict"
+for P in "$PKG_APPLY_W_BASE" "$PKG_APPLY_W_STRICT"; do
+  mkdir -p "$P"
+  cp tests/spec/pkg_basic/basic.gc "$P/basic.gc"
+  cp tests/spec/pkg_basic/caps.toml "$P/caps.toml"
+  cp tests/spec/pkg_basic/package.toml "$P/package.toml"
+  cp tests/spec/pkg_basic/pure.gcpatch "$P/pure.gcpatch"
+done
+W_N_APPLY="$(wasi_native apply-patch "$PKG_APPLY_W_BASE/pure.gcpatch" --pkg "$PKG_APPLY_W_BASE/package.toml" | tr -d '\n')"
+W_S_APPLY="$(wasi_native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_APPLY_W_STRICT/pure.gcpatch" --pkg "$PKG_APPLY_W_STRICT/package.toml" | tr -d '\n')"
+if [[ "$W_N_APPLY" != "$W_S_APPLY" ]]; then
+  echo "WASI strict apply-patch mismatch rust=$W_N_APPLY strict=$W_S_APPLY" >&2
+  exit 1
+fi
+if [[ "$N_APPLY" != "$W_N_APPLY" ]]; then
+  echo "WASI rust apply-patch mismatch native=$N_APPLY wasi=$W_N_APPLY" >&2
+  exit 1
+fi
 
 echo "selfhost-strict smoke: ok"

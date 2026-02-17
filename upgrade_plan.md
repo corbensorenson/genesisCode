@@ -141,6 +141,7 @@ Acceptance gate:
     - progress: strict smoke now enforces WASI `optimize` parity for rust baseline vs strict selfhost output, and native-vs-WASI rust optimize parity.
     - progress: strict smoke now executes WASI `apply-patch` under `--selfhost-only` with a real patch artifact (`tests/spec/pkg_basic/pure.gcpatch`) to guard command-surface and runtime routing.
     - progress: strict smoke now executes WASI `selfhost-dashboard` under `--selfhost-only` and verifies artifact+markdown path emission in the strict path.
+    - progress: strict smoke now enforces `apply-patch` artifact parity for native+WASI (rust baseline vs strict selfhost, plus native-vs-WASI rust baseline parity) using isolated package copies to avoid mutation coupling.
 - [ ] Keep Rust CLI as thin argument parser + host bridge only.
 - [ ] Remove duplicated Rust command logic once parity is proven.
 
