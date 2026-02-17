@@ -8080,6 +8080,10 @@ fn cmd_selfhost_artifact(
                     Term::Str((*src).to_string()),
                 ),
                 (
+                    TermOrdKey(Term::symbol(":forms")),
+                    Term::Vector(forms.clone()),
+                ),
+                (
                     TermOrdKey(Term::symbol(":module-h")),
                     Term::Bytes(module_h.to_vec().into()),
                 ),

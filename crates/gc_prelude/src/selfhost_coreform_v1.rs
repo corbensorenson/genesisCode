@@ -89,6 +89,7 @@ where
 ///     {
 ///       :path "selfhost/parse.gc"
 ///       :source "<module source>"
+///       :forms [<TopForm> ...]          ; optional (preferred): canonical module forms
 ///       :module-h b"...32 bytes..."
 ///       :stage1-ok true
 ///       :stage2-supported bool
@@ -174,13 +175,18 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             ));
         }
 
-        let src = match map_get(m_map, ":source") {
-            Some(Term::Str(s)) => s,
-            _ => {
+        let forms_from_artifact = match map_get(m_map, ":forms") {
+            Some(Term::Vector(v)) => Some(v.clone()),
+            Some(_) => {
                 return Err(anyhow::anyhow!(
-                    "artifact module {path} missing :source string"
+                    "artifact module {path} has invalid :forms (expected vector)"
                 ));
             }
+            None => None,
+        };
+        let src = match map_get(m_map, ":source") {
+            Some(Term::Str(s)) => Some(s.as_str()),
+            _ => None,
         };
         let module_h = match map_get(m_map, ":module-h") {
             Some(Term::Bytes(b)) if b.len() == 32 => {
@@ -209,17 +215,25 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             ));
         }
 
-        let forms = parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?;
-        let forms =
-            canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?;
-        let got_h = hash_module(&forms);
-        if got_h != module_h {
-            return Err(anyhow::anyhow!(
-                "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
-                module_h,
-                got_h
-            ));
-        }
+        let forms = if let Some(v) = forms_from_artifact {
+            v
+        } else {
+            let src = src.ok_or_else(|| {
+                anyhow::anyhow!("artifact module {path} missing :source string or :forms vector")
+            })?;
+            let forms = parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?;
+            let forms =
+                canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?;
+            let got_h = hash_module(&forms);
+            if got_h != module_h {
+                return Err(anyhow::anyhow!(
+                    "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
+                    module_h,
+                    got_h
+                ));
+            }
+            forms
+        };
         let compiled =
             compile_module(&forms).map_err(|e| anyhow::anyhow!("{path}: compile: {e}"))?;
         compiled_by_path.insert(path, compiled);
