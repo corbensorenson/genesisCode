@@ -83,7 +83,7 @@ Acceptance gate:
 - [ ] Keep compatibility profile for historical comparisons only.
 
 Acceptance gate:
-- [ ] `cargo test --workspace --profile selfhost-strict` passes without invoking bootstrap semantics from `/old_bootstrap`.
+- [x] `cargo test --workspace --profile selfhost-strict` passes without invoking bootstrap semantics from `/old_bootstrap`.
 
 ### D) Final Cutover Proof
 - [x] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) passes via selfhost-first paths.
