@@ -141,6 +141,10 @@ Acceptance gate:
     - regression coverage added for evidence exclusion, ref-root export, and dependency-closure mode differences (`none` vs `locked`)
 - [ ] Implement ref-policy gating in `.gc` per `docs/POLICY_DEFAULTS_v0.1.md`.
   - progress: moved `pkg publish` policy preflight/gating out of native CLI into capability runtime op `core/pkg::publish` (effect-runner path), so publish gate decisions are now enforced at the host capability boundary with deterministic logs.
+  - progress: moved `pkg import --set-ref` local ref mutation chain out of CLI continuation logic into `core/gpk::import` runtime handling:
+    - import payload now carries `:set-refs` entries (name/hash/policy/expected-old), applied in deterministic sorted order
+    - ref updates now reuse centralized local refs policy gate logic in runtime (`core/refs` gate path), removing duplicated CLI-side orchestration
+    - import ref updates remain policy-gated and covered by regression tests, including operation under caps that allow `core/gpk::import` without separately exposing `core/refs::set` to user programs
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
 
 Acceptance gate:
@@ -236,6 +240,7 @@ Acceptance gate:
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
   - [x] `pkg publish` now delegates policy preflight + ref-class obligation checks to runtime capability op `core/pkg::publish` (instead of native CLI-local preflight), preserving `EX_OBLIGATIONS` on publish gate failures.
+  - [x] `pkg import --set-ref` now delegates local refs updates to runtime capability handling in `core/gpk::import` (policy-gated via shared refs gate logic), eliminating CLI continuation-based `core/refs::set` orchestration.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
   - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.

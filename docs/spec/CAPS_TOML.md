@@ -132,7 +132,7 @@ The runner also uses `base_dir` to sandbox filesystem paths carried in payloads 
 - `core/pkg::list`: payload key `:lock` (lockfile path)
 - `core/pkg::info`: payload key `:lock` (lockfile path)
 - `core/gpk::export`: payload key `:out` (output `.gpk` path)
-- `core/gpk::import`: payload key `:in` (input `.gpk` path)
+- `core/gpk::import`: payload key `:in` (input `.gpk` path), and optional `:set-refs` entries (`:name`, `:hash|nil`, `:policy`, optional `:expected-old`) applied through the local refs policy gate
 - `core/gc::*`: payload keys `:lock`, `:pins`, and (optionally) `:quarantine-dir`
 
 These payload paths must remain under `base_dir` after canonicalization, using the same rules as `io/fs::*`.

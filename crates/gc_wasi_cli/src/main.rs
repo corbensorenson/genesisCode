@@ -2135,59 +2135,6 @@ fn parse_local_set_refs(
     Ok(out)
 }
 
-fn mk_local_set_refs_chain(set_refs: &[SetRefSpec], imp: gc_coreform::Term) -> gc_coreform::Term {
-    let mut body = gc_coreform::Term::list(vec![
-        gc_coreform::Term::symbol("core/effect::pure"),
-        imp.clone(),
-    ]);
-    for sr in set_refs.iter().rev() {
-        let op = gc_coreform::Term::list(vec![
-            gc_coreform::Term::symbol("quote"),
-            gc_coreform::Term::symbol("core/refs::set"),
-        ]);
-        let mut m = std::collections::BTreeMap::new();
-        m.insert(
-            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
-            gc_coreform::Term::Str(sr.name.clone()),
-        );
-        m.insert(
-            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":hash")),
-            if sr.hash == "nil" {
-                gc_coreform::Term::Nil
-            } else {
-                gc_coreform::Term::Str(sr.hash.clone())
-            },
-        );
-        m.insert(
-            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
-            gc_coreform::Term::Str(sr.policy.clone()),
-        );
-        if let Some(exp) = &sr.expected_old {
-            m.insert(
-                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":expected-old")),
-                if exp == "nil" {
-                    gc_coreform::Term::Nil
-                } else {
-                    gc_coreform::Term::Str(exp.clone())
-                },
-            );
-        }
-        let payload = gc_coreform::Term::Map(m);
-        let k = gc_coreform::Term::list(vec![
-            gc_coreform::Term::symbol("fn"),
-            gc_coreform::Term::list(vec![gc_coreform::Term::symbol("_")]),
-            body,
-        ]);
-        body = gc_coreform::Term::list(vec![
-            gc_coreform::Term::symbol("core/effect::perform"),
-            op,
-            payload,
-            k,
-        ]);
-    }
-    body
-}
-
 fn mk_pkg_init_program(
     workspace: &str,
     lock: &Path,
@@ -2664,19 +2611,56 @@ fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Vec<gc_corefo
         gc_coreform::Term::symbol("quote"),
         gc_coreform::Term::symbol("core/gpk::import"),
     ]);
-    let payload = gc_coreform::Term::Map(
-        [(
-            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":in")),
-            gc_coreform::Term::Str(input.display().to_string()),
-        )]
-        .into_iter()
-        .collect(),
+    let mut payload_m = std::collections::BTreeMap::new();
+    payload_m.insert(
+        gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":in")),
+        gc_coreform::Term::Str(input.display().to_string()),
     );
-    let k_body = mk_local_set_refs_chain(set_refs, gc_coreform::Term::symbol("imp"));
+    if !set_refs.is_empty() {
+        let mut entries = Vec::with_capacity(set_refs.len());
+        for sr in set_refs {
+            let mut em = std::collections::BTreeMap::new();
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":name")),
+                gc_coreform::Term::Str(sr.name.clone()),
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":hash")),
+                if sr.hash == "nil" {
+                    gc_coreform::Term::Nil
+                } else {
+                    gc_coreform::Term::Str(sr.hash.clone())
+                },
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":policy")),
+                gc_coreform::Term::Str(sr.policy.clone()),
+            );
+            if let Some(exp) = &sr.expected_old {
+                em.insert(
+                    gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":expected-old")),
+                    if exp == "nil" {
+                        gc_coreform::Term::Nil
+                    } else {
+                        gc_coreform::Term::Str(exp.clone())
+                    },
+                );
+            }
+            entries.push(gc_coreform::Term::Map(em));
+        }
+        payload_m.insert(
+            gc_coreform::TermOrdKey(gc_coreform::Term::symbol(":set-refs")),
+            gc_coreform::Term::Vector(entries),
+        );
+    }
+    let payload = gc_coreform::Term::Map(payload_m);
     let k = gc_coreform::Term::list(vec![
         gc_coreform::Term::symbol("fn"),
-        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("imp")]),
-        k_body,
+        gc_coreform::Term::list(vec![gc_coreform::Term::symbol("r")]),
+        gc_coreform::Term::list(vec![
+            gc_coreform::Term::symbol("core/effect::pure"),
+            gc_coreform::Term::symbol("r"),
+        ]),
     ]);
     let perform = gc_coreform::Term::list(vec![
         gc_coreform::Term::symbol("core/effect::perform"),

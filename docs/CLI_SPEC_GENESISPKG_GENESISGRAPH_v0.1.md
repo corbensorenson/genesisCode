@@ -88,7 +88,7 @@ Commands:
 - `genesis pkg update [<pkg-name> ...] [--log <path>]`
 - `genesis pkg info <pkg-name>`
 - `genesis pkg export <pkg-name> --ref <ref-or-commit-or-snapshot> --out <file.gpk> [--shallow|--full] [--depth <n>] [--include-evidence <required|all|none>] [--include-deps <none|locked|all>]`
-- `genesis pkg import <file.gpk> [--set-ref <refname>=<hash> ...] [--log <path>]`
+- `genesis pkg import <file.gpk> [--set-ref <refname>=<hash> ...] [--policy <policy-hash>] [--log <path>]`
 - `genesis pkg publish <pkg-name> --remote <registry> --ref <refname> [--policy <name-or-hash>] [--log <path>]`
 - `genesis pkg verify <pkg-name>@<commit-or-ref> [--policy <name-or-hash>]`
 

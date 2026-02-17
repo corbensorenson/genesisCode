@@ -3448,48 +3448,6 @@ fn parse_local_set_refs(
     Ok(out)
 }
 
-fn mk_local_set_refs_chain(set_refs: &[SetRefSpec], imp: Term) -> Term {
-    let mut body = Term::list(vec![Term::symbol("core/effect::pure"), imp.clone()]);
-    for sr in set_refs.iter().rev() {
-        let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/refs::set")]);
-        let mut m = std::collections::BTreeMap::new();
-        m.insert(
-            gc_coreform::TermOrdKey(Term::symbol(":name")),
-            Term::Str(sr.name.clone()),
-        );
-        m.insert(
-            gc_coreform::TermOrdKey(Term::symbol(":hash")),
-            if sr.hash == "nil" {
-                Term::Nil
-            } else {
-                Term::Str(sr.hash.clone())
-            },
-        );
-        m.insert(
-            gc_coreform::TermOrdKey(Term::symbol(":policy")),
-            Term::Str(sr.policy.clone()),
-        );
-        if let Some(exp) = &sr.expected_old {
-            m.insert(
-                gc_coreform::TermOrdKey(Term::symbol(":expected-old")),
-                if exp == "nil" {
-                    Term::Nil
-                } else {
-                    Term::Str(exp.clone())
-                },
-            );
-        }
-        let payload = Term::Map(m);
-        let k = Term::list(vec![
-            Term::symbol("fn"),
-            Term::list(vec![Term::symbol("_")]),
-            body,
-        ]);
-        body = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
-    }
-    body
-}
-
 fn mk_pkg_init_program(
     workspace: &str,
     lock: &Path,
@@ -3890,19 +3848,53 @@ fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Vec<Term> {
         Term::symbol("quote"),
         Term::symbol("core/gpk::import"),
     ]);
-    let payload = Term::Map(
-        [(
-            gc_coreform::TermOrdKey(Term::symbol(":in")),
-            Term::Str(input.display().to_string()),
-        )]
-        .into_iter()
-        .collect(),
+    let mut payload_m = std::collections::BTreeMap::new();
+    payload_m.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":in")),
+        Term::Str(input.display().to_string()),
     );
-    let k_body = mk_local_set_refs_chain(set_refs, Term::symbol("imp"));
+    if !set_refs.is_empty() {
+        let mut entries = Vec::with_capacity(set_refs.len());
+        for sr in set_refs {
+            let mut em = std::collections::BTreeMap::new();
+            em.insert(
+                gc_coreform::TermOrdKey(Term::symbol(":name")),
+                Term::Str(sr.name.clone()),
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(Term::symbol(":hash")),
+                if sr.hash == "nil" {
+                    Term::Nil
+                } else {
+                    Term::Str(sr.hash.clone())
+                },
+            );
+            em.insert(
+                gc_coreform::TermOrdKey(Term::symbol(":policy")),
+                Term::Str(sr.policy.clone()),
+            );
+            if let Some(exp) = &sr.expected_old {
+                em.insert(
+                    gc_coreform::TermOrdKey(Term::symbol(":expected-old")),
+                    if exp == "nil" {
+                        Term::Nil
+                    } else {
+                        Term::Str(exp.clone())
+                    },
+                );
+            }
+            entries.push(Term::Map(em));
+        }
+        payload_m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":set-refs")),
+            Term::Vector(entries),
+        );
+    }
+    let payload = Term::Map(payload_m);
     let k = Term::list(vec![
         Term::symbol("fn"),
-        Term::list(vec![Term::symbol("imp")]),
-        k_body,
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
     ]);
     let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
     vec![
