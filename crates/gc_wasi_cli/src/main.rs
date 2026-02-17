@@ -12,6 +12,7 @@ use gc_effects::{
     ArtifactStore, CapsPolicy, Decision, EffectLog, EffectsError, replay_with_store, run,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module, eval_term};
+use gc_obligations::PackageManifest;
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
     selfhost_coreform_toolchain_v1_sources,
@@ -155,6 +156,13 @@ enum Cmd {
 
     /// Compute and store a content-addressed package artifact record.
     Pack {
+        /// Path to package.toml
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
+    /// Run the (gradual) type/effect checker for a package.
+    Typecheck {
         /// Path to package.toml
         #[arg(long)]
         pkg: PathBuf,
@@ -1030,6 +1038,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Test { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
+        Cmd::Typecheck { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
@@ -1050,6 +1059,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 | Cmd::Explain { .. }
                 | Cmd::Run { .. }
                 | Cmd::Replay { .. }
+                | Cmd::Typecheck { .. }
                 | Cmd::Store { .. }
                 | Cmd::Refs { .. }
                 | Cmd::Pkg { .. }
@@ -1062,7 +1072,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli) -> Result<(), CliError> {
                 EX_VERIFY,
                 "selfhost-only/unsupported-cmd",
                 format!(
-                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
+                    "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`; `{cmd}` is not yet selfhost-routed"
                 ),
             ))
         }
@@ -1157,6 +1167,33 @@ fn render_value_for_cli(ctx: &EvalCtx, v: &Value) -> (String, &'static str) {
     let protocol_error = ctx.protocol.map(|p| p.error);
     let t = v.to_term_for_log(protocol_error);
     (gc_coreform::print_term(&t), "coreform/term")
+}
+
+fn extract_meta_static(forms: &[Term]) -> Option<Term> {
+    for f in forms {
+        let Some(items) = f.as_proper_list() else {
+            continue;
+        };
+        if items.len() != 3 {
+            continue;
+        }
+        if !matches!(items[0], Term::Symbol(s) if s == "def") {
+            continue;
+        }
+        if !matches!(items[1], Term::Symbol(s) if s == "::meta") {
+            continue;
+        }
+        let Some(q) = items[2].as_proper_list() else {
+            continue;
+        };
+        if q.len() == 2
+            && matches!(q[0], Term::Symbol(s) if s == "quote")
+            && let Term::Map(m) = q[1]
+        {
+            return Some(Term::Map(m.clone()));
+        }
+    }
+    None
 }
 
 fn default_effect_log_path(op: &str) -> Result<PathBuf, CliError> {
@@ -1797,6 +1834,80 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
             String::new()
         } else {
             format!("{h}\n")
+        },
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
+    let (manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
+    let frontend = resolved_coreform_frontend(cli)?;
+
+    let mut mods = Vec::new();
+    if matches!(frontend, gc_obligations::CoreformFrontend::Selfhost(_)) {
+        // Toolchain bootstrap is trusted; do not charge it against parse/canonicalize limits.
+        let mut ctx = EvalCtx::with_step_limit(None);
+        ctx.set_mem_limits(resolved_mem_limits(cli));
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+        // Charge user-configured limits to module parse/canonicalize work.
+        ctx.steps = 0;
+        ctx.step_limit = resolved_step_limit(cli).resolve();
+        for m in &manifest.modules {
+            let abs = pkg_dir.join(&m.path);
+            let src = std::fs::read_to_string(&abs)
+                .with_context(|| format!("read {}", abs.display()))
+                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
+            let meta = extract_meta_static(&forms);
+            mods.push(gc_types::ModuleForTypecheck {
+                path: m.path.clone(),
+                forms,
+                meta,
+            });
+        }
+    } else {
+        for m in &manifest.modules {
+            let abs = pkg_dir.join(&m.path);
+            let src = std::fs::read_to_string(&abs)
+                .with_context(|| format!("read {}", abs.display()))
+                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let meta = extract_meta_static(&forms);
+            mods.push(gc_types::ModuleForTypecheck {
+                path: m.path.clone(),
+                forms,
+                meta,
+            });
+        }
+    }
+
+    let report = gc_types::typecheck_package(&mods);
+    let report_term = report.to_term();
+    let report_s = gc_coreform::print_term(&report_term);
+
+    let exit_code = if report.ok { EX_OK } else { EX_OBLIGATIONS };
+    let env = JsonEnvelope {
+        ok: report.ok,
+        kind: "genesis/typecheck-v0.2",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "report_coreform": report_s,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{report_s}\n")
         },
         json: serde_json::to_value(env).expect("json"),
     })
@@ -5649,6 +5760,7 @@ fn dispatch(cli: &Cli) -> Result<CmdOut, CliError> {
         } => cmd_explain(cli, file, *engine, contract, msg),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg.as_path(), caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg.as_path()),
+        Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg.as_path()),
         Cmd::SelfhostArtifact {
             out,
             min_stage2_supported_modules,

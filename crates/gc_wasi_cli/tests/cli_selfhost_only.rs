@@ -116,7 +116,7 @@ fn selfhost_only_rejects_non_routed_commands() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `typecheck`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`",
         ));
 }
 
@@ -380,6 +380,28 @@ fn selfhost_only_accepts_pack_with_selfhost_artifact() {
             "--selfhost-artifact",
             artifact.to_str().unwrap(),
             "pack",
+            "--pkg",
+            pkg,
+        ])
+        .assert()
+        .success();
+}
+
+#[test]
+fn selfhost_only_accepts_typecheck_with_selfhost_artifact() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    let pkg = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/spec/pkg_basic/package.toml"
+    );
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "typecheck",
             "--pkg",
             pkg,
         ])

@@ -28,6 +28,7 @@ gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_effects = { path = "../gc_effects" }
 gc_obligations = { path = "../gc_obligations" }
 gc_opt = { path = "../gc_opt" }
+gc_types = { path = "../gc_types" }
 gc_vcs = { path = "../gc_vcs" }
 
 [dev-dependencies]

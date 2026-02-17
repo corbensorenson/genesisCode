@@ -42,12 +42,12 @@ Acceptance gate:
   - [x] covered now: `apply-patch` strict mode executes through selfhost frontend parse/canonicalize path in native CLI tests
   - [x] covered now: `selfhost-dashboard` runs in strict mode and emits content-addressed dashboard artifacts
   - [x] covered now: `vcs hash` strict mode executes through selfhost tool handlers in native + WASI CLI tests
-  - [x] covered now: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `vcs hash` strict-mode routing in WASI CLI tests
+  - [x] covered now: `fmt`, `eval`, `explain`, `run`, `replay`, `test`, `pack`, `typecheck`, `vcs hash` strict-mode routing in WASI CLI tests
   - [x] covered now: `explain` strict-mode engine gating in WASI CLI tests
   - [x] covered now: native + WASI `fmt` auto-select selfhost via workspace fallback artifact `selfhost/toolchain.gc`
   - [x] covered now: native + WASI `run`/`replay` auto-select selfhost when a toolchain artifact is configured (guarded by bad-artifact bootstrap tests)
   - [x] covered now: CI runs `scripts/selfhost_strict_smoke.sh` (native + WASI strict selfhost smoke path), including `run`/`replay`
-  - [x] covered now: strict smoke executes `explain` under `--selfhost-only` for native + WASI CLIs with selfhost artifact bootstrap.
+  - [x] covered now: strict smoke executes `explain` and `typecheck` under `--selfhost-only` for native + WASI CLIs with selfhost artifact bootstrap.
   - [x] covered now: strict smoke exercises non-frontend command groups under `--selfhost-only` (`store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and effectful `vcs`) on native + WASI.
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
   - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
@@ -71,7 +71,9 @@ Acceptance gate:
 - [ ] Native and WASM runs produce identical hashes/evidence between Rust fallback and `.gc` self-host path on conformance suites.
   - progress: added WASI `cli_run_replay_engine.rs` parity tests for `run`/`replay` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
   - progress: added WASI `cli_eval_engine.rs` parity tests for `eval` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
+  - progress: added WASI `cli_explain_engine.rs` parity tests for `explain` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
   - progress: added WASI `cli_fmt_engine.rs` parity tests for `fmt` (`rust` vs `selfhost`) including `--check` exit-code parity.
+  - progress: added WASI `cli_typecheck_engine.rs` parity tests for `typecheck` (`rust` vs `selfhost`) on `pkg_basic`.
   - progress: native `cli_run_replay_engine.rs` now enforces deterministic `.gclog` parity between `--engine rust` and `--engine selfhost`.
   - progress: WASI `cli_run_replay_engine.rs` now enforces deterministic `.gclog` parity between `--engine rust` and `--engine selfhost`.
   - progress: native + WASI parity tests now cover denied-effect programs (`sys/time::now` with deny-by-default caps), asserting exit-code/output/log/replay parity across `rust` and `selfhost`.
@@ -120,6 +122,7 @@ Acceptance gate:
     - progress: `--selfhost-only` now permits command groups `store`, `refs`, `pkg`, `policy`, `sync`, and `gc` in native + WASI CLIs; regression coverage executes these groups end-to-end under strict mode (`sync` asserted by strict-gate tests + smoke on both CLIs).
     - progress: added concrete `policy` command surface in native + WASI CLIs (`policy list`, `policy show`, `policy set-default`) with deterministic local config management and schema-validated policy artifact resolution from the content-addressed store.
     - progress: added missing WASI `explain` command surface with native-parity engine routing and output schema (`genesis/explain-v0.2`), including selfhost term parsing for `--contract`/`--msg`.
+    - progress: added missing WASI `typecheck` command surface with native-parity selfhost frontend routing and output schema (`genesis/typecheck-v0.2`).
     - progress: added missing WASI `pkg publish` command surface with native-parity runtime routing (`core/pkg::publish` effect op), including obligation-failure exit semantics and commit-hash stdout behavior parity.
     - progress: strict selfhost smoke now explicitly validates `pkg publish --help` availability on both native and WASI CLIs to prevent command-surface regressions.
     - progress: added WASI `cli_spec_surface.rs` to lock top-level/subcommand help surfaces (including `explain` and `pkg publish`) and prevent future command-surface regressions.

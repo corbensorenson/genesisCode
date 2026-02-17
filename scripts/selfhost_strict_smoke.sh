@@ -231,6 +231,16 @@ if [[ "$N_PACK" != "$W_N_PACK" ]]; then
   echo "WASI rust pack mismatch native=$N_PACK wasi=$W_N_PACK" >&2
   exit 1
 fi
+W_N_TYPECHECK="$(wasi_native typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+W_S_TYPECHECK="$(wasi_native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_W/package.toml" | tr -d '\n')"
+if [[ "$W_N_TYPECHECK" != "$W_S_TYPECHECK" ]]; then
+  echo "WASI strict typecheck mismatch rust=$W_N_TYPECHECK strict=$W_S_TYPECHECK" >&2
+  exit 1
+fi
+if [[ "$N_TYPECHECK" != "$W_N_TYPECHECK" ]]; then
+  echo "WASI rust typecheck mismatch native=$N_TYPECHECK wasi=$W_N_TYPECHECK" >&2
+  exit 1
+fi
 W_N_TEST="$(wasi_native test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 W_S_TEST="$(wasi_native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 if [[ "$W_N_TEST" != "$W_S_TEST" ]]; then

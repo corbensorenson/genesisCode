@@ -22,6 +22,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "replay",
         "test",
         "pack",
+        "typecheck",
         "selfhost-artifact",
         "store",
         "refs",
@@ -86,6 +87,9 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("--engine"),
         "replay --help output missing --engine"
     );
+
+    let s = stdout_str(&["typecheck", "--help"]);
+    assert!(s.contains("--pkg"), "typecheck --help output missing --pkg");
 
     let s = stdout_str(&["selfhost-artifact", "--help"]);
     assert!(
