@@ -24,7 +24,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - commands with `--engine` must use `--engine selfhost`
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
-  - Current native routed set: `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
+  - Current native routed set: `fmt`, `eval`, `explain`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, `vcs hash`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
   - Toolchain artifact resolution still follows:
@@ -46,6 +46,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
   - `--stage2-gate` enforces `core/obligation::translation-validation` only when the module is Stage-2 supported.
   - For Stage-2 gating, validation input is Stage-1 transformed CoreForm (matching package translation-validation flow), even when `--stage1-pipeline` is not requested.
+- `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
+  - when `--engine` is omitted, engine defaults to `selfhost`.
+  - `--engine selfhost` runs self-hosted parse/canonicalize for the input module and self-hosted parse for `--contract`/`--msg`.
 - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
   - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.

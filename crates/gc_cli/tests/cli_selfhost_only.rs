@@ -84,24 +84,20 @@ fn selfhost_only_accepts_fmt_selfhost_with_artifact() {
 #[test]
 fn selfhost_only_rejects_non_routed_commands() {
     let dir = tempdir().unwrap();
-    let file = dir.path().join("m.gc");
-    std::fs::write(&file, "(def x 1)\n").unwrap();
+    let out = dir.path().join("k.toml");
 
     cargo_bin_cmd!("genesis")
         .args([
             "--selfhost-only",
-            "explain",
-            file.to_str().unwrap(),
-            "--contract",
-            "x",
-            "--msg",
-            "nil",
+            "keygen",
+            "--out",
+            out.to_str().unwrap(),
         ])
         .assert()
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, and `vcs hash`",
+            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `selfhost-dashboard`, and `vcs hash`",
         ));
 }
 
@@ -256,6 +252,39 @@ fn selfhost_only_accepts_vcs_hash_with_selfhost_artifact() {
         .and_then(JsonValue::as_str)
         .unwrap();
     assert_eq!(kind, "module");
+}
+
+#[test]
+fn selfhost_only_accepts_explain_with_selfhost_artifact() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let file = dir.path().join("m.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def c (core/contract::make (fn (msg) nil) nil {}))
+          c
+        "#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "explain",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--contract",
+            "c",
+            "--msg",
+            "(msg foo nil)",
+        ])
+        .assert()
+        .success();
 }
 
 #[test]

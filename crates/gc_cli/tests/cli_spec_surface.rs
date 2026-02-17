@@ -73,6 +73,12 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         "eval --help output missing --stage2-gate"
     );
 
+    let s = stdout_str(&["explain", "--help"]);
+    assert!(
+        s.contains("--engine"),
+        "explain --help output missing --engine"
+    );
+
     let s = stdout_str(&["optimize", "--help"]);
     assert!(
         s.contains("--engine"),
