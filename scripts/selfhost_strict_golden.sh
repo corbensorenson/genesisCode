@@ -76,14 +76,20 @@ TOML
 
 rust_run="$("$GEN" run "$TMP_DIR/run_pure.gc" --engine rust --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.rust.gclog" | tr -d '\n')"
 self_run="$("$GEN" --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run_pure.gc" --engine selfhost --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.self.gclog" | tr -d '\n')"
-wasi_run="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run_pure.gc" --engine selfhost --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.wasi.gclog" | tr -d '\n')"
+wasi_rust_run="$("$GWASI" run "$TMP_DIR/run_pure.gc" --engine rust --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.wasi.rust.gclog" | tr -d '\n')"
+wasi_run="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run_pure.gc" --engine selfhost --caps "$TMP_DIR/run_caps.toml" --log "$TMP_DIR/run_pure.wasi.self.gclog" | tr -d '\n')"
 [[ "$rust_run" == "$self_run" ]] || fail "native strict run mismatch on pure parity module"
+[[ "$wasi_rust_run" == "$wasi_run" ]] || fail "WASI strict run mismatch vs WASI rust baseline on pure parity module"
 [[ "$rust_run" == "$wasi_run" ]] || fail "WASI strict run mismatch on pure parity module"
+diff -u "$TMP_DIR/run_pure.rust.gclog" "$TMP_DIR/run_pure.self.gclog" >/dev/null || fail "native strict run log mismatch on pure parity module"
+diff -u "$TMP_DIR/run_pure.wasi.rust.gclog" "$TMP_DIR/run_pure.wasi.self.gclog" >/dev/null || fail "WASI strict run log mismatch on pure parity module"
 
 rust_replay="$("$GEN" replay "$TMP_DIR/run_pure.gc" --engine rust --log "$TMP_DIR/run_pure.rust.gclog" | tr -d '\n')"
 self_replay="$("$GEN" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run_pure.gc" --engine selfhost --log "$TMP_DIR/run_pure.self.gclog" | tr -d '\n')"
-wasi_replay="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run_pure.gc" --engine selfhost --log "$TMP_DIR/run_pure.wasi.gclog" | tr -d '\n')"
+wasi_rust_replay="$("$GWASI" replay "$TMP_DIR/run_pure.gc" --engine rust --log "$TMP_DIR/run_pure.wasi.rust.gclog" | tr -d '\n')"
+wasi_replay="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run_pure.gc" --engine selfhost --log "$TMP_DIR/run_pure.wasi.self.gclog" | tr -d '\n')"
 [[ "$rust_replay" == "$self_replay" ]] || fail "native strict replay mismatch on pure parity module"
+[[ "$wasi_rust_replay" == "$wasi_replay" ]] || fail "WASI strict replay mismatch vs WASI rust baseline on pure parity module"
 [[ "$rust_replay" == "$wasi_replay" ]] || fail "WASI strict replay mismatch on pure parity module"
 
 # Package golden sweep (selfhost strict) over every package fixture.
