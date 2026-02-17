@@ -8,7 +8,7 @@ compile_error!(
 
 pub use prelude::{Prelude, build_prelude};
 pub use selfhost_coreform_v1::{
-    SelfhostBootstrapMode, load_selfhost_coreform_toolchain_v1,
+    SelfhostBootstrapMode, embedded_bootstrap_available, load_selfhost_coreform_toolchain_v1,
     load_selfhost_coreform_toolchain_v1_from_artifact,
     load_selfhost_coreform_toolchain_v1_from_artifact_source,
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,

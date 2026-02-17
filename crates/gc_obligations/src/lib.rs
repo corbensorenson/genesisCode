@@ -231,6 +231,41 @@ pub fn parse_canonicalize_module_source_with_frontend(
     }
 }
 
+pub fn hash_module_forms_with_frontend(
+    forms: &[Term],
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<[u8; 32], ObligationError> {
+    enforce_frontend_allowed(frontend, "module hash")?;
+    let limits = KernelLimits {
+        step_limit,
+        mem_limits,
+    };
+    match frontend {
+        CoreformFrontend::Rust => Ok(hash_module(forms)),
+        CoreformFrontend::Selfhost(cfg) => {
+            // Toolchain bootstrap is trusted and therefore uncharged.
+            let mut ctx = EvalCtx::with_step_limit(None);
+            ctx.set_mem_limits(limits.mem_limits);
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_coreform_toolchain_v1_with_mode(
+                &mut ctx,
+                &mut env,
+                cfg.bootstrap_mode,
+                cfg.artifact.as_deref(),
+            )
+            .map_err(|e| ObligationError::Module(format!("selfhost/init: {e}")))?;
+
+            // Apply user/configured limits to hash work.
+            ctx.steps = 0;
+            ctx.step_limit = limits.step_limit.resolve();
+            selfhost_hash_module_forms(&mut ctx, &env, forms)
+        }
+    }
+}
+
 fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
     let mut ctx = EvalCtx::with_step_limit(limits.step_limit.resolve());
     ctx.set_mem_limits(limits.mem_limits);
@@ -733,6 +768,70 @@ fn selfhost_extract_module_meta(
     Ok(extract_meta_static(forms))
 }
 
+fn parse_hex32_str(hex: &str, context: &str) -> Result<[u8; 32], ObligationError> {
+    let s = hex.trim();
+    if s.len() != 64 {
+        return Err(ObligationError::Module(format!(
+            "{context} returned non-64-byte hex hash"
+        )));
+    }
+    let mut out = [0u8; 32];
+    for (i, chunk) in s.as_bytes().chunks_exact(2).enumerate() {
+        let hi = (chunk[0] as char).to_digit(16).ok_or_else(|| {
+            ObligationError::Module(format!("{context} returned invalid hex hash"))
+        })?;
+        let lo = (chunk[1] as char).to_digit(16).ok_or_else(|| {
+            ObligationError::Module(format!("{context} returned invalid hex hash"))
+        })?;
+        out[i] = ((hi << 4) | lo) as u8;
+    }
+    Ok(out)
+}
+
+fn selfhost_hash_module_forms(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    forms: &[Term],
+) -> Result<[u8; 32], ObligationError> {
+    if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
+        let out = hash_forms_fn
+            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .map_err(|e| ObligationError::Module(e.to_string()))?;
+        if let Some(e) = extract_protocol_error(ctx, &out) {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli hash-module-forms failed: {e}"
+            )));
+        }
+        let Some(Term::Str(hex)) = out.as_data() else {
+            return Err(ObligationError::Module(format!(
+                "selfhost core/cli hash-module-forms returned non-string: {}",
+                out.debug_repr()
+            )));
+        };
+        return parse_hex32_str(hex, "selfhost core/cli hash-module-forms");
+    }
+
+    if let Some(hash_fn) = env.get("selfhost/hash::hash-module") {
+        let out = hash_fn
+            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .map_err(|e| ObligationError::Module(e.to_string()))?;
+        if let Some(e) = extract_protocol_error(ctx, &out) {
+            return Err(ObligationError::Module(format!(
+                "selfhost hash-module failed: {e}"
+            )));
+        }
+        let Some(Term::Str(hex)) = out.as_data() else {
+            return Err(ObligationError::Module(format!(
+                "selfhost hash-module returned non-string: {}",
+                out.debug_repr()
+            )));
+        };
+        return parse_hex32_str(hex, "selfhost hash-module");
+    }
+
+    Ok(hash_module(forms))
+}
+
 fn pin_manifest_hashes(
     pkg_toml: &Path,
     manifest: &PackageManifest,
@@ -826,7 +925,7 @@ fn load_modules(
                 let src = std::fs::read_to_string(&abs)?;
                 let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?;
                 let meta = selfhost_extract_module_meta(&mut ctx, &env, &forms)?;
-                let h = hash_module(&forms);
+                let h = selfhost_hash_module_forms(&mut ctx, &env, &forms)?;
                 out.push(LoadedModule {
                     entry: e.clone(),
                     abs_path: abs,
@@ -4455,6 +4554,35 @@ mod tests {
         assert!(
             format!("{err}").contains("not callable"),
             "expected core/cli module-meta path to be attempted first, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_hash_prefers_core_cli_hash_module_forms_handler_when_present() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        env.set_local(
+            "core/cli::hash-module-forms",
+            Value::Data(Term::Str("shadowed".to_string())),
+        );
+
+        let forms = canonicalize_module(parse_module("(def x 1)\n x\n").unwrap()).unwrap();
+        let err = selfhost_hash_module_forms(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("not callable"),
+            "expected core/cli hash-module-forms path to be attempted first, got: {err}"
         );
     }
 }

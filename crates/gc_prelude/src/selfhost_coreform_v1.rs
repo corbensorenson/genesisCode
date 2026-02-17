@@ -49,6 +49,10 @@ pub fn selfhost_coreform_toolchain_v1_sources() -> &'static [(&'static str, &'st
     &MODULE_SOURCES
 }
 
+pub fn embedded_bootstrap_available() -> bool {
+    cfg!(feature = "embedded-bootstrap")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SelfhostBootstrapMode {
     ArtifactOnly,

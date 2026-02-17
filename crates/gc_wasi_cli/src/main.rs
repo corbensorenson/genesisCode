@@ -13,8 +13,8 @@ use gc_effects::{
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, StepLimit, Value, eval_module, eval_term};
 use gc_prelude::{
-    SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
-    selfhost_coreform_toolchain_v1_sources,
+    SelfhostBootstrapMode, build_prelude, embedded_bootstrap_available,
+    load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 
 const EX_OK: u8 = 0;
@@ -1083,6 +1083,18 @@ fn coreform_frontend_json(frontend: &gc_obligations::CoreformFrontend) -> serde_
     }
 }
 
+fn coreform_frontend_for_engine(cli: &Cli, engine: FmtEngine) -> gc_obligations::CoreformFrontend {
+    match engine {
+        FmtEngine::Rust => gc_obligations::CoreformFrontend::Rust,
+        FmtEngine::Selfhost => {
+            gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
+                bootstrap_mode: resolved_selfhost_bootstrap_mode(cli),
+                artifact: resolved_selfhost_artifact_for_frontend(cli),
+            })
+        }
+    }
+}
+
 fn enforce_selfhost_engine(
     cli: &Cli,
     cmd_name: &str,
@@ -1571,6 +1583,101 @@ fn selfhost_parse_canonicalize_module(
         ));
     };
     Ok(forms.clone())
+}
+
+fn parse_hex32_for_cli(hex: &str, context: &str) -> Result<[u8; 32], CliError> {
+    let s = hex.trim();
+    if s.len() != 64 {
+        return Err(cli_err(
+            EX_PARSE,
+            "selfhost/hash",
+            format!("{context} returned non-64-byte hex hash"),
+        ));
+    }
+    let mut out = [0u8; 32];
+    for (i, pair) in s.as_bytes().chunks_exact(2).enumerate() {
+        let hi = (pair[0] as char).to_digit(16).ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "selfhost/hash",
+                format!("{context} returned invalid hex hash"),
+            )
+        })?;
+        let lo = (pair[1] as char).to_digit(16).ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "selfhost/hash",
+                format!("{context} returned invalid hex hash"),
+            )
+        })?;
+        out[i] = ((hi << 4) | lo) as u8;
+    }
+    Ok(out)
+}
+
+fn selfhost_hash_module_forms(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    forms: &[Term],
+) -> Result<[u8; 32], CliError> {
+    if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
+        let out = hash_forms_fn
+            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
+        if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
+            return Err(CliError {
+                exit_code: EX_PARSE,
+                json: JsonError {
+                    code: "selfhost/error",
+                    message: format!("{code}: {message}"),
+                    context: payload.map(serde_json::Value::String),
+                },
+            });
+        }
+        let Some(Term::Str(hex)) = out.as_data() else {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/bad-return",
+                format!(
+                    "core/cli hash-module-forms returned non-string: {}",
+                    out.debug_repr()
+                ),
+            ));
+        };
+        return parse_hex32_for_cli(hex, "core/cli hash-module-forms");
+    }
+
+    let hash_fn = env.get("selfhost/hash::hash-module").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "selfhost/missing",
+            "missing binding selfhost/hash::hash-module",
+        )
+    })?;
+    let out = hash_fn
+        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
+    if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
+        return Err(CliError {
+            exit_code: EX_PARSE,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+    let Some(Term::Str(hex)) = out.as_data() else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            format!(
+                "selfhost hash-module returned non-string: {}",
+                out.debug_repr()
+            ),
+        ));
+    };
+    parse_hex32_for_cli(hex, "selfhost hash-module")
 }
 
 fn selfhost_parse_term(
@@ -2284,6 +2391,7 @@ fn cmd_optimize(
     stage2_gate: bool,
 ) -> Result<CmdOut, CliError> {
     let engine = resolved_engine(cli, "optimize", engine)?;
+    let frontend_info = coreform_frontend_json(&coreform_frontend_for_engine(cli, engine));
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
@@ -2378,6 +2486,7 @@ fn cmd_optimize(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "coreform_frontend": frontend_info,
             "stage1": gc_opt::stage1_pipeline_json(&pipeline.stage1),
             "stage2": pipeline.stage2.as_ref().map(gc_opt::stage2_report_json),
             "changed": pipeline.changed,
@@ -2457,6 +2566,40 @@ fn cmd_selfhost_artifact(
     min_stage2_supported_modules: u64,
     min_stage2_validated_modules: u64,
 ) -> Result<CmdOut, CliError> {
+    // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.
+    let step_limit = StepLimit::Unlimited;
+    let mem_limits = resolved_mem_limits(cli);
+    let bootstrap_mode = if embedded_bootstrap_available() {
+        SelfhostBootstrapMode::Embedded
+    } else {
+        SelfhostBootstrapMode::ArtifactOnly
+    };
+    let artifact = if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly {
+        resolved_selfhost_artifact_for_frontend(cli)
+    } else {
+        None
+    };
+    if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly && artifact.is_none() {
+        return Err(cli_err(
+            EX_PARSE,
+            "selfhost/bootstrap",
+            "selfhost-artifact requires an existing toolchain artifact when embedded bootstrap is unavailable; pass --selfhost-artifact or set GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
+        ));
+    }
+    let mut ctx = EvalCtx::with_step_limit(None);
+    ctx.set_mem_limits(mem_limits);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        &mut ctx,
+        &mut env,
+        bootstrap_mode,
+        artifact.as_deref(),
+    )
+    .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
+    ctx.steps = 0;
+    ctx.step_limit = step_limit.resolve();
+
     let mut modules = Vec::new();
     let mut all_ok = true;
     let mut stage2_supported = 0u64;
@@ -2464,11 +2607,20 @@ fn cmd_selfhost_artifact(
     let mut gate_errors: Vec<String> = Vec::new();
 
     for (path, src) in selfhost_coreform_toolchain_v1_sources() {
-        let forms = parse_module(src)
-            .map_err(|e| cli_err(EX_PARSE, "selfhost/parse", format!("{path}: {e}")))?;
-        let forms = canonicalize_module(forms)
-            .map_err(|e| cli_err(EX_PARSE, "selfhost/canon", format!("{path}: {e}")))?;
-        let module_h = hash_module(&forms);
+        let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src).map_err(|e| {
+            cli_err(
+                e.exit_code,
+                "selfhost/canon",
+                format!("{path}: {}", e.json.message),
+            )
+        })?;
+        let module_h = selfhost_hash_module_forms(&mut ctx, &env, &forms).map_err(|e| {
+            cli_err(
+                e.exit_code,
+                "selfhost/hash",
+                format!("{path}: {}", e.json.message),
+            )
+        })?;
 
         let stage1 = gc_opt::stage1_pipeline(&forms)
             .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{path}: {e}")))?;

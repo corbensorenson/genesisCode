@@ -86,6 +86,47 @@ fn poison_cli_module_meta_contract(artifact: &std::path::Path) {
     std::fs::write(artifact, print_term(&term)).unwrap();
 }
 
+fn poison_cli_hash_module_forms_contract(artifact: &std::path::Path) {
+    let src = std::fs::read_to_string(artifact).unwrap();
+    let mut term = parse_term(&src).unwrap();
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let modules = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules");
+    let Term::Vector(entries) = modules else {
+        panic!("artifact :modules must be vector");
+    };
+    let cli_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(mm)
+                if matches!(
+                    mm.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path)) if path == "selfhost/cli_coreform_v1.gc"
+                ) =>
+            {
+                Some(mm)
+            }
+            _ => None,
+        })
+        .expect("selfhost/cli_coreform_v1.gc entry");
+
+    let poisoned_src = "(def core/cli::hash-module-forms (fn (forms) \"bad-hash\"))\n";
+    let poisoned_forms = canonicalize_module(parse_module(poisoned_src).unwrap()).unwrap();
+    let poisoned_hash = hash_module(&poisoned_forms);
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":source")),
+        Term::Str(poisoned_src.to_string()),
+    );
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(poisoned_hash.to_vec().into()),
+    );
+    std::fs::write(artifact, print_term(&term)).unwrap();
+}
+
 #[test]
 fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     let td = tempdir().unwrap();
@@ -154,4 +195,27 @@ fn typecheck_selfhost_frontend_fails_when_module_meta_contract_is_poisoned() {
         .failure()
         .code(10)
         .stderr(predicate::str::contains("module-meta"));
+}
+
+#[test]
+fn typecheck_selfhost_frontend_fails_when_hash_module_forms_contract_is_poisoned() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    poison_cli_hash_module_forms_contract(&artifact);
+    let pkg = copy_pkg_basic_fixture(&td.path().join("pkg_selfhost_bad_hash"));
+
+    cmd()
+        .args([
+            "--coreform-frontend",
+            "selfhost",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "typecheck",
+            "--pkg",
+            pkg.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(10)
+        .stderr(predicate::str::contains("hash-module-forms"));
 }

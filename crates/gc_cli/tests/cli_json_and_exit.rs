@@ -99,6 +99,12 @@ fn optimize_json_includes_egg_stats() {
         Some("genesis/optimize-v0.2")
     );
     let data = v.get("data").expect("data");
+    assert_eq!(
+        data.get("coreform_frontend")
+            .and_then(|x| x.get("name"))
+            .and_then(|x| x.as_str()),
+        Some("selfhost")
+    );
     assert!(
         data.get("changed")
             .and_then(|x| x.as_bool())

@@ -56,6 +56,64 @@ fn optimize_selfhost_engine_matches_rust_engine_output() {
 }
 
 #[test]
+fn optimize_json_reports_coreform_frontend_for_ai_drivers() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+    let artifact = build_selfhost_artifact(dir.path());
+    std::fs::write(
+        &file,
+        r#"
+          (def x (prim int/add 0 (prim int/add 1 2)))
+          x
+        "#,
+    )
+    .unwrap();
+
+    let rust_out = cargo_bin_cmd!("genesis_wasi")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args([
+            "--json",
+            "optimize",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let rust_v: serde_json::Value = serde_json::from_slice(&rust_out).expect("valid rust json");
+    assert_eq!(
+        rust_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("rust")
+    );
+
+    let selfhost_out = cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--no-step-limit",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--json",
+            "optimize",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_v: serde_json::Value =
+        serde_json::from_slice(&selfhost_out).expect("valid selfhost json");
+    assert_eq!(
+        self_v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
+}
+
+#[test]
 fn optimize_stage1_gate_fails_for_effect_program() {
     let td = tempdir().unwrap();
     let file = td.path().join("effect.gc");

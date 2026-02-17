@@ -25,6 +25,9 @@ A fast-path cutover is complete when all of the following are true:
 - Native + WASI parity tests now assert selfhost typecheck fails deterministically when `core/cli::module-meta` is poisoned in generated artifacts.
 - Native + WASI `optimize` command semantics now run through shared `gc_opt::optimize_command_pipeline` (stage1/stage2/emit-wasm gating unified).
 - Obsolete CLI-local optimize JSON helper logic is now centralized in `gc_opt` and shared by native + WASI paths.
+- Native + WASI `optimize --json` now emits explicit `coreform_frontend` provenance for deterministic AI-agent orchestration parity with `test`/`pack`/`typecheck`/`apply-patch`.
+- Selfhost frontend module loading now prefers `core/cli::hash-module-forms` for module hash derivation (with deterministic failure tests on native + WASI when poisoned).
+- Native + WASI `selfhost-artifact` rebuild now parses/canonicalizes/hashes toolchain modules through selfhost frontend contracts (embedded bootstrap), removing Rust parser/hash semantics from artifact rebuild path.
 
 ---
 
@@ -79,7 +82,7 @@ Acceptance gate:
 
 ### D) Final Cutover Proof
 - [ ] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) passes via selfhost-first paths.
-- [ ] Toolchain artifact can be rebuilt from `.gc` sources (host bridge allowed, no Rust semantic dependency).
+- [x] Toolchain artifact can be rebuilt from `.gc` sources (host bridge allowed, no Rust semantic dependency).
 - [ ] Cutover dashboard and CI checks confirm selfhost default path is authoritative.
 
 ---
@@ -97,10 +100,13 @@ Acceptance gate:
   - [x] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
+  - [x] 7b) Module-loading hash derivation now prefers selfhost `core/cli::hash-module-forms` instead of Rust-only hashing in selfhost frontend paths.
 - [ ] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
 - [x] 11) Strengthen strict smoke/golden parity harnesses to force explicit `--coreform-frontend rust|selfhost` selection for package/obligation/patch command families.
+- [x] 12) Extend `optimize --json` outputs with explicit `coreform_frontend` provenance on native + WASI and lock via parity tests.
+- [x] 13) Route `selfhost-artifact` parse/canon/hash through selfhost frontend contracts so rebuilds do not depend on Rust parser/hash semantics.
 
 ### Execution Sprint (Now)
 - [x] T1: Route native + WASI `genesis typecheck` through shared obligations implementation and remove duplicate per-CLI logic.

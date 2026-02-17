@@ -90,7 +90,13 @@
     (let ((forms (core/cli::canonicalize-module-src src)))
       (if (core/cli::is-error forms)
         forms
-        (selfhost/hash::hash-module forms)))))
+        (core/cli::hash-module-forms forms)))))
+
+(def core/cli::hash-module-forms
+  (fn (forms)
+    (if (core/cli::vec? forms)
+      (selfhost/hash::hash-module forms)
+      ((core/error::make2 "core/type-error") "core/cli::hash-module-forms expects vector of forms"))))
 
 (def core/cli::hash-src-with-kind
   (fn (src)
