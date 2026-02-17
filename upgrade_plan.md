@@ -145,6 +145,7 @@ Acceptance gate:
     - import payload now carries `:set-refs` entries (name/hash/policy/expected-old), applied in deterministic sorted order
     - ref updates now reuse centralized local refs policy gate logic in runtime (`core/refs` gate path), removing duplicated CLI-side orchestration
     - import ref updates remain policy-gated and covered by regression tests, including operation under caps that allow `core/gpk::import` without separately exposing `core/refs::set` to user programs
+    - added explicit rejection coverage (native + WASI) proving `pkg import --set-ref` hard-fails and preserves ref state when commit artifacts do not satisfy policy-required obligations for protected refs
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
 
 Acceptance gate:
@@ -241,6 +242,7 @@ Acceptance gate:
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
   - [x] `pkg publish` now delegates policy preflight + ref-class obligation checks to runtime capability op `core/pkg::publish` (instead of native CLI-local preflight), preserving `EX_OBLIGATIONS` on publish gate failures.
   - [x] `pkg import --set-ref` now delegates local refs updates to runtime capability handling in `core/gpk::import` (policy-gated via shared refs gate logic), eliminating CLI continuation-based `core/refs::set` orchestration.
+  - [x] added runtime-gated import failure-path parity tests (native + WASI) for policy rejection and ref non-advancement, tightening ref-policy gate conformance coverage.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
   - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.
