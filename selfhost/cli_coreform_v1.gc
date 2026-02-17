@@ -494,3 +494,215 @@
                 payload
                 (fn (r) (core/effect::pure r)))))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-resolve-conflict-program expects map"))))
+
+(def core/cli::pkg-init-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :workspace ((core/map::get req) (quote :workspace))
+              :lock ((core/map::get req) (quote :lock))
+              :policy ((core/map::get req) (quote :policy))
+            }
+          )
+          (rd ((core/map::get req) (quote :registry-default)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? rd)
+               payload0
+               (((core/map::put payload0) (quote :registry-default)) rd))))
+          (core/effect::perform
+            (quote core/pkg::init)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-init-program expects map"))))
+
+(def core/cli::pkg-add-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :lock ((core/map::get req) (quote :lock))
+              :name ((core/map::get req) (quote :name))
+              :selector ((core/map::get req) (quote :selector))
+              :update-policy ((core/map::get req) (quote :update-policy))
+            }
+          )
+          (reg ((core/map::get req) (quote :registry)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? reg)
+               payload0
+               (((core/map::put payload0) (quote :registry)) reg))))
+          (core/effect::perform
+            (quote core/pkg::add)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-add-program expects map"))))
+
+(def core/cli::pkg-lock-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::lock)
+        {:lock ((core/map::get req) (quote :lock)) :strict ((core/map::get req) (quote :strict))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-lock-program expects map"))))
+
+(def core/cli::pkg-update-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::update)
+        {:lock ((core/map::get req) (quote :lock))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-update-program expects map"))))
+
+(def core/cli::pkg-install-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::install)
+        {
+          :lock ((core/map::get req) (quote :lock))
+          :frozen ((core/map::get req) (quote :frozen))
+          :strict ((core/map::get req) (quote :strict))
+        }
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-install-program expects map"))))
+
+(def core/cli::pkg-verify-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::verify)
+        {:lock ((core/map::get req) (quote :lock))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-verify-program expects map"))))
+
+(def core/cli::pkg-list-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::list)
+        {:lock ((core/map::get req) (quote :lock))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-list-program expects map"))))
+
+(def core/cli::pkg-info-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::info)
+        {:lock ((core/map::get req) (quote :lock)) :name ((core/map::get req) (quote :name))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-info-program expects map"))))
+
+(def core/cli::pkg-snapshot-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/pkg::snapshot)
+        {:pkg ((core/map::get req) (quote :pkg))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-snapshot-program expects map"))))
+
+(def core/cli::pkg-export-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (root ((core/map::get req) (quote :root)))
+          (out ((core/map::get req) (quote :out)))
+          (mode ((core/map::get req) (quote :mode)))
+          (depth ((core/map::get req) (quote :depth)))
+          (include-evidence ((core/map::get req) (quote :include-evidence)))
+          (include-deps ((core/map::get req) (quote :include-deps)))
+          (refs ((core/map::get req) (quote :refs)))
+        )
+        (let
+          ((payload0
+             {
+               :root root
+               :out out
+               :mode mode
+               :include-evidence include-evidence
+               :include-deps include-deps
+             }
+          ))
+          (let
+            ((payload1
+               (if ((core/int::eq? depth) 0)
+                 payload0
+                 (((core/map::put payload0) (quote :depth)) depth))))
+            (let
+              ((payload
+                 (if ((core/int::eq? (core/vec::len refs)) 0)
+                   payload1
+                   (((core/map::put payload1) (quote :refs)) refs))))
+              (core/effect::perform
+                (quote core/gpk::export)
+                payload
+                (fn (r) (core/effect::pure r)))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-export-program expects map"))))
+
+(def core/cli::pkg-import-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (inp ((core/map::get req) (quote :in)))
+          (set-refs ((core/map::get req) (quote :set-refs)))
+        )
+        (let ((payload0 {:in inp}))
+          (let
+            ((payload
+               (if ((core/int::eq? (core/vec::len set-refs)) 0)
+                 payload0
+                 (((core/map::put payload0) (quote :set-refs)) set-refs))))
+            (core/effect::perform
+              (quote core/gpk::import)
+              payload
+              (fn (r) (core/effect::pure r))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-import-program expects map"))))
+
+(def core/cli::pkg-publish-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (remote ((core/map::get req) (quote :remote)))
+          (ref ((core/map::get req) (quote :ref)))
+          (policy ((core/map::get req) (quote :policy)))
+          (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+          (expected-old ((core/map::get req) (quote :expected-old)))
+          (depth ((core/map::get req) (quote :depth)))
+          (commit ((core/map::get req) (quote :commit)))
+        )
+        (let ((payload0 {:remote remote :ref ref :policy policy}))
+          (let
+            ((payload1
+               (if expected-old-present
+                 (((core/map::put payload0) (quote :expected-old)) expected-old)
+                 payload0)))
+            (let
+              ((payload2
+                 (if ((core/int::eq? depth) 0)
+                   payload1
+                   (((core/map::put payload1) (quote :depth)) depth))))
+              (let
+                ((payload
+                   (if (core/list::is-nil? commit)
+                     payload2
+                     (((core/map::put payload2) (quote :commit)) commit))))
+                (core/effect::perform
+                  (quote core/pkg::publish)
+                  payload
+                  (fn (r) (core/effect::pure r))))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-publish-program expects map"))))
