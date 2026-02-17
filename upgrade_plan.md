@@ -152,6 +152,7 @@ Acceptance gate:
     - `core/refs::delete` now uses the shared local ref policy gate path (same validator as `core/refs::set`), with dedicated runner tests for frozen/no-class/CAS-conflict/success behavior.
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
   - progress: expanded executable GC conformance coverage in CLI tests for `pin`/`unpin` lifecycle and `keep_refs` retention semantics under `--no-refs` root scanning, validating policy-driven root preservation behavior end-to-end.
+  - progress: added tag-archival coverage for GC refs roots (`refs/tags/*`), asserting commit closure retention (patch/snapshot/evidence/attestation) while pruning unrelated artifacts.
 
 Acceptance gate:
 - [ ] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) executes through `.gc` plans and passes replay checks.

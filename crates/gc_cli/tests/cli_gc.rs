@@ -385,3 +385,94 @@ fn gc_pin_ref_keeps_target_even_with_no_refs_root_scan() {
     );
     assert!(!dir.join(".genesis").join("store").join(&dead_h).exists());
 }
+
+#[test]
+fn gc_keeps_tag_ref_commit_closure_and_prunes_unreachable() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(dir, &["core/store::put", "core/gc::run"]);
+
+    let patch_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "gc_tag_patch",
+    );
+    let snap_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "gc_tag_snap",
+    );
+    let evidence_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#,
+        "gc_tag_evidence",
+    );
+    let attestation_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/attestation :v 1 :alg "ed25519" :signing-h b"" :pk b"" :sig b""}"#,
+        "gc_tag_attestation",
+    );
+    let commit_h = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_h}"]
+  :attestations ["{attestation_h}"]
+  :message "release"
+}}"#
+        ),
+        "gc_tag_commit",
+    );
+    let dead_h = store_put(dir, &caps, "{:dead true}\n", "gc_tag_dead");
+
+    let refs_path = dir.join(".genesis").join("refs.gc");
+    let refs_db = gc_effects::RefsDb::open(&refs_path).unwrap();
+    refs_db
+        .set("refs/tags/v1.0.0", Some(&commit_h), None)
+        .unwrap();
+
+    let run_log = dir.join("gc-tag-run.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&run_log)
+        .args([
+            "run",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+            "--no-lock",
+        ])
+        .assert()
+        .success();
+
+    let store_dir = dir.join(".genesis").join("store");
+    for h in [&patch_h, &snap_h, &evidence_h, &attestation_h, &commit_h] {
+        assert!(
+            store_dir.join(h).exists(),
+            "expected retained artifact: {h}"
+        );
+    }
+    assert!(
+        !store_dir.join(&dead_h).exists(),
+        "dead artifact should be pruned"
+    );
+}
