@@ -284,7 +284,7 @@ fn fmt_check_failure_has_exit_code_11() {
 }
 
 #[test]
-fn manifest_memory_limit_causes_eval_exit_code_20() {
+fn manifest_memory_limit_causes_preflight_obligation_exit_code_30() {
     let td = tempfile::tempdir().unwrap();
     let src = fixture("pkg_fail_mem_limits");
     let dst = td.path().join("pkg_fail_mem_limits");
@@ -296,7 +296,7 @@ fn manifest_memory_limit_causes_eval_exit_code_20() {
         .arg(&pkg)
         .assert()
         .failure()
-        .code(20)
+        .code(30)
         .get_output()
         .stdout
         .clone();
@@ -305,12 +305,17 @@ fn manifest_memory_limit_causes_eval_exit_code_20() {
     assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(false));
     assert_eq!(
         v.get("kind").and_then(|x| x.as_str()),
-        Some("genesis/error-v0.2")
+        Some("genesis/test-v0.2")
     );
     assert_eq!(
-        v.get("error")
-            .and_then(|e| e.get("code"))
-            .and_then(|x| x.as_str()),
-        Some("test/error")
+        v.get("data")
+            .and_then(|d| d.get("obligations"))
+            .and_then(|x| x.as_array())
+            .and_then(|arr| arr.iter().find(|o| {
+                o.get("name").and_then(|x| x.as_str()) == Some("core/obligation::preflight")
+            }))
+            .and_then(|o| o.get("ok"))
+            .and_then(|x| x.as_bool()),
+        Some(false)
     );
 }

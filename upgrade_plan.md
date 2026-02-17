@@ -48,6 +48,9 @@ Acceptance gate:
 ---
 
 ## P1: Self-Hosted Toolchain Completeness (.gc)
+- [x] Fix self-host printer multiline-map emission so `fmt` output is parseable and `fmt --check` is idempotent.
+  - fixed in `selfhost/printer.gc` (`fmt-map-entry-multiline`) and rebuilt `selfhost/toolchain.gc`
+  - validated by `cargo test --workspace` and `cargo clippy --workspace --all-targets -- -D warnings`
 - [ ] Finalize self-host parser/canon/printer/hash as canonical source of truth.
 - [ ] Implement self-host Stage-1 transform pipeline fully in `.gc` (CoreForm -> CoreForm validated transforms).
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.

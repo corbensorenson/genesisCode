@@ -365,7 +365,15 @@
           (if (selfhost/printer::is-error kl)
             kl
             (let ((vl ((selfhost/printer::fmt-term v) ((core/int::add indent) ((core/int::mul selfhost/printer::INDENT) 2)))))
-              (if (selfhost/printer::is-error vl) vl ((selfhost/printer::append-lines-to-rev kl) vl)))))))))
+              (if (selfhost/printer::is-error vl)
+                vl
+                (let ((out_rev (selfhost/printer::list-rev kl)))
+                  (if (selfhost/printer::is-error out_rev)
+                    out_rev
+                    (let ((out_rev2 ((selfhost/printer::append-lines-to-rev out_rev) vl)))
+                      (if (selfhost/printer::is-error out_rev2)
+                        out_rev2
+                        (selfhost/printer::list-rev out_rev2)))))))))))))
 
 (def selfhost/printer::fmt-list
   (fn (t)
