@@ -52,12 +52,13 @@ A fast-path cutover is complete when all of the following are true:
   - [x] `fmt`, `eval` route through `core/cli::*` frontend handlers (with compatibility fallback).
   - [x] `test`, `typecheck`, `optimize`, `pack`, `apply-patch` selfhost frontend paths now prefer `core/cli::*` canonicalization handlers.
 - [ ] Route effectful command groups through `.gc` command contracts:
-  - [ ] Remaining: `vcs/*`, `pkg/*`, `policy/*`
+  - [ ] Remaining: `pkg/*`, `policy/*`
   - [x] Incremental: `store/*` now routes through `core/cli::store-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
   - [x] Incremental: `refs/*` now routes through `core/cli::refs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
   - [x] Incremental: `sync/*` now routes through `core/cli::sync-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
   - [x] Incremental: `gc/*` now routes through `core/cli::gc-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
   - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
+  - [x] Incremental: `vcs/*` now routes through `core/cli::vcs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
 - [ ] Reduce Rust CLI to arg parsing + host bridge only.
 - [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
 - [x] Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch paths to support deterministic AI parity checks.

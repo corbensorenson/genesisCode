@@ -331,3 +331,166 @@
             payload
             (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))
+
+(def core/cli::vcs-log-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (core/effect::perform
+        (quote core/vcs::log)
+        {:root ((core/map::get req) (quote :root)) :max ((core/map::get req) (quote :max))}
+        (fn (r) (core/effect::pure r)))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-log-program expects map"))))
+
+(def core/cli::vcs-blame-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :snapshot ((core/map::get req) (quote :snapshot))
+              :sym ((core/map::get req) (quote :sym))
+            }
+          )
+          (path ((core/map::get req) (quote :path)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? path)
+               payload0
+               (((core/map::put payload0) (quote :path)) path))))
+          (core/effect::perform
+            (quote core/vcs::blame)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-blame-program expects map"))))
+
+(def core/cli::vcs-why-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :snapshot ((core/map::get req) (quote :snapshot))
+              :sym ((core/map::get req) (quote :sym))
+            }
+          )
+          (op ((core/map::get req) (quote :op)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? op)
+               payload0
+               (((core/map::put payload0) (quote :op)) op))))
+          (core/effect::perform
+            (quote core/vcs::why)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-why-program expects map"))))
+
+(def core/cli::vcs-diff-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :base ((core/map::get req) (quote :base))
+              :to ((core/map::get req) (quote :to))
+              :store ((core/map::get req) (quote :store))
+            }
+          )
+          (out ((core/map::get req) (quote :out)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? out)
+               payload0
+               (((core/map::put payload0) (quote :out)) out))))
+          (core/effect::perform
+            (quote core/vcs::diff)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-diff-program expects map"))))
+
+(def core/cli::vcs-apply-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :base ((core/map::get req) (quote :base))
+              :patch ((core/map::get req) (quote :patch))
+              :store ((core/map::get req) (quote :store))
+            }
+          )
+          (out ((core/map::get req) (quote :out)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? out)
+               payload0
+               (((core/map::put payload0) (quote :out)) out))))
+          (core/effect::perform
+            (quote core/vcs::apply)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-apply-program expects map"))))
+
+(def core/cli::vcs-merge3-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0
+            {
+              :base ((core/map::get req) (quote :base))
+              :left ((core/map::get req) (quote :left))
+              :right ((core/map::get req) (quote :right))
+            }
+          )
+          (out ((core/map::get req) (quote :out)))
+        )
+        (let
+          ((payload
+             (if (core/list::is-nil? out)
+               payload0
+               (((core/map::put payload0) (quote :out)) out))))
+          (core/effect::perform
+            (quote core/vcs::merge3)
+            payload
+            (fn (r) (core/effect::pure r)))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-merge3-program expects map"))))
+
+(def core/cli::vcs-resolve-conflict-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (payload0 {:conflict ((core/map::get req) (quote :conflict))})
+          (strategy ((core/map::get req) (quote :strategy)))
+          (resolutions ((core/map::get req) (quote :resolutions)))
+          (out ((core/map::get req) (quote :out)))
+        )
+        (let
+          ((payload1
+             (if (core/list::is-nil? strategy)
+               payload0
+               (((core/map::put payload0) (quote :strategy)) strategy))))
+          (let
+            ((payload2
+               (if (core/list::is-nil? resolutions)
+                 payload1
+                 (((core/map::put payload1) (quote :resolutions)) resolutions))))
+            (let
+              ((payload
+                 (if (core/list::is-nil? out)
+                   payload2
+                   (((core/map::put payload2) (quote :out)) out))))
+              (core/effect::perform
+                (quote core/vcs::resolve-conflict)
+                payload
+                (fn (r) (core/effect::pure r)))))))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-resolve-conflict-program expects map"))))
