@@ -20,6 +20,24 @@ fail() {
   exit 1
 }
 
+check_typecheck_parity() {
+  local pkg_toml="$1"
+  local name="$2"
+  local rust_out self_out rust_code self_code
+  rust_out="$TMP_DIR/typecheck.${name}.rust.out"
+  self_out="$TMP_DIR/typecheck.${name}.selfhost.out"
+
+  set +e
+  "$GEN" typecheck --pkg "$pkg_toml" >"$rust_out" 2>&1
+  rust_code=$?
+  "$GEN" --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$pkg_toml" >"$self_out" 2>&1
+  self_code=$?
+  set -e
+
+  [[ "$rust_code" == "$self_code" ]] || fail "native strict typecheck exit mismatch for fixture ${name} (rust=${rust_code} selfhost=${self_code})"
+  diff -u "$rust_out" "$self_out" >/dev/null || fail "native strict typecheck output mismatch for fixture ${name}"
+}
+
 check_coreform_fixture() {
   local in_file="$1"
   local base expected staged rust_opt self_opt rust_h self_h wasi_h wasi_rust_h
@@ -107,6 +125,7 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   dst_dir="$PKGS_TMP/$name"
   cp -R "$src_dir" "$dst_dir"
   pkg_toml="$dst_dir/package.toml"
+  check_typecheck_parity "$pkg_toml" "$name"
 
   if [[ "$name" == pkg_fail_* ]]; then
     if "$GEN" test --pkg "$pkg_toml" >/dev/null 2>&1; then
@@ -129,13 +148,23 @@ done
 # Ensure strict selfhost package paths in WASI remain healthy on canonical baseline fixture.
 PKG_W="$TMP_DIR/pkg_wasi"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W"
-"$GWASI" --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" >/dev/null
-"$GWASI" --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" >/dev/null
+wasi_rust_pack="$("$GWASI" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_pack="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_W/package.toml" | tr -d '\n')"
+[[ "$wasi_rust_pack" == "$wasi_self_pack" ]] || fail "WASI strict pack mismatch for pkg_basic fixture"
+
+wasi_rust_test="$("$GWASI" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+wasi_self_test="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
+[[ "$wasi_rust_test" == "$wasi_self_test" ]] || fail "WASI strict test mismatch for pkg_basic fixture"
 
 # Strict apply-patch + dashboard on native path.
-PKG_N="$TMP_DIR/pkg_native"
-cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N"
-"$GEN" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
+PKG_N_R="$TMP_DIR/pkg_native_rust"
+PKG_N_S="$TMP_DIR/pkg_native_selfhost"
+cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N_R"
+cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N_S"
+rust_patch="$("$GEN" apply-patch "$PKG_N_R/pure.gcpatch" --pkg "$PKG_N_R/package.toml" | tr -d '\n')"
+self_patch="$("$GEN" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N_S/pure.gcpatch" --pkg "$PKG_N_S/package.toml" | tr -d '\n')"
+[[ "$rust_patch" == "$self_patch" ]] || fail "native strict apply-patch mismatch for pkg_basic fixture"
+
 "$GEN" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
 
 echo "selfhost-strict-golden: ok"

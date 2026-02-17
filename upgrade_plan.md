@@ -83,6 +83,8 @@ Acceptance gate:
   - progress: native `vcs hash` JSON envelope now matches WASI on v0.2 schema (`kind`, `in`, `hash_format`), while retaining legacy `input` for compatibility; native+WASI `cli_vcs_hash` tests now lock this schema and rust/selfhost parity.
   - progress: strict smoke script now enforces native+WASI parity for `pack` and `test` (rust baseline vs strict selfhost, plus native-vs-WASI rust baseline parity for package and acceptance artifacts).
   - progress: strict golden package sweep now enforces rust-vs-selfhost artifact parity for `pack` and `test` on all passing `tests/spec/pkg_*` fixtures, and confirms both engines fail expected `pkg_fail_*` fixtures.
+  - progress: strict golden package sweep now enforces native rust-vs-selfhost `typecheck` parity (exit code + full output) across all `tests/spec/pkg_*` fixtures.
+  - progress: strict golden now enforces rust-vs-selfhost `apply-patch` artifact parity on duplicated `pkg_basic` fixtures; WASI `pkg_basic` pack/test parity is enforced for rust and strict selfhost paths.
 
 ---
 
