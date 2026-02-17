@@ -95,6 +95,7 @@ Acceptance gate:
   - progress: strict golden package sweep now enforces rust-vs-selfhost artifact parity for `pack` and `test` on all passing `tests/spec/pkg_*` fixtures, and confirms both engines fail expected `pkg_fail_*` fixtures.
   - progress: strict golden package sweep now enforces native rust-vs-selfhost `typecheck` parity (exit code + full output) across all `tests/spec/pkg_*` fixtures.
   - progress: strict golden now enforces rust-vs-selfhost `apply-patch` artifact parity on duplicated `pkg_basic` fixtures; WASI `pkg_basic` pack/test parity is enforced for rust and strict selfhost paths.
+  - progress: added WASI `cli_apply_patch_engine.rs` parity coverage proving `apply-patch` artifact hashes (`patch/report/acceptance/package`) are identical across default, explicit `--selfhost-artifact`, and strict `--selfhost-only` frontend paths on `pkg_basic`.
   - progress: `gc_obligations` default library paths (`pack`, `test_package_with_step_limit`, `package_artifact_hash`) now default to selfhost frontend with env/cwd/workspace artifact resolution, reducing implicit Rust-frontend fallback in non-CLI call paths.
   - progress: `gc_patches::apply_patch_with_step_limit` default path now uses the shared selfhost default frontend (via `gc_obligations::default_coreform_frontend`) instead of defaulting to Rust frontend.
   - progress: `gc_obligations::verify_package_with_policy` now validates module/dependency hashes via the selfhost default frontend path instead of a hard-coded Rust frontend.
