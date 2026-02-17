@@ -47,4 +47,5 @@ fn selfhost_dashboard_writes_store_artifact_and_markdown_mirror() {
 
     let md = std::fs::read_to_string(markdown).unwrap();
     assert!(md.contains("Selfhost Cutover Dashboard"));
+    assert!(md.contains("`policy/*`"));
 }

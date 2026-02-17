@@ -5324,6 +5324,10 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
         selfhost_routed: false,
     },
     SelfhostCutoverRow {
+        cmd: "policy/*",
+        selfhost_routed: false,
+    },
+    SelfhostCutoverRow {
         cmd: "sync/*",
         selfhost_routed: false,
     },

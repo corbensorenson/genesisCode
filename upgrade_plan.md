@@ -41,6 +41,7 @@ Acceptance gate:
   - [x] covered now: `test` strict mode executes through selfhost frontend module-loading path in native CLI tests
   - [x] covered now: `apply-patch` strict mode executes through selfhost frontend parse/canonicalize path in native CLI tests
   - [x] covered now: `selfhost-dashboard` runs in strict mode and emits content-addressed dashboard artifacts
+  - [x] covered now: dashboard command-coverage tables include `policy/*` in both native and WASI markdown outputs (guarded by dedicated dashboard tests) to keep cutover percentages aligned with current command surface.
   - [x] covered now: `vcs hash` strict mode executes through selfhost tool handlers in native + WASI CLI tests
   - [x] covered now: `fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `selfhost-dashboard`, `vcs hash` strict-mode routing in WASI CLI tests
   - [x] covered now: `explain` strict-mode engine gating in WASI CLI tests
