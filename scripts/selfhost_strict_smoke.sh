@@ -73,6 +73,12 @@ native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.tom
 native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
+N_VCS_HASH="$(native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
+S_VCS_HASH="$(native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost | tr -d '\n')"
+if [[ "$N_VCS_HASH" != "$S_VCS_HASH" ]]; then
+  echo "native strict vcs hash mismatch rust=$N_VCS_HASH strict=$S_VCS_HASH" >&2
+  exit 1
+fi
 
 # strict selfhost smoke (WASI CLI native-host binary)
 wasi_native --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/mod.gc" >/dev/null
@@ -88,7 +94,16 @@ if [[ "$N_EVAL" != "$W_N_EVAL" ]]; then
 fi
 wasi_native --selfhost-only --selfhost-artifact "$ART" run "$TMP_DIR/run.gc" --engine selfhost --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
 wasi_native --selfhost-only --selfhost-artifact "$ART" replay "$TMP_DIR/run.gc" --engine selfhost --log "$TMP_DIR/wasi.strict.gclog" >/dev/null
-wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost >/dev/null
+W_N_VCS_HASH="$(wasi_native vcs hash --in "$TMP_DIR/mod.gc" --engine rust | tr -d '\n')"
+W_S_VCS_HASH="$(wasi_native --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$TMP_DIR/mod.gc" --engine selfhost | tr -d '\n')"
+if [[ "$W_N_VCS_HASH" != "$W_S_VCS_HASH" ]]; then
+  echo "WASI strict vcs hash mismatch rust=$W_N_VCS_HASH strict=$W_S_VCS_HASH" >&2
+  exit 1
+fi
+if [[ "$N_VCS_HASH" != "$W_N_VCS_HASH" ]]; then
+  echo "WASI rust vcs hash mismatch native=$N_VCS_HASH wasi=$W_N_VCS_HASH" >&2
+  exit 1
+fi
 
 PKG_W="$TMP_DIR/pkg_wasi"
 mkdir -p "$PKG_W"

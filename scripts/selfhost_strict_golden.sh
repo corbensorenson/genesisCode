@@ -22,7 +22,7 @@ fail() {
 
 check_coreform_fixture() {
   local in_file="$1"
-  local base expected staged rust_opt self_opt rust_h self_h wasi_h
+  local base expected staged rust_opt self_opt rust_h self_h wasi_h wasi_rust_h
   base="$(basename "$in_file" .in.gc)"
   expected="$ROOT_DIR/tests/spec/coreform/${base}.out.gc"
   staged="$TMP_DIR/${base}.gc"
@@ -46,7 +46,9 @@ check_coreform_fixture() {
   cp "$in_file" "$TMP_DIR/${base}.wasi.gc"
   "$GWASI" --selfhost-only --selfhost-artifact "$ART" fmt "$TMP_DIR/${base}.wasi.gc" >/dev/null
   diff -u "$expected" "$TMP_DIR/${base}.wasi.gc" >/dev/null || fail "WASI fmt mismatch for ${base}.in.gc"
+  wasi_rust_h="$("$GWASI" vcs hash --in "$expected" --engine rust | tr -d '\n')"
   wasi_h="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" vcs hash --in "$expected" --engine selfhost | tr -d '\n')"
+  [[ "$rust_h" == "$wasi_rust_h" ]] || fail "WASI rust vcs hash mismatch for ${base}.out.gc"
   [[ "$rust_h" == "$wasi_h" ]] || fail "WASI strict vcs hash mismatch for ${base}.out.gc"
 }
 

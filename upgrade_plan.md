@@ -79,6 +79,7 @@ Acceptance gate:
   - progress: strict smoke script now enforces native `typecheck` parity (`rust` baseline vs strict selfhost) in addition to command-success checks.
   - progress: added WASI `cli_vcs_hash.rs` parity coverage for rust/selfhost engines on both term and module inputs.
   - progress: fixed a WASI/native divergence in `vcs hash` rust-engine parse precedence (now term-first, matching native CLI + selfhost handler) to eliminate cross-host hash-kind drift.
+  - progress: strict smoke/golden scripts now enforce `vcs hash` parity for native and WASI rust baselines against strict selfhost outputs, and native-vs-WASI rust baseline parity.
 
 ---
 
