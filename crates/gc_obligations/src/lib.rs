@@ -1003,7 +1003,7 @@ fn run_one_test(
         caps,
         id,
         limits,
-        &CoreformFrontend::Rust,
+        &default_coreform_frontend(),
     )
 }
 
@@ -3924,7 +3924,13 @@ fn eval_package_once(
     modules: &[LoadedModule],
     limits: KernelLimits,
 ) -> Result<PackageEval, ObligationError> {
-    eval_package_once_with_frontend(pkg_dir, manifest, modules, limits, &CoreformFrontend::Rust)
+    eval_package_once_with_frontend(
+        pkg_dir,
+        manifest,
+        modules,
+        limits,
+        &default_coreform_frontend(),
+    )
 }
 
 fn eval_package_once_with_frontend(
@@ -3959,7 +3965,14 @@ fn eval_dependencies(
         step_limit: StepLimit::Default,
         mem_limits: MemLimits::default(),
     };
-    eval_dependencies_with_frontend(ctx, pkg_dir, base, deps, limits, &CoreformFrontend::Rust)
+    eval_dependencies_with_frontend(
+        ctx,
+        pkg_dir,
+        base,
+        deps,
+        limits,
+        &default_coreform_frontend(),
+    )
 }
 
 fn eval_dependencies_with_frontend(

@@ -58,12 +58,7 @@ pub fn verify_package_with_policy(
         mem_limits: MemLimits::default(),
     };
     let frontend = super::default_coreform_frontend();
-    match super::load_modules(
-        &pkg_dir,
-        &manifest.modules,
-        &frontend,
-        limits,
-    ) {
+    match super::load_modules(&pkg_dir, &manifest.modules, &frontend, limits) {
         Ok(modules) => {
             for m in &modules {
                 checked_modules = checked_modules.saturating_add(1);
@@ -89,12 +84,7 @@ pub fn verify_package_with_policy(
     }
 
     // Dependencies: pinned package hashes must exist and match.
-    if let Err(e) = super::check_dep_hashes(
-        &pkg_dir,
-        &manifest.dependencies,
-        &frontend,
-        limits,
-    ) {
+    if let Err(e) = super::check_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits) {
         errors.push(format!("{e}"));
     }
 

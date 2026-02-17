@@ -105,7 +105,10 @@ fn explain_selfhost_engine_matches_rust_engine_output() {
     else {
         panic!(":contract-id must be string");
     };
-    assert_eq!(rid, sid, "engine mismatch for explain step field :contract-id");
+    assert_eq!(
+        rid, sid,
+        "engine mismatch for explain step field :contract-id"
+    );
     assert_eq!(rid.len(), 64);
     assert!(rid.chars().all(|c| c.is_ascii_hexdigit()));
 }

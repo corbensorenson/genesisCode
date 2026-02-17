@@ -88,6 +88,7 @@ Acceptance gate:
   - progress: `gc_obligations` default library paths (`pack`, `test_package_with_step_limit`, `package_artifact_hash`) now default to selfhost frontend with env/cwd/workspace artifact resolution, reducing implicit Rust-frontend fallback in non-CLI call paths.
   - progress: `gc_patches::apply_patch_with_step_limit` default path now uses the shared selfhost default frontend (via `gc_obligations::default_coreform_frontend`) instead of defaulting to Rust frontend.
   - progress: `gc_obligations::verify_package_with_policy` now validates module/dependency hashes via the selfhost default frontend path instead of a hard-coded Rust frontend.
+  - progress: remaining internal `gc_obligations` wrappers (`run_one_test`, `eval_package_once`, `eval_dependencies`) now default through `default_coreform_frontend()`, removing additional implicit Rust-frontend fallback from translation-validation and dependency-eval paths.
 
 ---
 
