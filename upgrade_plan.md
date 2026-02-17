@@ -254,6 +254,7 @@ Acceptance gate:
   - [x] hardened multi-ref import semantics with atomic local refs commit + native/WASI atomicity tests (no partial ref updates when one target fails policy).
   - [x] added native/WASI optimistic CAS support for `pkg import --set-ref` (`@<expected-old|nil>`) with strict parser validation and compare-and-set regression coverage.
   - [x] hardened `sync push --set-ref` parsing/gating: contract-style refs containing `::` now parse correctly, duplicate targets are rejected, and runtime preflight enforces policy obligations before any remote upload/ref mutation.
+  - [x] removed residual sync parser ambiguity for contract refs without expected-old by standardizing sync set-ref CAS syntax to `@<expected-old|nil>` and adding parser regressions for both with/without CAS on `::` ref names.
   - [x] removed duplicated delete-side policy logic by routing `core/refs::delete` through the shared refs gate validator; added conformance tests for frozen/no-class/CAS success/failure paths.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.

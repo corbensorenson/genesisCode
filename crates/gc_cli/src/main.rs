@@ -506,7 +506,7 @@ enum SyncCmd {
 
         /// Optionally advance remote refs after uploading artifacts.
         ///
-        /// Format: `<refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]`
+        /// Format: `<refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]`
         #[arg(long = "set-ref")]
         set_refs: Vec<String>,
     },
@@ -3350,37 +3350,39 @@ struct SetRefSpec {
 }
 
 fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
-    let mut it = spec.rsplitn(4, ':');
-    let Some(last) = it.next() else {
-        return Err(cli_err(
-            EX_PARSE,
-            "sync/set-ref",
-            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
-                .to_string(),
-        ));
+    let (base, expected_old_raw) = match spec.split_once('@') {
+        None => (spec, None),
+        Some((lhs, rhs)) => (lhs, Some(rhs)),
     };
-    let Some(second) = it.next() else {
-        return Err(cli_err(
-            EX_PARSE,
-            "sync/set-ref",
-            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
-                .to_string(),
-        ));
-    };
-    let Some(third) = it.next() else {
-        return Err(cli_err(
-            EX_PARSE,
-            "sync/set-ref",
-            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
-                .to_string(),
-        ));
-    };
-    let fourth = it.next();
 
-    let (name, hash, policy, expected_old_raw) = match fourth {
-        None => (third.trim(), second.trim(), last.trim(), None),
-        Some(rest) => (rest.trim(), third.trim(), second.trim(), Some(last.trim())),
+    let mut it = base.rsplitn(3, ':');
+    let Some(policy) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
     };
+    let Some(hash) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let Some(name) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let name = name.trim();
+    let hash = hash.trim();
+    let policy = policy.trim();
 
     if name.is_empty() || hash.is_empty() || policy.is_empty() {
         return Err(cli_err(
@@ -3403,7 +3405,7 @@ fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
             "set-ref policy hash must be 64-hex".to_string(),
         ));
     }
-    let expected_old = match expected_old_raw {
+    let expected_old = match expected_old_raw.map(str::trim) {
         None => None,
         Some("") => {
             return Err(cli_err(
@@ -5951,7 +5953,7 @@ mod tests {
         let policy = "b".repeat(64);
         let expected_old = "c".repeat(64);
         let spec = format!(
-            "refs/contracts/my-lib/counter::Counter/heads/dev:{commit}:{policy}:{expected_old}"
+            "refs/contracts/my-lib/counter::Counter/heads/dev:{commit}:{policy}@{expected_old}"
         );
         let parsed = parse_set_ref_spec(&spec).expect("parse");
         assert_eq!(
@@ -5973,9 +5975,21 @@ mod tests {
     fn parse_set_ref_spec_accepts_expected_old_nil() {
         let commit = "a".repeat(64);
         let policy = "b".repeat(64);
-        let spec = format!("refs/heads/main:{commit}:{policy}:nil");
+        let spec = format!("refs/heads/main:{commit}:{policy}@nil");
         let parsed = parse_set_ref_spec(&spec).expect("parse");
         assert_eq!(parsed.expected_old.as_deref(), Some("nil"));
+    }
+
+    #[test]
+    fn parse_set_ref_spec_supports_contract_refs_without_expected_old() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let spec = format!("refs/contracts/p::q/heads/dev:{commit}:{policy}");
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(parsed.name, "refs/contracts/p::q/heads/dev");
+        assert_eq!(parsed.hash, commit);
+        assert_eq!(parsed.policy, policy);
+        assert_eq!(parsed.expected_old, None);
     }
 
     #[test]
@@ -5984,7 +5998,7 @@ mod tests {
         let policy = "b".repeat(64);
         let specs = vec![
             format!("refs/heads/main:{commit}:{policy}"),
-            format!("refs/heads/main:{commit}:{policy}:nil"),
+            format!("refs/heads/main:{commit}:{policy}@nil"),
         ];
         let err = parse_sync_set_refs(&specs).expect_err("must fail");
         assert_eq!(err.exit_code, EX_PARSE);
