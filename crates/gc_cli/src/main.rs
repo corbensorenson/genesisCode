@@ -558,6 +558,10 @@ enum PkgCmd {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
+
+        /// Perform strict checks while resolving locks: validate commit/snapshot/evidence integrity.
+        #[arg(long)]
+        strict: bool,
     },
 
     /// Update locked entries for tracked refs (`update_policy=auto`) (local-only v0.1).
@@ -2286,8 +2290,8 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                 "pkg-add",
             )
         }
-        PkgCmd::Lock { lock } => (
-            mk_pkg_lock_program(lock),
+        PkgCmd::Lock { lock, strict } => (
+            mk_pkg_lock_program(lock, *strict),
             "genesis/pkg-lock-v0.1",
             "pkg-lock",
         ),
@@ -3548,13 +3552,19 @@ fn mk_pkg_add_program(
     ]
 }
 
-fn mk_pkg_lock_program(lock: &Path) -> Vec<Term> {
+fn mk_pkg_lock_program(lock: &Path, strict: bool) -> Vec<Term> {
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg::lock")]);
     let payload = Term::Map(
-        [(
-            gc_coreform::TermOrdKey(Term::symbol(":lock")),
-            Term::Str(lock.display().to_string()),
-        )]
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":lock")),
+                Term::Str(lock.display().to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":strict")),
+                Term::Bool(strict),
+            ),
+        ]
         .into_iter()
         .collect(),
     );

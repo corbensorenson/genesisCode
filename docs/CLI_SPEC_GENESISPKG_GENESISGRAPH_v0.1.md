@@ -83,7 +83,7 @@ Commands:
 
 - `genesis pkg init [--name <workspace-name>] [--policy <name-or-hash>]`
 - `genesis pkg add <pkg>@<ref-or-hash> [--update-policy <manual|auto>] [--registry <remote>]`
-- `genesis pkg lock [--update] [--remote <registry>] [--log <path>]`
+- `genesis pkg lock [--strict] [--update] [--remote <registry>] [--log <path>]`
 - `genesis pkg install [--frozen] [--log <path>]`
 - `genesis pkg update [<pkg-name> ...] [--log <path>]`
 - `genesis pkg info <pkg-name>`

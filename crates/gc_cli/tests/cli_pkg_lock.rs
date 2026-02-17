@@ -10,6 +10,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
+  "core/store::put",
   "core/pkg::init",
   "core/pkg::add",
   "core/pkg::lock",
@@ -61,6 +62,26 @@ base_dir = "."
     )
     .unwrap();
     caps
+}
+
+fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
+    fs::write(dir.join(filename), term_src).unwrap();
+    String::from_utf8(
+        cargo_bin_cmd!("genesis")
+            .current_dir(dir)
+            .args(["store", "--caps"])
+            .arg(caps)
+            .args(["put", "--input"])
+            .arg(filename)
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string()
 }
 
 #[test]
@@ -223,4 +244,76 @@ mini::x
         .assert()
         .failure()
         .code(50);
+}
+
+#[test]
+fn pkg_lock_strict_rejects_commit_without_evidence() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    // Build commit closure artifacts directly in store.
+    let patch_h = store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let commit_h = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations [core/obligation::unit-tests]
+  :evidence []
+  :attestations []
+  :message "bad"
+}}"#
+        ),
+        "commit.gc",
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["add"])
+        .arg(format!("bad@commit:{commit_h}"))
+        .assert()
+        .success();
+
+    // Non-strict lock still resolves commit pins.
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock"])
+        .assert()
+        .success();
+
+    // Strict lock rejects commit entries with obligations but no evidence.
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock", "--strict"])
+        .assert()
+        .failure()
+        .code(20);
 }

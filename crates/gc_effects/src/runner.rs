@@ -1233,6 +1233,7 @@ fn call_capability(
             let refs = refs.ok_or_else(|| {
                 EffectsError::Log("missing refs db for core/pkg::lock".to_string())
             })?;
+            let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -1270,6 +1271,124 @@ fn call_capability(
                     Err(err_val) => return Ok(err_val),
                 }
             }
+
+            if strict {
+                for (name, le) in &out_locked {
+                    if !store.path_for(&le.snapshot).exists() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-found",
+                            format!("artifact not found: {}", le.snapshot),
+                            Some(op),
+                        ));
+                    }
+                    if store.verify_hex(&le.snapshot).is_err() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/corruption",
+                            format!("artifact store corruption: {}", le.snapshot),
+                            Some(op),
+                        ));
+                    }
+                    let snap_term = match store_get_term(store, &le.snapshot) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-snapshot",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if let Err(e) = gc_vcs::Snapshot::from_term(&snap_term) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-snapshot",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+
+                    if let Some(commit_hex) = &le.commit {
+                        let commit_term = match store_get_term(store, commit_hex) {
+                            Ok(t) => t,
+                            Err(_) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/not-found",
+                                    format!("artifact not found: {commit_hex}"),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        let c = match gc_vcs::Commit::from_term(&commit_term) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-commit",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        if c.result != le.snapshot {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/commit-snapshot-mismatch",
+                                format!("commit.result != locked.snapshot for {name}"),
+                                Some(op),
+                            ));
+                        }
+                        if !c.obligations.is_empty() && c.evidence.is_empty() {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/missing-evidence",
+                                format!("commit has obligations but no evidence for {name}"),
+                                Some(op),
+                            ));
+                        }
+                        for evh in &c.evidence {
+                            if !store.path_for(evh).exists() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/not-found",
+                                    format!("artifact not found: {evh}"),
+                                    Some(op),
+                                ));
+                            }
+                            if store.verify_hex(evh).is_err() {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/store/corruption",
+                                    format!("artifact store corruption: {evh}"),
+                                    Some(op),
+                                ));
+                            }
+                            let ev_term = match store_get_term(store, evh) {
+                                Ok(t) => t,
+                                Err(e) => {
+                                    return Ok(mk_error(
+                                        error_tok,
+                                        "core/pkg/bad-evidence",
+                                        e.to_string(),
+                                        Some(op),
+                                    ));
+                                }
+                            };
+                            if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-evidence",
+                                    e.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
             l.locked = out_locked;
 
             let bytes = l.to_toml_canonical();
@@ -1302,6 +1421,7 @@ fn call_capability(
                 TermOrdKey(Term::symbol(":locked-count")),
                 Term::Int((l.locked.len() as i64).into()),
             );
+            m.insert(TermOrdKey(Term::symbol(":strict")), Term::Bool(strict));
             Ok(Value::Data(Term::Map(m)))
         }
 
