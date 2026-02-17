@@ -63,7 +63,12 @@ cp tests/spec/pkg_basic/package.toml "$PKG_N/package.toml"
 cp tests/spec/pkg_basic/pure.gcpatch "$PKG_N/pure.gcpatch"
 
 native --selfhost-only --selfhost-artifact "$ART" pack --pkg "$PKG_N/package.toml" >/dev/null
-native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_N/package.toml" >/dev/null
+N_TYPECHECK="$(native typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
+S_TYPECHECK="$(native --selfhost-only --selfhost-artifact "$ART" typecheck --pkg "$PKG_N/package.toml" | tr -d '\n')"
+if [[ "$N_TYPECHECK" != "$S_TYPECHECK" ]]; then
+  echo "native strict typecheck mismatch native=$N_TYPECHECK strict=$S_TYPECHECK" >&2
+  exit 1
+fi
 native --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N/pure.gcpatch" --pkg "$PKG_N/package.toml" >/dev/null
 native --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
