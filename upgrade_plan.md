@@ -118,6 +118,7 @@ Acceptance gate:
     - progress: added concrete `policy` command surface in native + WASI CLIs (`policy list`, `policy show`, `policy set-default`) with deterministic local config management and schema-validated policy artifact resolution from the content-addressed store.
     - progress: `--selfhost-only` now also permits effectful `vcs/*` in native + WASI CLIs (with `vcs hash` still engine-validated), with regression coverage for strict-gate acceptance and strict-smoke execution of `vcs log`.
     - progress: added executable WASI `vcs` effectful conformance tests covering `vcs diff/apply` snapshot roundtrip and `vcs log` commit-history traversal with content-addressed artifacts.
+    - progress: added executable WASI semantic-merge coverage for `vcs merge3` and `vcs resolve-conflict`, including disjoint-op contract merges, conflict artifact emission, left-strategy resolution, and patch/apply equivalence checks.
     - progress: added executable native + WASI `sync` conformance tests covering `sync push`/`sync pull` roundtrips with policy-gated remote `--set-ref` CAS, closure transfer verification, local/remote ref updates, and idempotent second-pull behavior.
 - [ ] Keep Rust CLI as thin argument parser + host bridge only.
 - [ ] Remove duplicated Rust command logic once parity is proven.
