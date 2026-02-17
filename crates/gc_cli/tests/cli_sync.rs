@@ -64,6 +64,15 @@ fn map_get_bool(t: &Term, key: &str) -> bool {
     *v
 }
 
+fn get_remote_ref(remote_dir: &Path, name: &str) -> Option<String> {
+    let refs_path = remote_dir.join("v1").join("refs.gc");
+    if !refs_path.exists() {
+        return None;
+    }
+    let rdb = gc_effects::RefsDb::open(&refs_path).unwrap();
+    rdb.get(name).unwrap()
+}
+
 #[test]
 fn sync_push_then_pull_roundtrip_with_ref_update() {
     let td = tempfile::tempdir().unwrap();
@@ -189,4 +198,202 @@ fn sync_push_then_pull_roundtrip_with_ref_update() {
     let pull_again_t = parse_stdout_term(&pull_again);
     assert_eq!(map_get_int(&pull_again_t, ":pulled"), 0);
     assert!(map_get_int(&pull_again_t, ":present") >= 4);
+}
+
+#[test]
+fn sync_push_policy_preflight_rejects_before_upload() {
+    let td = tempfile::tempdir().unwrap();
+    let root = td.path();
+    let src = root.join("src");
+    let remote_dir = root.join("remote-registry");
+    fs::create_dir_all(&src).unwrap();
+    fs::create_dir_all(&remote_dir).unwrap();
+
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(&src, &remote_allow);
+
+    let src_store = src.join(".genesis").join("store");
+    let patch_h = put_term(&src_store, "{:type :vcs/patch :v 1 :ops []}");
+    let snap_h = put_term(
+        &src_store,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "mini" :pkg/version "0.1.0" :members {} :exports [] :deps [] :obligations []}"#,
+    );
+    let policy_h = put_term(
+        &src_store,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+    );
+    let bad_commit_h = put_term(
+        &src_store,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "mini" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "missing-obligation"
+}}"#
+        ),
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(&src)
+        .args(["sync", "--caps"])
+        .arg(&caps)
+        .args([
+            "push",
+            "--remote",
+            &remote,
+            "--root",
+            &bad_commit_h,
+            "--root",
+            &policy_h,
+        ])
+        .args([
+            "--set-ref",
+            &format!("refs/heads/main:{bad_commit_h}:{policy_h}@nil"),
+        ])
+        .assert()
+        .code(20);
+
+    assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
+    assert!(
+        !remote_dir
+            .join("v1")
+            .join("store")
+            .join(&bad_commit_h)
+            .exists()
+    );
+    assert!(!remote_dir.join("v1").join("store").join(&policy_h).exists());
+}
+
+#[test]
+fn sync_pull_ref_conflict_requires_force() {
+    let td = tempfile::tempdir().unwrap();
+    let root = td.path();
+    let src = root.join("src");
+    let dst = root.join("dst");
+    let remote_dir = root.join("remote-registry");
+    fs::create_dir_all(&src).unwrap();
+    fs::create_dir_all(&dst).unwrap();
+    fs::create_dir_all(&remote_dir).unwrap();
+
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let src_caps = write_caps(&src, &remote_allow);
+    let dst_caps = write_caps(&dst, &remote_allow);
+
+    let src_store = src.join(".genesis").join("store");
+    let patch_h = put_term(&src_store, "{:type :vcs/patch :v 1 :ops []}");
+    let snap_h = put_term(
+        &src_store,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "mini" :pkg/version "0.1.0" :members {} :exports [] :deps [] :obligations [core/obligation::unit-tests]}"#,
+    );
+    let evidence_h = put_term(
+        &src_store,
+        "{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}",
+    );
+    let policy_h = put_term(
+        &src_store,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+    );
+    let commit_h = put_term(
+        &src_store,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "mini" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_h}"]
+  :attestations []
+  :message "sync-conflict"
+}}"#
+        ),
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(&src)
+        .args(["sync", "--caps"])
+        .arg(&src_caps)
+        .args([
+            "push", "--remote", &remote, "--root", &commit_h, "--root", &policy_h,
+        ])
+        .args([
+            "--set-ref",
+            &format!("refs/heads/main:{commit_h}:{policy_h}@nil"),
+        ])
+        .assert()
+        .success();
+
+    let conflicting = "a".repeat(64);
+    let dst_refs_path = dst.join(".genesis").join("refs.gc");
+    let dst_refs = gc_effects::RefsDb::open(&dst_refs_path).unwrap();
+    let _ = dst_refs
+        .set("refs/heads/main", Some(&conflicting), None)
+        .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(&dst)
+        .args(["sync", "--caps"])
+        .arg(&dst_caps)
+        .args(["pull", "--remote", &remote, "--ref", "refs/heads/main"])
+        .assert()
+        .code(20);
+    let dst_refs = gc_effects::RefsDb::open(&dst_refs_path).unwrap();
+    assert_eq!(
+        dst_refs.get("refs/heads/main").unwrap(),
+        Some(conflicting.clone())
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(&dst)
+        .args(["sync", "--caps"])
+        .arg(&dst_caps)
+        .args([
+            "pull",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--force",
+        ])
+        .assert()
+        .success();
+    let dst_refs = gc_effects::RefsDb::open(&dst_refs_path).unwrap();
+    assert_eq!(dst_refs.get("refs/heads/main").unwrap(), Some(commit_h));
 }
