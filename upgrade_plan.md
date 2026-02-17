@@ -80,7 +80,7 @@ Acceptance gate:
 ### C) Bootstrap Extraction (`/old_bootstrap`)
 - [x] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.
 - [x] Exclude `/old_bootstrap` from default build/test paths.
-- [ ] Keep compatibility profile for historical comparisons only.
+- [x] Keep compatibility profile for historical comparisons only.
 
 Acceptance gate:
 - [x] `cargo test --workspace --profile selfhost-strict` passes without invoking bootstrap semantics from `/old_bootstrap`.

@@ -35,6 +35,19 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `./.genesis/selfhost/toolchain.gc` if present, or
     - workspace fallback `selfhost/toolchain.gc` if present.
 
+## Rust Engine Compatibility Mode (Historical Comparisons Only)
+
+`--engine rust` and `--coreform-frontend rust` exist solely to support deterministic parity checks
+against prior Rust semantics during the selfhost cutover.
+
+They are disabled by default and require explicit opt-in:
+
+- `GENESIS_ALLOW_RUST_ENGINE=1`
+
+CI must keep `GENESIS_ALLOW_RUST_ENGINE=0` by default, and only set it to `1` inside
+explicit parity/golden harnesses (e.g. `scripts/selfhost_strict_smoke.sh` /
+`scripts/selfhost_strict_golden.sh`).
+
 ## Subcommands (Signing + Policy)
 
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`
