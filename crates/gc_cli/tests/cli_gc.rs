@@ -16,7 +16,9 @@ fn write_caps(dir: &Path, allow: &[&str]) -> PathBuf {
         s.push_str(op);
         s.push('"');
     }
-    s.push_str("]\n\n[store]\ndir = \"./.genesis/store\"\n");
+    s.push_str(
+        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n",
+    );
     fs::write(&caps, s).unwrap();
     caps
 }
@@ -250,4 +252,136 @@ fn gc_pin_prevents_deletion() {
 
     assert!(dir.join(".genesis").join("store").join(&keep_h).exists());
     assert!(dir.join(".genesis").join("store").join(&pinned_h).exists());
+}
+
+#[test]
+fn gc_unpin_allows_reclaim_after_run() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(
+        dir,
+        &[
+            "core/store::put",
+            "core/gc::pin",
+            "core/gc::unpin",
+            "core/gc::run",
+        ],
+    );
+
+    let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep4");
+    let pinned_h = store_put(dir, &caps, "{:pin true}\n", "pin4");
+    write_min_lock(dir, Path::new("genesis.lock"), &keep_h);
+
+    let pin_log = dir.join("gc-pin4.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&pin_log)
+        .args(["pin", &pinned_h, "--pins", ".genesis/pins.toml"])
+        .assert()
+        .success();
+
+    let unpin_log = dir.join("gc-unpin4.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&unpin_log)
+        .args(["unpin", &pinned_h, "--pins", ".genesis/pins.toml"])
+        .assert()
+        .success();
+
+    let run_log = dir.join("gc-run4.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&run_log)
+        .args([
+            "run",
+            "--lock",
+            "genesis.lock",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+        ])
+        .assert()
+        .success();
+
+    assert!(dir.join(".genesis").join("store").join(&keep_h).exists());
+    assert!(!dir.join(".genesis").join("store").join(&pinned_h).exists());
+}
+
+#[test]
+fn gc_pin_ref_keeps_target_even_with_no_refs_root_scan() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(
+        dir,
+        &[
+            "core/store::put",
+            "core/gc::pin",
+            "core/gc::run",
+            "core/refs::set",
+        ],
+    );
+
+    let kept_via_ref_h = store_put(dir, &caps, "{:kept-via-ref true}\n", "keep_ref");
+    let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead_ref");
+
+    let refs_path = dir.join(".genesis").join("refs.gc");
+    let refs_db = gc_effects::RefsDb::open(&refs_path).unwrap();
+    refs_db
+        .set("refs/heads/main", Some(&kept_via_ref_h), None)
+        .unwrap();
+
+    let pin_log = dir.join("gc-pin-ref.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&pin_log)
+        .args(["pin", "refs/heads/main", "--pins", ".genesis/pins.toml"])
+        .assert()
+        .success();
+
+    let run_log = dir.join("gc-run-ref.gclog");
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&run_log)
+        .args([
+            "run",
+            "--pins",
+            ".genesis/pins.toml",
+            "--depth",
+            "0",
+            "--no-lock",
+            "--no-refs",
+        ])
+        .assert()
+        .success();
+
+    assert!(
+        dir.join(".genesis")
+            .join("store")
+            .join(&kept_via_ref_h)
+            .exists()
+    );
+    assert!(!dir.join(".genesis").join("store").join(&dead_h).exists());
 }

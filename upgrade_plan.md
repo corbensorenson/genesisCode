@@ -150,6 +150,7 @@ Acceptance gate:
     - native + WASI `pkg import --set-ref` now support optimistic compare-and-set syntax (`<ref>=<hash|nil>@<expected-old|nil>`) with strict validation and regression coverage for success/failure paths
     - `core/sync::push` now performs local policy-gate preflight for remote `:set-refs` before upload/remote mutation, and runtime payload parsing now rejects duplicate/invalid `:set-refs` entries deterministically.
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
+  - progress: expanded executable GC conformance coverage in CLI tests for `pin`/`unpin` lifecycle and `keep_refs` retention semantics under `--no-refs` root scanning, validating policy-driven root preservation behavior end-to-end.
 
 Acceptance gate:
 - [ ] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) executes through `.gc` plans and passes replay checks.
