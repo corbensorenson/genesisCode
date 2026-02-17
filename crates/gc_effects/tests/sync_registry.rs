@@ -462,6 +462,10 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
 
     let local_store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let local_policy_hex = local_store
+        .put_bytes(print_term(&policy_t).as_bytes())
+        .unwrap();
+    assert_eq!(local_policy_hex, policy_hex);
 
     let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
     let module_hex = local_store
@@ -597,6 +601,116 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let prog3 = eval_module(&mut ctx3, &mut env3, &pull_forms).unwrap();
     let v3 = replay(&mut ctx3, prog3, &log2).unwrap();
     assert_eq!(value_hash(&r2.value), value_hash(&v3));
+}
+
+#[test]
+fn sync_push_rejects_duplicate_set_ref_targets_in_payload() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_dup_set_ref", reg);
+    let (remote, remote_allow) = mk_remote("t_sync_dup_set_ref");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+
+    let commit_hex = "a".repeat(64);
+    let policy_hex = "b".repeat(64);
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :roots ["{commit_hex}"]
+          :depth 0
+          :set-refs [
+            {{ :name "refs/heads/main" :hash "{commit_hex}" :policy "{policy_hex}" }}
+            {{ :name "refs/heads/main" :hash "{commit_hex}" :policy "{policy_hex}" }}
+          ]
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::push", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/sync/bad-payload"));
+}
+
+#[test]
+fn sync_push_set_refs_preflight_fails_before_upload() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_preflight", reg.clone());
+    let (remote, remote_allow) = mk_remote("t_sync_preflight");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+    let local_store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = local_store
+        .put_bytes(print_term(&module_art).as_bytes())
+        .unwrap();
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = local_store
+        .put_bytes(print_term(&snap_t).as_bytes())
+        .unwrap();
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = local_store
+        .put_bytes(print_term(&patch_t).as_bytes())
+        .unwrap();
+    let commit_bad_t = parse_term(&format!(
+        r#"{{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :target {{ :kind :package :name "my-lib" }}
+          :base nil
+          :patch "{patch_hex}"
+          :result "{snap_hex}"
+          :obligations []
+          :evidence []
+          :attestations []
+          :message "missing obligation"
+        }}"#
+    ))
+    .unwrap();
+    let commit_bad_hex = local_store
+        .put_bytes(print_term(&commit_bad_t).as_bytes())
+        .unwrap();
+
+    let policy_t = mk_policy_artifact();
+    let policy_hex = local_store
+        .put_bytes(print_term(&policy_t).as_bytes())
+        .unwrap();
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :roots ["{commit_bad_hex}"]
+          :depth 0
+          :set-refs [
+            {{ :name "refs/heads/main" :hash "{commit_bad_hex}" :policy "{policy_hex}" }}
+          ]
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::push", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(
+        &ctx,
+        &r.value,
+        "core/refs/missing-obligation"
+    ));
+    assert!(!reg.has(&commit_bad_hex));
+    assert_eq!(reg.ref_get("refs/heads/main"), None);
 }
 
 #[test]

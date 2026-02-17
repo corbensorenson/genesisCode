@@ -2534,10 +2534,7 @@ fn cmd_sync(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &SyncCmd) -> Result
             depth,
             set_refs,
         } => {
-            let mut parsed = Vec::new();
-            for s in set_refs {
-                parsed.push(parse_set_ref_spec(s)?);
-            }
+            let parsed = parse_sync_set_refs(set_refs)?;
             (
                 mk_sync_push_program(remote, roots, *depth, &parsed),
                 "genesis/sync-push-v0.1",
@@ -3353,18 +3350,38 @@ struct SetRefSpec {
 }
 
 fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
-    let parts: Vec<&str> = spec.split(':').collect();
-    if parts.len() < 3 || parts.len() > 4 {
+    let mut it = spec.rsplitn(4, ':');
+    let Some(last) = it.next() else {
         return Err(cli_err(
             EX_PARSE,
             "sync/set-ref",
             "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
                 .to_string(),
         ));
-    }
-    let name = parts[0].trim();
-    let hash = parts[1].trim();
-    let policy = parts[2].trim();
+    };
+    let Some(second) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let Some(third) = it.next() else {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref must be <refname>:<commit-hash>:<policy-hash>[:<expected-old-hash|nil>]"
+                .to_string(),
+        ));
+    };
+    let fourth = it.next();
+
+    let (name, hash, policy, expected_old_raw) = match fourth {
+        None => (third.trim(), second.trim(), last.trim(), None),
+        Some(rest) => (rest.trim(), third.trim(), second.trim(), Some(last.trim())),
+    };
+
     if name.is_empty() || hash.is_empty() || policy.is_empty() {
         return Err(cli_err(
             EX_PARSE,
@@ -3372,16 +3389,68 @@ fn parse_set_ref_spec(spec: &str) -> Result<SetRefSpec, CliError> {
             "set-ref fields must be non-empty".to_string(),
         ));
     }
-    let expected_old = parts
-        .get(3)
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
+    if !is_hex64(hash) {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref commit hash must be 64-hex".to_string(),
+        ));
+    }
+    if !is_hex64(policy) {
+        return Err(cli_err(
+            EX_PARSE,
+            "sync/set-ref",
+            "set-ref policy hash must be 64-hex".to_string(),
+        ));
+    }
+    let expected_old = match expected_old_raw {
+        None => None,
+        Some("") => {
+            return Err(cli_err(
+                EX_PARSE,
+                "sync/set-ref",
+                "set-ref expected-old must be non-empty when provided".to_string(),
+            ));
+        }
+        Some(s) => {
+            if s != "nil" && !is_hex64(s) {
+                return Err(cli_err(
+                    EX_PARSE,
+                    "sync/set-ref",
+                    "set-ref expected-old must be 64-hex or `nil`".to_string(),
+                ));
+            }
+            Some(if s == "nil" {
+                "nil".to_string()
+            } else {
+                s.to_ascii_lowercase()
+            })
+        }
+    };
+
     Ok(SetRefSpec {
         name: name.to_string(),
-        hash: hash.to_string(),
-        policy: policy.to_string(),
+        hash: hash.to_ascii_lowercase(),
+        policy: policy.to_ascii_lowercase(),
         expected_old,
     })
+}
+
+fn parse_sync_set_refs(specs: &[String]) -> Result<Vec<SetRefSpec>, CliError> {
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut out = Vec::with_capacity(specs.len());
+    for spec in specs {
+        let parsed = parse_set_ref_spec(spec)?;
+        if !seen.insert(parsed.name.clone()) {
+            return Err(cli_err(
+                EX_PARSE,
+                "sync/set-ref",
+                format!("duplicate set-ref target: {}", parsed.name),
+            ));
+        }
+        out.push(parsed);
+    }
+    Ok(out)
 }
 
 fn is_hex64(s: &str) -> bool {
@@ -5870,4 +5939,54 @@ fn hex32(h: [u8; 32]) -> String {
         out.push(HEX[(b & 0x0f) as usize] as char);
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{EX_PARSE, parse_set_ref_spec, parse_sync_set_refs};
+
+    #[test]
+    fn parse_set_ref_spec_supports_contract_refs_with_colons() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let expected_old = "c".repeat(64);
+        let spec = format!(
+            "refs/contracts/my-lib/counter::Counter/heads/dev:{commit}:{policy}:{expected_old}"
+        );
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(
+            parsed.name,
+            "refs/contracts/my-lib/counter::Counter/heads/dev"
+        );
+        assert_eq!(parsed.hash, commit);
+        assert_eq!(parsed.policy, policy);
+        assert_eq!(parsed.expected_old.as_deref(), Some(expected_old.as_str()));
+    }
+
+    #[test]
+    fn parse_set_ref_spec_rejects_invalid_hashes() {
+        let err = parse_set_ref_spec("refs/heads/main:nothex:alsonothex").expect_err("must fail");
+        assert_eq!(err.exit_code, EX_PARSE);
+    }
+
+    #[test]
+    fn parse_set_ref_spec_accepts_expected_old_nil() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let spec = format!("refs/heads/main:{commit}:{policy}:nil");
+        let parsed = parse_set_ref_spec(&spec).expect("parse");
+        assert_eq!(parsed.expected_old.as_deref(), Some("nil"));
+    }
+
+    #[test]
+    fn parse_sync_set_refs_rejects_duplicate_targets() {
+        let commit = "a".repeat(64);
+        let policy = "b".repeat(64);
+        let specs = vec![
+            format!("refs/heads/main:{commit}:{policy}"),
+            format!("refs/heads/main:{commit}:{policy}:nil"),
+        ];
+        let err = parse_sync_set_refs(&specs).expect_err("must fail");
+        assert_eq!(err.exit_code, EX_PARSE);
+    }
 }

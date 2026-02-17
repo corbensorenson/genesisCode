@@ -148,6 +148,7 @@ Acceptance gate:
     - added explicit rejection coverage (native + WASI) proving `pkg import --set-ref` hard-fails and preserves ref state when commit artifacts do not satisfy policy-required obligations for protected refs
     - local refs storage now supports atomic batch updates (`RefsDb::set_many`), and `core/gpk::import` validates all `:set-refs` policy gates before committing refs in one write, preventing partial ref advancement on multi-ref failures
     - native + WASI `pkg import --set-ref` now support optimistic compare-and-set syntax (`<ref>=<hash|nil>@<expected-old|nil>`) with strict validation and regression coverage for success/failure paths
+    - `core/sync::push` now performs local policy-gate preflight for remote `:set-refs` before upload/remote mutation, and runtime payload parsing now rejects duplicate/invalid `:set-refs` entries deterministically.
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
 
 Acceptance gate:
@@ -240,13 +241,14 @@ Acceptance gate:
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
   - [x] added `pkg lock --strict` surface (native + WASI) and strict resolver checks in `core/pkg::lock`, with regression tests for missing-evidence failure paths.
   - [x] added `.gpk` export closure controls (ref-root resolution, evidence/dependency inclusion modes) and end-to-end CLI tests proving deterministic inclusion/exclusion behavior across shallow/full export modes.
-- [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
+- [x] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
   - [x] `pkg publish` now delegates policy preflight + ref-class obligation checks to runtime capability op `core/pkg::publish` (instead of native CLI-local preflight), preserving `EX_OBLIGATIONS` on publish gate failures.
   - [x] `pkg import --set-ref` now delegates local refs updates to runtime capability handling in `core/gpk::import` (policy-gated via shared refs gate logic), eliminating CLI continuation-based `core/refs::set` orchestration.
   - [x] added runtime-gated import failure-path parity tests (native + WASI) for policy rejection and ref non-advancement, tightening ref-policy gate conformance coverage.
   - [x] hardened multi-ref import semantics with atomic local refs commit + native/WASI atomicity tests (no partial ref updates when one target fails policy).
   - [x] added native/WASI optimistic CAS support for `pkg import --set-ref` (`@<expected-old|nil>`) with strict parser validation and compare-and-set regression coverage.
+  - [x] hardened `sync push --set-ref` parsing/gating: contract-style refs containing `::` now parse correctly, duplicate targets are rejected, and runtime preflight enforces policy obligations before any remote upload/ref mutation.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
   - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.

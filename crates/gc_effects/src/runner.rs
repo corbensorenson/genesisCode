@@ -785,6 +785,18 @@ fn call_capability(
                         return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
                     }
                 };
+                for sr in &set_refs {
+                    if let Err(v) = local_refs_validate_policy_gate(
+                        store,
+                        &sr.name,
+                        Some(&sr.hash),
+                        &sr.policy,
+                        error_tok,
+                        op,
+                    ) {
+                        return Ok(v);
+                    }
+                }
 
                 let sp = match sync_policy_from_op(pol) {
                     Ok(p) => p,
@@ -6305,6 +6317,7 @@ fn payload_gpk_set_refs(payload: &Term) -> Result<Vec<GpkSetRef>, EffectsError> 
         )));
     };
     let mut out = Vec::with_capacity(xs.len());
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for x in xs {
         let Term::Map(mm) = x else {
             return Err(EffectsError::BadPayload(format!(
@@ -6320,10 +6333,22 @@ fn payload_gpk_set_refs(payload: &Term) -> Result<Vec<GpkSetRef>, EffectsError> 
                 ));
             }
         };
+        if !seen.insert(name.clone()) {
+            return Err(EffectsError::BadPayload(format!(
+                "duplicate set-ref target: {name}"
+            )));
+        }
         let hash = match mm.get(&TermOrdKey(Term::symbol(":hash"))) {
             None | Some(Term::Nil) => None,
             Some(Term::Str(s)) if s == "nil" => None,
-            Some(Term::Str(s)) => Some(s.clone()),
+            Some(Term::Str(s)) => {
+                if gc_vcs::validate_hex_hash(s).is_err() {
+                    return Err(EffectsError::BadPayload(
+                        "set-ref :hash must be 64-hex or nil".to_string(),
+                    ));
+                }
+                Some(s.to_ascii_lowercase())
+            }
             Some(other) => {
                 return Err(EffectsError::BadPayload(format!(
                     "set-ref :hash must be string or nil, got {}",
@@ -6332,7 +6357,14 @@ fn payload_gpk_set_refs(payload: &Term) -> Result<Vec<GpkSetRef>, EffectsError> 
             }
         };
         let policy = match mm.get(&TermOrdKey(Term::symbol(":policy"))) {
-            Some(Term::Str(s)) if !s.trim().is_empty() => s.clone(),
+            Some(Term::Str(s)) if !s.trim().is_empty() => {
+                if gc_vcs::validate_hex_hash(s).is_err() {
+                    return Err(EffectsError::BadPayload(
+                        "set-ref :policy must be 64-hex".to_string(),
+                    ));
+                }
+                s.to_ascii_lowercase()
+            }
             _ => {
                 return Err(EffectsError::BadPayload(
                     "set-ref missing :policy string".to_string(),
@@ -6343,7 +6375,14 @@ fn payload_gpk_set_refs(payload: &Term) -> Result<Vec<GpkSetRef>, EffectsError> 
             None => None,
             Some(Term::Nil) => Some(None),
             Some(Term::Str(s)) if s == "nil" => Some(None),
-            Some(Term::Str(s)) => Some(Some(s.clone())),
+            Some(Term::Str(s)) => {
+                if gc_vcs::validate_hex_hash(s).is_err() {
+                    return Err(EffectsError::BadPayload(
+                        "set-ref :expected-old must be 64-hex, nil, or absent".to_string(),
+                    ));
+                }
+                Some(Some(s.to_ascii_lowercase()))
+            }
             Some(other) => {
                 return Err(EffectsError::BadPayload(format!(
                     "set-ref :expected-old must be string, nil, or absent, got {}",
@@ -7431,6 +7470,7 @@ fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
         return Err(format!(":set-refs must be vector, got {}", print_term(t)));
     };
     let mut out = Vec::new();
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for x in xs {
         let Term::Map(mm) = x else {
             return Err(format!(
@@ -7439,20 +7479,31 @@ fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
             ));
         };
         let name = match mm.get(&TermOrdKey(Term::symbol(":name"))) {
-            Some(Term::Str(s)) => s.clone(),
+            Some(Term::Str(s)) if !s.trim().is_empty() => s.clone(),
             _ => return Err("set-ref missing :name string".to_string()),
         };
+        if !seen.insert(name.clone()) {
+            return Err(format!("duplicate set-ref target: {name}"));
+        }
         let hash = match mm.get(&TermOrdKey(Term::symbol(":hash"))) {
-            Some(Term::Str(s)) => s.clone(),
+            Some(Term::Str(s)) if gc_vcs::validate_hex_hash(s).is_ok() => s.to_ascii_lowercase(),
+            Some(Term::Str(_)) => return Err("set-ref :hash must be 64-hex".to_string()),
             _ => return Err("set-ref missing :hash string".to_string()),
         };
         let policy = match mm.get(&TermOrdKey(Term::symbol(":policy"))) {
-            Some(Term::Str(s)) => s.clone(),
+            Some(Term::Str(s)) if gc_vcs::validate_hex_hash(s).is_ok() => s.to_ascii_lowercase(),
+            Some(Term::Str(_)) => return Err("set-ref :policy must be 64-hex".to_string()),
             _ => return Err("set-ref missing :policy string".to_string()),
         };
         let expected_old = match mm.get(&TermOrdKey(Term::symbol(":expected-old"))) {
             None | Some(Term::Nil) => None,
-            Some(Term::Str(s)) => Some(s.clone()),
+            Some(Term::Str(s)) if s == "nil" => Some("nil".to_string()),
+            Some(Term::Str(s)) if gc_vcs::validate_hex_hash(s).is_ok() => {
+                Some(s.to_ascii_lowercase())
+            }
+            Some(Term::Str(_)) => {
+                return Err("set-ref :expected-old must be 64-hex or nil".to_string());
+            }
             Some(other) => {
                 return Err(format!(
                     "set-ref :expected-old must be string or nil, got {}",
