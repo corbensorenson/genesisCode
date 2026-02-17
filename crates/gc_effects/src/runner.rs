@@ -5439,46 +5439,23 @@ fn call_capability(
             let name = payload_refs_name(payload)?;
             let expected_old = payload_refs_expected_old(payload)?;
             let policy_h = payload_refs_policy_hash(payload)?;
-            let pol_term = match store_get_term(store, &policy_h) {
-                Ok(t) => t,
-                Err(_) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/refs/policy-not-found",
-                        format!("policy artifact not found: {policy_h}"),
-                        Some(op),
-                    ));
-                }
+            let result = match local_refs_set_policy_gated(
+                store,
+                refs,
+                LocalRefSetRequest {
+                    name: &name,
+                    new_hash: None,
+                    expected_old: expected_old.as_ref().map(|x| x.as_deref()),
+                    policy_h: &policy_h,
+                },
+                error_tok,
+                op,
+            ) {
+                Ok(r) => r,
+                Err(v) => return Ok(v),
             };
-            let pol = match gc_vcs::Policy::from_term(&pol_term) {
-                Ok(p) => p,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/refs/bad-policy",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
-            if pol.is_frozen_ref(&name) {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/refs/frozen",
-                    format!("ref is frozen by policy: {name}"),
-                    Some(op),
-                ));
-            }
-            if pol.class_for_ref(&name).is_none() {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/refs/no-class",
-                    format!("policy has no matching class for ref {name}"),
-                    Some(op),
-                ));
-            }
 
-            match refs.set(&name, None, expected_old.as_ref().map(|x| x.as_deref()))? {
+            match result {
                 SetResult::Updated => {
                     let mut m = BTreeMap::new();
                     m.insert(

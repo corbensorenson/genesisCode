@@ -11,6 +11,25 @@ fn eval_prog(forms: &[Term]) -> (EvalCtx, Value) {
     (ctx, prog)
 }
 
+fn is_sealed_error_code(ctx: &EvalCtx, value: &Value, code: &str) -> bool {
+    let Some(proto) = ctx.protocol else {
+        return false;
+    };
+    let Value::Sealed { token, payload } = value else {
+        return false;
+    };
+    if *token != proto.error {
+        return false;
+    }
+    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+        return false;
+    };
+    matches!(
+        m.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(Term::Str(s)) if s == code
+    )
+}
+
 #[test]
 fn refs_set_then_get_roundtrips_through_refs_db_and_policy_gate() {
     let td = tempfile::tempdir().unwrap();
@@ -141,4 +160,166 @@ path = "./.genesis/refs.gc"
         m2.get(&TermOrdKey(Term::symbol(":hash"))),
         Some(Term::Str(s)) if s == &commit_h
     ));
+}
+
+#[test]
+fn refs_delete_uses_policy_gate_and_cas() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/refs::delete"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let store_dir = td.path().join(".genesis").join("store");
+    let store = ArtifactStore::open(&store_dir).unwrap();
+    let refs_path = td.path().join(".genesis").join("refs.gc");
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+
+    let policy_term = parse_term(
+        r#"
+        {
+          :type :vcs/policy
+          :v 1
+          :refs {:frozen-prefixes ["refs/frozen/"]}
+          :classes {
+            :dev {:patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations []}
+          }
+        }
+    "#,
+    )
+    .unwrap();
+    let policy_h = store
+        .put_bytes(print_term(&policy_term).as_bytes())
+        .unwrap();
+
+    // Seed local ref directly; delete operation should be policy/CAS gated.
+    let existing = "a".repeat(64);
+    refs.set("refs/heads/dev", Some(&existing), None).unwrap();
+
+    // CAS mismatch must fail with refs/conflict.
+    let src_cas_miss = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::delete
+            {{:name "refs/heads/dev" :policy "{policy_h}" :expected-old "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_cas_miss = parse_module(&src_cas_miss).unwrap();
+    let hash_cas_miss = hash_module(&forms_cas_miss);
+    let (mut ctx_cas_miss, prog_cas_miss) = eval_prog(&forms_cas_miss);
+    let r_cas_miss = run(
+        &mut ctx_cas_miss,
+        &pol,
+        prog_cas_miss,
+        hash_cas_miss,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error_code(
+        &ctx_cas_miss,
+        &r_cas_miss.value,
+        "core/refs/conflict"
+    ));
+    assert_eq!(refs.get("refs/heads/dev").unwrap(), Some(existing.clone()));
+
+    // Frozen ref must fail at policy gate.
+    let src_frozen = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::delete
+            {{:name "refs/frozen/main" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_frozen = parse_module(&src_frozen).unwrap();
+    let hash_frozen = hash_module(&forms_frozen);
+    let (mut ctx_frozen, prog_frozen) = eval_prog(&forms_frozen);
+    let r_frozen = run(
+        &mut ctx_frozen,
+        &pol,
+        prog_frozen,
+        hash_frozen,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error_code(
+        &ctx_frozen,
+        &r_frozen.value,
+        "core/refs/frozen"
+    ));
+
+    // No class match must fail.
+    let src_no_class = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::delete
+            {{:name "refs/other/x" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_no_class = parse_module(&src_no_class).unwrap();
+    let hash_no_class = hash_module(&forms_no_class);
+    let (mut ctx_no_class, prog_no_class) = eval_prog(&forms_no_class);
+    let r_no_class = run(
+        &mut ctx_no_class,
+        &pol,
+        prog_no_class,
+        hash_no_class,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error_code(
+        &ctx_no_class,
+        &r_no_class.value,
+        "core/refs/no-class"
+    ));
+
+    // Successful delete with matching expected-old.
+    let src_ok = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::delete
+            {{:name "refs/heads/dev" :policy "{policy_h}" :expected-old "{existing}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_ok = parse_module(&src_ok).unwrap();
+    let hash_ok = hash_module(&forms_ok);
+    let (mut ctx_ok, prog_ok) = eval_prog(&forms_ok);
+    let r_ok = run(
+        &mut ctx_ok,
+        &pol,
+        prog_ok,
+        hash_ok,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    let Value::Data(Term::Map(m_ok)) = r_ok.value else {
+        panic!("expected map result");
+    };
+    assert!(matches!(
+        m_ok.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(Term::Bool(true))
+    ));
+    assert_eq!(refs.get("refs/heads/dev").unwrap(), None);
 }

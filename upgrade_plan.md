@@ -149,6 +149,7 @@ Acceptance gate:
     - local refs storage now supports atomic batch updates (`RefsDb::set_many`), and `core/gpk::import` validates all `:set-refs` policy gates before committing refs in one write, preventing partial ref advancement on multi-ref failures
     - native + WASI `pkg import --set-ref` now support optimistic compare-and-set syntax (`<ref>=<hash|nil>@<expected-old|nil>`) with strict validation and regression coverage for success/failure paths
     - `core/sync::push` now performs local policy-gate preflight for remote `:set-refs` before upload/remote mutation, and runtime payload parsing now rejects duplicate/invalid `:set-refs` entries deterministically.
+    - `core/refs::delete` now uses the shared local ref policy gate path (same validator as `core/refs::set`), with dedicated runner tests for frozen/no-class/CAS-conflict/success behavior.
 - [ ] Implement local GC planning in `.gc` per `docs/GARBAGE_COLLECTION_RULES_v0.1.md`.
   - progress: expanded executable GC conformance coverage in CLI tests for `pin`/`unpin` lifecycle and `keep_refs` retention semantics under `--no-refs` root scanning, validating policy-driven root preservation behavior end-to-end.
 
@@ -250,6 +251,7 @@ Acceptance gate:
   - [x] hardened multi-ref import semantics with atomic local refs commit + native/WASI atomicity tests (no partial ref updates when one target fails policy).
   - [x] added native/WASI optimistic CAS support for `pkg import --set-ref` (`@<expected-old|nil>`) with strict parser validation and compare-and-set regression coverage.
   - [x] hardened `sync push --set-ref` parsing/gating: contract-style refs containing `::` now parse correctly, duplicate targets are rejected, and runtime preflight enforces policy obligations before any remote upload/ref mutation.
+  - [x] removed duplicated delete-side policy logic by routing `core/refs::delete` through the shared refs gate validator; added conformance tests for frozen/no-class/CAS success/failure paths.
 - [x] 9) Add host ABI conformance harness.
   - [x] added `docs/spec/HOST_ABI.md` with normative v0.2 op surface and CI-enforced parity against `gc_effects` dispatch via `scripts/check_host_abi_conformance.sh`.
   - [x] added runtime host ABI surface tests (`crates/gc_effects/tests/host_abi_surface.rs`) to verify documented ops are recognized by the runner dispatch path.
