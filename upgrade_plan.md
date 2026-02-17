@@ -49,6 +49,7 @@ Acceptance gate:
   - [x] covered now: CI runs `scripts/selfhost_strict_golden.sh` over `tests/spec/coreform/*` and all `tests/spec/pkg_*` fixtures, including native+WASI strict `run`/`replay` parity checks
   - [x] covered now: `gc_obligations` enforces `GENESIS_SELFHOST_ONLY` at library boundaries (`parse/canonicalize` + module loading), so strict mode also blocks Rust frontend fallback outside CLI command routing.
   - [x] covered now: CI default job env sets `GENESIS_ALLOW_RUST_ENGINE=0` and runs `scripts/selfhost_default_profile_guard.sh`, enforcing rust-engine rejection in the default selfhost profile for native + WASI CLIs.
+  - [x] covered now: CI runs `scripts/check_rust_engine_compat.sh`, requiring explicit `GENESIS_ALLOW_RUST_ENGINE=1` opt-in in tests/scripts wherever `--engine rust` appears.
 
 ---
 
@@ -214,6 +215,7 @@ Acceptance gate:
 - [ ] 5) Move replaced Rust semantic modules to `/deprecated`.
 - [x] 6) Enable `selfhost-strict` profile in CI as required.
   - [x] CI job now sets `GENESIS_ALLOW_RUST_ENGINE=0` by default and runs `scripts/selfhost_default_profile_guard.sh`.
+  - [x] CI now also runs `scripts/check_rust_engine_compat.sh` to prevent implicit rust-engine fallback regressions in test/script surfaces.
   - [x] strict smoke/golden parity paths explicitly opt into compatibility mode (`GENESIS_ALLOW_RUST_ENGINE=1`) where Rust baseline comparison is required.
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
 - [ ] 8) Complete `.gc` ref-policy gate enforcement cutover.
