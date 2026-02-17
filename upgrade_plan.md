@@ -79,7 +79,7 @@ Acceptance gate:
 
 ### C) Bootstrap Extraction (`/old_bootstrap`)
 - [x] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.
-- [ ] Exclude `/old_bootstrap` from default build/test paths.
+- [x] Exclude `/old_bootstrap` from default build/test paths.
 - [ ] Keep compatibility profile for historical comparisons only.
 
 Acceptance gate:
