@@ -157,7 +157,7 @@ wasi_rust_test="$("$GWASI" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 wasi_self_test="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" test --pkg "$PKG_W/package.toml" | tr -d '\n')"
 [[ "$wasi_rust_test" == "$wasi_self_test" ]] || fail "WASI strict test mismatch for pkg_basic fixture"
 
-# Strict apply-patch + dashboard on native path.
+# Strict apply-patch + dashboard on native and WASI paths.
 PKG_N_R="$TMP_DIR/pkg_native_rust"
 PKG_N_S="$TMP_DIR/pkg_native_selfhost"
 cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_N_R"
@@ -166,6 +166,16 @@ rust_patch="$("$GEN" apply-patch "$PKG_N_R/pure.gcpatch" --pkg "$PKG_N_R/package
 self_patch="$("$GEN" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_N_S/pure.gcpatch" --pkg "$PKG_N_S/package.toml" | tr -d '\n')"
 [[ "$rust_patch" == "$self_patch" ]] || fail "native strict apply-patch mismatch for pkg_basic fixture"
 
+PKG_W_R="$TMP_DIR/pkg_wasi_rust"
+PKG_W_S="$TMP_DIR/pkg_wasi_selfhost"
+cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W_R"
+cp -R "$ROOT_DIR/tests/spec/pkg_basic" "$PKG_W_S"
+wasi_rust_patch="$("$GWASI" apply-patch "$PKG_W_R/pure.gcpatch" --pkg "$PKG_W_R/package.toml" | tr -d '\n')"
+wasi_self_patch="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" apply-patch "$PKG_W_S/pure.gcpatch" --pkg "$PKG_W_S/package.toml" | tr -d '\n')"
+[[ "$wasi_rust_patch" == "$wasi_self_patch" ]] || fail "WASI strict apply-patch mismatch for pkg_basic fixture"
+[[ "$rust_patch" == "$wasi_rust_patch" ]] || fail "WASI rust apply-patch mismatch for pkg_basic fixture"
+
 "$GEN" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/store" --markdown "$TMP_DIR/SELFHOST_CUTOVER.md" >/dev/null
+"$GWASI" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/wasi.store" --markdown "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" >/dev/null
 
 echo "selfhost-strict-golden: ok"
