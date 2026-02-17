@@ -62,6 +62,7 @@ Acceptance gate:
 
 Acceptance gate:
 - [ ] Native and WASM runs produce identical hashes/evidence between Rust fallback and `.gc` self-host path on conformance suites.
+  - progress: added WASI `cli_run_replay_engine.rs` parity tests for `run`/`replay` (`rust` vs `selfhost`) plus selfhost parse-error surfacing.
 
 ---
 
