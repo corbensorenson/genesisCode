@@ -244,7 +244,7 @@ Acceptance gate:
 - [ ] 7) Complete `.gc` lock/resolver and `.gpk` planner cutover.
   - [x] added `pkg lock --strict` surface (native + WASI) and strict resolver checks in `core/pkg::lock`, with regression tests for missing-evidence failure paths.
   - [x] expanded strict lock integrity checks: `core/pkg::lock --strict` now validates locked selector invariants (`source_selector`/`resolved_ref`) and commit closure artifacts (`base`/`patch`/`result` + commit hash integrity), with regression coverage for missing patch closure.
-  - [x] aligned integrity checks across `core/pkg::install --strict` and `core/pkg::verify`: commit closure validation now includes `base`/`patch`/`result`, evidence and attestation artifact/schema checks, and obligation-without-evidence rejection, with CLI regressions for missing patch closure in install/verify paths.
+  - [x] aligned integrity checks across `core/pkg::install --strict` and `core/pkg::verify`: commit closure validation now includes `base`/`patch`/`result`, evidence and attestation artifact/schema checks, and obligation-without-evidence rejection, with native + WASI CLI regressions for missing patch closure in lock/install/verify paths.
   - [x] added `.gpk` export closure controls (ref-root resolution, evidence/dependency inclusion modes) and end-to-end CLI tests proving deterministic inclusion/exclusion behavior across shallow/full export modes.
 - [x] 8) Complete `.gc` ref-policy gate enforcement cutover.
   - [x] started routing `vcs/*`: `vcs hash` now executes through selfhost `.gc` tool handlers by default (native + WASI), with explicit `--engine rust` parity override
