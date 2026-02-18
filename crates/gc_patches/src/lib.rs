@@ -112,6 +112,7 @@ struct SelfhostPatchToolchain {
     validate_patch: Value,
     apply_replace_node: Value,
     print_module_forms: Value,
+    print_module_from_content: Value,
 }
 
 pub fn apply_patch(
@@ -290,6 +291,13 @@ impl SelfhostPatchToolchain {
         let print_module_forms = env.get("core/cli::print-module-forms").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::print-module-forms".to_string())
         })?;
+        let print_module_from_content =
+            env.get("core/cli::print-module-from-content")
+                .ok_or_else(|| {
+                    PatchError::Validate(
+                        "missing binding core/cli::print-module-from-content".to_string(),
+                    )
+                })?;
 
         Ok(SelfhostPatchToolchain {
             ctx,
@@ -297,6 +305,7 @@ impl SelfhostPatchToolchain {
             validate_patch,
             apply_replace_node,
             print_module_forms,
+            print_module_from_content,
         })
     }
 
@@ -379,6 +388,33 @@ impl SelfhostPatchToolchain {
         let Value::Data(Term::Str(s)) = out else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli print-module-forms must return string, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(s)
+    }
+
+    fn print_module_from_content_term(
+        &mut self,
+        content: &Term,
+        step_limit: StepLimit,
+    ) -> Result<String, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .print_module_from_content
+            .clone()
+            .apply(&mut self.ctx, Value::Data(content.clone()))
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost print-module-from-content apply: {e}"))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli print-module-from-content failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Str(s)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli print-module-from-content must return string, got {}",
                 out.debug_repr()
             )));
         };
@@ -474,14 +510,22 @@ fn apply_one_op(
             if let Some(parent) = abs.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            let forms = match content {
-                ModuleContent::Source(s) => {
-                    parse_canonicalize_module_src(s, frontend, step_limit, mem_limits)?
-                }
-                ModuleContent::Forms(fs) => canonicalize_module(fs.clone())
-                    .map_err(|e| PatchError::Validate(e.to_string()))?,
+            let out = if let Some(sh) = selfhost {
+                let content_term = match content {
+                    ModuleContent::Source(s) => Term::Str(s.clone()),
+                    ModuleContent::Forms(fs) => Term::Vector(fs.clone()),
+                };
+                sh.print_module_from_content_term(&content_term, step_limit)?
+            } else {
+                let forms = match content {
+                    ModuleContent::Source(s) => {
+                        parse_canonicalize_module_src(s, frontend, step_limit, mem_limits)?
+                    }
+                    ModuleContent::Forms(fs) => canonicalize_module(fs.clone())
+                        .map_err(|e| PatchError::Validate(e.to_string()))?,
+                };
+                print_module(&forms)
             };
-            let out = print_module(&forms);
             std::fs::write(&abs, out)?;
 
             // Update manifest modules list by appending; pack will pin hashes.

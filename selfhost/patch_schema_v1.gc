@@ -335,6 +335,21 @@
       (selfhost/printer::print-module forms)
       ((core/error::make2 "core/type-error") "core/cli::print-module-forms expects vector of forms"))))
 
+(def core/cli::canonicalize-module-content
+  (fn (content)
+    (if (selfhost/patch_schema::is-str? content)
+      (core/cli::canonicalize-module-src content)
+      (if (selfhost/patch_schema::is-vec? content)
+        (selfhost/canon::canonicalize-module content)
+        ((core/error::make2 "core/type-error") "core/cli::canonicalize-module-content expects string or vector")))))
+
+(def core/cli::print-module-from-content
+  (fn (content)
+    (let ((forms (core/cli::canonicalize-module-content content)))
+      (if (core/error::is? forms)
+        forms
+        (core/cli::print-module-forms forms)))))
+
 (def core/cli::validate-patch
   (fn (t)
     (if (selfhost/patch_schema::is-map? t)
