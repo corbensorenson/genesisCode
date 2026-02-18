@@ -153,6 +153,7 @@ These are important but not blockers for the fast-path self-hosted core mileston
   - [x] Add `scripts/test_fast.sh` to keep local iteration under a small, deterministic, high-signal subset without weakening CI coverage.
   - [x] Speed up WASI CLI engine tests by reusing the repo `selfhost/toolchain.gc` instead of rebuilding a selfhost artifact per test file.
   - [x] Speed up strict smoke/golden scripts by reusing repo `selfhost/toolchain.gc` unless sources changed (or `GENESIS_REBUILD_SELFHOST_ARTIFACT=1`).
+  - [x] Speed up `cli_selfhost_artifact` integration tests (native + WASI) by caching baseline artifacts and eliminating redundant rebuilds where not required.
 - [ ] Graphics/WebGPU/editor stack and higher-level developer UX layers.
 
 ---
