@@ -1,152 +1,87 @@
-# GenesisCode Upgrade Plan — Final Roadblocks to Full Self-Hosted Status
+# GenesisCode Upgrade Plan — Self-Hosted v1 Fast Path
 
 Last updated: 2026-02-18
 
-## Hard Target
-Ship a state where:
-- All language/tooling semantics evolve in `.gc`.
-- Rust is a frozen host runtime + kernel TCB, not the place where feature logic is added.
-- New features (including graphics/editor/AI workflows) can be shipped by changing `.gc` + policy/docs, without touching Rust semantic code.
+Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-## What "Fully Self-Hosted" Means Here
-Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. It means:
-1. Rust remains only as TCB/host bridge.
-2. Command semantics, package/VCS logic, and developer workflows are owned by `.gc` contracts.
-3. Selfhost-only mode covers all public command families needed for production use.
-4. Toolchain growth (new selfhost modules/capabilities) does not require Rust edits.
+Open checklist items: 45
 
-## Audit Findings (Current Blocking Evidence)
-- High-level package/VCS/GC/GPK semantics still execute in Rust capability code:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`
-  - `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`, `core/sync::*` are implemented there.
-- `.gc` CLI wrappers still delegate those high-level ops to the Rust runner:
-  - `/Users/corbensorenson/Documents/genesisCode/selfhost/cli_coreform_v1.gc`
-- Selfhost-only command-family gating has been widened and planners for additional command families are now selfhost-routed:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`
-  - planner bindings now used in selfhost frontend path: `selfhost-artifact`, `keygen`, `sign`, `transparency-verify`, `verify`.
-- Selfhost toolchain module set is now manifest-driven from:
-  - `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain_manifest.gc`
-  - loader validation enforces required symbols declared in the manifest.
-- Shipped prelude wrappers now map to explicit runner dispatch entries, currently returning deterministic `core/caps/not-supported` where host integrations are not yet available:
-  - wrappers in `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc` and `/Users/corbensorenson/Documents/genesisCode/prelude/modules/20_editor.gc`
-  - dispatch in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` and ABI lock in `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`.
-- GFX obligations still encode major logic in Rust:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
-  - `obligation_gfx_golden_images`, `obligation_gfx_frame_budgets`, `obligation_gfx_api_stability`.
+## Self-Hosted v1 Exit Criteria
+- [ ] All production command semantics are owned by `.gc` contracts.
+- [ ] Rust runtime is limited to kernel + low-level host ABI + transport.
+- [ ] Deterministic multithreading/parallel execution is available through Genesis capabilities and replayable logs.
+- [ ] Performance is sufficient for fast AI iteration (sub-minute incremental inner loop, materially reduced full-suite runtime).
+- [ ] Rust semantic fallbacks are disabled in production mode.
 
----
+## Workstream A — Final Semantic Extraction (Rust -> `.gc`)
+- [ ] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (keep only host primitives in Rust).
+- [ ] Move `core/pkg::publish` semantics fully into `.gc` contracts (including closure planning, policy prechecks, and report shaping).
+- [ ] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
+- [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` once low-level seam parity is complete.
+- [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, plus graphics/editor host ops.
+- [ ] Add CI guard that fails if new high-level semantic ops are added back into runner dispatch without explicit waiver.
 
-## Final Blocking Workstreams
+## Workstream B — Deterministic Multithreading/Parallelism (AI-First)
 
-### 1) Extract High-Level Semantics out of Rust Runner
-- [ ] Move `core/pkg::*` command semantics into `.gc` contracts using low-level host capabilities.
-- [x] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
-  - [x] Move `core/vcs::log` traversal semantics into `.gc` (`core/cli::vcs-log-program`) using `core/store::get` / `core/refs::get`.
-  - [x] Move `core/vcs::blame` and `core/vcs::why` provenance semantics into `.gc` (`core/cli::vcs-blame-program`, `core/cli::vcs-why-program`) using `core/store::get` / `core/refs::list`.
-  - [x] Add native + WASI parity tests for `core/vcs::diff` and `core/vcs::apply` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/vcs::merge3` and `core/vcs::resolve-conflict` frontend outputs to lock extraction behavior before migration.
-  - [x] Add low-level host seam ops `core/vcs-low::{diff-terms,apply-patch}` and route selfhost `vcs diff/apply` path through `.gc` contracts.
-  - [x] Add native + WASI selfhost tests proving `vcs diff/apply` works with low-level caps only (`core/vcs-low::*` + `core/store::*`), reducing selfhost dependence on `core/vcs::{diff,apply}`.
-  - [x] Align merge/resolve contract test capability allowlists with low-level selfhost VCS seams used by `vcs apply`.
-  - [x] Lock and document the remaining Rust-owned high-level op inventory (`core/vcs::{diff,apply,merge3,resolve-conflict}` and `core/pkg::*`) as the current extraction queue.
-  - [x] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
-  - [x] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
-  - [x] Add low-level host seam ops `core/vcs-low::{merge3-contract-snapshots,resolve-conflict}` and route selfhost merge/resolve flows through `.gc` contracts with parity-preserving exit semantics.
-  - [x] Move `core/pkg::{install,verify}` semantics into `.gc` contracts.
-  - [ ] Move `core/pkg::{snapshot,publish}` semantics into `.gc` contracts.
-  - [x] Move `core/pkg::lock` non-strict semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `.gc` selector resolution over `core/store::get`/`core/refs::get`, and prove selfhost-only non-strict lock works with caps that exclude `core/pkg::lock`.
-  - [x] Remove strict-mode fallback for `core/pkg::lock` by porting strict lock invariants + commit closure/evidence checks to `.gc`.
-  - [x] Move `core/pkg::update` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `core/store::get` + `core/refs::get`, and prove selfhost-only operation with caps that exclude `core/pkg::update`.
-  - [x] Move `core/pkg::{init,add}` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` and lock selfhost-only caps/tests away from `core/pkg::{init,add}`.
-  - [x] Move `core/pkg::{list,info}` semantics into `.gc` contracts via `core/pkg-low::load-lock` and lock native+WASI caps/tests to the low-level seam.
-  - [x] Add native + WASI parity tests for `core/pkg::{add,list,info}` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/pkg::lock` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/pkg::update` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/pkg::{install,verify}` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/pkg::snapshot` frontend outputs to lock extraction behavior before migration.
-  - [x] Add native + WASI parity tests for `core/pkg::publish` frontend outputs to lock extraction behavior before migration.
-  - [x] Add a canonicalization/idempotence guardrail test for `selfhost/cli_coreform_v1.gc` so malformed extraction edits fail fast in `gc_coreform`.
-  - [x] Re-stabilize `pkg publish` parity harnesses (native + WASI) after capability-surface migration attempts.
-  - [x] Keep `selfhost/cli_coreform_v1.gc` canonicalizable/idempotent after publish-path edits.
-  - [x] Rebuild `selfhost/toolchain.gc` from source and re-validate publish parity suites against the rebuilt artifact.
-- [x] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
-- [ ] Reduce Rust runner capability surface to low-level host ops (`core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`) plus transport glue.
-- [x] Keep temporary compatibility gate for migration, then disable by default.
-- [x] Extract GPK artifact-reference reachability semantics to `.gc` (`core/vcs/reach::artifact-refs`) and invoke from Rust closure traversal.
-- [x] Extract GPK parent-edge planning semantics to `.gc` (`core/vcs/reach::artifact-ref-plan`) and consume parent refs from plan output in Rust traversal.
+### B1. Spec + ABI
+- [ ] Add normative spec doc for deterministic concurrency (`docs/spec/CONCURRENCY_v0.1.md`) covering scheduling, replay, cancellation, and failure semantics.
+- [ ] Freeze task/capability ABI in `docs/spec/HOST_ABI.md` for:
+  - `core/task::spawn`
+  - `core/task::await`
+  - `core/task::cancel`
+  - `core/task::status`
+  - `core/task::scope`
 
-Acceptance:
-- Rust runner no longer contains semantic implementations for `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`.
-- Equivalent strict parity tests pass on native + WASI selfhost paths.
+### B2. Language/Prelude Surface
+- [ ] Add `.gc` contracts for structured concurrency (scope-based spawn/await/cancel) in prelude modules.
+- [ ] Add deterministic combinators optimized for AI-generated workflows (`core/task::all`, `core/task::race`, bounded parallel map over vectors).
+- [ ] Define clear data contracts for task handles/results/errors (stable map schema, no ad hoc shapes).
 
-### 2) Close Selfhost-Only Command Surface Gaps
-- [x] Route `selfhost-artifact` through selfhost contract path.
-- [x] Route `keygen`, `sign`, `transparency-verify`, and `verify` through selfhost contract path.
-- [x] Update selfhost-only allowlist to include all production public command families.
-- [x] Add native + WASI selfhost-only tests for these command families.
+### B3. Runtime Scheduler
+- [ ] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
+- [ ] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
+- [ ] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
+- [ ] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
 
-Acceptance:
-- `--selfhost-only` rejects no production command family as "not yet selfhost-routed".
+### B4. Replay + Evidence
+- [ ] Extend effect log schema with task/schedule events (`:task-id`, `:parent-task`, `:schedule-step`, `:await-edge`).
+- [ ] Implement replay verifier for concurrent runs (schedule mismatch, missing task events, response mismatch).
+- [ ] Add obligation `core/obligation::concurrency-replay` for effectful concurrent tests.
 
-### 3) Make Toolchain Bootstrap Self-Describing (No Rust Module List Edits)
-- [x] Replace hardcoded Rust `MODULE_SOURCES` ownership with a `.gc` toolchain manifest artifact.
-- [x] Make artifact loader validate required capabilities/symbols from manifest, not a Rust static list.
-- [x] Ensure adding a new selfhost module only requires `.gc` + manifest updates.
-- [x] Keep embedded bootstrap as development-only fallback behind explicit feature gate.
+### B5. Type/Effects Integration
+- [ ] Extend `gc_types` effect-row tracking for task ops so concurrency usage is explicit and checkable.
+- [ ] Add deterministic-safety checks for AI-authored parallel code patterns (unknown effect tails + undeclared caps fail in strict mode).
 
-Acceptance:
-- Toolchain module topology changes can be made without editing Rust source files.
+## Workstream C — Throughput and Latency Gains
 
-### 4) Implement Missing GFX/Editor Capability Ops
-- [x] Implement runner support (or remove wrappers) for shipped `gfx/gpu::*` ops.
-- [x] Implement runner support (or remove wrappers) for shipped `gfx/window::*` ops.
-- [x] Implement runner support (or remove wrappers) for shipped `gfx/input::*` and `gfx/audio::*` ops.
-- [x] Implement runner support (or remove wrappers) for shipped `editor/*` task/dialog/watch/clipboard ops.
-- [x] Add deterministic effect-log + replay tests for all newly supported ops.
+### C1. Hot Path Runtime
+- [ ] Optimize artifact reads in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs` to avoid double-read verification on every `get`.
+- [ ] Add optional integrity cache mode (hash memo with invalidation) to keep strong guarantees without repeated full rehash in tight loops.
+- [ ] Batch and parallelize remote sync transfers with deterministic result collation (upload/download worker pool + stable ordering).
 
-Acceptance:
-- No shipped prelude capability wrapper calls an unimplemented/unknown op.
+### C2. Obligation Engine
+- [ ] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
+- [ ] Add deterministic parallel test execution for independent tests (stable result ordering; isolated contexts; reproducible logs).
+- [ ] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
 
-### 5) Move GFX Obligation Semantics to `.gc` Ownership
-- [x] Port golden/frame-budget/api-stability planning/validation logic to `.gc` contracts.
-- [ ] Keep Rust role limited to host execution + artifact persistence + capability transport.
-- [x] Add parity tests ensuring `.gc` obligation outputs are deterministic and stable.
+### C3. Selfhost Frontend Startup
+- [ ] Add cross-process cache for compiled selfhost artifact modules (not only in-process cache) to reduce repeated parse/canonicalize/compile on CLI invocations.
+- [ ] Add warm startup mode for CLI/daemonized execution to amortize toolchain bootstrap across command bursts used by AI agents.
 
-Acceptance:
-- GFX obligation behavior changes can be shipped by editing `.gc`, not Rust algorithms.
+### C4. Test/CI Iteration Speed
+- [ ] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
+- [ ] Remove redundant native/WASI duplicate coverage where the same invariant is already proven by shared harness.
+- [ ] Add automatic test sharding support with deterministic seed/order and artifact collation.
+- [ ] Publish performance budgets in CI (test wall-time, selfhost bootstrap time, obligation runtime) and fail on regressions.
 
-### 6) Freeze/Archive Rust Compatibility Paths for Production
-- [x] Make Rust frontend and embedded fallback strictly compatibility-only and off in production defaults.
-- [x] Move non-essential compatibility semantic code into `/old_bootstrap` where practical.
-- [x] Lock selfhost boundary policy in CI to prevent semantic creep back into Rust.
-- [x] Publish explicit host ABI freeze doc for post-cutover governance.
+## Workstream D — AI-First Self-Hosting Completion
+- [ ] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first.
+- [ ] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
+- [ ] Move remaining bootstrap-only Rust semantic code under `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` after cutover.
+- [ ] Add an AI-oriented contract/API style pass (stable machine-readable diagnostics, canonical fix schemas, patch-intent metadata) as required quality gate for new modules.
 
-Acceptance:
-- Production profile runs selfhost paths only; Rust semantic compatibility requires explicit opt-in.
-
----
-
-## Critical Path Order
-1. Workstream 1 (semantic extraction from runner)
-2. Workstream 3 (self-describing bootstrap)
-3. Workstream 2 (full selfhost-only command coverage)
-4. Workstream 4 (capability completeness for shipped gfx/editor wrappers)
-5. Workstream 5 (gfx obligation ownership)
-6. Workstream 6 (final freeze/archive)
-
----
-
-## Exit Criteria for "Fully Self-Hosted Core"
-- [x] Selfhost-only mode covers all production command families.
-- [ ] No high-level package/VCS/GC/GPK semantic logic remains in Rust runner.
-- [x] Toolchain module graph can evolve without Rust source edits.
-- [x] Shipped prelude capability wrappers are all backed by implemented host ops or removed.
-- [x] Rust compatibility paths are non-default and clearly isolated.
-
----
-
-## Immediate Post-Cutover Queue (AI-First, Not Blocking Self-Host)
-- [x] Optimize selfhost pipeline throughput (incremental graph + cache + hot path budgets).
-- [x] Standardize machine-first diagnostics schema across all commands (stable fields, deterministic ordering, no free-form drift).
-- [x] Expand AI-oriented editing/provenance primitives (semantic patch planning, conflict resolution helpers, obligation-guided repair loops).
-- [x] Harden graphics/editor AI workflows (task orchestration contracts, deterministic replayable UI/GPU traces, artifact-linked explainability).
+## Acceptance Checks (Must Pass Before Declaring v1)
+- [ ] `--selfhost-only` path exercises full production workflow with no Rust semantic fallbacks.
+- [ ] Concurrency test suite validates deterministic replay under mixed task scheduling.
+- [ ] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
+- [ ] Full CI includes performance regression checks and passes within target runtime budget.
