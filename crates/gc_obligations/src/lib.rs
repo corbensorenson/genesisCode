@@ -504,7 +504,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 &manifest,
                 &modules,
                 &caps,
-                &test_ids,
+                &test_runs,
                 limits,
                 &frontend,
             ),
@@ -2849,7 +2849,7 @@ fn obligation_translation_validation(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     caps: &CapsPolicy,
-    test_ids: &[TestId],
+    test_runs: &[TestRun],
     limits: KernelLimits,
     frontend: &CoreformFrontend,
 ) -> Result<ObligationResult, ObligationError> {
@@ -2857,7 +2857,7 @@ fn obligation_translation_validation(
     // tests against an optimized copy of each module and comparing per-test hashes.
     //
     // If there are no tests, treat as pass.
-    if test_ids.is_empty() {
+    if test_runs.is_empty() {
         let report = Term::Map(
             [
                 (
@@ -3027,31 +3027,43 @@ fn obligation_translation_validation(
         });
     }
 
-    for id in test_ids {
-        // original
-        let orig = run_one_test(pkg_dir, manifest, modules, caps, id.clone(), limits)?;
-        // optimized
-        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, id.clone(), limits)?;
+    for tr in test_runs {
+        if !tr.ok {
+            ok = false;
+            errors.push(format!(
+                "original test failed for {}::{}",
+                tr.id.suite_sym, tr.id.test_name
+            ));
+        }
 
-        if orig.value_hash != opt.value_hash {
+        let opt = run_one_test(
+            pkg_dir,
+            manifest,
+            &opt_modules,
+            caps,
+            tr.id.clone(),
+            limits,
+        )?;
+
+        if tr.value_hash != opt.value_hash {
             ok = false;
             errors.push(format!(
                 "hash mismatch for {}::{}",
-                id.suite_sym, id.test_name
+                tr.id.suite_sym, tr.id.test_name
             ));
         }
         let mut m = BTreeMap::new();
         m.insert(
             TermOrdKey(Term::symbol(":suite")),
-            Term::Symbol(id.suite_sym.clone()),
+            Term::Symbol(tr.id.suite_sym.clone()),
         );
         m.insert(
             TermOrdKey(Term::symbol(":name")),
-            Term::Str(id.test_name.clone()),
+            Term::Str(tr.id.test_name.clone()),
         );
         m.insert(
             TermOrdKey(Term::symbol(":orig-h")),
-            Term::Bytes(orig.value_hash.to_vec().into()),
+            Term::Bytes(tr.value_hash.to_vec().into()),
         );
         m.insert(
             TermOrdKey(Term::symbol(":opt-h")),
