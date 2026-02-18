@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
@@ -61,7 +61,6 @@ struct TaskScheduleEvent {
 #[derive(Debug, Clone, Default)]
 struct TaskBudgetState {
     per_task: BTreeMap<String, TaskBudgetCounters>,
-    in_flight: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +74,7 @@ struct TaskBudgetCounters {
 struct TaskRuntime {
     next_task_id: u64,
     tasks: BTreeMap<String, TaskRecord>,
+    queue: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,6 +86,7 @@ struct TaskRecord {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TaskState {
+    Queued,
     Running,
     Done,
     Cancelled,
@@ -152,9 +153,13 @@ pub fn run(
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = cap_term(&req.op, pol)?;
-                    let resp = if let Some(task_resp) =
-                        task_runtime_call(&mut task_runtime, &req.op, &req.payload, proto.error)
-                    {
+                    let resp = if let Some(task_resp) = task_runtime_call(
+                        &mut task_runtime,
+                        policy,
+                        &req.op,
+                        &req.payload,
+                        proto.error,
+                    ) {
                         task_resp
                     } else {
                         call_capability(
@@ -174,6 +179,7 @@ pub fn run(
                     && let Some(limit_err) = enforce_task_policy_limits(
                         policy,
                         &mut task_budget_state,
+                        &task_runtime,
                         i,
                         &req.op,
                         &req.payload,
@@ -339,6 +345,7 @@ pub fn replay_with_store(
 
 fn task_runtime_call(
     runtime: &mut TaskRuntime,
+    policy: &CapsPolicy,
     op: &str,
     payload: &Term,
     error_tok: SealId,
@@ -359,17 +366,25 @@ fn task_runtime_call(
             let parent_task = map_field_str_or_symbol(payload, ":parent-task")
                 .or_else(|| map_field_str_or_symbol(payload, ":scope"));
             let task_payload = map_field(payload, ":payload").cloned().unwrap_or(Term::Nil);
+            let running = runtime_running_count(runtime);
+            let worker_budget = policy.task.max_workers.unwrap_or(u64::MAX);
+            let state = if running < worker_budget {
+                TaskState::Running
+            } else {
+                runtime.queue.push(task_id.clone());
+                TaskState::Queued
+            };
             runtime.tasks.insert(
                 task_id.clone(),
                 TaskRecord {
-                    state: TaskState::Running,
+                    state: state.clone(),
                     payload: task_payload,
                     parent_task,
                 },
             );
             Some(Value::Data(task_map([
                 (":task-id", Term::Str(task_id)),
-                (":state", Term::symbol(":running")),
+                (":state", task_state_term(&state)),
             ])))
         }
         "core/task::status" => {
@@ -407,17 +422,34 @@ fn task_runtime_call(
                     Some(op),
                 ));
             };
-            let Some(rec) = runtime.tasks.get_mut(&task_id) else {
+            if !runtime.tasks.contains_key(&task_id) {
                 return Some(mk_error(
                     error_tok,
                     "core/task/not-found",
                     format!("unknown task-id: {task_id}"),
                     Some(op),
                 ));
-            };
-            if rec.state == TaskState::Running {
+            }
+            let state_before = runtime
+                .tasks
+                .get(&task_id)
+                .map(|r| r.state.clone())
+                .expect("task-id existence checked");
+            if state_before == TaskState::Queued {
+                runtime.queue.retain(|q| q != &task_id);
+            }
+            if (state_before == TaskState::Running || state_before == TaskState::Queued)
+                && let Some(rec) = runtime.tasks.get_mut(&task_id)
+            {
                 rec.state = TaskState::Cancelled;
             }
+            if state_before == TaskState::Running {
+                promote_queued_task(runtime, policy);
+            }
+            let rec = runtime
+                .tasks
+                .get(&task_id)
+                .expect("task-id existence checked");
             Some(Value::Data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", task_state_term(&rec.state)),
@@ -436,20 +468,39 @@ fn task_runtime_call(
                     Some(op),
                 ));
             };
-            let Some(rec) = runtime.tasks.get_mut(&task_id) else {
+            if !runtime.tasks.contains_key(&task_id) {
                 return Some(mk_error(
                     error_tok,
                     "core/task/not-found",
                     format!("unknown task-id: {task_id}"),
                     Some(op),
                 ));
-            };
-            if rec.state == TaskState::Running {
+            }
+            let state_before = runtime
+                .tasks
+                .get(&task_id)
+                .map(|r| r.state.clone())
+                .expect("task-id existence checked");
+            if state_before == TaskState::Queued {
+                runtime.queue.retain(|q| q != &task_id);
+            }
+            if (state_before == TaskState::Running || state_before == TaskState::Queued)
+                && let Some(rec) = runtime.tasks.get_mut(&task_id)
+            {
                 rec.state = TaskState::Done;
             }
+            if state_before == TaskState::Running {
+                promote_queued_task(runtime, policy);
+            }
+            let rec = runtime
+                .tasks
+                .get(&task_id)
+                .expect("task-id existence checked");
             let (result, error) = match rec.state {
                 TaskState::Done => (rec.payload.clone(), Term::Nil),
-                TaskState::Cancelled | TaskState::Running => (Term::Nil, Term::Nil),
+                TaskState::Cancelled | TaskState::Running | TaskState::Queued => {
+                    (Term::Nil, Term::Nil)
+                }
             };
             Some(Value::Data(task_map([
                 (":task-id", Term::Str(task_id)),
@@ -468,9 +519,39 @@ fn task_runtime_call(
 
 fn task_state_term(state: &TaskState) -> Term {
     match state {
+        TaskState::Queued => Term::symbol(":queued"),
         TaskState::Running => Term::symbol(":running"),
         TaskState::Done => Term::symbol(":done"),
         TaskState::Cancelled => Term::symbol(":cancelled"),
+    }
+}
+
+fn runtime_running_count(runtime: &TaskRuntime) -> u64 {
+    runtime
+        .tasks
+        .values()
+        .filter(|t| t.state == TaskState::Running)
+        .count() as u64
+}
+
+fn runtime_queue_count(runtime: &TaskRuntime) -> u64 {
+    runtime.queue.len() as u64
+}
+
+fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy) {
+    let worker_budget = policy.task.max_workers.unwrap_or(u64::MAX);
+    while runtime_running_count(runtime) < worker_budget {
+        let Some(next_idx) = runtime.queue.iter().position(
+            |tid| matches!(runtime.tasks.get(tid), Some(rec) if rec.state == TaskState::Queued),
+        ) else {
+            break;
+        };
+        let tid = runtime.queue.remove(next_idx);
+        if let Some(rec) = runtime.tasks.get_mut(&tid)
+            && rec.state == TaskState::Queued
+        {
+            rec.state = TaskState::Running;
+        }
     }
 }
 
@@ -530,6 +611,7 @@ fn task_target_id(op: &str, payload: &Term, resp_val: &Value) -> Option<String> 
 fn enforce_task_policy_limits(
     policy: &CapsPolicy,
     state: &mut TaskBudgetState,
+    runtime: &TaskRuntime,
     i: u64,
     op: &str,
     payload: &Term,
@@ -552,16 +634,6 @@ fn enforce_task_policy_limits(
             });
         c.steps = c.steps.saturating_add(1);
         c.last_step = i;
-
-        match op {
-            "core/task::spawn" | "editor/task::spawn" => {
-                state.in_flight.insert(tid.clone());
-            }
-            "core/task::await" | "core/task::cancel" | "editor/task::cancel" => {
-                state.in_flight.remove(tid);
-            }
-            _ => {}
-        }
     }
 
     if let Some(max_tasks) = policy.task.max_tasks
@@ -577,25 +649,25 @@ fn enforce_task_policy_limits(
         ));
     }
     if let Some(max_workers) = policy.task.max_workers
-        && (state.in_flight.len() as u64) > max_workers
+        && runtime_running_count(runtime) > max_workers
     {
         return Some(task_limit_error(
             error_tok,
             "max_workers",
             max_workers,
-            state.in_flight.len() as u64,
+            runtime_running_count(runtime),
             op,
             tid.as_deref(),
         ));
     }
     if let Some(max_queue) = policy.task.max_queue
-        && (state.in_flight.len() as u64) > max_queue
+        && runtime_queue_count(runtime) > max_queue
     {
         return Some(task_limit_error(
             error_tok,
             "max_queue",
             max_queue,
-            state.in_flight.len() as u64,
+            runtime_queue_count(runtime),
             op,
             tid.as_deref(),
         ));

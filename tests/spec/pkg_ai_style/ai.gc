@@ -1,0 +1,12 @@
+(def ::meta
+  (quote
+    {
+      :intent "AI-first module with explicit contract metadata"
+      :caps []
+      :exports [pkg/ai-style::value]
+      :types {pkg/ai-style::value Int}
+    }))
+
+(def pkg/ai-style::value 7)
+
+pkg/ai-style::value

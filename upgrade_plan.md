@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 18
+Open checklist items: 17
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -39,7 +39,7 @@ Open checklist items: 18
 
 ### B3. Runtime Scheduler
 - [x] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
-- [ ] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
+- [x] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
 - [x] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
 - [x] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
 

@@ -194,6 +194,55 @@ fn test_pkg_lint_autofix_emits_patch_artifact() {
 }
 
 #[test]
+fn test_pkg_ai_style_obligation_succeeds_and_emits_machine_readable_report() {
+    let td = tempfile::tempdir().unwrap();
+    let src = fixture("pkg_ai_style");
+    let dst = td.path().join("pkg_ai_style");
+    copy_dir_all(&src, &dst).unwrap();
+
+    let pkg = dst.join("package.toml");
+    let out = cargo_bin_cmd!("genesis")
+        .args(["test", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let acceptance_h = parse_hash_line(&out);
+    let acc = read_store_term(&dst, &acceptance_h);
+    let ai_h = acceptance_obligation_artifact(&acc, "core/obligation::ai-style")
+        .expect("ai-style obligation must produce artifact");
+    let ai_report = read_store_term(&dst, &ai_h);
+
+    let Term::Map(rm) = ai_report else {
+        panic!("ai-style report must be a map")
+    };
+    assert_eq!(
+        rm.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::Str("genesis/ai-style-v0.1".to_string()))
+    );
+    assert_eq!(
+        rm.get(&TermOrdKey(Term::symbol(":schema"))),
+        Some(&Term::Str("genesis/diagnostics-schema-v1".to_string()))
+    );
+    let Term::Vector(_diags) = rm
+        .get(&TermOrdKey(Term::symbol(":diagnostics")))
+        .expect("ai-style report must include :diagnostics")
+    else {
+        panic!(":diagnostics must be a vector");
+    };
+    let Term::Vector(errors) = rm
+        .get(&TermOrdKey(Term::symbol(":errors")))
+        .expect("ai-style report must include :errors")
+    else {
+        panic!(":errors must be a vector");
+    };
+    assert_eq!(errors.len(), 0, "passing fixture should have no style errors");
+}
+
+#[test]
 fn pack_is_stable_independent_of_invocation_path() {
     let td = tempfile::tempdir().unwrap();
     let src = fixture("pkg_basic");

@@ -451,6 +451,136 @@ max_tasks = 0
     }
 
     #[test]
+    fn deterministic_task_scheduler_enqueues_and_promotes_with_worker_budget() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (((core/task::spawn "scope/main") "t1") {:job "one"}))
+                (fn (spawn-1)
+                  (let ((tid-1 ((core/map::get spawn-1) ':task-id)))
+                    ((core/effect::bind (((core/task::spawn "scope/main") "t2") {:job "two"}))
+                      (fn (spawn-2)
+                        (let ((tid-2 ((core/map::get spawn-2) ':task-id)))
+                          ((core/effect::bind (core/task::status tid-2))
+                            (fn (before)
+                              ((core/effect::bind (core/task::await tid-1))
+                                (fn (_await-1)
+                                  ((core/effect::bind (core/task::status tid-2))
+                                    (fn (after)
+                                      (core/effect::pure {:before before :after after}))))))))))))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let pol = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::spawn", "core/task::status", "core/task::await"]
+
+[task]
+max_workers = 1
+"#,
+        )
+        .unwrap();
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+        fn state_from_term_entry(t: &Term) -> Option<String> {
+            let Term::Map(m) = t else {
+                return None;
+            };
+            m.get(&TermOrdKey(Term::symbol(":state")))
+                .and_then(|x| match x {
+                    Term::Symbol(s) => Some(s.clone()),
+                    _ => None,
+                })
+        }
+
+        fn state_from_value_entry(v: &Value) -> Option<String> {
+            match v {
+                Value::Data(t) => state_from_term_entry(t),
+                Value::Map(m) => m
+                    .get(&TermOrdKey(Term::symbol(":state")))
+                    .and_then(|x| match x {
+                        Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                        _ => None,
+                    }),
+                _ => None,
+            }
+        }
+
+        let before_state = match &r.value {
+            Value::Data(Term::Map(root)) => root
+                .get(&TermOrdKey(Term::symbol(":before")))
+                .and_then(state_from_term_entry),
+            Value::Map(root) => root
+                .get(&TermOrdKey(Term::symbol(":before")))
+                .and_then(state_from_value_entry),
+            _ => None,
+        };
+        let after_state = match &r.value {
+            Value::Data(Term::Map(root)) => root
+                .get(&TermOrdKey(Term::symbol(":after")))
+                .and_then(state_from_term_entry),
+            Value::Map(root) => root
+                .get(&TermOrdKey(Term::symbol(":after")))
+                .and_then(state_from_value_entry),
+            _ => None,
+        };
+
+        assert_eq!(before_state.as_deref(), Some(":queued"));
+        assert_eq!(after_state.as_deref(), Some(":running"));
+    }
+
+    #[test]
+    fn task_policy_max_queue_limit_denies_spawn_and_returns_budget_error() {
+        let (forms, h) = mk_prog_for(
+            "core/task::spawn",
+            "{:scope \"scope/main\" :payload {:job \"compile\"}}",
+        );
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let pol = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::spawn"]
+
+[task]
+max_workers = 0
+max_queue = 0
+"#,
+        )
+        .unwrap();
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+        assert_eq!(r.log.entries.len(), 1);
+        assert_eq!(r.log.entries[0].decision, Decision::Deny);
+        match r.value {
+            Value::Sealed { token, payload } => {
+                assert_eq!(token, ctx.protocol.expect("protocol").error);
+                let Value::Data(Term::Map(m)) = payload.as_ref() else {
+                    panic!("expected error payload map");
+                };
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":error/code"))),
+                    Some(&Term::Str("core/task/budget-exceeded".to_string()))
+                );
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":error/op"))),
+                    Some(&Term::Symbol("core/task::spawn".to_string()))
+                );
+            }
+            other => panic!("expected sealed budget error, got {}", other.debug_repr()),
+        }
+    }
+
+    #[test]
     fn large_byte_responses_are_externalized_to_artifact_store_and_replay_loads_them() {
         let td = tempfile::tempdir().unwrap();
         let base = td.path().join("sandbox");

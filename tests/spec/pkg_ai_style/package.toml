@@ -1,0 +1,8 @@
+dependencies = []
+name = "pkg_ai_style"
+obligations = ["core/obligation::ai-style"]
+version = "0.0.1"
+
+[[modules]]
+hash = "3299196e581ed15d3e512202076c297d303e32558ed919d75de78b7a72cca999"
+path = "ai.gc"

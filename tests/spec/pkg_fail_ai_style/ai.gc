@@ -1,0 +1,11 @@
+(def ::meta
+  (quote
+    {
+      :caps []
+      :exports [pkg/fail-ai-style::value]
+      :types {pkg/fail-ai-style::value Int}
+    }))
+
+(def pkg/fail-ai-style::value 9)
+
+pkg/fail-ai-style::value
