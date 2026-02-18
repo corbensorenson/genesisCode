@@ -4345,6 +4345,15 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
     }
 
     let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    if !ok
+        && exit_code == EX_EVAL
+        && matches!(cmd, PkgCmd::Publish { .. })
+        && (value.contains("core/pkg/")
+            || value.contains("core/refs/")
+            || value.contains("core/store/not-found"))
+    {
+        exit_code = EX_OBLIGATIONS;
+    }
     let stdout = if cli.json {
         String::new()
     } else {

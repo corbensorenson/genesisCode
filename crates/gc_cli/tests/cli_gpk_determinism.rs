@@ -10,6 +10,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
+  "core/store::put",
   "core/pkg::snapshot",
   "core/gpk::export",
   "core/store::has",

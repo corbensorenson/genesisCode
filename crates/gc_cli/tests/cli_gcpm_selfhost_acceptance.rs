@@ -20,6 +20,8 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
         format!(
             r#"
 allow = [
+  "core/pkg::init",
+  "core/pkg::lock",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
   "core/pkg::install",
@@ -44,6 +46,14 @@ create_dirs = true
 
 [op."core/pkg-low::load-lock"]
 base_dir = "."
+
+[op."core/pkg::init"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg::lock"]
+base_dir = "."
+create_dirs = true
 
 [op."core/pkg::install"]
 base_dir = "."
@@ -218,6 +228,61 @@ fn selfhost_only_gcpm_lifecycle_is_deterministic_and_policy_gated() {
     assert_eq!(log_a, log_b);
     let log_term = parse_term(log_a.trim()).unwrap();
     EffectLog::from_term(&log_term).expect("parse deterministic lock log");
+
+    // run/replay roundtrip for workspace operations through core/pm wrappers.
+    let pm_prog = dir.join("pm_roundtrip.gc");
+    fs::write(
+        &pm_prog,
+        r#"
+(def prog
+  ((core/effect::bind ((((core/pm::init "genesis.lock") "ws") "policy:default-v0.1") "gen://registry"))
+    (fn (_)
+      ((core/effect::bind (core/pm::lock "genesis.lock"))
+        (fn (_)
+          ((core/pm::install "genesis.lock") true))))))
+prog
+"#,
+    )
+    .unwrap();
+    let pm_log = dir.join("pm_roundtrip.gclog");
+    let run_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "run",
+        ])
+        .arg(&pm_prog)
+        .args(["--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&pm_log)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let replay_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "replay",
+        ])
+        .arg(&pm_prog)
+        .args(["--log"])
+        .arg(&pm_log)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(
+        String::from_utf8(run_out).unwrap().trim(),
+        String::from_utf8(replay_out).unwrap().trim()
+    );
 
     cargo_bin_cmd!("genesis")
         .current_dir(dir)

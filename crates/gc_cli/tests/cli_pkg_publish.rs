@@ -6,7 +6,22 @@ use gc_coreform::{Term, TermOrdKey, parse_term};
 
 mod support;
 
-fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
+fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> PathBuf {
+    let publish_line = if include_pkg_publish {
+        "  \"core/pkg::publish\",\n"
+    } else {
+        ""
+    };
+    let publish_op = if include_pkg_publish {
+        format!(
+            r#"
+[op."core/pkg::publish"]
+remote_allow = ["{remote_allow}"]
+"#
+        )
+    } else {
+        "".to_string()
+    };
     let caps = dir.join("caps.toml");
     fs::write(
         &caps,
@@ -14,9 +29,10 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
             r#"
 allow = [
   "core/store::put",
+  "core/store::get",
   "core/refs::get",
   "core/sync::push",
-  "core/pkg::publish"
+{publish_line}
 ]
 
 [store]
@@ -27,9 +43,7 @@ path = "./.genesis/refs.gc"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
-
-[op."core/pkg::publish"]
-remote_allow = ["{remote_allow}"]
+{publish_op}
 "#
         ),
     )
@@ -124,7 +138,7 @@ fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     let remote = format!("file://{}/", remote_dir.display());
     let remote_allow = format!("{remote}v1/");
 
-    let caps = write_caps(dir, &remote_allow);
+    let caps = write_caps(dir, &remote_allow, true);
 
     // Policy: main requires unit-tests.
     let policy_hex = cli_store_put(
@@ -251,7 +265,7 @@ fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
     fs::create_dir_all(&remote_dir).unwrap();
     let remote = format!("file://{}/", remote_dir.display());
     let remote_allow = format!("{remote}v1/");
-    let caps = write_caps(dir, &remote_allow);
+    let caps = write_caps(dir, &remote_allow, true);
 
     let policy_hex = cli_store_put(
         dir,
@@ -306,6 +320,94 @@ fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
     );
     set_local_ref(dir, &commit_ok);
     (caps, remote, policy_hex, remote_dir)
+}
+
+#[test]
+fn selfhost_publish_works_without_core_pkg_publish_capability() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(dir, &remote_allow, false);
+    let artifact = build_selfhost_artifact(dir);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+        "policy.gc",
+    );
+    let patch_hex = cli_store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let evidence_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "evidence.gc",
+    );
+    let commit_ok = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_hex}"]
+  :attestations []
+  :message "ok"
+}}"#
+        ),
+        "commit_ok.gc",
+    );
+    set_local_ref(dir, &commit_ok);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .success();
+    assert_eq!(
+        get_remote_ref(&remote_dir, "refs/heads/main"),
+        Some(commit_ok)
+    );
 }
 
 #[test]

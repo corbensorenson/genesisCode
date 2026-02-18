@@ -21,6 +21,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
+  "core/store::put",
   "core/pkg::init",
   "core/pkg::add",
   "core/pkg::list",

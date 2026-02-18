@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 14
+Open checklist items: 9
 
 ## Findings From Current Project Audit
 
@@ -24,15 +24,15 @@ Open checklist items: 14
 
 - [ ] All production command semantics are owned by `.gc` contracts.
 - [ ] Rust runtime is limited to kernel + low-level host ABI + transport.
-- [ ] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
-- [ ] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
+- [x] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
+- [x] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
 - [ ] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
 - [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
 - [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, graphics/editor host ops.
 - [ ] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first.
 - [ ] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
 - [ ] Move remaining bootstrap-only Rust semantic code under `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` after cutover.
-- [ ] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
+- [x] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
 
 ## Workstream B — GCPM Core (Language-Native Project Manager)
 
@@ -78,6 +78,6 @@ Open checklist items: 14
 ## Acceptance Checks (Must Pass Before v1 Declaration)
 
 - [x] `--selfhost-only` + `gcpm` executes full workspace lifecycle (init/add/lock/install/run/test/publish) with no Rust semantic fallback.
-- [ ] End-to-end workspace operations are replayable and policy-gated with deterministic logs.
-- [ ] Lock v2 + environment realization meets AI iteration targets in CI budget checks.
+- [x] End-to-end workspace operations are replayable and policy-gated with deterministic logs.
+- [x] Lock v2 + environment realization meets AI iteration targets in CI budget checks.
 - [ ] Rust semantic bootstrap code is relocated to `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` and no longer used in production path.

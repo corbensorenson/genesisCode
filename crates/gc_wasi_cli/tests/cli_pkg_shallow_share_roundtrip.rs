@@ -13,6 +13,7 @@ fn write_caps_src(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
+  "core/store::put",
   "core/pkg::snapshot",
   "core/gpk::export",
   "core/store::get"

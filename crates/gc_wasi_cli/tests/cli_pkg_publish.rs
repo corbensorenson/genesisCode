@@ -10,7 +10,22 @@ fn cmd() -> assert_cmd::Command {
     cargo_bin_cmd!("genesis_wasi")
 }
 
-fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
+fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> PathBuf {
+    let publish_line = if include_pkg_publish {
+        "  \"core/pkg::publish\",\n"
+    } else {
+        ""
+    };
+    let publish_op = if include_pkg_publish {
+        format!(
+            r#"
+[op."core/pkg::publish"]
+remote_allow = ["{remote_allow}"]
+"#
+        )
+    } else {
+        "".to_string()
+    };
     let caps = dir.join("caps.toml");
     fs::write(
         &caps,
@@ -18,9 +33,10 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
             r#"
 allow = [
   "core/store::put",
+  "core/store::get",
   "core/refs::get",
   "core/sync::push",
-  "core/pkg::publish"
+{publish_line}
 ]
 
 [store]
@@ -31,9 +47,7 @@ path = "./.genesis/refs.gc"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
-
-[op."core/pkg::publish"]
-remote_allow = ["{remote_allow}"]
+{publish_op}
 "#
         ),
     )
@@ -127,7 +141,7 @@ fn wasi_pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     let remote = format!("file://{}/", remote_dir.display());
     let remote_allow = format!("{remote}v1/");
 
-    let caps = write_caps(dir, &remote_allow);
+    let caps = write_caps(dir, &remote_allow, true);
 
     let policy_hex = cli_store_put(
         dir,
@@ -246,12 +260,15 @@ fn wasi_pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     );
 }
 
-fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
+fn setup_publish_ok_fixture(
+    dir: &Path,
+    include_pkg_publish: bool,
+) -> (PathBuf, String, String, PathBuf) {
     let remote_dir = dir.join("remote-registry");
     fs::create_dir_all(&remote_dir).unwrap();
     let remote = format!("file://{}/", remote_dir.display());
     let remote_allow = format!("{remote}v1/");
-    let caps = write_caps(dir, &remote_allow);
+    let caps = write_caps(dir, &remote_allow, include_pkg_publish);
 
     let policy_hex = cli_store_put(
         dir,
@@ -317,9 +334,9 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
     fs::create_dir_all(&self_dir).unwrap();
 
     let (rust_caps, rust_remote, rust_policy_hex, rust_remote_dir) =
-        setup_publish_ok_fixture(&rust_dir);
+        setup_publish_ok_fixture(&rust_dir, true);
     let (self_caps, self_remote, self_policy_hex, self_remote_dir) =
-        setup_publish_ok_fixture(&self_dir);
+        setup_publish_ok_fixture(&self_dir, false);
     let artifact = build_selfhost_artifact(&self_dir);
 
     let rust_out = cmd()
@@ -395,4 +412,44 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
         get_remote_ref(&self_remote_dir, "refs/heads/main"),
         Some(self_commit)
     );
+}
+
+#[test]
+fn wasi_selfhost_publish_works_without_core_pkg_publish_capability() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let (caps, remote, policy_hex, remote_dir) = setup_publish_ok_fixture(dir, false);
+    let artifact = build_selfhost_artifact(dir);
+
+    let out = cmd()
+        .current_dir(dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let commit = match normalize_publish_value(&json_value(&out)) {
+        Term::Map(m) => match m.get(&TermOrdKey(Term::symbol(":commit"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => panic!("missing :commit"),
+        },
+        _ => panic!("publish value must be map"),
+    };
+    assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), Some(commit));
 }

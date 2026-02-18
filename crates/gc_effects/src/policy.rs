@@ -94,10 +94,17 @@ impl CapsPolicy {
 
     pub fn is_allowed(&self, op: &str) -> bool {
         self.ops.contains_key(op)
+            || op_compat_aliases(op)
+                .iter()
+                .any(|alias| self.ops.contains_key(*alias))
     }
 
     pub fn op_policy(&self, op: &str) -> Option<&OpPolicy> {
-        self.ops.get(op)
+        self.ops.get(op).or_else(|| {
+            op_compat_aliases(op)
+                .iter()
+                .find_map(|alias| self.ops.get(*alias))
+        })
     }
 
     pub fn inline_max_bytes_for(&self, op: &str) -> Option<usize> {
@@ -231,6 +238,15 @@ impl CapsPolicy {
                 p.base_dir = Some(base.join(bd));
             }
         }
+    }
+}
+
+fn op_compat_aliases(op: &str) -> &'static [&'static str] {
+    match op {
+        // Transitional alias: selfhost pkg snapshot now uses the low-level loader op, but
+        // existing caps may still authorize the legacy high-level snapshot op.
+        "core/pkg-low::load-package" => &["core/pkg::snapshot"],
+        _ => &[],
     }
 }
 
@@ -530,5 +546,20 @@ max_time_ms_per_task = 50
         assert_eq!(p.task.max_queue, Some(16));
         assert_eq!(p.task.max_steps_per_task, Some(20));
         assert_eq!(p.task.max_time_ms_per_task, Some(50));
+    }
+
+    #[test]
+    fn supports_pkg_snapshot_compat_alias_for_low_level_loader() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/pkg::snapshot"]
+
+[op."core/pkg::snapshot"]
+base_dir = "."
+"#,
+        )
+        .unwrap();
+        assert!(p.is_allowed("core/pkg-low::load-package"));
+        assert!(p.op_policy("core/pkg-low::load-package").is_some());
     }
 }
