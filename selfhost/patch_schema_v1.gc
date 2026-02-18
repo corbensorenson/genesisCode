@@ -1,0 +1,191 @@
+; Patch schema validator for v0.2 (.gcpatch).
+;
+; This module defines a pure validator that returns `true` on success and a sealed ERROR on failure.
+; It is intended to be called by host tooling when running in selfhost frontend mode.
+
+(def selfhost/patch_schema::is-int?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def selfhost/patch_schema::is-str?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def selfhost/patch_schema::is-sym?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def selfhost/patch_schema::is-vec?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def selfhost/patch_schema::is-map?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def selfhost/patch_schema::err
+  (fn (msg) ((core/error::make2 "core/patch-schema") msg)))
+
+(def selfhost/patch_schema::require
+  (fn (cond msg) (if cond true (selfhost/patch_schema::err msg))))
+
+(def selfhost/patch_schema::require-key
+  (fn (m k msg)
+    (let ((v ((core/map::get m) k)))
+      (if (core/list::is-nil? v) (selfhost/patch_schema::err msg) v))))
+
+(def selfhost/patch_schema::validate-path-step
+  (fn (step)
+    (if (selfhost/patch_schema::is-vec? step)
+      (let ((n (core/vec::len step)))
+        (if ((core/int::eq? n) 0)
+          (selfhost/patch_schema::err "empty path step")
+          (let ((tag ((core/vec::get step) 0)))
+            (if (selfhost/patch_schema::is-sym? tag)
+              (if ((core/sym::eq? tag) (quote :form))
+                (if ((core/int::eq? n) 2)
+                  (let ((i ((core/vec::get step) 1)))
+                    (if (selfhost/patch_schema::is-int? i)
+                      true
+                      (selfhost/patch_schema::err ":form expects int index")))
+                  (selfhost/patch_schema::err ":form expects 1 arg"))
+                (if ((core/sym::eq? tag) (quote :pair-car))
+                  (if ((core/int::eq? n) 1)
+                    true
+                    (selfhost/patch_schema::err ":pair-car expects 0 args"))
+                  (if ((core/sym::eq? tag) (quote :pair-cdr))
+                    (if ((core/int::eq? n) 1)
+                      true
+                      (selfhost/patch_schema::err ":pair-cdr expects 0 args"))
+                    (if ((core/sym::eq? tag) (quote :vec))
+                      (if ((core/int::eq? n) 2)
+                        (let ((i ((core/vec::get step) 1)))
+                          (if (selfhost/patch_schema::is-int? i)
+                            true
+                            (selfhost/patch_schema::err ":vec expects int index")))
+                        (selfhost/patch_schema::err ":vec expects 1 arg"))
+                      (if ((core/sym::eq? tag) (quote :map))
+                        (if ((core/int::eq? n) 2)
+                          true
+                          (selfhost/patch_schema::err ":map expects 1 arg"))
+                        (selfhost/patch_schema::err "unknown path step tag"))))))
+              (selfhost/patch_schema::err "path step tag must be symbol")))))
+      (selfhost/patch_schema::err ":path step must be vector"))))
+
+(def selfhost/patch_schema::validate-path
+  (fn (path)
+    (if (selfhost/patch_schema::is-vec? path)
+      (let ((len (core/vec::len path)))
+        ((selfhost/patch_schema::validate-path-loop path len) 0))
+      (selfhost/patch_schema::err ":path must be vector"))))
+
+(def selfhost/patch_schema::validate-path-loop
+  (fn (path len)
+    (fn (i)
+      (if ((core/int::eq? i) len)
+        true
+        (let ((step ((core/vec::get path) i)))
+          (let ((r (selfhost/patch_schema::validate-path-step step)))
+            (if (core/error::is? r)
+              r
+              ((selfhost/patch_schema::validate-path-loop path len) ((core/int::add i) 1)))))))))
+
+(def selfhost/patch_schema::validate-op-replace-node
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "replace-node missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((path (selfhost/patch_schema::require-key opm (quote :path) "replace-node missing :path")))
+            (if (core/error::is? path)
+              path
+              (let ((r (selfhost/patch_schema::validate-path path)))
+                (if (core/error::is? r)
+                  r
+                  (let ((newv (selfhost/patch_schema::require-key opm (quote :new) "replace-node missing :new")))
+                    (if (core/error::is? newv) newv true))))))
+          (selfhost/patch_schema::err "replace-node :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-add-module
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "add-module missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((content (selfhost/patch_schema::require-key opm (quote :content) "add-module missing :content")))
+            (if (core/error::is? content)
+              content
+              (if (selfhost/patch_schema::is-str? content)
+                true
+                (if (selfhost/patch_schema::is-vec? content)
+                  true
+                  (selfhost/patch_schema::err "add-module :content must be string or vector")))))
+          (selfhost/patch_schema::err "add-module :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-remove-module
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "remove-module missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          true
+          (selfhost/patch_schema::err "remove-module :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-update-manifest
+  (fn (opm)
+    ; `:update-manifest` is intentionally conservative: validate only basic shape and a small set of known fields.
+    (let ((setv ((core/map::get opm) (quote :set))))
+      (if (core/list::is-nil? setv)
+        true
+        (if (selfhost/patch_schema::is-map? setv)
+          true
+          (selfhost/patch_schema::err ":set must be a map"))))))
+
+(def selfhost/patch_schema::validate-op
+  (fn (op)
+    (if (selfhost/patch_schema::is-map? op)
+      (let ((op_sym ((core/map::get op) (quote :op))))
+        (if (core/list::is-nil? op_sym)
+          (selfhost/patch_schema::err "missing :op")
+          (if (selfhost/patch_schema::is-sym? op_sym)
+            (if ((core/sym::eq? op_sym) (quote :replace-node))
+              (selfhost/patch_schema::validate-op-replace-node op)
+              (if ((core/sym::eq? op_sym) (quote :add-module))
+                (selfhost/patch_schema::validate-op-add-module op)
+                (if ((core/sym::eq? op_sym) (quote :remove-module))
+                  (selfhost/patch_schema::validate-op-remove-module op)
+                  (if ((core/sym::eq? op_sym) (quote :update-manifest))
+                    (selfhost/patch_schema::validate-op-update-manifest op)
+                    (selfhost/patch_schema::err "unknown :op")))))
+            (selfhost/patch_schema::err ":op must be a symbol"))))
+      (selfhost/patch_schema::err "op must be a map"))))
+
+(def selfhost/patch_schema::validate-ops
+  (fn (ops)
+    (if (selfhost/patch_schema::is-vec? ops)
+      (let ((len (core/vec::len ops)))
+        ((selfhost/patch_schema::validate-ops-loop ops len) 0))
+      (selfhost/patch_schema::err ":ops must be a vector"))))
+
+(def selfhost/patch_schema::validate-ops-loop
+  (fn (ops len)
+    (fn (i)
+      (if ((core/int::eq? i) len)
+        true
+        (let ((op ((core/vec::get ops) i)))
+          (let ((r (selfhost/patch_schema::validate-op op)))
+            (if (core/error::is? r)
+              r
+              ((selfhost/patch_schema::validate-ops-loop ops len) ((core/int::add i) 1)))))))))
+
+(def core/cli::validate-patch
+  (fn (t)
+    (if (selfhost/patch_schema::is-map? t)
+      (let ((v ((core/map::get t) (quote :version))))
+        (if (selfhost/patch_schema::is-int? v)
+          (if ((core/int::eq? v) 1)
+            (let ((intent ((core/map::get t) (quote :intent))))
+              (if (selfhost/patch_schema::is-str? intent)
+                (let ((prov ((core/map::get t) (quote :provenance))))
+                  (if (selfhost/patch_schema::is-map? prov)
+                    (selfhost/patch_schema::validate-ops ((core/map::get t) (quote :ops)))
+                    (selfhost/patch_schema::err ":provenance must be a map")))
+                (selfhost/patch_schema::err ":intent must be a string")))
+            (selfhost/patch_schema::err ":version must be 1"))
+          (selfhost/patch_schema::err ":version must be an int")))
+      (selfhost/patch_schema::err "patch must be a map"))))

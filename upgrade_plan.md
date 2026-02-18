@@ -67,17 +67,21 @@ Acceptance gate:
 - [x] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
 
 ### B) `.gc` Semantic Source-of-Truth
-- [ ] Finalize self-host parser/canon/printer/hash as canonical source of truth.
+- [x] Finalize self-host parser/canon/printer/hash as canonical source of truth.
   - [x] Remove legacy `selfhost/tool::*` fallback bindings from the CLI driver; selfhost routes require `core/cli::*` contracts.
   - [x] Toolchain artifact loader enforces canonical `:forms` (idempotent canonicalization) and hashes canonical forms to prevent semantic skew.
 - [ ] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
 - [ ] Implement self-host patch schema validation/apply pipeline in `.gc`.
-- [ ] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
+  - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
+  - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active (host still applies patch ops in Rust for now).
+- [x] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
   - [x] `selfhost-artifact` output is byte-for-byte deterministic across rebuilds on the same toolchain (enforced by `gc_cli` tests).
   - [x] `pack` and `test` acceptance artifact hashes are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).
   - [x] `.gpk` export output is byte-for-byte deterministic for the same root snapshot and store state (enforced by `gc_cli` tests).
+  - [x] `pkg lock` / `pkg update` are deterministic for the same store+refs state (enforced by `gc_cli` + `gc_wasi_cli` tests).
+  - [x] `apply-patch` artifact outputs are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).
 
 Acceptance gate:
 - [ ] Native + WASI parity suites remain green when Rust semantic fallbacks are removed from default path.

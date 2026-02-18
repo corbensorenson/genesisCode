@@ -4,13 +4,14 @@ use std::path::Path;
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, parse_module, parse_term, print_module, print_term,
 };
-use gc_kernel::{MemLimits, StepLimit};
+use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value};
 use gc_obligations::{
     CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, default_coreform_frontend,
     pack, parse_canonicalize_module_source_with_frontend,
     test_package_with_step_limit_and_frontend,
 };
 use gc_pkg::PackageManifest;
+use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
@@ -126,6 +127,13 @@ pub fn apply_patch_with_step_limit_and_frontend(
 ) -> Result<PatchApplyResult, PatchError> {
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
+
+    // When running under the selfhost CoreForm frontend, validate patch schema via the
+    // self-hosted contract to ensure schema acceptance is controlled by `.gc` semantics.
+    if let CoreformFrontend::Selfhost(cfg) = &frontend {
+        selfhost_validate_patch_term(&patch_term, cfg, step_limit, mem_limits)?;
+    }
+
     let patch = Patch::from_term(&patch_term)?;
     if patch.version != 1 {
         return Err(PatchError::Validate(format!(
@@ -175,6 +183,79 @@ pub fn apply_patch_with_step_limit_and_frontend(
 /// Validate a patch artifact term without performing any I/O.
 pub fn validate_patch_term(t: &Term) -> Result<(), PatchError> {
     let _ = Patch::from_term(t)?;
+    Ok(())
+}
+
+fn summarize_protocol_error_payload(payload: &Value) -> String {
+    let Some(t) = payload.as_data() else {
+        return payload.debug_repr();
+    };
+    match t {
+        Term::Map(m) => {
+            let code = m
+                .get(&TermOrdKey(Term::symbol(":error/code")))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("core/error");
+            let msg = m
+                .get(&TermOrdKey(Term::symbol(":error/message")))
+                .and_then(|t| match t {
+                    Term::Str(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("error");
+            format!("{code}: {msg}")
+        }
+        _ => print_term(t),
+    }
+}
+
+fn extract_protocol_error(out: &Value, error_token: SealId) -> Option<String> {
+    match out {
+        Value::Sealed { token, payload } if *token == error_token => {
+            Some(summarize_protocol_error_payload(payload))
+        }
+        _ => None,
+    }
+}
+
+fn selfhost_validate_patch_term(
+    patch_term: &Term,
+    cfg: &gc_obligations::SelfhostFrontendConfig,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<(), PatchError> {
+    // Toolchain bootstrap is trusted and therefore uncharged.
+    let mut ctx = EvalCtx::with_step_limit(None);
+    ctx.set_mem_limits(mem_limits);
+    let prelude = build_prelude(&mut ctx);
+    let error_token = prelude.protocol.error;
+    let mut env = prelude.env;
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        &mut ctx,
+        &mut env,
+        cfg.bootstrap_mode,
+        cfg.artifact.as_deref(),
+    )
+    .map_err(|e| PatchError::Validate(format!("selfhost/init: {e}")))?;
+
+    // Apply user/configured limits to the patch schema validation work.
+    ctx.steps = 0;
+    ctx.step_limit = step_limit.resolve();
+
+    let validate_fn = env.get("core/cli::validate-patch").ok_or_else(|| {
+        PatchError::Validate("missing binding core/cli::validate-patch".to_string())
+    })?;
+    let out = validate_fn
+        .apply(&mut ctx, Value::Data(patch_term.clone()))
+        .map_err(|e| PatchError::Validate(format!("selfhost validate-patch apply: {e}")))?;
+    if let Some(e) = extract_protocol_error(&out, error_token) {
+        return Err(PatchError::Validate(format!(
+            "selfhost core/cli validate-patch failed: {e}"
+        )));
+    }
     Ok(())
 }
 
