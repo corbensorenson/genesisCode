@@ -25,6 +25,7 @@ allow = [
   "core/pkg::add",
   "core/pkg::list",
   "core/pkg::info",
+  "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
   "core/pkg::lock",
   "core/pkg::update",
@@ -46,6 +47,8 @@ base_dir = "."
 [op."core/pkg::list"]
 base_dir = "."
 [op."core/pkg::info"]
+base_dir = "."
+[op."core/pkg-low::save-lock"]
 base_dir = "."
 [op."core/pkg-low::load-lock"]
 base_dir = "."

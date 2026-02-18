@@ -14,6 +14,7 @@ fn write_caps(dir: &Path) -> PathBuf {
         r#"
 allow = [
   "core/store::put",
+  "core/pkg-low::save-lock",
   "core/pkg::init",
   "core/pkg::add",
   "core/pkg::lock",
@@ -42,6 +43,10 @@ base_dir = "."
 
 [op."core/pkg::verify"]
 base_dir = "."
+
+[op."core/pkg-low::save-lock"]
+base_dir = "."
+create_dirs = true
 "#,
     )
     .unwrap();

@@ -21,7 +21,10 @@ allow = [
   "core/vcs::resolve-conflict",
   "core/vcs::apply",
   "core/vcs-low::diff-terms",
-  "core/vcs-low::apply-patch"
+  "core/vcs-low::apply-patch",
+  "core/vcs-low::merge3-contract-snapshots",
+  "core/vcs-low::resolve-conflict",
+  "io/fs::write"
 ]
 
 [store]
@@ -35,6 +38,10 @@ base_dir = "."
 
 [op."core/vcs::apply"]
 base_dir = "."
+
+[op."io/fs::write"]
+base_dir = "."
+create_dirs = true
 "#,
     )
     .unwrap();

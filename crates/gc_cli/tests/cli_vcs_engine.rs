@@ -27,7 +27,9 @@ fn write_caps(dir: &Path, allow: &[&str]) -> PathBuf {
         s.push_str(op);
         s.push('"');
     }
-    s.push_str("]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n");
+    s.push_str(
+        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n",
+    );
     fs::write(&caps, s).unwrap();
     caps
 }
@@ -126,7 +128,10 @@ fn vcs_log_value_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/store::get", "core/vcs::log"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/store::get", "core/vcs::log"],
+    );
     let artifact = build_selfhost_artifact(dir);
 
     let patch = store_put(dir, &caps, "{:type :vcs/patch :v 1 :ops []}\n", "patch.gc");
@@ -207,7 +212,10 @@ fn vcs_log_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/store::get", "core/vcs::log"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/store::get", "core/vcs::log"],
+    );
     let artifact = build_selfhost_artifact(dir);
     poison_cli_vcs_log_program(&artifact);
 
@@ -686,6 +694,9 @@ fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
             "core/store::get",
             "core/vcs::merge3",
             "core/vcs::resolve-conflict",
+            "core/vcs-low::merge3-contract-snapshots",
+            "core/vcs-low::resolve-conflict",
+            "core/vcs-low::diff-terms",
         ],
     );
     let artifact = build_selfhost_artifact(dir);
@@ -732,7 +743,9 @@ fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
         .args(["--coreform-frontend", "rust"])
         .args(["vcs", "--caps"])
         .arg(&caps)
-        .args(["merge3", "--base", &base_h, "--left", &left_h, "--right", &right_h])
+        .args([
+            "merge3", "--base", &base_h, "--left", &left_h, "--right", &right_h,
+        ])
         .assert()
         .code(3)
         .get_output()
@@ -745,7 +758,9 @@ fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
         .args(["--selfhost-artifact", artifact.to_str().unwrap()])
         .args(["vcs", "--caps"])
         .arg(&caps)
-        .args(["merge3", "--base", &base_h, "--left", &left_h, "--right", &right_h])
+        .args([
+            "merge3", "--base", &base_h, "--left", &left_h, "--right", &right_h,
+        ])
         .assert()
         .code(3)
         .get_output()

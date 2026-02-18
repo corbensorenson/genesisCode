@@ -1229,14 +1229,368 @@ fn call_capability(
                 locked.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
             }
 
+            let mut registries: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for (name, url) in &l.registries {
+                registries.insert(TermOrdKey(Term::Str(name.clone())), Term::Str(url.clone()));
+            }
+            let mut artifacts: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for (name, h) in &l.artifacts {
+                artifacts.insert(TermOrdKey(Term::Str(name.clone())), Term::Str(h.clone()));
+            }
+
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-            m.insert(TermOrdKey(Term::symbol(":workspace")), Term::Str(l.workspace));
+            m.insert(
+                TermOrdKey(Term::symbol(":workspace")),
+                Term::Str(l.workspace),
+            );
             m.insert(TermOrdKey(Term::symbol(":policy")), Term::Str(l.policy));
             m.insert(TermOrdKey(Term::symbol(":requirements")), Term::Map(reqs));
             m.insert(TermOrdKey(Term::symbol(":locked")), Term::Map(locked));
+            m.insert(
+                TermOrdKey(Term::symbol(":registries")),
+                Term::Map(registries),
+            );
+            m.insert(TermOrdKey(Term::symbol(":artifacts")), Term::Map(artifacts));
             Ok(Value::Data(Term::Map(m)))
+        }
+        "core/pkg-low::save-lock" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let Term::Map(m) = payload else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-payload",
+                    "payload must be a map".to_string(),
+                    Some(op),
+                ));
+            };
+            let workspace = match m.get(&TermOrdKey(Term::symbol(":workspace"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        ":workspace must be string".to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let policy_s = match m.get(&TermOrdKey(Term::symbol(":policy"))) {
+                Some(Term::Str(s)) => s.clone(),
+                Some(Term::Nil) | None => "policy:default-v0.1".to_string(),
+                _ => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        ":policy must be string or nil".to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let as_str_map =
+                |v: Option<&Term>, field: &str| -> Result<BTreeMap<String, String>, Value> {
+                    let mut out = BTreeMap::new();
+                    let Some(term) = v else { return Ok(out) };
+                    if matches!(term, Term::Nil) {
+                        return Ok(out);
+                    }
+                    let Term::Map(mm) = term else {
+                        return Err(mk_error(
+                            error_tok,
+                            "core/pkg/bad-payload",
+                            format!("{field} must be map"),
+                            Some(op),
+                        ));
+                    };
+                    for (k, vv) in mm {
+                        let key = match &k.0 {
+                            Term::Str(s) => s.clone(),
+                            _ => {
+                                return Err(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-payload",
+                                    format!("{field} keys must be strings"),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        let val = match vv {
+                            Term::Str(s) => s.clone(),
+                            _ => {
+                                return Err(mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-payload",
+                                    format!("{field}/{key} must be string"),
+                                    Some(op),
+                                ));
+                            }
+                        };
+                        out.insert(key, val);
+                    }
+                    Ok(out)
+                };
+            let mut requirements: BTreeMap<String, gc_pkg::Requirement> = BTreeMap::new();
+            if let Some(term) = m.get(&TermOrdKey(Term::symbol(":requirements")))
+                && !matches!(term, Term::Nil)
+            {
+                let Term::Map(mm) = term else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        ":requirements must be map".to_string(),
+                        Some(op),
+                    ));
+                };
+                for (k, vv) in mm {
+                    let name = match &k.0 {
+                        Term::Str(s) => s.clone(),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                ":requirements keys must be strings".to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let Term::Map(rm) = vv else {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-payload",
+                            format!(":requirements/{name} must be map"),
+                            Some(op),
+                        ));
+                    };
+                    let selector = match rm.get(&TermOrdKey(Term::symbol(":selector"))) {
+                        Some(Term::Str(s)) => s.clone(),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":requirements/{name}/:selector must be string"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let update_policy = match rm.get(&TermOrdKey(Term::symbol(":update-policy"))) {
+                        None | Some(Term::Nil) => gc_pkg::UpdatePolicy::Manual,
+                        Some(Term::Symbol(s)) | Some(Term::Str(s))
+                            if s == ":manual" || s == "manual" =>
+                        {
+                            gc_pkg::UpdatePolicy::Manual
+                        }
+                        Some(Term::Symbol(s)) | Some(Term::Str(s))
+                            if s == ":auto" || s == "auto" =>
+                        {
+                            gc_pkg::UpdatePolicy::Auto
+                        }
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(
+                                    ":requirements/{name}/:update-policy must be :manual or :auto"
+                                ),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let registry = match rm.get(&TermOrdKey(Term::symbol(":registry"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":requirements/{name}/:registry must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    requirements.insert(
+                        name,
+                        gc_pkg::Requirement {
+                            selector,
+                            update_policy,
+                            registry,
+                        },
+                    );
+                }
+            }
+
+            let mut locked: BTreeMap<String, gc_pkg::LockedEntry> = BTreeMap::new();
+            if let Some(term) = m.get(&TermOrdKey(Term::symbol(":locked")))
+                && !matches!(term, Term::Nil)
+            {
+                let Term::Map(mm) = term else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        ":locked must be map".to_string(),
+                        Some(op),
+                    ));
+                };
+                for (k, vv) in mm {
+                    let name = match &k.0 {
+                        Term::Str(s) => s.clone(),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                ":locked keys must be strings".to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let Term::Map(lm) = vv else {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-payload",
+                            format!(":locked/{name} must be map"),
+                            Some(op),
+                        ));
+                    };
+                    let snapshot = match lm.get(&TermOrdKey(Term::symbol(":snapshot"))) {
+                        Some(Term::Str(s)) => s.clone(),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:snapshot must be string"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let commit = match lm.get(&TermOrdKey(Term::symbol(":commit"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:commit must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let registry = match lm.get(&TermOrdKey(Term::symbol(":registry"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:registry must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let source_selector = match lm
+                        .get(&TermOrdKey(Term::symbol(":source_selector")))
+                    {
+                        None | Some(Term::Nil) => String::new(),
+                        Some(Term::Str(s)) => s.clone(),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:source_selector must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let resolved_ref = match lm.get(&TermOrdKey(Term::symbol(":resolved-ref"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:resolved-ref must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let exports_hash = match lm.get(&TermOrdKey(Term::symbol(":exports_hash"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":locked/{name}/:exports_hash must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    locked.insert(
+                        name,
+                        gc_pkg::LockedEntry {
+                            commit,
+                            snapshot,
+                            registry,
+                            source_selector,
+                            resolved_ref,
+                            exports_hash,
+                        },
+                    );
+                }
+            }
+            let registries = match as_str_map(
+                m.get(&TermOrdKey(Term::symbol(":registries"))),
+                ":registries",
+            ) {
+                Ok(x) => x,
+                Err(v) => return Ok(v),
+            };
+            let artifacts =
+                match as_str_map(m.get(&TermOrdKey(Term::symbol(":artifacts"))), ":artifacts") {
+                    Ok(x) => x,
+                    Err(v) => return Ok(v),
+                };
+
+            let mut l = gc_pkg::GenesisLock::empty(workspace);
+            l.policy = policy_s;
+            l.registries = registries;
+            l.requirements = requirements;
+            l.locked = locked;
+            l.artifacts = artifacts;
+
+            let bytes = l.to_toml_canonical();
+            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_write(
+                &base_dir,
+                &lock_s,
+                pol.map(|p| p.create_dirs).unwrap_or(false),
+            ) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/caps/path-escape",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            if let Err(e) = atomic_write_text(&lock_path, bytes.as_bytes()) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            out.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+            Ok(Value::Data(Term::Map(out)))
         }
 
         "core/pkg::info" => {
@@ -3222,9 +3576,7 @@ fn call_capability(
         }
         "core/vcs-low::diff-terms" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log(
-                    "missing artifact store for core/vcs-low::diff-terms".to_string(),
-                )
+                EffectsError::Log("missing artifact store for core/vcs-low::diff-terms".to_string())
             })?;
             let Term::Map(m) = payload else {
                 return Ok(mk_error(
@@ -3263,10 +3615,7 @@ fn call_capability(
             };
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            out.insert(
-                TermOrdKey(Term::symbol(":patch-term")),
-                patch_term,
-            );
+            out.insert(TermOrdKey(Term::symbol(":patch-term")), patch_term);
             out.insert(
                 TermOrdKey(Term::symbol(":values")),
                 Term::Vector(values.into_iter().map(Term::Str).collect()),
@@ -3317,19 +3666,543 @@ fn call_capability(
             let snapshot_t = match vcs_apply_patch_term(store, base_t, &patch) {
                 Ok(t) => t,
                 Err(e) => {
+                    return Ok(mk_error(error_tok, "core/vcs/apply-error", e, Some(op)));
+                }
+            };
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(TermOrdKey(Term::symbol(":snapshot-term")), snapshot_t);
+            Ok(Value::Data(Term::Map(out)))
+        }
+        "core/vcs-low::merge3-contract-snapshots" => {
+            let Term::Map(m) = payload else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "payload must be a map".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(base_t) = m.get(&TermOrdKey(Term::symbol(":base-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :base-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(left_t) = m.get(&TermOrdKey(Term::symbol(":left-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :left-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(right_t) = m.get(&TermOrdKey(Term::symbol(":right-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :right-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let term_hash = |t: &Term| hash_bytes_hex(print_term(t).as_bytes());
+            let base_h = match m.get(&TermOrdKey(Term::symbol(":base-hash"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => term_hash(base_t),
+            };
+            let left_h = match m.get(&TermOrdKey(Term::symbol(":left-hash"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => term_hash(left_t),
+            };
+            let right_h = match m.get(&TermOrdKey(Term::symbol(":right-hash"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => term_hash(right_t),
+            };
+
+            let base = match as_contract_snapshot(&base_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let left = match as_contract_snapshot(&left_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let right = match as_contract_snapshot(&right_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+
+            if base.proto != left.proto || base.proto != right.proto {
+                let conflict_term = mk_conflict_artifact(
+                    ":contract-snapshot-merge3",
+                    &base_h,
+                    &left_h,
+                    &right_h,
+                    vec![Term::Map(
+                        [
+                            (TermOrdKey(Term::symbol(":op")), Term::symbol(":proto")),
+                            (
+                                TermOrdKey(Term::symbol(":base")),
+                                base.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":left")),
+                                left.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":right")),
+                                right.proto.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    )],
+                );
+                let mut out = BTreeMap::new();
+                out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
+                return Ok(Value::Data(Term::Map(out)));
+            }
+
+            let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            keys.extend(base.overrides.keys().cloned());
+            keys.extend(left.overrides.keys().cloned());
+            keys.extend(right.overrides.keys().cloned());
+
+            let mut merged: BTreeMap<String, String> = BTreeMap::new();
+            let mut conflicts: Vec<Term> = Vec::new();
+            for k in keys {
+                let b = base.overrides.get(&k).cloned();
+                let l = left.overrides.get(&k).cloned();
+                let r = right.overrides.get(&k).cloned();
+
+                let pick = if l == r {
+                    l.clone()
+                } else if l == b {
+                    r.clone()
+                } else if r == b {
+                    l.clone()
+                } else {
+                    None
+                };
+
+                if l == r || l == b || r == b {
+                    if let Some(h) = pick {
+                        merged.insert(k.clone(), h);
+                    }
+                    continue;
+                }
+
+                conflicts.push(Term::Map(
+                    [
+                        (TermOrdKey(Term::symbol(":op")), Term::Symbol(k.clone())),
+                        (
+                            TermOrdKey(Term::symbol(":base")),
+                            b.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":left")),
+                            l.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":right")),
+                            r.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ));
+            }
+
+            if !conflicts.is_empty() {
+                conflicts.sort_by_cached_key(print_term);
+                let conflict_term = mk_conflict_artifact(
+                    ":contract-snapshot-merge3",
+                    &base_h,
+                    &left_h,
+                    &right_h,
+                    conflicts,
+                );
+                let mut out = BTreeMap::new();
+                out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
+                return Ok(Value::Data(Term::Map(out)));
+            }
+
+            let merged_snapshot = gc_vcs::ContractSnapshot {
+                proto: base.proto,
+                overrides: merged,
+            }
+            .to_term();
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(TermOrdKey(Term::symbol(":snapshot-term")), merged_snapshot);
+            Ok(Value::Data(Term::Map(out)))
+        }
+        "core/vcs-low::resolve-conflict" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log(
+                    "missing artifact store for core/vcs-low::resolve-conflict".to_string(),
+                )
+            })?;
+            let Term::Map(m) = payload else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "payload must be a map".to_string(),
+                    Some(op),
+                ));
+            };
+            let (conflict, base_t, left_t, right_t) =
+                if let (Some(conflict_t), Some(base_t), Some(left_t), Some(right_t)) = (
+                    m.get(&TermOrdKey(Term::symbol(":conflict-term"))),
+                    m.get(&TermOrdKey(Term::symbol(":base-term"))),
+                    m.get(&TermOrdKey(Term::symbol(":left-term"))),
+                    m.get(&TermOrdKey(Term::symbol(":right-term"))),
+                ) {
+                    let conflict = match gc_vcs::Conflict::from_term(conflict_t) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/bad-conflict",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    (conflict, base_t.clone(), left_t.clone(), right_t.clone())
+                } else if let Some(Term::Str(conflict_h)) =
+                    m.get(&TermOrdKey(Term::symbol(":conflict-hash")))
+                {
+                    let conflict_t = match store_get_term(store, conflict_h) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/store-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let conflict = match gc_vcs::Conflict::from_term(&conflict_t) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/bad-conflict",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let base_t = match store_get_term(store, &conflict.base) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/store-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let left_t = match store_get_term(store, &conflict.left) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/store-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let right_t = match store_get_term(store, &conflict.right) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/store-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    (conflict, base_t, left_t, right_t)
+                } else {
+                    return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :conflict-hash or (:conflict-term + :base-term/:left-term/:right-term)"
+                        .to_string(),
+                    Some(op),
+                ));
+                };
+
+            let strategy = match m.get(&TermOrdKey(Term::symbol(":strategy"))) {
+                None | Some(Term::Nil) => None,
+                Some(Term::Symbol(s)) => Some(s.clone()),
+                Some(Term::Str(s)) => Some(s.clone()),
+                Some(other) => {
                     return Ok(mk_error(
                         error_tok,
-                        "core/vcs/apply-error",
-                        e,
+                        "core/vcs/bad-payload",
+                        format!(
+                            ":strategy must be symbol/string or nil, got {}",
+                            print_term(other)
+                        ),
+                        Some(op),
+                    ));
+                }
+            };
+            let strategy = strategy.map(|s| match s.as_str() {
+                ":left" | "left" => ":left".to_string(),
+                ":right" | "right" => ":right".to_string(),
+                ":base" | "base" => ":base".to_string(),
+                other => other.to_string(),
+            });
+            if let Some(s) = &strategy
+                && s != ":left"
+                && s != ":right"
+                && s != ":base"
+            {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    format!("unsupported :strategy {s} (expected :left/:right/:base)"),
+                    Some(op),
+                ));
+            }
+
+            #[derive(Debug, Clone)]
+            enum Resolution {
+                Side(String),
+                Hash(String),
+                Delete,
+            }
+            let mut resolutions: BTreeMap<String, Resolution> = BTreeMap::new();
+            if let Some(t) = m.get(&TermOrdKey(Term::symbol(":resolutions"))) {
+                let Term::Map(rm) = t else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!(":resolutions must be map, got {}", print_term(t)),
+                        Some(op),
+                    ));
+                };
+                for (k, v) in rm {
+                    let opk = match &k.0 {
+                        Term::Symbol(s) => s.clone(),
+                        Term::Str(s) => s.clone(),
+                        other => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/bad-payload",
+                                format!(
+                                    ":resolutions keys must be symbol/string, got {}",
+                                    print_term(other)
+                                ),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    let res = match v {
+                        Term::Nil => Resolution::Delete,
+                        Term::Symbol(s) => match s.as_str() {
+                            ":left" | "left" => Resolution::Side(":left".to_string()),
+                            ":right" | "right" => Resolution::Side(":right".to_string()),
+                            ":base" | "base" => Resolution::Side(":base".to_string()),
+                            other => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/vcs/bad-payload",
+                                    format!(
+                                        ":resolutions/{opk} unsupported side {other} (expected :left/:right/:base)"
+                                    ),
+                                    Some(op),
+                                ));
+                            }
+                        },
+                        Term::Str(s) => match s.as_str() {
+                            ":left" | "left" => Resolution::Side(":left".to_string()),
+                            ":right" | "right" => Resolution::Side(":right".to_string()),
+                            ":base" | "base" => Resolution::Side(":base".to_string()),
+                            _ => {
+                                if let Err(e) = gc_vcs::validate_hex_hash(s) {
+                                    return Ok(mk_error(
+                                        error_tok,
+                                        "core/vcs/bad-payload",
+                                        format!(":resolutions/{opk}: {e}"),
+                                        Some(op),
+                                    ));
+                                }
+                                Resolution::Hash(s.clone())
+                            }
+                        },
+                        other => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/bad-payload",
+                                format!(
+                                    ":resolutions/{opk} must be side symbol, hex string, or nil; got {}",
+                                    print_term(other)
+                                ),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    resolutions.insert(opk, res);
+                }
+            }
+
+            let base = match as_contract_snapshot(&base_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let left = match as_contract_snapshot(&left_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            let right = match as_contract_snapshot(&right_t) {
+                Ok(s) => s,
+                Err(msg) => {
+                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
+                }
+            };
+            if base.proto != left.proto || base.proto != right.proto {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-conflict",
+                    "proto mismatch across base/left/right".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            keys.extend(base.overrides.keys().cloned());
+            keys.extend(left.overrides.keys().cloned());
+            keys.extend(right.overrides.keys().cloned());
+
+            let mut merged: BTreeMap<String, String> = BTreeMap::new();
+            let mut unresolved: Vec<Term> = Vec::new();
+
+            for k in keys {
+                let b = base.overrides.get(&k).cloned();
+                let l = left.overrides.get(&k).cloned();
+                let r = right.overrides.get(&k).cloned();
+
+                let conflict_here = l != r && l != b && r != b;
+                if !conflict_here {
+                    let pick = if l == r {
+                        l
+                    } else if l == b {
+                        r
+                    } else if r == b {
+                        l
+                    } else {
+                        None
+                    };
+                    if let Some(h) = pick {
+                        merged.insert(k, h);
+                    }
+                    continue;
+                }
+
+                let chosen = resolutions
+                    .get(&k)
+                    .cloned()
+                    .or_else(|| strategy.as_ref().map(|s| Resolution::Side(s.clone())));
+
+                let picked = match chosen {
+                    Some(Resolution::Side(s)) if s == ":left" => l,
+                    Some(Resolution::Side(s)) if s == ":right" => r,
+                    Some(Resolution::Side(s)) if s == ":base" => b,
+                    Some(Resolution::Hash(h)) => Some(h),
+                    Some(Resolution::Delete) => None,
+                    _ => {
+                        let mut mm = BTreeMap::new();
+                        mm.insert(TermOrdKey(Term::symbol(":op")), Term::Str(k.clone()));
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":base")),
+                            b.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        );
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":left")),
+                            l.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        );
+                        mm.insert(
+                            TermOrdKey(Term::symbol(":right")),
+                            r.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        );
+                        unresolved.push(Term::Map(mm));
+                        continue;
+                    }
+                };
+
+                if let Some(h) = picked {
+                    if !store.path_for(&h).exists() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/not-found",
+                            format!("missing referenced artifact: {h}"),
+                            Some(op),
+                        ));
+                    }
+                    merged.insert(k, h);
+                }
+            }
+
+            if !unresolved.is_empty() {
+                let conflict_term = mk_conflict_artifact(
+                    &conflict.kind,
+                    &conflict.base,
+                    &conflict.left,
+                    &conflict.right,
+                    unresolved,
+                );
+                let mut out = BTreeMap::new();
+                out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
+                return Ok(Value::Data(Term::Map(out)));
+            }
+
+            let merged_snapshot = gc_vcs::ContractSnapshot {
+                proto: base.proto,
+                overrides: merged,
+            }
+            .to_term();
+            let (patch_term, values) = match vcs_diff_patch_term(store, &base_t, &merged_snapshot) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/diff-error",
+                        e.to_string(),
                         Some(op),
                     ));
                 }
             };
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(TermOrdKey(Term::symbol(":snapshot-term")), merged_snapshot);
+            out.insert(TermOrdKey(Term::symbol(":patch-term")), patch_term);
             out.insert(
-                TermOrdKey(Term::symbol(":snapshot-term")),
-                snapshot_t,
+                TermOrdKey(Term::symbol(":values")),
+                Term::Vector(values.into_iter().map(Term::Str).collect()),
             );
             Ok(Value::Data(Term::Map(out)))
         }
@@ -6748,13 +7621,13 @@ fn vcs_apply_patch_term(
     for opx in &patch.ops {
         match opx {
             gc_vcs::PatchOp::Replace { path, value } => {
-                let vterm =
-                    store_get_term(store, value).map_err(|e| format!("patch value read error: {e}"))?;
+                let vterm = store_get_term(store, value)
+                    .map_err(|e| format!("patch value read error: {e}"))?;
                 cur = replace_at(&cur, path, vterm)?;
             }
             gc_vcs::PatchOp::Insert { path, value } => {
-                let vterm =
-                    store_get_term(store, value).map_err(|e| format!("patch value read error: {e}"))?;
+                let vterm = store_get_term(store, value)
+                    .map_err(|e| format!("patch value read error: {e}"))?;
                 cur = insert_at(&cur, path, vterm)?;
             }
             gc_vcs::PatchOp::Delete { path } => {

@@ -1138,86 +1138,280 @@
               ((core/error::make2 "core/vcs/bad-payload") ":base must be 64-hex hash")))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-apply-program expects map"))))
 
+(def core/cli::vcs-merge3-low-program
+  (fn (base-h)
+    (fn (left-h)
+      (fn (right-h)
+        ((core/effect::bind (core/cli::vcs-load-hash-term-program base-h))
+          (fn (base-t)
+            (if (core/cli::is-error base-t)
+              (core/effect::pure base-t)
+              ((core/effect::bind (core/cli::vcs-load-hash-term-program left-h))
+                (fn (left-t)
+                  (if (core/cli::is-error left-t)
+                    (core/effect::pure left-t)
+                    ((core/effect::bind (core/cli::vcs-load-hash-term-program right-h))
+                      (fn (right-t)
+                        (if (core/cli::is-error right-t)
+                          (core/effect::pure right-t)
+                          (
+                            ((core/effect::perform (quote core/vcs-low::merge3-contract-snapshots))
+                              {
+                                :base-hash base-h
+                                :base-term base-t
+                                :left-hash left-h
+                                :left-term left-t
+                                :right-hash right-h
+                                :right-term right-t})
+                            (fn (low-r)
+                              (if (core/cli::is-error low-r)
+                                (core/effect::pure low-r)
+                                (if (core/cli::map? low-r)
+                                  (core/effect::pure low-r)
+                                  (core/effect::pure
+                                    ((core/error::make2 "core/type-error")
+                                      "core/vcs-low::merge3-contract-snapshots returned non-map")))))))))))))))))))
+
+(def core/cli::vcs-merge3-finish-program
+  (fn (low-r)
+    (fn (out)
+      (let ((ok ((core/map::get low-r) (quote :ok))))
+        (if (core/cli::bool? ok)
+          (if ok
+            (let ((snapshot-term ((core/map::get low-r) (quote :snapshot-term))))
+              ((core/effect::bind (core/cli::store-put-program snapshot-term))
+                (fn (put-resp)
+                  (if (core/cli::is-error put-resp)
+                    (core/effect::pure put-resp)
+                    (let ((snapshot-h (core/cli::store-put-hash put-resp)))
+                      (if (core/cli::is-error snapshot-h)
+                        (core/effect::pure snapshot-h)
+                        (((core/cli::vcs-write-out-if-needed-program out) snapshot-term)
+                          {:ok true :snapshot snapshot-h})))))))
+            (let ((conflict-term ((core/map::get low-r) (quote :conflict-term))))
+              ((core/effect::bind (core/cli::store-put-program conflict-term))
+                (fn (put-resp)
+                  (if (core/cli::is-error put-resp)
+                    (core/effect::pure put-resp)
+                    (let ((conflict-h (core/cli::store-put-hash put-resp)))
+                      (if (core/cli::is-error conflict-h)
+                        (core/effect::pure conflict-h)
+                        (((core/cli::vcs-write-out-if-needed-program out) conflict-term)
+                          {:conflict conflict-h :ok false}))))))))
+          (core/effect::pure
+            ((core/error::make2 "core/type-error")
+              "core/vcs-low::merge3-contract-snapshots :ok must be bool")))))))
+
 (def core/cli::vcs-merge3-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :base ((core/map::get req) (quote :base))
-              :left ((core/map::get req) (quote :left))
-              :right ((core/map::get req) (quote :right))})
+        ((base ((core/map::get req) (quote :base))) (left ((core/map::get req) (quote :left)))
+          (right ((core/map::get req) (quote :right)))
           (out ((core/map::get req) (quote :out))))
-        (let
-          ((payload (if (core/list::is-nil? out) payload0 (((core/map::put payload0) (quote :out)) out))))
-          (((core/effect::perform (quote core/vcs::merge3)) payload) (fn (r) (core/effect::pure r)))))
+        (if
+          (if (core/cli::hash-hex? base)
+            (if (core/cli::hash-hex? left) (core/cli::hash-hex? right) false)
+            false)
+          (if (if (core/list::is-nil? out) true (core/cli::str? out))
+            ((core/effect::bind (((core/cli::vcs-merge3-low-program base) left) right))
+              (fn (low-r)
+                (if (core/cli::is-error low-r)
+                  (core/effect::pure low-r)
+                  ((core/cli::vcs-merge3-finish-program low-r) out))))
+            (core/effect::pure
+              ((core/error::make2 "core/type-error")
+                "core/cli::vcs-merge3-program expects :out to be string or nil")))
+          (core/effect::pure
+            ((core/error::make2 "core/vcs/bad-payload") ":base/:left/:right must be 64-hex hashes"))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-merge3-program expects map"))))
+
+(def core/cli::vcs-resolve-low-program
+  (fn (conflict-h)
+    (fn (strategy)
+      (fn (resolutions)
+        (let
+          ((payload0 {:conflict-hash conflict-h})
+            (payload1
+              (if (core/list::is-nil? strategy)
+                payload0
+                (((core/map::put payload0) (quote :strategy)) strategy)))
+            (payload2
+              (if (core/list::is-nil? resolutions)
+                payload1
+                (((core/map::put payload1) (quote :resolutions)) resolutions))))
+          (((core/effect::perform (quote core/vcs-low::resolve-conflict)) payload2)
+            (fn (low-r)
+              (if (core/cli::is-error low-r)
+                (core/effect::pure low-r)
+                (if (core/cli::map? low-r)
+                  (core/effect::pure low-r)
+                  (core/effect::pure
+                    ((core/error::make2 "core/type-error")
+                      "core/vcs-low::resolve-conflict returned non-map")))))))))))
+
+(def core/cli::vcs-resolve-finish-program
+  (fn (low-r)
+    (fn (out)
+      (let ((ok ((core/map::get low-r) (quote :ok))))
+        (if (core/cli::bool? ok)
+          (if ok
+            (let
+              ((snapshot-term ((core/map::get low-r) (quote :snapshot-term)))
+                (patch-term ((core/map::get low-r) (quote :patch-term)))
+                (values ((core/map::get low-r) (quote :values))))
+              ((core/effect::bind (core/cli::store-put-program snapshot-term))
+                (fn (snap-put)
+                  (if (core/cli::is-error snap-put)
+                    (core/effect::pure snap-put)
+                    (let ((snapshot-h (core/cli::store-put-hash snap-put)))
+                      (if (core/cli::is-error snapshot-h)
+                        (core/effect::pure snapshot-h)
+                        ((core/effect::bind (core/cli::store-put-program patch-term))
+                          (fn (patch-put)
+                            (if (core/cli::is-error patch-put)
+                              (core/effect::pure patch-put)
+                              (let ((patch-h (core/cli::store-put-hash patch-put)))
+                                (if (core/cli::is-error patch-h)
+                                  (core/effect::pure patch-h)
+                                  (((core/cli::vcs-write-out-if-needed-program out) patch-term)
+                                    {
+                                      :ok true
+                                      :patch patch-h
+                                      :snapshot snapshot-h
+                                      :values values}))))))))))))
+            (let ((conflict-term ((core/map::get low-r) (quote :conflict-term))))
+              ((core/effect::bind (core/cli::store-put-program conflict-term))
+                (fn (put-resp)
+                  (if (core/cli::is-error put-resp)
+                    (core/effect::pure put-resp)
+                    (let ((conflict-h (core/cli::store-put-hash put-resp)))
+                      (if (core/cli::is-error conflict-h)
+                        (core/effect::pure conflict-h)
+                        (core/effect::pure {:conflict conflict-h :ok false}))))))))
+          (core/effect::pure
+            ((core/error::make2 "core/type-error") "core/vcs-low::resolve-conflict :ok must be bool")))))))
 
 (def core/cli::vcs-resolve-conflict-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :conflict ((core/map::get req) (quote :conflict))})
+        ((conflict ((core/map::get req) (quote :conflict)))
           (strategy ((core/map::get req) (quote :strategy)))
           (resolutions ((core/map::get req) (quote :resolutions)))
           (out ((core/map::get req) (quote :out))))
-        (let
-          (
-            (payload1
-              (if (core/list::is-nil? strategy)
-                payload0
-                (((core/map::put payload0) (quote :strategy)) strategy))))
-          (let
-            (
-              (payload2
-                (if (core/list::is-nil? resolutions)
-                  payload1
-                  (((core/map::put payload1) (quote :resolutions)) resolutions))))
-            (let
-              ((payload (if (core/list::is-nil? out) payload2 (((core/map::put payload2) (quote :out)) out))))
-              (((core/effect::perform (quote core/vcs::resolve-conflict)) payload)
-                (fn (r) (core/effect::pure r)))))))
+        (if (core/cli::hash-hex? conflict)
+          (if (if (core/list::is-nil? out) true (core/cli::str? out))
+            ((core/effect::bind (((core/cli::vcs-resolve-low-program conflict) strategy) resolutions))
+              (fn (low-r)
+                (if (core/cli::is-error low-r)
+                  (core/effect::pure low-r)
+                  ((core/cli::vcs-resolve-finish-program low-r) out))))
+            (core/effect::pure
+              ((core/error::make2 "core/type-error")
+                "core/cli::vcs-resolve-conflict-program expects :out to be string or nil")))
+          (core/effect::pure
+            ((core/error::make2 "core/vcs/bad-payload") ":conflict must be 64-hex hash"))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-resolve-conflict-program expects map"))))
 
 (def core/cli::pkg-init-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :lock ((core/map::get req) (quote :lock))
-              :policy ((core/map::get req) (quote :policy))
-              :workspace ((core/map::get req) (quote :workspace))})
+        ((lock ((core/map::get req) (quote :lock)))
+          (workspace ((core/map::get req) (quote :workspace)))
+          (policy ((core/map::get req) (quote :policy)))
           (rd ((core/map::get req) (quote :registry-default))))
-        (let
-          (
-            (payload
-              (if (core/list::is-nil? rd)
-                payload0
-                (((core/map::put payload0) (quote :registry-default)) rd))))
-          (((core/effect::perform (quote core/pkg::init)) payload) (fn (r) (core/effect::pure r)))))
+        (if (core/cli::str? workspace)
+          (let
+            ((registries (if (core/cli::str? rd) {"default" rd} {}))
+              (payload
+                {
+                  :artifacts {}
+                  :lock lock
+                  :locked {}
+                  :policy policy
+                  :registries registries
+                  :requirements {}
+                  :workspace workspace}))
+            (((core/effect::perform (quote core/pkg-low::save-lock)) payload)
+              (fn (r) (core/effect::pure r))))
+          (core/effect::pure
+            ((core/error::make2 "core/pkg/bad-payload") ":workspace must be string"))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-init-program expects map"))))
+
+(def core/cli::pkg-normalize-update-policy
+  (fn (up)
+    (if (core/list::is-nil? up)
+      (quote :manual)
+      (if (core/cli::sym? up)
+        (if ((core/sym::eq? up) (quote :manual))
+          (quote :manual)
+          (if ((core/sym::eq? up) (quote :auto))
+            (quote :auto)
+            ((core/error::make2 "core/pkg/bad-payload") ":update-policy must be :manual or :auto")))
+        (if (core/cli::str? up)
+          (if (if ((core/eq? up) ":manual") true ((core/eq? up) "manual"))
+            (quote :manual)
+            (if (if ((core/eq? up) ":auto") true ((core/eq? up) "auto"))
+              (quote :auto)
+              ((core/error::make2 "core/pkg/bad-payload") ":update-policy must be :manual or :auto")))
+          ((core/error::make2 "core/pkg/bad-payload") ":update-policy must be :manual or :auto"))))))
 
 (def core/cli::pkg-add-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :lock ((core/map::get req) (quote :lock))
-              :name ((core/map::get req) (quote :name))
-              :selector ((core/map::get req) (quote :selector))
-              :update-policy ((core/map::get req) (quote :update-policy))})
+        ((lock ((core/map::get req) (quote :lock))) (name ((core/map::get req) (quote :name)))
+          (selector ((core/map::get req) (quote :selector)))
+          (up0 ((core/map::get req) (quote :update-policy)))
           (reg ((core/map::get req) (quote :registry))))
-        (let
-          ((payload (if (core/list::is-nil? reg) payload0 (((core/map::put payload0) (quote :registry)) reg))))
-          (((core/effect::perform (quote core/pkg::add)) payload) (fn (r) (core/effect::pure r)))))
+        (if (if (core/cli::str? name) (core/cli::str? selector) false)
+          (let ((up (core/cli::pkg-normalize-update-policy up0)))
+            (if (core/cli::is-error up)
+              (core/effect::pure up)
+              ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+                (fn (low-r)
+                  (if (core/cli::is-error low-r)
+                    (core/effect::pure low-r)
+                    (if (core/cli::map? low-r)
+                      (let
+                        ((reqs0 ((core/map::get low-r) (quote :requirements)))
+                          (reqs (if (core/cli::map? reqs0) reqs0 (quote {})))
+                          (req-entry0 (quote {:registry nil :selector "" :update-policy :manual}))
+                          (req-entry1 (((core/map::put req-entry0) (quote :registry)) reg))
+                          (req-entry2 (((core/map::put req-entry1) (quote :selector)) selector))
+                          (req-entry3 (((core/map::put req-entry2) (quote :update-policy)) up))
+                          (reqs2 (((core/map::put reqs) name) req-entry3))
+                          (artifacts ((core/map::get low-r) (quote :artifacts)))
+                          (locked ((core/map::get low-r) (quote :locked)))
+                          (policy ((core/map::get low-r) (quote :policy)))
+                          (registries ((core/map::get low-r) (quote :registries)))
+                          (workspace ((core/map::get low-r) (quote :workspace)))
+                          (payload0
+                            (quote
+                              {
+                                :artifacts {}
+                                :lock ""
+                                :locked {}
+                                :policy nil
+                                :registries {}
+                                :requirements {}
+                                :workspace ""}))
+                          (payload1 (((core/map::put payload0) (quote :artifacts)) artifacts))
+                          (payload2 (((core/map::put payload1) (quote :lock)) lock))
+                          (payload3 (((core/map::put payload2) (quote :locked)) locked))
+                          (payload4 (((core/map::put payload3) (quote :policy)) policy))
+                          (payload5 (((core/map::put payload4) (quote :registries)) registries))
+                          (payload6 (((core/map::put payload5) (quote :requirements)) reqs2))
+                          (payload7 (((core/map::put payload6) (quote :workspace)) workspace)))
+                        (((core/effect::perform (quote core/pkg-low::save-lock)) payload7)
+                          (fn (r) (core/effect::pure r))))
+                      (core/effect::pure
+                        ((core/error::make2 "core/type-error")
+                          "core/pkg-low::load-lock returned non-map"))))))))
+          (core/effect::pure
+            ((core/error::make2 "core/pkg/bad-payload") ":name and :selector must be strings"))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-add-program expects map"))))
 
 (def core/cli::pkg-lock-program

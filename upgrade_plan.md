@@ -40,7 +40,7 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
 
 ### 1) Extract High-Level Semantics out of Rust Runner
 - [ ] Move `core/pkg::*` command semantics into `.gc` contracts using low-level host capabilities.
-- [ ] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
+- [x] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
   - [x] Move `core/vcs::log` traversal semantics into `.gc` (`core/cli::vcs-log-program`) using `core/store::get` / `core/refs::get`.
   - [x] Move `core/vcs::blame` and `core/vcs::why` provenance semantics into `.gc` (`core/cli::vcs-blame-program`, `core/cli::vcs-why-program`) using `core/store::get` / `core/refs::list`.
   - [x] Add native + WASI parity tests for `core/vcs::diff` and `core/vcs::apply` frontend outputs to lock extraction behavior before migration.
@@ -50,8 +50,10 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - [x] Align merge/resolve contract test capability allowlists with low-level selfhost VCS seams used by `vcs apply`.
   - [x] Lock and document the remaining Rust-owned high-level op inventory (`core/vcs::{diff,apply,merge3,resolve-conflict}` and `core/pkg::*`) as the current extraction queue.
   - [x] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
-  - [ ] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
-  - [ ] Move `core/pkg::{init,add,list,info,lock,update,install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [x] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
+  - [x] Add low-level host seam ops `core/vcs-low::{merge3-contract-snapshots,resolve-conflict}` and route selfhost merge/resolve flows through `.gc` contracts with parity-preserving exit semantics.
+  - [ ] Move `core/pkg::{lock,update,install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [x] Move `core/pkg::{init,add}` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` and lock selfhost-only caps/tests away from `core/pkg::{init,add}`.
   - [x] Move `core/pkg::{list,info}` semantics into `.gc` contracts via `core/pkg-low::load-lock` and lock native+WASI caps/tests to the low-level seam.
   - [x] Add native + WASI parity tests for `core/pkg::{add,list,info}` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/pkg::lock` frontend outputs to lock extraction behavior before migration.

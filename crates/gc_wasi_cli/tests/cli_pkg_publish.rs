@@ -311,8 +311,10 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
     fs::create_dir_all(&rust_dir).unwrap();
     fs::create_dir_all(&self_dir).unwrap();
 
-    let (rust_caps, rust_remote, rust_policy_hex, rust_remote_dir) = setup_publish_ok_fixture(&rust_dir);
-    let (self_caps, self_remote, self_policy_hex, self_remote_dir) = setup_publish_ok_fixture(&self_dir);
+    let (rust_caps, rust_remote, rust_policy_hex, rust_remote_dir) =
+        setup_publish_ok_fixture(&rust_dir);
+    let (self_caps, self_remote, self_policy_hex, self_remote_dir) =
+        setup_publish_ok_fixture(&self_dir);
     let artifact = build_selfhost_artifact(&self_dir);
 
     let rust_out = cmd()

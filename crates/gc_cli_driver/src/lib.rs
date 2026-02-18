@@ -5824,15 +5824,29 @@ fn cmd_vcs(
 
     let (value, value_format) = render_value_for_cli(&ctx, &r.value);
 
-    // Detect conflict artifact and use stable exit semantics for merge.
-    if matches!(cmd, VcsCmd::Merge3 { .. } | VcsCmd::ResolveConflict { .. })
-        && let Value::Data(Term::Map(m)) = &r.value
-        && matches!(
-            m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok"))),
+    let map_is_conflict = |m: &std::collections::BTreeMap<TermOrdKey, Term>| {
+        let ok_false = matches!(
+            m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok")))
+                .or_else(|| m.get(&gc_coreform::TermOrdKey(Term::Str(":ok".to_string())))),
             Some(Term::Bool(false))
-        )
-        && m.contains_key(&gc_coreform::TermOrdKey(Term::symbol(":conflict")))
-    {
+        );
+        let has_conflict = m.contains_key(&gc_coreform::TermOrdKey(Term::symbol(":conflict")))
+            || m.contains_key(&gc_coreform::TermOrdKey(Term::Str(":conflict".to_string())));
+        ok_false && has_conflict
+    };
+    let value_is_conflict = match &r.value {
+        Value::Data(Term::Map(m)) => map_is_conflict(m),
+        Value::Data(Term::Str(s)) => match gc_coreform::parse_term(s) {
+            Ok(Term::Map(m)) => map_is_conflict(&m),
+            _ => false,
+        },
+        _ => false,
+    } || match gc_coreform::parse_term(&value) {
+        Ok(Term::Map(m)) => map_is_conflict(&m),
+        _ => false,
+    };
+    // Detect conflict artifact and use stable exit semantics for merge.
+    if matches!(cmd, VcsCmd::Merge3 { .. } | VcsCmd::ResolveConflict { .. }) && value_is_conflict {
         ok = false;
         exit_code = 3; // conflict
     }

@@ -31,7 +31,7 @@ fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
         s.push('"');
     }
     s.push_str(
-        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n\n[op.\"core/pkg::init\"]\nbase_dir = \".\"\ncreate_dirs = true\n\n[op.\"core/pkg::list\"]\nbase_dir = \".\"\n\n[op.\"core/pkg-low::load-lock\"]\nbase_dir = \".\"\n",
+        "]\n\n[store]\ndir = \"./.genesis/store\"\n\n[refs]\npath = \"./.genesis/refs.gc\"\n\n[op.\"core/pkg-low::save-lock\"]\nbase_dir = \".\"\ncreate_dirs = true\n\n[op.\"core/pkg-low::load-lock\"]\nbase_dir = \".\"\n",
     );
     std::fs::write(&caps, s).unwrap();
     caps
@@ -62,7 +62,7 @@ fn write_vcs_caps(dir: &Path) -> PathBuf {
     let caps = dir.join("caps_vcs.toml");
     std::fs::write(
         &caps,
-r#"
+        r#"
 allow = ["core/vcs::log", "core/store::get", "core/refs::get", "core/refs::list"]
 
 [store]
@@ -240,8 +240,7 @@ fn selfhost_only_accepts_store_refs_pkg_and_gc() {
         &[
             "core/store::put",
             "core/refs::get",
-            "core/pkg::init",
-            "core/pkg::list",
+            "core/pkg-low::save-lock",
             "core/pkg-low::load-lock",
             "core/gc::pin",
         ],

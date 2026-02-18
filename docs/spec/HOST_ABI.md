@@ -25,6 +25,8 @@ Compatibility notes:
 - `core/gc::unpin`
 - `core/gpk::export`
 - `core/gpk::import`
+- `core/pkg-low::load-lock`
+- `core/pkg-low::save-lock`
 - `core/pkg::add`
 - `core/pkg::info`
 - `core/pkg::init`
@@ -46,6 +48,8 @@ Compatibility notes:
 - `core/sync::push`
 - `core/vcs-low::apply-patch`
 - `core/vcs-low::diff-terms`
+- `core/vcs-low::merge3-contract-snapshots`
+- `core/vcs-low::resolve-conflict`
 - `core/vcs::apply`
 - `core/vcs::blame`
 - `core/vcs::diff`
