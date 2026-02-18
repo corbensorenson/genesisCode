@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 30
+Open checklist items: 28
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -61,8 +61,8 @@ Open checklist items: 30
 
 ### C2. Obligation Engine
 - [x] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
-- [ ] Add deterministic parallel test execution for independent tests (stable result ordering; isolated contexts; reproducible logs).
-- [ ] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
+- [x] Add deterministic parallel test execution for independent tests (stable result ordering; isolated contexts; reproducible logs).
+- [x] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
 
 ### C3. Selfhost Frontend Startup
 - [ ] Add cross-process cache for compiled selfhost artifact modules (not only in-process cache) to reduce repeated parse/canonicalize/compile on CLI invocations.

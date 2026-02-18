@@ -9,7 +9,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{
-    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, print_term,
+    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, parse_term,
+    print_term,
 };
 use gc_effects::{CapsPolicy, EffectLog};
 use gc_kernel::{Apply, Env, EvalCtx, MemLimits, StepLimit, Value, eval_term, value_hash};
@@ -109,6 +110,8 @@ pub enum CoreformFrontend {
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
 const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
+const OBLIGATION_TEST_WORKERS_ENV: &str = "GENESIS_TEST_WORKERS";
+const OBLIGATION_CACHE_DISABLE_ENV: &str = "GENESIS_OBLIGATION_CACHE_DISABLE";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -419,6 +422,7 @@ pub fn test_package_with_step_limit_and_frontend(
     } else {
         CapsPolicy::empty()
     };
+    let caps_policy_hash = hash_optional_file(policy_path.as_deref())?;
 
     if !preflight_errors.is_empty() {
         let report = Term::Map(
@@ -454,6 +458,18 @@ pub fn test_package_with_step_limit_and_frontend(
             acceptance_artifact,
             obligation_results: vec![ob],
         });
+    }
+
+    let cache_key = obligation_cache_key(
+        pkg_toml,
+        &manifest,
+        &modules,
+        caps_policy_hash.as_deref(),
+        limits,
+        &frontend,
+    )?;
+    if let Some(cached) = try_load_cached_test_result(&pkg_dir, &store, &cache_key)? {
+        return Ok(cached);
     }
 
     // Evaluate once and reuse the prepared package for all test lookups/runs.
@@ -514,12 +530,13 @@ pub fn test_package_with_step_limit_and_frontend(
     let acceptance = acceptance_term(&manifest, ok_all, &obligation_results);
     let acceptance_artifact = store.put_term(&acceptance)?;
     write_last_acceptance(&pkg_dir, &acceptance_artifact)?;
-
-    Ok(PackageTestResult {
+    let result = PackageTestResult {
         ok: ok_all,
         acceptance_artifact,
         obligation_results,
-    })
+    };
+    write_cached_test_result(&pkg_dir, &cache_key, &result)?;
+    Ok(result)
 }
 
 pub fn typecheck_package_with_step_limit_and_frontend(
@@ -587,6 +604,418 @@ fn effective_mem_limits(manifest: &PackageManifest, cli: MemLimits) -> MemLimits
         max_bytes_len: min_opt(cli.max_bytes_len, manifest.limits.max_bytes_len),
         max_string_len: min_opt(cli.max_string_len, manifest.limits.max_string_len),
     }
+}
+
+fn hash_optional_file(path: Option<&Path>) -> Result<Option<String>, ObligationError> {
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let bytes = std::fs::read(path)?;
+    Ok(Some(blake3::hash(&bytes).to_hex().to_string()))
+}
+
+fn step_limit_term(step_limit: StepLimit) -> Term {
+    match step_limit {
+        StepLimit::Default => Term::symbol(":default"),
+        StepLimit::Unlimited => Term::symbol(":unlimited"),
+        StepLimit::Limit(n) => Term::Int(BigInt::from(n)),
+    }
+}
+
+fn option_u64_term(v: Option<u64>) -> Term {
+    match v {
+        Some(n) => Term::Int(BigInt::from(n)),
+        None => Term::Nil,
+    }
+}
+
+fn mem_limits_term(mem: MemLimits) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":max-pair-cells")),
+                option_u64_term(mem.max_pair_cells),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max-vec-len")),
+                option_u64_term(mem.max_vec_len),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max-map-len")),
+                option_u64_term(mem.max_map_len),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max-bytes-len")),
+                option_u64_term(mem.max_bytes_len),
+            ),
+            (
+                TermOrdKey(Term::symbol(":max-string-len")),
+                option_u64_term(mem.max_string_len),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn frontend_term(frontend: &CoreformFrontend) -> Term {
+    match frontend {
+        CoreformFrontend::Rust => Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":kind")),
+                Term::symbol(":frontend/rust"),
+            )]
+            .into_iter()
+            .collect(),
+        ),
+        CoreformFrontend::Selfhost(cfg) => {
+            let mode = match cfg.bootstrap_mode {
+                SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
+                SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
+                SelfhostBootstrapMode::Embedded => ":embedded",
+            };
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":kind")),
+                        Term::symbol(":frontend/selfhost"),
+                    ),
+                    (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
+                    (
+                        TermOrdKey(Term::symbol(":artifact")),
+                        cfg.artifact
+                            .as_ref()
+                            .map(|p| Term::Str(p.display().to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            )
+        }
+    }
+}
+
+fn obligation_cache_key(
+    pkg_toml: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps_policy_hash: Option<&str>,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+) -> Result<String, ObligationError> {
+    let pkg_toml_hash = hash_optional_file(Some(pkg_toml))?.unwrap_or_default();
+    let module_hashes = Term::Vector(
+        modules
+            .iter()
+            .map(|m| {
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str(m.entry.path.clone()),
+                        ),
+                        (TermOrdKey(Term::symbol(":hash")), Term::Str(hex32(m.hash))),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )
+            })
+            .collect(),
+    );
+    let key_term = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/obligation-cache-key-v0.1".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-name")),
+                Term::Str(manifest.name.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-version")),
+                Term::Str(manifest.version.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":pkg-toml-h")),
+                Term::Str(pkg_toml_hash),
+            ),
+            (TermOrdKey(Term::symbol(":module-hashes")), module_hashes),
+            (
+                TermOrdKey(Term::symbol(":caps-policy-h")),
+                caps_policy_hash
+                    .map(|s| Term::Str(s.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":obligations")),
+                Term::Vector(
+                    manifest
+                        .obligations
+                        .iter()
+                        .cloned()
+                        .map(Term::Symbol)
+                        .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":tests")),
+                Term::Vector(manifest.tests.iter().cloned().map(Term::Symbol).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":property-tests")),
+                Term::Vector(
+                    manifest
+                        .property_tests
+                        .iter()
+                        .cloned()
+                        .map(Term::Symbol)
+                        .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":step-limit")),
+                step_limit_term(limits.step_limit),
+            ),
+            (
+                TermOrdKey(Term::symbol(":mem-limits")),
+                mem_limits_term(limits.mem_limits),
+            ),
+            (
+                TermOrdKey(Term::symbol(":frontend")),
+                frontend_term(frontend),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    Ok(hex32(hash_term(&key_term)))
+}
+
+fn obligation_cache_dir(pkg_dir: &Path) -> PathBuf {
+    pkg_dir.join(".genesis").join("cache").join("obligations")
+}
+
+fn obligation_cache_path(pkg_dir: &Path, key: &str) -> PathBuf {
+    obligation_cache_dir(pkg_dir).join(format!("{key}.gc"))
+}
+
+fn obligation_result_to_cache_term(r: &ObligationResult) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":name")),
+                Term::Symbol(r.name.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(r.ok)),
+            (
+                TermOrdKey(Term::symbol(":artifact")),
+                r.artifact
+                    .as_ref()
+                    .map(|a| Term::Str(a.clone()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(r.errors.iter().cloned().map(Term::Str).collect()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn cache_term_to_obligation_result(t: &Term) -> Option<ObligationResult> {
+    let Term::Map(m) = t else { return None };
+    let name = match m.get(&TermOrdKey(Term::symbol(":name")))? {
+        Term::Symbol(s) | Term::Str(s) => s.clone(),
+        _ => return None,
+    };
+    let ok = match m.get(&TermOrdKey(Term::symbol(":ok")))? {
+        Term::Bool(b) => *b,
+        _ => return None,
+    };
+    let artifact = match m.get(&TermOrdKey(Term::symbol(":artifact"))) {
+        None | Some(Term::Nil) => None,
+        Some(Term::Str(s)) | Some(Term::Symbol(s)) => Some(s.clone()),
+        Some(_) => return None,
+    };
+    let errors = match m.get(&TermOrdKey(Term::symbol(":errors"))) {
+        None => Vec::new(),
+        Some(Term::Vector(xs)) => xs
+            .iter()
+            .filter_map(|x| match x {
+                Term::Str(s) | Term::Symbol(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect(),
+        Some(_) => return None,
+    };
+    Some(ObligationResult {
+        name,
+        ok,
+        artifact,
+        errors,
+    })
+}
+
+fn cached_result_to_term(key: &str, result: &PackageTestResult) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/obligation-cache-v0.1".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":key")), Term::Str(key.to_string())),
+            (
+                TermOrdKey(Term::symbol(":acceptance")),
+                Term::Str(result.acceptance_artifact.clone()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(result.ok)),
+            (
+                TermOrdKey(Term::symbol(":obligations")),
+                Term::Vector(
+                    result
+                        .obligation_results
+                        .iter()
+                        .map(obligation_result_to_cache_term)
+                        .collect(),
+                ),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn parse_cached_result_term(key: &str, t: &Term) -> Option<PackageTestResult> {
+    let Term::Map(m) = t else { return None };
+    if !matches!(
+        m.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(Term::Str(s)) if s == "genesis/obligation-cache-v0.1"
+    ) {
+        return None;
+    }
+    if !matches!(
+        m.get(&TermOrdKey(Term::symbol(":key"))),
+        Some(Term::Str(s)) if s == key
+    ) {
+        return None;
+    }
+    let acceptance_artifact = match m.get(&TermOrdKey(Term::symbol(":acceptance")))? {
+        Term::Str(s) | Term::Symbol(s) => s.clone(),
+        _ => return None,
+    };
+    let ok = match m.get(&TermOrdKey(Term::symbol(":ok")))? {
+        Term::Bool(b) => *b,
+        _ => return None,
+    };
+    let obligation_results = match m.get(&TermOrdKey(Term::symbol(":obligations")))? {
+        Term::Vector(xs) => xs
+            .iter()
+            .map(cache_term_to_obligation_result)
+            .collect::<Option<Vec<_>>>()?,
+        _ => return None,
+    };
+    Some(PackageTestResult {
+        ok,
+        acceptance_artifact,
+        obligation_results,
+    })
+}
+
+fn cache_artifacts_present_and_valid(
+    store: &EvidenceStore,
+    result: &PackageTestResult,
+) -> Result<bool, ObligationError> {
+    let acceptance_path = store.path_for(&result.acceptance_artifact);
+    if !acceptance_path.exists() {
+        return Ok(false);
+    }
+    store.verify_hex(&result.acceptance_artifact)?;
+    for ob in &result.obligation_results {
+        if let Some(artifact) = &ob.artifact {
+            let path = store.path_for(artifact);
+            if !path.exists() {
+                return Ok(false);
+            }
+            store.verify_hex(artifact)?;
+        }
+    }
+    Ok(true)
+}
+
+fn try_load_cached_test_result(
+    pkg_dir: &Path,
+    store: &EvidenceStore,
+    key: &str,
+) -> Result<Option<PackageTestResult>, ObligationError> {
+    if env_truthy(OBLIGATION_CACHE_DISABLE_ENV) {
+        return Ok(None);
+    }
+    let path = obligation_cache_path(pkg_dir, key);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let src = std::fs::read_to_string(&path)?;
+    let parsed = match parse_term(&src) {
+        Ok(t) => t,
+        Err(_) => {
+            let _ = std::fs::remove_file(&path);
+            return Ok(None);
+        }
+    };
+    let Some(result) = parse_cached_result_term(key, &parsed) else {
+        let _ = std::fs::remove_file(&path);
+        return Ok(None);
+    };
+    if !cache_artifacts_present_and_valid(store, &result)? {
+        return Ok(None);
+    }
+    write_last_acceptance(pkg_dir, &result.acceptance_artifact)?;
+    Ok(Some(result))
+}
+
+fn write_cached_test_result(
+    pkg_dir: &Path,
+    key: &str,
+    result: &PackageTestResult,
+) -> Result<(), ObligationError> {
+    if env_truthy(OBLIGATION_CACHE_DISABLE_ENV) {
+        return Ok(());
+    }
+    let dir = obligation_cache_dir(pkg_dir);
+    std::fs::create_dir_all(&dir)?;
+    let path = obligation_cache_path(pkg_dir, key);
+    let payload = print_term(&cached_result_to_term(key, result));
+
+    let mut i: u64 = 0;
+    let tmp = loop {
+        let cand = dir.join(format!(".tmp-{}-{}-{}", key, std::process::id(), i));
+        i = i.saturating_add(1);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&cand)
+        {
+            Ok(mut f) => {
+                use std::io::Write;
+                f.write_all(payload.as_bytes())?;
+                let _ = f.sync_all();
+                break cand;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    };
+    std::fs::rename(&tmp, &path)?;
+    #[cfg(unix)]
+    {
+        let d = std::fs::File::open(&dir)?;
+        let _ = d.sync_all();
+    }
+    Ok(())
 }
 
 fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationError> {
@@ -1291,6 +1720,56 @@ fn collect_test_ids(eval: &PackageEval, suites: &[String]) -> Result<Vec<TestId>
     Ok(ids)
 }
 
+fn configured_test_workers(max_tests: usize) -> usize {
+    let default_workers = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .clamp(1, 8);
+    let parsed = std::env::var(OBLIGATION_TEST_WORKERS_ENV)
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(default_workers);
+    parsed.clamp(1, 64).min(max_tests.max(1))
+}
+
+fn run_test_batch_with_frontend(
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps: &CapsPolicy,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+    batch: Vec<(usize, TestId)>,
+) -> Result<Vec<(usize, TestRun)>, ObligationError> {
+    if batch.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut ctx = mk_eval_ctx(limits);
+    let prelude = build_prelude(&mut ctx);
+    let mut base = prelude.env;
+    base = eval_dependencies_with_frontend(
+        &mut ctx,
+        pkg_dir,
+        &base,
+        &manifest.dependencies,
+        limits,
+        frontend,
+    )?;
+    let evals = eval_modules(&mut ctx, &base, modules)?;
+    let pkg = PackageEval::from_modules(base, evals)?;
+    let baseline_state = ctx.state;
+
+    let mut out = Vec::with_capacity(batch.len());
+    for (idx, id) in batch {
+        ctx.state = baseline_state;
+        ctx.step_limit = limits.step_limit.resolve();
+        ctx.reset_counters();
+        let run = run_test_from_package(&mut ctx, &pkg, caps, id)?;
+        out.push((idx, run));
+    }
+    Ok(out)
+}
+
 fn run_tests_with_frontend(
     pkg_dir: &Path,
     manifest: &PackageManifest,
@@ -1303,6 +1782,7 @@ fn run_tests_with_frontend(
         return Ok(Vec::new());
     }
 
+    // First pass builds a deterministic test-id list using one package evaluation.
     let mut ctx = mk_eval_ctx(limits);
     let prelude = build_prelude(&mut ctx);
     let mut base = prelude.env;
@@ -1317,15 +1797,87 @@ fn run_tests_with_frontend(
     let evals = eval_modules(&mut ctx, &base, modules)?;
     let pkg = PackageEval::from_modules(base, evals)?;
     let test_ids = collect_test_ids(&pkg, &manifest.tests)?;
-    let baseline_state = ctx.state;
+    if test_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let workers = configured_test_workers(test_ids.len());
 
+    // Single-worker path reuses the prepared package snapshot and is the lowest-overhead option.
+    if workers == 1 {
+        let baseline_state = ctx.state;
+        let mut out = Vec::with_capacity(test_ids.len());
+        for id in test_ids {
+            ctx.state = baseline_state;
+            ctx.step_limit = limits.step_limit.resolve();
+            ctx.reset_counters();
+            out.push(run_test_from_package(&mut ctx, &pkg, caps, id)?);
+        }
+        return Ok(out);
+    }
+
+    // Multi-worker path: deterministic partitioning by original index, isolated eval contexts per worker.
+    let mut buckets: Vec<Vec<(usize, TestId)>> = vec![Vec::new(); workers];
+    for (i, id) in test_ids.iter().cloned().enumerate() {
+        buckets[i % workers].push((i, id));
+    }
+
+    let pkg_dir = pkg_dir.to_path_buf();
+    let manifest = manifest.clone();
+    let modules = modules.to_vec();
+    let caps = caps.clone();
+    let frontend = frontend.clone();
+    let mut worker_results: Vec<Vec<(usize, TestRun)>> = Vec::new();
+    std::thread::scope(|scope| -> Result<(), ObligationError> {
+        let mut handles = Vec::new();
+        for batch in buckets {
+            if batch.is_empty() {
+                continue;
+            }
+            let pkg_dir = pkg_dir.clone();
+            let manifest = manifest.clone();
+            let modules = modules.clone();
+            let caps = caps.clone();
+            let frontend = frontend.clone();
+            handles.push(scope.spawn(move || {
+                run_test_batch_with_frontend(
+                    &pkg_dir, &manifest, &modules, &caps, limits, &frontend, batch,
+                )
+            }));
+        }
+
+        for h in handles {
+            match h.join() {
+                Ok(Ok(rows)) => worker_results.push(rows),
+                Ok(Err(e)) => return Err(e),
+                Err(_) => {
+                    return Err(ObligationError::Test(
+                        "parallel test worker panicked".to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    })?;
+
+    let mut ordered: Vec<Option<TestRun>> = (0..test_ids.len()).map(|_| None).collect();
+    for rows in worker_results {
+        for (idx, run) in rows {
+            if idx >= ordered.len() || ordered[idx].is_some() {
+                return Err(ObligationError::Test(
+                    "parallel test collation mismatch".to_string(),
+                ));
+            }
+            ordered[idx] = Some(run);
+        }
+    }
     let mut out = Vec::with_capacity(test_ids.len());
-    for id in test_ids {
-        // Keep per-test budgets/isolation deterministic while reusing package evaluation.
-        ctx.state = baseline_state;
-        ctx.step_limit = limits.step_limit.resolve();
-        ctx.reset_counters();
-        out.push(run_test_from_package(&mut ctx, &pkg, caps, id)?);
+    for row in ordered {
+        let Some(run) = row else {
+            return Err(ObligationError::Test(
+                "parallel test collation dropped a test".to_string(),
+            ));
+        };
+        out.push(run);
     }
     Ok(out)
 }
@@ -4554,6 +5106,75 @@ mod tests {
         let h2 = store.put_term(&t).unwrap();
         assert_eq!(h1, h2);
         assert!(store.path_for(&h1).exists());
+    }
+
+    #[test]
+    fn obligation_cache_term_roundtrip_preserves_result_shape() {
+        let key = "abc123";
+        let result = PackageTestResult {
+            ok: false,
+            acceptance_artifact: "acc-hash".to_string(),
+            obligation_results: vec![
+                ObligationResult {
+                    name: "core/obligation::unit-tests".to_string(),
+                    ok: true,
+                    artifact: Some("art-1".to_string()),
+                    errors: Vec::new(),
+                },
+                ObligationResult {
+                    name: "core/obligation::caps".to_string(),
+                    ok: false,
+                    artifact: None,
+                    errors: vec!["missing cap".to_string()],
+                },
+            ],
+        };
+        let t = cached_result_to_term(key, &result);
+        let parsed = parse_cached_result_term(key, &t).expect("parse cached result");
+        assert_eq!(parsed.ok, result.ok);
+        assert_eq!(parsed.acceptance_artifact, result.acceptance_artifact);
+        assert_eq!(parsed.obligation_results.len(), 2);
+        assert_eq!(
+            parsed.obligation_results[0].name,
+            "core/obligation::unit-tests"
+        );
+        assert_eq!(
+            parsed.obligation_results[0].artifact.as_deref(),
+            Some("art-1")
+        );
+        assert_eq!(parsed.obligation_results[1].name, "core/obligation::caps");
+        assert_eq!(
+            parsed.obligation_results[1].errors,
+            vec!["missing cap".to_string()]
+        );
+    }
+
+    #[test]
+    fn cache_artifact_presence_check_respects_missing_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = EvidenceStore::open(dir.path()).unwrap();
+        let acceptance = store
+            .put_term(&Term::Str("acceptance".to_string()))
+            .unwrap();
+        let ob_artifact = store.put_term(&Term::Str("ob-art".to_string())).unwrap();
+        let ok_result = PackageTestResult {
+            ok: true,
+            acceptance_artifact: acceptance,
+            obligation_results: vec![ObligationResult {
+                name: "core/obligation::unit-tests".to_string(),
+                ok: true,
+                artifact: Some(ob_artifact),
+                errors: Vec::new(),
+            }],
+        };
+        assert!(cache_artifacts_present_and_valid(&store, &ok_result).unwrap());
+
+        let miss_result = PackageTestResult {
+            ok: true,
+            acceptance_artifact: "missing".to_string(),
+            obligation_results: Vec::new(),
+        };
+        assert!(!cache_artifacts_present_and_valid(&store, &miss_result).unwrap());
     }
 
     #[test]
