@@ -3126,6 +3126,119 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":why")), why);
             Ok(Value::Data(Term::Map(m)))
         }
+        "core/vcs-low::diff-terms" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log(
+                    "missing artifact store for core/vcs-low::diff-terms".to_string(),
+                )
+            })?;
+            let Term::Map(m) = payload else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "payload must be a map".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(base_t) = m.get(&TermOrdKey(Term::symbol(":base-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :base-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(to_t) = m.get(&TermOrdKey(Term::symbol(":to-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :to-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let (patch_term, values) = match vcs_diff_patch_term(store, base_t, to_t) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/diff-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(
+                TermOrdKey(Term::symbol(":patch-term")),
+                patch_term,
+            );
+            out.insert(
+                TermOrdKey(Term::symbol(":values")),
+                Term::Vector(values.into_iter().map(Term::Str).collect()),
+            );
+            Ok(Value::Data(Term::Map(out)))
+        }
+        "core/vcs-low::apply-patch" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log(
+                    "missing artifact store for core/vcs-low::apply-patch".to_string(),
+                )
+            })?;
+            let Term::Map(m) = payload else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "payload must be a map".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(base_t) = m.get(&TermOrdKey(Term::symbol(":base-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :base-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(patch_t) = m.get(&TermOrdKey(Term::symbol(":patch-term"))) else {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/vcs/bad-payload",
+                    "missing :patch-term".to_string(),
+                    Some(op),
+                ));
+            };
+            let patch = match gc_vcs::Patch::from_term(patch_t) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-patch",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let snapshot_t = match vcs_apply_patch_term(store, base_t, &patch) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/apply-error",
+                        e,
+                        Some(op),
+                    ));
+                }
+            };
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(
+                TermOrdKey(Term::symbol(":snapshot-term")),
+                snapshot_t,
+            );
+            Ok(Value::Data(Term::Map(out)))
+        }
         "core/vcs::diff" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::diff".to_string())
@@ -3357,158 +3470,17 @@ fn call_capability(
                     ));
                 }
             };
-
-            fn update_at(
-                t: &Term,
-                path: &[gc_vcs::PathStep],
-                f: &dyn Fn(&Term) -> Result<Term, String>,
-            ) -> Result<Term, String> {
-                if path.is_empty() {
-                    return f(t);
+            let cur = match vcs_apply_patch_term(store, &base_t, &patch) {
+                Ok(t) => t,
+                Err(e) => {
+                    let code = if e.contains("patch op :rename is not supported yet") {
+                        "core/vcs/unsupported"
+                    } else {
+                        "core/vcs/apply-error"
+                    };
+                    return Ok(mk_error(error_tok, code, e, Some(op)));
                 }
-                match &path[0] {
-                    gc_vcs::PathStep::Map(k) => {
-                        let Term::Map(m) = t else {
-                            return Err("expected map".to_string());
-                        };
-                        let kk = TermOrdKey(k.clone());
-                        let child = m
-                            .get(&kk)
-                            .ok_or_else(|| format!("missing map key {}", print_term(k)))?;
-                        let new_child = update_at(child, &path[1..], f)?;
-                        let mut mm = m.clone();
-                        mm.insert(kk, new_child);
-                        Ok(Term::Map(mm))
-                    }
-                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
-                        let Term::Vector(xs) = t else {
-                            return Err("expected vector".to_string());
-                        };
-                        if *i >= xs.len() {
-                            return Err(format!("vector index out of range: {i}"));
-                        }
-                        let mut ys = xs.clone();
-                        let new_child = update_at(&ys[*i], &path[1..], f)?;
-                        ys[*i] = new_child;
-                        Ok(Term::Vector(ys))
-                    }
-                    gc_vcs::PathStep::PairCar => {
-                        let Term::Pair(a, d) = t else {
-                            return Err("expected pair".to_string());
-                        };
-                        let new_a = update_at(a, &path[1..], f)?;
-                        Ok(Term::Pair(Box::new(new_a), d.clone()))
-                    }
-                    gc_vcs::PathStep::PairCdr => {
-                        let Term::Pair(a, d) = t else {
-                            return Err("expected pair".to_string());
-                        };
-                        let new_d = update_at(d, &path[1..], f)?;
-                        Ok(Term::Pair(a.clone(), Box::new(new_d)))
-                    }
-                }
-            }
-
-            fn replace_at(
-                t: &Term,
-                path: &[gc_vcs::PathStep],
-                new_term: Term,
-            ) -> Result<Term, String> {
-                update_at(t, path, &|_cur| Ok(new_term.clone()))
-            }
-
-            fn insert_at(
-                t: &Term,
-                path: &[gc_vcs::PathStep],
-                new_term: Term,
-            ) -> Result<Term, String> {
-                let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
-                update_at(t, parent, &|cur| match last {
-                    gc_vcs::PathStep::Map(k) => {
-                        let Term::Map(m) = cur else {
-                            return Err("expected map".to_string());
-                        };
-                        let kk = TermOrdKey(k.clone());
-                        if m.contains_key(&kk) {
-                            return Err(format!("map key already present {}", print_term(k)));
-                        }
-                        let mut mm = m.clone();
-                        mm.insert(kk, new_term.clone());
-                        Ok(Term::Map(mm))
-                    }
-                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
-                        let Term::Vector(xs) = cur else {
-                            return Err("expected vector".to_string());
-                        };
-                        if *i > xs.len() {
-                            return Err(format!("vector insert index out of range: {i}"));
-                        }
-                        let mut ys = xs.clone();
-                        ys.insert(*i, new_term.clone());
-                        Ok(Term::Vector(ys))
-                    }
-                    _ => Err("insert requires :map or :vec/:form final step".to_string()),
-                })
-            }
-
-            fn delete_at(t: &Term, path: &[gc_vcs::PathStep]) -> Result<Term, String> {
-                let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
-                update_at(t, parent, &|cur| match last {
-                    gc_vcs::PathStep::Map(k) => {
-                        let Term::Map(m) = cur else {
-                            return Err("expected map".to_string());
-                        };
-                        let kk = TermOrdKey(k.clone());
-                        if !m.contains_key(&kk) {
-                            return Err(format!("missing map key {}", print_term(k)));
-                        }
-                        let mut mm = m.clone();
-                        mm.remove(&kk);
-                        Ok(Term::Map(mm))
-                    }
-                    gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
-                        let Term::Vector(xs) = cur else {
-                            return Err("expected vector".to_string());
-                        };
-                        if *i >= xs.len() {
-                            return Err(format!("vector index out of range: {i}"));
-                        }
-                        let mut ys = xs.clone();
-                        ys.remove(*i);
-                        Ok(Term::Vector(ys))
-                    }
-                    _ => Err("delete requires :map or :vec/:form final step".to_string()),
-                })
-            }
-
-            let mut cur = base_t;
-            for opx in &patch.ops {
-                match opx {
-                    gc_vcs::PatchOp::Replace { path, value } => {
-                        let vterm = store_get_term(store, value).map_err(|e| {
-                            EffectsError::Log(format!("patch value read error: {e}"))
-                        })?;
-                        cur = replace_at(&cur, path, vterm).map_err(EffectsError::Log)?;
-                    }
-                    gc_vcs::PatchOp::Insert { path, value } => {
-                        let vterm = store_get_term(store, value).map_err(|e| {
-                            EffectsError::Log(format!("patch value read error: {e}"))
-                        })?;
-                        cur = insert_at(&cur, path, vterm).map_err(EffectsError::Log)?;
-                    }
-                    gc_vcs::PatchOp::Delete { path } => {
-                        cur = delete_at(&cur, path).map_err(EffectsError::Log)?;
-                    }
-                    gc_vcs::PatchOp::Rename { .. } => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/vcs/unsupported",
-                            "patch op :rename is not supported yet".to_string(),
-                            Some(op),
-                        ));
-                    }
-                }
-            }
+            };
 
             let snap_bytes = print_term(&cur);
             let snap_h = if store_result {
@@ -6556,6 +6528,150 @@ fn vcs_diff_patch_term(
         .collect(),
     );
     Ok((patch_term, values))
+}
+
+fn vcs_apply_patch_term(
+    store: &ArtifactStore,
+    base_t: &Term,
+    patch: &gc_vcs::Patch,
+) -> Result<Term, String> {
+    fn update_at(
+        t: &Term,
+        path: &[gc_vcs::PathStep],
+        f: &dyn Fn(&Term) -> Result<Term, String>,
+    ) -> Result<Term, String> {
+        if path.is_empty() {
+            return f(t);
+        }
+        match &path[0] {
+            gc_vcs::PathStep::Map(k) => {
+                let Term::Map(m) = t else {
+                    return Err("expected map".to_string());
+                };
+                let kk = TermOrdKey(k.clone());
+                let child = m
+                    .get(&kk)
+                    .ok_or_else(|| format!("missing map key {}", print_term(k)))?;
+                let new_child = update_at(child, &path[1..], f)?;
+                let mut mm = m.clone();
+                mm.insert(kk, new_child);
+                Ok(Term::Map(mm))
+            }
+            gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                let Term::Vector(xs) = t else {
+                    return Err("expected vector".to_string());
+                };
+                if *i >= xs.len() {
+                    return Err(format!("vector index out of range: {i}"));
+                }
+                let mut ys = xs.clone();
+                let new_child = update_at(&ys[*i], &path[1..], f)?;
+                ys[*i] = new_child;
+                Ok(Term::Vector(ys))
+            }
+            gc_vcs::PathStep::PairCar => {
+                let Term::Pair(a, d) = t else {
+                    return Err("expected pair".to_string());
+                };
+                let new_a = update_at(a, &path[1..], f)?;
+                Ok(Term::Pair(Box::new(new_a), d.clone()))
+            }
+            gc_vcs::PathStep::PairCdr => {
+                let Term::Pair(a, d) = t else {
+                    return Err("expected pair".to_string());
+                };
+                let new_d = update_at(d, &path[1..], f)?;
+                Ok(Term::Pair(a.clone(), Box::new(new_d)))
+            }
+        }
+    }
+
+    fn replace_at(t: &Term, path: &[gc_vcs::PathStep], new_term: Term) -> Result<Term, String> {
+        update_at(t, path, &|_cur| Ok(new_term.clone()))
+    }
+
+    fn insert_at(t: &Term, path: &[gc_vcs::PathStep], new_term: Term) -> Result<Term, String> {
+        let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
+        update_at(t, parent, &|cur| match last {
+            gc_vcs::PathStep::Map(k) => {
+                let Term::Map(m) = cur else {
+                    return Err("expected map".to_string());
+                };
+                let kk = TermOrdKey(k.clone());
+                if m.contains_key(&kk) {
+                    return Err(format!("map key already present {}", print_term(k)));
+                }
+                let mut mm = m.clone();
+                mm.insert(kk, new_term.clone());
+                Ok(Term::Map(mm))
+            }
+            gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                let Term::Vector(xs) = cur else {
+                    return Err("expected vector".to_string());
+                };
+                if *i > xs.len() {
+                    return Err(format!("vector insert index out of range: {i}"));
+                }
+                let mut ys = xs.clone();
+                ys.insert(*i, new_term.clone());
+                Ok(Term::Vector(ys))
+            }
+            _ => Err("insert requires :map or :vec/:form final step".to_string()),
+        })
+    }
+
+    fn delete_at(t: &Term, path: &[gc_vcs::PathStep]) -> Result<Term, String> {
+        let (last, parent) = path.split_last().ok_or_else(|| "empty path".to_string())?;
+        update_at(t, parent, &|cur| match last {
+            gc_vcs::PathStep::Map(k) => {
+                let Term::Map(m) = cur else {
+                    return Err("expected map".to_string());
+                };
+                let kk = TermOrdKey(k.clone());
+                if !m.contains_key(&kk) {
+                    return Err(format!("missing map key {}", print_term(k)));
+                }
+                let mut mm = m.clone();
+                mm.remove(&kk);
+                Ok(Term::Map(mm))
+            }
+            gc_vcs::PathStep::Vec(i) | gc_vcs::PathStep::Form(i) => {
+                let Term::Vector(xs) = cur else {
+                    return Err("expected vector".to_string());
+                };
+                if *i >= xs.len() {
+                    return Err(format!("vector index out of range: {i}"));
+                }
+                let mut ys = xs.clone();
+                ys.remove(*i);
+                Ok(Term::Vector(ys))
+            }
+            _ => Err("delete requires :map or :vec/:form final step".to_string()),
+        })
+    }
+
+    let mut cur = base_t.clone();
+    for opx in &patch.ops {
+        match opx {
+            gc_vcs::PatchOp::Replace { path, value } => {
+                let vterm =
+                    store_get_term(store, value).map_err(|e| format!("patch value read error: {e}"))?;
+                cur = replace_at(&cur, path, vterm)?;
+            }
+            gc_vcs::PatchOp::Insert { path, value } => {
+                let vterm =
+                    store_get_term(store, value).map_err(|e| format!("patch value read error: {e}"))?;
+                cur = insert_at(&cur, path, vterm)?;
+            }
+            gc_vcs::PatchOp::Delete { path } => {
+                cur = delete_at(&cur, path)?;
+            }
+            gc_vcs::PatchOp::Rename { .. } => {
+                return Err("patch op :rename is not supported yet".to_string());
+            }
+        }
+    }
+    Ok(cur)
 }
 
 fn mk_conflict_artifact(

@@ -473,6 +473,8 @@ fn vcs_diff_and_apply_values_match_between_frontends() {
             "core/store::get",
             "core/vcs::diff",
             "core/vcs::apply",
+            "core/vcs-low::diff-terms",
+            "core/vcs-low::apply-patch",
         ],
     );
     let artifact = build_selfhost_artifact(dir);
@@ -577,6 +579,96 @@ fn vcs_diff_and_apply_values_match_between_frontends() {
         panic!("apply value must be map");
     };
     match rust_apply_map.get(&TermOrdKey(Term::symbol(":snapshot"))) {
+        Some(Term::Str(s)) => assert_eq!(s, &to_h),
+        _ => panic!("apply value missing :snapshot string"),
+    }
+}
+
+#[test]
+fn vcs_diff_and_apply_selfhost_work_with_low_level_caps_only() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(
+        dir,
+        &[
+            "core/store::put",
+            "core/store::get",
+            "core/vcs-low::diff-terms",
+            "core/vcs-low::apply-patch",
+        ],
+    );
+    let artifact = build_selfhost_artifact(dir);
+
+    let h1 = store_put(dir, &caps, "1", "v1.gc");
+    let h2 = store_put(dir, &caps, "2", "v2.gc");
+    let h3 = store_put(dir, &caps, "3", "v3.gc");
+
+    let base_snap = format!(
+        r#"{{
+  :type :vcs/snapshot
+  :v 1
+  :kind :contract
+  :proto nil
+  :overrides {{ my/op::a "{h1}" }}
+}}"#
+    );
+    let to_snap = format!(
+        r#"{{
+  :type :vcs/snapshot
+  :v 1
+  :kind :contract
+  :proto nil
+  :overrides {{ my/op::a "{h2}" my/op::b "{h3}" }}
+}}"#
+    );
+    let base_h = store_put(dir, &caps, &base_snap, "base.gc");
+    let to_h = store_put(dir, &caps, &to_snap, "to.gc");
+
+    let self_diff = cmd()
+        .current_dir(dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args(["diff", "--base", &base_h, "--to", &to_h])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&self_diff), "selfhost");
+
+    let diff_term = parse_term(&json_value(&self_diff)).unwrap();
+    let Term::Map(diff_map) = diff_term else {
+        panic!("diff value must be map");
+    };
+    let patch_h = match diff_map.get(&TermOrdKey(Term::symbol(":patch"))) {
+        Some(Term::Str(s)) => s.clone(),
+        _ => panic!("diff value missing :patch string"),
+    };
+
+    let self_apply = cmd()
+        .current_dir(dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args(["apply", "--base", &base_h, "--patch", &patch_h])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&self_apply), "selfhost");
+
+    let apply_term = parse_term(&json_value(&self_apply)).unwrap();
+    let Term::Map(apply_map) = apply_term else {
+        panic!("apply value must be map");
+    };
+    match apply_map.get(&TermOrdKey(Term::symbol(":snapshot"))) {
         Some(Term::Str(s)) => assert_eq!(s, &to_h),
         _ => panic!("apply value missing :snapshot string"),
     }

@@ -44,6 +44,8 @@ Compatibility notes:
 - `core/store::put`
 - `core/sync::pull`
 - `core/sync::push`
+- `core/vcs-low::apply-patch`
+- `core/vcs-low::diff-terms`
 - `core/vcs::apply`
 - `core/vcs::blame`
 - `core/vcs::diff`

@@ -2,6 +2,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{Term, TermOrdKey, parse_term};
+
+mod support;
 
 fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
     let caps = dir.join("caps.toml");
@@ -59,6 +62,50 @@ fn get_remote_ref(remote_dir: &Path, name: &str) -> Option<String> {
     }
     let rdb = gc_effects::RefsDb::open(&refs_path).unwrap();
     rdb.get(name).unwrap()
+}
+
+fn build_selfhost_artifact(dir: &Path) -> PathBuf {
+    support::copy_repo_toolchain_artifact(dir)
+}
+
+fn json_value(stdout: &[u8]) -> String {
+    let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
+    v.get("data")
+        .and_then(|d| d.get("value"))
+        .and_then(|x| x.as_str())
+        .unwrap()
+        .to_string()
+}
+
+fn json_frontend_name(stdout: &[u8]) -> String {
+    let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
+    v.get("data")
+        .and_then(|d| d.get("coreform_frontend"))
+        .and_then(|cf| cf.get("name"))
+        .and_then(|x| x.as_str())
+        .unwrap()
+        .to_string()
+}
+
+fn normalize_publish_value(s: &str) -> Term {
+    fn walk(t: &Term) -> Term {
+        match t {
+            Term::Map(m) => {
+                let mut out = std::collections::BTreeMap::new();
+                for (k, v) in m {
+                    if k.0 == Term::symbol(":remote") {
+                        continue;
+                    }
+                    out.insert(k.clone(), walk(v));
+                }
+                Term::Map(out)
+            }
+            Term::Vector(xs) => Term::Vector(xs.iter().map(walk).collect()),
+            Term::Pair(a, d) => Term::Pair(Box::new(walk(a)), Box::new(walk(d))),
+            other => other.clone(),
+        }
+    }
+    walk(&parse_term(s).unwrap())
 }
 
 #[test]
@@ -191,5 +238,154 @@ fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     assert_eq!(
         get_remote_ref(&remote_dir, "refs/heads/main"),
         Some(commit_ok)
+    );
+}
+
+fn setup_publish_ok_fixture(dir: &Path) -> (PathBuf, String, String, PathBuf) {
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(dir, &remote_allow);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+        "policy.gc",
+    );
+    let patch_hex = cli_store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let evidence_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "evidence.gc",
+    );
+    let commit_ok = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_hex}"]
+  :attestations []
+  :message "ok"
+}}"#
+        ),
+        "commit_ok.gc",
+    );
+    set_local_ref(dir, &commit_ok);
+    (caps, remote, policy_hex, remote_dir)
+}
+
+#[test]
+fn pkg_publish_value_matches_between_frontends() {
+    let td = tempfile::tempdir().unwrap();
+    let rust_dir = td.path().join("rust");
+    let self_dir = td.path().join("self");
+    fs::create_dir_all(&rust_dir).unwrap();
+    fs::create_dir_all(&self_dir).unwrap();
+
+    let (rust_caps, rust_remote, rust_policy_hex, rust_remote_dir) = setup_publish_ok_fixture(&rust_dir);
+    let (self_caps, self_remote, self_policy_hex, self_remote_dir) = setup_publish_ok_fixture(&self_dir);
+    let artifact = build_selfhost_artifact(&self_dir);
+
+    let rust_out = cargo_bin_cmd!("genesis")
+        .current_dir(&rust_dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args([
+            "publish",
+            "--remote",
+            &rust_remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &rust_policy_hex,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_out = cargo_bin_cmd!("genesis")
+        .current_dir(&self_dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args([
+            "publish",
+            "--remote",
+            &self_remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &self_policy_hex,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    assert_eq!(json_frontend_name(&rust_out), "rust");
+    assert_eq!(json_frontend_name(&self_out), "selfhost");
+    assert_eq!(
+        normalize_publish_value(&json_value(&rust_out)),
+        normalize_publish_value(&json_value(&self_out))
+    );
+
+    let rust_commit = match normalize_publish_value(&json_value(&rust_out)) {
+        Term::Map(m) => match m.get(&TermOrdKey(Term::symbol(":commit"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => panic!("missing :commit"),
+        },
+        _ => panic!("publish value must be map"),
+    };
+    let self_commit = match normalize_publish_value(&json_value(&self_out)) {
+        Term::Map(m) => match m.get(&TermOrdKey(Term::symbol(":commit"))) {
+            Some(Term::Str(s)) => s.clone(),
+            _ => panic!("missing :commit"),
+        },
+        _ => panic!("publish value must be map"),
+    };
+    assert_eq!(
+        get_remote_ref(&rust_remote_dir, "refs/heads/main"),
+        Some(rust_commit)
+    );
+    assert_eq!(
+        get_remote_ref(&self_remote_dir, "refs/heads/main"),
+        Some(self_commit)
     );
 }
