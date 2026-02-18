@@ -1503,16 +1503,13 @@ fn cmd_fmt(
 
             load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
-            let f = env
-                .get("core/cli::fmt-module")
-                .or_else(|| env.get("selfhost/tool::fmt-module"))
-                .ok_or_else(|| {
-                    cli_err(
-                        EX_INTERNAL,
-                        "selfhost/missing",
-                        "missing binding core/cli::fmt-module (or fallback selfhost/tool::fmt-module)",
-                    )
-                })?;
+            let f = env.get("core/cli::fmt-module").ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "selfhost/missing",
+                    "missing binding core/cli::fmt-module",
+                )
+            })?;
 
             // Now apply the user-configured step limit to the formatting work itself.
             ctx.steps = 0;
@@ -4884,16 +4881,13 @@ fn cmd_vcs(
             let mut env = prelude.env;
             load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
-            let f = env
-                .get("core/cli::hash-src-with-kind")
-                .or_else(|| env.get("selfhost/tool::hash-src-with-kind"))
-                .ok_or_else(|| {
-                    cli_err(
-                        EX_INTERNAL,
-                        "selfhost/missing",
-                        "missing binding core/cli::hash-src-with-kind (or fallback selfhost/tool::hash-src-with-kind)",
-                    )
-                })?;
+            let f = env.get("core/cli::hash-src-with-kind").ok_or_else(|| {
+                cli_err(
+                    EX_INTERNAL,
+                    "selfhost/missing",
+                    "missing binding core/cli::hash-src-with-kind",
+                )
+            })?;
 
             ctx.steps = 0;
             ctx.step_limit = resolved_step_limit(cli).resolve();
