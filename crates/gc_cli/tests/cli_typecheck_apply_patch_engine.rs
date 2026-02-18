@@ -131,6 +131,56 @@ fn poison_cli_hash_module_forms_contract(artifact: &std::path::Path) {
     std::fs::write(artifact, print_term(&term)).unwrap();
 }
 
+fn poison_patch_schema_apply_replace_node_contract(artifact: &std::path::Path) {
+    let src = std::fs::read_to_string(artifact).unwrap();
+    let mut term = parse_term(&src).unwrap();
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let modules = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules");
+    let Term::Vector(entries) = modules else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(mm)
+                if matches!(
+                    mm.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path)) if path == "selfhost/patch_schema_v1.gc"
+                ) =>
+            {
+                Some(mm)
+            }
+            _ => None,
+        })
+        .expect("selfhost/patch_schema_v1.gc entry");
+
+    let poisoned_src = r#"
+      (def core/cli::validate-patch (fn (t) true))
+      (def core/cli::apply-replace-node
+        (fn (req) ((core/error::make2 "core/poison") "apply-replace-node poisoned")))
+      (def core/cli::print-module-forms (fn (forms) ""))
+    "#;
+    let poisoned_forms = canonicalize_module(parse_module(poisoned_src).unwrap()).unwrap();
+    let poisoned_hash = hash_module(&poisoned_forms);
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":source")),
+        Term::Str(poisoned_src.to_string()),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(poisoned_hash.to_vec().into()),
+    );
+    std::fs::write(artifact, print_term(&term)).unwrap();
+}
+
 #[test]
 fn typecheck_selfhost_frontend_matches_rust_frontend_report() {
     let td = tempdir().unwrap();
@@ -255,6 +305,33 @@ fn typecheck_selfhost_frontend_fails_when_module_meta_contract_is_poisoned() {
         .failure()
         .code(10)
         .stderr(predicate::str::contains("module-meta"));
+}
+
+#[test]
+fn apply_patch_selfhost_frontend_fails_when_apply_replace_node_contract_is_poisoned() {
+    let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
+    poison_patch_schema_apply_replace_node_contract(&artifact);
+
+    let pkg_dir = td.path().join("pkg_selfhost_poison_replace");
+    let pkg = copy_pkg_basic_fixture(&pkg_dir);
+    let patch = pkg_dir.join("pure.gcpatch");
+
+    cmd()
+        .args([
+            "--coreform-frontend",
+            "selfhost",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "apply-patch",
+            patch.to_str().unwrap(),
+            "--pkg",
+            pkg.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(10)
+        .stderr(predicate::str::contains("apply-replace-node"));
 }
 
 #[test]

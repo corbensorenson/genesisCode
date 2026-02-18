@@ -86,6 +86,34 @@ enum PathStep {
     Map(Term),
 }
 
+fn usize_to_int_term(x: usize) -> Result<Term, PatchError> {
+    let i = i64::try_from(x).map_err(|_| PatchError::Validate("index out of range".to_string()))?;
+    Ok(Term::Int(i.into()))
+}
+
+fn path_steps_to_term(path: &[PathStep]) -> Result<Term, PatchError> {
+    let mut steps = Vec::with_capacity(path.len());
+    for st in path {
+        let t = match st {
+            PathStep::Form(i) => Term::Vector(vec![Term::symbol(":form"), usize_to_int_term(*i)?]),
+            PathStep::PairCar => Term::Vector(vec![Term::symbol(":pair-car")]),
+            PathStep::PairCdr => Term::Vector(vec![Term::symbol(":pair-cdr")]),
+            PathStep::Vec(i) => Term::Vector(vec![Term::symbol(":vec"), usize_to_int_term(*i)?]),
+            PathStep::Map(k) => Term::Vector(vec![Term::symbol(":map"), k.clone()]),
+        };
+        steps.push(t);
+    }
+    Ok(Term::Vector(steps))
+}
+
+struct SelfhostPatchToolchain {
+    ctx: EvalCtx,
+    error_token: SealId,
+    validate_patch: Value,
+    apply_replace_node: Value,
+    print_module_forms: Value,
+}
+
 pub fn apply_patch(
     patch_path: &Path,
     pkg_toml: &Path,
@@ -128,10 +156,15 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
 
+    let mut selfhost = match &frontend {
+        CoreformFrontend::Selfhost(cfg) => Some(SelfhostPatchToolchain::init(cfg, mem_limits)?),
+        CoreformFrontend::Rust => None,
+    };
+
     // When running under the selfhost CoreForm frontend, validate patch schema via the
     // self-hosted contract to ensure schema acceptance is controlled by `.gc` semantics.
-    if let CoreformFrontend::Selfhost(cfg) = &frontend {
-        selfhost_validate_patch_term(&patch_term, cfg, step_limit, mem_limits)?;
+    if let Some(sh) = selfhost.as_mut() {
+        sh.validate_patch_term(&patch_term, step_limit)?;
     }
 
     let patch = Patch::from_term(&patch_term)?;
@@ -151,7 +184,15 @@ pub fn apply_patch_with_step_limit_and_frontend(
 
     // Apply ops.
     for op in &patch.ops {
-        apply_one_op(&pkg_dir, pkg_toml, op, &frontend, step_limit, mem_limits)?;
+        apply_one_op(
+            &pkg_dir,
+            pkg_toml,
+            op,
+            &frontend,
+            step_limit,
+            mem_limits,
+            selfhost.as_mut(),
+        )?;
     }
 
     // Re-pack to compute updated package artifact record and module hashes.
@@ -221,42 +262,128 @@ fn extract_protocol_error(out: &Value, error_token: SealId) -> Option<String> {
     }
 }
 
-fn selfhost_validate_patch_term(
-    patch_term: &Term,
-    cfg: &gc_obligations::SelfhostFrontendConfig,
-    step_limit: StepLimit,
-    mem_limits: MemLimits,
-) -> Result<(), PatchError> {
-    // Toolchain bootstrap is trusted and therefore uncharged.
-    let mut ctx = EvalCtx::with_step_limit(None);
-    ctx.set_mem_limits(mem_limits);
-    let prelude = build_prelude(&mut ctx);
-    let error_token = prelude.protocol.error;
-    let mut env = prelude.env;
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        cfg.bootstrap_mode,
-        cfg.artifact.as_deref(),
-    )
-    .map_err(|e| PatchError::Validate(format!("selfhost/init: {e}")))?;
+impl SelfhostPatchToolchain {
+    fn init(
+        cfg: &gc_obligations::SelfhostFrontendConfig,
+        mem_limits: MemLimits,
+    ) -> Result<Self, PatchError> {
+        // Toolchain bootstrap is trusted and therefore uncharged.
+        let mut ctx = EvalCtx::with_step_limit(None);
+        ctx.set_mem_limits(mem_limits);
+        let prelude = build_prelude(&mut ctx);
+        let error_token = prelude.protocol.error;
+        let mut env = prelude.env;
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            cfg.bootstrap_mode,
+            cfg.artifact.as_deref(),
+        )
+        .map_err(|e| PatchError::Validate(format!("selfhost/init: {e}")))?;
 
-    // Apply user/configured limits to the patch schema validation work.
-    ctx.steps = 0;
-    ctx.step_limit = step_limit.resolve();
+        let validate_patch = env.get("core/cli::validate-patch").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::validate-patch".to_string())
+        })?;
+        let apply_replace_node = env.get("core/cli::apply-replace-node").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::apply-replace-node".to_string())
+        })?;
+        let print_module_forms = env.get("core/cli::print-module-forms").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::print-module-forms".to_string())
+        })?;
 
-    let validate_fn = env.get("core/cli::validate-patch").ok_or_else(|| {
-        PatchError::Validate("missing binding core/cli::validate-patch".to_string())
-    })?;
-    let out = validate_fn
-        .apply(&mut ctx, Value::Data(patch_term.clone()))
-        .map_err(|e| PatchError::Validate(format!("selfhost validate-patch apply: {e}")))?;
-    if let Some(e) = extract_protocol_error(&out, error_token) {
-        return Err(PatchError::Validate(format!(
-            "selfhost core/cli validate-patch failed: {e}"
-        )));
+        Ok(SelfhostPatchToolchain {
+            ctx,
+            error_token,
+            validate_patch,
+            apply_replace_node,
+            print_module_forms,
+        })
     }
-    Ok(())
+
+    fn with_limits(&mut self, step_limit: StepLimit) {
+        self.ctx.steps = 0;
+        self.ctx.step_limit = step_limit.resolve();
+    }
+
+    fn validate_patch_term(
+        &mut self,
+        patch_term: &Term,
+        step_limit: StepLimit,
+    ) -> Result<(), PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .validate_patch
+            .clone()
+            .apply(&mut self.ctx, Value::Data(patch_term.clone()))
+            .map_err(|e| PatchError::Validate(format!("selfhost validate-patch apply: {e}")))?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli validate-patch failed: {e}"
+            )));
+        }
+        Ok(())
+    }
+
+    fn apply_replace_node_term(
+        &mut self,
+        forms: &[Term],
+        path: &Term,
+        new_term: &Term,
+        step_limit: StepLimit,
+    ) -> Result<Vec<Term>, PatchError> {
+        self.with_limits(step_limit);
+        let mut req = BTreeMap::new();
+        req.insert(
+            TermOrdKey(Term::symbol(":forms")),
+            Term::Vector(forms.to_vec()),
+        );
+        req.insert(TermOrdKey(Term::symbol(":path")), path.clone());
+        req.insert(TermOrdKey(Term::symbol(":new")), new_term.clone());
+        let req = Term::Map(req);
+
+        let out = self
+            .apply_replace_node
+            .clone()
+            .apply(&mut self.ctx, Value::Data(req))
+            .map_err(|e| PatchError::Validate(format!("selfhost apply-replace-node apply: {e}")))?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli apply-replace-node failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Vector(forms)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli apply-replace-node must return vector of forms, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(forms)
+    }
+
+    fn print_module_forms_term(
+        &mut self,
+        forms: &[Term],
+        step_limit: StepLimit,
+    ) -> Result<String, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .print_module_forms
+            .clone()
+            .apply(&mut self.ctx, Value::Data(Term::Vector(forms.to_vec())))
+            .map_err(|e| PatchError::Validate(format!("selfhost print-module-forms apply: {e}")))?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli print-module-forms failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Str(s)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli print-module-forms must return string, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(s)
+    }
 }
 
 fn report_term(
@@ -305,6 +432,7 @@ fn apply_one_op(
     frontend: &CoreformFrontend,
     step_limit: StepLimit,
     mem_limits: MemLimits,
+    selfhost: Option<&mut SelfhostPatchToolchain>,
 ) -> Result<(), PatchError> {
     match op {
         PatchOp::ReplaceNode {
@@ -314,13 +442,22 @@ fn apply_one_op(
         } => {
             let abs = pkg_dir.join(module_path);
             let src = std::fs::read_to_string(&abs)?;
-            let mut forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
 
-            apply_replace(&mut forms, path, new_term.clone())?;
-            let forms =
-                canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
-            let out = print_module(&forms);
-            std::fs::write(&abs, out)?;
+            if let Some(sh) = selfhost {
+                let path_term = path_steps_to_term(path)?;
+                let next_forms =
+                    sh.apply_replace_node_term(&forms, &path_term, new_term, step_limit)?;
+                let out = sh.print_module_forms_term(&next_forms, step_limit)?;
+                std::fs::write(&abs, out)?;
+            } else {
+                let mut forms = forms;
+                apply_replace(&mut forms, path, new_term.clone())?;
+                let forms =
+                    canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
+                let out = print_module(&forms);
+                std::fs::write(&abs, out)?;
+            }
             Ok(())
         }
         PatchOp::AddModule {

@@ -75,7 +75,8 @@ Acceptance gate:
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
 - [ ] Implement self-host patch schema validation/apply pipeline in `.gc`.
   - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
-  - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active (host still applies patch ops in Rust for now).
+  - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.
+  - [x] Apply `:replace-node` via `core/cli::apply-replace-node` + `core/cli::print-module-forms` when `--coreform-frontend selfhost` is active (other patch ops still applied in Rust for now).
 - [x] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
   - [x] `selfhost-artifact` output is byte-for-byte deterministic across rebuilds on the same toolchain (enforced by `gc_cli` tests).
   - [x] `pack` and `test` acceptance artifact hashes are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).

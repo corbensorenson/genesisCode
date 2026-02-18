@@ -173,6 +173,168 @@
               r
               ((selfhost/patch_schema::validate-ops-loop ops len) ((core/int::add i) 1)))))))))
 
+(def selfhost/patch_schema::is-pair?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+
+(def selfhost/patch_schema::vec-drop
+  (fn (v)
+    (fn (start)
+      (let ((len (core/vec::len v)))
+        (((selfhost/patch_schema::vec-drop-loop v len start) 0)
+         (core/pair::as-proper-list nil))))))
+
+(def selfhost/patch_schema::vec-drop-loop
+  (fn (v len start)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) len)
+          out
+          (if ((core/int::lt? i) start)
+            (((selfhost/patch_schema::vec-drop-loop v len start) ((core/int::add i) 1)) out)
+            (let ((x ((core/vec::get v) i)))
+              (((selfhost/patch_schema::vec-drop-loop v len start) ((core/int::add i) 1))
+               ((core/vec::push out) x)))))))))
+
+(def selfhost/patch_schema::vec-replace
+  (fn (v)
+    (fn (idx)
+      (fn (x)
+        (let ((len (core/vec::len v)))
+          (((selfhost/patch_schema::vec-replace-loop v len idx x) 0)
+           (core/pair::as-proper-list nil)))))))
+
+(def selfhost/patch_schema::vec-replace-loop
+  (fn (v len idx x)
+    (fn (i)
+      (fn (out)
+        (if ((core/int::eq? i) len)
+          out
+          (let ((cur ((core/vec::get v) i)))
+            (let ((next (if ((core/int::eq? i) idx) x cur)))
+              (((selfhost/patch_schema::vec-replace-loop v len idx x) ((core/int::add i) 1))
+               ((core/vec::push out) next)))))))))
+
+(def selfhost/patch_schema::step-tag
+  (fn (step)
+    (if (selfhost/patch_schema::is-vec? step)
+      (if ((core/int::eq? (core/vec::len step)) 0)
+        nil
+        ((core/vec::get step) 0))
+      nil)))
+
+(def selfhost/patch_schema::apply-replace-step-sym
+  (fn (t)
+    (fn (tag)
+      (fn (step)
+        (fn (rest)
+          (fn (new)
+            (if ((core/sym::eq? tag) (quote :pair-car))
+              (if (selfhost/patch_schema::is-pair? t)
+                (let ((a (core/pair::car t)) (d (core/pair::cdr t)))
+                  (let ((na (((selfhost/patch_schema::apply-replace-term a) rest) new)))
+                    (if (core/error::is? na) na ((core/pair::cons na) d))))
+                (selfhost/patch_schema::err "expected pair for :pair-car"))
+              (if ((core/sym::eq? tag) (quote :pair-cdr))
+                (if (selfhost/patch_schema::is-pair? t)
+                  (let ((a (core/pair::car t)) (d (core/pair::cdr t)))
+                    (let ((nd (((selfhost/patch_schema::apply-replace-term d) rest) new)))
+                      (if (core/error::is? nd) nd ((core/pair::cons a) nd))))
+                  (selfhost/patch_schema::err "expected pair for :pair-cdr"))
+                (if ((core/sym::eq? tag) (quote :vec))
+                  (if (selfhost/patch_schema::is-vec? t)
+                    (if ((core/int::eq? (core/vec::len step)) 2)
+                      (let ((idx ((core/vec::get step) 1)))
+                        (if (selfhost/patch_schema::is-int? idx)
+                          (if ((core/int::lt? idx) (core/vec::len t))
+                            (let ((cur ((core/vec::get t) idx)))
+                              (let ((nx (((selfhost/patch_schema::apply-replace-term cur) rest) new)))
+                                (if (core/error::is? nx)
+                                  nx
+                                  (((selfhost/patch_schema::vec-replace t) idx) nx))))
+                            (selfhost/patch_schema::err "vector index out of range"))
+                          (selfhost/patch_schema::err ":vec expects int index")))
+                      (selfhost/patch_schema::err ":vec expects 1 arg"))
+                    (selfhost/patch_schema::err "expected vector for :vec"))
+                  (if ((core/sym::eq? tag) (quote :map))
+                    (if (selfhost/patch_schema::is-map? t)
+                      (if ((core/int::eq? (core/vec::len step)) 2)
+                        (let ((k ((core/vec::get step) 1)))
+                          (let ((cur ((core/map::get t) k)))
+                            (if (core/list::is-nil? cur)
+                              (selfhost/patch_schema::err "missing map key for :map")
+                              (let ((nv (((selfhost/patch_schema::apply-replace-term cur) rest) new)))
+                                (if (core/error::is? nv)
+                                  nv
+                                  (((core/map::put t) k) nv))))))
+                        (selfhost/patch_schema::err ":map expects 1 arg"))
+                      (selfhost/patch_schema::err "expected map for :map"))
+                    (if ((core/sym::eq? tag) (quote :form))
+                      (selfhost/patch_schema::err "unexpected :form step")
+                      (selfhost/patch_schema::err "unknown path step tag"))))))))))))
+
+(def selfhost/patch_schema::apply-replace-step
+  (fn (t)
+    (fn (step)
+      (fn (rest)
+        (fn (new)
+          (let ((tag (selfhost/patch_schema::step-tag step)))
+            (if (selfhost/patch_schema::is-sym? tag)
+              (((((selfhost/patch_schema::apply-replace-step-sym t) tag) step) rest) new)
+              (selfhost/patch_schema::err "path step tag must be symbol"))))))))
+
+(def selfhost/patch_schema::apply-replace-term
+  (fn (t)
+    (fn (steps)
+      (fn (new)
+        (if ((core/int::eq? (core/vec::len steps)) 0)
+          new
+          (let ((step ((core/vec::get steps) 0)))
+            (let ((rest ((selfhost/patch_schema::vec-drop steps) 1)))
+              ((((selfhost/patch_schema::apply-replace-step t) step) rest) new))))))))
+
+(def core/cli::apply-replace-node
+  (fn (req)
+    (if (selfhost/patch_schema::is-map? req)
+      (let ((forms ((core/map::get req) (quote :forms)))
+            (path ((core/map::get req) (quote :path)))
+            (newv ((core/map::get req) (quote :new))))
+        (if (selfhost/patch_schema::is-vec? forms)
+          (if (selfhost/patch_schema::is-vec? path)
+            (if ((core/int::lt? 0) (core/vec::len path))
+              (let ((step0 ((core/vec::get path) 0)))
+                (if (selfhost/patch_schema::is-vec? step0)
+                  (let ((tag0 (selfhost/patch_schema::step-tag step0)))
+                    (if (selfhost/patch_schema::is-sym? tag0)
+                      (if ((core/sym::eq? tag0) (quote :form))
+                        (if ((core/int::eq? (core/vec::len step0)) 2)
+                          (let ((idx ((core/vec::get step0) 1)))
+                            (if (selfhost/patch_schema::is-int? idx)
+                              (if ((core/int::lt? idx) (core/vec::len forms))
+                                (let ((form ((core/vec::get forms) idx)))
+                                  (let ((rest ((selfhost/patch_schema::vec-drop path) 1)))
+                                    (let ((nf (((selfhost/patch_schema::apply-replace-term form) rest) newv)))
+                                      (if (core/error::is? nf)
+                                        nf
+                                        (let ((next_forms (((selfhost/patch_schema::vec-replace forms) idx) nf)))
+                                          (let ((canon (selfhost/canon::canonicalize-module next_forms)))
+                                            (if (core/error::is? canon) canon canon)))))))
+                                (selfhost/patch_schema::err "form index out of range"))
+                              (selfhost/patch_schema::err ":form expects int index")))
+                          (selfhost/patch_schema::err ":form expects 1 arg"))
+                        (selfhost/patch_schema::err "first path step must be :form"))
+                      (selfhost/patch_schema::err "path step tag must be symbol")))
+                  (selfhost/patch_schema::err "path step must be vector")))
+              (selfhost/patch_schema::err "empty :path"))
+            (selfhost/patch_schema::err ":path must be vector"))
+          (selfhost/patch_schema::err ":forms must be vector")))
+      (selfhost/patch_schema::err "apply-replace-node expects map"))))
+
+(def core/cli::print-module-forms
+  (fn (forms)
+    (if (selfhost/patch_schema::is-vec? forms)
+      (selfhost/printer::print-module forms)
+      ((core/error::make2 "core/type-error") "core/cli::print-module-forms expects vector of forms"))))
+
 (def core/cli::validate-patch
   (fn (t)
     (if (selfhost/patch_schema::is-map? t)
