@@ -113,6 +113,9 @@ struct SelfhostPatchToolchain {
     apply_replace_node: Value,
     print_module_forms: Value,
     print_module_from_content: Value,
+    manifest_apply_add_module: Value,
+    manifest_apply_remove_module: Value,
+    manifest_apply_update_manifest_op: Value,
 }
 
 pub fn apply_patch(
@@ -298,6 +301,27 @@ impl SelfhostPatchToolchain {
                         "missing binding core/cli::print-module-from-content".to_string(),
                     )
                 })?;
+        let manifest_apply_add_module =
+            env.get("core/cli::manifest-apply-add-module")
+                .ok_or_else(|| {
+                    PatchError::Validate(
+                        "missing binding core/cli::manifest-apply-add-module".to_string(),
+                    )
+                })?;
+        let manifest_apply_remove_module = env
+            .get("core/cli::manifest-apply-remove-module")
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "missing binding core/cli::manifest-apply-remove-module".to_string(),
+                )
+            })?;
+        let manifest_apply_update_manifest_op = env
+            .get("core/cli::manifest-apply-update-manifest-op")
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "missing binding core/cli::manifest-apply-update-manifest-op".to_string(),
+                )
+            })?;
 
         Ok(SelfhostPatchToolchain {
             ctx,
@@ -306,6 +330,9 @@ impl SelfhostPatchToolchain {
             apply_replace_node,
             print_module_forms,
             print_module_from_content,
+            manifest_apply_add_module,
+            manifest_apply_remove_module,
+            manifest_apply_update_manifest_op,
         })
     }
 
@@ -420,6 +447,105 @@ impl SelfhostPatchToolchain {
         };
         Ok(s)
     }
+
+    fn manifest_apply_add_module_term(
+        &mut self,
+        manifest: &Term,
+        module_path: &str,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .manifest_apply_add_module
+            .clone()
+            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .and_then(|f| {
+                f.apply(
+                    &mut self.ctx,
+                    Value::Data(Term::Str(module_path.to_string())),
+                )
+            })
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost manifest-apply-add-module apply: {e}"))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-add-module failed: {e}"
+            )));
+        }
+        let Value::Data(t) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-add-module must return data term, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(t)
+    }
+
+    fn manifest_apply_remove_module_term(
+        &mut self,
+        manifest: &Term,
+        module_path: &str,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .manifest_apply_remove_module
+            .clone()
+            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .and_then(|f| {
+                f.apply(
+                    &mut self.ctx,
+                    Value::Data(Term::Str(module_path.to_string())),
+                )
+            })
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost manifest-apply-remove-module apply: {e}"))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-remove-module failed: {e}"
+            )));
+        }
+        let Value::Data(t) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-remove-module must return data term, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(t)
+    }
+
+    fn manifest_apply_update_manifest_op_term(
+        &mut self,
+        manifest: &Term,
+        op: &Term,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .manifest_apply_update_manifest_op
+            .clone()
+            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .and_then(|f| f.apply(&mut self.ctx, Value::Data(op.clone())))
+            .map_err(|e| {
+                PatchError::Validate(format!(
+                    "selfhost manifest-apply-update-manifest-op apply: {e}"
+                ))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-update-manifest-op failed: {e}"
+            )));
+        }
+        let Value::Data(t) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-update-manifest-op must return data term, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(t)
+    }
 }
 
 fn report_term(
@@ -468,7 +594,7 @@ fn apply_one_op(
     frontend: &CoreformFrontend,
     step_limit: StepLimit,
     mem_limits: MemLimits,
-    selfhost: Option<&mut SelfhostPatchToolchain>,
+    mut selfhost: Option<&mut SelfhostPatchToolchain>,
 ) -> Result<(), PatchError> {
     match op {
         PatchOp::ReplaceNode {
@@ -480,7 +606,7 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
 
-            if let Some(sh) = selfhost {
+            if let Some(sh) = selfhost.as_deref_mut() {
                 let path_term = path_steps_to_term(path)?;
                 let next_forms =
                     sh.apply_replace_node_term(&forms, &path_term, new_term, step_limit)?;
@@ -510,7 +636,7 @@ fn apply_one_op(
             if let Some(parent) = abs.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            let out = if let Some(sh) = selfhost {
+            let out = if let Some(sh) = selfhost.as_deref_mut() {
                 let content_term = match content {
                     ModuleContent::Source(s) => Term::Str(s.clone()),
                     ModuleContent::Forms(fs) => Term::Vector(fs.clone()),
@@ -530,22 +656,31 @@ fn apply_one_op(
 
             // Update manifest modules list by appending; pack will pin hashes.
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value =
+            let v0: toml::Value =
                 toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mods = v
-                .get_mut("modules")
-                .and_then(|x| x.as_array_mut())
-                .ok_or_else(|| {
-                    PatchError::Validate("manifest missing modules array".to_string())
-                })?;
-            mods.push(toml::Value::Table(
-                [
-                    ("path".to_string(), toml::Value::String(module_path.clone())),
-                    ("hash".to_string(), toml::Value::String("".to_string())),
-                ]
-                .into_iter()
-                .collect(),
-            ));
+            let v = if let Some(sh) = selfhost.as_deref_mut() {
+                let manifest_term = toml_to_coreform(&v0)?;
+                let out_term =
+                    sh.manifest_apply_add_module_term(&manifest_term, module_path, step_limit)?;
+                coreform_to_toml(&out_term)?
+            } else {
+                let mut v = v0;
+                let mods = v
+                    .get_mut("modules")
+                    .and_then(|x| x.as_array_mut())
+                    .ok_or_else(|| {
+                        PatchError::Validate("manifest missing modules array".to_string())
+                    })?;
+                mods.push(toml::Value::Table(
+                    [
+                        ("path".to_string(), toml::Value::String(module_path.clone())),
+                        ("hash".to_string(), toml::Value::String("".to_string())),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ));
+                v
+            };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
             Ok(())
@@ -557,15 +692,26 @@ fn apply_one_op(
             }
             // Remove from manifest modules array.
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value =
+            let v0: toml::Value =
                 toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let mods = v
-                .get_mut("modules")
-                .and_then(|x| x.as_array_mut())
-                .ok_or_else(|| {
-                    PatchError::Validate("manifest missing modules array".to_string())
-                })?;
-            mods.retain(|m| m.get("path").and_then(|p| p.as_str()) != Some(module_path.as_str()));
+            let v = if let Some(sh) = selfhost.as_deref_mut() {
+                let manifest_term = toml_to_coreform(&v0)?;
+                let out_term =
+                    sh.manifest_apply_remove_module_term(&manifest_term, module_path, step_limit)?;
+                coreform_to_toml(&out_term)?
+            } else {
+                let mut v = v0;
+                let mods = v
+                    .get_mut("modules")
+                    .and_then(|x| x.as_array_mut())
+                    .ok_or_else(|| {
+                        PatchError::Validate("manifest missing modules array".to_string())
+                    })?;
+                mods.retain(|m| {
+                    m.get("path").and_then(|p| p.as_str()) != Some(module_path.as_str())
+                });
+                v
+            };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
             Ok(())
@@ -579,22 +725,49 @@ fn apply_one_op(
             caps_policy,
         } => {
             let mut s = std::fs::read_to_string(pkg_toml)?;
-            let mut v: toml::Value =
+            let v0: toml::Value =
                 toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            if let Some(set) = set {
-                apply_manifest_set(&mut v, set)?;
-            }
-            if !obligations_add.is_empty() || !obligations_remove.is_empty() {
-                patch_string_vec_field(&mut v, "obligations", obligations_add, obligations_remove)?;
-            }
-            if !tests_add.is_empty() || !tests_remove.is_empty() {
-                patch_string_vec_field(&mut v, "tests", tests_add, tests_remove)?;
-            }
-            if let Some(p) = caps_policy {
-                v.as_table_mut()
-                    .ok_or_else(|| PatchError::Validate("manifest must be a table".to_string()))?
-                    .insert("caps_policy".to_string(), toml::Value::String(p.clone()));
-            }
+            let v = if let Some(sh) = selfhost {
+                let manifest_term = toml_to_coreform(&v0)?;
+                let op_term = update_manifest_op_to_term(
+                    set.as_ref(),
+                    obligations_add,
+                    obligations_remove,
+                    tests_add,
+                    tests_remove,
+                    caps_policy.as_deref(),
+                )?;
+                let out_term = sh.manifest_apply_update_manifest_op_term(
+                    &manifest_term,
+                    &op_term,
+                    step_limit,
+                )?;
+                coreform_to_toml(&out_term)?
+            } else {
+                let mut v = v0;
+                if let Some(set) = set {
+                    apply_manifest_set(&mut v, set)?;
+                }
+                if !obligations_add.is_empty() || !obligations_remove.is_empty() {
+                    patch_string_vec_field(
+                        &mut v,
+                        "obligations",
+                        obligations_add,
+                        obligations_remove,
+                    )?;
+                }
+                if !tests_add.is_empty() || !tests_remove.is_empty() {
+                    patch_string_vec_field(&mut v, "tests", tests_add, tests_remove)?;
+                }
+                if let Some(p) = caps_policy {
+                    v.as_table_mut()
+                        .ok_or_else(|| {
+                            PatchError::Validate("manifest must be a table".to_string())
+                        })?
+                        .insert("caps_policy".to_string(), toml::Value::String(p.clone()));
+                }
+                v
+            };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
             Ok(())
@@ -702,6 +875,79 @@ fn coreform_to_toml(t: &Term) -> Result<toml::Value, PatchError> {
             "cannot convert list to TOML in :set".to_string(),
         )),
     }
+}
+
+fn toml_to_coreform(v: &toml::Value) -> Result<Term, PatchError> {
+    match v {
+        toml::Value::String(s) => Ok(Term::Str(s.clone())),
+        toml::Value::Integer(i) => Ok(Term::Int((*i).into())),
+        toml::Value::Boolean(b) => Ok(Term::Bool(*b)),
+        toml::Value::Float(f) => Ok(Term::Str(f.to_string())),
+        toml::Value::Datetime(dt) => Ok(Term::Str(dt.to_string())),
+        toml::Value::Array(xs) => Ok(Term::Vector(
+            xs.iter().map(toml_to_coreform).collect::<Result<_, _>>()?,
+        )),
+        toml::Value::Table(m) => Ok(Term::Map(
+            m.iter()
+                .map(|(k, v)| Ok((TermOrdKey(Term::Str(k.clone())), toml_to_coreform(v)?)))
+                .collect::<Result<_, PatchError>>()?,
+        )),
+    }
+}
+
+fn update_manifest_op_to_term(
+    set: Option<&Term>,
+    obligations_add: &[String],
+    obligations_remove: &[String],
+    tests_add: &[String],
+    tests_remove: &[String],
+    caps_policy: Option<&str>,
+) -> Result<Term, PatchError> {
+    let mut m = BTreeMap::new();
+    if let Some(set) = set {
+        m.insert(TermOrdKey(Term::symbol(":set")), set.clone());
+    }
+    if !obligations_add.is_empty() {
+        m.insert(
+            TermOrdKey(Term::symbol(":obligations-add")),
+            Term::Vector(
+                obligations_add
+                    .iter()
+                    .map(|s| Term::Str(s.clone()))
+                    .collect(),
+            ),
+        );
+    }
+    if !obligations_remove.is_empty() {
+        m.insert(
+            TermOrdKey(Term::symbol(":obligations-remove")),
+            Term::Vector(
+                obligations_remove
+                    .iter()
+                    .map(|s| Term::Str(s.clone()))
+                    .collect(),
+            ),
+        );
+    }
+    if !tests_add.is_empty() {
+        m.insert(
+            TermOrdKey(Term::symbol(":tests-add")),
+            Term::Vector(tests_add.iter().map(|s| Term::Str(s.clone())).collect()),
+        );
+    }
+    if !tests_remove.is_empty() {
+        m.insert(
+            TermOrdKey(Term::symbol(":tests-remove")),
+            Term::Vector(tests_remove.iter().map(|s| Term::Str(s.clone())).collect()),
+        );
+    }
+    if let Some(p) = caps_policy {
+        m.insert(
+            TermOrdKey(Term::symbol(":caps-policy")),
+            Term::Str(p.to_string()),
+        );
+    }
+    Ok(Term::Map(m))
 }
 
 fn apply_replace(forms: &mut [Term], path: &[PathStep], new_term: Term) -> Result<(), PatchError> {

@@ -10,7 +10,10 @@ pub fn canonicalize_module(forms: Vec<Term>) -> anyhow::Result<Vec<Term>> {
 }
 
 pub fn canonicalize_form(form: Term) -> anyhow::Result<Term> {
-    canon_code(form)
+    // Canonicalization is structurally recursive on potentially deep CoreForm terms.
+    // CLI entrypoints may run on the main thread with a smaller stack than test threads,
+    // so grow the stack deterministically as needed to avoid overflow.
+    stacker::maybe_grow(32 * 1024, 4 * 1024 * 1024, || canon_code(form))
 }
 
 fn canon_code(t: Term) -> anyhow::Result<Term> {

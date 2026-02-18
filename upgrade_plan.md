@@ -73,11 +73,14 @@ Acceptance gate:
 - [x] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
-- [ ] Implement self-host patch schema validation/apply pipeline in `.gc`.
+- [x] Implement self-host patch schema validation/apply pipeline in `.gc`.
   - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
   - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.
   - [x] Apply `:replace-node` via `core/cli::apply-replace-node` + `core/cli::print-module-forms` when `--coreform-frontend selfhost` is active (other patch ops still applied in Rust for now).
   - [x] Apply `:add-module` content canonicalization/printing via `core/cli::print-module-from-content` when `--coreform-frontend selfhost` is active.
+  - [x] Apply `:add-module` manifest update via `core/cli::manifest-apply-add-module` when `--coreform-frontend selfhost` is active.
+  - [x] Apply `:remove-module` manifest update via `core/cli::manifest-apply-remove-module` when `--coreform-frontend selfhost` is active.
+  - [x] Apply `:update-manifest` via `core/cli::manifest-apply-update-manifest-op` when `--coreform-frontend selfhost` is active.
 - [x] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
   - [x] `selfhost-artifact` output is byte-for-byte deterministic across rebuilds on the same toolchain (enforced by `gc_cli` tests).
   - [x] `pack` and `test` acceptance artifact hashes are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).

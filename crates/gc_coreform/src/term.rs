@@ -53,7 +53,7 @@ fn tag(t: &Term) -> u8 {
 
 fn cmp_term(a: &Term, b: &Term) -> Ordering {
     // Term ordering is structurally recursive; grow stack as needed to avoid overflow on deep terms.
-    stacker::maybe_grow(32 * 1024, 1024 * 1024, || cmp_term_impl(a, b))
+    stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || cmp_term_impl(a, b))
 }
 
 fn cmp_term_impl(a: &Term, b: &Term) -> Ordering {

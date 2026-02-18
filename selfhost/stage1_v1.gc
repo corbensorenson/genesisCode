@@ -1,13 +1,3 @@
-; Stage-1 CoreForm -> CoreForm transform pipeline (selfhost toolchain v0.2).
-;
-; This module is intentionally conservative and pure:
-; - It never performs effects.
-; - It never evaluates user code (validation gates are host-side obligations).
-; - It rewrites only structurally safe fragments and preserves semantics.
-;
-; Contract surface:
-; - core/cli::stage1-transform-module : (Vec<Form>) -> Vec<Form> | sealed ERROR
-
 (def selfhost/stage1::is-error core/error::is?)
 
 (def selfhost/stage1::type-error (fn (msg) ((core/error::make2 "core/type-error") msg)))
@@ -18,13 +8,10 @@
 
 (def selfhost/stage1::empty-vec (core/pair::as-proper-list nil))
 
-(def selfhost/stage1::vec1
-  (fn (a) (core/pair::as-proper-list ((core/pair::cons a) nil))))
+(def selfhost/stage1::vec1 (fn (a) (core/pair::as-proper-list ((core/pair::cons a) nil))))
 
 (def selfhost/stage1::vec2
-  (fn (a)
-    (fn (b)
-      (core/pair::as-proper-list ((core/pair::cons a) ((core/pair::cons b) nil))))))
+  (fn (a) (fn (b) (core/pair::as-proper-list ((core/pair::cons a) ((core/pair::cons b) nil))))))
 
 (def selfhost/stage1::vec3
   (fn (a)
@@ -40,29 +27,25 @@
         (fn (d)
           (core/pair::as-proper-list
             ((core/pair::cons a)
-             ((core/pair::cons b) ((core/pair::cons c) ((core/pair::cons d) nil))))))))))
+              ((core/pair::cons b) ((core/pair::cons c) ((core/pair::cons d) nil))))))))))
 
-(def selfhost/stage1::sym?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+(def selfhost/stage1::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
 
-(def selfhost/stage1::pair?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
+(def selfhost/stage1::pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
 
-(def selfhost/stage1::vec?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+(def selfhost/stage1::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
 
-(def selfhost/stage1::map?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+(def selfhost/stage1::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
 
-(def selfhost/stage1::int?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+(def selfhost/stage1::int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
 
-(def selfhost/stage1::bool?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
+(def selfhost/stage1::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
 
-(def selfhost/stage1::is-int-zero? (fn (x) (if (selfhost/stage1::int? x) ((core/int::eq? x) 0) false)))
+(def selfhost/stage1::is-int-zero?
+  (fn (x) (if (selfhost/stage1::int? x) ((core/int::eq? x) 0) false)))
 
-(def selfhost/stage1::is-int-one? (fn (x) (if (selfhost/stage1::int? x) ((core/int::eq? x) 1) false)))
+(def selfhost/stage1::is-int-one?
+  (fn (x) (if (selfhost/stage1::int? x) ((core/int::eq? x) 1) false)))
 
 (def selfhost/stage1::falsey?
   (fn (t)
@@ -87,7 +70,7 @@
     (fn (f)
       (if (selfhost/stage1::vec? v)
         (let ((n (core/vec::len v)))
-          (((selfhost/stage1::vec-map2 v f n) 0) selfhost/stage1::empty-vec))
+          (((((selfhost/stage1::vec-map2 v) f) n) 0) selfhost/stage1::empty-vec))
         (selfhost/stage1::type-error "vec-map expects vector datum")))))
 
 (def selfhost/stage1::vec-map2
@@ -102,15 +85,14 @@
                 (let ((y (f x)))
                   (if (selfhost/stage1::is-error y)
                     y
-                    (((selfhost/stage1::vec-map2 v f n) ((core/int::add i) 1))
-                     ((core/vec::push out) y))))))))))))
+                    (((((selfhost/stage1::vec-map2 v) f) n) ((core/int::add i) 1))
+                      ((core/vec::push out) y))))))))))))
 
 (def selfhost/stage1::vec-append
   (fn (a)
     (fn (b)
       (if (if (selfhost/stage1::vec? a) (selfhost/stage1::vec? b) false)
-        (let ((n (core/vec::len b)))
-          (((selfhost/stage1::vec-append2 a b n) 0) a))
+        (let ((n (core/vec::len b))) (((((selfhost/stage1::vec-append2 a) b) n) 0) a))
         (selfhost/stage1::type-error "vec-append expects vector datums")))))
 
 (def selfhost/stage1::vec-append2
@@ -122,8 +104,8 @@
             (if ((core/int::eq? i) n)
               out
               (let ((x ((core/vec::get b) i)))
-                (((selfhost/stage1::vec-append2 a b n) ((core/int::add i) 1))
-                 ((core/vec::push out) x))))))))))
+                (((((selfhost/stage1::vec-append2 a) b) n) ((core/int::add i) 1))
+                  ((core/vec::push out) x))))))))))
 
 (def selfhost/stage1::optimize-module
   (fn (forms)
@@ -137,16 +119,16 @@
       (let ((items (core/pair::as-proper-list t)))
         (if (selfhost/stage1::vec? items)
           (if ((core/int::eq? (core/vec::len items)) 3)
-            (let ((h ((core/vec::get items) 0))
-                  (n ((core/vec::get items) 1))
-                  (rhs ((core/vec::get items) 2)))
+            (let
+              ((h ((core/vec::get items) 0)) (n ((core/vec::get items) 1))
+                (rhs ((core/vec::get items) 2)))
               (if (selfhost/stage1::sym? h)
                 (if ((core/sym::eq? h) (quote def))
                   (if (selfhost/stage1::sym? n)
                     (let ((rhs2 (selfhost/stage1::optimize-term rhs)))
                       (if (selfhost/stage1::is-error rhs2)
                         rhs2
-                        (selfhost/canon::vec->list ((((selfhost/stage1::vec3 h) n) rhs2)))))
+                        (selfhost/canon::vec->list (((selfhost/stage1::vec3 h) n) rhs2))))
                     (selfhost/stage1::optimize-term t))
                   (selfhost/stage1::optimize-term t))
                 (selfhost/stage1::optimize-term t)))
@@ -156,7 +138,6 @@
 
 (def selfhost/stage1::optimize-term
   (fn (t)
-    ; Atoms are unchanged; only map values and list/code structure are rewritten.
     (let ((tg (core/data::tag t)))
       (if ((core/sym::eq? tg) (quote :map))
         (selfhost/stage1::optimize-map-values t)
@@ -167,17 +148,14 @@
     (if (selfhost/stage1::map? m)
       (let ((entries (core/map::entries m)))
         (let ((entries2 ((selfhost/stage1::vec-map entries) selfhost/stage1::optimize-map-entry)))
-          (if (selfhost/stage1::is-error entries2)
-            entries2
-            (core/map::from-entries entries2))))
+          (if (selfhost/stage1::is-error entries2) entries2 (core/map::from-entries entries2))))
       (selfhost/stage1::type-error "optimize-map-values expects map datum"))))
 
 (def selfhost/stage1::optimize-map-entry
   (fn (e)
     (if (selfhost/stage1::vec? e)
       (if ((core/int::eq? (core/vec::len e)) 2)
-        (let ((k ((core/vec::get e) 0))
-              (v ((core/vec::get e) 1)))
+        (let ((k ((core/vec::get e) 0)) (v ((core/vec::get e) 1)))
           (let ((v2 (selfhost/stage1::optimize-term v)))
             (if (selfhost/stage1::is-error v2) v2 ((selfhost/stage1::vec2 k) v2))))
         (selfhost/stage1::bad-form "map entry must be [k v]"))
@@ -191,16 +169,14 @@
           nil
           (let ((h ((core/vec::get items) 0)))
             (if (selfhost/stage1::sym? h)
-              (selfhost/stage1::optimize-special-or-app h items)
+              ((selfhost/stage1::optimize-special-or-app h) items)
               (selfhost/stage1::optimize-app items))))
-        ; improper list: leave as-is
         t))))
 
 (def selfhost/stage1::optimize-special-or-app
   (fn (h)
     (fn (items)
       (if ((core/sym::eq? h) (quote quote))
-        ; do not optimize inside quote
         (selfhost/canon::vec->list items)
         (if ((core/sym::eq? h) (quote fn))
           (selfhost/stage1::optimize-fn items)
@@ -223,20 +199,19 @@
     (if (if ((core/int::lt? (core/vec::len items)) 3) true false)
       (selfhost/canon::vec->list items)
       (let ((params ((core/vec::get items) 1)))
-        (let ((bodyv (selfhost/stage1::slice-from items 2)))
+        (let ((bodyv ((selfhost/stage1::slice-from items) 2)))
           (let ((body2 ((selfhost/stage1::vec-map bodyv) selfhost/stage1::optimize-term)))
             (if (selfhost/stage1::is-error body2)
               body2
-              (let ((head (((selfhost/stage1::vec2 (quote fn)) params))))
+              (let ((head ((selfhost/stage1::vec2 (quote fn)) params)))
                 (let ((all ((selfhost/stage1::vec-append head) body2)))
                   (selfhost/canon::vec->list all))))))))))
 
-; slice-from for vector datum (start..end)
 (def selfhost/stage1::slice-from
   (fn (v)
     (fn (start)
       (let ((n (core/vec::len v)))
-        (((selfhost/stage1::slice-from2 v start n) 0) selfhost/stage1::empty-vec)))))
+        (((((selfhost/stage1::slice-from2 v) start) n) 0) selfhost/stage1::empty-vec)))))
 
 (def selfhost/stage1::slice-from2
   (fn (v)
@@ -247,17 +222,18 @@
             (if ((core/int::eq? i) n)
               out
               (if ((core/int::lt? i) start)
-                (((selfhost/stage1::slice-from2 v start n) ((core/int::add i) 1)) out)
+                (((((selfhost/stage1::slice-from2 v) start) n) ((core/int::add i) 1)) out)
                 (let ((x ((core/vec::get v) i)))
-                  (((selfhost/stage1::slice-from2 v start n) ((core/int::add i) 1))
-                   ((core/vec::push out) x)))))))))))
+                  (((((selfhost/stage1::slice-from2 v) start) n) ((core/int::add i) 1))
+                    ((core/vec::push out) x)))))))))))
 
 (def selfhost/stage1::optimize-if
   (fn (items)
     (if (if ((core/int::eq? (core/vec::len items)) 4) true false)
-      (let ((c (selfhost/stage1::optimize-term ((core/vec::get items) 1)))
-            (tt (selfhost/stage1::optimize-term ((core/vec::get items) 2)))
-            (ee (selfhost/stage1::optimize-term ((core/vec::get items) 3))))
+      (let
+        ((c (selfhost/stage1::optimize-term ((core/vec::get items) 1)))
+          (tt (selfhost/stage1::optimize-term ((core/vec::get items) 2)))
+          (ee (selfhost/stage1::optimize-term ((core/vec::get items) 3))))
         (if (selfhost/stage1::is-error c)
           c
           (if (selfhost/stage1::is-error tt)
@@ -275,7 +251,7 @@
   (fn (items)
     (if (if ((core/int::eq? (core/vec::len items)) 2) true false)
       (selfhost/stage1::optimize-term ((core/vec::get items) 1))
-      (let ((body (selfhost/stage1::slice-from items 1)))
+      (let ((body ((selfhost/stage1::slice-from items) 1)))
         (let ((body2 ((selfhost/stage1::vec-map body) selfhost/stage1::optimize-term)))
           (if (selfhost/stage1::is-error body2)
             body2
@@ -291,12 +267,11 @@
         (let ((binds2 (selfhost/stage1::optimize-let-binds binds)))
           (if (selfhost/stage1::is-error binds2)
             binds2
-            (let ((body (selfhost/stage1::slice-from items 2)))
+            (let ((body ((selfhost/stage1::slice-from items) 2)))
               (let ((body2 ((selfhost/stage1::vec-map body) selfhost/stage1::optimize-term)))
                 (if (selfhost/stage1::is-error body2)
                   body2
-                  ; (let binds body...)
-                  (let ((head (((selfhost/stage1::vec2 (quote let)) binds2))))
+                  (let ((head ((selfhost/stage1::vec2 (quote let)) binds2)))
                     (let ((all ((selfhost/stage1::vec-append head) body2)))
                       (selfhost/canon::vec->list all))))))))))))
 
@@ -304,8 +279,7 @@
   (fn (binds)
     (let ((xs (core/pair::as-proper-list binds)))
       (if (selfhost/stage1::vec? xs)
-        (let ((n (core/vec::len xs)))
-          (((selfhost/stage1::optimize-let-binds2 xs n) 0) nil))
+        (let ((n (core/vec::len xs))) ((((selfhost/stage1::optimize-let-binds2 xs) n) 0) nil))
         binds))))
 
 (def selfhost/stage1::optimize-let-binds2
@@ -319,13 +293,13 @@
               (let ((pair (core/pair::as-proper-list b)))
                 (if (selfhost/stage1::vec? pair)
                   (if ((core/int::eq? (core/vec::len pair)) 2)
-                    (let ((name ((core/vec::get pair) 0))
-                          (rhs ((core/vec::get pair) 1)))
+                    (let ((name ((core/vec::get pair) 0)) (rhs ((core/vec::get pair) 1)))
                       (let ((rhs2 (selfhost/stage1::optimize-term rhs)))
                         (if (selfhost/stage1::is-error rhs2)
                           rhs2
-                          (((selfhost/stage1::optimize-let-binds2 xs n) ((core/int::add i) 1))
-                           ((core/pair::cons (selfhost/canon::vec->list (((selfhost/stage1::vec2 name) rhs2)))) acc)))))
+                          ((((selfhost/stage1::optimize-let-binds2 xs) n) ((core/int::add i) 1))
+                            ((core/pair::cons (selfhost/canon::vec->list ((selfhost/stage1::vec2 name) rhs2)))
+                              acc)))))
                     (selfhost/stage1::bad-form "let binding must be (name expr)"))
                   (selfhost/stage1::bad-form "let bindings must be list of (name expr)"))))))))))
 
@@ -335,18 +309,14 @@
       (selfhost/canon::vec->list items)
       (let ((op ((core/vec::get items) 1)))
         (if (selfhost/stage1::sym? op)
-          (let ((args (selfhost/stage1::slice-from items 2)))
+          (let ((args ((selfhost/stage1::slice-from items) 2)))
             (let ((args2 ((selfhost/stage1::vec-map args) selfhost/stage1::optimize-term)))
-              (if (selfhost/stage1::is-error args2)
-                args2
-                (selfhost/stage1::fold-prim op args2))))
+              (if (selfhost/stage1::is-error args2) args2 ((selfhost/stage1::fold-prim op) args2))))
           (selfhost/stage1::optimize-app items))))))
 
 (def selfhost/stage1::mk-prim2
   (fn (op)
-    (fn (a)
-      (fn (b)
-        (selfhost/canon::vec->list ((((selfhost/stage1::vec4 (quote prim)) op) a) b))))))
+    (fn (a) (fn (b) (selfhost/canon::vec->list ((((selfhost/stage1::vec4 (quote prim)) op) a) b))))))
 
 (def selfhost/stage1::fold-prim
   (fn (op)
@@ -358,9 +328,7 @@
               ((core/int::add a) b)
               (if (selfhost/stage1::is-int-zero? a)
                 b
-                (if (selfhost/stage1::is-int-zero? b)
-                  a
-                  (((selfhost/stage1::mk-prim2 op) a) b))))
+                (if (selfhost/stage1::is-int-zero? b) a (((selfhost/stage1::mk-prim2 op) a) b))))
             (if ((core/sym::eq? op) (quote int/sub))
               (if (if (selfhost/stage1::int? a) (selfhost/stage1::int? b) false)
                 ((core/int::sub a) b)
@@ -372,7 +340,10 @@
                     b
                     (if (selfhost/stage1::is-int-one? b)
                       a
-                      (if (if (selfhost/stage1::is-int-zero? a) true (selfhost/stage1::is-int-zero? b))
+                      (if
+                        (if (selfhost/stage1::is-int-zero? a)
+                          true
+                          (selfhost/stage1::is-int-zero? b))
                         0
                         (((selfhost/stage1::mk-prim2 op) a) b)))))
                 (if ((core/sym::eq? op) (quote int/eq?))
@@ -384,13 +355,12 @@
                       ((core/int::lt? a) b)
                       (((selfhost/stage1::mk-prim2 op) a) b))
                     (((selfhost/stage1::mk-prim2 op) a) b)))))))
-        (selfhost/canon::vec->list (selfhost/stage1::rebuild-prim op args))))))
+        (selfhost/canon::vec->list ((selfhost/stage1::rebuild-prim op) args))))))
 
 (def selfhost/stage1::rebuild-prim
   (fn (op)
     (fn (args)
-      ; (prim op args...)
-      (let ((head (((selfhost/stage1::vec2 (quote prim)) op))))
+      (let ((head ((selfhost/stage1::vec2 (quote prim)) op)))
         ((selfhost/stage1::vec-append head) args)))))
 
 (def selfhost/stage1::optimize-app
@@ -401,6 +371,4 @@
 (def core/cli::stage1-transform-module
   (fn (forms)
     (let ((opt (selfhost/stage1::optimize-module forms)))
-      (if (selfhost/stage1::is-error opt)
-        opt
-        (selfhost/canon::canonicalize-module opt)))))
+      (if (selfhost/stage1::is-error opt) opt (selfhost/canon::canonicalize-module opt)))))

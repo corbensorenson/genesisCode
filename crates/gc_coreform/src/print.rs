@@ -47,7 +47,7 @@ fn atom_repr(t: &Term) -> Option<String> {
 
 fn single_line(t: &Term) -> Option<String> {
     // Used both as a formatting heuristic and as a recursion driver for list printing.
-    stacker::maybe_grow(32 * 1024, 1024 * 1024, || single_line_impl(t))
+    stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || single_line_impl(t))
 }
 
 fn single_line_impl(t: &Term) -> Option<String> {
@@ -112,7 +112,7 @@ fn single_line_impl(t: &Term) -> Option<String> {
 
 fn fmt_term(t: &Term, indent: usize) -> Vec<String> {
     // Printer is structurally recursive on nested CoreForm terms; grow stack as needed.
-    stacker::maybe_grow(32 * 1024, 1024 * 1024, || fmt_term_impl(t, indent))
+    stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || fmt_term_impl(t, indent))
 }
 
 fn fmt_term_impl(t: &Term, indent: usize) -> Vec<String> {

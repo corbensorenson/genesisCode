@@ -13,7 +13,7 @@ use num_traits::ToPrimitive;
 ///
 /// This is a DoS safety valve, not a semantic constraint. Tooling may allow
 /// overriding or disabling it for trusted inputs.
-pub const DEFAULT_STEP_LIMIT: u64 = 5_000_000;
+pub const DEFAULT_STEP_LIMIT: u64 = 50_000_000;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StepLimit {
