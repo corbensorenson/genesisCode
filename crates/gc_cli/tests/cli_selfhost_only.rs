@@ -62,11 +62,14 @@ fn write_vcs_caps(dir: &Path) -> PathBuf {
     let caps = dir.join("caps_vcs.toml");
     std::fs::write(
         &caps,
-        r#"
-allow = ["core/vcs::log"]
+r#"
+allow = ["core/vcs::log", "core/store::get", "core/refs::get", "core/refs::list"]
 
 [store]
 dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
 "#,
     )
     .unwrap();

@@ -21,10 +21,19 @@ fn write_caps(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
-  "core/pkg::init"
+  "core/pkg::init",
+  "core/pkg::add",
+  "core/pkg::list",
+  "core/pkg::info"
 ]
 
 [op."core/pkg::init"]
+base_dir = "."
+[op."core/pkg::add"]
+base_dir = "."
+[op."core/pkg::list"]
+base_dir = "."
+[op."core/pkg::info"]
 base_dir = "."
 "#,
     )
@@ -63,8 +72,12 @@ fn poison_cli_pkg_init_program(artifact: &Path) {
         })
         .expect("selfhost/cli_coreform_v1.gc entry");
 
-    let poisoned_src = "(def core/cli::pkg-init-program \"shadowed\")\n";
-    let poisoned_forms = canonicalize_module(parse_module(poisoned_src).unwrap()).unwrap();
+    let module_src = match cli_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("cli module missing :source"),
+    };
+    let poisoned_src = format!("{module_src}\n(def core/cli::pkg-init-program \"shadowed\")\n");
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
     let poisoned_hash = hash_module(&poisoned_forms);
     cli_mod.insert(
         TermOrdKey(Term::symbol(":source")),
@@ -181,4 +194,148 @@ fn pkg_init_selfhost_frontend_fails_when_contract_is_poisoned() {
         .failure()
         .code(20)
         .stderr(predicate::str::contains("pkg-init-program"));
+}
+
+#[test]
+fn pkg_add_list_info_values_match_between_frontends() {
+    let td = tempfile::tempdir().unwrap();
+    let rust_dir = td.path().join("rust");
+    let self_dir = td.path().join("self");
+    fs::create_dir_all(&rust_dir).unwrap();
+    fs::create_dir_all(&self_dir).unwrap();
+
+    let rust_caps = write_caps(&rust_dir);
+    let self_caps = write_caps(&self_dir);
+    let artifact = build_selfhost_artifact(&self_dir);
+
+    let rust_lock = rust_dir.join("genesis.lock");
+    let self_lock = self_dir.join("genesis.lock");
+
+    let rust_init = cmd()
+        .current_dir(&rust_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["init", "--workspace", "w", "--lock"])
+        .arg(&rust_lock)
+        .args(["--policy", "policy:default-v0.1"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_init = cmd()
+        .current_dir(&self_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["init", "--workspace", "w", "--lock"])
+        .arg(&self_lock)
+        .args(["--policy", "policy:default-v0.1"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&rust_init), "rust");
+    assert_eq!(json_frontend_name(&self_init), "selfhost");
+    assert_eq!(json_value(&rust_init), json_value(&self_init));
+
+    let rust_add = cmd()
+        .current_dir(&rust_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["add", "dep@refs/heads/main", "--lock"])
+        .arg(&rust_lock)
+        .args(["--update-policy", "auto", "--registry", "default"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_add = cmd()
+        .current_dir(&self_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["add", "dep@refs/heads/main", "--lock"])
+        .arg(&self_lock)
+        .args(["--update-policy", "auto", "--registry", "default"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&rust_add), "rust");
+    assert_eq!(json_frontend_name(&self_add), "selfhost");
+    assert_eq!(json_value(&rust_add), json_value(&self_add));
+
+    let rust_list = cmd()
+        .current_dir(&rust_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["list", "--lock"])
+        .arg(&rust_lock)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_list = cmd()
+        .current_dir(&self_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["list", "--lock"])
+        .arg(&self_lock)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&rust_list), "rust");
+    assert_eq!(json_frontend_name(&self_list), "selfhost");
+    assert_eq!(json_value(&rust_list), json_value(&self_list));
+
+    let rust_info = cmd()
+        .current_dir(&rust_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["info", "dep", "--lock"])
+        .arg(&rust_lock)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let self_info = cmd()
+        .current_dir(&self_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["info", "dep", "--lock"])
+        .arg(&self_lock)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(json_frontend_name(&rust_info), "rust");
+    assert_eq!(json_frontend_name(&self_info), "selfhost");
+    assert_eq!(json_value(&rust_info), json_value(&self_info));
 }

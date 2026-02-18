@@ -39,14 +39,8 @@ fn build_selfhost_artifact_source(modules: &[(String, String)]) -> String {
             let h = gc_coreform::hash_module(&forms);
             Term::Map(
                 [
-                    (
-                        TermOrdKey(Term::symbol(":path")),
-                        Term::Str(path.clone()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":source")),
-                        Term::Str(src.clone()),
-                    ),
+                    (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
+                    (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
                     (
                         TermOrdKey(Term::symbol(":module-h")),
                         Term::Bytes(h.to_vec().into()),
@@ -71,7 +65,10 @@ fn build_selfhost_artifact_source(modules: &[(String, String)]) -> String {
                 Term::Str("genesis/selfhost-toolchain-artifact-v0.2".to_string()),
             ),
             (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (TermOrdKey(Term::symbol(":modules")), Term::Vector(module_terms)),
+            (
+                TermOrdKey(Term::symbol(":modules")),
+                Term::Vector(module_terms),
+            ),
         ]
         .into_iter()
         .collect::<BTreeMap<_, _>>(),
@@ -112,11 +109,14 @@ fn artifact_loader_enforces_manifest_required_symbols() {
     let artifact = build_selfhost_artifact_source(&mutated);
     let mut ctx = EvalCtx::new();
     let mut env = build_prelude(&mut ctx).env;
-    let err = load_selfhost_coreform_toolchain_v1_from_artifact_source(&mut ctx, &mut env, &artifact)
-        .expect_err("artifact load should fail when manifest required symbol is missing");
+    let err =
+        load_selfhost_coreform_toolchain_v1_from_artifact_source(&mut ctx, &mut env, &artifact)
+            .expect_err("artifact load should fail when manifest required symbol is missing");
     let msg = format!("{err:#}");
     assert!(
-        msg.contains("artifact missing required manifest symbol: core/cli::canonicalize-module-src"),
+        msg.contains(
+            "artifact missing required manifest symbol: core/cli::canonicalize-module-src"
+        ),
         "unexpected error: {msg}"
     );
 }

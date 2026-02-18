@@ -14,11 +14,7 @@
 
 (def core/cli::int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
 
-(def core/cli::str-or-nil?
-  (fn (x)
-    (if (core/list::is-nil? x)
-      true
-      (core/cli::str? x))))
+(def core/cli::str-or-nil? (fn (x) (if (core/list::is-nil? x) true (core/cli::str? x))))
 
 (def core/cli::keygen-request
   (fn (req)
@@ -33,18 +29,23 @@
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (pkg ((core/map::get req) (quote :pkg)))
-          (key ((core/map::get req) (quote :key)))
+        ((pkg ((core/map::get req) (quote :pkg))) (key ((core/map::get req) (quote :key)))
           (acceptance ((core/map::get req) (quote :acceptance)))
           (signatures ((core/map::get req) (quote :signatures))))
         (if (if (core/cli::str? pkg) (core/cli::str? key) false)
           (if (core/cli::str-or-nil? acceptance)
             (if (core/cli::str-or-nil? signatures)
-              {:pkg pkg :key key :acceptance acceptance :signatures signatures}
-              ((core/error::make2 "core/type-error") "core/cli::sign-request expects :signatures string or nil"))
-            ((core/error::make2 "core/type-error") "core/cli::sign-request expects :acceptance string or nil"))
-          ((core/error::make2 "core/type-error") "core/cli::sign-request expects :pkg and :key strings")))
+              {
+                :acceptance acceptance
+                :key key
+                :pkg pkg
+                :signatures signatures}
+              ((core/error::make2 "core/type-error")
+                "core/cli::sign-request expects :signatures string or nil"))
+            ((core/error::make2 "core/type-error")
+              "core/cli::sign-request expects :acceptance string or nil"))
+          ((core/error::make2 "core/type-error")
+            "core/cli::sign-request expects :pkg and :key strings")))
       ((core/error::make2 "core/type-error") "core/cli::sign-request expects map"))))
 
 (def core/cli::transparency-verify-request
@@ -53,15 +54,15 @@
       (let ((pkg ((core/map::get req) (quote :pkg))))
         (if (core/cli::str? pkg)
           {:pkg pkg}
-          ((core/error::make2 "core/type-error") "core/cli::transparency-verify-request expects :pkg string")))
+          ((core/error::make2 "core/type-error")
+            "core/cli::transparency-verify-request expects :pkg string")))
       ((core/error::make2 "core/type-error") "core/cli::transparency-verify-request expects map"))))
 
 (def core/cli::verify-request
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (pkg ((core/map::get req) (quote :pkg)))
+        ((pkg ((core/map::get req) (quote :pkg)))
           (acceptance ((core/map::get req) (quote :acceptance)))
           (policy ((core/map::get req) (quote :policy)))
           (signatures ((core/map::get req) (quote :signatures)))
@@ -71,14 +72,17 @@
             (if (core/cli::str-or-nil? signatures)
               (if (core/cli::bool? scan-store)
                 {
-                  :pkg pkg
                   :acceptance acceptance
+                  :pkg pkg
                   :policy policy
-                  :signatures signatures
-                  :scan-store scan-store}
-                ((core/error::make2 "core/type-error") "core/cli::verify-request expects :scan-store bool"))
-              ((core/error::make2 "core/type-error") "core/cli::verify-request expects :signatures string or nil"))
-            ((core/error::make2 "core/type-error") "core/cli::verify-request expects :acceptance and :policy as string or nil"))
+                  :scan-store scan-store
+                  :signatures signatures}
+                ((core/error::make2 "core/type-error")
+                  "core/cli::verify-request expects :scan-store bool"))
+              ((core/error::make2 "core/type-error")
+                "core/cli::verify-request expects :signatures string or nil"))
+            ((core/error::make2 "core/type-error")
+              "core/cli::verify-request expects :acceptance and :policy as string or nil"))
           ((core/error::make2 "core/type-error") "core/cli::verify-request expects :pkg string")))
       ((core/error::make2 "core/type-error") "core/cli::verify-request expects map"))))
 
@@ -86,16 +90,15 @@
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (out ((core/map::get req) (quote :out)))
+        ((out ((core/map::get req) (quote :out)))
           (min-supported ((core/map::get req) (quote :min-stage2-supported-modules)))
           (min-validated ((core/map::get req) (quote :min-stage2-validated-modules))))
         (if (core/cli::str? out)
           (if (if (core/cli::int? min-supported) (core/cli::int? min-validated) false)
             {
-              :out out
               :min-stage2-supported-modules min-supported
-              :min-stage2-validated-modules min-validated}
+              :min-stage2-validated-modules min-validated
+              :out out}
             ((core/error::make2 "core/type-error")
               "core/cli::selfhost-artifact-request expects integer stage2 minima"))
           ((core/error::make2 "core/type-error")
@@ -381,45 +384,543 @@
           (((core/effect::perform (quote core/gc::purge)) payload) (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))
 
+(def core/cli::vcs-log::vec-take
+  (fn (v)
+    (fn (n)
+      (if (if (core/cli::vec? v) (core/cli::int? n) false)
+        ((((core/cli::vcs-log::vec-take2 v) n) 0) [])
+        []))))
+
+(def core/cli::vcs-log::vec-take2
+  (fn (v)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/cli::vcs-log::vec-take2 v) n) ((core/int::add i) 1))
+              ((core/vec::push out) ((core/vec::get v) i)))))))))
+
+(def core/cli::vcs-log::vec-reverse
+  (fn (v)
+    (if (core/cli::vec? v) ((((core/cli::vcs-log::vec-reverse2 v) (core/vec::len v)) 0) []) [])))
+
+(def core/cli::vcs-log::vec-reverse2
+  (fn (v)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((j ((core/int::sub n) ((core/int::add i) 1))))
+              ((((core/cli::vcs-log::vec-reverse2 v) n) ((core/int::add i) 1))
+                ((core/vec::push out) ((core/vec::get v) j))))))))))
+
+(def core/cli::vcs-log::entry
+  (fn (hash)
+    (fn (commit)
+      {
+        :attestations ((core/map::get commit) (quote :attestations))
+        :base ((core/map::get commit) (quote :base))
+        :evidence ((core/map::get commit) (quote :evidence))
+        :hash hash
+        :message ((core/map::get commit) (quote :message))
+        :obligations ((core/map::get commit) (quote :obligations))
+        :parents ((core/map::get commit) (quote :parents))
+        :patch ((core/map::get commit) (quote :patch))
+        :result ((core/map::get commit) (quote :result))})))
+
+(def core/cli::vcs-log::resolve-root
+  (fn (root)
+    (if (core/cli::str? root)
+      (if ((core/cli::str-starts-with? root) "refs/")
+        ((core/effect::bind (core/cli::refs-get-program root))
+          (fn (resp)
+            (if (core/cli::is-error resp)
+              (core/effect::pure resp)
+              (let ((h ((core/map::get resp) (quote :hash))))
+                (if (core/cli::str? h)
+                  (core/effect::pure h)
+                  (core/effect::pure
+                    ((core/error::make2 "core/vcs/ref-not-found")
+                      ((core/str::concat "ref not found: ") root))))))))
+        (if (core/cli::hash-hex? root)
+          (core/effect::pure root)
+          (core/effect::pure
+            ((core/error::make2 "core/vcs/bad-root") "root must be a 64-hex commit hash or refs/..."))))
+      (core/effect::pure
+        ((core/error::make2 "core/vcs/bad-root") "root must be a 64-hex commit hash or refs/...")))))
+
+(def core/cli::vcs-log::loop
+  (fn (state)
+    (fn (max)
+      (let ((commits ((core/map::get state) (quote :commits))))
+        (if ((core/int::eq? (core/vec::len commits)) max)
+          (core/effect::pure (((core/map::put state) (quote :truncated)) true))
+          (let ((stack ((core/map::get state) (quote :stack))))
+            (if ((core/int::eq? (core/vec::len stack)) 0)
+              (core/effect::pure state)
+              (let
+                ((seen ((core/map::get state) (quote :seen)))
+                  (h ((core/vec::get stack) ((core/int::sub (core/vec::len stack)) 1)))
+                  (rest
+                    ((core/cli::vcs-log::vec-take stack) ((core/int::sub (core/vec::len stack)) 1))))
+                (if (core/list::is-nil? ((core/map::get seen) h))
+                  ((core/effect::bind (core/cli::store-get-program h))
+                    (fn (resp)
+                      (if (core/cli::is-error resp)
+                        (core/effect::pure resp)
+                        (let
+                          ((c (core/cli::vcs-validate-commit ((core/map::get resp) (quote :artifact)))))
+                          (if (core/cli::is-error c)
+                            (core/effect::pure c)
+                            (let
+                              ((parents ((core/map::get c) (quote :parents)))
+                                (stack2
+                                  ((core/cli::vec-append rest)
+                                    (core/cli::vcs-log::vec-reverse parents)))
+                                (seen2 (((core/map::put seen) h) true))
+                                (commits2
+                                  ((core/vec::push commits) ((core/cli::vcs-log::entry h) c)))
+                                (state2
+                                  {
+                                    :commits commits2
+                                    :seen seen2
+                                    :stack stack2
+                                    :truncated false}))
+                              ((core/cli::vcs-log::loop state2) max)))))))
+                  (
+                    (core/cli::vcs-log::loop
+                      {
+                        :commits commits
+                        :seen seen
+                        :stack rest
+                        :truncated ((core/map::get state) (quote :truncated))})
+                    max))))))))))
+
 (def core/cli::vcs-log-program
   (fn (req)
     (if (core/cli::map? req)
-      (
-        ((core/effect::perform (quote core/vcs::log))
-          {
-            :max ((core/map::get req) (quote :max))
-            :root ((core/map::get req) (quote :root))})
-        (fn (r) (core/effect::pure r)))
+      (let ((root0 ((core/map::get req) (quote :root))) (max0 ((core/map::get req) (quote :max))))
+        (let ((max (if (core/cli::int? max0) max0 1000)))
+          ((core/effect::bind (core/cli::vcs-log::resolve-root root0))
+            (fn (resolved)
+              (if (core/cli::is-error resolved)
+                (core/effect::pure resolved)
+                (
+                  (core/effect::bind
+                    (
+                      (core/cli::vcs-log::loop
+                        {
+                          :commits []
+                          :seen {}
+                          :stack ((core/vec::push []) resolved)
+                          :truncated false})
+                      max))
+                  (fn (state)
+                    (if (core/cli::is-error state)
+                      (core/effect::pure state)
+                      (core/effect::pure
+                        {
+                          :commits ((core/map::get state) (quote :commits))
+                          :ok true
+                          :root resolved
+                          :truncated ((core/map::get state) (quote :truncated))})))))))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-log-program expects map"))))
+
+(def core/cli::sym-or-str->str
+  (fn (x) (if (core/cli::str? x) x (if (core/cli::sym? x) (core/sym::to-str x) nil))))
+
+(def core/cli::vcs-map-get-sym-or-str
+  (fn (m)
+    (fn (kstr)
+      (if (if (core/cli::map? m) (core/cli::str? kstr) false)
+        (let ((v1 ((core/map::get m) (core/sym::from-str kstr))))
+          (if (core/list::is-nil? v1) ((core/map::get m) kstr) v1))
+        nil))))
+
+(def core/cli::vcs-package-module-ref
+  (fn (mods)
+    (fn (sym)
+      (if (if (core/cli::vec? mods) (core/cli::str? sym) false)
+        ((((core/cli::vcs-package-module-ref2 mods) sym) (core/vec::len mods)) 0)
+        nil))))
+
+(def core/cli::vcs-package-module-ref2
+  (fn (mods)
+    (fn (sym)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            nil
+            (let ((entry ((core/vec::get mods) i)))
+              (if (core/cli::map? entry)
+                (let
+                  ((p ((core/map::get entry) (quote :path)))
+                    (h ((core/map::get entry) (quote :hash))))
+                  (if (if (core/cli::str? p) (core/cli::hash-hex? h) false)
+                    (if ((core/eq? p) sym)
+                      h
+                      ((((core/cli::vcs-package-module-ref2 mods) sym) n) ((core/int::add i) 1)))
+                    ((((core/cli::vcs-package-module-ref2 mods) sym) n) ((core/int::add i) 1))))
+                ((((core/cli::vcs-package-module-ref2 mods) sym) n) ((core/int::add i) 1))))))))))
+
+(def core/cli::vcs-snapshot-symbol-ref
+  (fn (snapshot)
+    (fn (sym)
+      (let ((snap (core/cli::vcs-validate-snapshot snapshot)))
+        (if (core/cli::is-error snap)
+          snap
+          (let ((kind ((core/map::get snapshot) (quote :kind))))
+            (if ((core/sym::eq? kind) (quote :module))
+              (let ((defs ((core/map::get snapshot) (quote :defs))))
+                (if (core/cli::map? defs)
+                  (let ((h ((core/cli::vcs-map-get-sym-or-str defs) sym)))
+                    (if (core/cli::hash-hex? h) h nil))
+                  nil))
+              (if ((core/sym::eq? kind) (quote :contract))
+                (let ((ov ((core/map::get snapshot) (quote :overrides))))
+                  (if (core/cli::map? ov)
+                    (let ((h ((core/cli::vcs-map-get-sym-or-str ov) sym)))
+                      (if (core/cli::hash-hex? h) h nil))
+                    nil))
+                (if ((core/sym::eq? kind) (quote :workspace))
+                  (let ((mods ((core/map::get snapshot) (quote :modules))))
+                    (if (core/cli::map? mods)
+                      (let ((h ((core/cli::vcs-map-get-sym-or-str mods) sym)))
+                        (if (core/cli::hash-hex? h) h nil))
+                      nil))
+                  (if ((core/sym::eq? kind) (quote :package))
+                    ((core/cli::vcs-package-module-ref ((core/map::get snapshot) (quote :modules)))
+                      sym)
+                    nil))))))))))
+
+(def core/cli::vcs-load-commit
+  (fn (h)
+    (if (core/cli::hash-hex? h)
+      ((core/effect::bind (core/cli::store-get-program h))
+        (fn (resp)
+          (if (core/cli::is-error resp)
+            (core/effect::pure resp)
+            (let ((commit (core/cli::vcs-validate-commit ((core/map::get resp) (quote :artifact)))))
+              (if (core/cli::is-error commit)
+                (core/effect::pure commit)
+                (core/effect::pure {:commit commit :hash h}))))))
+      (core/effect::pure ((core/error::make2 "core/vcs/bad-payload") ":commit must be 64-hex hash")))))
+
+(def core/cli::vcs-load-snapshot
+  (fn (h)
+    (if (core/cli::hash-hex? h)
+      ((core/effect::bind (core/cli::store-get-program h))
+        (fn (resp)
+          (if (core/cli::is-error resp)
+            (core/effect::pure resp)
+            (let
+              ((snapshot (core/cli::vcs-validate-snapshot ((core/map::get resp) (quote :artifact)))))
+              (if (core/cli::is-error snapshot)
+                (core/effect::pure snapshot)
+                (core/effect::pure {:hash h :snapshot snapshot}))))))
+      (core/effect::pure
+        ((core/error::make2 "core/vcs/bad-payload") ":snapshot must be 64-hex hash")))))
+
+(def core/cli::vcs-ref-hashes
+  (fn (refs-resp)
+    (let ((refs ((core/map::get refs-resp) (quote :refs))))
+      (if (core/cli::vec? refs) ((((core/cli::vcs-ref-hashes2 refs) (core/vec::len refs)) 0) []) []))))
+
+(def core/cli::vcs-ref-hashes2
+  (fn (refs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get refs) i)))
+              (if (core/cli::map? e)
+                (let ((h ((core/map::get e) (quote :hash))))
+                  ((((core/cli::vcs-ref-hashes2 refs) n) ((core/int::add i) 1))
+                    (if (core/cli::hash-hex? h) ((core/vec::push out) h) out)))
+                ((((core/cli::vcs-ref-hashes2 refs) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::vcs-find-commit-for-snapshot-loop
+  (fn (snapshot-h)
+    (fn (state)
+      (let ((stack ((core/map::get state) (quote :stack))))
+        (if ((core/int::eq? (core/vec::len stack)) 0)
+          (core/effect::pure nil)
+          (let
+            ((seen ((core/map::get state) (quote :seen)))
+              (h ((core/vec::get stack) ((core/int::sub (core/vec::len stack)) 1)))
+              (rest ((core/cli::vcs-log::vec-take stack) ((core/int::sub (core/vec::len stack)) 1))))
+            (if (core/list::is-nil? ((core/map::get seen) h))
+              ((core/effect::bind (core/cli::vcs-load-commit h))
+                (fn (loaded)
+                  (if (core/cli::is-error loaded)
+                    (core/effect::pure loaded)
+                    (let
+                      ((c ((core/map::get loaded) (quote :commit)))
+                        (seen2 (((core/map::put seen) h) true)))
+                      (if ((core/eq? ((core/map::get c) (quote :result))) snapshot-h)
+                        (core/effect::pure h)
+                        ((core/cli::vcs-find-commit-for-snapshot-loop snapshot-h)
+                          {
+                            :seen seen2
+                            :stack
+                              ((core/cli::vec-append rest)
+                                (core/cli::vcs-log::vec-reverse ((core/map::get c) (quote :parents))))}))))))
+              ((core/cli::vcs-find-commit-for-snapshot-loop snapshot-h) {:seen seen :stack rest}))))))))
+
+(def core/cli::vcs-find-commit-for-snapshot
+  (fn (snapshot-h)
+    ((core/effect::bind (core/cli::refs-list-program nil))
+      (fn (resp)
+        (if (core/cli::is-error resp)
+          (core/effect::pure resp)
+          ((core/cli::vcs-find-commit-for-snapshot-loop snapshot-h)
+            {
+              :seen {}
+              :stack (core/cli::vcs-ref-hashes resp)}))))))
+
+(def core/cli::vcs-snapshot-symbol-ref-by-hash
+  (fn (snapshot-h)
+    (fn (sym)
+      ((core/effect::bind (core/cli::vcs-load-snapshot snapshot-h))
+        (fn (loaded)
+          (if (core/cli::is-error loaded)
+            (core/effect::pure loaded)
+            (core/effect::pure
+              ((core/cli::vcs-snapshot-symbol-ref ((core/map::get loaded) (quote :snapshot))) sym))))))))
+
+(def core/cli::vcs-blame-next-parent-loop
+  (fn (parents)
+    (fn (sym)
+      (fn (value-h)
+        (fn (n)
+          (fn (i)
+            (if ((core/int::eq? i) n)
+              (core/effect::pure nil)
+              (let ((p ((core/vec::get parents) i)))
+                ((core/effect::bind (core/cli::vcs-load-commit p))
+                  (fn (loaded)
+                    (if (core/cli::is-error loaded)
+                      (core/effect::pure loaded)
+                      (let ((pc ((core/map::get loaded) (quote :commit))))
+                        (
+                          (core/effect::bind
+                            ((core/cli::vcs-snapshot-symbol-ref-by-hash ((core/map::get pc) (quote :result)))
+                              sym))
+                          (fn (pref)
+                            (if (core/cli::is-error pref)
+                              (core/effect::pure pref)
+                              (if (if (core/cli::hash-hex? pref) ((core/eq? pref) value-h) false)
+                                (core/effect::pure p)
+                                (((((core/cli::vcs-blame-next-parent-loop parents) sym) value-h) n)
+                                  ((core/int::add i) 1))))))))))))))))))
+
+(def core/cli::vcs-blame-next-parent
+  (fn (parents)
+    (fn (sym)
+      (fn (value-h)
+        (if (core/cli::vec? parents)
+          (((((core/cli::vcs-blame-next-parent-loop parents) sym) value-h) (core/vec::len parents))
+            0)
+          (core/effect::pure nil))))))
+
+(def core/cli::vcs-blame-loop
+  (fn (cur)
+    (fn (sym)
+      (fn (value-h)
+        (fn (seen)
+          (if ((core/map::get seen) cur)
+            (core/effect::pure cur)
+            (let ((seen2 (((core/map::put seen) cur) true)))
+              ((core/effect::bind (core/cli::vcs-load-commit cur))
+                (fn (loaded)
+                  (if (core/cli::is-error loaded)
+                    (core/effect::pure loaded)
+                    (let ((c ((core/map::get loaded) (quote :commit))))
+                      (
+                        (core/effect::bind
+                          (((core/cli::vcs-blame-next-parent ((core/map::get c) (quote :parents))) sym)
+                            value-h))
+                        (fn (next)
+                          (if (core/cli::is-error next)
+                            (core/effect::pure next)
+                            (if (core/cli::hash-hex? next)
+                              ((((core/cli::vcs-blame-loop next) sym) value-h) seen2)
+                              (core/effect::pure cur))))))))))))))))
+
+(def core/cli::vcs-resolve-start
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((snapshot0 ((core/map::get req) (quote :snapshot)))
+          (commit0 ((core/map::get req) (quote :commit))))
+        (let
+          (
+            (snapshot-bad
+              (if (core/list::is-nil? snapshot0)
+                false
+                (if (core/cli::hash-hex? snapshot0) false true)))
+            (commit-bad
+              (if (core/list::is-nil? commit0) false (if (core/cli::hash-hex? commit0) false true))))
+          (if (if snapshot-bad true commit-bad)
+            (core/effect::pure
+              ((core/error::make2 "core/vcs/bad-payload")
+                ":snapshot/:commit must be 64-hex hash strings or nil"))
+            (if (if (core/list::is-nil? snapshot0) (core/list::is-nil? commit0) false)
+              (core/effect::pure
+                ((core/error::make2 "core/vcs/bad-payload") "missing :snapshot or :commit"))
+              (if (core/list::is-nil? commit0)
+                ((core/effect::bind (core/cli::vcs-find-commit-for-snapshot snapshot0))
+                  (fn (found)
+                    (if (core/cli::is-error found)
+                      (core/effect::pure found)
+                      (if (core/cli::hash-hex? found)
+                        ((core/effect::bind (core/cli::vcs-load-commit found))
+                          (fn (loaded)
+                            (if (core/cli::is-error loaded)
+                              (core/effect::pure loaded)
+                              (core/effect::pure
+                                {
+                                  :query-snapshot snapshot0
+                                  :start-commit ((core/map::get loaded) (quote :commit))
+                                  :start-commit-h found}))))
+                        (core/effect::pure
+                          ((core/error::make2 "core/vcs/no-commit-for-snapshot")
+                            ((core/str::concat "no commit found for snapshot: ") snapshot0)))))))
+                ((core/effect::bind (core/cli::vcs-load-commit commit0))
+                  (fn (loaded)
+                    (if (core/cli::is-error loaded)
+                      (core/effect::pure loaded)
+                      (let ((c ((core/map::get loaded) (quote :commit))))
+                        (if
+                          (if (core/list::is-nil? snapshot0)
+                            false
+                            ((core/eq? ((core/map::get c) (quote :result))) snapshot0))
+                          (core/effect::pure
+                            {
+                              :query-snapshot snapshot0
+                              :start-commit c
+                              :start-commit-h commit0})
+                          (if (core/list::is-nil? snapshot0)
+                            (core/effect::pure
+                              {
+                                :query-snapshot ((core/map::get c) (quote :result))
+                                :start-commit c
+                                :start-commit-h commit0})
+                            (core/effect::pure
+                              ((core/error::make2 "core/vcs/bad-payload")
+                                "provided :commit does not resolve to provided :snapshot")))))))))))))
+      (core/effect::pure
+        ((core/error::make2 "core/type-error") "core/cli::vcs-resolve-start expects map")))))
 
 (def core/cli::vcs-blame-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :snapshot ((core/map::get req) (quote :snapshot))
-              :sym ((core/map::get req) (quote :sym))})
-          (path ((core/map::get req) (quote :path))))
-        (let
-          ((payload (if (core/list::is-nil? path) payload0 (((core/map::put payload0) (quote :path)) path))))
-          (((core/effect::perform (quote core/vcs::blame)) payload) (fn (r) (core/effect::pure r)))))
+        ((sym (core/cli::sym-or-str->str ((core/map::get req) (quote :sym))))
+          (path0 ((core/map::get req) (quote :path))))
+        (if (core/list::is-nil? sym)
+          ((core/error::make2 "core/vcs/bad-payload") ":sym must be symbol/string")
+          (let ((path (if (core/list::is-nil? path0) nil (core/cli::sym-or-str->str path0))))
+            (if (if (core/list::is-nil? path0) false (core/list::is-nil? path))
+              ((core/error::make2 "core/vcs/bad-payload") ":path must be symbol/string or nil")
+              ((core/effect::bind (core/cli::vcs-resolve-start req))
+                (fn (start)
+                  (if (core/cli::is-error start)
+                    (core/effect::pure start)
+                    (let
+                      ((query-snapshot ((core/map::get start) (quote :query-snapshot)))
+                        (start-h ((core/map::get start) (quote :start-commit-h))))
+                      ((core/effect::bind ((core/cli::vcs-snapshot-symbol-ref-by-hash query-snapshot) sym))
+                        (fn (value-h)
+                          (if (core/cli::is-error value-h)
+                            (core/effect::pure value-h)
+                            (if (core/cli::hash-hex? value-h)
+                              ((core/effect::bind ((((core/cli::vcs-blame-loop start-h) sym) value-h) {}))
+                                (fn (blame-h)
+                                  (if (core/cli::is-error blame-h)
+                                    (core/effect::pure blame-h)
+                                    ((core/effect::bind (core/cli::vcs-load-commit blame-h))
+                                      (fn (loaded)
+                                        (if (core/cli::is-error loaded)
+                                          (core/effect::pure loaded)
+                                          (let ((c ((core/map::get loaded) (quote :commit))))
+                                            (core/effect::pure
+                                              {
+                                                :commit blame-h
+                                                :ok true
+                                                :path path
+                                                :query-snapshot query-snapshot
+                                                :snapshot ((core/map::get c) (quote :result))
+                                                :sym sym
+                                                :value value-h}))))))))
+                              (core/effect::pure
+                                ((core/error::make2 "core/vcs/symbol-not-found")
+                                  ((core/str::concat "symbol not found in snapshot: ") sym)))))))))))))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-blame-program expects map"))))
 
 (def core/cli::vcs-why-program
   (fn (req)
     (if (core/cli::map? req)
       (let
-        (
-          (payload0
-            {
-              :snapshot ((core/map::get req) (quote :snapshot))
-              :sym ((core/map::get req) (quote :sym))})
-          (op ((core/map::get req) (quote :op))))
-        (let
-          ((payload (if (core/list::is-nil? op) payload0 (((core/map::put payload0) (quote :op)) op))))
-          (((core/effect::perform (quote core/vcs::why)) payload) (fn (r) (core/effect::pure r)))))
+        ((sym (core/cli::sym-or-str->str ((core/map::get req) (quote :sym))))
+          (op0 ((core/map::get req) (quote :op)))
+          (path0 ((core/map::get req) (quote :path))))
+        (if (core/list::is-nil? sym)
+          ((core/error::make2 "core/vcs/bad-payload") ":sym must be symbol/string")
+          (let
+            ((op (if (core/list::is-nil? op0) nil (core/cli::sym-or-str->str op0)))
+              (path (if (core/list::is-nil? path0) nil (core/cli::sym-or-str->str path0))))
+            (if
+              (if (if (core/list::is-nil? op0) false (core/list::is-nil? op))
+                true
+                (if (core/list::is-nil? path0) false (core/list::is-nil? path)))
+              ((core/error::make2 "core/vcs/bad-payload") ":op/:path must be symbol/string or nil")
+              ((core/effect::bind (core/cli::vcs-resolve-start req))
+                (fn (start)
+                  (if (core/cli::is-error start)
+                    (core/effect::pure start)
+                    (let
+                      ((query-snapshot ((core/map::get start) (quote :query-snapshot)))
+                        (start-h ((core/map::get start) (quote :start-commit-h))))
+                      ((core/effect::bind ((core/cli::vcs-snapshot-symbol-ref-by-hash query-snapshot) sym))
+                        (fn (value-h)
+                          (if (core/cli::is-error value-h)
+                            (core/effect::pure value-h)
+                            (if (core/cli::hash-hex? value-h)
+                              ((core/effect::bind ((((core/cli::vcs-blame-loop start-h) sym) value-h) {}))
+                                (fn (blame-h)
+                                  (if (core/cli::is-error blame-h)
+                                    (core/effect::pure blame-h)
+                                    ((core/effect::bind (core/cli::vcs-load-commit blame-h))
+                                      (fn (loaded)
+                                        (if (core/cli::is-error loaded)
+                                          (core/effect::pure loaded)
+                                          (let ((c ((core/map::get loaded) (quote :commit))))
+                                            (core/effect::pure
+                                              {
+                                                :attestations
+                                                  ((core/map::get c) (quote :attestations))
+                                                :author ((core/map::get c) (quote :author))
+                                                :commit blame-h
+                                                :evidence ((core/map::get c) (quote :evidence))
+                                                :message ((core/map::get c) (quote :message))
+                                                :obligations
+                                                  ((core/map::get c) (quote :obligations))
+                                                :ok true
+                                                :op op
+                                                :path path
+                                                :query-snapshot query-snapshot
+                                                :snapshot ((core/map::get c) (quote :result))
+                                                :sym sym
+                                                :target ((core/map::get c) (quote :target))
+                                                :value value-h
+                                                :why ((core/map::get c) (quote :why))}))))))))
+                              (core/effect::pure
+                                ((core/error::make2 "core/vcs/symbol-not-found")
+                                  ((core/str::concat "symbol not found in snapshot: ") sym)))))))))))))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-why-program expects map"))))
 
 (def core/cli::vcs-diff-program
@@ -1131,11 +1632,7 @@
           fallback)))))
 
 (def core/cli::vec-append
-  (fn (a)
-    (fn (b)
-      (if (core/cli::vec? b)
-        ((((core/cli::vec-append2 b) (core/vec::len b)) 0) a)
-        a))))
+  (fn (a) (fn (b) (if (core/cli::vec? b) ((((core/cli::vec-append2 b) (core/vec::len b)) 0) a) a))))
 
 (def core/cli::vec-append2
   (fn (b)
@@ -1148,9 +1645,7 @@
               ((core/vec::push out) ((core/vec::get b) i)))))))))
 
 (def core/cli::push-if-hash
-  (fn (out)
-    (fn (x)
-      (if (core/cli::hash-hex? x) ((core/vec::push out) x) out))))
+  (fn (out) (fn (x) (if (core/cli::hash-hex? x) ((core/vec::push out) x) out))))
 
 (def core/cli::push-hashes-from-vec
   (fn (out)
@@ -1167,7 +1662,7 @@
           (if ((core/int::eq? i) n)
             out
             ((((core/cli::push-hashes-from-vec2 xs) n) ((core/int::add i) 1))
-              (((core/cli::push-if-hash out) ((core/vec::get xs) i))))))))))
+              ((core/cli::push-if-hash out) ((core/vec::get xs) i)))))))))
 
 (def core/cli::map-entries-vec
   (fn (m)
@@ -1196,17 +1691,15 @@
               (let ((pair (if (core/cli::vec? e) e (core/pair::as-proper-list e))))
                 (if (core/cli::vec? pair)
                   (if ((core/int::eq? (core/vec::len pair)) 2)
-                  ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1))
-                    (((core/cli::push-if-hash out) ((core/vec::get pair) 1))))
-                  ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))
+                    ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1))
+                      ((core/cli::push-if-hash out) ((core/vec::get pair) 1)))
+                    ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))
                   ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))))))))))
 
 (def core/cli::vcs-patch-refs
   (fn (patch)
     (let ((ops ((core/map::get patch) (quote :ops))))
-      (if (core/cli::vec? ops)
-        ((((core/cli::vcs-patch-refs2 ops) (core/vec::len ops)) 0) [])
-        []))))
+      (if (core/cli::vec? ops) ((((core/cli::vcs-patch-refs2 ops) (core/vec::len ops)) 0) []) []))))
 
 (def core/cli::vcs-patch-refs2
   (fn (ops)
@@ -1217,18 +1710,19 @@
             out
             (let ((op ((core/vec::get ops) i)))
               (if (core/cli::map? op)
-                (let ((out1 (((core/cli::push-if-hash out) ((core/map::get op) (quote :value))))))
-                  (let ((out2 (((core/cli::push-if-hash out1) ((core/map::get op) (quote :base))))))
-                    (let ((out3 (((core/cli::push-if-hash out2) ((core/map::get op) (quote :left))))))
+                (let ((out1 ((core/cli::push-if-hash out) ((core/map::get op) (quote :value)))))
+                  (let ((out2 ((core/cli::push-if-hash out1) ((core/map::get op) (quote :base)))))
+                    (let ((out3 ((core/cli::push-if-hash out2) ((core/map::get op) (quote :left)))))
                       ((((core/cli::vcs-patch-refs2 ops) n) ((core/int::add i) 1))
-                        (((core/cli::push-if-hash out3) ((core/map::get op) (quote :right))))))))
+                        ((core/cli::push-if-hash out3) ((core/map::get op) (quote :right)))))))
                 ((((core/cli::vcs-patch-refs2 ops) n) ((core/int::add i) 1)) out)))))))))
 
 (def core/cli::vcs-evidence-refs
   (fn (evidence)
-    (let ((out1 (((core/cli::push-hashes-from-vec []) ((core/map::get evidence) (quote :inputs))))))
-      (let ((out2 (((core/cli::push-hashes-from-vec out1) ((core/map::get evidence) (quote :outputs))))))
-        (((core/cli::push-if-hash out2) ((core/map::get evidence) (quote :data))))))))
+    (let ((out1 ((core/cli::push-hashes-from-vec []) ((core/map::get evidence) (quote :inputs)))))
+      (let
+        ((out2 ((core/cli::push-hashes-from-vec out1) ((core/map::get evidence) (quote :outputs)))))
+        ((core/cli::push-if-hash out2) ((core/map::get evidence) (quote :data)))))))
 
 (def core/cli::vcs-snapshot-dep-refs
   (fn (snapshot)
@@ -1246,21 +1740,28 @@
             out
             (let ((dep ((core/vec::get deps) i)))
               (if (core/cli::map? dep)
-                (let ((out1 (((core/cli::push-if-hash out) ((core/map::get dep) (quote :dep/commit))))))
-                  (let ((out2 (((core/cli::push-if-hash out1) ((core/map::get dep) (quote :dep/snapshot))))))
-                    (let ((out3 (((core/cli::push-if-hash out2) ((core/map::get dep) (quote :commit))))))
+                (let
+                  ((out1 ((core/cli::push-if-hash out) ((core/map::get dep) (quote :dep/commit)))))
+                  (let
+                    ((out2 ((core/cli::push-if-hash out1) ((core/map::get dep) (quote :dep/snapshot)))))
+                    (let
+                      ((out3 ((core/cli::push-if-hash out2) ((core/map::get dep) (quote :commit)))))
                       ((((core/cli::vcs-snapshot-dep-refs2 deps) n) ((core/int::add i) 1))
-                        (((core/cli::push-if-hash out3) ((core/map::get dep) (quote :snapshot))))))))
+                        ((core/cli::push-if-hash out3) ((core/map::get dep) (quote :snapshot)))))))
                 ((((core/cli::vcs-snapshot-dep-refs2 deps) n) ((core/int::add i) 1)) out)))))))))
 
 (def core/cli::vcs-snapshot-refs
   (fn (snapshot)
-    (let ((out1 (((core/cli::push-if-hash []) ((core/map::get snapshot) (quote :proto))))))
-      (let ((out2 (((core/cli::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash))))))
-        (let ((out3 (((core/cli::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members))))))
-          (let ((out4 (((core/cli::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs))))))
-            (let ((out5 (((core/cli::push-hash-values-from-map out4) ((core/map::get snapshot) (quote :modules))))))
-              (((core/cli::push-hash-values-from-map out5) ((core/map::get snapshot) (quote :overrides)))))))))))
+    (let ((out1 ((core/cli::push-if-hash []) ((core/map::get snapshot) (quote :proto)))))
+      (let ((out2 ((core/cli::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash)))))
+        (let
+          ((out3 ((core/cli::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members)))))
+          (let
+            ((out4 ((core/cli::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs)))))
+            (let
+              ((out5 ((core/cli::push-hash-values-from-map out4) ((core/map::get snapshot) (quote :modules)))))
+              ((core/cli::push-hash-values-from-map out5)
+                ((core/map::get snapshot) (quote :overrides))))))))))
 
 (def core/cli::vcs-artifact-refs
   (fn (artifact)
@@ -1268,18 +1769,23 @@
       (if (core/cli::map? artifact)
         (let ((ty ((core/map::get artifact) (quote :type))))
           (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
-            (let ((out1 (((core/cli::push-if-hash []) ((core/map::get artifact) (quote :base))))))
-              (let ((out2 (((core/cli::push-if-hash out1) ((core/map::get artifact) (quote :patch))))))
-                (let ((out3 (((core/cli::push-if-hash out2) ((core/map::get artifact) (quote :result))))))
+            (let ((out1 ((core/cli::push-if-hash []) ((core/map::get artifact) (quote :base)))))
+              (let
+                ((out2 ((core/cli::push-if-hash out1) ((core/map::get artifact) (quote :patch)))))
+                (let
+                  ((out3 ((core/cli::push-if-hash out2) ((core/map::get artifact) (quote :result)))))
                   (let
-                    ((out4
-                       (if (((core/cli::opt-bool opts) (quote :include-evidence)) true)
-                         (((core/cli::push-hashes-from-vec out3) ((core/map::get artifact) (quote :evidence))))
-                         out3)))
-                    (let ((out5 (((core/cli::push-hashes-from-vec out4) ((core/map::get artifact) (quote :attestations))))))
+                    (
+                      (out4
+                        (if (((core/cli::opt-bool opts) (quote :include-evidence)) true)
+                          ((core/cli::push-hashes-from-vec out3)
+                            ((core/map::get artifact) (quote :evidence)))
+                          out3)))
+                    (let
+                      ((out5 ((core/cli::push-hashes-from-vec out4) ((core/map::get artifact) (quote :attestations)))))
                       (if (((core/cli::opt-bool opts) (quote :include-parents)) true)
-                        (((core/cli::push-hashes-from-vec out5) ((core/map::get artifact) (quote :parents)))
-                        )
+                        ((core/cli::push-hashes-from-vec out5)
+                          ((core/map::get artifact) (quote :parents)))
                         out5))))))
             (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/patch)) false)
               (core/cli::vcs-patch-refs artifact)
@@ -1301,7 +1807,12 @@
       (fn (opts)
         (if (if (core/cli::map? artifact-index) (core/cli::vec? roots) false)
           (((core/cli::vcs-plan-reachability2 artifact-index) opts)
-            {:i 0 :live [] :missing [] :queue roots :seen {}})
+            {
+              :i 0
+              :live []
+              :missing []
+              :queue roots
+              :seen {}})
           ((core/error::make2 "core/type-error")
             "core/cli::vcs-plan-reachability expects (map index, vector roots, map opts)"))))))
 
@@ -1311,7 +1822,9 @@
       (fn (st)
         (let ((queue ((core/map::get st) (quote :queue))) (i ((core/map::get st) (quote :i))))
           (if ((core/int::eq? i) (core/vec::len queue))
-            {:live ((core/map::get st) (quote :live)) :missing ((core/map::get st) (quote :missing))}
+            {
+              :live ((core/map::get st) (quote :live))
+              :missing ((core/map::get st) (quote :missing))}
             (let ((h ((core/vec::get queue) i)))
               (if (core/cli::hash-hex? h)
                 (let ((seen ((core/map::get st) (quote :seen))))
@@ -1327,8 +1840,7 @@
                               :live ((core/map::get st) (quote :live))
                               :missing ((core/vec::push ((core/map::get st) (quote :missing))) h)
                               :queue queue
-                              :seen seen2
-                            })
+                              :seen seen2})
                           (let ((refs ((core/cli::vcs-artifact-refs artifact) opts)))
                             (let ((queue2 ((core/cli::vec-append queue) refs)))
                               (((core/cli::vcs-plan-reachability2 artifact-index) opts)
@@ -1337,8 +1849,7 @@
                                   :live ((core/vec::push ((core/map::get st) (quote :live))) h)
                                   :missing ((core/map::get st) (quote :missing))
                                   :queue queue2
-                                  :seen seen2
-                                }))))))))
+                                  :seen seen2}))))))))
                 (((core/cli::vcs-plan-reachability2 artifact-index) opts)
                   (((core/map::put st) (quote :i)) ((core/int::add i) 1)))))))))))
 
@@ -1347,11 +1858,14 @@
     (fn (resolved-by-name)
       (if (if (core/cli::map? requirements) (core/cli::map? resolved-by-name) false)
         (let ((entries (core/cli::map-entries-vec requirements)))
-          ((((core/cli::lock-plan-from-requirements2 entries) (core/vec::len entries)) 0)
-            {:count 0 :locked {} :missing []}
+          (
+            ((((core/cli::lock-plan-from-requirements2 entries) (core/vec::len entries)) 0)
+              {
+                :count 0
+                :locked {}
+                :missing []})
             resolved-by-name))
-        ((core/error::make2 "core/type-error")
-          "core/cli::lock-plan-from-requirements expects maps")))))
+        ((core/error::make2 "core/type-error") "core/cli::lock-plan-from-requirements expects maps")))))
 
 (def core/cli::lock-plan-from-requirements2
   (fn (entries)
@@ -1366,24 +1880,25 @@
                   (if (core/cli::vec? e)
                     (if ((core/int::eq? (core/vec::len e)) 2)
                       (let ((name ((core/vec::get e) 0)) (req ((core/vec::get e) 1)))
-                      (let ((resolved ((core/map::get resolved-by-name) name)))
-                        (if (core/cli::map? resolved)
-                          (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
-                            {
-                              :count ((core/int::add ((core/map::get st) (quote :count))) 1)
-                              :locked
-                                (((core/map::put ((core/map::get st) (quote :locked))) name)
-                                  ((core/cli::lock-make-entry req) resolved))
-                              :missing ((core/map::get st) (quote :missing))
-                            })
-                            resolved-by-name)
-                          (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
-                            {
-                              :count ((core/map::get st) (quote :count))
-                              :locked ((core/map::get st) (quote :locked))
-                              :missing ((core/vec::push ((core/map::get st) (quote :missing))) name)
-                            })
-                            resolved-by-name))))
+                        (let ((resolved ((core/map::get resolved-by-name) name)))
+                          (if (core/cli::map? resolved)
+                            (
+                              ((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
+                                {
+                                  :count ((core/int::add ((core/map::get st) (quote :count))) 1)
+                                  :locked
+                                    (((core/map::put ((core/map::get st) (quote :locked))) name)
+                                      ((core/cli::lock-make-entry req) resolved))
+                                  :missing ((core/map::get st) (quote :missing))})
+                              resolved-by-name)
+                            (
+                              ((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
+                                {
+                                  :count ((core/map::get st) (quote :count))
+                                  :locked ((core/map::get st) (quote :locked))
+                                  :missing
+                                    ((core/vec::push ((core/map::get st) (quote :missing))) name)})
+                              resolved-by-name))))
                       (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1)) st)
                         resolved-by-name))
                     (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1)) st)

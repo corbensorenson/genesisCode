@@ -567,6 +567,468 @@
               :ttl-days ttl-days})
           (fn (resp) (core/effect::pure resp)))))))
 
+; -----------------------------------------------------------------------------
+; VCS/GPK reachability helpers (pure planning helpers for host-bridge ops)
+; -----------------------------------------------------------------------------
+
+(def core/vcs/reach::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/vcs/reach::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/vcs/reach::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/vcs/reach::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/vcs/reach::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
+
+(def core/vcs/reach::hash-hex?
+  (fn (x) (if (core/vcs/reach::str? x) ((core/int::eq? (core/str::len x)) 64) false)))
+
+(def core/vcs/reach::opt-bool
+  (fn (opts)
+    (fn (k)
+      (fn (fallback)
+        (if (core/vcs/reach::map? opts)
+          (let ((v ((core/map::get opts) k)))
+            (if (core/vcs/reach::bool? v) v fallback))
+          fallback)))))
+
+(def core/vcs/reach::vec-append
+  (fn (a)
+    (fn (b)
+      (if (core/vcs/reach::vec? b)
+        ((((core/vcs/reach::vec-append2 b) (core/vec::len b)) 0) a)
+        a))))
+
+(def core/vcs/reach::vec-append2
+  (fn (b)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/vcs/reach::vec-append2 b) n) ((core/int::add i) 1))
+              ((core/vec::push out) ((core/vec::get b) i)))))))))
+
+(def core/vcs/reach::push-if-hash
+  (fn (out)
+    (fn (x)
+      (if (core/vcs/reach::hash-hex? x) ((core/vec::push out) x) out))))
+
+(def core/vcs/reach::push-hashes-from-vec
+  (fn (out)
+    (fn (xs)
+      (if (core/vcs/reach::vec? xs)
+        ((((core/vcs/reach::push-hashes-from-vec2 xs) (core/vec::len xs)) 0) out)
+        out))))
+
+(def core/vcs/reach::push-hashes-from-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/vcs/reach::push-hashes-from-vec2 xs) n) ((core/int::add i) 1))
+              (((core/vcs/reach::push-if-hash out) ((core/vec::get xs) i))))))))))
+
+(def core/vcs/reach::map-entries-vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/vcs/reach::vec? entries)
+        entries
+        (let ((as-list (core/pair::as-proper-list entries)))
+          (if (core/vcs/reach::vec? as-list) as-list []))))))
+
+(def core/vcs/reach::push-hash-values-from-map
+  (fn (out)
+    (fn (m)
+      (if (core/vcs/reach::map? m)
+        (let ((entries (core/vcs/reach::map-entries-vec m)))
+          ((((core/vcs/reach::push-hash-values-from-map2 entries) (core/vec::len entries)) 0) out))
+        out))))
+
+(def core/vcs/reach::push-hash-values-from-map2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (let ((pair (if (core/vcs/reach::vec? e) e (core/pair::as-proper-list e))))
+                (if (core/vcs/reach::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1))
+                      (((core/vcs/reach::push-if-hash out) ((core/vec::get pair) 1))))
+                    ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))
+                  ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))))))))))
+
+(def core/vcs/reach::patch-refs
+  (fn (patch)
+    (let ((ops ((core/map::get patch) (quote :ops))))
+      (if (core/vcs/reach::vec? ops)
+        ((((core/vcs/reach::patch-refs2 ops) (core/vec::len ops)) 0) [])
+        []))))
+
+(def core/vcs/reach::patch-refs2
+  (fn (ops)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((op ((core/vec::get ops) i)))
+              (if (core/vcs/reach::map? op)
+                (let ((out1 (((core/vcs/reach::push-if-hash out) ((core/map::get op) (quote :value))))))
+                  (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get op) (quote :base))))))
+                    (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get op) (quote :left))))))
+                      ((((core/vcs/reach::patch-refs2 ops) n) ((core/int::add i) 1))
+                        (((core/vcs/reach::push-if-hash out3) ((core/map::get op) (quote :right))))))))
+                ((((core/vcs/reach::patch-refs2 ops) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/vcs/reach::evidence-refs
+  (fn (evidence)
+    (let ((out1 (((core/vcs/reach::push-hashes-from-vec []) ((core/map::get evidence) (quote :inputs))))))
+      (let ((out2 (((core/vcs/reach::push-hashes-from-vec out1) ((core/map::get evidence) (quote :outputs))))))
+        (((core/vcs/reach::push-if-hash out2) ((core/map::get evidence) (quote :data))))))))
+
+(def core/vcs/reach::snapshot-dep-refs
+  (fn (snapshot)
+    (let ((deps ((core/map::get snapshot) (quote :deps))))
+      (if (core/vcs/reach::vec? deps)
+        ((((core/vcs/reach::snapshot-dep-refs2 deps) (core/vec::len deps)) 0) [])
+        []))))
+
+(def core/vcs/reach::snapshot-dep-refs2
+  (fn (deps)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((dep ((core/vec::get deps) i)))
+              (if (core/vcs/reach::map? dep)
+                (let ((out1 (((core/vcs/reach::push-if-hash out) ((core/map::get dep) (quote :dep/commit))))))
+                  (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get dep) (quote :dep/snapshot))))))
+                    (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get dep) (quote :commit))))))
+                      ((((core/vcs/reach::snapshot-dep-refs2 deps) n) ((core/int::add i) 1))
+                        (((core/vcs/reach::push-if-hash out3) ((core/map::get dep) (quote :snapshot))))))))
+                ((((core/vcs/reach::snapshot-dep-refs2 deps) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/vcs/reach::snapshot-refs
+  (fn (snapshot)
+    (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get snapshot) (quote :proto))))))
+      (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash))))))
+        (let ((out3 (((core/vcs/reach::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members))))))
+          (let ((out4 (((core/vcs/reach::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs))))))
+            (let ((out5 (((core/vcs/reach::push-hash-values-from-map out4) ((core/map::get snapshot) (quote :modules))))))
+              (((core/vcs/reach::push-hash-values-from-map out5) ((core/map::get snapshot) (quote :overrides)))))))))))
+
+(def core/vcs/reach::conflict-refs
+  (fn (conflict)
+    (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get conflict) (quote :base))))))
+      (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get conflict) (quote :left))))))
+        (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get conflict) (quote :right))))))
+          (let ((conflicts ((core/map::get conflict) (quote :conflicts))))
+            (if (core/vcs/reach::vec? conflicts)
+              ((((core/vcs/reach::conflict-refs2 conflicts) (core/vec::len conflicts)) 0) out3)
+              out3)))))))
+
+(def core/vcs/reach::conflict-refs2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((c ((core/vec::get entries) i)))
+              (let
+                ((out1
+                   (if (core/vcs/reach::map? c)
+                     (((core/vcs/reach::push-if-hash out) ((core/map::get c) (quote :base))))
+                     out)))
+                (let
+                  ((out2
+                     (if (core/vcs/reach::map? c)
+                       (((core/vcs/reach::push-if-hash out1) ((core/map::get c) (quote :left))))
+                       out1)))
+                  (let
+                    ((out3
+                       (if (core/vcs/reach::map? c)
+                         (((core/vcs/reach::push-if-hash out2) ((core/map::get c) (quote :right))))
+                         out2)))
+                    ((((core/vcs/reach::conflict-refs2 entries) n) ((core/int::add i) 1))
+                      out3)))))))))))
+
+(def core/vcs/reach::artifact-refs
+  (fn (artifact)
+    (fn (opts)
+      (if (core/vcs/reach::map? artifact)
+        (let ((ty ((core/map::get artifact) (quote :type))))
+          (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+            (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get artifact) (quote :base))))))
+              (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get artifact) (quote :patch))))))
+                (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get artifact) (quote :result))))))
+                  (let
+                    ((out4
+                       (if (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+                         (((core/vcs/reach::push-hashes-from-vec out3) ((core/map::get artifact) (quote :evidence))))
+                         out3)))
+                    (let ((out5 (((core/vcs/reach::push-hashes-from-vec out4) ((core/map::get artifact) (quote :attestations))))))
+                      (if (((core/vcs/reach::opt-bool opts) (quote :include-parents)) true)
+                        (((core/vcs/reach::push-hashes-from-vec out5) ((core/map::get artifact) (quote :parents))))
+                        out5))))))
+            (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/patch)) false)
+              (core/vcs/reach::patch-refs artifact)
+              (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
+                (if (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+                  (core/vcs/reach::evidence-refs artifact)
+                  [])
+                (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/conflict)) false)
+                  (core/vcs/reach::conflict-refs artifact)
+                  (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
+                    (let ((refs0 (core/vcs/reach::snapshot-refs artifact)))
+                      (if (((core/vcs/reach::opt-bool opts) (quote :include-deps)) false)
+                        ((core/vcs/reach::vec-append refs0) (core/vcs/reach::snapshot-dep-refs artifact))
+                        refs0))
+                    []))))))
+        []))))
+
+(def core/vcs/reach::commit-parents
+  (fn (artifact)
+    (if (core/vcs/reach::map? artifact)
+      (let ((ty ((core/map::get artifact) (quote :type))))
+        (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+          (let ((parents ((core/map::get artifact) (quote :parents))))
+            (((core/vcs/reach::push-hashes-from-vec []) parents)))
+          []))
+      [])))
+
+(def core/vcs/reach::artifact-ref-plan
+  (fn (artifact)
+    (fn (opts)
+      (let
+        ((opts2
+           {
+             :include-deps (((core/vcs/reach::opt-bool opts) (quote :include-deps)) false)
+             :include-evidence (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+             :include-parents false})
+          (want-parents (((core/vcs/reach::opt-bool opts) (quote :include-parents)) false)))
+        {
+          :parents (if want-parents (core/vcs/reach::commit-parents artifact) [])
+          :refs ((core/vcs/reach::artifact-refs artifact) opts2)}))))
+
+; -----------------------------------------------------------------------------
+; GC root planning helpers (pure planners consumed by host capability bridge)
+; -----------------------------------------------------------------------------
+
+(def core/gc/reach::state-empty {:roots [] :meta []})
+
+(def core/gc/reach::state-merge
+  (fn (a)
+    (fn (b)
+      {
+        :roots
+          ((core/vcs/reach::vec-append ((core/map::get a) (quote :roots)))
+            ((core/map::get b) (quote :roots)))
+        :meta
+          ((core/vcs/reach::vec-append ((core/map::get a) (quote :meta)))
+            ((core/map::get b) (quote :meta)))})))
+
+(def core/gc/reach::state-add
+  (fn (st)
+    (fn (hash)
+      (fn (meta)
+        (if (core/vcs/reach::hash-hex? hash)
+          {
+            :roots ((core/vec::push ((core/map::get st) (quote :roots))) hash)
+            :meta ((core/vec::push ((core/map::get st) (quote :meta))) meta)}
+          st)))))
+
+(def core/gc/reach::refs-state
+  (fn (refs)
+    (if (core/vcs/reach::vec? refs)
+      ((((core/gc/reach::refs-state2 refs) (core/vec::len refs)) 0) core/gc/reach::state-empty)
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::refs-state2
+  (fn (refs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((entry ((core/vec::get refs) i)))
+              (let
+                ((next
+                   (if (core/vcs/reach::map? entry)
+                     (((core/gc/reach::state-add st) ((core/map::get entry) (quote :hash)))
+                       {
+                         :hash ((core/map::get entry) (quote :hash))
+                         :kind (quote :ref)
+                         :name ((core/map::get entry) (quote :name))})
+                     st)))
+                ((((core/gc/reach::refs-state2 refs) n) ((core/int::add i) 1)) next)))))))))
+
+(def core/gc/reach::lock-state
+  (fn (lock-info)
+    (if (core/vcs/reach::map? lock-info)
+      (let
+        (
+          (lock-name ((core/map::get lock-info) (quote :lock)))
+          (locked ((core/map::get lock-info) (quote :locked)))
+          (artifacts ((core/map::get lock-info) (quote :artifacts))))
+        (let
+          ((st1
+             (if (core/vcs/reach::vec? locked)
+               (((((core/gc/reach::lock-locked-state2 locked) lock-name) (core/vec::len locked))
+                  0)
+                 core/gc/reach::state-empty)
+               core/gc/reach::state-empty)))
+          (if (core/vcs/reach::map? artifacts)
+            ((core/gc/reach::state-merge st1)
+              (((core/gc/reach::lock-artifacts-state artifacts) lock-name)))
+            st1)))
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::lock-locked-state2
+  (fn (locked)
+    (fn (lock-name)
+      (fn (n)
+        (fn (i)
+          (fn (st)
+            (if ((core/int::eq? i) n)
+              st
+              (let ((entry ((core/vec::get locked) i)))
+                (if (core/vcs/reach::map? entry)
+                  (let
+                    ((st1
+                       (((core/gc/reach::state-add st) ((core/map::get entry) (quote :commit)))
+                         {
+                           :hash ((core/map::get entry) (quote :commit))
+                           :kind (quote :lock-commit)
+                           :lock lock-name})))
+                    (let
+                      ((next
+                         (((core/gc/reach::state-add st1) ((core/map::get entry) (quote :snapshot)))
+                           {
+                             :hash ((core/map::get entry) (quote :snapshot))
+                             :kind (quote :lock-snapshot)
+                             :lock lock-name})))
+                      (((((core/gc/reach::lock-locked-state2 locked) lock-name) n)
+                        ((core/int::add i) 1))
+                        next)))
+                  (((((core/gc/reach::lock-locked-state2 locked) lock-name) n)
+                    ((core/int::add i) 1))
+                    st))))))))))
+
+(def core/gc/reach::lock-artifacts-state
+  (fn (artifacts)
+    (fn (lock-name)
+      (let ((entries (core/vcs/reach::map-entries-vec artifacts)))
+        (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) (core/vec::len entries)) 0)
+          core/gc/reach::state-empty)))))
+
+(def core/gc/reach::lock-artifacts-state2
+  (fn (entries)
+    (fn (lock-name)
+      (fn (n)
+        (fn (i)
+          (fn (st)
+            (if ((core/int::eq? i) n)
+              st
+                (let ((entry0 ((core/vec::get entries) i)))
+                  (let ((entry (if (core/vcs/reach::vec? entry0) entry0 (core/pair::as-proper-list entry0))))
+                    (if (core/vcs/reach::vec? entry)
+                      (if ((core/int::eq? (core/vec::len entry)) 2)
+                        (let ((k ((core/vec::get entry) 0)) (h ((core/vec::get entry) 1)))
+                          (let
+                            ((next
+                               (((core/gc/reach::state-add st) h)
+                                 {
+                                   :hash h
+                                   :key k
+                                   :kind (quote :lock-artifact)
+                                   :lock lock-name})))
+                            (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                              ((core/int::add i) 1))
+                              next)))
+                        (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                          ((core/int::add i) 1))
+                          st))
+                      (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                        ((core/int::add i) 1))
+                        st)))))))))))
+
+(def core/gc/reach::pins-state
+  (fn (pins-info)
+    (if (core/vcs/reach::map? pins-info)
+      (let
+        (
+          (keep ((core/map::get pins-info) (quote :keep)))
+          (keep-refs ((core/map::get pins-info) (quote :keep-refs))))
+        (let
+          ((st1
+             (if (core/vcs/reach::vec? keep)
+               ((((core/gc/reach::pins-keep-state2 keep) (core/vec::len keep)) 0) core/gc/reach::state-empty)
+               core/gc/reach::state-empty)))
+          (if (core/vcs/reach::vec? keep-refs)
+            ((((core/gc/reach::pins-keep-refs-state2 keep-refs) (core/vec::len keep-refs)) 0) st1)
+            st1)))
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::pins-keep-state2
+  (fn (keep)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            ((((core/gc/reach::pins-keep-state2 keep) n) ((core/int::add i) 1))
+              (((core/gc/reach::state-add st) ((core/vec::get keep) i))
+                {:hash ((core/vec::get keep) i) :kind (quote :pin)}))))))))
+
+(def core/gc/reach::pins-keep-refs-state2
+  (fn (keep-refs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((entry ((core/vec::get keep-refs) i)))
+              (let
+                ((next
+                   (if (core/vcs/reach::map? entry)
+                     (((core/gc/reach::state-add st) ((core/map::get entry) (quote :hash)))
+                       {
+                         :hash ((core/map::get entry) (quote :hash))
+                         :kind (quote :pin-ref)
+                         :name ((core/map::get entry) (quote :name))})
+                     st)))
+                ((((core/gc/reach::pins-keep-refs-state2 keep-refs) n) ((core/int::add i) 1))
+                  next)))))))))
+
+(def core/gc/reach::roots-plan
+  (fn (refs)
+    (fn (lock-info)
+      (fn (pins-info)
+        (fn (include-lock)
+          (fn (include-refs)
+            (let
+              ((ref-st
+                 (if include-refs (core/gc/reach::refs-state refs) core/gc/reach::state-empty))
+                (lock-st
+                  (if include-lock
+                    (core/gc/reach::lock-state lock-info)
+                    core/gc/reach::state-empty))
+                (pins-st (core/gc/reach::pins-state pins-info)))
+              (let ((st1 ((core/gc/reach::state-merge ref-st) lock-st)))
+                (let ((st2 ((core/gc/reach::state-merge st1) pins-st)))
+                  {
+                    :roots ((core/map::get st2) (quote :roots))
+                    :roots-meta ((core/map::get st2) (quote :meta))})))))))))
+
 (def core/caps::perform
   (fn (op)
     (fn (payload)
@@ -1775,6 +2237,446 @@
 
 (def core/gfx/runtime::hash-frame-graph (fn (graph) (core/coreform::hash-term graph)))
 
+(def core/gfx/runtime::vec-or-empty
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :vec)) x [])))
+
+(def core/gfx/runtime::pass-label
+  (fn (pass)
+    (if ((core/sym::eq? (core/data::tag pass)) (quote :map))
+      (let ((label ((core/map::get pass) (quote :label))))
+        (if ((core/sym::eq? (core/data::tag label)) (quote :str)) label ""))
+      "")))
+
+(def core/gfx/runtime::pass-commands
+  (fn (pass)
+    (if ((core/sym::eq? (core/data::tag pass)) (quote :map))
+      (core/gfx/runtime::vec-or-empty ((core/map::get pass) (quote :commands)))
+      [])))
+
+(def core/gfx/runtime::pass-command-count
+  (fn (pass) (core/vec::len (core/gfx/runtime::pass-commands pass))))
+
+(def core/gfx/runtime::command-count
+  (fn (passes)
+    ((((core/gfx/runtime::command-count-loop passes) 0) (core/vec::len passes)) 0)))
+
+(def core/gfx/runtime::command-count-loop
+  (fn (passes)
+    (fn (i)
+      (fn (n)
+        (fn (total)
+          (if ((core/int::lt? i) n)
+            (let ((pass ((core/vec::get passes) i)) (i2 ((core/int::add i) 1)))
+              ((((core/gfx/runtime::command-count-loop passes) i2) n)
+                ((core/int::add total) (core/gfx/runtime::pass-command-count pass))))
+            total))))))
+
+(def core/gfx/runtime::pass-summaries
+  (fn (passes)
+    (fn (pass-kind)
+      (((((core/gfx/runtime::pass-summaries-loop passes) pass-kind) 0) (core/vec::len passes)) []))))
+
+(def core/gfx/runtime::pass-summaries-loop
+  (fn (passes)
+    (fn (pass-kind)
+      (fn (i)
+        (fn (n)
+          (fn (out)
+            (if ((core/int::lt? i) n)
+              (let ((pass ((core/vec::get passes) i)) (i2 ((core/int::add i) 1)))
+                ((((core/gfx/runtime::pass-summaries-loop passes) pass-kind) i2) n)
+                  ((core/vec::push out)
+                    {
+                      :command-count (core/gfx/runtime::pass-command-count pass)
+                      :kind pass-kind
+                      :label (core/gfx/runtime::pass-label pass)
+                      :pass-h (core/coreform::hash-term pass)}))
+              out)))))))
+
+(def core/gfx/runtime::frame-trace
+  (fn (scene)
+    (fn (frame-graph)
+      (let
+        ((render-passes
+           (core/gfx/runtime::vec-or-empty ((core/map::get frame-graph) (quote :render-passes))))
+          (compute-passes
+            (core/gfx/runtime::vec-or-empty ((core/map::get frame-graph) (quote :compute-passes))))
+          (render-command-count (core/gfx/runtime::command-count render-passes))
+          (compute-command-count (core/gfx/runtime::command-count compute-passes))
+          (render-pass-summaries ((core/gfx/runtime::pass-summaries render-passes) (quote :render-pass)))
+          (compute-pass-summaries ((core/gfx/runtime::pass-summaries compute-passes) (quote :compute-pass))))
+        {
+          :compute-command-count compute-command-count
+          :compute-pass-count (core/vec::len compute-passes)
+          :compute-pass-summaries compute-pass-summaries
+          :frame-h (core/gfx/runtime::hash-frame-graph frame-graph)
+          :kind (quote :gfx/frame-trace)
+          :render-command-count render-command-count
+          :render-pass-count (core/vec::len render-passes)
+          :render-pass-summaries render-pass-summaries
+          :scene-h (core/gfx/runtime::hash-scene scene)
+          :total-command-count ((core/int::add render-command-count) compute-command-count)
+          :v 1}))))
+
+(def core/gfx/runtime::frame-trace+ui
+  (fn (scene)
+    (fn (ui-root)
+      (fn (frame-graph)
+        (let ((trace ((core/gfx/runtime::frame-trace scene) frame-graph)))
+          (prim map/put
+            (prim map/put trace (quote :ui-node-count) (core/gfx/runtime::ui-node-count ui-root))
+            (quote :ui-root-h)
+            (core/coreform::hash-term ui-root)))))))
+
+(def core/gfx/runtime::trace-artifact
+  (fn (trace)
+    {
+      :frame-h ((core/map::get trace) (quote :frame-h))
+      :kind (quote genesis/gfx-frame-trace-v0.2)
+      :scene-h ((core/map::get trace) (quote :scene-h))
+      :trace trace
+      :trace-h (core/coreform::hash-term trace)
+      :v 1}))
+
+(def core/gfx/runtime::trace-artifact-with-meta
+  (fn (trace)
+    (fn (meta)
+      (if ((core/sym::eq? (core/data::tag meta)) (quote :map))
+        (prim map/put (core/gfx/runtime::trace-artifact trace) (quote :meta) meta)
+        (core/gfx/runtime::trace-artifact trace)))))
+
+(def core/gfx/runtime::store-trace-artifact
+  (fn (trace) (core/store::put (core/gfx/runtime::trace-artifact trace))))
+
+(def core/gfx/runtime::store-trace-artifact-with-meta
+  (fn (trace)
+    (fn (meta) (core/store::put ((core/gfx/runtime::trace-artifact-with-meta trace) meta)))))
+
+(def core/gfx/runtime::plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (let
+                ((frame
+                   ((((((core/gfx/runtime::plan-frame-2d+ui scene) ui-root) scene-label) scene-pipeline-id)
+                     ui-label)
+                     ui-pipeline-id))
+                  (trace (((core/gfx/runtime::frame-trace+ui scene) ui-root) frame)))
+                {
+                  :frame frame
+                  :frame-h (core/gfx/runtime::hash-frame-graph frame)
+                  :kind (quote :gfx/plan-frame-2d+ui-trace)
+                  :trace trace
+                  :trace-h (core/coreform::hash-term trace)}))))))))
+
+(def core/gfx/runtime::store-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (fn (meta)
+                (let
+                  ((plan
+                     ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) scene-label)
+                       scene-pipeline-id)
+                       ui-label)
+                       ui-pipeline-id))
+                    (trace ((core/map::get plan) (quote :trace))))
+                  ((core/gfx/runtime::store-trace-artifact-with-meta trace) meta))))))))))
+
+(def core/gfx/obligation::golden-report
+  (fn (package)
+    (fn (ok)
+      (fn (cases)
+        (fn (errors)
+          {
+            :cases (core/gfx/runtime::vec-or-empty cases)
+            :errors (core/gfx/runtime::vec-or-empty errors)
+            :kind "genesis/gfx-golden-images-v0.2"
+            :ok ok
+            :package package})))))
+
+(def core/gfx/obligation::frame-budget-report
+  (fn (package)
+    (fn (ok)
+      (fn (limits)
+        (fn (cases)
+          (fn (errors)
+            {
+              :cases (core/gfx/runtime::vec-or-empty cases)
+              :errors (core/gfx/runtime::vec-or-empty errors)
+              :kind "genesis/gfx-frame-budgets-v0.2"
+              :limits (if ((core/sym::eq? (core/data::tag limits)) (quote :map)) limits {})
+              :ok ok
+              :package package}))))))
+
+(def core/gfx/obligation::api-stability-report
+  (fn (package)
+    (fn (ok)
+      (fn (surface-h)
+        (fn (expected-surface-h)
+          (fn (surface)
+            (fn (errors)
+              {
+                :errors (core/gfx/runtime::vec-or-empty errors)
+                :expected-surface-h expected-surface-h
+                :kind "genesis/gfx-api-stability-v0.2"
+                :ok ok
+                :package package
+                :surface surface
+                :surface-h surface-h})))))))
+
+(def core/gfx/obligation::sym?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/gfx/obligation::str?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/gfx/obligation::int?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/gfx/obligation::vec-contains-sym?
+  (fn (xs) (fn (sym) ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) 0) false))))
+
+(def core/gfx/obligation::vec-contains-sym-loop
+  (fn (xs)
+    (fn (sym)
+      (fn (i)
+        (fn (found)
+          (if found
+            true
+            (if ((core/int::eq? i) (core/vec::len xs))
+              false
+              (let ((x ((core/vec::get xs) i)))
+                ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) ((core/int::add i) 1))
+                  (if (core/gfx/obligation::sym? x) ((core/sym::eq? x) sym) false))))))))))
+
+(def core/gfx/obligation::sym-diff
+  (fn (left) (fn (right) ((((core/gfx/obligation::sym-diff-loop left) right) 0) []))))
+
+(def core/gfx/obligation::sym-diff-loop
+  (fn (left)
+    (fn (right)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len left))
+            out
+            (let ((x ((core/vec::get left) i)))
+              ((((core/gfx/obligation::sym-diff-loop left) right) ((core/int::add i) 1))
+                (if (core/gfx/obligation::sym? x)
+                  (if ((core/gfx/obligation::vec-contains-sym? right) x) out ((core/vec::push out) x))
+                  out)))))))))
+
+(def core/gfx/obligation::errors-push-if
+  (fn (errors)
+    (fn (cond)
+      (fn (msg) (if cond ((core/vec::push errors) msg) errors)))))
+
+(def core/gfx/obligation::golden-case
+  (fn (suite)
+    (fn (name)
+      (fn (kind)
+        (fn (expect-h)
+          (fn (actual-h)
+            (fn (expect-png-h)
+              (fn (actual-png-h)
+                (fn (pixel-width)
+                  (fn (pixel-height)
+                    (fn (runtime-error)
+                      (let
+                        ((runtime-ok (if (core/gfx/obligation::str? runtime-error) false true))
+                          (hash-ok (if runtime-ok ((core/eq? expect-h) actual-h) false))
+                          (need-png (if ((core/sym::eq? (core/data::tag expect-png-h)) (quote :nil)) false true))
+                          (png-ok
+                            (if runtime-ok
+                              (if need-png ((core/eq? expect-png-h) actual-png-h) true)
+                              false)))
+                        (let
+                          ((errors0 [])
+                            (errors1
+                              (((core/gfx/obligation::errors-push-if errors0)
+                                (core/gfx/obligation::str? runtime-error))
+                                (if (core/gfx/obligation::str? runtime-error)
+                                  runtime-error
+                                  "runtime error")))
+                            (errors2
+                              (((core/gfx/obligation::errors-push-if errors1)
+                                (if runtime-ok (if hash-ok false true) false))
+                                "golden hash mismatch"))
+                            (errors3
+                              (((core/gfx/obligation::errors-push-if errors2)
+                                (if runtime-ok (if need-png (if png-ok false true) false) false))
+                                "golden png hash mismatch")))
+                          {
+                            :actual-h actual-h
+                            :actual-png-h actual-png-h
+                            :error runtime-error
+                            :errors errors3
+                            :expect-h expect-h
+                            :expect-png-h expect-png-h
+                            :kind kind
+                            :name name
+                            :ok
+                              (if runtime-ok
+                                (if hash-ok
+                                  (if need-png png-ok true)
+                                  false)
+                                false)
+                            :pixel-height pixel-height
+                            :pixel-width pixel-width
+                            :suite suite})))))))))))))
+
+(def core/gfx/obligation::metric-int
+  (fn (m)
+    (fn (k)
+      (let ((v ((core/map::get m) k))) (if (core/gfx/obligation::int? v) v nil)))))
+
+(def core/gfx/obligation::frame-budget-case
+  (fn (suite)
+    (fn (name)
+      (fn (metrics)
+        (fn (limits)
+          (fn (frame-time-ms)
+            (fn (runtime-error)
+              (let
+                ((render-passes ((core/gfx/obligation::metric-int metrics) (quote :render-passes)))
+                  (compute-passes ((core/gfx/obligation::metric-int metrics) (quote :compute-passes)))
+                  (draw-commands ((core/gfx/obligation::metric-int metrics) (quote :draw-commands)))
+                  (compute-commands ((core/gfx/obligation::metric-int metrics) (quote :compute-commands)))
+                  (frame-graph-bytes ((core/gfx/obligation::metric-int metrics) (quote :frame-graph-bytes)))
+                  (max-render-passes ((core/gfx/obligation::metric-int limits) (quote :max-render-passes-per-frame)))
+                  (max-compute-passes ((core/gfx/obligation::metric-int limits) (quote :max-compute-passes-per-frame)))
+                  (max-draw-commands ((core/gfx/obligation::metric-int limits) (quote :max-draw-commands-per-frame)))
+                  (max-compute-commands
+                    ((core/gfx/obligation::metric-int limits) (quote :max-compute-commands-per-frame)))
+                  (max-frame-graph-bytes ((core/gfx/obligation::metric-int limits) (quote :max-frame-graph-bytes)))
+                  (max-frame-time-ms ((core/gfx/obligation::metric-int limits) (quote :max-frame-time-ms))))
+                (let
+                  ((errors0
+                     (((core/gfx/obligation::errors-push-if [])
+                       (core/gfx/obligation::str? runtime-error))
+                       (if (core/gfx/obligation::str? runtime-error) runtime-error "runtime error")))
+                    (errors1
+                      (((core/gfx/obligation::errors-push-if errors0)
+                        (if (core/gfx/obligation::int? max-render-passes)
+                          (if (core/gfx/obligation::int? render-passes)
+                            ((core/int::lt? max-render-passes) render-passes)
+                            false)
+                          false))
+                        "render passes exceed max"))
+                    (errors2
+                      (((core/gfx/obligation::errors-push-if errors1)
+                        (if (core/gfx/obligation::int? max-compute-passes)
+                          (if (core/gfx/obligation::int? compute-passes)
+                            ((core/int::lt? max-compute-passes) compute-passes)
+                            false)
+                          false))
+                        "compute passes exceed max"))
+                    (errors3
+                      (((core/gfx/obligation::errors-push-if errors2)
+                        (if (core/gfx/obligation::int? max-draw-commands)
+                          (if (core/gfx/obligation::int? draw-commands)
+                            ((core/int::lt? max-draw-commands) draw-commands)
+                            false)
+                          false))
+                        "draw commands exceed max"))
+                    (errors4
+                      (((core/gfx/obligation::errors-push-if errors3)
+                        (if (core/gfx/obligation::int? max-compute-commands)
+                          (if (core/gfx/obligation::int? compute-commands)
+                            ((core/int::lt? max-compute-commands) compute-commands)
+                            false)
+                          false))
+                        "compute commands exceed max"))
+                    (errors5
+                      (((core/gfx/obligation::errors-push-if errors4)
+                        (if (core/gfx/obligation::int? max-frame-graph-bytes)
+                          (if (core/gfx/obligation::int? frame-graph-bytes)
+                            ((core/int::lt? max-frame-graph-bytes) frame-graph-bytes)
+                            false)
+                          false))
+                        "frame graph bytes exceed max"))
+                    (errors6
+                      (((core/gfx/obligation::errors-push-if errors5)
+                        (if (core/gfx/obligation::int? max-frame-time-ms)
+                          (if (core/gfx/obligation::int? frame-time-ms)
+                            ((core/int::lt? max-frame-time-ms) frame-time-ms)
+                            true)
+                          false))
+                        "frame time exceeds max or is missing")))
+                  {
+                    :compute-commands compute-commands
+                    :compute-passes compute-passes
+                    :draw-commands draw-commands
+                    :errors errors6
+                    :frame-graph-bytes frame-graph-bytes
+                    :frame-time-ms frame-time-ms
+                    :name name
+                    :ok ((core/int::eq? (core/vec::len errors6)) 0)
+                    :render-passes render-passes
+                    :suite suite})))))))))
+
+(def core/gfx/obligation::api-stability-analysis
+  (fn (exported)
+    (fn (expected-exports)
+      (fn (tracked)
+        (fn (expected-surface-h)
+          (fn (surface-h)
+            (fn (has-config)
+              (fn (missing-defs)
+                (let
+                  ((compare-exports (if ((core/int::eq? (core/vec::len expected-exports)) 0) false true))
+                    (missing
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff expected-exports) exported)
+                        []))
+                    (extra
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff exported) expected-exports)
+                        []))
+                    (surface-mismatch
+                      (if (core/gfx/obligation::str? expected-surface-h)
+                        (if ((core/eq? expected-surface-h) surface-h) false true)
+                        false)))
+                  (let
+                    ((errors0
+                       (((core/gfx/obligation::errors-push-if [])
+                         (if compare-exports
+                           (if ((core/int::eq? (core/vec::len missing)) 0) false true)
+                           false))
+                         "missing exported gfx symbols"))
+                      (errors1
+                        (((core/gfx/obligation::errors-push-if errors0)
+                          (if compare-exports
+                            (if ((core/int::eq? (core/vec::len extra)) 0) false true)
+                            false))
+                          "unexpected exported gfx symbols"))
+                      (errors2
+                        (((core/gfx/obligation::errors-push-if errors1)
+                          (if ((core/int::eq? (core/vec::len tracked)) 0) true false))
+                          "no tracked gfx API exports found"))
+                      (errors3
+                        (((core/gfx/obligation::errors-push-if errors2) (if has-config false true))
+                          "gfx api stability requires gfx.api_exports and/or gfx.api_surface_hash configuration"))
+                      (errors4
+                        (((core/gfx/obligation::errors-push-if errors3) surface-mismatch)
+                          "gfx API surface hash mismatch"))
+                      (errors5
+                        (((core/gfx/obligation::errors-push-if errors4)
+                          (if ((core/int::eq? (core/vec::len missing-defs)) 0) false true))
+                          "tracked API symbol has no defining def form")))
+                    {
+                      :errors errors5
+                      :extra extra
+                      :missing missing
+                      :missing-defs missing-defs
+                      :ok ((core/int::eq? (core/vec::len errors5)) 0)}))))))))))
+
 (def core/gfx/gpu::limits
   (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
 
@@ -2868,6 +3770,31 @@
     (fn (caps)
       (((core/editor/action::task (quote editor/task::test-pkg)) {:caps caps :pkg pkg}) 50))))
 
+(def core/editor/action::gfx-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) scene-label) scene-pipeline-id)
+                ui-label)
+                ui-pipeline-id))))))))
+
+(def core/editor/action::gfx-store-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (fn (meta)
+                (((((((core/gfx/runtime::store-plan-frame-2d+ui-trace scene) ui-root) scene-label)
+                  scene-pipeline-id)
+                  ui-label)
+                  ui-pipeline-id)
+                  meta)))))))))
+
 (def core/editor/plugin::contains-op?
   (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
 
@@ -2996,11 +3923,191 @@
         :kind (quote :editor/agent-acceptance)
         :verify verify-resp})))
 
+(def core/editor/agent::present?
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :nil)) false true)))
+
+(def core/editor/agent::int-or-zero
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :int)) x 0)))
+
+(def core/editor/agent::normalize-side
+  (fn (x)
+    (let
+      ((s
+         (if (core/editor/lint::sym? x)
+           (core/sym::to-str x)
+           (if (core/editor/lint::str? x) x ""))))
+      (if (prim core/eq? s "left")
+        (quote :left)
+        (if (prim core/eq? s ":left")
+          (quote :left)
+          (if (prim core/eq? s "base")
+            (quote :base)
+            (if (prim core/eq? s ":base") (quote :base) (quote :right))))))))
+
+(def core/editor/agent::conflict-op-key
+  (fn (entry)
+    (if (core/editor/lint::map? entry)
+      (let ((op ((core/map::get entry) (quote :op))))
+        (if (core/editor/lint::sym? op)
+          op
+          (if (core/editor/lint::str? op) (core/sym::from-str op) nil)))
+      nil)))
+
+(def core/editor/agent::choose-side
+  (fn (entry)
+    (fn (prefer)
+      (if (core/editor/lint::map? entry)
+        (let
+          ((base ((core/map::get entry) (quote :base)))
+            (left ((core/map::get entry) (quote :left)))
+            (right ((core/map::get entry) (quote :right))))
+          (if ((core/sym::eq? prefer) (quote :left))
+            (if (core/editor/agent::present? left)
+              (quote :left)
+              (if (core/editor/agent::present? right)
+                (quote :right)
+                (if (core/editor/agent::present? base) (quote :base) nil)))
+            (if ((core/sym::eq? prefer) (quote :right))
+              (if (core/editor/agent::present? right)
+                (quote :right)
+                (if (core/editor/agent::present? left)
+                  (quote :left)
+                  (if (core/editor/agent::present? base) (quote :base) nil)))
+              (if (core/editor/agent::present? base)
+                (quote :base)
+                (if (core/editor/agent::present? right)
+                  (quote :right)
+                  (if (core/editor/agent::present? left) (quote :left) nil))))))
+        nil))))
+
+(def core/editor/agent::conflict-plan-loop
+  (fn (conflicts)
+    (fn (prefer)
+      (fn (i)
+        (fn (resolutions)
+          (fn (ops)
+            (if ((core/int::eq? i) (core/vec::len conflicts))
+              {:ops ops :resolutions resolutions}
+              (let
+                ((entry ((core/vec::get conflicts) i))
+                  (next
+                    (((core/editor/agent::conflict-plan-loop conflicts) prefer)
+                      ((core/int::add i) 1))))
+                (let
+                  ((opk (core/editor/agent::conflict-op-key entry))
+                    (side ((core/editor/agent::choose-side entry) prefer)))
+                  (if (core/editor/lint::sym? opk)
+                    (if (core/editor/lint::sym? side)
+                      ((next (prim map/put resolutions opk side))
+                        ((core/vec::push ops) (core/sym::to-str opk)))
+                      ((next resolutions) ops))
+                    ((next resolutions) ops)))))))))))
+
+(def core/editor/agent::conflict-resolution-plan
+  (fn (conflict-h)
+    (fn (conflict-panel)
+      (fn (prefer)
+        (let
+          ((pref (core/editor/agent::normalize-side prefer))
+            (conflicts
+              (if (core/editor/lint::map? conflict-panel)
+                (core/editor/vcs::vec-or-empty ((core/map::get conflict-panel) (quote :conflicts)))
+                [])))
+          (let ((planned (((((core/editor/agent::conflict-plan-loop conflicts) pref) 0) {}) [])))
+            {
+              :conflict conflict-h
+              :count (core/vec::len ((core/map::get planned) (quote :ops)))
+              :kind (quote :editor/agent-conflict-resolution-plan)
+              :ok true
+              :ops ((core/map::get planned) (quote :ops))
+              :resolutions ((core/map::get planned) (quote :resolutions))
+              :strategy pref}))))))
+
+(def core/editor/agent::semantic-patch-plan
+  (fn (base)
+    (fn (to)
+      (fn (before-src)
+        (fn (after-src)
+          (let
+            ((before-index (core/editor/ast::parse-module-index before-src))
+              (after-index (core/editor/ast::parse-module-index after-src)))
+            (let
+              ((before-ok (core/editor/ast::module-index-ok? before-index))
+                (after-ok (core/editor/ast::module-index-ok? after-index)))
+              (let
+                ((changed
+                   (if before-ok
+                     (if after-ok ((core/editor/ast::changed-syms before-index) after-index) [(quote ::meta)])
+                     [(quote ::meta)])))
+                {
+                  :after-error ((core/map::get after-index) (quote :error))
+                  :after-h (core/coreform::hash-module-src after-src)
+                  :after-ok after-ok
+                  :base base
+                  :before-error ((core/map::get before-index) (quote :error))
+                  :before-h (core/coreform::hash-module-src before-src)
+                  :before-ok before-ok
+                  :changed-count (core/vec::len changed)
+                  :changed-syms changed
+                  :kind (quote :editor/agent-semantic-patch-plan)
+                  :meta-changed ((core/editor/ast::contains-sym? changed) (quote ::meta))
+                  :ok (if before-ok after-ok false)
+                  :to to}))))))))
+
+(def core/editor/agent::repair-plan
+  (fn (acceptance)
+    (fn (lint-panel)
+      (let
+        ((accepted (core/editor/agent::bool-or-false ((core/map::get acceptance) (quote :accepted))))
+          (verify-ok (core/editor/agent::verify-ok? ((core/map::get acceptance) (quote :verify))))
+          (error-count (core/editor/agent::int-or-zero ((core/map::get lint-panel) (quote :error-count))))
+          (warn-count (core/editor/agent::int-or-zero ((core/map::get lint-panel) (quote :warn-count))))
+          (autofixes (core/editor/lint::vec-or-empty ((core/map::get lint-panel) (quote :autofixes)))))
+        (let
+          ((steps0 [])
+            (steps1
+              (if ((core/int::lt? 0) (core/vec::len autofixes))
+                ((core/vec::push steps0) {:op (quote :apply-autofixes) :payload {:patches autofixes}})
+                steps0))
+            (steps2
+              (if ((core/int::lt? 0) error-count)
+                ((core/vec::push steps1)
+                  {:op (quote :run-lint) :payload {:changed-syms [(quote ::meta)] :strict true}})
+                steps1))
+            (steps3
+              (if verify-ok
+                steps2
+                ((core/vec::push steps2) {:op (quote :run-obligation-verify) :payload {:strict true}})))
+            (steps4
+              (if accepted steps3 ((core/vec::push steps3) {:op (quote :run-tests) :payload {:strict true}}))))
+          {
+            :accepted accepted
+            :autofix-count (core/vec::len autofixes)
+            :error-count error-count
+            :kind (quote :editor/agent-repair-plan)
+            :ok true
+            :steps (if accepted ((core/vec::push steps4) {:op (quote :publish-candidate) :payload {}}) steps4)
+            :verify-ok verify-ok
+            :warn-count warn-count})))))
+
 (def core/editor/action::agent-propose-patch
   (fn (base)
     (fn (to)
       ((core/effect::map ((((core/vcs::diff base) to) nil) true))
         core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::agent-plan-and-propose-patch
+  (fn (base)
+    (fn (to)
+      (fn (before-src)
+        (fn (after-src)
+          (let ((plan ((((core/editor/agent::semantic-patch-plan base) to) before-src) after-src)))
+            ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+              (fn (diff-panel)
+                (prim map/put
+                  (prim map/put plan (quote :diff) diff-panel)
+                  (quote :patch)
+                  ((core/map::get diff-panel) (quote :patch)))))))))))
 
 (def core/editor/action::agent-apply-patch-with-obligations
   (fn (base)
@@ -3015,6 +4122,17 @@
                     (core/effect::pure
                       ((core/editor/agent::acceptance-report apply-resp) verify-resp))))
                 (core/effect::pure ((core/editor/agent::acceptance-report apply-resp) nil))))))))))
+
+(def core/editor/action::agent-conflict-resolution-plan
+  (fn (conflict-h)
+    (fn (prefer)
+      ((core/effect::map (core/editor/action::vcs-conflict-panel conflict-h))
+        (fn (panel) (((core/editor/agent::conflict-resolution-plan conflict-h) panel) prefer))))))
+
+(def core/editor/action::agent-repair-plan-from-acceptance
+  (fn (acceptance)
+    ((core/effect::bind (core/editor/action::lint-panel-from-acceptance acceptance))
+      (fn (lint-panel) (core/effect::pure ((core/editor/agent::repair-plan acceptance) lint-panel))))))
 
 (def core/editor/pkg::field
   (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))

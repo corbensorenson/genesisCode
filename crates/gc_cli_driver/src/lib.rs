@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -980,10 +981,7 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
         Ok(out) => {
             if cli.json {
                 // JSON mode: exactly one JSON object on stdout.
-                println!(
-                    "{}",
-                    serde_json::to_string(&out.json).expect("json serialization")
-                );
+                println!("{}", json_canonical_string(&out.json));
             } else if !out.stdout.is_empty() {
                 print!("{}", out.stdout);
             }
@@ -991,16 +989,14 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
         }
         Err(e) => {
             if cli.json {
-                println!(
-                    "{}",
-                    serde_json::to_string(&JsonEnvelope::<serde_json::Value> {
-                        ok: false,
-                        kind: "genesis/error-v0.2",
-                        data: None,
-                        error: Some(e.json),
-                    })
-                    .expect("json serialization")
-                );
+                let out = serde_json::to_value(JsonEnvelope::<serde_json::Value> {
+                    ok: false,
+                    kind: "genesis/error-v0.2",
+                    data: None,
+                    error: Some(e.json),
+                })
+                .expect("json serialization");
+                println!("{}", json_canonical_string(&out));
             } else {
                 eprintln!("{}", e.json.message);
                 if let Some(ctx) = e.json.context
@@ -1013,6 +1009,30 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
             std::process::ExitCode::from(e.exit_code)
         }
     }
+}
+
+fn canonicalize_json(v: &serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(m) => {
+            let mut sorted: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+            for (k, vv) in m {
+                sorted.insert(k.clone(), canonicalize_json(vv));
+            }
+            let mut out = serde_json::Map::new();
+            for (k, vv) in sorted {
+                out.insert(k, vv);
+            }
+            serde_json::Value::Object(out)
+        }
+        serde_json::Value::Array(xs) => {
+            serde_json::Value::Array(xs.iter().map(canonicalize_json).collect())
+        }
+        _ => v.clone(),
+    }
+}
+
+fn json_canonical_string(v: &serde_json::Value) -> String {
+    serde_json::to_string(&canonicalize_json(v)).expect("json serialization")
 }
 
 #[derive(Debug)]
@@ -8352,7 +8372,9 @@ fn cmd_selfhost_artifact(
     ctx.steps = 0;
     ctx.step_limit = step_limit.resolve();
 
-    let stage2_seed_index = bootstrap_artifact.as_deref().and_then(load_stage2_seed_index);
+    let stage2_seed_index = bootstrap_artifact
+        .as_deref()
+        .and_then(load_stage2_seed_index);
     let reuse_seed_results = stage2_seed_index.as_ref().is_some_and(|idx| {
         idx.generated_by.as_deref() == Some(&format!("genesis {}", env!("CARGO_PKG_VERSION")))
     });
@@ -8446,14 +8468,8 @@ fn cmd_selfhost_artifact(
 
         modules.push(Term::Map(
             [
-                (
-                    TermOrdKey(Term::symbol(":path")),
-                    Term::Str(path.clone()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":source")),
-                    Term::Str(src.clone()),
-                ),
+                (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
+                (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
                 (
                     TermOrdKey(Term::symbol(":forms")),
                     Term::Vector(forms.clone()),
@@ -8630,7 +8646,8 @@ fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
                 .into_iter()
                 .collect(),
             );
-            let planned = selfhost_plan_request_map(cli, "core/cli::keygen-request", req, "keygen")?;
+            let planned =
+                selfhost_plan_request_map(cli, "core/cli::keygen-request", req, "keygen")?;
             PathBuf::from(planned_required_str(&planned, ":out", "keygen")?)
         }
     };
@@ -9105,7 +9122,10 @@ fn cmd_verify(
                             .map(|p| Term::Str(p.display().to_string()))
                             .unwrap_or(Term::Nil),
                     ),
-                    (TermOrdKey(Term::symbol(":scan-store")), Term::Bool(scan_store)),
+                    (
+                        TermOrdKey(Term::symbol(":scan-store")),
+                        Term::Bool(scan_store),
+                    ),
                 ]
                 .into_iter()
                 .collect(),
@@ -9186,7 +9206,7 @@ fn hex32(h: [u8; 32]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{EX_PARSE, parse_set_ref_spec, parse_sync_set_refs};
+    use super::{EX_PARSE, json_canonical_string, parse_set_ref_spec, parse_sync_set_refs};
 
     #[test]
     fn parse_set_ref_spec_supports_contract_refs_with_colons() {
@@ -9231,6 +9251,19 @@ mod tests {
         assert_eq!(parsed.hash, commit);
         assert_eq!(parsed.policy, policy);
         assert_eq!(parsed.expected_old, None);
+    }
+
+    #[test]
+    fn json_canonical_string_sorts_object_keys_recursively() {
+        let value = serde_json::json!({
+            "z": 1,
+            "a": {
+                "y": 2,
+                "x": [{"b": 1, "a": 2}]
+            }
+        });
+        let s = json_canonical_string(&value);
+        assert_eq!(s, r#"{"a":{"x":[{"a":2,"b":1}],"y":2},"z":1}"#);
     }
 
     #[test]

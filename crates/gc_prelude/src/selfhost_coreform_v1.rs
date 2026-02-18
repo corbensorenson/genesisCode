@@ -6,7 +6,9 @@ use anyhow::Context;
 #[cfg(feature = "embedded-bootstrap")]
 use once_cell::sync::Lazy;
 
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term};
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
+};
 use gc_kernel::{CompiledModule, Env, EvalCtx, compile_module, eval_compiled_module};
 
 const SELFHOST_TOOLCHAIN_MANIFEST_SRC: &str =
@@ -72,7 +74,11 @@ fn parse_required_symbols_vec(t: &Term, field: &str) -> anyhow::Result<Vec<Strin
         let sym = match item {
             Term::Symbol(s) => s.clone(),
             Term::Str(s) => s.clone(),
-            _ => return Err(anyhow::anyhow!("{field} entries must be symbols or strings")),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "{field} entries must be symbols or strings"
+                ));
+            }
         };
         if sym.trim().is_empty() {
             return Err(anyhow::anyhow!("{field} cannot contain empty symbol names"));
@@ -124,8 +130,9 @@ fn parse_toolchain_manifest_src(src: &str) -> anyhow::Result<ToolchainManifest> 
 }
 
 fn toolchain_manifest() -> anyhow::Result<&'static ToolchainManifest> {
-    let r = TOOLCHAIN_MANIFEST
-        .get_or_init(|| parse_toolchain_manifest_src(SELFHOST_TOOLCHAIN_MANIFEST_SRC).map_err(|e| e.to_string()));
+    let r = TOOLCHAIN_MANIFEST.get_or_init(|| {
+        parse_toolchain_manifest_src(SELFHOST_TOOLCHAIN_MANIFEST_SRC).map_err(|e| e.to_string())
+    });
     match r {
         Ok(m) => Ok(m),
         Err(e) => Err(anyhow::anyhow!("selfhost toolchain manifest: {e}")),
@@ -155,15 +162,25 @@ fn parse_embedded_artifact_sources() -> anyhow::Result<BTreeMap<String, String>>
     let mut out = BTreeMap::new();
     for m in modules {
         let Term::Map(mm) = m else {
-            return Err(anyhow::anyhow!("embedded artifact module entry must be map"));
+            return Err(anyhow::anyhow!(
+                "embedded artifact module entry must be map"
+            ));
         };
         let path = match map_get(mm, ":path") {
             Some(Term::Str(s)) => s.clone(),
-            _ => return Err(anyhow::anyhow!("embedded artifact module missing :path string")),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "embedded artifact module missing :path string"
+                ));
+            }
         };
         let src = match map_get(mm, ":source") {
             Some(Term::Str(s)) => s.clone(),
-            _ => return Err(anyhow::anyhow!("embedded artifact module {path} missing :source string")),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "embedded artifact module {path} missing :source string"
+                ));
+            }
         };
         if out.insert(path.clone(), src).is_some() {
             return Err(anyhow::anyhow!(
@@ -174,7 +191,9 @@ fn parse_embedded_artifact_sources() -> anyhow::Result<BTreeMap<String, String>>
     Ok(out)
 }
 
-fn read_manifest_sources_from_workspace(manifest: &ToolchainManifest) -> anyhow::Result<Vec<(String, String)>> {
+fn read_manifest_sources_from_workspace(
+    manifest: &ToolchainManifest,
+) -> anyhow::Result<Vec<(String, String)>> {
     let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut out = Vec::with_capacity(manifest.module_paths.len());
     for path in &manifest.module_paths {
@@ -450,7 +469,8 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
     }
 
     // Build a deterministic vector in manifest-declared order for caching and evaluation.
-    let mut compiled_in_order: CachedCompiledModules = Vec::with_capacity(manifest.module_paths.len());
+    let mut compiled_in_order: CachedCompiledModules =
+        Vec::with_capacity(manifest.module_paths.len());
     for path in &manifest.module_paths {
         let module = compiled_by_path
             .remove(path)

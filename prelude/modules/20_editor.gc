@@ -1038,6 +1038,31 @@
     (fn (caps)
       (((core/editor/action::task (quote editor/task::test-pkg)) {:caps caps :pkg pkg}) 50))))
 
+(def core/editor/action::gfx-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) scene-label) scene-pipeline-id)
+                ui-label)
+                ui-pipeline-id))))))))
+
+(def core/editor/action::gfx-store-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (fn (meta)
+                (((((((core/gfx/runtime::store-plan-frame-2d+ui-trace scene) ui-root) scene-label)
+                  scene-pipeline-id)
+                  ui-label)
+                  ui-pipeline-id)
+                  meta)))))))))
+
 (def core/editor/plugin::contains-op?
   (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
 
@@ -1166,11 +1191,191 @@
         :kind (quote :editor/agent-acceptance)
         :verify verify-resp})))
 
+(def core/editor/agent::present?
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :nil)) false true)))
+
+(def core/editor/agent::int-or-zero
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :int)) x 0)))
+
+(def core/editor/agent::normalize-side
+  (fn (x)
+    (let
+      ((s
+         (if (core/editor/lint::sym? x)
+           (core/sym::to-str x)
+           (if (core/editor/lint::str? x) x ""))))
+      (if (prim core/eq? s "left")
+        (quote :left)
+        (if (prim core/eq? s ":left")
+          (quote :left)
+          (if (prim core/eq? s "base")
+            (quote :base)
+            (if (prim core/eq? s ":base") (quote :base) (quote :right))))))))
+
+(def core/editor/agent::conflict-op-key
+  (fn (entry)
+    (if (core/editor/lint::map? entry)
+      (let ((op ((core/map::get entry) (quote :op))))
+        (if (core/editor/lint::sym? op)
+          op
+          (if (core/editor/lint::str? op) (core/sym::from-str op) nil)))
+      nil)))
+
+(def core/editor/agent::choose-side
+  (fn (entry)
+    (fn (prefer)
+      (if (core/editor/lint::map? entry)
+        (let
+          ((base ((core/map::get entry) (quote :base)))
+            (left ((core/map::get entry) (quote :left)))
+            (right ((core/map::get entry) (quote :right))))
+          (if ((core/sym::eq? prefer) (quote :left))
+            (if (core/editor/agent::present? left)
+              (quote :left)
+              (if (core/editor/agent::present? right)
+                (quote :right)
+                (if (core/editor/agent::present? base) (quote :base) nil)))
+            (if ((core/sym::eq? prefer) (quote :right))
+              (if (core/editor/agent::present? right)
+                (quote :right)
+                (if (core/editor/agent::present? left)
+                  (quote :left)
+                  (if (core/editor/agent::present? base) (quote :base) nil)))
+              (if (core/editor/agent::present? base)
+                (quote :base)
+                (if (core/editor/agent::present? right)
+                  (quote :right)
+                  (if (core/editor/agent::present? left) (quote :left) nil))))))
+        nil))))
+
+(def core/editor/agent::conflict-plan-loop
+  (fn (conflicts)
+    (fn (prefer)
+      (fn (i)
+        (fn (resolutions)
+          (fn (ops)
+            (if ((core/int::eq? i) (core/vec::len conflicts))
+              {:ops ops :resolutions resolutions}
+              (let
+                ((entry ((core/vec::get conflicts) i))
+                  (next
+                    (((core/editor/agent::conflict-plan-loop conflicts) prefer)
+                      ((core/int::add i) 1))))
+                (let
+                  ((opk (core/editor/agent::conflict-op-key entry))
+                    (side ((core/editor/agent::choose-side entry) prefer)))
+                  (if (core/editor/lint::sym? opk)
+                    (if (core/editor/lint::sym? side)
+                      ((next (prim map/put resolutions opk side))
+                        ((core/vec::push ops) (core/sym::to-str opk)))
+                      ((next resolutions) ops))
+                    ((next resolutions) ops)))))))))))
+
+(def core/editor/agent::conflict-resolution-plan
+  (fn (conflict-h)
+    (fn (conflict-panel)
+      (fn (prefer)
+        (let
+          ((pref (core/editor/agent::normalize-side prefer))
+            (conflicts
+              (if (core/editor/lint::map? conflict-panel)
+                (core/editor/vcs::vec-or-empty ((core/map::get conflict-panel) (quote :conflicts)))
+                [])))
+          (let ((planned (((((core/editor/agent::conflict-plan-loop conflicts) pref) 0) {}) [])))
+            {
+              :conflict conflict-h
+              :count (core/vec::len ((core/map::get planned) (quote :ops)))
+              :kind (quote :editor/agent-conflict-resolution-plan)
+              :ok true
+              :ops ((core/map::get planned) (quote :ops))
+              :resolutions ((core/map::get planned) (quote :resolutions))
+              :strategy pref}))))))
+
+(def core/editor/agent::semantic-patch-plan
+  (fn (base)
+    (fn (to)
+      (fn (before-src)
+        (fn (after-src)
+          (let
+            ((before-index (core/editor/ast::parse-module-index before-src))
+              (after-index (core/editor/ast::parse-module-index after-src)))
+            (let
+              ((before-ok (core/editor/ast::module-index-ok? before-index))
+                (after-ok (core/editor/ast::module-index-ok? after-index)))
+              (let
+                ((changed
+                   (if before-ok
+                     (if after-ok ((core/editor/ast::changed-syms before-index) after-index) [(quote ::meta)])
+                     [(quote ::meta)])))
+                {
+                  :after-error ((core/map::get after-index) (quote :error))
+                  :after-h (core/coreform::hash-module-src after-src)
+                  :after-ok after-ok
+                  :base base
+                  :before-error ((core/map::get before-index) (quote :error))
+                  :before-h (core/coreform::hash-module-src before-src)
+                  :before-ok before-ok
+                  :changed-count (core/vec::len changed)
+                  :changed-syms changed
+                  :kind (quote :editor/agent-semantic-patch-plan)
+                  :meta-changed ((core/editor/ast::contains-sym? changed) (quote ::meta))
+                  :ok (if before-ok after-ok false)
+                  :to to}))))))))
+
+(def core/editor/agent::repair-plan
+  (fn (acceptance)
+    (fn (lint-panel)
+      (let
+        ((accepted (core/editor/agent::bool-or-false ((core/map::get acceptance) (quote :accepted))))
+          (verify-ok (core/editor/agent::verify-ok? ((core/map::get acceptance) (quote :verify))))
+          (error-count (core/editor/agent::int-or-zero ((core/map::get lint-panel) (quote :error-count))))
+          (warn-count (core/editor/agent::int-or-zero ((core/map::get lint-panel) (quote :warn-count))))
+          (autofixes (core/editor/lint::vec-or-empty ((core/map::get lint-panel) (quote :autofixes)))))
+        (let
+          ((steps0 [])
+            (steps1
+              (if ((core/int::lt? 0) (core/vec::len autofixes))
+                ((core/vec::push steps0) {:op (quote :apply-autofixes) :payload {:patches autofixes}})
+                steps0))
+            (steps2
+              (if ((core/int::lt? 0) error-count)
+                ((core/vec::push steps1)
+                  {:op (quote :run-lint) :payload {:changed-syms [(quote ::meta)] :strict true}})
+                steps1))
+            (steps3
+              (if verify-ok
+                steps2
+                ((core/vec::push steps2) {:op (quote :run-obligation-verify) :payload {:strict true}})))
+            (steps4
+              (if accepted steps3 ((core/vec::push steps3) {:op (quote :run-tests) :payload {:strict true}}))))
+          {
+            :accepted accepted
+            :autofix-count (core/vec::len autofixes)
+            :error-count error-count
+            :kind (quote :editor/agent-repair-plan)
+            :ok true
+            :steps (if accepted ((core/vec::push steps4) {:op (quote :publish-candidate) :payload {}}) steps4)
+            :verify-ok verify-ok
+            :warn-count warn-count})))))
+
 (def core/editor/action::agent-propose-patch
   (fn (base)
     (fn (to)
       ((core/effect::map ((((core/vcs::diff base) to) nil) true))
         core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::agent-plan-and-propose-patch
+  (fn (base)
+    (fn (to)
+      (fn (before-src)
+        (fn (after-src)
+          (let ((plan ((((core/editor/agent::semantic-patch-plan base) to) before-src) after-src)))
+            ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+              (fn (diff-panel)
+                (prim map/put
+                  (prim map/put plan (quote :diff) diff-panel)
+                  (quote :patch)
+                  ((core/map::get diff-panel) (quote :patch)))))))))))
 
 (def core/editor/action::agent-apply-patch-with-obligations
   (fn (base)
@@ -1185,6 +1390,17 @@
                     (core/effect::pure
                       ((core/editor/agent::acceptance-report apply-resp) verify-resp))))
                 (core/effect::pure ((core/editor/agent::acceptance-report apply-resp) nil))))))))))
+
+(def core/editor/action::agent-conflict-resolution-plan
+  (fn (conflict-h)
+    (fn (prefer)
+      ((core/effect::map (core/editor/action::vcs-conflict-panel conflict-h))
+        (fn (panel) (((core/editor/agent::conflict-resolution-plan conflict-h) panel) prefer))))))
+
+(def core/editor/action::agent-repair-plan-from-acceptance
+  (fn (acceptance)
+    ((core/effect::bind (core/editor/action::lint-panel-from-acceptance acceptance))
+      (fn (lint-panel) (core/effect::pure ((core/editor/agent::repair-plan acceptance) lint-panel))))))
 
 (def core/editor/pkg::field
   (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))

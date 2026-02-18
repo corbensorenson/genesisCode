@@ -893,3 +893,98 @@ fn prelude_gfx_ui_runtime_projects_to_2d_and_plans_batched_frame() {
     };
     assert_eq!(commands.len(), 5, "set-pipeline + one draw per batch");
 }
+
+#[test]
+fn prelude_gfx_runtime_trace_artifact_is_deterministic_and_storeable() {
+    let src = r#"
+      (def scene (core/gfx/scene::empty "trace-demo"))
+      (def ui-style ((((core/gfx/ui::style {:axis "vertical"}) {:w 640000 :h 480000}) {:gap 8000}) {:bg [0 0 0 1000000]}))
+      (def title (((core/gfx/ui::text "title") "Trace") ui-style))
+      (def children0 [])
+      (def children1 ((core/vec::push children0) title))
+      (def ui-root (((core/gfx/ui::container "root") ui-style) children1))
+      (def plan-a ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) "scene-pass") 17) "ui-pass") 23))
+      (def plan-b ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) "scene-pass") 17) "ui-pass") 23))
+      (def trace-a ((core/map::get plan-a) (quote :trace)))
+      {
+        :plan plan-a
+        :trace-h-a (core/coreform::hash-term trace-a)
+        :trace-h-b (core/coreform::hash-term ((core/map::get plan-b) (quote :trace)))
+        :store ((core/gfx/runtime::store-trace-artifact-with-meta trace-a) {:workflow "ai-editor"})
+      }
+    "#;
+    let forms = canonicalize_module(parse_module(src).expect("parse")).expect("canonicalize");
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let v = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let Value::Map(m) = v else {
+        panic!("expected map");
+    };
+
+    let plan_v = m
+        .get(&TermOrdKey(Term::symbol(":plan")))
+        .expect(":plan")
+        .clone();
+    let Some(Term::Map(plan)) = value_to_data_term(&plan_v) else {
+        panic!("plan must be map");
+    };
+    assert_eq!(
+        plan.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol(":gfx/plan-frame-2d+ui-trace"))
+    );
+    let Some(Term::Map(trace)) = plan.get(&TermOrdKey(Term::symbol(":trace"))) else {
+        panic!("trace must be map");
+    };
+    assert_eq!(
+        trace.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol(":gfx/frame-trace"))
+    );
+    assert_eq!(
+        trace.get(&TermOrdKey(Term::symbol(":ui-node-count"))),
+        Some(&Term::Int(2.into()))
+    );
+
+    let Some(Term::Str(trace_h)) = m
+        .get(&TermOrdKey(Term::symbol(":trace-h-a")))
+        .and_then(value_to_data_term)
+    else {
+        panic!("trace-h-a must be string");
+    };
+    let Some(Term::Str(trace_h_b)) = m
+        .get(&TermOrdKey(Term::symbol(":trace-h-b")))
+        .and_then(value_to_data_term)
+    else {
+        panic!("trace-h-b must be string");
+    };
+    assert_eq!(trace_h.len(), 64);
+    assert_eq!(trace_h, trace_h_b, "trace hash must be deterministic");
+
+    let store_v = m
+        .get(&TermOrdKey(Term::symbol(":store")))
+        .expect(":store")
+        .clone();
+    let req = get_req(store_v);
+    assert_eq!(req.op, "core/store::put");
+    let Term::Map(payload) = req.payload else {
+        panic!("store payload must be map");
+    };
+    let Some(Term::Map(artifact)) = payload.get(&TermOrdKey(Term::symbol(":artifact"))) else {
+        panic!("artifact payload missing");
+    };
+    assert_eq!(
+        artifact.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol("genesis/gfx-frame-trace-v0.2"))
+    );
+    assert_eq!(
+        artifact.get(&TermOrdKey(Term::symbol(":trace-h"))),
+        Some(&Term::Str(trace_h))
+    );
+    let Some(Term::Map(meta)) = artifact.get(&TermOrdKey(Term::symbol(":meta"))) else {
+        panic!("trace artifact meta missing");
+    };
+    assert_eq!(
+        meta.get(&TermOrdKey(Term::symbol(":workflow"))),
+        Some(&Term::Str("ai-editor".to_string()))
+    );
+}

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use blake3::Hasher;
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
+use gc_prelude::build_prelude;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
@@ -4230,162 +4231,31 @@ fn call_capability(
             let include_lock = payload_gc_include_lock(payload).unwrap_or(true);
             let include_refs = payload_gc_include_refs(payload).unwrap_or(true);
 
-            let mut roots: Vec<String> = Vec::new();
-            let mut roots_kind: Vec<Term> = Vec::new();
-
-            if include_refs && let Some(rdb) = refs {
-                for r in rdb.list(None)? {
-                    if let Some(h) = r.hash
-                        && gc_vcs::validate_hex_hash(&h).is_ok()
-                    {
-                        roots.push(h.clone());
-                        roots_kind.push(Term::Map(
-                            [
-                                (TermOrdKey(Term::symbol(":kind")), Term::symbol(":ref")),
-                                (TermOrdKey(Term::symbol(":name")), Term::Str(r.name)),
-                                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        ));
-                    }
-                }
-            }
-
-            if include_lock
-                && let Ok(lock_path) = sandbox_path_read(&base_dir, &lock_s)
-                && lock_path.exists()
-            {
-                match gc_pkg::GenesisLock::load(&lock_path) {
-                    Ok(lk) => {
-                        for (_, le) in lk.locked {
-                            if let Some(ch) = le.commit
-                                && gc_vcs::validate_hex_hash(&ch).is_ok()
-                            {
-                                roots.push(ch.clone());
-                                roots_kind.push(Term::Map(
-                                    [
-                                        (
-                                            TermOrdKey(Term::symbol(":kind")),
-                                            Term::symbol(":lock-commit"),
-                                        ),
-                                        (
-                                            TermOrdKey(Term::symbol(":lock")),
-                                            Term::Str(lock_s.clone()),
-                                        ),
-                                        (TermOrdKey(Term::symbol(":hash")), Term::Str(ch)),
-                                    ]
-                                    .into_iter()
-                                    .collect(),
-                                ));
-                            }
-                            if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
-                                roots.push(le.snapshot.clone());
-                                roots_kind.push(Term::Map(
-                                    [
-                                        (
-                                            TermOrdKey(Term::symbol(":kind")),
-                                            Term::symbol(":lock-snapshot"),
-                                        ),
-                                        (
-                                            TermOrdKey(Term::symbol(":lock")),
-                                            Term::Str(lock_s.clone()),
-                                        ),
-                                        (TermOrdKey(Term::symbol(":hash")), Term::Str(le.snapshot)),
-                                    ]
-                                    .into_iter()
-                                    .collect(),
-                                ));
-                            }
-                        }
-                        for (k, v) in lk.artifacts {
-                            if gc_vcs::validate_hex_hash(&v).is_ok() {
-                                roots.push(v.clone());
-                                roots_kind.push(Term::Map(
-                                    [
-                                        (
-                                            TermOrdKey(Term::symbol(":kind")),
-                                            Term::symbol(":lock-artifact"),
-                                        ),
-                                        (
-                                            TermOrdKey(Term::symbol(":lock")),
-                                            Term::Str(lock_s.clone()),
-                                        ),
-                                        (TermOrdKey(Term::symbol(":key")), Term::Str(k)),
-                                        (TermOrdKey(Term::symbol(":hash")), Term::Str(v)),
-                                    ]
-                                    .into_iter()
-                                    .collect(),
-                                ));
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/gc/bad-lock",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
-                }
-            }
-
-            let pins = match gc_pins_load(&base_dir, &pins_s) {
-                Ok(p) => p,
-                Err(e) => return Ok(mk_error(error_tok, "core/gc/bad-pins", e, Some(op))),
+            let (refs_entries, lock_info, pins_info) = match gc_build_sources(
+                refs,
+                &base_dir,
+                &lock_s,
+                &pins_s,
+                include_lock,
+                include_refs,
+                error_tok,
+                op,
+            ) {
+                Ok(v) => v,
+                Err(v) => return Ok(v),
             };
-            for h in &pins.keep {
-                roots.push(h.clone());
-                roots_kind.push(Term::Map(
-                    [
-                        (TermOrdKey(Term::symbol(":kind")), Term::symbol(":pin")),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(h.clone())),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ));
-            }
-            for rname in &pins.keep_refs {
-                let Some(rdb) = refs else {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/gc/missing-refs-db",
-                        "pins.keep_refs requires refs db".to_string(),
-                        Some(op),
-                    ));
-                };
-                let cur = match rdb.get(rname) {
-                    Ok(h) => h,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/gc/refs-io-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let Some(h) = cur else {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/gc/ref-not-found",
-                        format!("pinned ref not found: {rname}"),
-                        Some(op),
-                    ));
-                };
-                roots.push(h.clone());
-                roots_kind.push(Term::Map(
-                    [
-                        (TermOrdKey(Term::symbol(":kind")), Term::symbol(":pin-ref")),
-                        (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ));
-            }
-
+            let (mut roots, roots_kind) = match gc_roots_plan_from_sources(
+                &refs_entries,
+                &lock_info,
+                &pins_info,
+                include_lock,
+                include_refs,
+                error_tok,
+                op,
+            ) {
+                Ok(v) => v,
+                Err(v) => return Ok(v),
+            };
             roots.sort();
             roots.dedup();
 
@@ -4460,86 +4330,31 @@ fn call_capability(
             let quarantine = payload_gc_quarantine(payload).unwrap_or(false);
             let quarantine_dir_s = payload_gc_quarantine_dir(payload);
 
-            // Compute live set by reusing plan logic (without returning the whole plan payload).
-            let mut roots: Vec<String> = Vec::new();
-            if include_refs && let Some(rdb) = refs {
-                for r in rdb.list(None)? {
-                    if let Some(h) = r.hash
-                        && gc_vcs::validate_hex_hash(&h).is_ok()
-                    {
-                        roots.push(h);
-                    }
-                }
-            }
-            if include_lock
-                && let Ok(lock_path) = sandbox_path_read(&base_dir, &lock_s)
-                && lock_path.exists()
-            {
-                match gc_pkg::GenesisLock::load(&lock_path) {
-                    Ok(lk) => {
-                        for (_, le) in lk.locked {
-                            if let Some(ch) = le.commit
-                                && gc_vcs::validate_hex_hash(&ch).is_ok()
-                            {
-                                roots.push(ch);
-                            }
-                            if gc_vcs::validate_hex_hash(&le.snapshot).is_ok() {
-                                roots.push(le.snapshot);
-                            }
-                        }
-                        for (_, v) in lk.artifacts {
-                            if gc_vcs::validate_hex_hash(&v).is_ok() {
-                                roots.push(v);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/gc/bad-lock",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
-                }
-            }
-            let pins = match gc_pins_load(&base_dir, &pins_s) {
-                Ok(p) => p,
-                Err(e) => return Ok(mk_error(error_tok, "core/gc/bad-pins", e, Some(op))),
+            let (refs_entries, lock_info, pins_info) = match gc_build_sources(
+                refs,
+                &base_dir,
+                &lock_s,
+                &pins_s,
+                include_lock,
+                include_refs,
+                error_tok,
+                op,
+            ) {
+                Ok(v) => v,
+                Err(v) => return Ok(v),
             };
-            roots.extend(pins.keep.iter().cloned());
-            if !pins.keep_refs.is_empty() {
-                let Some(rdb) = refs else {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/gc/missing-refs-db",
-                        "pins.keep_refs requires refs db".to_string(),
-                        Some(op),
-                    ));
-                };
-                for rname in &pins.keep_refs {
-                    let cur = match rdb.get(rname) {
-                        Ok(h) => h,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/gc/refs-io-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let Some(h) = cur else {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/gc/ref-not-found",
-                            format!("pinned ref not found: {rname}"),
-                            Some(op),
-                        ));
-                    };
-                    roots.push(h);
-                }
-            }
+            let (mut roots, _) = match gc_roots_plan_from_sources(
+                &refs_entries,
+                &lock_info,
+                &pins_info,
+                include_lock,
+                include_refs,
+                error_tok,
+                op,
+            ) {
+                Ok(v) => v,
+                Err(v) => return Ok(v),
+            };
             roots.sort();
             roots.dedup();
 
@@ -7779,38 +7594,6 @@ fn sync_closure_local(
     Ok(())
 }
 
-fn snapshot_dep_refs_from_term(t: &Term) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    let Term::Map(m) = t else {
-        return out;
-    };
-    let Some(Term::Symbol(ty)) = m.get(&TermOrdKey(Term::symbol(":type"))) else {
-        return out;
-    };
-    if ty != ":vcs/snapshot" {
-        return out;
-    }
-    let Some(Term::Vector(deps)) = m.get(&TermOrdKey(Term::symbol(":deps"))) else {
-        return out;
-    };
-    for dep in deps {
-        let Term::Map(dm) = dep else {
-            continue;
-        };
-        for key in [":dep/commit", ":dep/snapshot", ":commit", ":snapshot"] {
-            let Some(Term::Str(h)) = dm.get(&TermOrdKey(Term::symbol(key))) else {
-                continue;
-            };
-            if gc_vcs::validate_hex_hash(h).is_ok() {
-                out.push(h.to_ascii_lowercase());
-            }
-        }
-    }
-    out.sort();
-    out.dedup();
-    out
-}
-
 fn resolve_gpk_root_for_export(
     store: &ArtifactStore,
     refs: Option<&RefsDb>,
@@ -7898,6 +7681,20 @@ fn gpk_export_closure_local(
 ) -> Result<(), Value> {
     use std::collections::{HashSet, VecDeque};
 
+    let mut helper_ctx = EvalCtx::new();
+    let helper_prelude = build_prelude(&mut helper_ctx);
+    let helper_ref_plan_fn = helper_prelude
+        .env
+        .get("core/vcs/reach::artifact-ref-plan")
+        .ok_or_else(|| {
+            mk_error(
+                error_tok,
+                "core/gpk/planner-missing",
+                "missing prelude binding core/vcs/reach::artifact-ref-plan".to_string(),
+                Some(op),
+            )
+        })?;
+
     let mut q: VecDeque<(String, u64, bool)> = VecDeque::new();
     q.push_back((root.to_string(), opts.depth, true));
     let mut seen: HashSet<String> = HashSet::new();
@@ -7938,72 +7735,305 @@ fn gpk_export_closure_local(
             Ok(t) => t,
             Err(_) => continue,
         };
-        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
-            if let Some(b) = c.base {
-                q.push_back((b, dleft, false));
-            }
-            q.push_back((c.patch, dleft, false));
-            q.push_back((c.result, dleft, false));
-            let include_commit_evidence = match opts.include_evidence {
-                GpkIncludeEvidence::None => false,
-                GpkIncludeEvidence::Required => is_root,
-                GpkIncludeEvidence::All => true,
-            };
-            if include_commit_evidence {
-                for x in c.evidence {
-                    q.push_back((x, dleft, false));
-                }
-            }
-            for x in c.attestations {
-                q.push_back((x, dleft, false));
-            }
-            if opts.mode == GpkMode::Full && dleft > 0 {
-                for p in c.parents {
-                    q.push_back((p, dleft - 1, false));
-                }
-            }
-            continue;
+        let include_commit_evidence = match opts.include_evidence {
+            GpkIncludeEvidence::None => false,
+            GpkIncludeEvidence::Required => is_root,
+            GpkIncludeEvidence::All => true,
+        };
+        let follow_deps = match opts.include_deps {
+            GpkIncludeDeps::None => false,
+            GpkIncludeDeps::Locked => opts
+                .root_snapshot_for_locked_deps
+                .map(|hh| hh.eq_ignore_ascii_case(&h))
+                .unwrap_or(false),
+            GpkIncludeDeps::All => true,
+        };
+
+        let mut opts_map = BTreeMap::new();
+        opts_map.insert(
+            TermOrdKey(Term::symbol(":include-evidence")),
+            Term::Bool(include_commit_evidence),
+        );
+        opts_map.insert(
+            TermOrdKey(Term::symbol(":include-deps")),
+            Term::Bool(follow_deps),
+        );
+        opts_map.insert(
+            TermOrdKey(Term::symbol(":include-parents")),
+            Term::Bool(opts.mode == GpkMode::Full && dleft > 0),
+        );
+        let opts_term = Term::Map(opts_map);
+
+        let plan_term = helper_ref_plan_fn
+            .clone()
+            .apply(&mut helper_ctx, Value::Data(t.clone()))
+            .and_then(|f| f.apply(&mut helper_ctx, Value::Data(opts_term)))
+            .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
+            .map_err(|e| {
+                mk_error(
+                    error_tok,
+                    "core/gpk/planner-error",
+                    format!("core/vcs/reach::artifact-ref-plan failed: {e}"),
+                    Some(op),
+                )
+            })?;
+        let (refs_to_follow, parent_refs) = gpk_ref_plan_from_term(&plan_term);
+        for x in refs_to_follow {
+            q.push_back((x, dleft, false));
         }
-        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
-            for x in p.refs() {
-                q.push_back((x, dleft, false));
-            }
-            continue;
-        }
-        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
-            if opts.include_evidence != GpkIncludeEvidence::None {
-                for x in e.refs() {
-                    q.push_back((x, dleft, false));
-                }
-            }
-            continue;
-        }
-        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
-            for x in c.refs() {
-                q.push_back((x, dleft, false));
-            }
-            continue;
-        }
-        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
-            for x in s.shallow_refs() {
-                q.push_back((x, dleft, false));
-            }
-            let follow_deps = match opts.include_deps {
-                GpkIncludeDeps::None => false,
-                GpkIncludeDeps::Locked => opts
-                    .root_snapshot_for_locked_deps
-                    .map(|hh| hh.eq_ignore_ascii_case(&h))
-                    .unwrap_or(false),
-                GpkIncludeDeps::All => true,
-            };
-            if follow_deps {
-                for dep in snapshot_dep_refs_from_term(&t) {
-                    q.push_back((dep, dleft, false));
-                }
+
+        if dleft > 0 {
+            for p in parent_refs {
+                q.push_back((p, dleft - 1, false));
             }
         }
     }
     Ok(())
+}
+
+fn gpk_ref_hashes_from_term(t: &Term) -> Vec<String> {
+    let Term::Vector(xs) = t else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for x in xs {
+        let s = match x {
+            Term::Str(s) | Term::Symbol(s) => s,
+            _ => continue,
+        };
+        if gc_vcs::validate_hex_hash(s).is_ok() {
+            out.push(s.to_ascii_lowercase());
+        }
+    }
+    out
+}
+
+fn gpk_ref_plan_from_term(t: &Term) -> (Vec<String>, Vec<String>) {
+    let Term::Map(m) = t else {
+        return (Vec::new(), Vec::new());
+    };
+    let refs = m
+        .get(&TermOrdKey(Term::symbol(":refs")))
+        .map(gpk_ref_hashes_from_term)
+        .unwrap_or_default();
+    let parents = m
+        .get(&TermOrdKey(Term::symbol(":parents")))
+        .map(gpk_ref_hashes_from_term)
+        .unwrap_or_default();
+    (refs, parents)
+}
+
+fn gc_build_sources(
+    refs: Option<&RefsDb>,
+    base_dir: &Path,
+    lock_s: &str,
+    pins_s: &str,
+    include_lock: bool,
+    include_refs: bool,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(Vec<Term>, Term, Term), Value> {
+    let mut ref_entries: Vec<Term> = Vec::new();
+    if include_refs && let Some(rdb) = refs {
+        match rdb.list(None) {
+            Ok(list) => {
+                for r in list {
+                    let mut m = BTreeMap::new();
+                    m.insert(TermOrdKey(Term::symbol(":name")), Term::Str(r.name));
+                    m.insert(
+                        TermOrdKey(Term::symbol(":hash")),
+                        r.hash.map(Term::Str).unwrap_or(Term::Nil),
+                    );
+                    ref_entries.push(Term::Map(m));
+                }
+            }
+            Err(e) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/gc/refs-io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+        }
+    }
+
+    let mut lock_entries_term: Vec<Term> = Vec::new();
+    let mut lock_artifacts_term: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+    if include_lock
+        && let Ok(lock_path) = sandbox_path_read(base_dir, lock_s)
+        && lock_path.exists()
+    {
+        match gc_pkg::GenesisLock::load(&lock_path) {
+            Ok(lk) => {
+                for (_, le) in lk.locked {
+                    let mut m = BTreeMap::new();
+                    m.insert(
+                        TermOrdKey(Term::symbol(":commit")),
+                        le.commit.map(Term::Str).unwrap_or(Term::Nil),
+                    );
+                    m.insert(
+                        TermOrdKey(Term::symbol(":snapshot")),
+                        Term::Str(le.snapshot),
+                    );
+                    lock_entries_term.push(Term::Map(m));
+                }
+                for (k, v) in lk.artifacts {
+                    lock_artifacts_term.insert(TermOrdKey(Term::Str(k)), Term::Str(v));
+                }
+            }
+            Err(e) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/gc/bad-lock",
+                    format!("{e}"),
+                    Some(op),
+                ));
+            }
+        }
+    }
+    let lock_info = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":lock")),
+                Term::Str(lock_s.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":locked")),
+                Term::Vector(lock_entries_term),
+            ),
+            (
+                TermOrdKey(Term::symbol(":artifacts")),
+                Term::Map(lock_artifacts_term),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+
+    let pins = match gc_pins_load(base_dir, pins_s) {
+        Ok(p) => p,
+        Err(e) => return Err(mk_error(error_tok, "core/gc/bad-pins", e, Some(op))),
+    };
+    let mut keep_refs_term: Vec<Term> = Vec::new();
+    for rname in &pins.keep_refs {
+        let Some(rdb) = refs else {
+            return Err(mk_error(
+                error_tok,
+                "core/gc/missing-refs-db",
+                "pins.keep_refs requires refs db".to_string(),
+                Some(op),
+            ));
+        };
+        let cur = match rdb.get(rname) {
+            Ok(h) => h,
+            Err(e) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/gc/refs-io-error",
+                    e.to_string(),
+                    Some(op),
+                ));
+            }
+        };
+        let Some(h) = cur else {
+            return Err(mk_error(
+                error_tok,
+                "core/gc/ref-not-found",
+                format!("pinned ref not found: {rname}"),
+                Some(op),
+            ));
+        };
+        keep_refs_term.push(Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
+                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+    let pins_info = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":keep")),
+                Term::Vector(pins.keep.into_iter().map(Term::Str).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":keep-refs")),
+                Term::Vector(keep_refs_term),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+
+    Ok((ref_entries, lock_info, pins_info))
+}
+
+fn gc_roots_plan_from_sources(
+    refs_entries: &[Term],
+    lock_info: &Term,
+    pins_info: &Term,
+    include_lock: bool,
+    include_refs: bool,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(Vec<String>, Vec<Term>), Value> {
+    let mut helper_ctx = EvalCtx::new();
+    let helper_prelude = build_prelude(&mut helper_ctx);
+    let roots_plan_fn = helper_prelude
+        .env
+        .get("core/gc/reach::roots-plan")
+        .ok_or_else(|| {
+            mk_error(
+                error_tok,
+                "core/gc/planner-missing",
+                "missing prelude binding core/gc/reach::roots-plan".to_string(),
+                Some(op),
+            )
+        })?;
+
+    let plan_term = roots_plan_fn
+        .apply(
+            &mut helper_ctx,
+            Value::Data(Term::Vector(refs_entries.to_vec())),
+        )
+        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(lock_info.clone())))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(pins_info.clone())))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_lock))))
+        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_refs))))
+        .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
+        .map_err(|e| {
+            mk_error(
+                error_tok,
+                "core/gc/planner-error",
+                format!("core/gc/reach::roots-plan failed: {e}"),
+                Some(op),
+            )
+        })?;
+
+    let Term::Map(m) = plan_term else {
+        return Err(mk_error(
+            error_tok,
+            "core/gc/planner-error",
+            "gc roots planner must return a map".to_string(),
+            Some(op),
+        ));
+    };
+    let roots = m
+        .get(&TermOrdKey(Term::symbol(":roots")))
+        .map(gpk_ref_hashes_from_term)
+        .unwrap_or_default();
+    let roots_meta = m
+        .get(&TermOrdKey(Term::symbol(":roots-meta")))
+        .and_then(|t| match t {
+            Term::Vector(v) => Some(v.clone()),
+            _ => None,
+        })
+        .unwrap_or_default();
+
+    Ok((roots, roots_meta))
 }
 
 // -----------------------------------------------------------------------------

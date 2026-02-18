@@ -16,14 +16,8 @@ fn build_selfhost_artifact_source() -> String {
             let h = gc_coreform::hash_module(&forms);
             Term::Map(
                 [
-                    (
-                        TermOrdKey(Term::symbol(":path")),
-                        Term::Str(path.clone()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":source")),
-                        Term::Str(src.clone()),
-                    ),
+                    (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
+                    (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
                     (
                         TermOrdKey(Term::symbol(":module-h")),
                         Term::Bytes(h.to_vec().into()),

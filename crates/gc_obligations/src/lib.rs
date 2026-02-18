@@ -510,7 +510,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_gfx_frame_budgets(&store, &pkg_dir, &manifest, &modules, limits)
             }
             "core/obligation::gfx-api-stability" => {
-                obligation_gfx_api_stability(&store, &manifest, &modules)
+                obligation_gfx_api_stability(&store, &manifest, &modules, limits)
             }
             "core/obligation::lint" => obligation_lint(&store, &manifest, &modules, limits),
             other => Ok(ObligationResult {
@@ -3322,6 +3322,20 @@ fn obligation_gfx_golden_images(
     }
 
     let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
+    let golden_case_fn = eval
+        .lookup_any("core/gfx/obligation::golden-case")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::golden-case".to_string(),
+            )
+        })?;
+    let golden_report_fn = eval
+        .lookup_any("core/gfx/obligation::golden-report")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::golden-report".to_string(),
+            )
+        })?;
     let mut cases: Vec<GfxGoldenCase> = Vec::new();
 
     for suite in &manifest.gfx.golden_tests {
@@ -3370,170 +3384,120 @@ fn obligation_gfx_golden_images(
     }
 
     for c in &cases {
-        let mut t_ok = true;
-        let mut actual_h = String::new();
-        let mut actual_png_h = String::new();
-        let mut err: Option<String> = None;
+        let mut runtime_error: Option<String> = None;
+        let mut actual_h = Term::Nil;
+        let mut actual_png_h = Term::Nil;
         let mut ctx = mk_eval_ctx(limits);
         let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
             Ok(v) => v,
             Err(e) => {
-                t_ok = false;
-                err = Some(format!("apply failed: {e}"));
+                runtime_error = Some(format!("apply failed: {e}"));
                 Value::Data(Term::Nil)
             }
         };
 
-        if t_ok && matches!(value, Value::EffectProgram(_)) {
-            t_ok = false;
-            err = Some(
+        if runtime_error.is_none() && matches!(value, Value::EffectProgram(_)) {
+            runtime_error = Some(
                 "effect program returned; gfx golden tests must return pure frame/scene data"
                     .to_string(),
             );
         }
 
-        if t_ok {
+        if runtime_error.is_none() {
             let is_error = ctx
                 .protocol
                 .is_some_and(|p| matches!(value, Value::Sealed { token, .. } if token == p.error));
             if is_error {
-                t_ok = false;
-                err = Some("sealed ERROR returned by golden test body".to_string());
+                runtime_error = Some("sealed ERROR returned by golden test body".to_string());
             }
         }
 
-        if t_ok {
+        if runtime_error.is_none() {
             let term = value.to_term_for_log(ctx.protocol.map(|p| p.error));
-            if t_ok {
-                let got = match c.kind {
-                    GfxGoldenKind::FrameGraph => match extract_frame_graph_term(&term) {
-                        Some(frame) => {
-                            if let Some(expect_png_h) = c.expect_png_hash.as_ref() {
-                                match gc_gfx::render_frame_graph_headless(
-                                    frame,
-                                    c.pixel_width,
-                                    c.pixel_height,
-                                ) {
-                                    Ok(img) => {
-                                        actual_png_h = hex32(img.png_hash);
-                                        if &actual_png_h != expect_png_h {
-                                            t_ok = false;
-                                            err = Some(format!(
-                                                "golden png hash mismatch: expected {}, got {}",
-                                                expect_png_h, actual_png_h
-                                            ));
-                                        }
-                                    }
-                                    Err(e) => {
-                                        t_ok = false;
-                                        err = Some(format!("headless render failed: {e}"));
-                                    }
+            match c.kind {
+                GfxGoldenKind::FrameGraph => match extract_frame_graph_term(&term) {
+                    Some(frame) => {
+                        actual_h = Term::Str(hex32(hash_term(frame)));
+                        if c.expect_png_hash.is_some() {
+                            match gc_gfx::render_frame_graph_headless(
+                                frame,
+                                c.pixel_width,
+                                c.pixel_height,
+                            ) {
+                                Ok(img) => {
+                                    actual_png_h = Term::Str(hex32(img.png_hash));
+                                }
+                                Err(e) => {
+                                    runtime_error = Some(format!("headless render failed: {e}"));
                                 }
                             }
-                            hex32(hash_term(frame))
                         }
-                        None => {
-                            t_ok = false;
-                            err = Some("expected frame-graph output".to_string());
-                            String::new()
-                        }
-                    },
-                    GfxGoldenKind::Scene => match extract_scene_term(&term) {
-                        Some(scene) => hex32(hash_term(scene)),
-                        None => {
-                            t_ok = false;
-                            err = Some("expected scene output".to_string());
-                            String::new()
-                        }
-                    },
-                };
-                actual_h = got.clone();
-                if got != c.expect_hash {
-                    t_ok = false;
-                    err = Some(format!(
-                        "golden hash mismatch: expected {}, got {}",
-                        c.expect_hash, got
-                    ));
-                }
-            }
+                    }
+                    None => {
+                        runtime_error = Some("expected frame-graph output".to_string());
+                    }
+                },
+                GfxGoldenKind::Scene => match extract_scene_term(&term) {
+                    Some(scene) => {
+                        actual_h = Term::Str(hex32(hash_term(scene)));
+                    }
+                    None => {
+                        runtime_error = Some("expected scene output".to_string());
+                    }
+                },
+            };
         }
 
-        ok &= t_ok;
-        if let Some(e) = err.as_ref() {
-            errors.push(format!("{}::{}: {e}", c.id.suite_sym, c.id.test_name));
-        }
-
-        let mut tm = BTreeMap::new();
-        tm.insert(
-            TermOrdKey(Term::symbol(":suite")),
+        let case_args = vec![
             Term::Symbol(c.id.suite_sym.clone()),
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":name")),
             Term::Str(c.id.test_name.clone()),
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":kind")),
             Term::Symbol(match c.kind {
                 GfxGoldenKind::FrameGraph => ":frame-graph".to_string(),
                 GfxGoldenKind::Scene => ":scene".to_string(),
             }),
-        );
-        tm.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t_ok));
-        tm.insert(
-            TermOrdKey(Term::symbol(":expect-h")),
             Term::Str(c.expect_hash.clone()),
-        );
-        tm.insert(TermOrdKey(Term::symbol(":actual-h")), Term::Str(actual_h));
-        tm.insert(
-            TermOrdKey(Term::symbol(":expect-png-h")),
+            actual_h,
             c.expect_png_hash
                 .as_ref()
                 .map(|h| Term::Str(h.clone()))
                 .unwrap_or(Term::Nil),
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":actual-png-h")),
-            if actual_png_h.is_empty() {
-                Term::Nil
-            } else {
-                Term::Str(actual_png_h)
-            },
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":pixel-width")),
+            actual_png_h,
             Term::Int((c.pixel_width as i64).into()),
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":pixel-height")),
             Term::Int((c.pixel_height as i64).into()),
-        );
-        if let Some(e) = err {
-            tm.insert(TermOrdKey(Term::symbol(":error")), Term::Str(e));
+            runtime_error.map(Term::Str).unwrap_or(Term::Nil),
+        ];
+        let case_value = apply_curried_term_args(&mut ctx, golden_case_fn.clone(), &case_args)?;
+        let case_term = case_value.to_term_for_log(ctx.protocol.map(|p| p.error));
+        let case_ok = term_map_get_bool(&case_term, ":ok").unwrap_or(false);
+        ok &= case_ok;
+        if !case_ok {
+            let case_errors = term_map_get_string_vec(&case_term, ":errors");
+            if case_errors.is_empty() {
+                errors.push(format!(
+                    "{}::{}: golden case failed",
+                    c.id.suite_sym, c.id.test_name
+                ));
+            } else {
+                errors.push(format!(
+                    "{}::{}: {}",
+                    c.id.suite_sym,
+                    c.id.test_name,
+                    case_errors.join("; ")
+                ));
+            }
         }
-        case_terms.push(Term::Map(tm));
+        case_terms.push(case_term);
     }
 
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/gfx-golden-images-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (TermOrdKey(Term::symbol(":cases")), Term::Vector(case_terms)),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let report_args = vec![
+        Term::Str(manifest.name.clone()),
+        Term::Bool(ok),
+        Term::Vector(case_terms),
+        Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+    ];
+    let mut report_ctx = mk_eval_ctx(limits);
+    let report_value = apply_curried_term_args(&mut report_ctx, golden_report_fn, &report_args)?;
+    let report = report_value.to_term_for_log(report_ctx.protocol.map(|p| p.error));
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::gfx-golden-images".to_string(),
@@ -3576,6 +3540,20 @@ fn obligation_gfx_frame_budgets(
     }
 
     let eval = eval_package_once(pkg_dir, manifest, modules, limits)?;
+    let frame_budget_case_fn = eval
+        .lookup_any("core/gfx/obligation::frame-budget-case")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::frame-budget-case".to_string(),
+            )
+        })?;
+    let frame_budget_report_fn = eval
+        .lookup_any("core/gfx/obligation::frame-budget-report")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::frame-budget-report".to_string(),
+            )
+        })?;
     let mut cases: Vec<GfxFrameBudgetCase> = Vec::new();
 
     for suite in &manifest.gfx.frame_budget_tests {
@@ -3618,182 +3596,6 @@ fn obligation_gfx_frame_budgets(
         }
     }
 
-    for c in &cases {
-        let mut t_ok = true;
-        let mut local_errors: Vec<String> = Vec::new();
-        let mut metrics_opt: Option<FrameMetrics> = None;
-        let mut frame_time_ms: Option<u64> = None;
-
-        let mut ctx = mk_eval_ctx(limits);
-        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
-            Ok(v) => v,
-            Err(e) => {
-                t_ok = false;
-                local_errors.push(format!("apply failed: {e}"));
-                Value::Data(Term::Nil)
-            }
-        };
-
-        if t_ok && matches!(value, Value::EffectProgram(_)) {
-            t_ok = false;
-            local_errors.push(
-                "effect program returned; gfx frame budgets must return pure frame data"
-                    .to_string(),
-            );
-        }
-        if t_ok {
-            let is_error = ctx
-                .protocol
-                .is_some_and(|p| matches!(value, Value::Sealed { token, .. } if token == p.error));
-            if is_error {
-                t_ok = false;
-                local_errors.push("sealed ERROR returned by frame budget test body".to_string());
-            }
-        }
-
-        if t_ok {
-            let term = value.to_term_for_log(ctx.protocol.map(|p| p.error));
-            if t_ok {
-                match extract_frame_graph_and_time(&term) {
-                    Ok((frame, time_ms)) => match frame_graph_metrics(frame) {
-                        Ok(m) => {
-                            metrics_opt = Some(m);
-                            frame_time_ms = time_ms;
-                        }
-                        Err(e) => {
-                            t_ok = false;
-                            local_errors.push(e);
-                        }
-                    },
-                    Err(e) => {
-                        t_ok = false;
-                        local_errors.push(e);
-                    }
-                }
-            }
-        }
-
-        if let Some(metrics) = metrics_opt {
-            if let Some(max) = manifest.gfx.max_render_passes_per_frame
-                && metrics.render_passes > max
-            {
-                t_ok = false;
-                local_errors.push(format!(
-                    "render passes {} > max {}",
-                    metrics.render_passes, max
-                ));
-            }
-            if let Some(max) = manifest.gfx.max_compute_passes_per_frame
-                && metrics.compute_passes > max
-            {
-                t_ok = false;
-                local_errors.push(format!(
-                    "compute passes {} > max {}",
-                    metrics.compute_passes, max
-                ));
-            }
-            if let Some(max) = manifest.gfx.max_draw_commands_per_frame
-                && metrics.draw_commands > max
-            {
-                t_ok = false;
-                local_errors.push(format!(
-                    "draw commands {} > max {}",
-                    metrics.draw_commands, max
-                ));
-            }
-            if let Some(max) = manifest.gfx.max_compute_commands_per_frame
-                && metrics.compute_commands > max
-            {
-                t_ok = false;
-                local_errors.push(format!(
-                    "compute commands {} > max {}",
-                    metrics.compute_commands, max
-                ));
-            }
-            if let Some(max) = manifest.gfx.max_frame_graph_bytes
-                && metrics.frame_graph_bytes > max
-            {
-                t_ok = false;
-                local_errors.push(format!(
-                    "frame graph bytes {} > max {}",
-                    metrics.frame_graph_bytes, max
-                ));
-            }
-        }
-        if let Some(max) = manifest.gfx.max_frame_time_ms {
-            match frame_time_ms {
-                Some(ms) if ms <= max => {}
-                Some(ms) => {
-                    t_ok = false;
-                    local_errors.push(format!("frame-time-ms {} > max {}", ms, max));
-                }
-                None => {
-                    t_ok = false;
-                    local_errors.push(
-                        "frame-time-ms metric missing (return {:frame <frame-graph> :frame-time-ms <int>})"
-                            .to_string(),
-                    );
-                }
-            }
-        }
-
-        ok &= t_ok;
-        if !local_errors.is_empty() {
-            errors.push(format!(
-                "{}::{}: {}",
-                c.id.suite_sym,
-                c.id.test_name,
-                local_errors.join("; ")
-            ));
-        }
-
-        let mut tm = BTreeMap::new();
-        tm.insert(
-            TermOrdKey(Term::symbol(":suite")),
-            Term::Symbol(c.id.suite_sym.clone()),
-        );
-        tm.insert(
-            TermOrdKey(Term::symbol(":name")),
-            Term::Str(c.id.test_name.clone()),
-        );
-        tm.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(t_ok));
-        if let Some(m) = metrics_opt {
-            tm.insert(
-                TermOrdKey(Term::symbol(":render-passes")),
-                Term::Int((m.render_passes as i64).into()),
-            );
-            tm.insert(
-                TermOrdKey(Term::symbol(":compute-passes")),
-                Term::Int((m.compute_passes as i64).into()),
-            );
-            tm.insert(
-                TermOrdKey(Term::symbol(":draw-commands")),
-                Term::Int((m.draw_commands as i64).into()),
-            );
-            tm.insert(
-                TermOrdKey(Term::symbol(":compute-commands")),
-                Term::Int((m.compute_commands as i64).into()),
-            );
-            tm.insert(
-                TermOrdKey(Term::symbol(":frame-graph-bytes")),
-                Term::Int((m.frame_graph_bytes as i64).into()),
-            );
-        }
-        tm.insert(
-            TermOrdKey(Term::symbol(":frame-time-ms")),
-            frame_time_ms
-                .map(|x| Term::Int((x as i64).into()))
-                .unwrap_or(Term::Nil),
-        );
-        if !local_errors.is_empty() {
-            tm.insert(
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(local_errors.into_iter().map(Term::Str).collect()),
-            );
-        }
-        case_terms.push(Term::Map(tm));
-    }
-
     let mut limits_map = BTreeMap::new();
     if let Some(v) = manifest.gfx.max_render_passes_per_frame {
         limits_map.insert(
@@ -3831,28 +3633,123 @@ fn obligation_gfx_frame_budgets(
             Term::Int((v as i64).into()),
         );
     }
+    let limits_term = Term::Map(limits_map.clone());
 
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/gfx-frame-budgets-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (TermOrdKey(Term::symbol(":limits")), Term::Map(limits_map)),
-            (TermOrdKey(Term::symbol(":cases")), Term::Vector(case_terms)),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    for c in &cases {
+        let mut runtime_error: Option<String> = None;
+        let mut metrics_opt: Option<FrameMetrics> = None;
+        let mut frame_time_ms: Option<u64> = None;
+
+        let mut ctx = mk_eval_ctx(limits);
+        let value = match c.body.clone().apply(&mut ctx, Value::Data(Term::Nil)) {
+            Ok(v) => v,
+            Err(e) => {
+                runtime_error = Some(format!("apply failed: {e}"));
+                Value::Data(Term::Nil)
+            }
+        };
+
+        if runtime_error.is_none() && matches!(value, Value::EffectProgram(_)) {
+            runtime_error = Some(
+                "effect program returned; gfx frame budgets must return pure frame data"
+                    .to_string(),
+            );
+        }
+        if runtime_error.is_none() {
+            let is_error = ctx
+                .protocol
+                .is_some_and(|p| matches!(value, Value::Sealed { token, .. } if token == p.error));
+            if is_error {
+                runtime_error = Some("sealed ERROR returned by frame budget test body".to_string());
+            }
+        }
+
+        if runtime_error.is_none() {
+            let term = value.to_term_for_log(ctx.protocol.map(|p| p.error));
+            match extract_frame_graph_and_time(&term) {
+                Ok((frame, time_ms)) => match frame_graph_metrics(frame) {
+                    Ok(m) => {
+                        metrics_opt = Some(m);
+                        frame_time_ms = time_ms;
+                    }
+                    Err(e) => {
+                        runtime_error = Some(e);
+                    }
+                },
+                Err(e) => {
+                    runtime_error = Some(e);
+                }
+            }
+        }
+
+        let mut metrics_term_map = BTreeMap::new();
+        if let Some(m) = metrics_opt {
+            metrics_term_map.insert(
+                TermOrdKey(Term::symbol(":render-passes")),
+                Term::Int((m.render_passes as i64).into()),
+            );
+            metrics_term_map.insert(
+                TermOrdKey(Term::symbol(":compute-passes")),
+                Term::Int((m.compute_passes as i64).into()),
+            );
+            metrics_term_map.insert(
+                TermOrdKey(Term::symbol(":draw-commands")),
+                Term::Int((m.draw_commands as i64).into()),
+            );
+            metrics_term_map.insert(
+                TermOrdKey(Term::symbol(":compute-commands")),
+                Term::Int((m.compute_commands as i64).into()),
+            );
+            metrics_term_map.insert(
+                TermOrdKey(Term::symbol(":frame-graph-bytes")),
+                Term::Int((m.frame_graph_bytes as i64).into()),
+            );
+        }
+        let case_args = vec![
+            Term::Symbol(c.id.suite_sym.clone()),
+            Term::Str(c.id.test_name.clone()),
+            Term::Map(metrics_term_map),
+            limits_term.clone(),
+            frame_time_ms
+                .map(|x| Term::Int((x as i64).into()))
+                .unwrap_or(Term::Nil),
+            runtime_error.map(Term::Str).unwrap_or(Term::Nil),
+        ];
+        let case_value =
+            apply_curried_term_args(&mut ctx, frame_budget_case_fn.clone(), &case_args)?;
+        let case_term = case_value.to_term_for_log(ctx.protocol.map(|p| p.error));
+        let case_ok = term_map_get_bool(&case_term, ":ok").unwrap_or(false);
+        ok &= case_ok;
+        if !case_ok {
+            let case_errors = term_map_get_string_vec(&case_term, ":errors");
+            if case_errors.is_empty() {
+                errors.push(format!(
+                    "{}::{}: frame budget case failed",
+                    c.id.suite_sym, c.id.test_name
+                ));
+            } else {
+                errors.push(format!(
+                    "{}::{}: {}",
+                    c.id.suite_sym,
+                    c.id.test_name,
+                    case_errors.join("; ")
+                ));
+            }
+        }
+        case_terms.push(case_term);
+    }
+
+    let report_args = vec![
+        Term::Str(manifest.name.clone()),
+        Term::Bool(ok),
+        Term::Map(limits_map),
+        Term::Vector(case_terms),
+        Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+    ];
+    let mut report_ctx = mk_eval_ctx(limits);
+    let report_value =
+        apply_curried_term_args(&mut report_ctx, frame_budget_report_fn, &report_args)?;
+    let report = report_value.to_term_for_log(report_ctx.protocol.map(|p| p.error));
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::gfx-frame-budgets".to_string(),
@@ -3866,6 +3763,7 @@ fn obligation_gfx_api_stability(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     let mut ok = true;
     let mut errors: Vec<String> = Vec::new();
@@ -3901,43 +3799,15 @@ fn obligation_gfx_api_stability(
         }
     }
 
-    let mut tracked: BTreeSet<String> = exported.clone();
-    if !manifest.gfx.api_exports.is_empty() {
-        tracked = manifest.gfx.api_exports.iter().cloned().collect();
-        let expected: BTreeSet<String> = tracked.clone();
-        if expected != exported {
-            ok = false;
-            let missing: Vec<String> = expected.difference(&exported).cloned().collect();
-            let extra: Vec<String> = exported.difference(&expected).cloned().collect();
-            if !missing.is_empty() {
-                errors.push(format!(
-                    "missing exported gfx symbols: {}",
-                    missing.join(", ")
-                ));
-            }
-            if !extra.is_empty() {
-                errors.push(format!(
-                    "unexpected exported gfx symbols: {}",
-                    extra.join(", ")
-                ));
-            }
-        }
-    }
-
-    if tracked.is_empty() {
-        ok = false;
-        errors.push("no tracked gfx API exports found".to_string());
-    }
-
-    if manifest.gfx.api_exports.is_empty() && manifest.gfx.api_surface_hash.is_none() {
-        ok = false;
-        errors.push(
-            "gfx api stability requires gfx.api_exports and/or gfx.api_surface_hash configuration"
-                .to_string(),
-        );
-    }
+    let expected: BTreeSet<String> = manifest.gfx.api_exports.iter().cloned().collect();
+    let tracked: BTreeSet<String> = if expected.is_empty() {
+        exported.clone()
+    } else {
+        expected.clone()
+    };
 
     let mut def_entries: Vec<Term> = Vec::new();
+    let mut missing_defs: Vec<String> = Vec::new();
     for sym in &tracked {
         match def_hashes.get(sym) {
             Some(h) => def_entries.push(Term::Map(
@@ -3952,10 +3822,7 @@ fn obligation_gfx_api_stability(
                 .collect(),
             )),
             None => {
-                ok = false;
-                errors.push(format!(
-                    "tracked API symbol has no defining def form: {sym}"
-                ));
+                missing_defs.push(sym.clone());
             }
         }
     }
@@ -3976,53 +3843,66 @@ fn obligation_gfx_api_stability(
         .collect(),
     );
     let surface_hash = hex32(hash_term(&surface));
-    if let Some(want) = manifest.gfx.api_surface_hash.as_ref() {
-        let want = want.to_ascii_lowercase();
-        if !is_hex32(&want) {
-            ok = false;
-            errors.push("gfx.api_surface_hash must be 64 lowercase hex chars".to_string());
-        } else if surface_hash != want {
-            ok = false;
-            errors.push(format!(
-                "gfx API surface hash mismatch: expected {}, got {}",
-                want, surface_hash
-            ));
-        }
+    let expected_surface = manifest
+        .gfx
+        .api_surface_hash
+        .as_ref()
+        .map(|s| s.to_ascii_lowercase());
+    if let Some(want) = expected_surface.as_ref()
+        && !is_hex32(want)
+    {
+        ok = false;
+        errors.push("gfx.api_surface_hash must be 64 lowercase hex chars".to_string());
     }
 
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/gfx-api-stability-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (
-                TermOrdKey(Term::symbol(":surface-h")),
-                Term::Str(surface_hash),
-            ),
-            (
-                TermOrdKey(Term::symbol(":expected-surface-h")),
-                manifest
-                    .gfx
-                    .api_surface_hash
-                    .as_ref()
-                    .map(|s| Term::Str(s.to_ascii_lowercase()))
-                    .unwrap_or(Term::Nil),
-            ),
-            (TermOrdKey(Term::symbol(":surface")), surface),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let mut analysis_ctx = mk_eval_ctx(limits);
+    let prelude = build_prelude(&mut analysis_ctx);
+    let analysis_fn = prelude
+        .env
+        .get("core/gfx/obligation::api-stability-analysis")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::api-stability-analysis".to_string(),
+            )
+        })?;
+    let report_fn = prelude
+        .env
+        .get("core/gfx/obligation::api-stability-report")
+        .ok_or_else(|| {
+            ObligationError::Module(
+                "missing prelude binding core/gfx/obligation::api-stability-report".to_string(),
+            )
+        })?;
+
+    let analysis_args = vec![
+        Term::Vector(exported.iter().cloned().map(Term::Symbol).collect()),
+        Term::Vector(expected.iter().cloned().map(Term::Symbol).collect()),
+        Term::Vector(tracked.iter().cloned().map(Term::Symbol).collect()),
+        expected_surface
+            .as_ref()
+            .map(|s| Term::Str(s.clone()))
+            .unwrap_or(Term::Nil),
+        Term::Str(surface_hash.clone()),
+        Term::Bool(!manifest.gfx.api_exports.is_empty() || manifest.gfx.api_surface_hash.is_some()),
+        Term::Vector(missing_defs.into_iter().map(Term::Symbol).collect()),
+    ];
+    let analysis_value = apply_curried_term_args(&mut analysis_ctx, analysis_fn, &analysis_args)?;
+    let analysis_term = analysis_value.to_term_for_log(analysis_ctx.protocol.map(|p| p.error));
+    let analysis_ok = term_map_get_bool(&analysis_term, ":ok").unwrap_or(false);
+    ok &= analysis_ok;
+    errors.extend(term_map_get_string_vec(&analysis_term, ":errors"));
+
+    let report_args = vec![
+        Term::Str(manifest.name.clone()),
+        Term::Bool(ok),
+        Term::Str(surface_hash),
+        expected_surface.map(Term::Str).unwrap_or(Term::Nil),
+        surface,
+        Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+    ];
+    let mut report_ctx = mk_eval_ctx(limits);
+    let report_value = apply_curried_term_args(&mut report_ctx, report_fn, &report_args)?;
+    let report = report_value.to_term_for_log(report_ctx.protocol.map(|p| p.error));
 
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
@@ -4577,6 +4457,40 @@ fn value_as_map(v: &Value) -> Option<&BTreeMap<TermOrdKey, Value>> {
     }
 }
 
+fn apply_curried_term_args(
+    ctx: &mut EvalCtx,
+    mut f: Value,
+    args: &[Term],
+) -> Result<Value, ObligationError> {
+    for arg in args {
+        f = f
+            .apply(ctx, Value::Data(arg.clone()))
+            .map_err(|e| ObligationError::Test(format!("gc helper apply failed: {e}")))?;
+    }
+    Ok(f)
+}
+
+fn term_map_get_bool(t: &Term, key: &str) -> Option<bool> {
+    let Term::Map(m) = t else { return None };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+fn term_map_get_string_vec(t: &Term, key: &str) -> Vec<String> {
+    let Term::Map(m) = t else { return Vec::new() };
+    let Some(Term::Vector(xs)) = m.get(&TermOrdKey(Term::symbol(key))) else {
+        return Vec::new();
+    };
+    xs.iter()
+        .filter_map(|x| match x {
+            Term::Str(s) | Term::Symbol(s) => Some(s.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 fn hex32(h: [u8; 32]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::new();
@@ -4590,7 +4504,22 @@ fn hex32(h: [u8; 32]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gc_coreform::parse_module;
+    use gc_coreform::{TermOrdKey, canonicalize_module, parse_module};
+    use gc_kernel::eval_module;
+
+    fn eval_gc_term(src: &str) -> Term {
+        let forms = canonicalize_module(parse_module(src).expect("parse")).expect("canon");
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let v = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+        v.to_term_for_log(ctx.protocol.map(|p| p.error))
+    }
+
+    fn map_get<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
+        let Term::Map(m) = t else { return None };
+        m.get(&TermOrdKey(Term::symbol(key)))
+    }
 
     #[test]
     fn store_is_content_addressed() {
@@ -4601,6 +4530,221 @@ mod tests {
         let h2 = store.put_term(&t).unwrap();
         assert_eq!(h1, h2);
         assert!(store.path_for(&h1).exists());
+    }
+
+    #[test]
+    fn gfx_obligation_report_builders_match_rust_report_shapes() {
+        let surface_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let src = format!(
+            r#"
+            {{
+              :golden
+                ((((core/gfx/obligation::golden-report "pkg/demo") true)
+                  [{{:suite pkg/tests::gfx :name "case-a" :ok true :kind :frame-graph}}])
+                  ["warn"])
+              :frame
+                (((((core/gfx/obligation::frame-budget-report "pkg/demo") false)
+                   {{:max-render-passes-per-frame 2}})
+                   [{{:suite pkg/tests::gfx :name "case-b" :ok false :render-passes 3}}])
+                   ["budget failed"])
+              :api
+                ((((((core/gfx/obligation::api-stability-report "pkg/demo") true)
+                   "{surface_h}") "{surface_h}")
+                   {{:kind "genesis/gfx-api-surface-v0.2" :exports [core/gfx/runtime::plan-frame-2d] :defs []}})
+                   [])
+            }}
+            "#
+        );
+        let term = eval_gc_term(&src);
+        let Some(golden) = map_get(&term, ":golden") else {
+            panic!("golden report missing");
+        };
+        let Some(frame) = map_get(&term, ":frame") else {
+            panic!("frame report missing");
+        };
+        let Some(api) = map_get(&term, ":api") else {
+            panic!("api report missing");
+        };
+
+        let expected_golden_case = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":suite")),
+                    Term::symbol("pkg/tests::gfx"),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str("case-a".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::symbol(":frame-graph"),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let expected_golden = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/gfx-golden-images-v0.2".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str("pkg/demo".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                (
+                    TermOrdKey(Term::symbol(":cases")),
+                    Term::Vector(vec![expected_golden_case]),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(vec![Term::Str("warn".to_string())]),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(golden, &expected_golden);
+
+        let expected_frame_limits = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":max-render-passes-per-frame")),
+                Term::Int(2.into()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let expected_frame_case = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":suite")),
+                    Term::symbol("pkg/tests::gfx"),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str("case-b".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(false)),
+                (
+                    TermOrdKey(Term::symbol(":render-passes")),
+                    Term::Int(3.into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let expected_frame = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/gfx-frame-budgets-v0.2".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str("pkg/demo".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(false)),
+                (TermOrdKey(Term::symbol(":limits")), expected_frame_limits),
+                (
+                    TermOrdKey(Term::symbol(":cases")),
+                    Term::Vector(vec![expected_frame_case]),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(vec![Term::Str("budget failed".to_string())]),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(frame, &expected_frame);
+
+        let expected_surface = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/gfx-api-surface-v0.2".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":exports")),
+                    Term::Vector(vec![Term::symbol("core/gfx/runtime::plan-frame-2d")]),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":defs")),
+                    Term::Vector(Vec::<Term>::new()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let expected_api = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::Str("genesis/gfx-api-stability-v0.2".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":package")),
+                    Term::Str("pkg/demo".to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                (
+                    TermOrdKey(Term::symbol(":surface-h")),
+                    Term::Str(surface_h.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":expected-surface-h")),
+                    Term::Str(surface_h.to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":surface")), expected_surface),
+                (
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(Vec::<Term>::new()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(api, &expected_api);
+    }
+
+    #[test]
+    fn gfx_obligation_report_builders_are_hash_stable() {
+        let surface_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let src = format!(
+            r#"
+            {{
+              :golden-a
+                (core/coreform::hash-term
+                  ((((core/gfx/obligation::golden-report "pkg/demo") true) []) []))
+              :golden-b
+                (core/coreform::hash-term
+                  ((((core/gfx/obligation::golden-report "pkg/demo") true) []) []))
+              :frame-a
+                (core/coreform::hash-term
+                  (((((core/gfx/obligation::frame-budget-report "pkg/demo") true) {{}}) []) []))
+              :frame-b
+                (core/coreform::hash-term
+                  (((((core/gfx/obligation::frame-budget-report "pkg/demo") true) {{}}) []) []))
+              :api-a
+                (core/coreform::hash-term
+                  ((((((core/gfx/obligation::api-stability-report "pkg/demo") true)
+                     "{surface_h}") "{surface_h}") {{:kind "genesis/gfx-api-surface-v0.2" :exports [] :defs []}}) []))
+              :api-b
+                (core/coreform::hash-term
+                  ((((((core/gfx/obligation::api-stability-report "pkg/demo") true)
+                     "{surface_h}") "{surface_h}") {{:kind "genesis/gfx-api-surface-v0.2" :exports [] :defs []}}) []))
+            }}
+            "#
+        );
+        let term = eval_gc_term(&src);
+        assert_eq!(map_get(&term, ":golden-a"), map_get(&term, ":golden-b"));
+        assert_eq!(map_get(&term, ":frame-a"), map_get(&term, ":frame-b"));
+        assert_eq!(map_get(&term, ":api-a"), map_get(&term, ":api-b"));
     }
 
     #[test]

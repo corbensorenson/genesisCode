@@ -23,6 +23,13 @@ fn vec_has_sym(t: &Term, want: &str) -> bool {
         .any(|it| matches!(it, Term::Symbol(s) if s == want))
 }
 
+fn vec_has_str(t: &Term, want: &str) -> bool {
+    let Term::Vector(items) = t else { return false };
+    items
+        .iter()
+        .any(|it| matches!(it, Term::Str(s) if s == want))
+}
+
 #[test]
 fn editor_action_format_source_success() {
     let term = eval_to_term(
@@ -205,4 +212,138 @@ fn editor_agent_acceptance_report_tracks_verify_gate() {
         rejected.get(&TermOrdKey(Term::symbol(":accepted"))),
         Some(&Term::Bool(false))
     );
+}
+
+#[test]
+fn editor_agent_semantic_patch_plan_reports_changed_symbols() {
+    let term = eval_to_term(
+        r#"
+        ((((core/editor/agent::semantic-patch-plan "base-h") "to-h")
+           "(def ::meta (quote {:exports [my/mod::a] :types {my/mod::a ?}}))
+(def my/mod::a 1)")
+          "(def ::meta (quote {:exports [my/mod::b] :types {my/mod::b ?}}))
+(def my/mod::b 2)")
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/agent-semantic-patch-plan"))
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(true)));
+    assert_eq!(map_get(&term, ":meta-changed"), Some(&Term::Bool(true)));
+    let Some(Term::Int(changed)) = map_get(&term, ":changed-count") else {
+        panic!("changed-count expected");
+    };
+    assert_eq!(changed.to_string(), "3");
+    let changed = map_get(&term, ":changed-syms").expect("changed-syms expected");
+    assert!(vec_has_sym(changed, "::meta"));
+    assert!(vec_has_sym(changed, "my/mod::a"));
+    assert!(vec_has_sym(changed, "my/mod::b"));
+}
+
+#[test]
+fn editor_agent_conflict_resolution_plan_prefers_requested_side() {
+    let term = eval_to_term(
+        r#"
+        (((core/editor/agent::conflict-resolution-plan "conflict-h")
+           (core/editor/vcs::conflict-panel-from-artifact
+             (quote
+               {
+                 :type :vcs/conflict
+                 :v 1
+                 :kind :contract-snapshot-merge3
+                 :base "b"
+                 :left "l"
+                 :right "r"
+                 :conflicts [
+                   {:op foo/a::x :base "bx" :left "lx" :right "rx"}
+                   {:op foo/a::y :base nil :left "ly" :right "ry"}
+                 ]
+               })))
+          (quote :left))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/agent-conflict-resolution-plan"))
+    );
+    assert_eq!(map_get(&term, ":strategy"), Some(&Term::symbol(":left")));
+    assert_eq!(map_get(&term, ":count"), Some(&Term::Int(2.into())));
+    let ops = map_get(&term, ":ops").expect("ops expected");
+    assert!(vec_has_str(ops, "foo/a::x"));
+    assert!(vec_has_str(ops, "foo/a::y"));
+    let Some(Term::Map(resolutions)) = map_get(&term, ":resolutions") else {
+        panic!("resolutions map expected");
+    };
+    assert_eq!(
+        resolutions.get(&TermOrdKey(Term::symbol("foo/a::x"))),
+        Some(&Term::symbol(":left"))
+    );
+    assert_eq!(
+        resolutions.get(&TermOrdKey(Term::symbol("foo/a::y"))),
+        Some(&Term::symbol(":left"))
+    );
+}
+
+#[test]
+fn editor_agent_repair_plan_prioritizes_autofix_and_verification() {
+    let term = eval_to_term(
+        r#"
+        ((core/editor/agent::repair-plan
+           {
+             :accepted false
+             :verify {:ok false}
+           })
+          {
+            :error-count 2
+            :warn-count 1
+            :autofixes [{:module "m.gc" :patch "p1"}]
+          })
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":editor/agent-repair-plan"))
+    );
+    assert_eq!(map_get(&term, ":accepted"), Some(&Term::Bool(false)));
+    assert_eq!(map_get(&term, ":verify-ok"), Some(&Term::Bool(false)));
+    assert_eq!(map_get(&term, ":autofix-count"), Some(&Term::Int(1.into())));
+    assert_eq!(map_get(&term, ":error-count"), Some(&Term::Int(2.into())));
+    let Some(Term::Vector(steps)) = map_get(&term, ":steps") else {
+        panic!("steps expected");
+    };
+    assert_eq!(steps.len(), 4);
+    let first = steps.first().expect("first step");
+    let Some(first_op) = map_get(first, ":op") else {
+        panic!("step op expected");
+    };
+    assert_eq!(first_op, &Term::symbol(":apply-autofixes"));
+}
+
+#[test]
+fn editor_action_gfx_plan_frame_trace_builds_explainable_plan() {
+    let term = eval_to_term(
+        r#"
+        (def scene (core/gfx/scene::empty "editor-trace"))
+        (def style ((((core/gfx/ui::style {:axis "vertical"}) {:w 400000 :h 200000}) {:gap 4000}) {:bg [0 0 0 1000000]}))
+        (def label (((core/gfx/ui::text "title") "Editor") style))
+        (def ui-root (((core/gfx/ui::container "root") style) ((core/vec::push []) label)))
+        ((((((core/editor/action::gfx-plan-frame-2d+ui-trace scene) ui-root) "scene-pass") 101) "ui-pass") 202)
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::symbol(":gfx/plan-frame-2d+ui-trace"))
+    );
+    let Some(Term::Map(trace)) = map_get(&term, ":trace") else {
+        panic!("trace map expected");
+    };
+    assert_eq!(
+        trace.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol(":gfx/frame-trace"))
+    );
+    let Some(Term::Str(trace_h)) = map_get(&term, ":trace-h") else {
+        panic!("trace-h expected");
+    };
+    assert_eq!(trace_h.len(), 64);
 }

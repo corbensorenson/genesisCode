@@ -41,9 +41,19 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
 ### 1) Extract High-Level Semantics out of Rust Runner
 - [ ] Move `core/pkg::*` command semantics into `.gc` contracts using low-level host capabilities.
 - [ ] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
-- [ ] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
+  - [x] Move `core/vcs::log` traversal semantics into `.gc` (`core/cli::vcs-log-program`) using `core/store::get` / `core/refs::get`.
+  - [x] Move `core/vcs::blame` and `core/vcs::why` provenance semantics into `.gc` (`core/cli::vcs-blame-program`, `core/cli::vcs-why-program`) using `core/store::get` / `core/refs::list`.
+  - [x] Add native + WASI parity tests for `core/vcs::diff` and `core/vcs::apply` frontend outputs to lock extraction behavior before migration.
+  - [x] Add native + WASI parity tests for `core/vcs::merge3` and `core/vcs::resolve-conflict` frontend outputs to lock extraction behavior before migration.
+  - [x] Lock and document the remaining Rust-owned high-level op inventory (`core/vcs::{diff,apply,merge3,resolve-conflict}` and `core/pkg::*`) as the current extraction queue.
+  - [ ] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
+  - [ ] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
+  - [ ] Move `core/pkg::{init,add,list,info,lock,update,install,verify,snapshot,publish}` semantics into `.gc` contracts.
+- [x] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
 - [ ] Reduce Rust runner capability surface to low-level host ops (`core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`) plus transport glue.
 - [x] Keep temporary compatibility gate for migration, then disable by default.
+- [x] Extract GPK artifact-reference reachability semantics to `.gc` (`core/vcs/reach::artifact-refs`) and invoke from Rust closure traversal.
+- [x] Extract GPK parent-edge planning semantics to `.gc` (`core/vcs/reach::artifact-ref-plan`) and consume parent refs from plan output in Rust traversal.
 
 Acceptance:
 - Rust runner no longer contains semantic implementations for `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`.
@@ -78,9 +88,9 @@ Acceptance:
 - No shipped prelude capability wrapper calls an unimplemented/unknown op.
 
 ### 5) Move GFX Obligation Semantics to `.gc` Ownership
-- [ ] Port golden/frame-budget/api-stability planning/validation logic to `.gc` contracts.
+- [x] Port golden/frame-budget/api-stability planning/validation logic to `.gc` contracts.
 - [ ] Keep Rust role limited to host execution + artifact persistence + capability transport.
-- [ ] Add parity tests ensuring `.gc` obligation outputs are deterministic and stable.
+- [x] Add parity tests ensuring `.gc` obligation outputs are deterministic and stable.
 
 Acceptance:
 - GFX obligation behavior changes can be shipped by editing `.gc`, not Rust algorithms.
@@ -117,6 +127,6 @@ Acceptance:
 
 ## Immediate Post-Cutover Queue (AI-First, Not Blocking Self-Host)
 - [x] Optimize selfhost pipeline throughput (incremental graph + cache + hot path budgets).
-- [ ] Standardize machine-first diagnostics schema across all commands (stable fields, deterministic ordering, no free-form drift).
-- [ ] Expand AI-oriented editing/provenance primitives (semantic patch planning, conflict resolution helpers, obligation-guided repair loops).
-- [ ] Harden graphics/editor AI workflows (task orchestration contracts, deterministic replayable UI/GPU traces, artifact-linked explainability).
+- [x] Standardize machine-first diagnostics schema across all commands (stable fields, deterministic ordering, no free-form drift).
+- [x] Expand AI-oriented editing/provenance primitives (semantic patch planning, conflict resolution helpers, obligation-guided repair loops).
+- [x] Harden graphics/editor AI workflows (task orchestration contracts, deterministic replayable UI/GPU traces, artifact-linked explainability).

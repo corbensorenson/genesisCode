@@ -143,7 +143,8 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
 
     if is_sym(&head, "if") {
         if items.len() != 4 {
-            bail!("(if cond then else) expects exactly 3 arguments");
+            let rendered = crate::print_term(&Term::list(items.clone()));
+            bail!("(if cond then else) expects exactly 3 arguments: {rendered}");
         }
         let c = canon_code(items.remove(1))?;
         let t = canon_code(items.remove(1))?;
