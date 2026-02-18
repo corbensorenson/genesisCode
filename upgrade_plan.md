@@ -1,181 +1,123 @@
-# GenesisCode Upgrade Plan — Fast Path to Fully Self-Hosted Core
+# GenesisCode Upgrade Plan — Final Roadblocks to Full Self-Hosted Status
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
-## Objective
-Ship a fully self-hosted GenesisCode core as quickly as possible, then move Rust bootstrap semantics out of the active path.
-AI-first constraint: command surfaces and diagnostics must remain deterministic, machine-parseable, and easy for autonomous agents to drive end-to-end.
+## Hard Target
+Ship a state where:
+- All language/tooling semantics evolve in `.gc`.
+- Rust is a frozen host runtime + kernel TCB, not the place where feature logic is added.
+- New features (including graphics/editor/AI workflows) can be shipped by changing `.gc` + policy/docs, without touching Rust semantic code.
 
-## Definition of Done (Fast Path)
-A fast-path cutover is complete when all of the following are true:
-- Default `genesis` execution for core workflows runs through self-hosted `.gc` toolchain paths.
-- Rust is not the active source of language semantics in default profile.
-- `--selfhost-only` passes on native and WASI for core workflows with deterministic parity checks.
-- Legacy Rust bootstrap semantics are moved to `/old_bootstrap` and excluded from default builds/tests.
+## What "Fully Self-Hosted" Means Here
+Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. It means:
+1. Rust remains only as TCB/host bridge.
+2. Command semantics, package/VCS logic, and developer workflows are owned by `.gc` contracts.
+3. Selfhost-only mode covers all public command families needed for production use.
+4. Toolchain growth (new selfhost modules/capabilities) does not require Rust edits.
 
-## Current Status Snapshot
-- Core strict-mode guardrails are in place and heavily tested on native + WASI.
-- Core command parity coverage has expanded significantly (including `optimize`, `apply-patch`, and `selfhost-dashboard` on WASI).
-- Strict smoke and strict golden now enforce cross-host/cross-engine parity on key paths.
-- Main blockers are now structural: `.gc` command contract ownership, `.gc` semantic ownership of toolchain passes, and bootstrap extraction.
-- Rust-vs-selfhost frontend parity for package/obligation/patch flows is now explicit via `--coreform-frontend`.
-- Strict full-cutover rehearsal scripts (`selfhost_strict_smoke` + `selfhost_strict_golden`) are passing on native + WASI.
-- Native + WASI `typecheck` command paths now call a shared `gc_obligations` implementation, removing duplicated CLI semantics for that command family.
-- Selfhost `core/cli` now owns module `::meta` extraction via `core/cli::module-meta`, and obligations typecheck prefers that contract path.
-- Native + WASI parity tests now assert selfhost typecheck fails deterministically when `core/cli::module-meta` is poisoned in generated artifacts.
-- Native + WASI `optimize` command semantics now run through shared `gc_opt::optimize_command_pipeline` (stage1/stage2/emit-wasm gating unified).
-- Obsolete CLI-local optimize JSON helper logic is now centralized in `gc_opt` and shared by native + WASI paths.
-- Native + WASI `optimize --json` now emits explicit `coreform_frontend` provenance for deterministic AI-agent orchestration parity with `test`/`pack`/`typecheck`/`apply-patch`.
-- Selfhost frontend module loading now prefers `core/cli::hash-module-forms` for module hash derivation (with deterministic failure tests on native + WASI when poisoned).
-- Native + WASI `selfhost-artifact` rebuild now parses/canonicalizes/hashes toolchain modules through selfhost frontend contracts (embedded bootstrap), removing Rust parser/hash semantics from artifact rebuild path.
-
----
-
-## Completed Baseline (Condensed)
-- [x] Self-host boundary and CI guardrails are defined/enforced.
-- [x] `--selfhost-only` hard mode exists for native + WASI and blocks non-compliant routes.
-- [x] Default profile blocks `--engine rust` unless compatibility env (`GENESIS_ALLOW_RUST_ENGINE=1`) is explicitly set.
-- [x] Native + WASI strict selfhost smoke/golden suites are active.
-- [x] Native + WASI parity checks cover `fmt`, `eval`, `run`, `replay`, `typecheck`, `optimize`, `pack`, `test`, `apply-patch`, `vcs hash`.
-- [x] WASI command-surface parity was expanded for missing gaps (`explain`, `typecheck`, `optimize`, `apply-patch`, `selfhost-dashboard`, `pkg publish`).
-- [x] `selfhost-dashboard` command exists on native + WASI, with markdown/store output checks.
-- [x] `gc_obligations` and `gc_patches` default frontend paths now prefer selfhost frontend.
-- [x] `selfhost-strict` CI profile is enabled by default and validated.
+## Audit Findings (Current Blocking Evidence)
+- High-level package/VCS/GC/GPK semantics still execute in Rust capability code:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`
+  - `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`, `core/sync::*` are implemented there.
+- `.gc` CLI wrappers still delegate those high-level ops to the Rust runner:
+  - `/Users/corbensorenson/Documents/genesisCode/selfhost/cli_coreform_v1.gc`
+- Selfhost-only still rejects several public commands:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (`enforce_selfhost_only_cmd`)
+  - currently unsupported in selfhost-only: `selfhost-artifact`, `keygen`, `sign`, `transparency-verify`, `verify`.
+- Selfhost toolchain module set is hardcoded in Rust:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs` (`MODULE_SOURCES`)
+  - adding/removing toolchain modules still requires Rust edits.
+- Shipped prelude wrappers expose gfx/editor capability ops that the runner does not implement:
+  - wrappers in `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc` and `/Users/corbensorenson/Documents/genesisCode/prelude/modules/20_editor.gc`
+  - missing in runner op table except `gfx/time::frame-tick`.
+- GFX obligations still encode major logic in Rust:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
+  - `obligation_gfx_golden_images`, `obligation_gfx_frame_budgets`, `obligation_gfx_api_stability`.
 
 ---
 
-## Fast Path Workstreams
+## Final Blocking Workstreams
 
-### A) `.gc` CLI Contract Ownership (Highest Priority)
-- [x] Define initial `core/cli::*` contract interface for frontend parse/canon/fmt/hash.
-- [x] Route core commands through `.gc` handlers by default:
-  - [x] `fmt`, `eval` route through `core/cli::*` frontend handlers (with compatibility fallback).
-  - [x] `test`, `typecheck`, `optimize`, `pack`, `apply-patch` selfhost frontend paths now prefer `core/cli::*` canonicalization handlers.
-- [x] Route effectful command groups through `.gc` command contracts:
-  - [x] Incremental: `store/*` now routes through `core/cli::store-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-  - [x] Incremental: `refs/*` now routes through `core/cli::refs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-  - [x] Incremental: `sync/*` now routes through `core/cli::sync-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
-  - [x] Incremental: `gc/*` now routes through `core/cli::gc-*-program` when `--coreform-frontend selfhost` is active, with native+WASI poison tests.
-  - [x] Incremental: `vcs hash` now prefers `core/cli::hash-src-with-kind` (with compatibility fallback).
-  - [x] Incremental: `vcs/*` now routes through `core/cli::vcs-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-- [x] Incremental: `pkg/*` now routes through `core/cli::pkg-*-program` when `--coreform-frontend selfhost` is active, with native+WASI parity + poison tests.
-- [x] Reduce Rust CLI to arg parsing + host bridge only.
-- [x] Keep selfhost artifact in sync with `core/cli` module surface and enforce via native+WASI regression tests.
-- [x] Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch paths to support deterministic AI parity checks.
+### 1) Extract High-Level Semantics out of Rust Runner
+- [ ] Move `core/pkg::*` command semantics into `.gc` contracts using low-level host capabilities.
+- [ ] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
+- [ ] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
+- [ ] Reduce Rust runner capability surface to low-level host ops (`core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`) plus transport glue.
+- [ ] Keep temporary compatibility gate for migration, then disable by default.
 
-Acceptance gate:
-- [x] CLI golden parity proves old Rust command logic and `.gc` command contracts are behavior-identical for covered paths.
+Acceptance:
+- Rust runner no longer contains semantic implementations for `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`.
+- Equivalent strict parity tests pass on native + WASI selfhost paths.
 
-### B) `.gc` Semantic Source-of-Truth
-- [x] Finalize self-host parser/canon/printer/hash as canonical source of truth.
-  - [x] Remove legacy `selfhost/tool::*` fallback bindings from the CLI driver; selfhost routes require `core/cli::*` contracts.
-  - [x] Toolchain artifact loader enforces canonical `:forms` (idempotent canonicalization) and hashes canonical forms to prevent semantic skew.
-- [x] Implement self-host Stage-1 transform pipeline in `.gc`.
-- [x] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
-  - [x] Implement `core/cli::infer-effects` (pure effect op inference) in `selfhost/cli_coreform_v1.gc` with parity test vs `gc_types::infer_effects`.
-  - [x] Wire `core/obligation::typecheck` and `genesis typecheck` through a selfhost `core/cli::infer-effects` parity gate (selfhost inference must match `gc_types::infer_effects` per module under selfhost frontend).
-- [x] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
-  - [x] Add `core/cli::optimize-module` (alias of stage1 transform) as the stable selfhost optimizer entrypoint.
-  - [x] Prove parity with `gc_opt` stage1 pipeline using regression tests (`crates/gc_prelude/tests/selfhost_optimize_parity.rs`) before switching `core/obligation::translation-validation` to selfhost.
-  - [x] Switch `core/obligation::translation-validation` to selfhost optimizer route once parity coverage is widened and acceptance artifact compatibility is frozen.
-  - [x] Remove temporary translation-validation optimizer compatibility fallback once `core/cli::optimize-module` emits byte-identical canonical modules across package fixtures.
-- [x] Implement self-host patch schema validation/apply pipeline in `.gc`.
-  - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
-  - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.
-  - [x] Apply `:replace-node` via `core/cli::apply-replace-node` + `core/cli::print-module-forms` when `--coreform-frontend selfhost` is active (other patch ops still applied in Rust for now).
-  - [x] Apply `:add-module` content canonicalization/printing via `core/cli::print-module-from-content` when `--coreform-frontend selfhost` is active.
-  - [x] Apply `:add-module` manifest update via `core/cli::manifest-apply-add-module` when `--coreform-frontend selfhost` is active.
-  - [x] Apply `:remove-module` manifest update via `core/cli::manifest-apply-remove-module` when `--coreform-frontend selfhost` is active.
-  - [x] Apply `:update-manifest` via `core/cli::manifest-apply-update-manifest-op` when `--coreform-frontend selfhost` is active.
-- [x] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
-  - [x] `selfhost-artifact` output is byte-for-byte deterministic across rebuilds on the same toolchain (enforced by `gc_cli` tests).
-  - [x] `pack` and `test` acceptance artifact hashes are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).
-  - [x] `.gpk` export output is byte-for-byte deterministic for the same root snapshot and store state (enforced by `gc_cli` tests).
-  - [x] `pkg lock` / `pkg update` are deterministic for the same store+refs state (enforced by `gc_cli` + `gc_wasi_cli` tests).
-  - [x] `apply-patch` artifact outputs are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).
+### 2) Close Selfhost-Only Command Surface Gaps
+- [ ] Route `selfhost-artifact` through selfhost contract path.
+- [ ] Route `keygen`, `sign`, `transparency-verify`, and `verify` through selfhost contract path.
+- [ ] Update selfhost-only allowlist to include all production public command families.
+- [ ] Add native + WASI selfhost-only tests for these command families.
 
-Acceptance gate:
-- [x] Native + WASI parity suites remain green when Rust semantic fallbacks are removed from default path.
-  - [x] Remove Rust hash fallback from selfhost frontend module hash derivation (fail closed if bindings are missing).
+Acceptance:
+- `--selfhost-only` rejects no production command family as "not yet selfhost-routed".
 
-### C) Bootstrap Extraction (`/old_bootstrap`)
-- [x] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.
-- [x] Exclude `/old_bootstrap` from default build/test paths.
-- [x] Keep compatibility profile for historical comparisons only.
+### 3) Make Toolchain Bootstrap Self-Describing (No Rust Module List Edits)
+- [ ] Replace hardcoded Rust `MODULE_SOURCES` ownership with a `.gc` toolchain manifest artifact.
+- [ ] Make artifact loader validate required capabilities/symbols from manifest, not a Rust static list.
+- [ ] Ensure adding a new selfhost module only requires `.gc` + manifest updates.
+- [ ] Keep embedded bootstrap as development-only fallback behind explicit feature gate.
 
-Acceptance gate:
-- [x] `cargo test --workspace --profile selfhost-strict` passes without invoking bootstrap semantics from `/old_bootstrap`.
+Acceptance:
+- Toolchain module topology changes can be made without editing Rust source files.
 
-### D) Final Cutover Proof
-- [x] End-to-end workspace flow (`pkg add/lock/install/test/publish/export/import`) passes via selfhost-first paths.
-- [x] Toolchain artifact can be rebuilt from `.gc` sources (host bridge allowed, no Rust semantic dependency).
-- [x] Cutover dashboard and CI checks confirm selfhost default path is authoritative.
+### 4) Implement Missing GFX/Editor Capability Ops
+- [ ] Implement runner support (or remove wrappers) for shipped `gfx/gpu::*` ops.
+- [ ] Implement runner support (or remove wrappers) for shipped `gfx/window::*` ops.
+- [ ] Implement runner support (or remove wrappers) for shipped `gfx/input::*` and `gfx/audio::*` ops.
+- [ ] Implement runner support (or remove wrappers) for shipped `editor/*` task/dialog/watch/clipboard ops.
+- [ ] Add deterministic effect-log + replay tests for all newly supported ops.
+
+Acceptance:
+- No shipped prelude capability wrapper calls an unimplemented/unknown op.
+
+### 5) Move GFX Obligation Semantics to `.gc` Ownership
+- [ ] Port golden/frame-budget/api-stability planning/validation logic to `.gc` contracts.
+- [ ] Keep Rust role limited to host execution + artifact persistence + capability transport.
+- [ ] Add parity tests ensuring `.gc` obligation outputs are deterministic and stable.
+
+Acceptance:
+- GFX obligation behavior changes can be shipped by editing `.gc`, not Rust algorithms.
+
+### 6) Freeze/Archive Rust Compatibility Paths for Production
+- [ ] Make Rust frontend and embedded fallback strictly compatibility-only and off in production defaults.
+- [ ] Move non-essential compatibility semantic code into `/old_bootstrap` where practical.
+- [ ] Lock selfhost boundary policy in CI to prevent semantic creep back into Rust.
+- [ ] Publish explicit host ABI freeze doc for post-cutover governance.
+
+Acceptance:
+- Production profile runs selfhost paths only; Rust semantic compatibility requires explicit opt-in.
 
 ---
 
-## Task List (Current Execution Queue)
-- [x] 1) Implement `core/cli::*` interface in `.gc` and wire `fmt/eval` through it.
-- [x] 2) Regenerate `selfhost/toolchain.gc` and add native+WASI regression tests that require `selfhost/cli_coreform_v1.gc` with passing stage1 gate.
-- [x] 3) Add explicit `--coreform-frontend {rust,selfhost}` selector for package/obligation/patch commands, plus strict-mode guard tests.
-- [x] 4) Extend `core/cli::*` routing to `test/typecheck/optimize/pack/apply-patch` command-owned handlers (not only shared frontend canonicalization).
-- [x] 5) Add CLI parity goldens that compare legacy Rust route vs `.gc` contract route for the command set above.
-- [x] 6) Remove duplicated Rust command semantics once parity gate is green.
-  - [x] 6a) Deduplicate native + WASI `typecheck` command semantics by routing through `gc_obligations::typecheck_package_with_step_limit_and_frontend`.
-  - [x] 6b) Deduplicate `pack` + `apply-patch` command families via shared `gc_obligations` / `gc_patches` entrypoints on native + WASI.
-  - [x] 6c) Deduplicate remaining command families (`test`, `optimize`) where CLI-local semantic duplication still exists.
-  - [x] 6d) Remove obsolete CLI-only helper code after each family is migrated and covered by parity tests.
-- [x] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
-  - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
-  - [x] 7b) Module-loading hash derivation now prefers selfhost `core/cli::hash-module-forms` instead of Rust-only hashing in selfhost frontend paths.
-  - [x] 7c) Stage-1 transform is implemented in `selfhost/stage1_v1.gc` and `selfhost-artifact` uses `core/cli::stage1-transform-module`.
-  - [x] 7d) Added optimizer parity harness: selfhost `core/cli::optimize-module` matches `gc_opt::stage1_pipeline` on representative modules.
-  - [x] 7e) Switched `core/obligation::translation-validation` optimization path to selfhost `core/cli::optimize-module` for selfhost frontend with deterministic parity guardrails.
-  - [x] 7f) Remove translation-validation compatibility fallback once selfhost optimizer output is byte-identical across package fixtures used by strict parity suites.
-  - [x] 7g) Added selfhost type/effect inference parity enforcement for `typecheck` obligation + command (`core/cli::infer-effects` must match Rust inference under selfhost frontend).
-  - [x] 7h) Fix selfhost `core/cli::infer-effects` mismatch on `pkg_fail_caps_declared` so strict-golden parity passes without exceptions.
-- [x] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
-- [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
-- [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
-- [x] 11) Strengthen strict smoke/golden parity harnesses to force explicit `--coreform-frontend rust|selfhost` selection for package/obligation/patch command families.
-- [x] 12) Extend `optimize --json` outputs with explicit `coreform_frontend` provenance on native + WASI and lock via parity tests.
-- [x] 13) Route `selfhost-artifact` parse/canon/hash through selfhost frontend contracts so rebuilds do not depend on Rust parser/hash semantics.
-
-### Execution Sprint (Now)
-- [x] T1: Route native + WASI `genesis typecheck` through shared obligations implementation and remove duplicate per-CLI logic.
-- [x] T2: Enforce clean build quality for this migration (`cargo fmt`, targeted tests, and `clippy -D warnings` for native + WASI CLIs).
-- [x] T3: Confirm `genesis pack` uses shared `gc_obligations::pack_with_frontend` path on native + WASI (no duplicated CLI semantics).
-- [x] T4: Confirm `genesis apply-patch` uses shared `gc_patches::apply_patch_with_step_limit_and_frontend` path on native + WASI (no duplicated CLI semantics).
-- [x] T5: Start `.gc` semantic ownership migration for typecheck obligation path beyond shared Rust wrapper (module metadata now extracted through `core/cli::module-meta` when selfhost frontend is active).
-
-### Execution Sprint (Next)
-- [x] N1: Deduplicate `optimize` command family into a shared library path for native + WASI.
-- [x] N2: Deduplicate any remaining `test` CLI-local semantic logic into shared library path.
-- [x] N3: Add parity tests asserting `core/cli::module-meta` contract path is active for generated selfhost artifacts.
+## Critical Path Order
+1. Workstream 1 (semantic extraction from runner)
+2. Workstream 3 (self-describing bootstrap)
+3. Workstream 2 (full selfhost-only command coverage)
+4. Workstream 4 (capability completeness for shipped gfx/editor wrappers)
+5. Workstream 5 (gfx obligation ownership)
+6. Workstream 6 (final freeze/archive)
 
 ---
 
-## Non-Blocking Backlog (Post Fast-Path Cutover)
-These are important but not blockers for the fast-path self-hosted core milestone:
-- [ ] Full `.gc` implementation of GenesisGraph constructors/validators/reachability planner internals.
-  - [x] Added `core/cli::vcs-make-{commit,evidence,snapshot}` pure constructors in `selfhost/cli_coreform_v1.gc`.
-  - [x] Added `core/cli::vcs-validate-{commit,evidence,snapshot}` pure validators in `selfhost/cli_coreform_v1.gc`.
-- [ ] Full `.gc` lock/resolver and `.gpk` planner internals (beyond current runtime parity coverage).
-  - [x] Added `core/cli::lock-selector-kind` and `core/cli::lock-make-entry` pure lock-planning helpers in `selfhost/cli_coreform_v1.gc`.
-  - [x] Added selfhost regression tests for new GenesisGraph/lock helpers in `crates/gc_prelude/tests/selfhost_vcs_lock_helpers.rs`.
-- [x] Second host implementation conformance harness for host ABI portability proof.
-  - [x] Added `scripts/host_abi_conformance.sh` to run deterministic native vs WASI conformance checks across `fmt`, `vcs hash`, `eval`, `run/replay`, `typecheck`, `pack`, `test`, and `apply-patch` for rust/selfhost frontends.
-- [x] `.gc` profiling/incremental build graph/perf acceleration wave.
-  - [x] Add `scripts/test_fast.sh` to keep local iteration under a small, deterministic, high-signal subset without weakening CI coverage.
-  - [x] Speed up WASI CLI engine tests by reusing the repo `selfhost/toolchain.gc` instead of rebuilding a selfhost artifact per test file.
-  - [x] Speed up strict smoke/golden scripts by reusing repo `selfhost/toolchain.gc` unless sources changed (or `GENESIS_REBUILD_SELFHOST_ARTIFACT=1`).
-  - [x] Speed up `cli_selfhost_artifact` integration tests (native + WASI) by caching baseline artifacts and eliminating redundant rebuilds where not required.
-  - [x] Speed up `core/obligation::translation-validation` by reusing the package's existing original test runs (no redundant re-run before optimized re-run).
-  - [x] Cache compiled selfhost toolchain modules per artifact bytes (in-process) to reduce overhead in selfhost frontend obligations workflows.
-  - [x] Parallelize strict-golden package fixture checks with configurable workers (`GENESIS_STRICT_GOLDEN_JOBS`, Bash 3 compatible) and deterministic worker cleanup on failure.
-- [ ] Graphics/WebGPU/editor stack and higher-level developer UX layers.
+## Exit Criteria for "Fully Self-Hosted Core"
+- [ ] Selfhost-only mode covers all production command families.
+- [ ] No high-level package/VCS/GC/GPK semantic logic remains in Rust runner.
+- [ ] Toolchain module graph can evolve without Rust source edits.
+- [ ] Shipped prelude capability wrappers are all backed by implemented host ops or removed.
+- [ ] Rust compatibility paths are non-default and clearly isolated.
 
 ---
 
-## Estimate (From Current State)
-- Fast-path fully self-hosted core: ~7-12 days of focused work.
-- Full original upgrade scope (including ecosystem backlog above): multi-week to multi-month.
+## Immediate Post-Cutover Queue (AI-First, Not Blocking Self-Host)
+- [ ] Optimize selfhost pipeline throughput (incremental graph + cache + hot path budgets).
+- [ ] Standardize machine-first diagnostics schema across all commands (stable fields, deterministic ordering, no free-form drift).
+- [ ] Expand AI-oriented editing/provenance primitives (semantic patch planning, conflict resolution helpers, obligation-guided repair loops).
+- [ ] Harden graphics/editor AI workflows (task orchestration contracts, deterministic replayable UI/GPU traces, artifact-linked explainability).
+
