@@ -618,6 +618,14 @@ enum PkgCmd {
         /// Registry name from `[registries]` (default is `default`).
         #[arg(long)]
         registry: Option<String>,
+
+        /// Deterministic resolver strategy for this dependency.
+        #[arg(long, value_parser = ["pinned", "track-ref", "tag-policy"])]
+        strategy: Option<String>,
+
+        /// Tag policy label when `--strategy tag-policy` is selected.
+        #[arg(long)]
+        tag_policy: Option<String>,
     },
 
     /// Remove a dependency requirement (and its locked entry) from `genesis.lock`.
@@ -3354,9 +3362,16 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     lock,
                     update_policy,
                     registry,
+                    strategy,
+                    tag_policy,
                 } => {
                     let (name, selector) = parse_pkg_spec(spec)
                         .map_err(|e| cli_err(EX_PARSE, "pkg/spec", e.to_string()))?;
+                    let (strategy_norm, tag_policy_norm) = normalize_pkg_add_strategy(
+                        &selector,
+                        strategy.as_deref(),
+                        tag_policy.as_deref(),
+                    )?;
                     (
                         mk_pkg_add_program(
                             lock,
@@ -3364,6 +3379,8 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                             &selector,
                             update_policy,
                             registry.as_deref(),
+                            strategy_norm.as_deref(),
+                            tag_policy_norm.as_deref(),
                         ),
                         "genesis/pkg-add-v0.1",
                         "pkg-add",
@@ -3558,9 +3575,16 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     lock,
                     update_policy,
                     registry,
+                    strategy,
+                    tag_policy,
                 } => {
                     let (name, selector) = parse_pkg_spec(spec)
                         .map_err(|e| cli_err(EX_PARSE, "pkg/spec", e.to_string()))?;
+                    let (strategy_norm, tag_policy_norm) = normalize_pkg_add_strategy(
+                        &selector,
+                        strategy.as_deref(),
+                        tag_policy.as_deref(),
+                    )?;
                     let f = env.get("core/cli::pkg-add-program").ok_or_else(|| {
                         cli_err(
                             EX_INTERNAL,
@@ -3589,6 +3613,20 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                             .map(|s| Term::Str(s.to_string()))
                             .unwrap_or(Term::Nil),
                     );
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":strategy")),
+                        strategy_norm
+                            .as_deref()
+                            .map(|s| Term::Str(s.to_string()))
+                            .unwrap_or(Term::Nil),
+                    );
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":tag-policy")),
+                        tag_policy_norm
+                            .as_deref()
+                            .map(|s| Term::Str(s.to_string()))
+                            .unwrap_or(Term::Nil),
+                    );
                     let req = Term::Map(mm);
                     let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
                         cli_err(
@@ -3612,6 +3650,20 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                             (
                                 TermOrdKey(Term::symbol(":update-policy")),
                                 Term::Str(update_policy.to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":strategy")),
+                                strategy_norm
+                                    .as_deref()
+                                    .map(|s| Term::Str(s.to_string()))
+                                    .unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":tag-policy")),
+                                tag_policy_norm
+                                    .as_deref()
+                                    .map(|s| Term::Str(s.to_string()))
+                                    .unwrap_or(Term::Nil),
                             ),
                         ]
                         .into_iter()
@@ -6760,6 +6812,51 @@ fn parse_pkg_spec(spec: &str) -> Result<(String, String), String> {
     Ok((name.to_string(), sel.to_string()))
 }
 
+fn normalize_pkg_add_strategy(
+    selector: &str,
+    strategy: Option<&str>,
+    tag_policy: Option<&str>,
+) -> Result<(Option<String>, Option<String>), CliError> {
+    let strategy = match strategy {
+        Some(raw) => gc_pkg::ResolutionStrategy::from_str(raw).ok_or_else(|| {
+            cli_err(
+                EX_PARSE,
+                "pkg/spec",
+                format!("invalid --strategy `{raw}` (expected pinned|track-ref|tag-policy)"),
+            )
+        })?,
+        None => gc_pkg::infer_strategy(selector),
+    };
+
+    if matches!(strategy, gc_pkg::ResolutionStrategy::TagPolicy)
+        && !matches!(
+            gc_pkg::classify_selector(selector),
+            Some(gc_pkg::SelectorKind::TagRef)
+        )
+    {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/spec",
+            "tag-policy strategy requires selector under refs/tags/*".to_string(),
+        ));
+    }
+    if !matches!(strategy, gc_pkg::ResolutionStrategy::TagPolicy) && tag_policy.is_some() {
+        return Err(cli_err(
+            EX_PARSE,
+            "pkg/spec",
+            "--tag-policy can only be used with --strategy tag-policy".to_string(),
+        ));
+    }
+
+    let strategy_s = Some(strategy.as_str().to_string());
+    let tag_policy_s = if matches!(strategy, gc_pkg::ResolutionStrategy::TagPolicy) {
+        Some(tag_policy.unwrap_or("exact").to_string())
+    } else {
+        None
+    };
+    Ok((strategy_s, tag_policy_s))
+}
+
 #[derive(Debug, Clone)]
 struct SetRefSpec {
     name: String,
@@ -7018,6 +7115,8 @@ fn mk_pkg_add_program(
     selector: &str,
     update_policy: &str,
     registry: Option<&str>,
+    strategy: Option<&str>,
+    tag_policy: Option<&str>,
 ) -> Vec<Term> {
     let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg::add")]);
     let mut m = std::collections::BTreeMap::new();
@@ -7041,6 +7140,18 @@ fn mk_pkg_add_program(
         m.insert(
             gc_coreform::TermOrdKey(Term::symbol(":registry")),
             Term::Str(r.to_string()),
+        );
+    }
+    if let Some(s) = strategy {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":strategy")),
+            Term::Str(s.to_string()),
+        );
+    }
+    if let Some(tp) = tag_policy {
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":tag-policy")),
+            Term::Str(tp.to_string()),
         );
     }
     let payload = Term::Map(m);

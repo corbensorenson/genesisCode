@@ -249,11 +249,7 @@ impl GenesisLock {
                 .as_deref()
                 .and_then(UpdatePolicy::from_str)
                 .unwrap_or(UpdatePolicy::Manual);
-            let strategy = match r
-                .strategy
-                .as_deref()
-                .and_then(ResolutionStrategy::from_str)
-            {
+            let strategy = match r.strategy.as_deref().and_then(ResolutionStrategy::from_str) {
                 Some(s) => s,
                 None => infer_strategy(&r.selector),
             };
@@ -552,11 +548,15 @@ mod tests {
     #[test]
     fn selector_classification_and_strategy_inference_are_stable() {
         assert_eq!(
-            classify_selector("commit:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            classify_selector(
+                "commit:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ),
             Some(SelectorKind::Commit)
         );
         assert_eq!(
-            classify_selector("snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            classify_selector(
+                "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ),
             Some(SelectorKind::Snapshot)
         );
         assert_eq!(
@@ -567,13 +567,18 @@ mod tests {
             classify_selector("refs/tags/v1.2.3"),
             Some(SelectorKind::TagRef)
         );
-        assert_eq!(infer_strategy("refs/heads/main"), ResolutionStrategy::TrackRef);
+        assert_eq!(
+            infer_strategy("refs/heads/main"),
+            ResolutionStrategy::TrackRef
+        );
         assert_eq!(
             infer_strategy("refs/tags/v1.2.3"),
             ResolutionStrategy::TagPolicy
         );
         assert_eq!(
-            infer_strategy("snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            infer_strategy(
+                "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ),
             ResolutionStrategy::Pinned
         );
     }

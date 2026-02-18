@@ -78,6 +78,8 @@ mod tests {
                 lock: PathBuf::from("genesis.lock"),
                 update_policy: "manual".to_string(),
                 registry: None,
+                strategy: None,
+                tag_policy: None,
             },
             PkgCmd::Remove {
                 name: "dep".to_string(),
