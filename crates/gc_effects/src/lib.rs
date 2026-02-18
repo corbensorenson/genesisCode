@@ -298,6 +298,159 @@ mod tests {
     }
 
     #[test]
+    fn task_policy_max_tasks_limit_overrides_capability_result() {
+        let (forms, h) = mk_prog_for("core/task::await", "{:task-id \"task-1\"}");
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let pol = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::await"]
+
+[task]
+max_tasks = 0
+"#,
+        )
+        .unwrap();
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+        assert_eq!(r.log.entries.len(), 1);
+        assert_eq!(r.log.entries[0].decision, Decision::Deny);
+        match r.value {
+            Value::Sealed { token, payload } => {
+                assert_eq!(token, ctx.protocol.expect("protocol").error);
+                let Value::Data(Term::Map(m)) = payload.as_ref() else {
+                    panic!("expected error payload map");
+                };
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":error/code"))),
+                    Some(&Term::Str("core/task/budget-exceeded".to_string()))
+                );
+            }
+            other => panic!("expected sealed budget error, got {}", other.debug_repr()),
+        }
+    }
+
+    #[test]
+    fn deterministic_task_scheduler_spawn_status_await_roundtrip_replays() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (((core/task::spawn "scope/main") "build") {:job "compile"}))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    ((core/effect::bind (core/task::status tid))
+                      (fn (status-resp)
+                        ((core/effect::bind (core/task::await tid))
+                          (fn (await-resp)
+                            (core/effect::pure {:spawn spawn-resp :status status-resp :await await-resp})))))))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["core/task::spawn", "core/task::status", "core/task::await"]"#,
+        )
+        .unwrap();
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        assert_eq!(r1.log.entries.len(), 3);
+        assert_eq!(r1.log.entries[0].op, "core/task::spawn");
+        assert_eq!(r1.log.entries[1].op, "core/task::status");
+        assert_eq!(r1.log.entries[2].op, "core/task::await");
+
+        let await_state = match &r1.value {
+            Value::Data(Term::Map(root)) => match root.get(&TermOrdKey(Term::symbol(":await"))) {
+                Some(Term::Map(await_m)) => await_m
+                    .get(&TermOrdKey(Term::symbol(":state")))
+                    .and_then(|t| match t {
+                        Term::Symbol(s) => Some(s.clone()),
+                        _ => None,
+                    }),
+                _ => None,
+            },
+            Value::Map(root) => match root.get(&TermOrdKey(Term::symbol(":await"))) {
+                Some(Value::Map(await_m)) => await_m
+                    .get(&TermOrdKey(Term::symbol(":state")))
+                    .and_then(|t| match t {
+                        Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                        _ => None,
+                    }),
+                Some(Value::Data(Term::Map(await_m))) => await_m
+                    .get(&TermOrdKey(Term::symbol(":state")))
+                    .and_then(|t| match t {
+                        Term::Symbol(s) => Some(s.clone()),
+                        _ => None,
+                    }),
+                _ => None,
+            },
+            _ => None,
+        };
+        assert_eq!(await_state.as_deref(), Some(":done"));
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+        assert_eq!(value_hash(&r1.value), value_hash(&v2));
+    }
+
+    #[test]
+    fn deterministic_task_scheduler_cancelled_task_awaits_as_cancelled() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (((core/task::spawn "scope/main") "build") {:job "compile"}))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    ((core/effect::bind (core/task::cancel tid))
+                      (fn (_cancel-resp)
+                        ((core/effect::bind (core/task::await tid))
+                          (fn (await-resp)
+                            (core/effect::pure await-resp)))))))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["core/task::spawn", "core/task::cancel", "core/task::await"]"#,
+        )
+        .unwrap();
+        let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+        assert_eq!(r.log.entries.len(), 3);
+        let state = match &r.value {
+            Value::Data(Term::Map(m)) => {
+                m.get(&TermOrdKey(Term::symbol(":state")))
+                    .and_then(|t| match t {
+                        Term::Symbol(s) => Some(s.clone()),
+                        _ => None,
+                    })
+            }
+            Value::Map(m) => m
+                .get(&TermOrdKey(Term::symbol(":state")))
+                .and_then(|t| match t {
+                    Value::Data(Term::Symbol(s)) => Some(s.clone()),
+                    _ => None,
+                }),
+            _ => None,
+        };
+        assert_eq!(state.as_deref(), Some(":cancelled"));
+    }
+
+    #[test]
     fn large_byte_responses_are_externalized_to_artifact_store_and_replay_loads_them() {
         let td = tempfile::tempdir().unwrap();
         let base = td.path().join("sandbox");

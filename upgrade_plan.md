@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 24
+Open checklist items: 18
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -38,15 +38,15 @@ Open checklist items: 24
 - [x] Define clear data contracts for task handles/results/errors (stable map schema, no ad hoc shapes).
 
 ### B3. Runtime Scheduler
-- [ ] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
+- [x] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
 - [ ] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
 - [x] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
-- [ ] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
+- [x] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
 
 ### B4. Replay + Evidence
-- [ ] Extend effect log schema with task/schedule events (`:task-id`, `:parent-task`, `:schedule-step`, `:await-edge`).
-- [ ] Implement replay verifier for concurrent runs (schedule mismatch, missing task events, response mismatch).
-- [ ] Add obligation `core/obligation::concurrency-replay` for effectful concurrent tests.
+- [x] Extend effect log schema with task/schedule events (`:task-id`, `:parent-task`, `:schedule-step`, `:await-edge`).
+- [x] Implement replay verifier for concurrent runs (schedule mismatch, missing task events, response mismatch).
+- [x] Add obligation `core/obligation::concurrency-replay` for effectful concurrent tests.
 
 ### B5. Type/Effects Integration
 - [x] Extend `gc_types` effect-row tracking for task ops so concurrency usage is explicit and checkable.
@@ -82,6 +82,6 @@ Open checklist items: 24
 
 ## Acceptance Checks (Must Pass Before Declaring v1)
 - [ ] `--selfhost-only` path exercises full production workflow with no Rust semantic fallbacks.
-- [ ] Concurrency test suite validates deterministic replay under mixed task scheduling.
+- [x] Concurrency test suite validates deterministic replay under mixed task scheduling.
 - [ ] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
 - [ ] Full CI includes performance regression checks and passes within target runtime budget.

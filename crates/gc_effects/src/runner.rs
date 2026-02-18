@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
@@ -58,6 +58,39 @@ struct TaskScheduleEvent {
     await_edge: Option<String>,
 }
 
+#[derive(Debug, Clone, Default)]
+struct TaskBudgetState {
+    per_task: BTreeMap<String, TaskBudgetCounters>,
+    in_flight: BTreeSet<String>,
+}
+
+#[derive(Debug, Clone)]
+struct TaskBudgetCounters {
+    first_step: u64,
+    last_step: u64,
+    steps: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+struct TaskRuntime {
+    next_task_id: u64,
+    tasks: BTreeMap<String, TaskRecord>,
+}
+
+#[derive(Debug, Clone)]
+struct TaskRecord {
+    state: TaskState,
+    payload: Term,
+    parent_task: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TaskState {
+    Running,
+    Done,
+    Cancelled,
+}
+
 pub fn run(
     ctx: &mut EvalCtx,
     policy: &CapsPolicy,
@@ -80,6 +113,8 @@ pub fn run(
     let mut entries = Vec::new();
     let mut i: u64 = 0;
     let mut cur = program;
+    let mut task_budget_state = TaskBudgetState::default();
+    let mut task_runtime = TaskRuntime::default();
 
     loop {
         let Value::EffectProgram(p) = cur else {
@@ -108,33 +143,49 @@ pub fn run(
                 let cont_h = value_hash(&req.k);
                 let req_h = hash_request(&req.op, payload_h, cont_h);
 
-                let (decision, cap_term, resp_val, resp_logged) = if !policy.is_allowed(&req.op) {
-                    let resp = mk_caps_denied(proto.error, &req.op);
+                let (mut decision, mut cap_term, mut resp_val) = if !policy.is_allowed(&req.op) {
                     (
                         Decision::Deny,
                         Term::Nil,
-                        resp.clone(),
-                        logged_resp(policy, &req.op, &store, &resp, proto.error)?,
+                        mk_caps_denied(proto.error, &req.op),
                     )
                 } else {
                     let pol = policy.op_policy(&req.op);
                     let cap_term = cap_term(&req.op, pol)?;
-                    let resp = call_capability(
+                    let resp = if let Some(task_resp) =
+                        task_runtime_call(&mut task_runtime, &req.op, &req.payload, proto.error)
+                    {
+                        task_resp
+                    } else {
+                        call_capability(
+                            &req.op,
+                            &req.payload,
+                            pol,
+                            policy,
+                            store.as_ref(),
+                            refs.as_ref(),
+                            proto.error,
+                        )?
+                    };
+                    (Decision::Allow, cap_term, resp)
+                };
+
+                if decision == Decision::Allow
+                    && let Some(limit_err) = enforce_task_policy_limits(
+                        policy,
+                        &mut task_budget_state,
+                        i,
                         &req.op,
                         &req.payload,
-                        pol,
-                        policy,
-                        store.as_ref(),
-                        refs.as_ref(),
+                        &resp_val,
                         proto.error,
-                    )?;
-                    (
-                        Decision::Allow,
-                        cap_term,
-                        resp.clone(),
-                        logged_resp(policy, &req.op, &store, &resp, proto.error)?,
                     )
+                {
+                    decision = Decision::Deny;
+                    cap_term = Term::Nil;
+                    resp_val = limit_err;
                 };
+                let resp_logged = logged_resp(policy, &req.op, &store, &resp_val, proto.error)?;
 
                 let resp_h = value_hash(&resp_val);
                 let task_event = task_schedule_event_for(i, &req.op, &req.payload, &resp_val);
@@ -286,6 +337,152 @@ pub fn replay_with_store(
     }
 }
 
+fn task_runtime_call(
+    runtime: &mut TaskRuntime,
+    op: &str,
+    payload: &Term,
+    error_tok: SealId,
+) -> Option<Value> {
+    match op {
+        "core/task::scope" => {
+            let scope = map_field_str_or_symbol(payload, ":scope")
+                .map(Term::Str)
+                .unwrap_or(Term::Nil);
+            Some(Value::Data(task_map([
+                (":scope", scope),
+                (":state", Term::symbol(":entered")),
+            ])))
+        }
+        "core/task::spawn" => {
+            let task_id = format!("task-{:016x}", runtime.next_task_id);
+            runtime.next_task_id = runtime.next_task_id.saturating_add(1);
+            let parent_task = map_field_str_or_symbol(payload, ":parent-task")
+                .or_else(|| map_field_str_or_symbol(payload, ":scope"));
+            let task_payload = map_field(payload, ":payload").cloned().unwrap_or(Term::Nil);
+            runtime.tasks.insert(
+                task_id.clone(),
+                TaskRecord {
+                    state: TaskState::Running,
+                    payload: task_payload,
+                    parent_task,
+                },
+            );
+            Some(Value::Data(task_map([
+                (":task-id", Term::Str(task_id)),
+                (":state", Term::symbol(":running")),
+            ])))
+        }
+        "core/task::status" => {
+            let Some(task_id) = map_field_str_or_symbol(payload, ":task-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::status payload must include :task-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(rec) = runtime.tasks.get(&task_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown task-id: {task_id}"),
+                    Some(op),
+                ));
+            };
+            Some(Value::Data(task_map([
+                (":task-id", Term::Str(task_id)),
+                (":state", task_state_term(&rec.state)),
+                (
+                    ":parent-task",
+                    rec.parent_task.clone().map(Term::Str).unwrap_or(Term::Nil),
+                ),
+            ])))
+        }
+        "core/task::cancel" => {
+            let Some(task_id) = map_field_str_or_symbol(payload, ":task-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::cancel payload must include :task-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(rec) = runtime.tasks.get_mut(&task_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown task-id: {task_id}"),
+                    Some(op),
+                ));
+            };
+            if rec.state == TaskState::Running {
+                rec.state = TaskState::Cancelled;
+            }
+            Some(Value::Data(task_map([
+                (":task-id", Term::Str(task_id)),
+                (":state", task_state_term(&rec.state)),
+                (
+                    ":parent-task",
+                    rec.parent_task.clone().map(Term::Str).unwrap_or(Term::Nil),
+                ),
+            ])))
+        }
+        "core/task::await" => {
+            let Some(task_id) = map_field_str_or_symbol(payload, ":task-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::await payload must include :task-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(rec) = runtime.tasks.get_mut(&task_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown task-id: {task_id}"),
+                    Some(op),
+                ));
+            };
+            if rec.state == TaskState::Running {
+                rec.state = TaskState::Done;
+            }
+            let (result, error) = match rec.state {
+                TaskState::Done => (rec.payload.clone(), Term::Nil),
+                TaskState::Cancelled | TaskState::Running => (Term::Nil, Term::Nil),
+            };
+            Some(Value::Data(task_map([
+                (":task-id", Term::Str(task_id)),
+                (":state", task_state_term(&rec.state)),
+                (
+                    ":parent-task",
+                    rec.parent_task.clone().map(Term::Str).unwrap_or(Term::Nil),
+                ),
+                (":result", result),
+                (":error", error),
+            ])))
+        }
+        _ => None,
+    }
+}
+
+fn task_state_term(state: &TaskState) -> Term {
+    match state {
+        TaskState::Running => Term::symbol(":running"),
+        TaskState::Done => Term::symbol(":done"),
+        TaskState::Cancelled => Term::symbol(":cancelled"),
+    }
+}
+
+fn task_map<const N: usize>(pairs: [(&str, Term); N]) -> Term {
+    Term::Map(
+        pairs
+            .into_iter()
+            .map(|(k, v)| (TermOrdKey(Term::symbol(k)), v))
+            .collect(),
+    )
+}
+
 fn task_schedule_event_for(
     i: u64,
     op: &str,
@@ -318,15 +515,179 @@ fn task_schedule_event_for(
     out
 }
 
+fn task_target_id(op: &str, payload: &Term, resp_val: &Value) -> Option<String> {
+    match op {
+        "core/task::spawn" | "editor/task::spawn" => value_data_map_field(resp_val, ":task-id"),
+        "core/task::await"
+        | "core/task::cancel"
+        | "core/task::status"
+        | "editor/task::poll"
+        | "editor/task::cancel" => map_field_str_or_symbol(payload, ":task-id"),
+        _ => None,
+    }
+}
+
+fn enforce_task_policy_limits(
+    policy: &CapsPolicy,
+    state: &mut TaskBudgetState,
+    i: u64,
+    op: &str,
+    payload: &Term,
+    resp_val: &Value,
+    error_tok: SealId,
+) -> Option<Value> {
+    if !is_task_like_op(op) {
+        return None;
+    }
+
+    let tid = task_target_id(op, payload, resp_val);
+    if let Some(tid) = &tid {
+        let c = state
+            .per_task
+            .entry(tid.clone())
+            .or_insert(TaskBudgetCounters {
+                first_step: i,
+                last_step: i,
+                steps: 0,
+            });
+        c.steps = c.steps.saturating_add(1);
+        c.last_step = i;
+
+        match op {
+            "core/task::spawn" | "editor/task::spawn" => {
+                state.in_flight.insert(tid.clone());
+            }
+            "core/task::await" | "core/task::cancel" | "editor/task::cancel" => {
+                state.in_flight.remove(tid);
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(max_tasks) = policy.task.max_tasks
+        && (state.per_task.len() as u64) > max_tasks
+    {
+        return Some(task_limit_error(
+            error_tok,
+            "max_tasks",
+            max_tasks,
+            state.per_task.len() as u64,
+            op,
+            tid.as_deref(),
+        ));
+    }
+    if let Some(max_workers) = policy.task.max_workers
+        && (state.in_flight.len() as u64) > max_workers
+    {
+        return Some(task_limit_error(
+            error_tok,
+            "max_workers",
+            max_workers,
+            state.in_flight.len() as u64,
+            op,
+            tid.as_deref(),
+        ));
+    }
+    if let Some(max_queue) = policy.task.max_queue
+        && (state.in_flight.len() as u64) > max_queue
+    {
+        return Some(task_limit_error(
+            error_tok,
+            "max_queue",
+            max_queue,
+            state.in_flight.len() as u64,
+            op,
+            tid.as_deref(),
+        ));
+    }
+    if let Some(max_steps) = policy.task.max_steps_per_task
+        && let Some(tid) = &tid
+        && let Some(c) = state.per_task.get(tid)
+        && c.steps > max_steps
+    {
+        return Some(task_limit_error(
+            error_tok,
+            "max_steps_per_task",
+            max_steps,
+            c.steps,
+            op,
+            Some(tid),
+        ));
+    }
+    if let Some(max_time_ms) = policy.task.max_time_ms_per_task
+        && let Some(tid) = &tid
+        && let Some(c) = state.per_task.get(tid)
+    {
+        // Deterministic logical elapsed time in effect-steps (not wall clock).
+        let logical_elapsed = c.last_step.saturating_sub(c.first_step);
+        if logical_elapsed > max_time_ms {
+            return Some(task_limit_error(
+                error_tok,
+                "max_time_ms_per_task",
+                max_time_ms,
+                logical_elapsed,
+                op,
+                Some(tid),
+            ));
+        }
+    }
+
+    None
+}
+
+fn task_limit_error(
+    error_tok: SealId,
+    budget: &str,
+    limit: u64,
+    observed: u64,
+    op: &str,
+    task_id: Option<&str>,
+) -> Value {
+    mk_error_with_ctx(
+        error_tok,
+        "core/task/budget-exceeded",
+        format!("task policy limit exceeded: {budget} observed {observed} > {limit} for {op}"),
+        Some(op),
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":task/budget")),
+                    Term::Str(budget.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":task/limit")),
+                    Term::Int(BigInt::from(limit)),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":task/observed")),
+                    Term::Int(BigInt::from(observed)),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":task/id")),
+                    task_id
+                        .map(|s| Term::Str(s.to_string()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    )
+}
+
 fn is_task_like_op(op: &str) -> bool {
     op.starts_with("core/task::") || op.starts_with("editor/task::")
 }
 
-fn map_field_str_or_symbol(t: &Term, key: &str) -> Option<String> {
+fn map_field<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
     let Term::Map(m) = t else {
         return None;
     };
-    match m.get(&TermOrdKey(Term::symbol(key))) {
+    m.get(&TermOrdKey(Term::symbol(key)))
+}
+
+fn map_field_str_or_symbol(t: &Term, key: &str) -> Option<String> {
+    match map_field(t, key) {
         Some(Term::Str(s)) => Some(s.clone()),
         Some(Term::Symbol(s)) => Some(s.clone()),
         _ => None,

@@ -9,6 +9,7 @@ pub struct CapsPolicy {
     pub log: LogPolicy,
     pub store: StorePolicy,
     pub refs: RefsPolicy,
+    pub task: TaskPolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +50,15 @@ pub struct RefsPolicy {
 }
 
 #[derive(Debug, Clone)]
+pub struct TaskPolicy {
+    pub max_tasks: Option<u64>,
+    pub max_workers: Option<u64>,
+    pub max_queue: Option<u64>,
+    pub max_steps_per_task: Option<u64>,
+    pub max_time_ms_per_task: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
     pub create_dirs: bool,
@@ -72,6 +82,13 @@ impl CapsPolicy {
                 allow_http: false,
             },
             refs: RefsPolicy { path: None },
+            task: TaskPolicy {
+                max_tasks: None,
+                max_workers: None,
+                max_queue: None,
+                max_steps_per_task: None,
+                max_time_ms_per_task: None,
+            },
         }
     }
 
@@ -117,6 +134,7 @@ impl CapsPolicy {
         let log = parse_log_policy(tbl)?;
         let store = parse_store_policy(tbl)?;
         let refs = parse_refs_policy(tbl)?;
+        let task = parse_task_policy(tbl)?;
 
         // Baseline allowlist.
         if let Some(arr) = tbl.get("allow").and_then(|v| v.as_array()) {
@@ -155,6 +173,7 @@ impl CapsPolicy {
                 || k == "log"
                 || k == "store"
                 || k == "refs"
+                || k == "task"
             {
                 continue;
             }
@@ -168,6 +187,7 @@ impl CapsPolicy {
             log,
             store,
             refs,
+            task,
         })
     }
 
@@ -309,6 +329,49 @@ fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsErro
     Ok(RefsPolicy { path })
 }
 
+fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsError> {
+    let Some(v) = tbl.get("task") else {
+        return Ok(TaskPolicy {
+            max_tasks: None,
+            max_workers: None,
+            max_queue: None,
+            max_steps_per_task: None,
+            max_time_ms_per_task: None,
+        });
+    };
+    let task_tbl = v
+        .as_table()
+        .ok_or_else(|| EffectsError::Log("caps.toml: task must be a table".to_string()))?;
+
+    fn parse_u64_opt(
+        task_tbl: &toml::value::Table,
+        key: &str,
+    ) -> Result<Option<u64>, EffectsError> {
+        match task_tbl.get(key) {
+            None => Ok(None),
+            Some(v) => {
+                let n = v.as_integer().ok_or_else(|| {
+                    EffectsError::Log(format!("caps.toml: task.{key} must be an integer"))
+                })?;
+                if n < 0 {
+                    return Err(EffectsError::Log(format!(
+                        "caps.toml: task.{key} must be >= 0"
+                    )));
+                }
+                Ok(Some(n as u64))
+            }
+        }
+    }
+
+    Ok(TaskPolicy {
+        max_tasks: parse_u64_opt(task_tbl, "max_tasks")?,
+        max_workers: parse_u64_opt(task_tbl, "max_workers")?,
+        max_queue: parse_u64_opt(task_tbl, "max_queue")?,
+        max_steps_per_task: parse_u64_opt(task_tbl, "max_steps_per_task")?,
+        max_time_ms_per_task: parse_u64_opt(task_tbl, "max_time_ms_per_task")?,
+    })
+}
+
 fn apply_op_cfg(
     ops: &mut BTreeMap<String, OpPolicy>,
     op: &str,
@@ -445,5 +508,27 @@ log_inline_max_bytes = 5
         )
         .unwrap();
         assert_eq!(p.inline_max_bytes_for("sys/time::now"), Some(5));
+    }
+
+    #[test]
+    fn parses_task_policy_limits() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::await"]
+
+[task]
+max_tasks = 12
+max_workers = 4
+max_queue = 16
+max_steps_per_task = 20
+max_time_ms_per_task = 50
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.task.max_tasks, Some(12));
+        assert_eq!(p.task.max_workers, Some(4));
+        assert_eq!(p.task.max_queue, Some(16));
+        assert_eq!(p.task.max_steps_per_task, Some(20));
+        assert_eq!(p.task.max_time_ms_per_task, Some(50));
     }
 }
