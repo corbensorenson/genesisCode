@@ -14,6 +14,16 @@ on:
           - fast
           - standard
           - full
+      test_shards_total:
+        description: "Workspace test shard count (1 disables sharding)"
+        required: true
+        default: "1"
+        type: string
+      test_shard_index:
+        description: "Workspace test shard index (0-based)"
+        required: true
+        default: "0"
+        type: string
   schedule:
     - cron: "0 8 * * *"
 
@@ -23,6 +33,8 @@ jobs:
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_CI_PROFILE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || 'fast' }}
+      GENESIS_TEST_SHARDS_TOTAL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shards_total || '1' }}
+      GENESIS_TEST_SHARD_INDEX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shard_index || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +48,23 @@ jobs:
               ;;
           esac
           echo "CI profile: ${GENESIS_CI_PROFILE}"
+          [[ "${GENESIS_TEST_SHARDS_TOTAL}" =~ ^[0-9]+$ ]] || {
+            echo "GENESIS_TEST_SHARDS_TOTAL must be numeric"
+            exit 1
+          }
+          [[ "${GENESIS_TEST_SHARD_INDEX}" =~ ^[0-9]+$ ]] || {
+            echo "GENESIS_TEST_SHARD_INDEX must be numeric"
+            exit 1
+          }
+          if [[ "${GENESIS_TEST_SHARDS_TOTAL}" -lt 1 ]]; then
+            echo "GENESIS_TEST_SHARDS_TOTAL must be >= 1"
+            exit 1
+          fi
+          if [[ "${GENESIS_TEST_SHARD_INDEX}" -ge "${GENESIS_TEST_SHARDS_TOTAL}" ]]; then
+            echo "GENESIS_TEST_SHARD_INDEX must be < GENESIS_TEST_SHARDS_TOTAL"
+            exit 1
+          fi
+          echo "Test shard: ${GENESIS_TEST_SHARD_INDEX}/${GENESIS_TEST_SHARDS_TOTAL}"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -71,7 +100,28 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --profile selfhost-strict
+        run: |
+          if [[ "${GENESIS_CI_PROFILE}" == "fast" ]]; then
+            bash scripts/test_fast.sh
+          elif [[ "${GENESIS_TEST_SHARDS_TOTAL}" -gt 1 ]]; then
+            bash scripts/test_shard_workspace.sh \
+              --total "${GENESIS_TEST_SHARDS_TOTAL}" \
+              --index "${GENESIS_TEST_SHARD_INDEX}" \
+              --seed "${GITHUB_SHA}" \
+              --out ".genesis/ci-shards" \
+              --exclude-crate "gc_wasi_cli"
+          else
+            # gc_wasi_cli command invariants are exercised by dedicated WASI smoke/strict lanes.
+            cargo test --workspace --profile selfhost-strict --exclude gc_wasi_cli
+          fi
+
+      - name: Upload Test Shard Artifacts
+        if: ${{ always() && env.GENESIS_TEST_SHARDS_TOTAL != '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-shard-${{ env.GENESIS_TEST_SHARD_INDEX }}-of-${{ env.GENESIS_TEST_SHARDS_TOTAL }}
+          path: .genesis/ci-shards/
+          if-no-files-found: error
 
       - name: Performance Budgets
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}

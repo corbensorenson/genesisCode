@@ -637,6 +637,7 @@ fn call_capability(
                         already: &mut already,
                         error_tok,
                         op,
+                        transfer_workers: sp.transfer_workers,
                     };
                     match sync_pull_closure(&client, store, h, depth, &mut stats) {
                         Ok(()) => {}
@@ -670,6 +671,7 @@ fn call_capability(
                         already: &mut already,
                         error_tok,
                         op,
+                        transfer_workers: sp.transfer_workers,
                     };
                     match sync_pull_closure(&client, store, &h, depth, &mut stats) {
                         Ok(()) => {}
@@ -837,15 +839,18 @@ fn call_capability(
 
                 let mut missing: Vec<String> = Vec::new();
                 let mut present: u64 = 0;
-                for chunk in hashes.chunks(512) {
-                    let chunk_vec: Vec<String> = chunk.to_vec();
-                    let mp = match client.store_has(&chunk_vec) {
+                let has_chunks: Vec<Vec<String>> =
+                    hashes.chunks(512).map(|chunk| chunk.to_vec()).collect();
+                let has_results =
+                    sync_parallel_store_has_chunks(&client, &has_chunks, sp.transfer_workers);
+                for (chunk_i, chunk) in hashes.chunks(512).enumerate() {
+                    let mp = match &has_results[chunk_i] {
                         Ok(m) => m,
                         Err(e) => {
                             return Ok(mk_error(
                                 error_tok,
                                 "core/sync/remote-error",
-                                format!("{e}"),
+                                e.clone(),
                                 Some(op),
                             ));
                         }
@@ -860,28 +865,19 @@ fn call_capability(
                 missing.sort();
                 missing.dedup();
 
+                let upload_results =
+                    sync_parallel_upload_missing(&client, store, &missing, sp.transfer_workers);
                 let mut uploaded: u64 = 0;
-                for h in &missing {
-                    let bytes = match store.get_bytes(h) {
-                        Ok(b) => b,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/store/not-found",
-                                format!("{e}"),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    match client.store_put(h, &bytes) {
+                for r in upload_results {
+                    match r {
                         Ok(()) => uploaded = uploaded.saturating_add(1),
                         Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/sync/remote-error",
-                                format!("{e}"),
-                                Some(op),
-                            ));
+                            let (code, msg) = if e.starts_with("store-read:") {
+                                ("core/store/not-found", e)
+                            } else {
+                                ("core/sync/remote-error", e)
+                            };
+                            return Ok(mk_error(error_tok, code, msg, Some(op)));
                         }
                     }
                 }
@@ -6677,6 +6673,74 @@ fn payload_refs_policy_hash(payload: &Term) -> Result<String, EffectsError> {
     }
 }
 
+type TimeoutJob = Box<dyn FnOnce() + Send + 'static>;
+
+struct TimeoutPool {
+    tx: std::sync::mpsc::Sender<TimeoutJob>,
+}
+
+impl TimeoutPool {
+    fn worker_count() -> usize {
+        let env_n = std::env::var("GENESIS_TIMEOUT_WORKERS")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .unwrap_or(4);
+        env_n.clamp(1, 32)
+    }
+
+    fn new() -> Result<Self, EffectsError> {
+        use std::sync::{Arc, Mutex, mpsc};
+        let (tx, rx) = mpsc::channel::<TimeoutJob>();
+        let rx = Arc::new(Mutex::new(rx));
+
+        let mut started = 0usize;
+        for i in 0..Self::worker_count() {
+            let rx2 = Arc::clone(&rx);
+            let name = format!("gc-timeout-{i}");
+            let spawned = std::thread::Builder::new().name(name).spawn(move || {
+                loop {
+                    let msg = {
+                        let guard = rx2.lock();
+                        match guard {
+                            Ok(g) => g.recv(),
+                            Err(_) => return,
+                        }
+                    };
+                    match msg {
+                        Ok(job) => job(),
+                        Err(_) => return,
+                    }
+                }
+            });
+            if spawned.is_ok() {
+                started = started.saturating_add(1);
+            }
+        }
+        if started == 0 {
+            return Err(EffectsError::Log(
+                "timeout pool failed to start worker threads".to_string(),
+            ));
+        }
+        Ok(Self { tx })
+    }
+
+    fn submit(&self, job: TimeoutJob) -> Result<(), TimeoutJob> {
+        self.tx.send(job).map_err(|e| e.0)
+    }
+}
+
+fn timeout_pool() -> Option<&'static TimeoutPool> {
+    static POOL: std::sync::OnceLock<TimeoutPool> = std::sync::OnceLock::new();
+    if let Some(p) = POOL.get() {
+        return Some(p);
+    }
+    let built = TimeoutPool::new().ok()?;
+    if POOL.set(built).is_ok() {
+        return POOL.get();
+    }
+    POOL.get()
+}
+
 fn with_timeout<T, F>(timeout_ms: u64, f: F) -> Result<Option<T>, EffectsError>
 where
     T: Send + 'static,
@@ -6684,16 +6748,55 @@ where
 {
     use std::sync::mpsc;
     let (tx, rx) = mpsc::channel();
-    std::thread::spawn(move || {
-        let r = f();
+    let mut f_slot = Some(f);
+    let job: TimeoutJob = Box::new(move || {
+        let run = f_slot.take().expect("timeout closure taken");
+        let r = run();
         let _ = tx.send(r);
     });
+    let mut fallback_job = Some(job);
+    let submitted = match timeout_pool() {
+        Some(pool) => match pool.submit(fallback_job.take().expect("timeout job")) {
+            Ok(()) => true,
+            Err(job) => {
+                fallback_job = Some(job);
+                false
+            }
+        },
+        None => false,
+    };
+    if !submitted {
+        let job = fallback_job.expect("timeout fallback job");
+        std::thread::spawn(move || job());
+    }
     match rx.recv_timeout(std::time::Duration::from_millis(timeout_ms)) {
         Ok(r) => r.map(Some),
         Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
         Err(mpsc::RecvTimeoutError::Disconnected) => Err(EffectsError::Log(
             "capability thread disconnected".to_string(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod timeout_tests {
+    use super::with_timeout;
+    use crate::EffectsError;
+
+    #[test]
+    fn with_timeout_returns_some_for_fast_jobs() {
+        let out = with_timeout(100, || -> Result<u64, EffectsError> { Ok(7) }).unwrap();
+        assert_eq!(out, Some(7));
+    }
+
+    #[test]
+    fn with_timeout_returns_none_for_slow_jobs() {
+        let out = with_timeout(1, || -> Result<u64, EffectsError> {
+            std::thread::sleep(std::time::Duration::from_millis(25));
+            Ok(7)
+        })
+        .unwrap();
+        assert_eq!(out, None);
     }
 }
 
@@ -8197,12 +8300,14 @@ fn payload_pkg_publish_commit(payload: &Term) -> Result<Option<String>, String> 
 struct SyncPolicy {
     remote_allow: Vec<String>,
     allow_http: bool,
+    transfer_workers: usize,
 }
 
 #[cfg(not(target_os = "wasi"))]
 fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
+    let mut transfer_workers: usize = 4;
     if let Some(pol) = pol {
         if let Some(v) = pol.extra.get("remote_allow")
             && let Some(arr) = v.as_array()
@@ -8222,6 +8327,12 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
         {
             allow_http = b;
         }
+        if let Some(v) = pol.extra.get("transfer_workers")
+            && let Some(n) = v.as_integer()
+            && n > 0
+        {
+            transfer_workers = (n as usize).clamp(1, 64);
+        }
     }
     if remote_allow.is_empty() {
         return Err("sync requires per-op remote_allow allowlist in caps.toml".to_string());
@@ -8229,6 +8340,7 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     Ok(SyncPolicy {
         remote_allow,
         allow_http,
+        transfer_workers,
     })
 }
 
@@ -8457,6 +8569,7 @@ struct SyncPullStats<'a> {
     already: &'a mut u64,
     error_tok: SealId,
     op: &'a str,
+    transfer_workers: usize,
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -8473,118 +8586,289 @@ fn sync_pull_closure(
     q.push_back((root.to_string(), depth));
     let mut seen: HashSet<String> = HashSet::new();
     let mut obj_count: u64 = 0;
+    let batch_cap = (stats.transfer_workers.max(1) * 8).max(8);
 
-    while let Some((h, dleft)) = q.pop_front() {
-        if !seen.insert(h.clone()) {
+    while !q.is_empty() {
+        let mut batch: Vec<(String, u64)> = Vec::new();
+        while batch.len() < batch_cap {
+            let Some((h, dleft)) = q.pop_front() else {
+                break;
+            };
+            if !seen.insert(h.clone()) {
+                continue;
+            }
+            obj_count = obj_count.saturating_add(1);
+            if obj_count > 50_000 {
+                return Err(mk_error(
+                    stats.error_tok,
+                    "core/sync/too-many-objects",
+                    "closure exceeded 50k objects".to_string(),
+                    Some(stats.op),
+                ));
+            }
+            batch.push((h, dleft));
+        }
+        if batch.is_empty() {
             continue;
         }
-        obj_count = obj_count.saturating_add(1);
-        if obj_count > 50_000 {
-            return Err(mk_error(
-                stats.error_tok,
-                "core/sync/too-many-objects",
-                "closure exceeded 50k objects".to_string(),
-                Some(stats.op),
-            ));
-        }
 
-        if store.path_for(&h).exists() {
-            if store.verify_hex(&h).is_err() {
-                return Err(mk_error(
-                    stats.error_tok,
-                    "core/store/corruption",
-                    format!("artifact store corruption: {h}"),
-                    Some(stats.op),
-                ));
-            }
-            *stats.already = stats.already.saturating_add(1);
-        } else {
-            let bytes = client.store_get(&h).map_err(|e| {
-                mk_error(
-                    stats.error_tok,
-                    "core/sync/remote-error",
-                    format!("{e}"),
-                    Some(stats.op),
-                )
-            })?;
-            let got = store.put_bytes(&bytes).map_err(|e| {
-                mk_error(
-                    stats.error_tok,
-                    "core/store/io-error",
-                    e.to_string(),
-                    Some(stats.op),
-                )
-            })?;
-            if got != h {
-                return Err(mk_error(
-                    stats.error_tok,
-                    "core/sync/hash-mismatch",
-                    "remote bytes hash mismatch".to_string(),
-                    Some(stats.op),
-                ));
-            }
-            *stats.pulled = stats.pulled.saturating_add(1);
-        }
-
-        let t = match store_get_term(store, &h) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-
-        // Commit closure: commit, base, patch, result snapshot, evidence, attestations, parents.
-        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
-            if let Some(b) = c.base {
-                q.push_back((b, dleft));
-            }
-            q.push_back((c.patch, dleft));
-            q.push_back((c.result, dleft));
-            for x in c.evidence {
-                q.push_back((x, dleft));
-            }
-            for x in c.attestations {
-                q.push_back((x, dleft));
-            }
-            if dleft > 0 {
-                for p in c.parents {
-                    q.push_back((p, dleft - 1));
+        let mut missing_hashes: Vec<String> = Vec::new();
+        for (h, _) in &batch {
+            if store.path_for(h).exists() {
+                if store.verify_hex(h).is_err() {
+                    return Err(mk_error(
+                        stats.error_tok,
+                        "core/store/corruption",
+                        format!("artifact store corruption: {h}"),
+                        Some(stats.op),
+                    ));
                 }
+                *stats.already = stats.already.saturating_add(1);
+            } else {
+                missing_hashes.push(h.clone());
             }
-            continue;
         }
 
-        // Patch closure: follow referenced values.
-        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
-            for x in p.refs() {
-                q.push_back((x, dleft));
+        if !missing_hashes.is_empty() {
+            let dl_results =
+                sync_parallel_store_get_bytes(client, &missing_hashes, stats.transfer_workers);
+            for (i, h) in missing_hashes.iter().enumerate() {
+                let bytes = match &dl_results[i] {
+                    Ok(b) => b,
+                    Err(e) => {
+                        return Err(mk_error(
+                            stats.error_tok,
+                            "core/sync/remote-error",
+                            e.clone(),
+                            Some(stats.op),
+                        ));
+                    }
+                };
+                let got = store.put_bytes(bytes).map_err(|e| {
+                    mk_error(
+                        stats.error_tok,
+                        "core/store/io-error",
+                        e.to_string(),
+                        Some(stats.op),
+                    )
+                })?;
+                if got != *h {
+                    return Err(mk_error(
+                        stats.error_tok,
+                        "core/sync/hash-mismatch",
+                        "remote bytes hash mismatch".to_string(),
+                        Some(stats.op),
+                    ));
+                }
+                *stats.pulled = stats.pulled.saturating_add(1);
             }
-            continue;
         }
 
-        // Evidence closure: follow any referenced inputs/outputs/data.
-        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
-            for x in e.refs() {
-                q.push_back((x, dleft));
-            }
-            continue;
-        }
+        for (h, dleft) in batch {
+            let t = match store_get_term(store, &h) {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
 
-        // Conflict closure: follow referenced snapshots and referenced handler/value hashes.
-        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
-            for x in c.refs() {
-                q.push_back((x, dleft));
+            // Commit closure: commit, base, patch, result snapshot, evidence, attestations, parents.
+            if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+                if let Some(b) = c.base {
+                    q.push_back((b, dleft));
+                }
+                q.push_back((c.patch, dleft));
+                q.push_back((c.result, dleft));
+                for x in c.evidence {
+                    q.push_back((x, dleft));
+                }
+                for x in c.attestations {
+                    q.push_back((x, dleft));
+                }
+                if dleft > 0 {
+                    for p in c.parents {
+                        q.push_back((p, dleft - 1));
+                    }
+                }
+                continue;
             }
-            continue;
-        }
 
-        // Snapshot closure: shallow refs.
-        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
-            for x in s.shallow_refs() {
-                q.push_back((x, dleft));
+            // Patch closure: follow referenced values.
+            if let Ok(p) = gc_vcs::Patch::from_term(&t) {
+                for x in p.refs() {
+                    q.push_back((x, dleft));
+                }
+                continue;
+            }
+
+            // Evidence closure: follow any referenced inputs/outputs/data.
+            if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
+                for x in e.refs() {
+                    q.push_back((x, dleft));
+                }
+                continue;
+            }
+
+            // Conflict closure: follow referenced snapshots and referenced handler/value hashes.
+            if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
+                for x in c.refs() {
+                    q.push_back((x, dleft));
+                }
+                continue;
+            }
+
+            // Snapshot closure: shallow refs.
+            if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
+                for x in s.shallow_refs() {
+                    q.push_back((x, dleft));
+                }
             }
         }
     }
 
     Ok(())
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn sync_parallel_store_get_bytes(
+    client: &gc_registry::RegistryClient,
+    hashes: &[String],
+    workers: usize,
+) -> Vec<Result<Vec<u8>, String>> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    if hashes.is_empty() {
+        return Vec::new();
+    }
+    let workers = workers.clamp(1, 64).min(hashes.len());
+    if workers <= 1 {
+        return hashes
+            .iter()
+            .map(|h| client.store_get(h).map_err(|e| format!("{e}")))
+            .collect();
+    }
+
+    let next = Arc::new(AtomicUsize::new(0));
+    let out: Arc<Mutex<Vec<Option<Result<Vec<u8>, String>>>>> =
+        Arc::new(Mutex::new((0..hashes.len()).map(|_| None).collect()));
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            let out = Arc::clone(&out);
+            let next = Arc::clone(&next);
+            let c = client.clone();
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= hashes.len() {
+                        break;
+                    }
+                    let res = c.store_get(&hashes[i]).map_err(|e| format!("{e}"));
+                    let mut g = out.lock().expect("sync get results lock");
+                    g[i] = Some(res);
+                }
+            });
+        }
+    });
+    let mut g = out.lock().expect("sync get results lock");
+    g.drain(..).map(|x| x.expect("filled")).collect()
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn sync_parallel_store_has_chunks(
+    client: &gc_registry::RegistryClient,
+    chunks: &[Vec<String>],
+    workers: usize,
+) -> Vec<Result<BTreeMap<String, bool>, String>> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    if chunks.is_empty() {
+        return Vec::new();
+    }
+    let workers = workers.clamp(1, 64).min(chunks.len());
+    if workers <= 1 {
+        return chunks
+            .iter()
+            .map(|chunk| client.store_has(chunk).map_err(|e| format!("{e}")))
+            .collect();
+    }
+
+    let next = Arc::new(AtomicUsize::new(0));
+    let out: Arc<Mutex<Vec<Option<Result<BTreeMap<String, bool>, String>>>>> =
+        Arc::new(Mutex::new((0..chunks.len()).map(|_| None).collect()));
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            let out = Arc::clone(&out);
+            let next = Arc::clone(&next);
+            let c = client.clone();
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= chunks.len() {
+                        break;
+                    }
+                    let res = c.store_has(&chunks[i]).map_err(|e| format!("{e}"));
+                    let mut g = out.lock().expect("sync has results lock");
+                    g[i] = Some(res);
+                }
+            });
+        }
+    });
+    let mut g = out.lock().expect("sync has results lock");
+    g.drain(..).map(|x| x.expect("filled")).collect()
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn sync_parallel_upload_missing(
+    client: &gc_registry::RegistryClient,
+    store: &ArtifactStore,
+    missing: &[String],
+    workers: usize,
+) -> Vec<Result<(), String>> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    if missing.is_empty() {
+        return Vec::new();
+    }
+    let workers = workers.clamp(1, 64).min(missing.len());
+    if workers <= 1 {
+        return missing
+            .iter()
+            .map(|h| {
+                let bytes = store.get_bytes(h).map_err(|e| format!("store-read:{e}"))?;
+                client.store_put(h, &bytes).map_err(|e| format!("{e}"))
+            })
+            .collect();
+    }
+
+    let next = Arc::new(AtomicUsize::new(0));
+    let out: Arc<Mutex<Vec<Option<Result<(), String>>>>> =
+        Arc::new(Mutex::new((0..missing.len()).map(|_| None).collect()));
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            let out = Arc::clone(&out);
+            let next = Arc::clone(&next);
+            let c = client.clone();
+            let s = store.clone();
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= missing.len() {
+                        break;
+                    }
+                    let h = &missing[i];
+                    let res = s
+                        .get_bytes(h)
+                        .map_err(|e| format!("store-read:{e}"))
+                        .and_then(|bytes| c.store_put(h, &bytes).map_err(|e| format!("{e}")));
+                    let mut g = out.lock().expect("sync put results lock");
+                    g[i] = Some(res);
+                }
+            });
+        }
+    });
+    let mut g = out.lock().expect("sync put results lock");
+    g.drain(..).map(|x| x.expect("filled")).collect()
 }
 
 fn sync_closure_local(

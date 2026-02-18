@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 34
+Open checklist items: 30
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -40,7 +40,7 @@ Open checklist items: 34
 ### B3. Runtime Scheduler
 - [ ] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
 - [ ] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
-- [ ] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
+- [x] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
 - [ ] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
 
 ### B4. Replay + Evidence
@@ -57,7 +57,7 @@ Open checklist items: 34
 ### C1. Hot Path Runtime
 - [x] Optimize artifact reads in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs` to avoid double-read verification on every `get`.
 - [x] Add optional integrity cache mode (hash memo with invalidation) to keep strong guarantees without repeated full rehash in tight loops.
-- [ ] Batch and parallelize remote sync transfers with deterministic result collation (upload/download worker pool + stable ordering).
+- [x] Batch and parallelize remote sync transfers with deterministic result collation (upload/download worker pool + stable ordering).
 
 ### C2. Obligation Engine
 - [x] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
@@ -70,8 +70,8 @@ Open checklist items: 34
 
 ### C4. Test/CI Iteration Speed
 - [x] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
-- [ ] Remove redundant native/WASI duplicate coverage where the same invariant is already proven by shared harness.
-- [ ] Add automatic test sharding support with deterministic seed/order and artifact collation.
+- [x] Remove redundant native/WASI duplicate coverage where the same invariant is already proven by shared harness.
+- [x] Add automatic test sharding support with deterministic seed/order and artifact collation.
 - [x] Publish performance budgets in CI (test wall-time, selfhost bootstrap time, obligation runtime) and fail on regressions.
 
 ## Workstream D — AI-First Self-Hosting Completion

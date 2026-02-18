@@ -245,9 +245,11 @@ path = "{refs_path}"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
+transfer_workers = 4
 
 [op."core/sync::pull"]
 remote_allow = ["{remote_allow}"]
+transfer_workers = 4
 "#,
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),

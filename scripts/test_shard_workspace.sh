@@ -9,6 +9,7 @@ INDEX=""
 SEED="${GENESIS_TEST_SHARD_SEED:-genesis-v1}"
 OUT_DIR="${GENESIS_TEST_SHARD_OUT_DIR:-.genesis/ci-shards}"
 DRY_RUN=0
+EXCLUDE_CRATES=()
 
 usage() {
   cat <<'EOF'
@@ -19,6 +20,7 @@ Options:
   --index I        shard index (0 <= I < N)
   --seed S         deterministic seed for ordering (default: GENESIS_TEST_SHARD_SEED or genesis-v1)
   --out DIR        output directory for shard artifacts (default: .genesis/ci-shards)
+  --exclude-crate  omit a workspace crate from shard execution (repeatable)
   --dry-run        print selected crates/commands without running tests
 EOF
 }
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --out)
       OUT_DIR="${2:-}"
+      shift 2
+      ;;
+    --exclude-crate)
+      EXCLUDE_CRATES+=("${2:-}")
       shift 2
       ;;
     --dry-run)
@@ -79,16 +85,19 @@ REPORT_JSON="$OUT_DIR/shard_${INDEX}_of_${TOTAL}.json"
 : >"$LOG_FILE"
 : >"$RESULTS_TSV"
 
-mapfile -t WORKSPACE_CRATES < <(
-  cargo metadata --no-deps --format-version 1 \
-    | python3 - <<'PY'
+WORKSPACE_CRATES=()
+while IFS= read -r crate; do
+  [[ -z "$crate" ]] && continue
+  WORKSPACE_CRATES+=("$crate")
+done < <(
+  cargo metadata --no-deps --format-version 1 | python3 -c '
 import json, sys
 m = json.load(sys.stdin)
 members = set(m["workspace_members"])
 for p in m["packages"]:
     if p["id"] in members:
         print(p["name"])
-PY
+'
 )
 
 if [[ "${#WORKSPACE_CRATES[@]}" -eq 0 ]]; then
@@ -96,13 +105,45 @@ if [[ "${#WORKSPACE_CRATES[@]}" -eq 0 ]]; then
   exit 1
 fi
 
+if [[ "${#EXCLUDE_CRATES[@]}" -gt 0 ]]; then
+  FILTERED_CRATES=()
+  for crate in "${WORKSPACE_CRATES[@]}"; do
+    skip=0
+    for excluded in "${EXCLUDE_CRATES[@]}"; do
+      if [[ "$crate" == "$excluded" ]]; then
+        skip=1
+        break
+      fi
+    done
+    if (( skip == 0 )); then
+      FILTERED_CRATES+=("$crate")
+    fi
+  done
+  WORKSPACE_CRATES=("${FILTERED_CRATES[@]}")
+fi
+
+if [[ "${#WORKSPACE_CRATES[@]}" -eq 0 ]]; then
+  echo "test-shard-workspace: no workspace crates remain after exclusions" >&2
+  exit 1
+fi
+
 ORDERED=()
 for crate in "${WORKSPACE_CRATES[@]}"; do
-  key="$(printf "%s" "${SEED}|${crate}" | shasum -a 256 | awk '{print $1}')"
+  key="$(
+    python3 - "$SEED" "$crate" <<'PY'
+import hashlib, sys
+seed = sys.argv[1]
+crate = sys.argv[2]
+print(hashlib.sha256(f"{seed}|{crate}".encode("utf-8")).hexdigest())
+PY
+  )"
   ORDERED+=("${key}"$'\t'"${crate}")
 done
-IFS=$'\n' ORDERED_SORTED=($(printf "%s\n" "${ORDERED[@]}" | LC_ALL=C sort))
-unset IFS
+ORDERED_SORTED=()
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  ORDERED_SORTED+=("$line")
+done < <(printf "%s\n" "${ORDERED[@]}" | LC_ALL=C sort)
 
 SELECTED=()
 for i in "${!ORDERED_SORTED[@]}"; do
@@ -114,6 +155,9 @@ done
 
 echo "test-shard-workspace: shard=${INDEX}/${TOTAL} seed=${SEED}" | tee -a "$LOG_FILE"
 echo "test-shard-workspace: selected crates=${#SELECTED[@]}" | tee -a "$LOG_FILE"
+if [[ "${#EXCLUDE_CRATES[@]}" -gt 0 ]]; then
+  echo "test-shard-workspace: excluded crates=${EXCLUDE_CRATES[*]}" | tee -a "$LOG_FILE"
+fi
 
 if (( DRY_RUN == 1 )); then
   for crate in "${SELECTED[@]}"; do
