@@ -1,4 +1,6 @@
 use std::fs;
+use std::path::Path;
+use std::sync::OnceLock;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
@@ -9,29 +11,108 @@ fn map_get<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> 
     m.get(&TermOrdKey(Term::symbol(k)))
 }
 
+struct BaselineArtifact {
+    bytes: Vec<u8>,
+    json: JsonValue,
+}
+
+fn baseline() -> &'static BaselineArtifact {
+    static BASELINE: OnceLock<BaselineArtifact> = OnceLock::new();
+    BASELINE.get_or_init(|| {
+        // Persist this directory for the duration of the test binary so other tests can reuse
+        // the expensive `selfhost-artifact` build without rebuilding.
+        let td = tempdir().unwrap();
+        let dir = td.keep();
+        let artifact = dir.join("baseline_toolchain.gc");
+
+        let out = cargo_bin_cmd!("genesis")
+            .args(["selfhost-artifact", "--out"])
+            .arg(&artifact)
+            .arg("--json")
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let json: JsonValue = serde_json::from_slice(&out).unwrap();
+        let bytes = fs::read(&artifact).unwrap();
+
+        BaselineArtifact { bytes, json }
+    })
+}
+
+fn write_baseline_copy(dst: &Path) {
+    fs::write(dst, &baseline().bytes).unwrap();
+}
+
+#[test]
+fn selfhost_artifact_with_noncanonical_forms_is_rejected_even_if_hash_matches_forms() {
+    let td = tempdir().unwrap();
+    let artifact = td.path().join("selfhost_toolchain.gc");
+    let file = td.path().join("m.gc");
+
+    write_baseline_copy(&artifact);
+
+    // Replace the canonical forms for one module with intentionally non-canonical forms, and
+    // update :module-h to match those forms. The loader must still reject it.
+    let artifact_s = fs::read_to_string(&artifact).unwrap();
+    let mut term = parse_term(&artifact_s).unwrap();
+    let Term::Map(root) = &mut term else {
+        panic!("artifact must be a map");
+    };
+    let modules = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("modules");
+    let Term::Vector(mods) = modules else {
+        panic!("modules must be vector");
+    };
+    let Term::Map(first) = mods.first_mut().expect("first module") else {
+        panic!("first module must be map");
+    };
+
+    let noncanon_src = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/spec/coreform/app_sugar.in.gc"),
+    )
+    .unwrap();
+    let noncanon_forms = gc_coreform::parse_module(&noncanon_src).unwrap();
+    let noncanon_hash = gc_coreform::hash_module(&noncanon_forms);
+
+    first.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(noncanon_forms),
+    );
+    first.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(noncanon_hash.to_vec().into()),
+    );
+    fs::write(&artifact, print_term(&term)).unwrap();
+
+    fs::write(&file, "(def x 1)\nx\n").unwrap();
+    cargo_bin_cmd!("genesis")
+        .env("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT", &artifact)
+        .args(["fmt", "--engine", "selfhost"])
+        .arg(&file)
+        .assert()
+        .failure()
+        .code(1);
+}
+
 #[test]
 fn selfhost_artifact_is_byte_for_byte_deterministic_across_rebuilds() {
     let td = tempdir().unwrap();
-    let artifact_a = td.path().join("a.gc");
     let artifact_b = td.path().join("b.gc");
 
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact_a)
-        .assert()
-        .success();
+    // Compare a fresh build against the cached baseline build to guarantee determinism.
     cargo_bin_cmd!("genesis")
         .args(["selfhost-artifact", "--out"])
         .arg(&artifact_b)
         .assert()
         .success();
 
-    let a = fs::read(&artifact_a).unwrap();
+    let a = &baseline().bytes;
     let b = fs::read(&artifact_b).unwrap();
-    assert_eq!(
-        a, b,
-        "selfhost-artifact output must be deterministic (byte-for-byte)"
-    );
+    assert_eq!(a, &b, "selfhost-artifact output must be deterministic");
 }
 
 #[test]
@@ -40,11 +121,7 @@ fn selfhost_artifact_can_be_built_and_used_for_selfhost_fmt() {
     let artifact = td.path().join("selfhost_toolchain.gc");
     let file = td.path().join("m.gc");
 
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
+    write_baseline_copy(&artifact);
 
     let artifact_s = fs::read_to_string(&artifact).unwrap();
     let term = parse_term(&artifact_s).unwrap();
@@ -87,11 +164,7 @@ fn invalid_selfhost_artifact_is_rejected_by_loader() {
     let artifact = td.path().join("selfhost_toolchain.gc");
     let file = td.path().join("m.gc");
 
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
+    write_baseline_copy(&artifact);
 
     let artifact_s = fs::read_to_string(&artifact).unwrap();
     let mut term = parse_term(&artifact_s).unwrap();
@@ -129,11 +202,7 @@ fn selfhost_artifact_tampered_forms_are_rejected_even_if_module_hash_is_unchange
     let artifact = td.path().join("selfhost_toolchain.gc");
     let file = td.path().join("m.gc");
 
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
+    write_baseline_copy(&artifact);
 
     let artifact_s = fs::read_to_string(&artifact).unwrap();
     let mut term = parse_term(&artifact_s).unwrap();
@@ -185,20 +254,9 @@ fn artifact_summary_counts(v: &JsonValue) -> (u64, u64) {
 #[test]
 fn selfhost_artifact_thresholds_accept_exact_observed_stage2_coverage() {
     let td = tempdir().unwrap();
-    let baseline_artifact = td.path().join("baseline.gc");
     let gated_artifact = td.path().join("gated.gc");
 
-    let baseline_out = cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&baseline_artifact)
-        .arg("--json")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let baseline_json: JsonValue = serde_json::from_slice(&baseline_out).unwrap();
-    let (supported, validated) = artifact_summary_counts(&baseline_json);
+    let (supported, validated) = artifact_summary_counts(&baseline().json);
 
     let gated_out = cargo_bin_cmd!("genesis")
         .args([
@@ -246,20 +304,9 @@ fn selfhost_artifact_thresholds_accept_exact_observed_stage2_coverage() {
 #[test]
 fn selfhost_artifact_thresholds_fail_when_minimums_exceed_observed_stage2_coverage() {
     let td = tempdir().unwrap();
-    let baseline_artifact = td.path().join("baseline.gc");
     let failing_artifact = td.path().join("failing.gc");
 
-    let baseline_out = cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&baseline_artifact)
-        .arg("--json")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let baseline_json: JsonValue = serde_json::from_slice(&baseline_out).unwrap();
-    let (supported, validated) = artifact_summary_counts(&baseline_json);
+    let (supported, validated) = artifact_summary_counts(&baseline().json);
 
     let failing_out = cargo_bin_cmd!("genesis")
         .args([

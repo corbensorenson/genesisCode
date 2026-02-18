@@ -4,14 +4,10 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{canonicalize_module, hash_module, hash_term, parse_module, parse_term};
 use serde_json::Value as JsonValue;
 
+mod support;
+
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    support::copy_repo_toolchain_artifact(dir)
 }
 
 #[test]

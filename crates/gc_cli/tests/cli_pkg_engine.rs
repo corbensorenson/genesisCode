@@ -7,6 +7,8 @@ use gc_coreform::{
 };
 use predicates::prelude::*;
 
+mod support;
+
 fn cmd() -> assert_cmd::Command {
     let mut c = cargo_bin_cmd!("genesis");
     c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
@@ -31,13 +33,7 @@ base_dir = "."
 }
 
 fn build_selfhost_artifact(dir: &Path) -> PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cmd()
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    support::copy_repo_toolchain_artifact(dir)
 }
 
 fn poison_cli_pkg_init_program(artifact: &Path) {

@@ -69,6 +69,7 @@ Acceptance gate:
 ### B) `.gc` Semantic Source-of-Truth
 - [ ] Finalize self-host parser/canon/printer/hash as canonical source of truth.
   - [x] Remove legacy `selfhost/tool::*` fallback bindings from the CLI driver; selfhost routes require `core/cli::*` contracts.
+  - [x] Toolchain artifact loader enforces canonical `:forms` (idempotent canonicalization) and hashes canonical forms to prevent semantic skew.
 - [ ] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.

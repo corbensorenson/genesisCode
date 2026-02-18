@@ -7,6 +7,8 @@ use gc_coreform::{
 };
 use predicates::prelude::*;
 
+mod support;
+
 fn write_caps(dir: &std::path::Path, allow: &[&str]) -> PathBuf {
     let caps = dir.join("caps.toml");
     let mut s = String::new();
@@ -31,13 +33,7 @@ fn cmd() -> assert_cmd::Command {
 }
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cmd()
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    support::copy_repo_toolchain_artifact(dir)
 }
 
 fn poison_cli_store_put_program(artifact: &std::path::Path) {

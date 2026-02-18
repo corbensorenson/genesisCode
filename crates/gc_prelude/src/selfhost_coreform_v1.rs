@@ -224,12 +224,19 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             parse_module(src).map_err(|e| anyhow::anyhow!("{path}: parse: {e}"))?
         };
 
+        // Canonicalize always; toolchain identity is defined by canonical printed bytes.
+        // If the artifact provides `:forms`, they must already be canonical (idempotent).
+        let canon_forms = canonicalize_module(forms.clone())
+            .map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?;
+        if forms_from_artifact.is_some() && canon_forms != forms {
+            return Err(anyhow::anyhow!(
+                "artifact module {path} has non-canonical :forms; re-run `genesis selfhost-artifact`"
+            ));
+        }
+
         // Validate the module hash against the canonical printed bytes. This is the stable
         // content-addressed identity for toolchain modules in artifact-only mode.
-        //
-        // Note: if `:forms` is present, we still validate against `:module-h` to prevent
-        // tampering with forms while keeping the hash unchanged.
-        let got_h = hash_module(&forms);
+        let got_h = hash_module(&canon_forms);
         if got_h != module_h {
             return Err(anyhow::anyhow!(
                 "artifact module hash mismatch for {path}: expected {:x?}, computed {:x?}",
@@ -238,13 +245,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             ));
         }
 
-        // If the artifact did not include canonical forms, canonicalize now so the compiled module
-        // matches the semantics of the artifact producer.
-        let forms = if forms_from_artifact.is_some() {
-            forms
-        } else {
-            canonicalize_module(forms).map_err(|e| anyhow::anyhow!("{path}: canon: {e}"))?
-        };
+        let forms = canon_forms;
         let compiled =
             compile_module(&forms).map_err(|e| anyhow::anyhow!("{path}: compile: {e}"))?;
         compiled_by_path.insert(path, compiled);
