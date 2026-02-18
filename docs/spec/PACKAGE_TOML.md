@@ -9,6 +9,7 @@ This file defines a package, its modules, dependencies, and required obligations
 - `modules` (array of tables): `[{ path = "...", hash = "..." }, ...]`
 - `dependencies` (array of tables): `[{ name = "...", path = "...", hash = "..." }, ...]`
 - `obligations` (array of strings): obligation IDs to run
+  - includes `core/obligation::ai-style` for AI-oriented module quality gates
 
 ## Optional Keys
 
@@ -23,6 +24,7 @@ This file defines a package, its modules, dependencies, and required obligations
   - `core/obligation::gfx-golden-images`
   - `core/obligation::gfx-frame-budgets`
   - `core/obligation::gfx-api-stability`
+- `core/obligation::ai-style` emits canonical machine-readable diagnostics and patch-intent metadata (see `docs/spec/AI_STYLE.md`)
 
 `limits` keys:
 - `step_limit` (integer, optional): kernel evaluation step limit for package evaluation/tests

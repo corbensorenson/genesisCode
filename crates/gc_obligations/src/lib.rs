@@ -519,9 +519,7 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_gfx_api_stability(&store, &manifest, &modules, limits)
             }
             "core/obligation::lint" => obligation_lint(&store, &manifest, &modules, limits),
-            "core/obligation::ai-style" => {
-                obligation_ai_style(&store, &manifest, &modules, limits)
-            }
+            "core/obligation::ai-style" => obligation_ai_style(&store, &manifest, &modules, limits),
             other => Ok(ObligationResult {
                 name: other.to_string(),
                 ok: false,
@@ -3494,7 +3492,9 @@ fn obligation_ai_style(
             .cloned()
             .unwrap_or_default();
         for (diag_idx, diag_term) in module_diags.into_iter().enumerate() {
-            let Term::Map(diag_map) = diag_term else { continue };
+            let Term::Map(diag_map) = diag_term else {
+                continue;
+            };
             let code = get_map_str_or_sym(&diag_map, ":code")
                 .unwrap_or_else(|| "editor/lint/error".to_string());
             let level = normalize_level(get_map_str_or_sym(&diag_map, ":level"));
@@ -3514,7 +3514,10 @@ fn obligation_ai_style(
                             TermOrdKey(Term::symbol(":schema")),
                             Term::Str("genesis/fix-schema-v1".to_string()),
                         ),
-                        (TermOrdKey(Term::symbol(":patch")), Term::Str(patch_h.clone())),
+                        (
+                            TermOrdKey(Term::symbol(":patch")),
+                            Term::Str(patch_h.clone()),
+                        ),
                         (
                             TermOrdKey(Term::symbol(":intent")),
                             Term::Str(format!("apply lint autofix for {code}")),
@@ -3529,7 +3532,8 @@ fn obligation_ai_style(
                 ));
             }
 
-            let fail = level == ":error" || (level == ":warn" && strict_warning_codes.contains(&code));
+            let fail =
+                level == ":error" || (level == ":warn" && strict_warning_codes.contains(&code));
             if fail {
                 errors.push(format!("{path}: {code}: {message}"));
             }

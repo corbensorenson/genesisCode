@@ -1,87 +1,83 @@
-# GenesisCode Upgrade Plan — Self-Hosted v1 Fast Path
+# GenesisCode Upgrade Plan — Self-Hosted v1 + GCPM Fast Path
 
 Last updated: 2026-02-18
 
-Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
+This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 17
+Open checklist items: 41
 
-## Self-Hosted v1 Exit Criteria
+## Findings From Current Project Audit
+
+- The foundation is strong: Genesis already ships integrated `store`, `refs`, `sync`, `vcs`, `pkg`, `policy`, and obligation pipelines in the CLI/runtime.
+- Current package management is lock-centric (`genesis.lock`) and package-centric (`package.toml`), but not yet workspace-native in the way Cargo/Pixi users expect.
+- Environment setup is not yet modeled as a first-class, deterministic workspace artifact (toolchain/deps/profile environment closure).
+- High-level semantic dispatch for package/VCS/GC/GPK still exists in Rust capability runner; full self-host cutover remains open.
+- Selfhost-only enforcement is strong, but production-grade removal/relocation of bootstrap Rust semantics is not completed yet.
+
+## Naming Decision (Project Manager)
+
+- [ ] Adopt `GCPM` (GenesisCode Project Manager) as product name.
+- [ ] Keep `genesis pkg` as stable compatibility surface and add `genesis gcpm` as first-class alias.
+- [ ] Freeze command naming and JSON output contracts for AI agents (no churn without schema version bump).
+
+## Workstream A — Self-Host Completion Blockers
+
 - [ ] All production command semantics are owned by `.gc` contracts.
 - [ ] Rust runtime is limited to kernel + low-level host ABI + transport.
-- [ ] Deterministic multithreading/parallel execution is available through Genesis capabilities and replayable logs.
-- [ ] Performance is sufficient for fast AI iteration (sub-minute incremental inner loop, materially reduced full-suite runtime).
-- [ ] Rust semantic fallbacks are disabled in production mode.
-
-## Workstream A — Final Semantic Extraction (Rust -> `.gc`)
-- [ ] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (keep only host primitives in Rust).
-- [ ] Move `core/pkg::publish` semantics fully into `.gc` contracts (including closure planning, policy prechecks, and report shaping).
+- [ ] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
+- [ ] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
 - [ ] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
-- [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` once low-level seam parity is complete.
-- [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, plus graphics/editor host ops.
-- [x] Add CI guard that fails if new high-level semantic ops are added back into runner dispatch without explicit waiver.
-
-## Workstream B — Deterministic Multithreading/Parallelism (AI-First)
-
-### B1. Spec + ABI
-- [x] Add normative spec doc for deterministic concurrency (`docs/spec/CONCURRENCY_v0.1.md`) covering scheduling, replay, cancellation, and failure semantics.
-- [x] Freeze task/capability ABI in `docs/spec/HOST_ABI.md` for:
-  - `core/task::spawn`
-  - `core/task::await`
-  - `core/task::cancel`
-  - `core/task::status`
-  - `core/task::scope`
-
-### B2. Language/Prelude Surface
-- [x] Add `.gc` contracts for structured concurrency (scope-based spawn/await/cancel) in prelude modules.
-- [x] Add deterministic combinators optimized for AI-generated workflows (`core/task::all`, `core/task::race`, bounded parallel map over vectors).
-- [x] Define clear data contracts for task handles/results/errors (stable map schema, no ad hoc shapes).
-
-### B3. Runtime Scheduler
-- [x] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
-- [x] Add bounded worker pool for host-side parallel execution where allowed, while preserving deterministic commit order.
-- [x] Replace per-operation ad hoc thread spawning in timeout path (`with_timeout`) with pooled execution/timers.
-- [x] Enforce policy-based limits: max tasks, max workers, queue depth, per-task step/time budgets.
-
-### B4. Replay + Evidence
-- [x] Extend effect log schema with task/schedule events (`:task-id`, `:parent-task`, `:schedule-step`, `:await-edge`).
-- [x] Implement replay verifier for concurrent runs (schedule mismatch, missing task events, response mismatch).
-- [x] Add obligation `core/obligation::concurrency-replay` for effectful concurrent tests.
-
-### B5. Type/Effects Integration
-- [x] Extend `gc_types` effect-row tracking for task ops so concurrency usage is explicit and checkable.
-- [x] Add deterministic-safety checks for AI-authored parallel code patterns (unknown effect tails + undeclared caps fail in strict mode).
-
-## Workstream C — Throughput and Latency Gains
-
-### C1. Hot Path Runtime
-- [x] Optimize artifact reads in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs` to avoid double-read verification on every `get`.
-- [x] Add optional integrity cache mode (hash memo with invalidation) to keep strong guarantees without repeated full rehash in tight loops.
-- [x] Batch and parallelize remote sync transfers with deterministic result collation (upload/download worker pool + stable ordering).
-
-### C2. Obligation Engine
-- [x] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
-- [x] Add deterministic parallel test execution for independent tests (stable result ordering; isolated contexts; reproducible logs).
-- [x] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
-
-### C3. Selfhost Frontend Startup
-- [x] Add cross-process cache for compiled selfhost artifact modules (not only in-process cache) to reduce repeated parse/canonicalize/compile on CLI invocations.
-- [x] Add warm startup mode for CLI/daemonized execution to amortize toolchain bootstrap across command bursts used by AI agents.
-
-### C4. Test/CI Iteration Speed
-- [x] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
-- [x] Remove redundant native/WASI duplicate coverage where the same invariant is already proven by shared harness.
-- [x] Add automatic test sharding support with deterministic seed/order and artifact collation.
-- [x] Publish performance budgets in CI (test wall-time, selfhost bootstrap time, obligation runtime) and fail on regressions.
-
-## Workstream D — AI-First Self-Hosting Completion
+- [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
+- [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, graphics/editor host ops.
 - [ ] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first.
 - [ ] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
 - [ ] Move remaining bootstrap-only Rust semantic code under `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` after cutover.
-- [ ] Add an AI-oriented contract/API style pass (stable machine-readable diagnostics, canonical fix schemas, patch-intent metadata) as required quality gate for new modules.
-
-## Acceptance Checks (Must Pass Before Declaring v1)
-- [ ] `--selfhost-only` path exercises full production workflow with no Rust semantic fallbacks.
-- [x] Concurrency test suite validates deterministic replay under mixed task scheduling.
 - [ ] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
-- [ ] Full CI includes performance regression checks and passes within target runtime budget.
+
+## Workstream B — GCPM Core (Language-Native Project Manager)
+
+### B1. Workspace Model
+- [ ] Define and implement `genesis.workspace.toml` (or canonical CoreForm equivalent) as workspace root descriptor.
+- [ ] Add multi-package workspace graph support (members, local paths, package roles).
+- [ ] Add workspace-level policy/default registry/toolchain/profile declarations.
+
+### B2. Lock + Resolution v2
+- [ ] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
+- [ ] Add deterministic resolver strategy modes (`pinned`, `track-ref`, `tag-policy`) with strict lock pinning.
+- [ ] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
+
+### B3. Environment Automation (Pixi-like UX, deterministic)
+- [ ] Add `gcpm env` surface for deterministic environment realization from lock + toolchain pins.
+- [ ] Materialize environment artifacts under `.genesis/env/<profile-hash>/` with immutable provenance records.
+- [ ] Add profile support (`dev`, `ci`, `release`) with policy-gated capability surfaces.
+
+### B4. Command Surface (AI-First)
+- [ ] Add `genesis gcpm init/new/add/remove/lock/install/update/run/test/publish/info/list`.
+- [ ] Implement `gcpm run <task>` with workspace tasks as canonical data (not ad hoc shell glue).
+- [ ] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
+
+### B5. In-Language Contract Surface
+- [ ] Define `core/pm::*` contract API so AI can drive project management from Genesis code, not only CLI.
+- [ ] Keep state-mutating `core/pm::*` operations effectful and replay-logged.
+- [ ] Add obligation/policy gates to `core/pm::publish`, `core/pm::update`, `core/pm::lock`.
+
+## Workstream C — VCS + PM Unification
+
+- [ ] Make workspace/project state snapshots first-class `:vcs/snapshot` roots.
+- [ ] Bind `gcpm lock/install/update/publish` operations to explicit commit/evidence provenance edges.
+- [ ] Add branch-aware dependency tracking semantics (`track ref + locked commit`) at workspace level.
+- [ ] Add deterministic migration path from package-only mode to workspace+gcpm mode.
+
+## Workstream D — AI-First Developer Experience
+
+- [ ] Add canonical diagnostic/fix schema docs for `gcpm` errors and resolver conflicts.
+- [ ] Add AI-optimized “what changed / why / fix options” report artifacts for lock/update/publish workflows.
+- [ ] Add deterministic “project doctor” command (`gcpm doctor`) with policy + lock + capability checks.
+- [ ] Add prompt-safe command telemetry artifacts (non-sensitive, deterministic summaries) for agent loops.
+
+## Acceptance Checks (Must Pass Before v1 Declaration)
+
+- [ ] `--selfhost-only` + `gcpm` executes full workspace lifecycle (init/add/lock/install/run/test/publish) with no Rust semantic fallback.
+- [ ] End-to-end workspace operations are replayable and policy-gated with deterministic logs.
+- [ ] Lock v2 + environment realization meets AI iteration targets in CI budget checks.
+- [ ] Rust semantic bootstrap code is relocated to `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` and no longer used in production path.

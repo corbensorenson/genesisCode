@@ -884,6 +884,50 @@ fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
 }
 
 #[test]
+fn default_profile_rejects_rust_coreform_frontend_without_compat_opt_in() {
+    let dir = tempdir().unwrap();
+    let fixture = std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/spec/pkg_basic"
+    ));
+    for name in ["basic.gc", "caps.toml", "package.toml", "pure.gcpatch"] {
+        std::fs::copy(fixture.join(name), dir.path().join(name)).unwrap();
+    }
+    let pkg = dir.path().join("package.toml");
+    let patch = dir.path().join("pure.gcpatch");
+
+    for args in [
+        vec!["pack", "--pkg", pkg.to_str().unwrap()],
+        vec!["test", "--pkg", pkg.to_str().unwrap()],
+        vec!["typecheck", "--pkg", pkg.to_str().unwrap()],
+        vec![
+            "apply-patch",
+            patch.to_str().unwrap(),
+            "--pkg",
+            pkg.to_str().unwrap(),
+        ],
+    ] {
+        cargo_bin_cmd!("genesis")
+            .args(["--coreform-frontend", "rust"])
+            .args(&args)
+            .assert()
+            .failure()
+            .code(50)
+            .stderr(predicate::str::contains(
+                "--coreform-frontend rust` is disabled in the default selfhost profile",
+            ));
+    }
+
+    // Explicit compat opt-in is still available.
+    cargo_bin_cmd!("genesis")
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(["--coreform-frontend", "rust", "pack", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success();
+}
+
+#[test]
 fn fmt_defaults_to_selfhost_via_workspace_artifact_fallback() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("m.gc");
@@ -904,4 +948,129 @@ fn fmt_defaults_to_selfhost_via_workspace_artifact_fallback() {
         .and_then(JsonValue::as_str)
         .unwrap();
     assert_eq!(engine, "selfhost");
+}
+
+#[test]
+fn selfhost_only_full_production_workflow_runs_without_rust_fallbacks() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let fixture = std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/spec/pkg_basic"
+    ));
+    for name in ["basic.gc", "caps.toml", "package.toml", "pure.gcpatch"] {
+        std::fs::copy(fixture.join(name), dir.path().join(name)).unwrap();
+    }
+
+    let module = dir.path().join("basic.gc");
+    let pkg = dir.path().join("package.toml");
+    let patch = dir.path().join("pure.gcpatch");
+    let optimized = dir.path().join("basic.opt.gc");
+    let run_prog = dir.path().join("prog.gc");
+    let run_caps = dir.path().join("caps_run.toml");
+    let run_log = dir.path().join("run.gclog");
+    std::fs::write(
+        &run_prog,
+        r#"
+          (def prog (core/effect::pure 42))
+          prog
+        "#,
+    )
+    .unwrap();
+    std::fs::write(&run_caps, "allow = []\n").unwrap();
+
+    let common = [
+        "--selfhost-only",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+    ];
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["fmt", module.to_str().unwrap(), "--engine", "selfhost"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["eval", module.to_str().unwrap(), "--engine", "selfhost"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args([
+            "run",
+            run_prog.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            run_caps.to_str().unwrap(),
+            "--log",
+            run_log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args([
+            "replay",
+            run_prog.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--log",
+            run_log.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["pack", "--pkg", pkg.to_str().unwrap()])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["test", "--pkg", pkg.to_str().unwrap()])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["typecheck", "--pkg", pkg.to_str().unwrap()])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args([
+            "optimize",
+            module.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--out",
+            optimized.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    assert!(optimized.exists());
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args([
+            "apply-patch",
+            patch.to_str().unwrap(),
+            "--pkg",
+            pkg.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .args(common)
+        .args(["pack", "--pkg", pkg.to_str().unwrap()])
+        .assert()
+        .success();
 }

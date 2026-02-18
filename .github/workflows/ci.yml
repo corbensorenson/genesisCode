@@ -127,6 +127,10 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_perf_budgets.sh
 
+      - name: AI Iteration SLO
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_ai_iteration_slo.sh
+
       - name: Selfhost Strict Smoke (Native + WASI CLI)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_smoke.sh

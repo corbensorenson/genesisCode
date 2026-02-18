@@ -472,8 +472,5 @@ fn ai_style_failure_is_recorded_in_acceptance_artifact() {
     let hex = parse_acceptance_hash(&out);
     let acc = read_acceptance(&dst, &hex);
     assert!(!acceptance_ok(&acc));
-    assert!(acceptance_has_obligation(
-        &acc,
-        "core/obligation::ai-style"
-    ));
+    assert!(acceptance_has_obligation(&acc, "core/obligation::ai-style"));
 }

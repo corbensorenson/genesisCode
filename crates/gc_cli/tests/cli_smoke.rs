@@ -239,7 +239,11 @@ fn test_pkg_ai_style_obligation_succeeds_and_emits_machine_readable_report() {
     else {
         panic!(":errors must be a vector");
     };
-    assert_eq!(errors.len(), 0, "passing fixture should have no style errors");
+    assert_eq!(
+        errors.len(),
+        0,
+        "passing fixture should have no style errors"
+    );
 }
 
 #[test]
