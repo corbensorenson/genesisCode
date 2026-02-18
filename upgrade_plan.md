@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 45
+Open checklist items: 34
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -19,13 +19,13 @@ Open checklist items: 45
 - [ ] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
 - [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` once low-level seam parity is complete.
 - [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, plus graphics/editor host ops.
-- [ ] Add CI guard that fails if new high-level semantic ops are added back into runner dispatch without explicit waiver.
+- [x] Add CI guard that fails if new high-level semantic ops are added back into runner dispatch without explicit waiver.
 
 ## Workstream B — Deterministic Multithreading/Parallelism (AI-First)
 
 ### B1. Spec + ABI
-- [ ] Add normative spec doc for deterministic concurrency (`docs/spec/CONCURRENCY_v0.1.md`) covering scheduling, replay, cancellation, and failure semantics.
-- [ ] Freeze task/capability ABI in `docs/spec/HOST_ABI.md` for:
+- [x] Add normative spec doc for deterministic concurrency (`docs/spec/CONCURRENCY_v0.1.md`) covering scheduling, replay, cancellation, and failure semantics.
+- [x] Freeze task/capability ABI in `docs/spec/HOST_ABI.md` for:
   - `core/task::spawn`
   - `core/task::await`
   - `core/task::cancel`
@@ -33,9 +33,9 @@ Open checklist items: 45
   - `core/task::scope`
 
 ### B2. Language/Prelude Surface
-- [ ] Add `.gc` contracts for structured concurrency (scope-based spawn/await/cancel) in prelude modules.
-- [ ] Add deterministic combinators optimized for AI-generated workflows (`core/task::all`, `core/task::race`, bounded parallel map over vectors).
-- [ ] Define clear data contracts for task handles/results/errors (stable map schema, no ad hoc shapes).
+- [x] Add `.gc` contracts for structured concurrency (scope-based spawn/await/cancel) in prelude modules.
+- [x] Add deterministic combinators optimized for AI-generated workflows (`core/task::all`, `core/task::race`, bounded parallel map over vectors).
+- [x] Define clear data contracts for task handles/results/errors (stable map schema, no ad hoc shapes).
 
 ### B3. Runtime Scheduler
 - [ ] Implement deterministic logical scheduler in runner (stable ordering by task-id + explicit policy knobs).
@@ -55,12 +55,12 @@ Open checklist items: 45
 ## Workstream C — Throughput and Latency Gains
 
 ### C1. Hot Path Runtime
-- [ ] Optimize artifact reads in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs` to avoid double-read verification on every `get`.
-- [ ] Add optional integrity cache mode (hash memo with invalidation) to keep strong guarantees without repeated full rehash in tight loops.
+- [x] Optimize artifact reads in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs` to avoid double-read verification on every `get`.
+- [x] Add optional integrity cache mode (hash memo with invalidation) to keep strong guarantees without repeated full rehash in tight loops.
 - [ ] Batch and parallelize remote sync transfers with deterministic result collation (upload/download worker pool + stable ordering).
 
 ### C2. Obligation Engine
-- [ ] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
+- [x] Remove per-test full package re-evaluation in `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` by reusing a package-eval snapshot for test closure lookup.
 - [ ] Add deterministic parallel test execution for independent tests (stable result ordering; isolated contexts; reproducible logs).
 - [ ] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
 
@@ -69,10 +69,10 @@ Open checklist items: 45
 - [ ] Add warm startup mode for CLI/daemonized execution to amortize toolchain bootstrap across command bursts used by AI agents.
 
 ### C4. Test/CI Iteration Speed
-- [ ] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
+- [x] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
 - [ ] Remove redundant native/WASI duplicate coverage where the same invariant is already proven by shared harness.
 - [ ] Add automatic test sharding support with deterministic seed/order and artifact collation.
-- [ ] Publish performance budgets in CI (test wall-time, selfhost bootstrap time, obligation runtime) and fail on regressions.
+- [x] Publish performance budgets in CI (test wall-time, selfhost bootstrap time, obligation runtime) and fail on regressions.
 
 ## Workstream D — AI-First Self-Hosting Completion
 - [ ] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first.

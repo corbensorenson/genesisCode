@@ -167,6 +167,17 @@
 
 (def core/vec::set (fn (v) (fn (i) (fn (x) (prim vec/set v i x)))))
 
+(def core/vec::append (fn (a) (fn (b) (((core/vec::append-loop b) 0) a))))
+
+(def core/vec::append-loop
+  (fn (b)
+    (fn (i)
+      (fn (acc)
+        (if ((core/int::eq? i) (core/vec::len b))
+          acc
+          (((core/vec::append-loop b) ((core/int::add i) 1))
+            ((core/vec::push acc) ((core/vec::get b) i))))))))
+
 (def core/sym::eq? (fn (a) (fn (b) (prim sym/eq? a b))))
 
 (def core/sym::to-str (fn (s) (prim sym/to-str s)))
@@ -222,6 +233,138 @@
 
 (def core/effect::catch-payload
   (fn (p) (fn (handler) ((core/effect::catch p) (fn (err) (handler (core/error::payload err)))))))
+
+(def core/task::spawn
+  (fn (scope)
+    (fn (label)
+      (fn (payload)
+        (((core/effect::perform (quote core/task::spawn))
+          {:label label :payload payload :scope scope})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/task::await
+  (fn (task-id)
+    (((core/effect::perform (quote core/task::await)) {:task-id task-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::cancel
+  (fn (task-id)
+    (((core/effect::perform (quote core/task::cancel)) {:task-id task-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::status
+  (fn (task-id)
+    (((core/effect::perform (quote core/task::status)) {:task-id task-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::scope
+  (fn (scope)
+    (((core/effect::perform (quote core/task::scope)) {:scope scope})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::await-all
+  (fn (task-ids) (((core/task::await-all-loop task-ids) 0) [])))
+
+(def core/task::await-all-loop
+  (fn (task-ids)
+    (fn (i)
+      (fn (acc)
+        (if ((core/int::eq? i) (core/vec::len task-ids))
+          (core/effect::pure acc)
+          ((core/effect::bind (core/task::await ((core/vec::get task-ids) i)))
+            (fn (resp)
+              (((core/task::await-all-loop task-ids) ((core/int::add i) 1))
+                ((core/vec::push acc) resp)))))))))
+
+(def core/task::all core/task::await-all)
+
+(def core/task::race
+  (fn (task-ids)
+    (if ((core/int::eq? (core/vec::len task-ids)) 0)
+      (core/effect::pure
+        ((core/error::make2 "core/task/empty-race")
+          "core/task::race expects non-empty task vector"))
+      (let ((winner ((core/vec::get task-ids) 0)))
+        ((core/effect::bind (core/task::await winner))
+          (fn (winner-resp)
+            ((core/effect::bind
+               ((((core/task::race-cancel-rest task-ids) 1) (core/vec::len task-ids))))
+              (fn (_)
+                (core/effect::pure {:response winner-resp :winner winner})))))))))
+
+(def core/task::race-cancel-rest
+  (fn (task-ids)
+    (fn (i)
+      (fn (n)
+        (if ((core/int::eq? i) n)
+          (core/effect::pure true)
+          ((core/effect::bind (core/task::cancel ((core/vec::get task-ids) i)))
+            (fn (_)
+              (((core/task::race-cancel-rest task-ids) ((core/int::add i) 1)) n))))))))
+
+(def core/task::spawn-batch
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (start)
+          (fn (end)
+            (fn (mk-payload)
+              (((((((core/task::spawn-batch-loop scope) label) items) mk-payload) start) end)
+                []))))))))
+
+(def core/task::spawn-batch-loop
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (mk-payload)
+          (fn (i)
+            (fn (end)
+              (fn (acc)
+                (if ((core/int::eq? i) end)
+                  (core/effect::pure acc)
+                  ((core/effect::bind (((core/task::spawn scope) label) (mk-payload ((core/vec::get items) i))))
+                    (fn (spawn-resp)
+                      (((((((core/task::spawn-batch-loop scope) label) items) mk-payload)
+                        ((core/int::add i) 1))
+                        end)
+                        ((core/vec::push acc) ((core/map::get spawn-resp) (quote :task-id)))))))))))))))
+
+(def core/task::map-bounded
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (limit)
+          (fn (mk-payload)
+            (if ((core/int::lt? limit) 1)
+              (core/effect::pure
+                ((core/error::make2 "core/task/bad-limit")
+                  "core/task::map-bounded expects limit >= 1"))
+              (((((((core/task::map-bounded-loop scope) label) items) limit) mk-payload) 0)
+                []))))))))
+
+(def core/task::map-bounded-loop
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (limit)
+          (fn (mk-payload)
+            (fn (i)
+              (fn (acc)
+                (let ((n (core/vec::len items)))
+                  (if ((core/int::eq? i) n)
+                    (core/effect::pure acc)
+                    (let ((end0 ((core/int::add i) limit)))
+                      (let ((end (if ((core/int::lt? n) end0) n end0)))
+                        ((core/effect::bind ((((((core/task::spawn-batch scope) label) items) i) end) mk-payload))
+                          (fn (task-ids)
+                            ((core/effect::bind (core/task::await-all task-ids))
+                              (fn (chunk-resps)
+                                (((((((core/task::map-bounded-loop scope) label) items) limit) mk-payload)
+                                  end)
+                                  ((core/vec::append acc) chunk-resps)))))))))))))))))
+)
+
+(def core/task::parallel-map-bounded core/task::map-bounded)
 
 (def core/contract::call
   (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))

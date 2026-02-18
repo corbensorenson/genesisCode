@@ -6273,6 +6273,11 @@ fn call_capability(
             }
         }
         "gfx/gpu::create-buffer"
+        | "core/task::spawn"
+        | "core/task::await"
+        | "core/task::cancel"
+        | "core/task::status"
+        | "core/task::scope"
         | "gfx/gpu::create-texture"
         | "gfx/gpu::create-sampler"
         | "gfx/gpu::create-shader-module"

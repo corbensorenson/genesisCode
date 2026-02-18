@@ -3,14 +3,39 @@ name: ci
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "CI profile to run"
+        required: true
+        default: standard
+        type: choice
+        options:
+          - fast
+          - standard
+          - full
+  schedule:
+    - cron: "0 8 * * *"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_CI_PROFILE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || 'fast' }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve CI Profile
+        run: |
+          case "${GENESIS_CI_PROFILE}" in
+            fast|standard|full) ;;
+            *)
+              echo "unsupported GENESIS_CI_PROFILE=${GENESIS_CI_PROFILE}"
+              exit 1
+              ;;
+          esac
+          echo "CI profile: ${GENESIS_CI_PROFILE}"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -30,6 +55,9 @@ jobs:
       - name: Host ABI Conformance Guard
         run: bash scripts/check_host_abi_conformance.sh
 
+      - name: Runner High-Level Op Guard
+        run: bash scripts/check_runner_high_level_op_guard.sh
+
       - name: Prelude Capability Coverage Guard
         run: bash scripts/check_prelude_capability_coverage.sh
 
@@ -45,48 +73,64 @@ jobs:
       - name: Test
         run: cargo test --workspace --profile selfhost-strict
 
+      - name: Performance Budgets
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_perf_budgets.sh
+
       - name: Selfhost Strict Smoke (Native + WASI CLI)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_smoke.sh
 
       - name: Selfhost Strict Golden (Native + WASI CLI)
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_golden.sh
 
       - name: WASM Build (Pure Kernel)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: cargo build -p gc_wasm --target wasm32-unknown-unknown
 
       - name: Install Node
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install wasm-bindgen-cli
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
 
       - name: WASM Bindings (Node) + Smoke Test
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_node_smoke.mjs
 
       - name: WASM Cross-Host Determinism (Native vs Node)
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
 
       - name: Install JS Deps (Playwright)
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
 
       - name: Install Playwright Chromium
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: npx playwright install --with-deps chromium
 
       - name: WASM Bindings (Web) + Headless Browser Smoke
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: |
           bash scripts/wasm_bindgen_web.sh >/dev/null
           node scripts/wasm_web_smoke.mjs
 
       - name: Install wasmtime
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         uses: bytecodealliance/wasmtime-action@v1
 
       - name: WASI Build + Smoke (genesis_wasi.wasm)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: |
           rustup target add wasm32-wasip1
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release

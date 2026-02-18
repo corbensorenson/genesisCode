@@ -456,22 +456,9 @@ pub fn test_package_with_step_limit_and_frontend(
         });
     }
 
-    // Discover test ids (suite_sym + test_name) once.
-    let test_ids = discover_tests_with_frontend(&pkg_dir, &manifest, &modules, limits, &frontend)?;
-
-    // Execute tests (each test gets a fresh ctx/env build).
-    let mut test_runs = Vec::new();
-    for id in &test_ids {
-        test_runs.push(run_one_test_with_frontend(
-            &pkg_dir,
-            &manifest,
-            &modules,
-            &caps,
-            id.clone(),
-            limits,
-            &frontend,
-        )?);
-    }
+    // Evaluate once and reuse the prepared package for all test lookups/runs.
+    let test_runs =
+        run_tests_with_frontend(&pkg_dir, &manifest, &modules, &caps, limits, &frontend)?;
 
     let mut obligation_results = Vec::new();
     let mut ok_all = true;
@@ -1276,20 +1263,9 @@ fn acceptance_term(manifest: &PackageManifest, ok: bool, obs: &[ObligationResult
     Term::Map(m)
 }
 
-fn discover_tests_with_frontend(
-    pkg_dir: &Path,
-    manifest: &PackageManifest,
-    modules: &[LoadedModule],
-    limits: KernelLimits,
-    frontend: &CoreformFrontend,
-) -> Result<Vec<TestId>, ObligationError> {
-    if manifest.tests.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let eval = eval_package_once_with_frontend(pkg_dir, manifest, modules, limits, frontend)?;
+fn collect_test_ids(eval: &PackageEval, suites: &[String]) -> Result<Vec<TestId>, ObligationError> {
     let mut ids = Vec::new();
-    for suite in &manifest.tests {
+    for suite in suites {
         let v = eval
             .lookup_any(suite)
             .ok_or_else(|| ObligationError::Test(format!("missing test suite symbol {suite}")))?;
@@ -1313,6 +1289,122 @@ fn discover_tests_with_frontend(
         }
     }
     Ok(ids)
+}
+
+fn run_tests_with_frontend(
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+    modules: &[LoadedModule],
+    caps: &CapsPolicy,
+    limits: KernelLimits,
+    frontend: &CoreformFrontend,
+) -> Result<Vec<TestRun>, ObligationError> {
+    if manifest.tests.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut ctx = mk_eval_ctx(limits);
+    let prelude = build_prelude(&mut ctx);
+    let mut base = prelude.env;
+    base = eval_dependencies_with_frontend(
+        &mut ctx,
+        pkg_dir,
+        &base,
+        &manifest.dependencies,
+        limits,
+        frontend,
+    )?;
+    let evals = eval_modules(&mut ctx, &base, modules)?;
+    let pkg = PackageEval::from_modules(base, evals)?;
+    let test_ids = collect_test_ids(&pkg, &manifest.tests)?;
+    let baseline_state = ctx.state;
+
+    let mut out = Vec::with_capacity(test_ids.len());
+    for id in test_ids {
+        // Keep per-test budgets/isolation deterministic while reusing package evaluation.
+        ctx.state = baseline_state;
+        ctx.step_limit = limits.step_limit.resolve();
+        ctx.reset_counters();
+        out.push(run_test_from_package(&mut ctx, &pkg, caps, id)?);
+    }
+    Ok(out)
+}
+
+fn run_test_from_package(
+    ctx: &mut EvalCtx,
+    pkg: &PackageEval,
+    caps: &CapsPolicy,
+    id: TestId,
+) -> Result<TestRun, ObligationError> {
+    let suite_v = pkg.lookup_any(&id.suite_sym).ok_or_else(|| {
+        ObligationError::Test(format!("missing test suite symbol {}", id.suite_sym))
+    })?;
+    let suite_map = value_as_map(&suite_v).ok_or_else(|| {
+        ObligationError::Test(format!("test suite {} must be a map", id.suite_sym))
+    })?;
+    let (test_body, expect) = parse_test_entry(
+        suite_map
+            .get(&TermOrdKey(Term::Str(id.test_name.clone())))
+            .or_else(|| suite_map.get(&TermOrdKey(Term::Symbol(id.test_name.clone()))))
+            .ok_or_else(|| {
+                ObligationError::Test(format!(
+                    "missing test {} in suite {}",
+                    id.test_name, id.suite_sym
+                ))
+            })?,
+    )?;
+
+    let value = test_body
+        .apply(ctx, Value::Data(Term::Nil))
+        .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
+
+    let (final_value, effect_log) = match value {
+        Value::EffectProgram(_) => {
+            let prog_h = value_hash(&value);
+            let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+            let r = gc_effects::run(ctx, caps, value, prog_h, toolchain)
+                .map_err(|e| ObligationError::Test(format!("effect run failed: {e}")))?;
+            (r.value, Some(r.log))
+        }
+        other => (other, None),
+    };
+    let steps = ctx.steps;
+    let effect_entries = effect_log
+        .as_ref()
+        .map(|l| l.entries.len() as u64)
+        .unwrap_or(0);
+    let effect_log_bytes = effect_log
+        .as_ref()
+        .map(|l| l.to_string_canonical().len() as u64)
+        .unwrap_or(0);
+
+    let is_error = ctx
+        .protocol
+        .is_some_and(|p| matches!(final_value, Value::Sealed { token, .. } if token == p.error));
+
+    let fv_hash = value_hash(&final_value);
+    let ok = if is_error {
+        false
+    } else if let Some(exp) = expect {
+        fv_hash == value_hash(&Value::Data(exp))
+    } else {
+        true
+    };
+
+    Ok(TestRun {
+        id,
+        ok,
+        effect_log,
+        steps,
+        effect_entries,
+        effect_log_bytes,
+        value_hash: fv_hash,
+        error: if ok {
+            None
+        } else {
+            Some("test failed".to_string())
+        },
+    })
 }
 
 fn run_one_test(
@@ -1360,76 +1452,8 @@ fn run_one_test_with_frontend(
     // Evaluate modules and collect module envs for internal lookup.
     let evals = eval_modules(&mut ctx, &base, modules)?;
     let pkg = PackageEval::from_modules(base, evals)?;
-
-    let suite_v = pkg.lookup_any(&id.suite_sym).ok_or_else(|| {
-        ObligationError::Test(format!("missing test suite symbol {}", id.suite_sym))
-    })?;
-    let suite_map = value_as_map(&suite_v).ok_or_else(|| {
-        ObligationError::Test(format!("test suite {} must be a map", id.suite_sym))
-    })?;
-    let (test_body, expect) = parse_test_entry(
-        suite_map
-            .get(&TermOrdKey(Term::Str(id.test_name.clone())))
-            .or_else(|| suite_map.get(&TermOrdKey(Term::Symbol(id.test_name.clone()))))
-            .ok_or_else(|| {
-                ObligationError::Test(format!(
-                    "missing test {} in suite {}",
-                    id.test_name, id.suite_sym
-                ))
-            })?,
-    )?;
-
-    let value = test_body
-        .apply(&mut ctx, Value::Data(Term::Nil))
-        .map_err(|e| ObligationError::Test(format!("test apply failed: {e}")))?;
-
-    let (final_value, effect_log) = match value {
-        Value::EffectProgram(_) => {
-            let prog_h = value_hash(&value);
-            let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
-            let r = gc_effects::run(&mut ctx, caps, value, prog_h, toolchain)
-                .map_err(|e| ObligationError::Test(format!("effect run failed: {e}")))?;
-            (r.value, Some(r.log))
-        }
-        other => (other, None),
-    };
-    let steps = ctx.steps;
-    let effect_entries = effect_log
-        .as_ref()
-        .map(|l| l.entries.len() as u64)
-        .unwrap_or(0);
-    let effect_log_bytes = effect_log
-        .as_ref()
-        .map(|l| l.to_string_canonical().len() as u64)
-        .unwrap_or(0);
-
-    let is_error = ctx
-        .protocol
-        .is_some_and(|p| matches!(final_value, Value::Sealed { token, .. } if token == p.error));
-
-    let fv_hash = value_hash(&final_value);
-    let ok = if is_error {
-        false
-    } else if let Some(exp) = expect {
-        fv_hash == value_hash(&Value::Data(exp))
-    } else {
-        true
-    };
-
-    Ok(TestRun {
-        id,
-        ok,
-        effect_log,
-        steps,
-        effect_entries,
-        effect_log_bytes,
-        value_hash: fv_hash,
-        error: if ok {
-            None
-        } else {
-            Some("test failed".to_string())
-        },
-    })
+    ctx.reset_counters();
+    run_test_from_package(&mut ctx, &pkg, caps, id)
 }
 
 fn obligation_budgets(

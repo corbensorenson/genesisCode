@@ -298,7 +298,10 @@ fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
         .current_dir(td.path())
         .args(["--selfhost-only", "pkg", "--caps"])
         .arg(caps.to_str().unwrap())
-        .args(["add", "dep@snapshot:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"])
+        .args([
+            "add",
+            "dep@snapshot:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        ])
         .assert()
         .success();
 

@@ -46,6 +46,11 @@ Compatibility notes:
 - `core/store::put`
 - `core/sync::pull`
 - `core/sync::push`
+- `core/task::await`
+- `core/task::cancel`
+- `core/task::scope`
+- `core/task::spawn`
+- `core/task::status`
 - `core/vcs-low::apply-patch`
 - `core/vcs-low::diff-terms`
 - `core/vcs-low::merge3-contract-snapshots`

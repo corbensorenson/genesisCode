@@ -28,6 +28,17 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :vcs_log (core/vcs::log "refs/heads/main" 10)
         :pkg_init (core/pkg::init "genesis.lock" "ws" nil nil)
         :gc_plan (core/gc::plan "genesis.lock" ".genesis/pins.toml" 200 true true)
+        :task_scope (core/task::scope "agent/rewrite")
+        :task_spawn (((core/task::spawn "agent/rewrite") "compile") {:module "m.gc"})
+        :task_status (core/task::status "task-1")
+        :task_await (core/task::await "task-1")
+        :task_cancel (core/task::cancel "task-1")
+        :task_await_all (core/task::await-all ["task-1" "task-2"])
+        :task_all (core/task::all ["task-1" "task-2"])
+        :task_race (core/task::race ["task-1" "task-2"])
+        :task_map_bounded
+          (((((core/task::map-bounded "agent/rewrite") "compile") ["a" "b"]) 2)
+            (fn (x) {:module x}))
         :gfx_submit (core/gfx/gpu::submit-frame-graph {:render-passes [] :compute-passes []})
         :gfx_resize (((core/gfx/window::resize-surface "main-surface") 1280) 720)
         :editor_clip_set ((core/editor/clipboard::set "text/plain") "hello")
@@ -180,6 +191,129 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .clone();
     let req = get_req(gc_plan);
     assert_eq!(req.op, "core/gc::plan");
+
+    let task_scope = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_scope",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_scope);
+    assert_eq!(req.op, "core/task::scope");
+
+    let task_spawn = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_spawn",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_spawn);
+    assert_eq!(req.op, "core/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":label"
+        ))),
+        Some(&gc_coreform::Term::Str("compile".to_string()))
+    );
+
+    let task_status = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_status",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_status);
+    assert_eq!(req.op, "core/task::status");
+
+    let task_await = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_await",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_await);
+    assert_eq!(req.op, "core/task::await");
+
+    let task_cancel = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_cancel",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_cancel);
+    assert_eq!(req.op, "core/task::cancel");
+
+    let task_await_all = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_await_all",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_await_all);
+    assert_eq!(req.op, "core/task::await");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task-id"
+        ))),
+        Some(&gc_coreform::Term::Str("task-1".to_string()))
+    );
+
+    let task_all = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_all",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_all);
+    assert_eq!(req.op, "core/task::await");
+
+    let task_race = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_race",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_race);
+    assert_eq!(req.op, "core/task::await");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task-id"
+        ))),
+        Some(&gc_coreform::Term::Str("task-1".to_string()))
+    );
+
+    let task_map_bounded = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":task_map_bounded",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(task_map_bounded);
+    assert_eq!(req.op, "core/task::spawn");
+    let gc_coreform::Term::Map(mm) = req.payload else {
+        panic!("expected map payload");
+    };
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":scope"
+        ))),
+        Some(&gc_coreform::Term::Str("agent/rewrite".to_string()))
+    );
+    assert_eq!(
+        mm.get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":label"
+        ))),
+        Some(&gc_coreform::Term::Str("compile".to_string()))
+    );
 
     let gfx_submit = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

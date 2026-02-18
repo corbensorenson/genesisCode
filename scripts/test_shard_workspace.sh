@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
+
+TOTAL=""
+INDEX=""
+SEED="${GENESIS_TEST_SHARD_SEED:-genesis-v1}"
+OUT_DIR="${GENESIS_TEST_SHARD_OUT_DIR:-.genesis/ci-shards}"
+DRY_RUN=0
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/test_shard_workspace.sh --total N --index I [options]
+
+Options:
+  --total N        total shard count (N >= 1)
+  --index I        shard index (0 <= I < N)
+  --seed S         deterministic seed for ordering (default: GENESIS_TEST_SHARD_SEED or genesis-v1)
+  --out DIR        output directory for shard artifacts (default: .genesis/ci-shards)
+  --dry-run        print selected crates/commands without running tests
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --total)
+      TOTAL="${2:-}"
+      shift 2
+      ;;
+    --index)
+      INDEX="${2:-}"
+      shift 2
+      ;;
+    --seed)
+      SEED="${2:-}"
+      shift 2
+      ;;
+    --out)
+      OUT_DIR="${2:-}"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "test-shard-workspace: unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+[[ -n "$TOTAL" ]] || { echo "test-shard-workspace: --total is required" >&2; exit 2; }
+[[ -n "$INDEX" ]] || { echo "test-shard-workspace: --index is required" >&2; exit 2; }
+[[ "$TOTAL" =~ ^[0-9]+$ ]] || { echo "test-shard-workspace: --total must be integer" >&2; exit 2; }
+[[ "$INDEX" =~ ^[0-9]+$ ]] || { echo "test-shard-workspace: --index must be integer" >&2; exit 2; }
+(( TOTAL >= 1 )) || { echo "test-shard-workspace: --total must be >= 1" >&2; exit 2; }
+(( INDEX < TOTAL )) || { echo "test-shard-workspace: --index must be < --total" >&2; exit 2; }
+
+now_ns() {
+  python3 - <<'PY'
+import time
+print(time.time_ns())
+PY
+}
+
+mkdir -p "$OUT_DIR"
+LOG_FILE="$OUT_DIR/shard_${INDEX}_of_${TOTAL}.log"
+RESULTS_TSV="$OUT_DIR/shard_${INDEX}_of_${TOTAL}.tsv"
+REPORT_JSON="$OUT_DIR/shard_${INDEX}_of_${TOTAL}.json"
+
+: >"$LOG_FILE"
+: >"$RESULTS_TSV"
+
+mapfile -t WORKSPACE_CRATES < <(
+  cargo metadata --no-deps --format-version 1 \
+    | python3 - <<'PY'
+import json, sys
+m = json.load(sys.stdin)
+members = set(m["workspace_members"])
+for p in m["packages"]:
+    if p["id"] in members:
+        print(p["name"])
+PY
+)
+
+if [[ "${#WORKSPACE_CRATES[@]}" -eq 0 ]]; then
+  echo "test-shard-workspace: no workspace crates found" >&2
+  exit 1
+fi
+
+ORDERED=()
+for crate in "${WORKSPACE_CRATES[@]}"; do
+  key="$(printf "%s" "${SEED}|${crate}" | shasum -a 256 | awk '{print $1}')"
+  ORDERED+=("${key}"$'\t'"${crate}")
+done
+IFS=$'\n' ORDERED_SORTED=($(printf "%s\n" "${ORDERED[@]}" | LC_ALL=C sort))
+unset IFS
+
+SELECTED=()
+for i in "${!ORDERED_SORTED[@]}"; do
+  crate="${ORDERED_SORTED[$i]#*$'\t'}"
+  if (( i % TOTAL == INDEX )); then
+    SELECTED+=("$crate")
+  fi
+done
+
+echo "test-shard-workspace: shard=${INDEX}/${TOTAL} seed=${SEED}" | tee -a "$LOG_FILE"
+echo "test-shard-workspace: selected crates=${#SELECTED[@]}" | tee -a "$LOG_FILE"
+
+if (( DRY_RUN == 1 )); then
+  for crate in "${SELECTED[@]}"; do
+    echo "DRY-RUN cargo test -p ${crate} --profile selfhost-strict" | tee -a "$LOG_FILE"
+    printf "%s\t%s\t%s\t%s\n" "$crate" "0" "0" "dry-run" >>"$RESULTS_TSV"
+  done
+else
+  for crate in "${SELECTED[@]}"; do
+    cmd=(cargo test -p "$crate" --profile selfhost-strict)
+    start_ns="$(now_ns)"
+    status=0
+    {
+      echo ">> ${cmd[*]}"
+      "${cmd[@]}"
+    } >>"$LOG_FILE" 2>&1 || status=$?
+    end_ns="$(now_ns)"
+    elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
+    verdict="ok"
+    if (( status != 0 )); then
+      verdict="fail"
+    fi
+    printf "%s\t%s\t%s\t%s\n" "$crate" "$status" "$elapsed_ms" "$verdict" >>"$RESULTS_TSV"
+  done
+fi
+
+python3 - "$RESULTS_TSV" "$REPORT_JSON" "$INDEX" "$TOTAL" "$SEED" "$DRY_RUN" <<'PY'
+import json, sys
+tsv_path, out_path, index, total, seed, dry_run = sys.argv[1:]
+rows = []
+failed = []
+total_ms = 0
+with open(tsv_path, "r", encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        crate, status_s, elapsed_s, verdict = line.split("\t")
+        status = int(status_s)
+        elapsed_ms = int(elapsed_s)
+        total_ms += elapsed_ms
+        row = {
+            "crate": crate,
+            "status": status,
+            "elapsed_ms": elapsed_ms,
+            "verdict": verdict,
+        }
+        rows.append(row)
+        if status != 0:
+            failed.append(crate)
+report = {
+    "kind": "genesis/test-shard-report-v0.1",
+    "shard_index": int(index),
+    "shard_total": int(total),
+    "seed": seed,
+    "dry_run": dry_run == "1",
+    "commands": rows,
+    "summary": {
+        "count": len(rows),
+        "failed": len(failed),
+        "total_elapsed_ms": total_ms,
+        "failed_crates": failed,
+    },
+}
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2, sort_keys=True)
+    f.write("\n")
+print(json.dumps(report["summary"], sort_keys=True))
+PY
+
+if (( DRY_RUN == 1 )); then
+  echo "test-shard-workspace: dry-run complete (report: $REPORT_JSON)"
+  exit 0
+fi
+
+if awk -F '\t' '{ if ($2 != 0) { exit 1 } } END { exit 0 }' "$RESULTS_TSV"; then
+  echo "test-shard-workspace: ok (report: $REPORT_JSON)"
+  exit 0
+fi
+
+echo "test-shard-workspace: failures detected (report: $REPORT_JSON)" >&2
+exit 1
