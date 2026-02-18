@@ -77,6 +77,7 @@ Acceptance gate:
 - [ ] Guarantee byte-for-byte deterministic artifacts/evidence for selfhost paths.
   - [x] `selfhost-artifact` output is byte-for-byte deterministic across rebuilds on the same toolchain (enforced by `gc_cli` tests).
   - [x] `pack` and `test` acceptance artifact hashes are deterministic across reruns under the selfhost frontend (enforced by `gc_cli` tests).
+  - [x] `.gpk` export output is byte-for-byte deterministic for the same root snapshot and store state (enforced by `gc_cli` tests).
 
 Acceptance gate:
 - [ ] Native + WASI parity suites remain green when Rust semantic fallbacks are removed from default path.
