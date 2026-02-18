@@ -50,6 +50,14 @@ pub struct RunResult {
     pub log: EffectLog,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct TaskScheduleEvent {
+    task_id: Option<String>,
+    parent_task: Option<String>,
+    schedule_step: Option<u64>,
+    await_edge: Option<String>,
+}
+
 pub fn run(
     ctx: &mut EvalCtx,
     policy: &CapsPolicy,
@@ -80,7 +88,7 @@ pub fn run(
         match p.as_ref() {
             EffectProgram::Pure(v) => {
                 let log = EffectLog {
-                    version: 2,
+                    version: 3,
                     program_hash,
                     toolchain,
                     entries,
@@ -129,6 +137,7 @@ pub fn run(
                 };
 
                 let resp_h = value_hash(&resp_val);
+                let task_event = task_schedule_event_for(i, &req.op, &req.payload, &resp_val);
 
                 entries.push(EffectLogEntry {
                     i,
@@ -136,6 +145,10 @@ pub fn run(
                     payload_h,
                     cont_h,
                     req_h,
+                    task_id: task_event.task_id,
+                    parent_task: task_event.parent_task,
+                    schedule_step: task_event.schedule_step,
+                    await_edge: task_event.await_edge,
                     decision,
                     cap: cap_term,
                     resp: resp_logged,
@@ -231,6 +244,34 @@ pub fn replay_with_store(
                         "response hash mismatch at {idx}"
                     )));
                 }
+                if log.version >= 3 {
+                    let expected =
+                        task_schedule_event_for(idx as u64, &req.op, &req.payload, &resp_val);
+                    if entry.schedule_step != expected.schedule_step {
+                        return Err(EffectsError::ReplayMismatch(format!(
+                            "schedule-step mismatch at {idx}: expected {:?}, got {:?}",
+                            expected.schedule_step, entry.schedule_step
+                        )));
+                    }
+                    if entry.task_id != expected.task_id {
+                        return Err(EffectsError::ReplayMismatch(format!(
+                            "task-id mismatch at {idx}: expected {:?}, got {:?}",
+                            expected.task_id, entry.task_id
+                        )));
+                    }
+                    if entry.parent_task != expected.parent_task {
+                        return Err(EffectsError::ReplayMismatch(format!(
+                            "parent-task mismatch at {idx}: expected {:?}, got {:?}",
+                            expected.parent_task, entry.parent_task
+                        )));
+                    }
+                    if entry.await_edge != expected.await_edge {
+                        return Err(EffectsError::ReplayMismatch(format!(
+                            "await-edge mismatch at {idx}: expected {:?}, got {:?}",
+                            expected.await_edge, entry.await_edge
+                        )));
+                    }
+                }
 
                 let k = (*req.k).clone();
                 let next = k.apply(ctx, resp_val)?;
@@ -242,6 +283,64 @@ pub fn replay_with_store(
                 idx += 1;
             }
         }
+    }
+}
+
+fn task_schedule_event_for(
+    i: u64,
+    op: &str,
+    payload: &Term,
+    resp_val: &Value,
+) -> TaskScheduleEvent {
+    let mut out = TaskScheduleEvent::default();
+    if is_task_like_op(op) {
+        out.schedule_step = Some(i);
+    }
+    match op {
+        "core/task::spawn" | "editor/task::spawn" => {
+            out.parent_task = map_field_str_or_symbol(payload, ":parent-task")
+                .or_else(|| map_field_str_or_symbol(payload, ":scope"));
+            out.task_id = value_data_map_field(resp_val, ":task-id");
+        }
+        "core/task::await" => {
+            let tid = map_field_str_or_symbol(payload, ":task-id");
+            out.task_id = tid.clone();
+            out.await_edge = tid;
+        }
+        "core/task::cancel" | "core/task::status" | "editor/task::poll" | "editor/task::cancel" => {
+            out.task_id = map_field_str_or_symbol(payload, ":task-id");
+        }
+        "core/task::scope" => {
+            out.parent_task = map_field_str_or_symbol(payload, ":scope");
+        }
+        _ => {}
+    }
+    out
+}
+
+fn is_task_like_op(op: &str) -> bool {
+    op.starts_with("core/task::") || op.starts_with("editor/task::")
+}
+
+fn map_field_str_or_symbol(t: &Term, key: &str) -> Option<String> {
+    let Term::Map(m) = t else {
+        return None;
+    };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        Some(Term::Symbol(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn value_data_map_field(v: &Value, key: &str) -> Option<String> {
+    let Value::Data(Term::Map(m)) = v else {
+        return None;
+    };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        Some(Term::Symbol(s)) => Some(s.clone()),
+        _ => None,
     }
 }
 

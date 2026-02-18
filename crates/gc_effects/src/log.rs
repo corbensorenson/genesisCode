@@ -28,6 +28,10 @@ pub struct EffectLogEntry {
     pub payload_h: [u8; 32],
     pub cont_h: [u8; 32],
     pub req_h: [u8; 32],
+    pub task_id: Option<String>,
+    pub parent_task: Option<String>,
+    pub schedule_step: Option<u64>,
+    pub await_edge: Option<String>,
     pub decision: Decision,
     pub cap: Term,
     pub resp: LoggedResp,
@@ -70,9 +74,9 @@ impl EffectLog {
             return Err(EffectsError::Log("gclog must be a map".to_string()));
         };
         let version = get_int(m, ":version")?.unwrap_or(2);
-        if version != 2 {
+        if version != 2 && version != 3 {
             return Err(EffectsError::Log(format!(
-                "unsupported gclog :version {version} (expected 2)"
+                "unsupported gclog :version {version} (expected 2 or 3)"
             )));
         }
         let program_hash = get_bytes32(m, ":program-hash")?;
@@ -122,6 +126,30 @@ impl EffectLogEntry {
             TermOrdKey(Term::Symbol(":req-h".to_string())),
             Term::Bytes(self.req_h.to_vec().into()),
         );
+        if let Some(task_id) = &self.task_id {
+            m.insert(
+                TermOrdKey(Term::Symbol(":task-id".to_string())),
+                Term::Str(task_id.clone()),
+            );
+        }
+        if let Some(parent_task) = &self.parent_task {
+            m.insert(
+                TermOrdKey(Term::Symbol(":parent-task".to_string())),
+                Term::Str(parent_task.clone()),
+            );
+        }
+        if let Some(schedule_step) = self.schedule_step {
+            m.insert(
+                TermOrdKey(Term::Symbol(":schedule-step".to_string())),
+                Term::Int((schedule_step as i64).into()),
+            );
+        }
+        if let Some(await_edge) = &self.await_edge {
+            m.insert(
+                TermOrdKey(Term::Symbol(":await-edge".to_string())),
+                Term::Str(await_edge.clone()),
+            );
+        }
         m.insert(
             TermOrdKey(Term::Symbol(":decision".to_string())),
             Term::Symbol(match self.decision {
@@ -176,6 +204,10 @@ impl EffectLogEntry {
         let payload_h = get_bytes32(m, ":payload-h")?;
         let cont_h = get_bytes32(m, ":cont-h")?;
         let req_h = get_bytes32(m, ":req-h")?;
+        let task_id = get_str_or_symbol(m, ":task-id")?;
+        let parent_task = get_str_or_symbol(m, ":parent-task")?;
+        let schedule_step = get_int(m, ":schedule-step")?;
+        let await_edge = get_str_or_symbol(m, ":await-edge")?;
         let decision = match map_get(m, ":decision") {
             Some(Term::Symbol(s)) if s == ":allow" => Decision::Allow,
             Some(Term::Symbol(s)) if s == ":deny" => Decision::Deny,
@@ -198,6 +230,10 @@ impl EffectLogEntry {
             payload_h,
             cont_h,
             req_h,
+            task_id,
+            parent_task,
+            schedule_step,
+            await_edge,
             decision,
             cap,
             resp,
@@ -311,6 +347,21 @@ fn get_str(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<String>, Ef
         Some(Term::Str(s)) => Ok(Some(s.clone())),
         Some(x) => Err(EffectsError::Log(format!(
             "{k} must be string, got {}",
+            print_term(x)
+        ))),
+    }
+}
+
+fn get_str_or_symbol(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+) -> Result<Option<String>, EffectsError> {
+    match map_get(m, k) {
+        None => Ok(None),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(Term::Symbol(s)) => Ok(Some(s.clone())),
+        Some(x) => Err(EffectsError::Log(format!(
+            "{k} must be string or symbol, got {}",
             print_term(x)
         ))),
     }

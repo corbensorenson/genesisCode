@@ -149,14 +149,41 @@ fn infer_effects_term(out: &mut InferredEffects, t: &Term) {
 
         // General application: canonical form is nested binary, but support n-ary too.
         if let Some((head, args)) = flatten_app(t) {
-            if matches!(&head, Term::Symbol(s) if s == "core/effect::perform") {
-                // (core/effect::perform op payload k)
-                if args.len() == 3 {
-                    match literal_op_symbol(&args[0]) {
-                        Some(op) => {
-                            out.ops.insert(op);
+            if let Term::Symbol(sym) = &head {
+                match sym.as_str() {
+                    "core/effect::perform" => {
+                        // (core/effect::perform op payload k)
+                        if args.len() == 3 {
+                            match literal_op_symbol(&args[0]) {
+                                Some(op) => {
+                                    out.ops.insert(op);
+                                }
+                                None => out.unknown = true,
+                            }
                         }
-                        None => out.unknown = true,
+                    }
+                    "core/caps::perform" => {
+                        // (core/caps::perform op payload)
+                        if args.len() == 2 {
+                            match literal_op_symbol(&args[0]) {
+                                Some(op) => {
+                                    out.ops.insert(op);
+                                }
+                                None => out.unknown = true,
+                            }
+                        }
+                    }
+                    _ => {
+                        if let Some(ops) = direct_effect_ops(sym, args.len()) {
+                            for op in ops {
+                                out.ops.insert((*op).to_string());
+                            }
+                        } else if sym.starts_with("core/task::")
+                            || sym.starts_with("core/editor/task::")
+                        {
+                            // Unknown task wrapper/combinator shape: remain conservative.
+                            out.unknown = true;
+                        }
                     }
                 }
             }
@@ -218,6 +245,39 @@ fn literal_op_symbol(t: &Term) -> Option<String> {
         return Some(s.clone());
     }
     None
+}
+
+fn direct_effect_ops(head: &str, arity: usize) -> Option<&'static [&'static str]> {
+    match head {
+        // Base deterministic task ABI.
+        "core/task::spawn" if arity >= 3 => Some(&["core/task::spawn"]),
+        "core/task::await" if arity >= 1 => Some(&["core/task::await"]),
+        "core/task::cancel" if arity >= 1 => Some(&["core/task::cancel"]),
+        "core/task::status" if arity >= 1 => Some(&["core/task::status"]),
+        "core/task::scope" if arity >= 1 => Some(&["core/task::scope"]),
+
+        // AI-facing task combinators in prelude, mapped to base ABI effects.
+        "core/task::await-all" if arity >= 1 => Some(&["core/task::await"]),
+        "core/task::await-all-loop" if arity >= 3 => Some(&["core/task::await"]),
+        "core/task::all" if arity >= 1 => Some(&["core/task::await"]),
+        "core/task::race" if arity >= 1 => Some(&["core/task::await", "core/task::cancel"]),
+        "core/task::race-cancel-rest" if arity >= 3 => Some(&["core/task::cancel"]),
+        "core/task::spawn-batch" if arity >= 6 => Some(&["core/task::spawn"]),
+        "core/task::spawn-batch-loop" if arity >= 7 => Some(&["core/task::spawn"]),
+        "core/task::map-bounded" if arity >= 5 => Some(&["core/task::spawn", "core/task::await"]),
+        "core/task::map-bounded-loop" if arity >= 7 => {
+            Some(&["core/task::spawn", "core/task::await"])
+        }
+        "core/task::parallel-map-bounded" if arity >= 5 => {
+            Some(&["core/task::spawn", "core/task::await"])
+        }
+
+        // Editor task wrappers lower to host editor task capabilities.
+        "core/editor/task::spawn" if arity >= 3 => Some(&["editor/task::spawn"]),
+        "core/editor/task::poll" if arity >= 1 => Some(&["editor/task::poll"]),
+        "core/editor/task::cancel" if arity >= 1 => Some(&["editor/task::cancel"]),
+        _ => None,
+    }
 }
 
 pub fn typecheck_package(mods: &[ModuleForTypecheck]) -> TypecheckReport {
@@ -289,6 +349,15 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         }
         Some(x) => x,
     };
+    let strict_effects_meta = match meta_strict_effects(&meta) {
+        Ok(v) => v,
+        Err(e) => {
+            ok = false;
+            errors.push(format!("{}: {}", m.path, e));
+            false
+        }
+    };
+    let strict_effects = strict_effects_meta || caps.iter().any(|c| is_core_task_effect_op(c));
 
     let caps_set: BTreeSet<String> = caps.iter().cloned().collect();
     let def_map = defs_map(&m.forms);
@@ -305,13 +374,20 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         let eff = infer_effects_in_term(expr);
         if eff.unknown {
             warnings.push(format!(
-                "{}: {} effect ops could not be fully inferred (non-literal op passed to core/effect::perform)",
+                "{}: {} effect ops could not be fully inferred (non-literal op passed to core/effect::perform or core/caps::perform, or unknown task wrapper arity)",
                 m.path, e
             ));
             if caps.is_empty() {
                 ok = false;
                 errors.push(format!(
                     "{}: {} declares :caps [] but has unknown effect ops",
+                    m.path, e
+                ));
+            }
+            if strict_effects {
+                ok = false;
+                errors.push(format!(
+                    "{}: {} strict effect mode forbids unknown effect ops; use literal op symbols and closed declared rows",
                     m.path, e
                 ));
             }
@@ -407,6 +483,15 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                                 ops: BTreeSet::new(),
                                 unknown: false,
                             });
+                            if strict_effects
+                                && has_core_task_effect_ops(&eff)
+                                && decl_eff.tail.is_open()
+                            {
+                                tr_ok = false;
+                                tr_errors.push(format!(
+                                    "{e}: strict effect mode requires a closed declared effect row for concurrent task exports"
+                                ));
+                            }
                             if eff.unknown && matches!(decl_eff.tail, RowTail::Closed) {
                                 tr_ok = false;
                                 tr_errors.push(format!(
@@ -608,6 +693,37 @@ fn meta_types(meta: &Term) -> Option<BTreeMap<String, Term>> {
     Some(out)
 }
 
+fn meta_strict_effects(meta: &Term) -> Result<bool, String> {
+    let Term::Map(m) = meta else {
+        return Ok(false);
+    };
+    let Some(v) = m.get(&TermOrdKey(Term::symbol(":strict-effects"))) else {
+        return Ok(false);
+    };
+    match v {
+        Term::Bool(b) => Ok(*b),
+        other => Err(format!(
+            "::meta :strict-effects must be bool, got {}",
+            print_term(other)
+        )),
+    }
+}
+
+fn is_core_task_effect_op(op: &str) -> bool {
+    matches!(
+        op,
+        "core/task::spawn"
+            | "core/task::await"
+            | "core/task::cancel"
+            | "core/task::status"
+            | "core/task::scope"
+    )
+}
+
+fn has_core_task_effect_ops(eff: &InferredEffects) -> bool {
+    eff.ops.iter().any(|op| is_core_task_effect_op(op))
+}
+
 impl TypecheckReport {
     pub fn to_term(&self) -> Term {
         let mut m = BTreeMap::new();
@@ -794,6 +910,32 @@ mod tests {
     }
 
     #[test]
+    fn infers_caps_perform_literal_ops() {
+        let src = r#"
+            (def ::meta '{:exports [] :caps [editor/task::poll] :types {}})
+            (def x ((core/caps::perform 'editor/task::poll) {:task-id "task-1"}))
+            x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let inf = infer_effects(&forms);
+        assert!(inf.ops.contains("editor/task::poll"));
+        assert!(!inf.unknown);
+    }
+
+    #[test]
+    fn infers_task_wrapper_ops_without_inlining() {
+        let src = r#"
+            (def ::meta '{:exports [] :caps [core/task::await] :types {}})
+            (def x (core/task::await "task-1"))
+            x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let inf = infer_effects(&forms);
+        assert!(inf.ops.contains("core/task::await"));
+        assert!(!inf.unknown);
+    }
+
+    #[test]
     fn typecheck_requires_types_for_exports() {
         let src = r#"
             (def ::meta '{:exports [m::x] :caps [] :types {}})
@@ -944,5 +1086,69 @@ mod tests {
             }
             other => panic!("expected Contract, got {}", print_term(&other.to_term())),
         }
+    }
+
+    #[test]
+    fn strict_effects_reject_unknown_effect_ops() {
+        let src = r#"
+          (def ::meta
+            '{
+              :exports [m::x]
+              :caps [core/task::spawn]
+              :strict-effects true
+              :types {m::x ?}})
+          (def m::op 'core/task::spawn)
+          (def m::x
+            (core/effect::perform m::op {:payload 1} (fn (resp) (core/effect::pure resp))))
+          m::x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let m = ModuleForTypecheck {
+            path: "strict.gc".to_string(),
+            meta: extract_meta(&forms),
+            forms,
+        };
+        let r = typecheck_package(&[m]);
+        assert!(!r.ok);
+        assert!(
+            r.errors
+                .iter()
+                .any(|e| e.contains("strict effect mode forbids unknown effect ops")),
+            "expected strict unknown-op error, got {:?}",
+            r.errors
+        );
+    }
+
+    #[test]
+    fn strict_effects_require_closed_declared_row_for_task_exports() {
+        let src = r#"
+          (def ::meta
+            '{
+              :exports [m::x]
+              :caps [core/task::await]
+              :strict-effects true
+              :types {m::x (Prog ? (Eff [core/task::await] ?))}})
+          (def m::x
+            (core/effect::perform
+              'core/task::await
+              {:task-id "task-1"}
+              (fn (resp) (core/effect::pure resp))))
+          m::x
+        "#;
+        let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+        let m = ModuleForTypecheck {
+            path: "strict-row.gc".to_string(),
+            meta: extract_meta(&forms),
+            forms,
+        };
+        let r = typecheck_package(&[m]);
+        assert!(!r.ok);
+        assert!(
+            r.errors.iter().any(|e| e.contains(
+                "strict effect mode requires a closed declared effect row for concurrent task exports"
+            )),
+            "expected strict closed-row error, got {:?}",
+            r.errors
+        );
     }
 }

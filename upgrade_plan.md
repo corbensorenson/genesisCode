@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 26
+Open checklist items: 24
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -49,8 +49,8 @@ Open checklist items: 26
 - [ ] Add obligation `core/obligation::concurrency-replay` for effectful concurrent tests.
 
 ### B5. Type/Effects Integration
-- [ ] Extend `gc_types` effect-row tracking for task ops so concurrency usage is explicit and checkable.
-- [ ] Add deterministic-safety checks for AI-authored parallel code patterns (unknown effect tails + undeclared caps fail in strict mode).
+- [x] Extend `gc_types` effect-row tracking for task ops so concurrency usage is explicit and checkable.
+- [x] Add deterministic-safety checks for AI-authored parallel code patterns (unknown effect tails + undeclared caps fail in strict mode).
 
 ## Workstream C — Throughput and Latency Gains
 
