@@ -85,6 +85,7 @@ Acceptance gate:
 
 Acceptance gate:
 - [ ] Native + WASI parity suites remain green when Rust semantic fallbacks are removed from default path.
+  - [x] Remove Rust hash fallback from selfhost frontend module hash derivation (fail closed if bindings are missing).
 
 ### C) Bootstrap Extraction (`/old_bootstrap`)
 - [x] Move replaced Rust semantic bootstrap modules to `/old_bootstrap`.

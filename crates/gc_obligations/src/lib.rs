@@ -829,7 +829,9 @@ fn selfhost_hash_module_forms(
         return parse_hex32_str(hex, "selfhost hash-module");
     }
 
-    Ok(hash_module(forms))
+    Err(ObligationError::Module(
+        "missing binding core/cli::hash-module-forms or selfhost/hash::hash-module".to_string(),
+    ))
 }
 
 fn pin_manifest_hashes(
@@ -4583,6 +4585,19 @@ mod tests {
         assert!(
             format!("{err}").contains("not callable"),
             "expected core/cli hash-module-forms path to be attempted first, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_hash_requires_a_selfhost_hash_binding_and_does_not_fallback_to_rust() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let env = prelude.env;
+        let forms = canonicalize_module(parse_module("(def x 1)\n x\n").unwrap()).unwrap();
+        let err = selfhost_hash_module_forms(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("missing binding core/cli::hash-module-forms"),
+            "expected missing-binding error, got: {err}"
         );
     }
 }
