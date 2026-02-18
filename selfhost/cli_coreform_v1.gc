@@ -2092,7 +2092,9 @@
         (fn (state)
           (let ((snapshot-h ((core/map::get entry) (quote :snapshot))))
             (if (core/cli::hash-hex? snapshot-h)
-              ((core/effect::bind ((((core/cli::pkg-check-hashes-loop-program [snapshot-h]) 1) 0) state))
+              ((core/effect::bind
+                ((((core/cli::pkg-check-hashes-loop-program ((core/vec::push []) snapshot-h)) 1) 0)
+                  state))
                 (fn (st1)
                   (if (core/cli::is-error st1)
                     (core/effect::pure st1)

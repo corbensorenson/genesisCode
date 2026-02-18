@@ -16,6 +16,9 @@ fn write_caps(dir: &Path) -> PathBuf {
         r#"
 allow = [
   "core/store::put",
+  "core/store::get",
+  "core/store::has",
+  "core/refs::get",
   "core/refs::set",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",

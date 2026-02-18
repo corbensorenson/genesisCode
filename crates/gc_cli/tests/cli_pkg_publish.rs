@@ -372,8 +372,33 @@ fn pkg_publish_value_matches_between_frontends() {
         normalize_publish_value(&json_value(&rust_out)),
         normalize_publish_value(&json_value(&self_out))
     );
+    let rust_norm = normalize_publish_value(&json_value(&rust_out));
+    let Term::Map(rust_map) = &rust_norm else {
+        panic!("publish value must be map");
+    };
+    let Term::Map(prov) = rust_map
+        .get(&TermOrdKey(Term::symbol(":provenance")))
+        .expect("publish provenance")
+    else {
+        panic!("publish provenance must be map");
+    };
+    let Term::Vector(evidence) = prov
+        .get(&TermOrdKey(Term::symbol(":evidence")))
+        .expect("publish provenance evidence")
+    else {
+        panic!("publish provenance evidence must be vector");
+    };
+    assert_eq!(evidence.len(), 1);
+    assert_eq!(
+        prov.get(&TermOrdKey(Term::symbol(":result")))
+            .and_then(|t| match t {
+                Term::Str(s) => Some(s.len()),
+                _ => None,
+            }),
+        Some(64)
+    );
 
-    let rust_commit = match normalize_publish_value(&json_value(&rust_out)) {
+    let rust_commit = match rust_norm {
         Term::Map(m) => match m.get(&TermOrdKey(Term::symbol(":commit"))) {
             Some(Term::Str(s)) => s.clone(),
             _ => panic!("missing :commit"),

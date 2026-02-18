@@ -598,6 +598,64 @@
     (((core/effect::perform (quote core/pkg::snapshot)) {:pkg pkg-path})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/pm::init core/pkg::init)
+
+(def core/pm::add core/pkg::add)
+
+(def core/pm::list core/pkg::list)
+
+(def core/pm::info core/pkg::info)
+
+(def core/pm::snapshot core/pkg::snapshot)
+
+(def core/pm::lock
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::lock)) {:lock lock :strict true})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pm::update
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::update)) {:lock lock :strict true})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pm::install
+  (fn (lock)
+    (fn (frozen)
+      (
+        ((core/effect::perform (quote core/pkg::install))
+          {
+            :frozen frozen
+            :lock lock
+            :strict true})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/pm::verify
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg::verify)) {:lock lock :strict true})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pm::publish
+  (fn (remote)
+    (fn (refname)
+      (fn (policy)
+        (fn (expected-old)
+          (fn (depth)
+            (fn (commit)
+              (if ((core/eq? policy) nil)
+                (core/effect::pure
+                  ((core/error::make2 "core/pm/missing-policy")
+                    "core/pm::publish requires a non-nil policy hash"))
+                (
+                  ((core/effect::perform (quote core/pkg::publish))
+                    {
+                      :commit commit
+                      :depth depth
+                      :expected-old expected-old
+                      :policy policy
+                      :ref refname
+                      :remote remote})
+                  (fn (resp) (core/effect::pure resp)))))))))))
+
 (def core/gpk::export
   (fn (root)
     (fn (out)

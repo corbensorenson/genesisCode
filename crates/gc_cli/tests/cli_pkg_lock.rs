@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 
 fn write_caps(dir: &Path) -> PathBuf {
@@ -148,6 +149,15 @@ fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &st
         .success();
 
     commit_h
+}
+
+fn json_value_term(stdout: &[u8]) -> Term {
+    let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
+    let s = v
+        .pointer("/data/value")
+        .and_then(|x| x.as_str())
+        .expect("json data.value");
+    parse_term(s).expect("parse value term")
 }
 
 #[test]
@@ -310,6 +320,167 @@ mini::x
         .assert()
         .failure()
         .code(50);
+}
+
+#[test]
+fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let patch_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "patch_p.gc",
+    );
+    let snap_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "dep" :pkg/version "1" :modules [] :obligations []}"#,
+        "snap_p.gc",
+    );
+    let evidence_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "evidence_p.gc",
+    );
+    let commit_h = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "dep" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_h}"]
+  :attestations []
+  :message "dep-commit"
+}}"#
+        ),
+        "commit_p.gc",
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["add"])
+        .arg(format!("dep@commit:{commit_h}"))
+        .assert()
+        .success();
+
+    let lock_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["lock", "--strict"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let lock_t = json_value_term(&lock_out);
+    let Term::Map(lock_m) = lock_t else {
+        panic!("expected map lock value");
+    };
+    let workspace_root = match lock_m.get(&TermOrdKey(Term::symbol(":workspace-root"))) {
+        Some(Term::Str(s)) => s.clone(),
+        other => panic!("missing :workspace-root in lock result: {other:?}"),
+    };
+    let Term::Map(lock_prov) = lock_m
+        .get(&TermOrdKey(Term::symbol(":provenance")))
+        .expect("lock provenance")
+    else {
+        panic!("lock provenance must be map");
+    };
+    let Term::Vector(lock_deps) = lock_prov
+        .get(&TermOrdKey(Term::symbol(":deps")))
+        .expect("lock deps")
+    else {
+        panic!("lock deps must be vector");
+    };
+    assert_eq!(lock_deps.len(), 1);
+    let Term::Map(dep_edge) = &lock_deps[0] else {
+        panic!("dep edge must be map");
+    };
+    assert_eq!(
+        dep_edge.get(&TermOrdKey(Term::symbol(":commit"))),
+        Some(&Term::Str(commit_h.clone()))
+    );
+    assert_eq!(
+        dep_edge.get(&TermOrdKey(Term::symbol(":snapshot"))),
+        Some(&Term::Str(snap_h.clone()))
+    );
+    assert_eq!(
+        dep_edge.get(&TermOrdKey(Term::symbol(":evidence"))),
+        Some(&Term::Vector(vec![Term::Str(evidence_h.clone())]))
+    );
+
+    let lock_src = fs::read_to_string(dir.join("genesis.lock")).unwrap();
+    assert!(lock_src.contains("root_workspace_snapshot"));
+    assert!(lock_src.contains(&workspace_root));
+    let workspace_root_term = parse_term(
+        &fs::read_to_string(dir.join(".genesis").join("store").join(&workspace_root)).unwrap(),
+    )
+    .unwrap();
+    let Term::Map(ws_m) = workspace_root_term else {
+        panic!("workspace root must be a map term");
+    };
+    assert_eq!(
+        ws_m.get(&TermOrdKey(Term::symbol(":kind"))),
+        Some(&Term::symbol(":workspace"))
+    );
+
+    let install_out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+        .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["install", "--frozen", "--strict"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let install_t = json_value_term(&install_out);
+    let Term::Map(install_m) = install_t else {
+        panic!("expected map install value");
+    };
+    assert_eq!(
+        install_m.get(&TermOrdKey(Term::symbol(":workspace-root"))),
+        Some(&Term::Str(workspace_root))
+    );
+    let Term::Map(install_prov) = install_m
+        .get(&TermOrdKey(Term::symbol(":provenance")))
+        .expect("install provenance")
+    else {
+        panic!("install provenance must be map");
+    };
+    let Term::Vector(install_deps) = install_prov
+        .get(&TermOrdKey(Term::symbol(":deps")))
+        .expect("install deps")
+    else {
+        panic!("install deps must be vector");
+    };
+    assert_eq!(install_deps.len(), 1);
 }
 
 #[test]

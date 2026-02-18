@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 23
+Open checklist items: 14
 
 ## Findings From Current Project Audit
 
@@ -42,8 +42,8 @@ Open checklist items: 23
 - [x] Add workspace-level policy/default registry/toolchain/profile declarations.
 
 ### B2. Lock + Resolution v2
-- [ ] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
-- [ ] Add deterministic resolver strategy modes (`pinned`, `track-ref`, `tag-policy`) with strict lock pinning.
+- [x] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
+- [x] Add deterministic resolver strategy modes (`pinned`, `track-ref`, `tag-policy`) with strict lock pinning.
 - [x] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
 
 ### B3. Environment Automation (Pixi-like UX, deterministic)
@@ -57,15 +57,15 @@ Open checklist items: 23
 - [x] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
 
 ### B5. In-Language Contract Surface
-- [ ] Define `core/pm::*` contract API so AI can drive project management from Genesis code, not only CLI.
-- [ ] Keep state-mutating `core/pm::*` operations effectful and replay-logged.
-- [ ] Add obligation/policy gates to `core/pm::publish`, `core/pm::update`, `core/pm::lock`.
+- [x] Define `core/pm::*` contract API so AI can drive project management from Genesis code, not only CLI.
+- [x] Keep state-mutating `core/pm::*` operations effectful and replay-logged.
+- [x] Add obligation/policy gates to `core/pm::publish`, `core/pm::update`, `core/pm::lock`.
 
 ## Workstream C — VCS + PM Unification
 
-- [ ] Make workspace/project state snapshots first-class `:vcs/snapshot` roots.
-- [ ] Bind `gcpm lock/install/update/publish` operations to explicit commit/evidence provenance edges.
-- [ ] Add branch-aware dependency tracking semantics (`track ref + locked commit`) at workspace level.
+- [x] Make workspace/project state snapshots first-class `:vcs/snapshot` roots.
+- [x] Bind `gcpm lock/install/update/publish` operations to explicit commit/evidence provenance edges.
+- [x] Add branch-aware dependency tracking semantics (`track ref + locked commit`) at workspace level.
 - [x] Add deterministic migration path from package-only mode to workspace+gcpm mode.
 
 ## Workstream D — AI-First Developer Experience
@@ -77,7 +77,7 @@ Open checklist items: 23
 
 ## Acceptance Checks (Must Pass Before v1 Declaration)
 
-- [ ] `--selfhost-only` + `gcpm` executes full workspace lifecycle (init/add/lock/install/run/test/publish) with no Rust semantic fallback.
+- [x] `--selfhost-only` + `gcpm` executes full workspace lifecycle (init/add/lock/install/run/test/publish) with no Rust semantic fallback.
 - [ ] End-to-end workspace operations are replayable and policy-gated with deterministic logs.
 - [ ] Lock v2 + environment realization meets AI iteration targets in CI budget checks.
 - [ ] Rust semantic bootstrap code is relocated to `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` and no longer used in production path.

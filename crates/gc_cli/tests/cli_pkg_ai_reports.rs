@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{Term, TermOrdKey, parse_term};
 
 fn write_caps(dir: &Path) -> PathBuf {
     let caps = dir.join("caps.toml");
@@ -90,6 +91,18 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
             .and_then(|x| x.as_str()),
         Some("lock")
     );
+    let lock_value_t = parse_term(
+        lock_v
+            .pointer("/data/value")
+            .and_then(|x| x.as_str())
+            .unwrap(),
+    )
+    .expect("parse lock value");
+    let Term::Map(lock_mm) = lock_value_t else {
+        panic!("lock value should be map");
+    };
+    assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
+    assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
 
     let update_out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
@@ -119,6 +132,18 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
             .and_then(|x| x.as_str()),
         Some("update")
     );
+    let update_value_t = parse_term(
+        update_v
+            .pointer("/data/value")
+            .and_then(|x| x.as_str())
+            .unwrap(),
+    )
+    .expect("parse update value");
+    let Term::Map(update_mm) = update_value_t else {
+        panic!("update value should be map");
+    };
+    assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
+    assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
 }
 
 #[test]
