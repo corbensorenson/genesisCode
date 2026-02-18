@@ -23,6 +23,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "test",
         "pack",
         "selfhost-artifact",
+        "warm",
         "keygen",
         "sign",
         "verify",

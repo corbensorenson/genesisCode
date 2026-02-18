@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -222,6 +223,19 @@ enum Cmd {
         /// Content-addressed store directory (default: ./.genesis/store).
         #[arg(long)]
         store: Option<PathBuf>,
+    },
+
+    /// Warm startup mode: process newline-delimited JSON requests in one long-lived process.
+    ///
+    /// Input format (one JSON object per line on stdin):
+    ///   {"argv":["--json","eval","file.gc"]}
+    ///
+    /// Output format (one JSON object per line on stdout):
+    ///   { "ok": true|false, "kind": "genesis/warm-response-v0.1", ... }
+    Warm {
+        /// Preload selfhost toolchain once before request handling.
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        prime_selfhost: bool,
     },
 
     /// Generate a new Ed25519 signing key.
@@ -1059,6 +1073,11 @@ struct JsonEnvelope<T> {
     error: Option<JsonError>,
 }
 
+#[derive(Debug, Deserialize)]
+struct WarmRequest {
+    argv: Vec<String>,
+}
+
 #[derive(Debug)]
 struct CmdOut {
     exit_code: u8,
@@ -1121,6 +1140,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::SelfhostDashboard { markdown, store } => {
             cmd_selfhost_dashboard(cli, markdown.as_deref(), store.as_deref())
         }
+        Cmd::Warm { prime_selfhost } => cmd_warm(cli, flavor, *prime_selfhost),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,
@@ -1408,6 +1428,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<(), CliError>
         Cmd::TransparencyVerify { .. } => Ok(()),
         Cmd::Verify { .. } => Ok(()),
         Cmd::SelfhostDashboard { .. } => Ok(()),
+        Cmd::Warm { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
             ..
@@ -1443,6 +1464,185 @@ fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> Cli
             context: None,
         },
     }
+}
+
+fn inherited_global_args(cli: &Cli) -> Vec<String> {
+    let mut out = Vec::new();
+    if cli.json {
+        out.push("--json".to_string());
+    }
+    if let Some(n) = cli.step_limit {
+        out.push("--step-limit".to_string());
+        out.push(n.to_string());
+    }
+    if cli.no_step_limit {
+        out.push("--no-step-limit".to_string());
+    }
+    if let Some(n) = cli.max_pair_cells {
+        out.push("--max-pair-cells".to_string());
+        out.push(n.to_string());
+    }
+    if let Some(n) = cli.max_vec_len {
+        out.push("--max-vec-len".to_string());
+        out.push(n.to_string());
+    }
+    if let Some(n) = cli.max_map_len {
+        out.push("--max-map-len".to_string());
+        out.push(n.to_string());
+    }
+    if let Some(n) = cli.max_bytes_len {
+        out.push("--max-bytes-len".to_string());
+        out.push(n.to_string());
+    }
+    if let Some(n) = cli.max_string_len {
+        out.push("--max-string-len".to_string());
+        out.push(n.to_string());
+    }
+    if let Some(p) = &cli.selfhost_artifact {
+        out.push("--selfhost-artifact".to_string());
+        out.push(p.display().to_string());
+    }
+    out.push("--selfhost-bootstrap".to_string());
+    out.push(
+        match cli.selfhost_bootstrap {
+            SelfhostBootstrapArg::ArtifactOnly => "artifact-only",
+            SelfhostBootstrapArg::ArtifactPreferred => "artifact-preferred",
+            SelfhostBootstrapArg::Embedded => "embedded",
+        }
+        .to_string(),
+    );
+    if cli.selfhost_only {
+        out.push("--selfhost-only".to_string());
+    }
+    if let Some(frontend) = cli.coreform_frontend {
+        out.push("--coreform-frontend".to_string());
+        out.push(
+            match frontend {
+                CoreformFrontendArg::Rust => "rust",
+                CoreformFrontendArg::Selfhost => "selfhost",
+            }
+            .to_string(),
+        );
+    }
+    out
+}
+
+fn emit_warm_line(v: &serde_json::Value) -> Result<(), CliError> {
+    let mut out = io::stdout().lock();
+    writeln!(out, "{}", json_canonical_string(v))
+        .map_err(|e| cli_err(EX_IO, "io/error", format!("{e}")))?;
+    out.flush()
+        .map_err(|e| cli_err(EX_IO, "io/error", format!("{e}")))?;
+    Ok(())
+}
+
+fn cmd_warm(cli: &Cli, flavor: Flavor, prime_selfhost: bool) -> Result<CmdOut, CliError> {
+    if prime_selfhost {
+        let frontend = resolved_coreform_frontend(cli)?;
+        if matches!(frontend, gc_obligations::CoreformFrontend::Selfhost(_)) {
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+        }
+    }
+
+    let inherited = inherited_global_args(cli);
+    let mut handled: u64 = 0;
+    for line in io::stdin().lock().lines() {
+        let line = line.map_err(|e| cli_err(EX_IO, "io/error", format!("{e}")))?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let req: WarmRequest = match serde_json::from_str(trimmed) {
+            Ok(r) => r,
+            Err(e) => {
+                emit_warm_line(&serde_json::json!({
+                    "ok": false,
+                    "kind": "genesis/warm-response-v0.1",
+                    "error": { "code": "warm/request-parse", "message": format!("{e}") },
+                    "data": { "request_index": handled }
+                }))?;
+                handled = handled.saturating_add(1);
+                continue;
+            }
+        };
+
+        if req.argv.len() == 1 && matches!(req.argv[0].as_str(), "exit" | "quit" | "stop") {
+            break;
+        }
+        if req.argv.first().map(|s| s.as_str()) == Some("warm") {
+            emit_warm_line(&serde_json::json!({
+                "ok": false,
+                "kind": "genesis/warm-response-v0.1",
+                "error": { "code": "warm/nested", "message": "nested warm command is not allowed" },
+                "data": { "request_index": handled }
+            }))?;
+            handled = handled.saturating_add(1);
+            continue;
+        }
+
+        let argv: Vec<String> = std::iter::once("genesis".to_string())
+            .chain(inherited.iter().cloned())
+            .chain(req.argv.iter().cloned())
+            .collect();
+        let sub_cli = match Cli::try_parse_from(argv) {
+            Ok(c) => c,
+            Err(e) => {
+                emit_warm_line(&serde_json::json!({
+                    "ok": false,
+                    "kind": "genesis/warm-response-v0.1",
+                    "error": { "code": "warm/request-argv-parse", "message": e.to_string() },
+                    "data": { "request_index": handled }
+                }))?;
+                handled = handled.saturating_add(1);
+                continue;
+            }
+        };
+
+        match dispatch(&sub_cli, flavor) {
+            Ok(out) => {
+                emit_warm_line(&serde_json::json!({
+                    "ok": true,
+                    "kind": "genesis/warm-response-v0.1",
+                    "data": {
+                        "request_index": handled,
+                        "exit_code": out.exit_code,
+                        "result": out.json
+                    }
+                }))?;
+            }
+            Err(e) => {
+                emit_warm_line(&serde_json::json!({
+                    "ok": false,
+                    "kind": "genesis/warm-response-v0.1",
+                    "error": e.json,
+                    "data": {
+                        "request_index": handled,
+                        "exit_code": e.exit_code
+                    }
+                }))?;
+            }
+        }
+        handled = handled.saturating_add(1);
+    }
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/warm-session-v0.1",
+        data: Some(serde_json::json!({
+            "requests_handled": handled,
+            "prime_selfhost": prime_selfhost
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: String::new(),
+        json: serde_json::to_value(env).expect("json"),
+    })
 }
 
 fn obligation_err(e: gc_obligations::ObligationError) -> CliError {

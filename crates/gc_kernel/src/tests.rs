@@ -1,7 +1,10 @@
 use gc_coreform::{Term, parse_module};
 use num_bigint::BigInt;
 
-use crate::{Env, EvalCtx, KernelErrorKind, MemLimits, Value, eval_module, eval_module_compiled};
+use crate::{
+    Env, EvalCtx, KernelErrorKind, MemLimits, Value, compile_module, decode_compiled_module_blob,
+    encode_compiled_module_blob, eval_compiled_module, eval_module, eval_module_compiled,
+};
 
 #[test]
 fn seal_unseal_roundtrip() {
@@ -147,6 +150,29 @@ fn compiled_eval_matches_treewalk_eval_with_closure_calls() {
     let v_comp = eval_module_compiled(&mut ctx_comp, &mut env_comp, &forms).unwrap();
 
     assert_eq!(v_tree.debug_repr(), v_comp.debug_repr());
+}
+
+#[test]
+fn compiled_module_blob_roundtrip_preserves_behavior() {
+    let src = r#"
+      (def mk (fn (x) (fn (y) (prim int/add x y))))
+      (def add9 (mk 9))
+      (add9 33)
+    "#;
+    let forms = parse_module(src).unwrap();
+    let compiled = compile_module(&forms).unwrap();
+    let blob = encode_compiled_module_blob(&compiled).unwrap();
+    let restored = decode_compiled_module_blob(&blob).unwrap();
+
+    let mut ctx_a = EvalCtx::new();
+    let mut env_a = Env::empty();
+    let out_a = eval_compiled_module(&mut ctx_a, &mut env_a, &compiled).unwrap();
+
+    let mut ctx_b = EvalCtx::new();
+    let mut env_b = Env::empty();
+    let out_b = eval_compiled_module(&mut ctx_b, &mut env_b, &restored).unwrap();
+
+    assert_eq!(out_a.debug_repr(), out_b.debug_repr());
 }
 
 #[test]

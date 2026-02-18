@@ -9,7 +9,10 @@ use once_cell::sync::Lazy;
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
 };
-use gc_kernel::{CompiledModule, Env, EvalCtx, compile_module, eval_compiled_module};
+use gc_kernel::{
+    CompiledModule, Env, EvalCtx, compile_module, decode_compiled_module_blob,
+    encode_compiled_module_blob, eval_compiled_module,
+};
 
 const SELFHOST_TOOLCHAIN_MANIFEST_SRC: &str =
     include_str!("../../../selfhost/toolchain_manifest.gc");
@@ -17,8 +20,12 @@ const SELFHOST_TOOLCHAIN_EMBEDDED_ARTIFACT_SRC: &str =
     include_str!("../../../selfhost/toolchain.gc");
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
+const SELFHOST_COMPILED_CACHE_DIR_ENV: &str = "GENESIS_SELFHOST_COMPILED_CACHE_DIR";
+const SELFHOST_COMPILED_CACHE_DISABLE_ENV: &str = "GENESIS_SELFHOST_COMPILED_CACHE_DISABLE";
 const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
+const DEFAULT_SELFHOST_COMPILED_CACHE_REL: &str = ".genesis/cache/selfhost_compiled_v1";
+const SELFHOST_COMPILED_CACHE_FILE_MAGIC: &[u8] = b"GCSHC1\0";
 
 #[derive(Debug, Clone)]
 struct ToolchainManifest {
@@ -270,6 +277,232 @@ where
     out
 }
 
+fn env_truthy(name: &str) -> bool {
+    std::env::var(name)
+        .ok()
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn hex32(h: [u8; 32]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(64);
+    for b in h {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn push_u32(out: &mut Vec<u8>, n: usize) -> anyhow::Result<()> {
+    let n = u32::try_from(n).map_err(|_| anyhow::anyhow!("cache field exceeds u32 range"))?;
+    out.extend_from_slice(&n.to_le_bytes());
+    Ok(())
+}
+
+fn push_bytes(out: &mut Vec<u8>, bytes: &[u8]) -> anyhow::Result<()> {
+    push_u32(out, bytes.len())?;
+    out.extend_from_slice(bytes);
+    Ok(())
+}
+
+fn push_str(out: &mut Vec<u8>, s: &str) -> anyhow::Result<()> {
+    push_bytes(out, s.as_bytes())
+}
+
+struct CacheDecodeCursor<'a> {
+    bytes: &'a [u8],
+    at: usize,
+}
+
+impl<'a> CacheDecodeCursor<'a> {
+    fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes, at: 0 }
+    }
+
+    fn remaining(&self) -> usize {
+        self.bytes.len().saturating_sub(self.at)
+    }
+
+    fn read_exact(&mut self, n: usize) -> anyhow::Result<&'a [u8]> {
+        if self.remaining() < n {
+            return Err(anyhow::anyhow!("compiled cache truncated"));
+        }
+        let start = self.at;
+        self.at += n;
+        Ok(&self.bytes[start..start + n])
+    }
+
+    fn read_u32(&mut self) -> anyhow::Result<u32> {
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(self.read_exact(4)?);
+        Ok(u32::from_le_bytes(buf))
+    }
+
+    fn read_bytes(&mut self) -> anyhow::Result<&'a [u8]> {
+        let n = self.read_u32()? as usize;
+        self.read_exact(n)
+    }
+
+    fn read_str(&mut self) -> anyhow::Result<String> {
+        let bytes = self.read_bytes()?;
+        let s = std::str::from_utf8(bytes).map_err(|e| anyhow::anyhow!("invalid utf-8: {e}"))?;
+        Ok(s.to_string())
+    }
+}
+
+fn resolve_compiled_cache_dir() -> Option<PathBuf> {
+    if env_truthy(SELFHOST_COMPILED_CACHE_DISABLE_ENV) {
+        return None;
+    }
+    if let Ok(raw) = std::env::var(SELFHOST_COMPILED_CACHE_DIR_ENV) {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    Some(
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(DEFAULT_SELFHOST_COMPILED_CACHE_REL),
+    )
+}
+
+fn compiled_cache_file_path(artifact_h: [u8; 32]) -> Option<PathBuf> {
+    let dir = resolve_compiled_cache_dir()?;
+    Some(dir.join(format!("{}.bin", hex32(artifact_h))))
+}
+
+fn decode_compiled_cache_blob(
+    bytes: &[u8],
+    expected_artifact_h: [u8; 32],
+    manifest: &ToolchainManifest,
+) -> anyhow::Result<CachedCompiledModules> {
+    let mut cur = CacheDecodeCursor::new(bytes);
+    let magic = cur.read_exact(SELFHOST_COMPILED_CACHE_FILE_MAGIC.len())?;
+    if magic != SELFHOST_COMPILED_CACHE_FILE_MAGIC {
+        return Err(anyhow::anyhow!("compiled cache magic mismatch"));
+    }
+    let got_h = cur.read_exact(32)?;
+    if got_h != expected_artifact_h {
+        return Err(anyhow::anyhow!("compiled cache artifact hash mismatch"));
+    }
+    let count = cur.read_u32()? as usize;
+    if count != manifest.module_paths.len() {
+        return Err(anyhow::anyhow!(
+            "compiled cache module count mismatch: expected {}, got {}",
+            manifest.module_paths.len(),
+            count
+        ));
+    }
+
+    let mut out = Vec::with_capacity(count);
+    for expected_path in &manifest.module_paths {
+        let path = cur.read_str()?;
+        if &path != expected_path {
+            return Err(anyhow::anyhow!(
+                "compiled cache path order mismatch: expected {}, got {}",
+                expected_path,
+                path
+            ));
+        }
+        let blob = cur.read_bytes()?;
+        let module = decode_compiled_module_blob(blob)
+            .map_err(|e| anyhow::anyhow!("decode compiled module {} failed: {}", path, e))?;
+        out.push((path, module));
+    }
+    if cur.remaining() != 0 {
+        return Err(anyhow::anyhow!("compiled cache has trailing bytes"));
+    }
+    Ok(out)
+}
+
+fn encode_compiled_cache_blob(
+    artifact_h: [u8; 32],
+    modules: &CachedCompiledModules,
+) -> anyhow::Result<Vec<u8>> {
+    let mut out = Vec::new();
+    out.extend_from_slice(SELFHOST_COMPILED_CACHE_FILE_MAGIC);
+    out.extend_from_slice(&artifact_h);
+    push_u32(&mut out, modules.len())?;
+    for (path, module) in modules {
+        push_str(&mut out, path)?;
+        let blob = encode_compiled_module_blob(module)
+            .map_err(|e| anyhow::anyhow!("encode compiled module {} failed: {}", path, e))?;
+        push_bytes(&mut out, &blob)?;
+    }
+    Ok(out)
+}
+
+fn try_read_compiled_cache(
+    artifact_h: [u8; 32],
+    manifest: &ToolchainManifest,
+) -> Option<CachedCompiledModules> {
+    let path = compiled_cache_file_path(artifact_h)?;
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(_) => return None,
+    };
+    match decode_compiled_cache_blob(&bytes, artifact_h, manifest) {
+        Ok(mods) => Some(mods),
+        Err(_) => {
+            let _ = std::fs::remove_file(&path);
+            None
+        }
+    }
+}
+
+fn write_compiled_cache(
+    artifact_h: [u8; 32],
+    modules: &CachedCompiledModules,
+) -> anyhow::Result<()> {
+    let Some(path) = compiled_cache_file_path(artifact_h) else {
+        return Ok(());
+    };
+    let Some(dir) = path.parent() else {
+        return Ok(());
+    };
+    std::fs::create_dir_all(dir)?;
+    let bytes = encode_compiled_cache_blob(artifact_h, modules)?;
+
+    let mut i: u64 = 0;
+    let tmp = loop {
+        let cand = dir.join(format!(
+            ".tmp-{}-{}-{}",
+            hex32(artifact_h),
+            std::process::id(),
+            i
+        ));
+        i = i.saturating_add(1);
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&cand)
+        {
+            Ok(mut f) => {
+                use std::io::Write;
+                f.write_all(&bytes)?;
+                let _ = f.sync_all();
+                break cand;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e.into()),
+        }
+    };
+    std::fs::rename(&tmp, &path)?;
+    #[cfg(unix)]
+    {
+        let d = std::fs::File::open(dir)?;
+        let _ = d.sync_all();
+    }
+    Ok(())
+}
+
 /// Load the self-hosted CoreForm toolchain v1 from an artifact file.
 ///
 /// Artifact schema (CoreForm map):
@@ -325,6 +558,31 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         }
     }
 
+    let manifest = toolchain_manifest()?;
+    if let Some(compiled_in_order) = try_read_compiled_cache(artifact_h, manifest) {
+        let out = with_trusted_bootstrap_limits(ctx, |ctx| {
+            for (path, module) in &compiled_in_order {
+                eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
+            }
+            for sym in &manifest.required_symbols {
+                if env.get(sym).is_none() {
+                    return Err(anyhow::anyhow!(
+                        "compiled cache missing required manifest symbol: {sym}"
+                    ));
+                }
+            }
+            Ok(())
+        });
+        if out.is_ok() {
+            let cache = ARTIFACT_COMPILED_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
+            cache
+                .lock()
+                .expect("artifact cache lock")
+                .insert(artifact_h, compiled_in_order);
+            return out;
+        }
+    }
+
     let term = parse_term(src).map_err(|e| anyhow::anyhow!("artifact parse: {e}"))?;
     let root = match term {
         Term::Map(m) => m,
@@ -359,7 +617,6 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         _ => return Err(anyhow::anyhow!("artifact missing :modules vector")),
     };
 
-    let manifest = toolchain_manifest()?;
     let expected_paths: BTreeSet<&str> = manifest.module_paths.iter().map(String::as_str).collect();
     let mut seen = BTreeSet::new();
     let mut compiled_by_path: BTreeMap<String, CompiledModule> = BTreeMap::new();
@@ -497,7 +754,8 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         cache
             .lock()
             .expect("artifact cache lock")
-            .insert(artifact_h, compiled_in_order);
+            .insert(artifact_h, compiled_in_order.clone());
+        let _ = write_compiled_cache(artifact_h, &compiled_in_order);
     }
     out
 }
@@ -585,4 +843,40 @@ pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> 
         SelfhostBootstrapMode::ArtifactOnly,
         None,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gc_kernel::{compile_module, eval_compiled_module};
+
+    #[test]
+    fn compiled_cache_blob_roundtrip_preserves_modules() {
+        let artifact_h = [7u8; 32];
+        let manifest = ToolchainManifest {
+            module_paths: vec!["selfhost/a.gc".to_string(), "selfhost/b.gc".to_string()],
+            required_symbols: Vec::new(),
+        };
+        let m1 = compile_module(&parse_module("(def selfhost/a::x 11)\nselfhost/a::x\n").unwrap())
+            .unwrap();
+        let m2 = compile_module(&parse_module("(def selfhost/b::x 31)\nselfhost/b::x\n").unwrap())
+            .unwrap();
+        let mods = vec![
+            (manifest.module_paths[0].clone(), m1),
+            (manifest.module_paths[1].clone(), m2),
+        ];
+
+        let blob = encode_compiled_cache_blob(artifact_h, &mods).unwrap();
+        let decoded = decode_compiled_cache_blob(&blob, artifact_h, &manifest).unwrap();
+        assert_eq!(decoded.len(), 2);
+        assert_eq!(decoded[0].0, "selfhost/a.gc");
+        assert_eq!(decoded[1].0, "selfhost/b.gc");
+
+        let mut ctx = EvalCtx::new();
+        let mut env = Env::empty();
+        let out1 = eval_compiled_module(&mut ctx, &mut env, &decoded[0].1).unwrap();
+        let out2 = eval_compiled_module(&mut ctx, &mut env, &decoded[1].1).unwrap();
+        assert_eq!(out1.debug_repr(), "11");
+        assert_eq!(out2.debug_repr(), "31");
+    }
 }

@@ -4,7 +4,10 @@ mod error;
 mod eval;
 mod value;
 
-pub use compiled::{CompiledModule, compile_module, eval_compiled_module, eval_module_compiled};
+pub use compiled::{
+    CompiledModule, compile_module, decode_compiled_module_blob, encode_compiled_module_blob,
+    eval_compiled_module, eval_module_compiled,
+};
 pub use env::{Env, EnvFrame};
 pub use error::{KernelError, KernelErrorKind};
 pub use eval::{

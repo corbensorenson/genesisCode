@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 Completed items from the prior plan were intentionally removed. This file now tracks only unresolved blockers and high-impact upgrades.
 
-Open checklist items: 28
+Open checklist items: 26
 
 ## Self-Hosted v1 Exit Criteria
 - [ ] All production command semantics are owned by `.gc` contracts.
@@ -65,8 +65,8 @@ Open checklist items: 28
 - [x] Add incremental obligation cache keyed by `(module hashes, caps policy hash, obligation config)` to skip unchanged work.
 
 ### C3. Selfhost Frontend Startup
-- [ ] Add cross-process cache for compiled selfhost artifact modules (not only in-process cache) to reduce repeated parse/canonicalize/compile on CLI invocations.
-- [ ] Add warm startup mode for CLI/daemonized execution to amortize toolchain bootstrap across command bursts used by AI agents.
+- [x] Add cross-process cache for compiled selfhost artifact modules (not only in-process cache) to reduce repeated parse/canonicalize/compile on CLI invocations.
+- [x] Add warm startup mode for CLI/daemonized execution to amortize toolchain bootstrap across command bursts used by AI agents.
 
 ### C4. Test/CI Iteration Speed
 - [x] Split integration tests into fast/standard/full lanes and gate expensive parity matrices behind explicit CI profile.
