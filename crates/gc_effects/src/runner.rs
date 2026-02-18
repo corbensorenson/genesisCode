@@ -1145,6 +1145,100 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
+        "core/pkg-low::load-lock" => {
+            let lock_s = match payload_pkg_lock(payload) {
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let base_dir = effective_base_dir(pol)?;
+            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let l = match gc_pkg::GenesisLock::load(&lock_path) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-lock",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let mut reqs: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for (name, r) in &l.requirements {
+                let mut mm = BTreeMap::new();
+                mm.insert(
+                    TermOrdKey(Term::symbol(":selector")),
+                    Term::Str(r.selector.clone()),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":update-policy")),
+                    Term::Symbol(match r.update_policy {
+                        gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
+                        gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
+                    }),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":registry")),
+                    r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                reqs.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
+            }
+
+            let mut locked: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+            for (name, le) in &l.locked {
+                let mut mm = BTreeMap::new();
+                mm.insert(
+                    TermOrdKey(Term::symbol(":commit")),
+                    le.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":snapshot")),
+                    Term::Str(le.snapshot.clone()),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":registry")),
+                    le.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":source_selector")),
+                    if le.source_selector.is_empty() {
+                        Term::Nil
+                    } else {
+                        Term::Str(le.source_selector.clone())
+                    },
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":resolved-ref")),
+                    le.resolved_ref.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":exports_hash")),
+                    le.exports_hash.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                locked.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
+            }
+
+            let mut m = BTreeMap::new();
+            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+            m.insert(TermOrdKey(Term::symbol(":workspace")), Term::Str(l.workspace));
+            m.insert(TermOrdKey(Term::symbol(":policy")), Term::Str(l.policy));
+            m.insert(TermOrdKey(Term::symbol(":requirements")), Term::Map(reqs));
+            m.insert(TermOrdKey(Term::symbol(":locked")), Term::Map(locked));
+            Ok(Value::Data(Term::Map(m)))
+        }
+
         "core/pkg::info" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,

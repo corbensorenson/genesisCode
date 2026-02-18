@@ -12,6 +12,10 @@ fn write_caps(dir: &Path) -> PathBuf {
 allow = [
   "core/store::put",
   "core/store::get",
+  "core/vcs-low::diff-terms",
+  "core/vcs-low::apply-patch",
+  "io/fs::read",
+  "io/fs::write",
   "core/vcs::diff",
   "core/vcs::apply"
 ]
@@ -27,6 +31,13 @@ base_dir = "."
 create_dirs = true
 
 [op."core/vcs::apply"]
+base_dir = "."
+create_dirs = true
+
+[op."io/fs::read"]
+base_dir = "."
+
+[op."io/fs::write"]
 base_dir = "."
 create_dirs = true
 "#,

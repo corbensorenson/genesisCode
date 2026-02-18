@@ -45,12 +45,14 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - [x] Move `core/vcs::blame` and `core/vcs::why` provenance semantics into `.gc` (`core/cli::vcs-blame-program`, `core/cli::vcs-why-program`) using `core/store::get` / `core/refs::list`.
   - [x] Add native + WASI parity tests for `core/vcs::diff` and `core/vcs::apply` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/vcs::merge3` and `core/vcs::resolve-conflict` frontend outputs to lock extraction behavior before migration.
-  - [x] Add low-level host seam ops `core/vcs-low::{diff-terms,apply-patch}` and route selfhost `vcs diff/apply` hash-based (no `--out`) path through `.gc` contracts first, with deterministic fallback to compatibility ops.
+  - [x] Add low-level host seam ops `core/vcs-low::{diff-terms,apply-patch}` and route selfhost `vcs diff/apply` path through `.gc` contracts.
   - [x] Add native + WASI selfhost tests proving `vcs diff/apply` works with low-level caps only (`core/vcs-low::*` + `core/store::*`), reducing selfhost dependence on `core/vcs::{diff,apply}`.
+  - [x] Align merge/resolve contract test capability allowlists with low-level selfhost VCS seams used by `vcs apply`.
   - [x] Lock and document the remaining Rust-owned high-level op inventory (`core/vcs::{diff,apply,merge3,resolve-conflict}` and `core/pkg::*`) as the current extraction queue.
-  - [ ] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
+  - [x] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
   - [ ] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
   - [ ] Move `core/pkg::{init,add,list,info,lock,update,install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [x] Move `core/pkg::{list,info}` semantics into `.gc` contracts via `core/pkg-low::load-lock` and lock native+WASI caps/tests to the low-level seam.
   - [x] Add native + WASI parity tests for `core/pkg::{add,list,info}` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/pkg::lock` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/pkg::update` frontend outputs to lock extraction behavior before migration.

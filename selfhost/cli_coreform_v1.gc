@@ -923,27 +923,6 @@
                                   ((core/str::concat "symbol not found in snapshot: ") sym)))))))))))))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-why-program expects map"))))
 
-(def core/cli::error-code
-  (fn (err)
-    (if (core/error::is? err)
-      (let ((payload (core/error::payload err)))
-        (if (core/cli::map? payload)
-          (let ((code ((core/map::get payload) (quote :error/code))))
-            (if (core/cli::str? code) code nil))
-          nil))
-      nil)))
-
-(def core/cli::caps-missing-op?
-  (fn (err)
-    (let ((code (core/cli::error-code err)))
-      (if (core/cli::str? code)
-        (if ((core/eq? code) "core/caps/denied")
-          true
-          (if ((core/eq? code) "core/caps/not-supported")
-            true
-            ((core/eq? code) "core/caps/unknown-op")))
-        false))))
-
 (def core/cli::store-put-hash
   (fn (resp)
     (if (core/cli::map? resp)
@@ -964,6 +943,101 @@
           artifact))
       ((core/error::make2 "core/store/bad-response") "core/store::get returned non-map"))))
 
+(def core/cli::vcs-read-term-file-program
+  (fn (path)
+    (((core/effect::perform (quote io/fs::read)) {:path path})
+      (fn (read-r)
+        (if (core/cli::is-error read-r)
+          (core/effect::pure read-r)
+          (let ((src (core/str::from-utf8 read-r)))
+            (if (core/cli::is-error src)
+              (core/effect::pure
+                ((core/error::make2 "core/vcs/bad-payload")
+                  "vcs file content must be utf-8 CoreForm"))
+              (core/effect::pure (selfhost/parse::parse-term src)))))))))
+
+(def core/cli::vcs-write-term-file-program
+  (fn (path)
+    (fn (term)
+      (let ((src (selfhost/printer::print-term term)))
+        (if (core/cli::is-error src)
+          (core/effect::pure src)
+          (
+            ((core/effect::perform (quote io/fs::write))
+              {
+                :data (core/str::to-utf8 src)
+                :path path})
+            (fn (write-r)
+              (if (core/cli::is-error write-r) (core/effect::pure write-r) (core/effect::pure nil)))))))))
+
+(def core/cli::vcs-write-out-if-needed-program
+  (fn (out)
+    (fn (term)
+      (fn (result)
+        (if (core/list::is-nil? out)
+          (core/effect::pure result)
+          ((core/effect::bind ((core/cli::vcs-write-term-file-program out) term))
+            (fn (write-r)
+              (if (core/cli::is-error write-r)
+                (core/effect::pure write-r)
+                (core/effect::pure result)))))))))
+
+(def core/cli::vcs-resolve-patch-term-program
+  (fn (patch)
+    (if (core/cli::hash-hex? patch)
+      ((core/effect::bind (core/cli::store-get-program patch))
+        (fn (patch-resp)
+          (if (core/cli::is-error patch-resp)
+            (core/effect::pure patch-resp)
+            (core/effect::pure (core/cli::store-get-artifact patch-resp)))))
+      (if (core/cli::str? patch)
+        (core/cli::vcs-read-term-file-program patch)
+        (core/effect::pure
+          ((core/error::make2 "core/vcs/bad-payload") ":patch must be a hash or file path"))))))
+
+(def core/cli::vcs-load-hash-term-program
+  (fn (hash)
+    ((core/effect::bind (core/cli::store-get-program hash))
+      (fn (resp)
+        (if (core/cli::is-error resp)
+          (core/effect::pure resp)
+          (core/effect::pure (core/cli::store-get-artifact resp)))))))
+
+(def core/cli::vcs-diff-low-program
+  (fn (base)
+    (fn (to)
+      ((core/effect::bind (core/cli::vcs-load-hash-term-program base))
+        (fn (base-t)
+          (if (core/cli::is-error base-t)
+            (core/effect::pure base-t)
+            ((core/effect::bind (core/cli::vcs-load-hash-term-program to))
+              (fn (to-t)
+                (if (core/cli::is-error to-t)
+                  (core/effect::pure to-t)
+                  (((core/effect::perform (quote core/vcs-low::diff-terms)) {:base-term base-t :to-term to-t})
+                    (fn (low-r)
+                      (if (core/cli::is-error low-r)
+                        (core/effect::pure low-r)
+                        (if (core/cli::map? low-r)
+                          (core/effect::pure low-r)
+                          (core/effect::pure
+                            ((core/error::make2 "core/type-error")
+                              "core/vcs-low::diff-terms returned non-map")))))))))))))))
+
+(def core/cli::vcs-apply-low-program
+  (fn (base-term)
+    (fn (patch-term)
+      (
+        ((core/effect::perform (quote core/vcs-low::apply-patch))
+          {:base-term base-term :patch-term patch-term})
+        (fn (low-r)
+          (if (core/cli::is-error low-r)
+            (core/effect::pure low-r)
+            (if (core/cli::map? low-r)
+              (core/effect::pure low-r)
+              (core/effect::pure
+                ((core/error::make2 "core/type-error") "core/vcs-low::apply-patch returned non-map")))))))))
+
 (def core/cli::vcs-diff-program
   (fn (req)
     (if (core/cli::map? req)
@@ -973,74 +1047,61 @@
           (store0 ((core/map::get req) (quote :store))))
         (let ((store (if (core/cli::bool? store0) store0 true)))
           (if (if (core/cli::hash-hex? base) (core/cli::hash-hex? to) false)
-            (if (core/list::is-nil? out)
-              ((core/effect::bind (core/cli::store-get-program base))
-                (fn (base-resp)
-                  (if (core/cli::is-error base-resp)
-                    (core/effect::pure base-resp)
-                    ((core/effect::bind (core/cli::store-get-program to))
-                      (fn (to-resp)
-                        (if (core/cli::is-error to-resp)
-                          (core/effect::pure to-resp)
-                          (let ((base-t (core/cli::store-get-artifact base-resp)))
-                            (if (core/cli::is-error base-t)
-                              (core/effect::pure base-t)
-                              (let ((to-t (core/cli::store-get-artifact to-resp)))
-                                (if (core/cli::is-error to-t)
-                                  (core/effect::pure to-t)
-                                  (((core/effect::perform (quote core/vcs-low::diff-terms)) {:base-term base-t :to-term to-t})
-                                    (fn (low-r)
-                                      (if (core/cli::caps-missing-op? low-r)
-                                        (
-                                          ((core/effect::perform (quote core/vcs::diff))
-                                            {
-                                              :base base
-                                              :store store
-                                              :to to})
-                                          (fn (r) (core/effect::pure r)))
-                                        (if (core/cli::is-error low-r)
-                                          (core/effect::pure low-r)
-                                          (if (core/cli::map? low-r)
-                                            (let
-                                              ((patch-term ((core/map::get low-r) (quote :patch-term)))
-                                                (values ((core/map::get low-r) (quote :values))))
-                                              (if store
-                                                ((core/effect::bind (core/cli::store-put-program patch-term))
-                                                  (fn (put-resp)
-                                                    (if (core/cli::is-error put-resp)
-                                                      (core/effect::pure put-resp)
-                                                      (let
-                                                        ((patch-h (core/cli::store-put-hash put-resp)))
-                                                        (if (core/cli::is-error patch-h)
-                                                          (core/effect::pure patch-h)
-                                                          (core/effect::pure
-                                                            {
-                                                              :ok true
-                                                              :patch patch-h
-                                                              :values values}))))))
-                                                (let
-                                                  ((patch-h (selfhost/hash::hash-term patch-term)))
-                                                  (if (core/cli::is-error patch-h)
-                                                    (core/effect::pure patch-h)
-                                                    (core/effect::pure
-                                                      {
-                                                        :ok true
-                                                        :patch patch-h
-                                                        :values values})))))
-                                            (core/effect::pure
-                                              ((core/error::make2 "core/type-error")
-                                                "core/vcs-low::diff-terms returned non-map")))))))))))))))))
-              (
-                ((core/effect::perform (quote core/vcs::diff))
-                  {
-                    :base base
-                    :out out
-                    :store store
-                    :to to})
-                (fn (r) (core/effect::pure r))))
+            (if (if (core/list::is-nil? out) true (core/cli::str? out))
+              ((core/effect::bind ((core/cli::vcs-diff-low-program base) to))
+                (fn (low-r)
+                  (if (core/cli::is-error low-r)
+                    (core/effect::pure low-r)
+                    (let
+                      ((patch-term ((core/map::get low-r) (quote :patch-term)))
+                        (values ((core/map::get low-r) (quote :values))))
+                      (if store
+                        ((core/effect::bind (core/cli::store-put-program patch-term))
+                          (fn (put-resp)
+                            (if (core/cli::is-error put-resp)
+                              (core/effect::pure put-resp)
+                              (let ((patch-h (core/cli::store-put-hash put-resp)))
+                                (if (core/cli::is-error patch-h)
+                                  (core/effect::pure patch-h)
+                                  (((core/cli::vcs-write-out-if-needed-program out) patch-term)
+                                    {
+                                      :ok true
+                                      :patch patch-h
+                                      :values values}))))))
+                        (let ((patch-h (selfhost/hash::hash-term patch-term)))
+                          (if (core/cli::is-error patch-h)
+                            (core/effect::pure patch-h)
+                            (((core/cli::vcs-write-out-if-needed-program out) patch-term)
+                              {
+                                :ok true
+                                :patch patch-h
+                                :values values}))))))))
+              (core/effect::pure
+                ((core/error::make2 "core/type-error")
+                  "core/cli::vcs-diff-program expects :out to be string or nil")))
             (core/effect::pure
               ((core/error::make2 "core/vcs/bad-payload") ":base/:to must be 64-hex hashes")))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-diff-program expects map"))))
+
+(def core/cli::vcs-apply-finish-program
+  (fn (snapshot-term)
+    (fn (store)
+      (fn (out)
+        (if store
+          ((core/effect::bind (core/cli::store-put-program snapshot-term))
+            (fn (put-resp)
+              (if (core/cli::is-error put-resp)
+                (core/effect::pure put-resp)
+                (let ((snapshot-h (core/cli::store-put-hash put-resp)))
+                  (if (core/cli::is-error snapshot-h)
+                    (core/effect::pure snapshot-h)
+                    (((core/cli::vcs-write-out-if-needed-program out) snapshot-term)
+                      {:ok true :snapshot snapshot-h}))))))
+          (let ((snapshot-h (selfhost/hash::hash-term snapshot-term)))
+            (if (core/cli::is-error snapshot-h)
+              (core/effect::pure snapshot-h)
+              (((core/cli::vcs-write-out-if-needed-program out) snapshot-term)
+                {:ok true :snapshot snapshot-h}))))))))
 
 (def core/cli::vcs-apply-program
   (fn (req)
@@ -1050,73 +1111,31 @@
           (out ((core/map::get req) (quote :out)))
           (store0 ((core/map::get req) (quote :store))))
         (let ((store (if (core/cli::bool? store0) store0 true)))
-          (if (if (core/cli::hash-hex? base) (core/cli::hash-hex? patch) false)
-            (if (core/list::is-nil? out)
-              ((core/effect::bind (core/cli::store-get-program base))
-                (fn (base-resp)
-                  (if (core/cli::is-error base-resp)
-                    (core/effect::pure base-resp)
-                    ((core/effect::bind (core/cli::store-get-program patch))
-                      (fn (patch-resp)
-                        (if (core/cli::is-error patch-resp)
-                          (core/effect::pure patch-resp)
-                          (let ((base-t (core/cli::store-get-artifact base-resp)))
-                            (if (core/cli::is-error base-t)
-                              (core/effect::pure base-t)
-                              (let ((patch-t (core/cli::store-get-artifact patch-resp)))
-                                (if (core/cli::is-error patch-t)
-                                  (core/effect::pure patch-t)
-                                  (((core/effect::perform (quote core/vcs-low::apply-patch)) {:base-term base-t :patch-term patch-t})
-                                    (fn (low-r)
-                                      (if (core/cli::caps-missing-op? low-r)
-                                        (
-                                          ((core/effect::perform (quote core/vcs::apply))
-                                            {
-                                              :base base
-                                              :patch patch
-                                              :store store})
-                                          (fn (r) (core/effect::pure r)))
-                                        (if (core/cli::is-error low-r)
-                                          (core/effect::pure low-r)
-                                          (if (core/cli::map? low-r)
-                                            (let
-                                              ((snapshot-term ((core/map::get low-r) (quote :snapshot-term))))
-                                              (if store
-                                                ((core/effect::bind (core/cli::store-put-program snapshot-term))
-                                                  (fn (put-resp)
-                                                    (if (core/cli::is-error put-resp)
-                                                      (core/effect::pure put-resp)
-                                                      (let
-                                                        ((snapshot-h (core/cli::store-put-hash put-resp)))
-                                                        (if (core/cli::is-error snapshot-h)
-                                                          (core/effect::pure snapshot-h)
-                                                          (core/effect::pure
-                                                            {:ok true :snapshot snapshot-h}))))))
-                                                (let
-                                                  ((snapshot-h (selfhost/hash::hash-term snapshot-term)))
-                                                  (if (core/cli::is-error snapshot-h)
-                                                    (core/effect::pure snapshot-h)
-                                                    (core/effect::pure
-                                                      {:ok true :snapshot snapshot-h})))))
-                                            (core/effect::pure
-                                              ((core/error::make2 "core/type-error")
-                                                "core/vcs-low::apply-patch returned non-map")))))))))))))))))
-              (
-                ((core/effect::perform (quote core/vcs::apply))
-                  {
-                    :base base
-                    :out out
-                    :patch patch
-                    :store store})
-                (fn (r) (core/effect::pure r))))
-            (
-              ((core/effect::perform (quote core/vcs::apply))
-                {
-                  :base base
-                  :out out
-                  :patch patch
-                  :store store})
-              (fn (r) (core/effect::pure r))))))
+          (if (core/cli::hash-hex? base)
+            (if (core/cli::str? patch)
+              (if (if (core/list::is-nil? out) true (core/cli::str? out))
+                ((core/effect::bind (core/cli::vcs-load-hash-term-program base))
+                  (fn (base-t)
+                    (if (core/cli::is-error base-t)
+                      (core/effect::pure base-t)
+                      ((core/effect::bind (core/cli::vcs-resolve-patch-term-program patch))
+                        (fn (patch-t)
+                          (if (core/cli::is-error patch-t)
+                            (core/effect::pure patch-t)
+                            ((core/effect::bind ((core/cli::vcs-apply-low-program base-t) patch-t))
+                              (fn (low-r)
+                                (if (core/cli::is-error low-r)
+                                  (core/effect::pure low-r)
+                                  (((core/cli::vcs-apply-finish-program ((core/map::get low-r) (quote :snapshot-term))) store)
+                                    out))))))))))
+                (core/effect::pure
+                  ((core/error::make2 "core/type-error")
+                    "core/cli::vcs-apply-program expects :out to be string or nil")))
+              (core/effect::pure
+                ((core/error::make2 "core/type-error")
+                  "core/cli::vcs-apply-program expects :patch as string")))
+            (core/effect::pure
+              ((core/error::make2 "core/vcs/bad-payload") ":base must be 64-hex hash")))))
       ((core/error::make2 "core/type-error") "core/cli::vcs-apply-program expects map"))))
 
 (def core/cli::vcs-merge3-program
@@ -1244,25 +1263,134 @@
         (fn (r) (core/effect::pure r)))
       ((core/error::make2 "core/type-error") "core/cli::pkg-verify-program expects map"))))
 
+(def core/cli::pkg-load-lock-program
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg-low::load-lock)) {:lock lock})
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::pkg-list-requirements
+  (fn (reqs)
+    (if (core/cli::map? reqs)
+      (let ((entries (core/cli::map-entries-vec reqs)))
+        ((((core/cli::pkg-list-requirements2 entries) (core/vec::len entries)) 0) []))
+      [])))
+
+(def core/cli::pkg-list-requirements2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli::pkg-list-requirements2 entries) n) ((core/int::add i) 1))))
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (r ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? r) false)
+                        (next
+                          ((core/vec::push out)
+                            {
+                              :name name
+                              :registry ((core/map::get r) (quote :registry))
+                              :selector ((core/map::get r) (quote :selector))
+                              :update-policy ((core/map::get r) (quote :update-policy))}))
+                        (next out)))
+                    (next out)))))))))))
+
+(def core/cli::pkg-list-locked
+  (fn (locked)
+    (if (core/cli::map? locked)
+      (let ((entries (core/cli::map-entries-vec locked)))
+        ((((core/cli::pkg-list-locked2 entries) (core/vec::len entries)) 0) []))
+      [])))
+
+(def core/cli::pkg-list-locked2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli::pkg-list-locked2 entries) n) ((core/int::add i) 1))))
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (l ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? l) false)
+                        (next
+                          ((core/vec::push out)
+                            {
+                              :commit ((core/map::get l) (quote :commit))
+                              :name name
+                              :snapshot ((core/map::get l) (quote :snapshot))}))
+                        (next out)))
+                    (next out)))))))))))
+
+(def core/cli::pkg-info-requirement-view
+  (fn (r)
+    (if (core/cli::map? r)
+      {
+        :registry ((core/map::get r) (quote :registry))
+        :selector ((core/map::get r) (quote :selector))
+        :update-policy ((core/map::get r) (quote :update-policy))}
+      nil)))
+
+(def core/cli::pkg-info-locked-view
+  (fn (l)
+    (if (core/cli::map? l)
+      {
+        :commit ((core/map::get l) (quote :commit))
+        :resolved-ref ((core/map::get l) (quote :resolved-ref))
+        :snapshot ((core/map::get l) (quote :snapshot))}
+      nil)))
+
 (def core/cli::pkg-list-program
   (fn (req)
     (if (core/cli::map? req)
-      (
-        ((core/effect::perform (quote core/pkg::list))
-          {
-            :lock ((core/map::get req) (quote :lock))})
-        (fn (r) (core/effect::pure r)))
+      (let ((lock ((core/map::get req) (quote :lock))))
+        ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+          (fn (low-r)
+            (if (core/cli::is-error low-r)
+              (core/effect::pure low-r)
+              (if (core/cli::map? low-r)
+                (core/effect::pure
+                  {
+                    :lock ((core/map::get low-r) (quote :lock))
+                    :locked (core/cli::pkg-list-locked ((core/map::get low-r) (quote :locked)))
+                    :ok true
+                    :requirements
+                      (core/cli::pkg-list-requirements ((core/map::get low-r) (quote :requirements)))})
+                (core/effect::pure
+                  ((core/error::make2 "core/type-error") "core/pkg-low::load-lock returned non-map")))))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-list-program expects map"))))
 
 (def core/cli::pkg-info-program
   (fn (req)
     (if (core/cli::map? req)
-      (
-        ((core/effect::perform (quote core/pkg::info))
-          {
-            :lock ((core/map::get req) (quote :lock))
-            :name ((core/map::get req) (quote :name))})
-        (fn (r) (core/effect::pure r)))
+      (let ((lock ((core/map::get req) (quote :lock))) (name ((core/map::get req) (quote :name))))
+        (if (core/cli::str? name)
+          ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+            (fn (low-r)
+              (if (core/cli::is-error low-r)
+                (core/effect::pure low-r)
+                (if (core/cli::map? low-r)
+                  (let ((reqs ((core/map::get low-r) (quote :requirements))))
+                    (let ((locked ((core/map::get low-r) (quote :locked))))
+                      (core/effect::pure
+                        {
+                          :locked
+                            (core/cli::pkg-info-locked-view
+                              (if (core/cli::map? locked) ((core/map::get locked) name) nil))
+                          :name name
+                          :ok true
+                          :requirement
+                            (core/cli::pkg-info-requirement-view
+                              (if (core/cli::map? reqs) ((core/map::get reqs) name) nil))})))
+                  (core/effect::pure
+                    ((core/error::make2 "core/type-error")
+                      "core/pkg-low::load-lock returned non-map"))))))
+          (core/effect::pure ((core/error::make2 "core/pkg/bad-payload") ":name must be string"))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-info-program expects map"))))
 
 (def core/cli::pkg-snapshot-program

@@ -15,7 +15,9 @@ allow = [
   "core/store::get",
   "core/vcs::merge3",
   "core/vcs::resolve-conflict",
-  "core/vcs::apply"
+  "core/vcs::apply",
+  "core/vcs-low::diff-terms",
+  "core/vcs-low::apply-patch"
 ]
 
 [store]
