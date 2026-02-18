@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
@@ -8,19 +10,53 @@ fn map_get<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> 
     m.get(&TermOrdKey(Term::symbol(k)))
 }
 
-fn artifact_summary_counts(v: &JsonValue) -> (u64, u64) {
-    let data = v
-        .get("data")
-        .expect("json envelope has data object for selfhost-artifact");
-    let supported = data
-        .get("stage2_supported_modules")
-        .and_then(JsonValue::as_u64)
-        .expect("stage2_supported_modules");
-    let validated = data
-        .get("stage2_validated_modules")
-        .and_then(JsonValue::as_u64)
-        .expect("stage2_validated_modules");
-    (supported, validated)
+struct BaselineArtifact {
+    bytes: Vec<u8>,
+    supported: u64,
+    validated: u64,
+}
+
+fn baseline() -> &'static BaselineArtifact {
+    static BASELINE: OnceLock<BaselineArtifact> = OnceLock::new();
+    BASELINE.get_or_init(|| {
+        let td = tempdir().unwrap();
+        let artifact = td.path().join("baseline.gc");
+
+        cargo_bin_cmd!("genesis_wasi")
+            .args(["selfhost-artifact", "--out"])
+            .arg(&artifact)
+            .assert()
+            .success();
+
+        let artifact_s = std::fs::read_to_string(&artifact).unwrap();
+        let term = parse_term(&artifact_s).unwrap();
+        let Term::Map(root) = term else {
+            panic!("artifact must be a map");
+        };
+        let modules = map_get(&root, ":modules").expect("modules");
+        let Term::Vector(mods) = modules else {
+            panic!(":modules must be vector");
+        };
+        let mut supported = 0u64;
+        let mut validated = 0u64;
+        for m in mods {
+            let Term::Map(mm) = m else { continue };
+            let sup = matches!(map_get(mm, ":stage2-supported"), Some(Term::Bool(true)));
+            let ok = matches!(map_get(mm, ":stage2-ok"), Some(Term::Bool(true)));
+            if sup {
+                supported += 1;
+                if ok {
+                    validated += 1;
+                }
+            }
+        }
+
+        BaselineArtifact {
+            bytes: artifact_s.into_bytes(),
+            supported,
+            validated,
+        }
+    })
 }
 
 #[test]
@@ -37,20 +73,10 @@ fn selfhost_artifact_help_exposes_stage2_threshold_flags() {
 #[test]
 fn selfhost_artifact_wasi_thresholds_accept_exact_observed_stage2_coverage() {
     let td = tempdir().unwrap();
-    let baseline_artifact = td.path().join("baseline.gc");
     let gated_artifact = td.path().join("gated.gc");
 
-    let baseline_out = cargo_bin_cmd!("genesis_wasi")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&baseline_artifact)
-        .arg("--json")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let baseline_json: JsonValue = serde_json::from_slice(&baseline_out).unwrap();
-    let (supported, validated) = artifact_summary_counts(&baseline_json);
+    let supported = baseline().supported;
+    let validated = baseline().validated;
 
     let gated_out = cargo_bin_cmd!("genesis_wasi")
         .args([
@@ -93,20 +119,10 @@ fn selfhost_artifact_wasi_thresholds_accept_exact_observed_stage2_coverage() {
 #[test]
 fn selfhost_artifact_wasi_thresholds_fail_when_minimums_exceed_observed_coverage() {
     let td = tempdir().unwrap();
-    let baseline_artifact = td.path().join("baseline.gc");
     let failing_artifact = td.path().join("failing.gc");
 
-    let baseline_out = cargo_bin_cmd!("genesis_wasi")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&baseline_artifact)
-        .arg("--json")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let baseline_json: JsonValue = serde_json::from_slice(&baseline_out).unwrap();
-    let (supported, validated) = artifact_summary_counts(&baseline_json);
+    let supported = baseline().supported;
+    let validated = baseline().validated;
 
     let failing_out = cargo_bin_cmd!("genesis_wasi")
         .args([
@@ -164,17 +180,8 @@ fn selfhost_artifact_wasi_thresholds_fail_when_minimums_exceed_observed_coverage
 
 #[test]
 fn selfhost_artifact_wasi_includes_cli_core_module_with_passing_stage1_gate() {
-    let td = tempdir().unwrap();
-    let artifact = td.path().join("selfhost_toolchain.gc");
-
-    cargo_bin_cmd!("genesis_wasi")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-
-    let artifact_s = std::fs::read_to_string(&artifact).unwrap();
-    let term = parse_term(&artifact_s).unwrap();
+    let artifact_s = std::str::from_utf8(&baseline().bytes).expect("utf-8 baseline artifact");
+    let term = parse_term(artifact_s).unwrap();
     let Term::Map(root) = term else {
         panic!("artifact must be map");
     };

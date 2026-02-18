@@ -13,31 +13,52 @@ fn map_get<'a>(m: &'a std::collections::BTreeMap<TermOrdKey, Term>, k: &str) -> 
 
 struct BaselineArtifact {
     bytes: Vec<u8>,
-    json: JsonValue,
+    supported: u64,
+    validated: u64,
 }
 
 fn baseline() -> &'static BaselineArtifact {
     static BASELINE: OnceLock<BaselineArtifact> = OnceLock::new();
     BASELINE.get_or_init(|| {
-        // Persist this directory for the duration of the test binary so other tests can reuse
-        // the expensive `selfhost-artifact` build without rebuilding.
-        let td = tempdir().unwrap();
-        let dir = td.keep();
-        let artifact = dir.join("baseline_toolchain.gc");
-
-        let out = cargo_bin_cmd!("genesis")
-            .args(["selfhost-artifact", "--out"])
-            .arg(&artifact)
-            .arg("--json")
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
-        let json: JsonValue = serde_json::from_slice(&out).unwrap();
+        // Use the repo toolchain artifact as the baseline to keep test iteration fast.
+        // If it ever diverges from a fresh rebuild, the determinism test will fail and force
+        // the repo artifact to be updated.
+        let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .expect("workspace root");
+        let artifact = repo_root.join("selfhost").join("toolchain.gc");
+        assert!(artifact.is_file(), "missing {}", artifact.display());
         let bytes = fs::read(&artifact).unwrap();
 
-        BaselineArtifact { bytes, json }
+        let s = std::str::from_utf8(&bytes).expect("artifact is utf-8 text");
+        let term = parse_term(s).unwrap();
+        let Term::Map(root) = term else {
+            panic!("artifact must be a map");
+        };
+        let modules = map_get(&root, ":modules").expect("modules");
+        let Term::Vector(mods) = modules else {
+            panic!(":modules must be vector");
+        };
+        let mut supported = 0u64;
+        let mut validated = 0u64;
+        for m in mods {
+            let Term::Map(mm) = m else { continue };
+            let sup = matches!(map_get(mm, ":stage2-supported"), Some(Term::Bool(true)));
+            let ok = matches!(map_get(mm, ":stage2-ok"), Some(Term::Bool(true)));
+            if sup {
+                supported += 1;
+                if ok {
+                    validated += 1;
+                }
+            }
+        }
+
+        BaselineArtifact {
+            bytes,
+            supported,
+            validated,
+        }
     })
 }
 
@@ -236,27 +257,13 @@ fn selfhost_artifact_tampered_forms_are_rejected_even_if_module_hash_is_unchange
         .code(1);
 }
 
-fn artifact_summary_counts(v: &JsonValue) -> (u64, u64) {
-    let data = v
-        .get("data")
-        .expect("json envelope has data object for selfhost-artifact");
-    let supported = data
-        .get("stage2_supported_modules")
-        .and_then(JsonValue::as_u64)
-        .expect("stage2_supported_modules");
-    let validated = data
-        .get("stage2_validated_modules")
-        .and_then(JsonValue::as_u64)
-        .expect("stage2_validated_modules");
-    (supported, validated)
-}
-
 #[test]
 fn selfhost_artifact_thresholds_accept_exact_observed_stage2_coverage() {
     let td = tempdir().unwrap();
     let gated_artifact = td.path().join("gated.gc");
 
-    let (supported, validated) = artifact_summary_counts(&baseline().json);
+    let supported = baseline().supported;
+    let validated = baseline().validated;
 
     let gated_out = cargo_bin_cmd!("genesis")
         .args([
@@ -306,7 +313,8 @@ fn selfhost_artifact_thresholds_fail_when_minimums_exceed_observed_stage2_covera
     let td = tempdir().unwrap();
     let failing_artifact = td.path().join("failing.gc");
 
-    let (supported, validated) = artifact_summary_counts(&baseline().json);
+    let supported = baseline().supported;
+    let validated = baseline().validated;
 
     let failing_out = cargo_bin_cmd!("genesis")
         .args([
@@ -369,17 +377,8 @@ fn selfhost_artifact_thresholds_fail_when_minimums_exceed_observed_stage2_covera
 
 #[test]
 fn selfhost_artifact_includes_cli_core_module_with_passing_stage1_gate() {
-    let td = tempdir().unwrap();
-    let artifact = td.path().join("selfhost_toolchain.gc");
-
-    cargo_bin_cmd!("genesis")
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-
-    let artifact_s = fs::read_to_string(&artifact).unwrap();
-    let term = parse_term(&artifact_s).unwrap();
+    let artifact_s = std::str::from_utf8(&baseline().bytes).expect("utf-8 baseline artifact");
+    let term = parse_term(artifact_s).unwrap();
     let Term::Map(root) = term else {
         panic!("artifact must be map");
     };

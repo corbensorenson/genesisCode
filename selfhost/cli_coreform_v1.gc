@@ -706,3 +706,256 @@
                   payload
                   (fn (r) (core/effect::pure r))))))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-publish-program expects map"))))
+
+; --- Type/Effect Inference Helpers (v0.2) ---
+;
+; These helpers are pure and are intended to be used by obligation tooling.
+; They operate on CoreForm syntax terms (datums), not evaluated values.
+
+(def core/cli::empty-vec (core/pair::as-proper-list nil))
+
+(def core/cli::vec2
+  (fn (a)
+    (fn (b)
+      (core/pair::as-proper-list ((core/pair::cons a) ((core/pair::cons b) nil))))))
+
+(def core/cli::vec-slice-from
+  (fn (v)
+    (fn (start)
+      (if (core/cli::vec? v)
+        (let ((n (core/vec::len v)))
+          (((((core/cli::vec-slice-from2 v) start) n) 0) core/cli::empty-vec))
+        ((core/error::make2 "core/type-error") "core/cli::vec-slice-from expects vector")))))
+
+(def core/cli::vec-slice-from2
+  (fn (v)
+    (fn (start)
+      (fn (n)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) n)
+              out
+              (if ((core/int::lt? i) start)
+                (((((core/cli::vec-slice-from2 v) start) n) ((core/int::add i) 1)) out)
+                (let ((x ((core/vec::get v) i)))
+                  (((((core/cli::vec-slice-from2 v) start) n) ((core/int::add i) 1))
+                    ((core/vec::push out) x)))))))))))
+
+(def core/cli::literal-op-sym-or-nil
+  (fn (t)
+    (if (core/cli::pair? t)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 2)
+            (let ((h ((core/vec::get items) 0)) (v ((core/vec::get items) 1)))
+              (if (core/cli::sym? h)
+                (if ((core/sym::eq? h) (quote quote))
+                  (if (core/cli::sym? v) v nil)
+                  nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def core/cli::flatten-app
+  (fn (t)
+    (if (core/cli::pair? t)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (let ((n (core/vec::len items)))
+            (if ((core/int::eq? n) 2)
+              (let ((f ((core/vec::get items) 0)) (x ((core/vec::get items) 1)))
+                (let ((r (core/cli::flatten-app f)))
+                  (if (core/cli::map? r)
+                    (let ((head ((core/map::get r) (quote :head)))
+                          (args0 ((core/map::get r) (quote :args))))
+                      {:head head :args ((core/vec::push args0) x)})
+                    {:head f :args [x]})))
+              (if (if ((core/int::lt? n) 1) true false)
+                nil
+                (let ((head ((core/vec::get items) 0))
+                      (args ((core/cli::vec-slice-from items) 1)))
+                  {:head head :args args}))))
+          nil))
+      nil)))
+
+(def core/cli::infer-effects
+  (fn (forms)
+    (if (core/cli::vec? forms)
+      (let ((st
+             (((((core/cli::infer-effects-vec forms) (core/vec::len forms)) 0)
+               ((core/cli::vec2 (quote {})) false)))))
+        {:ops (core/cli::set-keys->vec ((core/vec::get st) 0)) :unknown ((core/vec::get st) 1)})
+      ((core/error::make2 "core/type-error") "core/cli::infer-effects expects vector of forms"))))
+
+; state = [set-map unknown-bool]
+(def core/cli::infer-effects-vec
+  (fn (forms)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((st2 ((core/cli::infer-effects-term ((core/vec::get forms) i)) st)))
+              ((((core/cli::infer-effects-vec forms) n) ((core/int::add i) 1)) st2))))))))
+
+(def core/cli::infer-effects-term
+  (fn (t)
+    (fn (st)
+      (let ((set0 ((core/vec::get st) 0)) (unk0 ((core/vec::get st) 1)))
+        (let ((tg (core/data::tag t)))
+          (if (if ((core/sym::eq? tg) (quote :pair)) true false)
+            ((core/cli::infer-effects-list t) st)
+            (if (if ((core/sym::eq? tg) (quote :map)) true false)
+              ((core/cli::infer-effects-map t) st)
+              st)))))))
+
+(def core/cli::infer-effects-map
+  (fn (m)
+    (fn (st)
+      (let ((entries (core/map::entries m)))
+        (if (core/cli::vec? entries)
+          (((core/cli::infer-effects-map2 entries) (core/vec::len entries)) 0 st)
+          st)))))
+
+(def core/cli::infer-effects-map2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((e ((core/vec::get entries) i)))
+              (if (core/cli::vec? e)
+                (if ((core/int::eq? (core/vec::len e)) 2)
+                  (let ((v ((core/vec::get e) 1)))
+                    (((core/cli::infer-effects-map2 entries n) ((core/int::add i) 1))
+                      ((core/cli::infer-effects-term v) st)))
+                  (((core/cli::infer-effects-map2 entries n) ((core/int::add i) 1)) st))
+                (((core/cli::infer-effects-map2 entries n) ((core/int::add i) 1)) st)))))))))
+
+(def core/cli::infer-effects-list
+  (fn (t)
+    (fn (st)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 0)
+            st
+            (let ((h ((core/vec::get items) 0)))
+              (if (core/cli::sym? h)
+                (((core/cli::infer-effects-special-or-app h) items) st)
+                ((core/cli::infer-effects-app t) st))))
+          st)))))
+
+(def core/cli::infer-effects-special-or-app
+  (fn (h)
+    (fn (items)
+      (fn (st)
+        (if ((core/sym::eq? h) (quote quote))
+          st
+          (if ((core/sym::eq? h) (quote def))
+            (if ((core/int::eq? (core/vec::len items)) 3)
+              ((core/cli::infer-effects-term ((core/vec::get items) 2)) st)
+              st)
+            (if ((core/sym::eq? h) (quote fn))
+              (if (if ((core/int::lt? (core/vec::len items)) 3) true false)
+                st
+                (let ((body ((core/cli::vec-slice-from items) 2)))
+                  (((((core/cli::infer-effects-vec body) (core/vec::len body)) 0) st))))
+              (if ((core/sym::eq? h) (quote if))
+                (if ((core/int::eq? (core/vec::len items)) 4)
+                  (let ((st2 ((core/cli::infer-effects-term ((core/vec::get items) 1)) st)))
+                    (let ((st3 ((core/cli::infer-effects-term ((core/vec::get items) 2)) st2)))
+                      ((core/cli::infer-effects-term ((core/vec::get items) 3)) st3)))
+                  st)
+                (if ((core/sym::eq? h) (quote begin))
+                  (let ((rest ((core/cli::vec-slice-from items) 1)))
+                    (((((core/cli::infer-effects-vec rest) (core/vec::len rest)) 0) st)))
+                  (if ((core/sym::eq? h) (quote let))
+                    ((core/cli::infer-effects-let items) st)
+                    (if ((core/sym::eq? h) (quote prim))
+                      (let ((args ((core/cli::vec-slice-from items) 2)))
+                        (((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st)))
+                      (if (if ((core/sym::eq? h) (quote seal)) ((core/sym::eq? h) (quote unseal)) false)
+                        (let ((xs ((core/cli::vec-slice-from items) 1)))
+                          (((((core/cli::infer-effects-vec xs) (core/vec::len xs)) 0) st)))
+                        ((core/cli::infer-effects-app (selfhost/canon::vec->list items)) st)))))))))))))
+
+(def core/cli::infer-effects-let
+  (fn (items)
+    (fn (st)
+      (if (if ((core/int::lt? (core/vec::len items)) 3) true false)
+        st
+        (let ((binds ((core/vec::get items) 1)))
+          (let ((xs (core/pair::as-proper-list binds)))
+            (let ((st2 (if (core/cli::vec? xs) (((((core/cli::infer-effects-let-binds xs) (core/vec::len xs)) 0) st)) st)))
+              (let ((body ((core/cli::vec-slice-from items) 2)))
+                (((((core/cli::infer-effects-vec body) (core/vec::len body)) 0) st2))))))))))
+
+(def core/cli::infer-effects-let-binds
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((b ((core/vec::get xs) i)))
+              (let ((pair (core/pair::as-proper-list b)))
+                (if (core/cli::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    (((core/cli::infer-effects-let-binds xs n) ((core/int::add i) 1))
+                      ((core/cli::infer-effects-term ((core/vec::get pair) 1)) st))
+                    (((core/cli::infer-effects-let-binds xs n) ((core/int::add i) 1)) st))
+                  (((core/cli::infer-effects-let-binds xs n) ((core/int::add i) 1)) st))))))))))
+
+(def core/cli::infer-effects-app
+  (fn (t)
+    (fn (st)
+      (let ((flat (core/cli::flatten-app t)))
+        (if (core/cli::map? flat)
+          (let ((head ((core/map::get flat) (quote :head)))
+                (args ((core/map::get flat) (quote :args))))
+            (let ((st2 (((core/cli::infer-effects-perform head) args) st)))
+              (let ((st3 ((core/cli::infer-effects-term head) st2)))
+                (((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st3)))))
+          st)))))
+
+(def core/cli::infer-effects-perform
+  (fn (head)
+    (fn (args)
+      (fn (st)
+        (if (core/cli::sym? head)
+          (if ((core/sym::eq? head) (quote core/effect::perform))
+            (if ((core/int::eq? (core/vec::len args)) 3)
+              (let ((op0 ((core/vec::get args) 0)))
+                (let ((op (core/cli::literal-op-sym-or-nil op0)))
+                  (if (core/cli::sym? op)
+                    ((core/cli::vec2 (((core/map::put ((core/vec::get st) 0)) op) true))
+                      ((core/vec::get st) 1))
+                    ((core/cli::vec2 ((core/vec::get st) 0)) true))))
+              st)
+            st)
+          st)))))
+
+(def core/cli::set-keys->vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/cli::vec? entries)
+        (((core/cli::set-keys->vec2 entries) (core/vec::len entries)) 0 core/cli::empty-vec)
+        core/cli::empty-vec))))
+
+(def core/cli::set-keys->vec2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (if (core/cli::vec? e)
+                (if ((core/int::eq? (core/vec::len e)) 2)
+                  (let ((k ((core/vec::get e) 0)))
+                    (((core/cli::set-keys->vec2 entries n) ((core/int::add i) 1))
+                      ((core/vec::push out) k)))
+                  (((core/cli::set-keys->vec2 entries n) ((core/int::add i) 1)) out))
+                (((core/cli::set-keys->vec2 entries n) ((core/int::add i) 1)) out)))))))))
