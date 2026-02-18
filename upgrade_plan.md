@@ -52,7 +52,10 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - [x] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
   - [x] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
   - [x] Add low-level host seam ops `core/vcs-low::{merge3-contract-snapshots,resolve-conflict}` and route selfhost merge/resolve flows through `.gc` contracts with parity-preserving exit semantics.
-  - [ ] Move `core/pkg::{lock,update,install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [ ] Move `core/pkg::{install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [x] Move `core/pkg::lock` non-strict semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `.gc` selector resolution over `core/store::get`/`core/refs::get`, and prove selfhost-only non-strict lock works with caps that exclude `core/pkg::lock`.
+  - [ ] Remove strict-mode fallback for `core/pkg::lock` by porting strict lock invariants + commit closure/evidence checks to `.gc`.
+  - [x] Move `core/pkg::update` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `core/store::get` + `core/refs::get`, and prove selfhost-only operation with caps that exclude `core/pkg::update`.
   - [x] Move `core/pkg::{init,add}` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` and lock selfhost-only caps/tests away from `core/pkg::{init,add}`.
   - [x] Move `core/pkg::{list,info}` semantics into `.gc` contracts via `core/pkg-low::load-lock` and lock native+WASI caps/tests to the low-level seam.
   - [x] Add native + WASI parity tests for `core/pkg::{add,list,info}` frontend outputs to lock extraction behavior before migration.

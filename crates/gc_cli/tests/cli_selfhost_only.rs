@@ -291,6 +291,64 @@ fn selfhost_only_accepts_store_refs_pkg_and_gc() {
 }
 
 #[test]
+fn selfhost_only_pkg_update_uses_pkg_low_caps_only() {
+    let dir = tempdir().unwrap();
+    let caps = write_effect_caps(
+        dir.path(),
+        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["update", "--lock", "genesis.lock"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
+    let dir = tempdir().unwrap();
+    let caps = write_effect_caps(
+        dir.path(),
+        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["add", "dep@snapshot:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["lock", "--lock", "genesis.lock"])
+        .assert()
+        .success();
+}
+
+#[test]
 fn selfhost_only_accepts_sync_command_group() {
     let dir = tempdir().unwrap();
     let caps = write_sync_caps(dir.path());
