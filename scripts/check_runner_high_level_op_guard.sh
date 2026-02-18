@@ -28,7 +28,7 @@ UNEXPECTED="$TMP_DIR/unexpected.txt"
 
 awk '
   /^fn call_capability\(/ { in_fn = 1; }
-  in_fn && /match op \{/ { in_match = 1; next; }
+  in_fn && /match op(_eff)? \{/ { in_match = 1; next; }
   in_match {
     if ($0 ~ /^        _[[:space:]]*=>/) {
       in_match = 0;

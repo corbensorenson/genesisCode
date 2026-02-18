@@ -243,8 +243,18 @@ impl CapsPolicy {
 
 fn op_compat_aliases(op: &str) -> &'static [&'static str] {
     match op {
-        // Transitional alias: selfhost pkg snapshot now uses the low-level loader op, but
-        // existing caps may still authorize the legacy high-level snapshot op.
+        // Transitional aliases: pkg semantics have moved to low-level ops, but existing
+        // policies may still authorize legacy high-level package ops.
+        "core/pkg-low::init" => &["core/pkg::init"],
+        "core/pkg-low::add" => &["core/pkg::add"],
+        "core/pkg-low::list" => &["core/pkg::list"],
+        "core/pkg-low::info" => &["core/pkg::info"],
+        "core/pkg-low::lock" => &["core/pkg::lock"],
+        "core/pkg-low::update" => &["core/pkg::update"],
+        "core/pkg-low::install" => &["core/pkg::install"],
+        "core/pkg-low::verify" => &["core/pkg::verify"],
+        "core/pkg-low::snapshot" => &["core/pkg::snapshot"],
+        "core/pkg-low::publish" => &["core/pkg::publish"],
         "core/pkg-low::load-package" => &["core/pkg::snapshot"],
         _ => &[],
     }
@@ -561,5 +571,20 @@ base_dir = "."
         .unwrap();
         assert!(p.is_allowed("core/pkg-low::load-package"));
         assert!(p.op_policy("core/pkg-low::load-package").is_some());
+    }
+
+    #[test]
+    fn supports_pkg_low_lock_compat_alias() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/pkg::lock"]
+
+[op."core/pkg::lock"]
+base_dir = "."
+"#,
+        )
+        .unwrap();
+        assert!(p.is_allowed("core/pkg-low::lock"));
+        assert!(p.op_policy("core/pkg-low::lock").is_some());
     }
 }

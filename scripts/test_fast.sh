@@ -6,6 +6,9 @@ set -euo pipefail
 
 SECONDS=0
 
+echo "[test-fast] selfhost artifact freshness"
+./scripts/check_selfhost_artifact_fresh.sh
+
 echo "[test-fast] cargo test (core libs)"
 cargo test \
   -p gc_coreform \
@@ -21,4 +24,3 @@ cargo test -p gc_cli --test cli_apply_patch_determinism
 cargo test -p gc_cli --test cli_typecheck_apply_patch_engine
 
 echo "[test-fast] ok in ${SECONDS}s"
-

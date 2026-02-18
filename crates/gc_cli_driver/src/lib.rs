@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
@@ -1522,6 +1522,44 @@ fn resolved_engine(
     Ok(FmtEngine::Selfhost)
 }
 
+fn is_legacy_high_level_semantic_op(op: &str) -> bool {
+    // Selfhost cutover is complete for pkg/vcs command semantics. In selfhost-only mode these
+    // high-level semantic ops must not execute at runtime.
+    op.starts_with("core/pkg::") || op.starts_with("core/vcs::")
+}
+
+fn collect_legacy_high_level_semantic_ops(log: &EffectLog) -> Vec<String> {
+    let mut out: BTreeSet<String> = BTreeSet::new();
+    for entry in &log.entries {
+        if is_legacy_high_level_semantic_op(&entry.op) {
+            out.insert(entry.op.clone());
+        }
+    }
+    out.into_iter().collect()
+}
+
+fn enforce_no_legacy_semantic_fallback_in_selfhost_only(
+    cli: &Cli,
+    cmd_name: &str,
+    log: &EffectLog,
+) -> Result<(), CliError> {
+    if !selfhost_only_enabled(cli) {
+        return Ok(());
+    }
+    let found = collect_legacy_high_level_semantic_ops(log);
+    if found.is_empty() {
+        return Ok(());
+    }
+    Err(cli_err(
+        EX_VERIFY,
+        "selfhost-only/legacy-semantic-fallback",
+        format!(
+            "selfhost-only mode detected legacy semantic fallback while running `{cmd_name}`: {}",
+            found.join(", ")
+        ),
+    ))
+}
+
 fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<(), CliError> {
     if !selfhost_only_enabled(cli) {
         return Ok(());
@@ -2634,6 +2672,7 @@ fn cmd_run(
     };
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+    enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "run", &r.log)?;
 
     let log_path = log
         .map(PathBuf::from)
@@ -2853,6 +2892,7 @@ fn cmd_store(
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+    enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "pkg", &r.log)?;
 
     let log_path = log
         .map(PathBuf::from)
@@ -3229,6 +3269,7 @@ fn cmd_refs(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &RefsCmd) -> Result
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+    enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "vcs", &r.log)?;
 
     let log_path = log
         .map(PathBuf::from)

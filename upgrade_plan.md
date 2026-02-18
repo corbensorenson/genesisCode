@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 9
+Open checklist items: 7
 
 ## Findings From Current Project Audit
 
@@ -26,11 +26,12 @@ Open checklist items: 9
 - [ ] Rust runtime is limited to kernel + low-level host ABI + transport.
 - [x] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
 - [x] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
-- [ ] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
+- [x] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
 - [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
 - [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, graphics/editor host ops.
-- [ ] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first.
+- [x] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first (enforced by `scripts/check_selfhost_artifact_fresh.sh` + `scripts/test_fast.sh`).
 - [ ] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
+- [x] In `--selfhost-only` mode, fail fast when runtime logs show legacy high-level `core/pkg::*` or `core/vcs::*` semantic ops (prevents production fallback drift).
 - [ ] Move remaining bootstrap-only Rust semantic code under `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` after cutover.
 - [x] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
 

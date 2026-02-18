@@ -1058,6 +1058,22 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
     Ok(Term::Map(m))
 }
 
+fn effective_capability_op(op: &str) -> &str {
+    match op {
+        "core/pkg::init" => "core/pkg-low::init",
+        "core/pkg::add" => "core/pkg-low::add",
+        "core/pkg::list" => "core/pkg-low::list",
+        "core/pkg::info" => "core/pkg-low::info",
+        "core/pkg::lock" => "core/pkg-low::lock",
+        "core/pkg::update" => "core/pkg-low::update",
+        "core/pkg::install" => "core/pkg-low::install",
+        "core/pkg::verify" => "core/pkg-low::verify",
+        "core/pkg::snapshot" => "core/pkg-low::snapshot",
+        "core/pkg::publish" => "core/pkg-low::publish",
+        _ => op,
+    }
+}
+
 fn call_capability(
     op: &str,
     payload: &Term,
@@ -1067,8 +1083,9 @@ fn call_capability(
     refs: Option<&RefsDb>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
+    let op_eff = effective_capability_op(op);
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
-    if timeout_ms.is_some() && op == "io/fs::write" {
+    if timeout_ms.is_some() && op_eff == "io/fs::write" {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
@@ -1076,7 +1093,7 @@ fn call_capability(
             Some(op),
         ));
     }
-    match op {
+    match op_eff {
         "core/sync::pull" => {
             #[cfg(target_os = "wasi")]
             {
@@ -1472,7 +1489,7 @@ fn call_capability(
             }
         }
 
-        "core/pkg::init" => {
+        "core/pkg-low::init" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -1525,7 +1542,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::add" => {
+        "core/pkg-low::add" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -1617,7 +1634,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::list" => {
+        "core/pkg-low::list" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -2401,7 +2418,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(out)))
         }
 
-        "core/pkg::info" => {
+        "core/pkg-low::info" => {
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
@@ -2510,7 +2527,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::lock" => {
+        "core/pkg-low::lock" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::lock".to_string())
             })?;
@@ -2645,7 +2662,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::update" => {
+        "core/pkg-low::update" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::update".to_string())
             })?;
@@ -2787,7 +2804,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::install" => {
+        "core/pkg-low::install" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::install".to_string())
             })?;
@@ -2965,7 +2982,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::verify" => {
+        "core/pkg-low::verify" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::verify".to_string())
             })?;
@@ -3091,7 +3108,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg::snapshot" => {
+        "core/pkg-low::snapshot" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg::snapshot".to_string())
             })?;
@@ -3319,7 +3336,7 @@ fn call_capability(
             Ok(Value::Data(Term::Map(out)))
         }
 
-        "core/pkg::publish" => {
+        "core/pkg-low::publish" => {
             #[cfg(target_os = "wasi")]
             {
                 let _ = payload;

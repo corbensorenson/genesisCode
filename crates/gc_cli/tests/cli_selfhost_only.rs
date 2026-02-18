@@ -769,6 +769,60 @@ fn selfhost_only_accepts_run_and_replay_with_selfhost_artifact() {
 }
 
 #[test]
+fn selfhost_only_rejects_legacy_pkg_semantic_fallback_in_run_logs() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let file = dir.path().join("legacy.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog
+            (((core/effect::perform (quote core/pkg::init))
+               {:workspace "legacy-ws"
+                :lock "legacy.lock"
+                :policy "policy:default-v0.1"
+                :registry-default nil})
+             (fn (r) (core/effect::pure r))))
+          prog
+        "#,
+    )
+    .unwrap();
+    let caps = dir.path().join("caps_legacy_pkg.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/pkg::init"]
+
+[op."core/pkg::init"]
+base_dir = "."
+create_dirs = true
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode detected legacy semantic fallback",
+        ))
+        .stderr(predicate::str::contains("core/pkg::init"));
+}
+
+#[test]
 fn pack_prefers_selfhost_when_artifact_flag_is_set_even_without_selfhost_only() {
     let dir = tempdir().unwrap();
     let fixture = std::path::Path::new(concat!(
