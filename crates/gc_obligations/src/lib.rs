@@ -496,7 +496,7 @@ pub fn test_package_with_step_limit_and_frontend(
             }
             "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
             "core/obligation::stage1-validation" => {
-                obligation_stage1_validation(&store, &manifest, &modules, &frontend, limits)
+                obligation_stage1_validation(&store, &manifest, &modules)
             }
             "core/obligation::translation-validation" => obligation_translation_validation(
                 &store,
@@ -506,7 +506,6 @@ pub fn test_package_with_step_limit_and_frontend(
                 &caps,
                 &test_runs,
                 limits,
-                &frontend,
             ),
             "core/obligation::gfx-golden-images" => {
                 obligation_gfx_golden_images(&store, &pkg_dir, &manifest, &modules, limits)
@@ -839,60 +838,6 @@ fn selfhost_hash_module_forms(
     Err(ObligationError::Module(
         "missing binding core/cli::hash-module-forms or selfhost/hash::hash-module".to_string(),
     ))
-}
-
-fn mk_selfhost_toolchain_ctx_env(
-    cfg: &SelfhostFrontendConfig,
-    limits: KernelLimits,
-) -> Result<(EvalCtx, Env), ObligationError> {
-    // Toolchain bootstrap is trusted and therefore uncharged.
-    let mut ctx = EvalCtx::with_step_limit(None);
-    ctx.set_mem_limits(limits.mem_limits);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        cfg.bootstrap_mode,
-        cfg.artifact.as_deref(),
-    )
-    .map_err(|e| ObligationError::Module(format!("selfhost/init: {e}")))?;
-
-    // Apply user/configured limits to subsequent selfhost work.
-    ctx.steps = 0;
-    ctx.step_limit = limits.step_limit.resolve();
-    Ok((ctx, env))
-}
-
-fn selfhost_optimize_module(
-    ctx: &mut EvalCtx,
-    env: &Env,
-    forms: &[Term],
-) -> Result<Vec<Term>, ObligationError> {
-    let opt_fn = env
-        .get("core/cli::optimize-module")
-        .or_else(|| env.get("core/cli::stage1-transform-module"))
-        .ok_or_else(|| {
-            ObligationError::Module(
-                "missing binding core/cli::optimize-module (or core/cli::stage1-transform-module)"
-                    .to_string(),
-            )
-        })?;
-    let out = opt_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-        .map_err(|e| ObligationError::Module(e.to_string()))?;
-    if let Some(e) = extract_protocol_error(ctx, &out) {
-        return Err(ObligationError::Module(format!(
-            "selfhost core/cli optimize-module failed: {e}"
-        )));
-    }
-    let Some(Term::Vector(forms2)) = out.as_data() else {
-        return Err(ObligationError::Module(format!(
-            "selfhost core/cli optimize-module returned non-vector: {}",
-            out.debug_repr()
-        )));
-    };
-    Ok(forms2.clone())
 }
 
 fn pin_manifest_hashes(
@@ -2703,29 +2648,16 @@ fn obligation_stage1_validation(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     modules: &[LoadedModule],
-    frontend: &CoreformFrontend,
-    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
     let mut ok = true;
     let mut errors = Vec::new();
     let mut module_reports = Vec::new();
 
-    // Selfhost frontend: use the `.gc` optimizer contract as the source of truth.
-    let mut selfhost_ctx_env = match frontend {
-        CoreformFrontend::Selfhost(cfg) => Some(mk_selfhost_toolchain_ctx_env(cfg, limits)?),
-        CoreformFrontend::Rust => None,
-    };
-
     for m in modules {
-        let (gate_report, optimizer_stats) = if let Some((ctx, env)) = selfhost_ctx_env.as_mut() {
-            let transformed = selfhost_optimize_module(ctx, env, &m.forms)?;
-            let gate = gc_opt::stage1_validation_report(&m.forms, &transformed);
-            (gate, gc_opt::OptimizeStats::default())
-        } else {
-            let out = gc_opt::stage1_pipeline(&m.forms)
-                .map_err(|e| ObligationError::Opt(format!("{e}")))?;
-            (out.gate_report, out.optimize_report.stats)
-        };
+        let out =
+            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
+        let gate_report = out.gate_report;
+        let optimizer_stats = out.optimize_report.stats;
 
         if !gate_report.ok {
             ok = false;
@@ -2851,7 +2783,6 @@ fn obligation_translation_validation(
     caps: &CapsPolicy,
     test_runs: &[TestRun],
     limits: KernelLimits,
-    frontend: &CoreformFrontend,
 ) -> Result<ObligationResult, ObligationError> {
     // Conservative v0.2: we only validate optimization by re-running the *whole package*
     // tests against an optimized copy of each module and comparing per-test hashes.
@@ -2893,34 +2824,26 @@ fn obligation_translation_validation(
     let mut opt_modules = Vec::new();
     let mut opt_stats = gc_opt::OptimizeStats::default();
     let mut mod_terms: Vec<Term> = Vec::new();
-    let mut selfhost_ctx_env = match frontend {
-        CoreformFrontend::Selfhost(cfg) => Some(mk_selfhost_toolchain_ctx_env(cfg, limits)?),
-        CoreformFrontend::Rust => None,
-    };
     for m in modules {
         let orig_h = hash_module(&m.forms);
-        let opt_forms = if let Some((ctx, env)) = selfhost_ctx_env.as_mut() {
-            selfhost_optimize_module(ctx, env, &m.forms)?
-        } else {
-            let stage1 = gc_opt::stage1_pipeline(&m.forms)
-                .map_err(|e| ObligationError::Opt(format!("{e}")))?;
-            opt_stats.egg_runs = opt_stats
-                .egg_runs
-                .saturating_add(stage1.optimize_report.stats.egg_runs);
-            opt_stats.iterations = opt_stats
-                .iterations
-                .saturating_add(stage1.optimize_report.stats.iterations);
-            opt_stats.eclasses = opt_stats
-                .eclasses
-                .saturating_add(stage1.optimize_report.stats.eclasses);
-            opt_stats.enodes = opt_stats
-                .enodes
-                .saturating_add(stage1.optimize_report.stats.enodes);
-            for (k, v) in stage1.optimize_report.stats.rewrites_applied {
-                *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
-            }
-            stage1.transformed_forms
-        };
+        let stage1 =
+            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
+        let opt_forms = stage1.transformed_forms;
+        opt_stats.egg_runs = opt_stats
+            .egg_runs
+            .saturating_add(stage1.optimize_report.stats.egg_runs);
+        opt_stats.iterations = opt_stats
+            .iterations
+            .saturating_add(stage1.optimize_report.stats.iterations);
+        opt_stats.eclasses = opt_stats
+            .eclasses
+            .saturating_add(stage1.optimize_report.stats.eclasses);
+        opt_stats.enodes = opt_stats
+            .enodes
+            .saturating_add(stage1.optimize_report.stats.enodes);
+        for (k, v) in stage1.optimize_report.stats.rewrites_applied {
+            *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
+        }
         let opt_h = hash_module(&opt_forms);
 
         let s2 = gc_opt::stage2_validation_report(&opt_forms);

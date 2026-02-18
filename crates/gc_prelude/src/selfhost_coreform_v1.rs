@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use anyhow::Context;
 #[cfg(feature = "embedded-bootstrap")]
@@ -36,6 +37,14 @@ const MODULE_SOURCES: [(&str, &str); 8] = [
 
 #[cfg(feature = "embedded-bootstrap")]
 type SelfhostCompiledModules = Vec<(&'static str, CompiledModule)>;
+
+type CachedCompiledModules = Vec<(&'static str, CompiledModule)>;
+
+// Per-process cache: compiling the selfhost toolchain modules dominates costs for obligations and
+// other workflows that create fresh ctx/env pairs. The artifact bytes are content-addressed, so
+// caching by a content hash is safe and deterministic.
+static ARTIFACT_COMPILED_CACHE: OnceLock<Mutex<BTreeMap<[u8; 32], CachedCompiledModules>>> =
+    OnceLock::new();
 
 #[cfg(feature = "embedded-bootstrap")]
 static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Lazy::new(|| {
@@ -121,6 +130,23 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
     env: &mut Env,
     src: &str,
 ) -> anyhow::Result<()> {
+    // Fast-path: reuse compiled modules for identical artifact bytes.
+    let mut h = blake3::Hasher::new();
+    h.update(b"GCv0.2\0selfhost-artifact\0");
+    h.update(src.as_bytes());
+    let artifact_h: [u8; 32] = *h.finalize().as_bytes();
+
+    if let Some(cache) = ARTIFACT_COMPILED_CACHE.get() {
+        if let Some(compiled) = cache.lock().expect("artifact cache lock").get(&artifact_h) {
+            return with_trusted_bootstrap_limits(ctx, |ctx| {
+                for (name, m) in compiled {
+                    eval_compiled_module(ctx, env, m).with_context(|| format!("eval {name}"))?;
+                }
+                Ok(())
+            });
+        }
+    }
+
     let term = parse_term(src).map_err(|e| anyhow::anyhow!("artifact parse: {e}"))?;
     let root = match term {
         Term::Map(m) => m,
@@ -263,15 +289,30 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         }
     }
 
-    with_trusted_bootstrap_limits(ctx, |ctx| {
-        for (path, _) in MODULE_SOURCES {
-            let module = compiled_by_path
-                .remove(path)
-                .ok_or_else(|| anyhow::anyhow!("artifact missing compiled module: {path}"))?;
-            eval_compiled_module(ctx, env, &module).with_context(|| format!("eval {path}"))?;
+    // Build a deterministic vector in MODULE_SOURCES order for caching and evaluation.
+    let mut compiled_in_order: CachedCompiledModules = Vec::with_capacity(MODULE_SOURCES.len());
+    for (path, _) in MODULE_SOURCES {
+        let module = compiled_by_path
+            .remove(path)
+            .ok_or_else(|| anyhow::anyhow!("artifact missing compiled module: {path}"))?;
+        compiled_in_order.push((path, module));
+    }
+
+    let out = with_trusted_bootstrap_limits(ctx, |ctx| {
+        for (path, module) in &compiled_in_order {
+            eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
         }
         Ok(())
-    })
+    });
+
+    if out.is_ok() {
+        let cache = ARTIFACT_COMPILED_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
+        cache
+            .lock()
+            .expect("artifact cache lock")
+            .insert(artifact_h, compiled_in_order);
+    }
+    out
 }
 
 fn load_selfhost_coreform_toolchain_v1_embedded(

@@ -73,8 +73,9 @@ Acceptance gate:
 - [x] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
   - [x] Implement `core/cli::infer-effects` (pure effect op inference) in `selfhost/cli_coreform_v1.gc` with parity test vs `gc_types::infer_effects`.
-- [x] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
-  - [x] Add `core/cli::optimize-module` (alias of stage1 transform) and switch `core/obligation::{stage1-validation,translation-validation}` to use it when the CoreForm frontend is `selfhost`.
+- [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
+  - [x] Add `core/cli::optimize-module` (alias of stage1 transform) as the stable selfhost optimizer entrypoint.
+  - [ ] Prove parity with `gc_opt` stage1 pipeline (or tighten the selfhost optimizer spec to match) before switching `core/obligation::translation-validation` to selfhost, because acceptance artifacts must remain frontend-independent.
 - [x] Implement self-host patch schema validation/apply pipeline in `.gc`.
   - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
   - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.
@@ -156,6 +157,7 @@ These are important but not blockers for the fast-path self-hosted core mileston
   - [x] Speed up strict smoke/golden scripts by reusing repo `selfhost/toolchain.gc` unless sources changed (or `GENESIS_REBUILD_SELFHOST_ARTIFACT=1`).
   - [x] Speed up `cli_selfhost_artifact` integration tests (native + WASI) by caching baseline artifacts and eliminating redundant rebuilds where not required.
   - [x] Speed up `core/obligation::translation-validation` by reusing the package's existing original test runs (no redundant re-run before optimized re-run).
+  - [x] Cache compiled selfhost toolchain modules per artifact bytes (in-process) to reduce overhead in selfhost frontend obligations workflows.
 - [ ] Graphics/WebGPU/editor stack and higher-level developer UX layers.
 
 ---
