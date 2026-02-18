@@ -11,9 +11,14 @@ This document freezes the first AI-agent-facing contract for GenesisCode project
 ## Scope
 
 `gcpm/pkg` covers:
+- workspace bootstrap and migration (`new`, `migrate`)
 - workspace lock lifecycle (`init`, `add`, `lock`, `update`, `install`)
+- lock hygiene (`remove`, `doctor`, `verify`)
 - dependency inspection (`list`, `info`)
 - deterministic diagnostics (`doctor`)
+- workspace task execution (`run`)
+- package obligation execution alias (`test`)
+- deterministic profile environment realization (`env`)
 - snapshot and distribution (`snapshot`, `export`, `import`, `publish`)
 
 ## JSON Stability Rules

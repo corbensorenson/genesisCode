@@ -95,6 +95,15 @@ CI strict selfhost gates:
 - `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
   - See `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`.
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
+- Workspace lifecycle commands:
+  - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
+  - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
+  - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
+  - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
+  - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
+  - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`.
+  - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
+  - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.

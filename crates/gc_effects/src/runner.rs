@@ -1540,6 +1540,14 @@ fn call_capability(
                 Ok(None) => gc_pkg::UpdatePolicy::Manual,
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
+            let strategy = match payload_pkg_strategy(payload) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
+            let tag_policy = match payload_pkg_tag_policy(payload) {
+                Ok(x) => x,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
             let registry = payload_pkg_registry(payload);
 
             let base_dir = effective_base_dir(pol)?;
@@ -1566,7 +1574,14 @@ fn call_capability(
                 }
             };
 
-            l.set_requirement(&name, &selector, update_policy, registry);
+            l.set_requirement_with_metadata(
+                &name,
+                &selector,
+                update_policy,
+                registry,
+                strategy,
+                tag_policy,
+            );
             let bytes = l.to_toml_canonical();
             let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
@@ -1644,6 +1659,14 @@ fn call_capability(
                     TermOrdKey(Term::symbol(":registry")),
                     r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
                 );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":strategy")),
+                    Term::Symbol(format!(":{}", r.strategy.as_str())),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":tag-policy")),
+                    r.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
                 reqs.push(Term::Map(mm));
             }
 
@@ -1658,6 +1681,13 @@ fn call_capability(
                 mm.insert(
                     TermOrdKey(Term::symbol(":snapshot")),
                     Term::Str(le.snapshot.clone()),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":environment-fingerprint")),
+                    le.environment_fingerprint
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
                 );
                 locks.push(Term::Map(mm));
             }
@@ -1720,6 +1750,14 @@ fn call_capability(
                     TermOrdKey(Term::symbol(":registry")),
                     r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
                 );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":strategy")),
+                    Term::Symbol(format!(":{}", r.strategy.as_str())),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":tag-policy")),
+                    r.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
                 reqs.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
             }
 
@@ -1753,6 +1791,13 @@ fn call_capability(
                 mm.insert(
                     TermOrdKey(Term::symbol(":exports_hash")),
                     le.exports_hash.clone().map(Term::Str).unwrap_or(Term::Nil),
+                );
+                mm.insert(
+                    TermOrdKey(Term::symbol(":environment-fingerprint")),
+                    le.environment_fingerprint
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
                 );
                 locked.insert(TermOrdKey(Term::Str(name.clone())), Term::Map(mm));
             }
@@ -1939,12 +1984,53 @@ fn call_capability(
                             ));
                         }
                     };
+                    let strategy = match rm.get(&TermOrdKey(Term::symbol(":strategy"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Symbol(s)) => gc_pkg::ResolutionStrategy::from_str(
+                            s.trim_start_matches(':'),
+                        ),
+                        Some(Term::Str(s)) => gc_pkg::ResolutionStrategy::from_str(s),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(
+                                    ":requirements/{name}/:strategy must be :pinned, :track-ref, :tag-policy, string, or nil"
+                                ),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if rm.contains_key(&TermOrdKey(Term::symbol(":strategy"))) && strategy.is_none() {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-payload",
+                            format!(
+                                ":requirements/{name}/:strategy must be :pinned, :track-ref, or :tag-policy"
+                            ),
+                            Some(op),
+                        ));
+                    }
+                    let tag_policy = match rm.get(&TermOrdKey(Term::symbol(":tag-policy"))) {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(":requirements/{name}/:tag-policy must be string or nil"),
+                                Some(op),
+                            ));
+                        }
+                    };
                     requirements.insert(
                         name,
                         gc_pkg::Requirement {
                             selector,
                             update_policy,
                             registry,
+                            strategy: strategy.unwrap_or_else(|| gc_pkg::infer_strategy(&selector)),
+                            tag_policy,
                         },
                     );
                 }
@@ -2055,6 +2141,22 @@ fn call_capability(
                             ));
                         }
                     };
+                    let environment_fingerprint = match lm
+                        .get(&TermOrdKey(Term::symbol(":environment-fingerprint")))
+                    {
+                        None | Some(Term::Nil) => None,
+                        Some(Term::Str(s)) => Some(s.clone()),
+                        _ => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-payload",
+                                format!(
+                                    ":locked/{name}/:environment-fingerprint must be string or nil"
+                                ),
+                                Some(op),
+                            ));
+                        }
+                    };
                     locked.insert(
                         name,
                         gc_pkg::LockedEntry {
@@ -2064,6 +2166,7 @@ fn call_capability(
                             source_selector,
                             resolved_ref,
                             exports_hash,
+                            environment_fingerprint,
                         },
                     );
                 }
@@ -2179,6 +2282,14 @@ fn call_capability(
                                     TermOrdKey(Term::symbol(":registry")),
                                     r.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
                                 ),
+                                (
+                                    TermOrdKey(Term::symbol(":strategy")),
+                                    Term::Symbol(format!(":{}", r.strategy.as_str())),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":tag-policy")),
+                                    r.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
                             ]
                             .into_iter()
                             .collect(),
@@ -2204,6 +2315,13 @@ fn call_capability(
                                 (
                                     TermOrdKey(Term::symbol(":resolved-ref")),
                                     le.resolved_ref.clone().map(Term::Str).unwrap_or(Term::Nil),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":environment-fingerprint")),
+                                    le.environment_fingerprint
+                                        .clone()
+                                        .map(Term::Str)
+                                        .unwrap_or(Term::Nil),
                                 ),
                             ]
                             .into_iter()
@@ -2279,6 +2397,39 @@ fn call_capability(
                             error_tok,
                             "core/pkg/lock-invariant",
                             format!("locked.source_selector mismatch for {name}"),
+                            Some(op),
+                        ));
+                    }
+                    let inferred_strategy = gc_pkg::infer_strategy(&req.selector);
+                    if req.strategy != inferred_strategy {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/lock-invariant",
+                            format!(
+                                "selector strategy mismatch for {name} (declared={}, inferred={})",
+                                req.strategy.as_str(),
+                                inferred_strategy.as_str()
+                            ),
+                            Some(op),
+                        ));
+                    }
+                    if matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy)
+                        && req.tag_policy.is_none()
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/lock-invariant",
+                            format!("tag-policy strategy requires tag_policy for {name}"),
+                            Some(op),
+                        ));
+                    }
+                    if !matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy)
+                        && req.tag_policy.is_some()
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/lock-invariant",
+                            format!("tag_policy is only valid for tag-policy strategy: {name}"),
                             Some(op),
                         ));
                     }
@@ -8449,6 +8600,48 @@ fn parse_selector(s: &str) -> Option<Selector> {
     None
 }
 
+fn compute_requirement_fingerprint(
+    req: &gc_pkg::Requirement,
+    snapshot: Option<&str>,
+    commit: Option<&str>,
+) -> String {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":selector")),
+        Term::Str(req.selector.clone()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":update-policy")),
+        Term::Symbol(match req.update_policy {
+            gc_pkg::UpdatePolicy::Manual => ":manual".to_string(),
+            gc_pkg::UpdatePolicy::Auto => ":auto".to_string(),
+        }),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":strategy")),
+        Term::Symbol(format!(":{}", req.strategy.as_str())),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":tag-policy")),
+        req.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":registry")),
+        req.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":snapshot")),
+        snapshot.map(|s| Term::Str(s.to_string())).unwrap_or(Term::Nil),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":commit")),
+        commit.map(|s| Term::Str(s.to_string())).unwrap_or(Term::Nil),
+    );
+    blake3::hash((print_term(&Term::Map(m)) + "\n").as_bytes())
+        .to_hex()
+        .to_string()
+}
+
 fn validate_commit_artifact_closure(
     store: &ArtifactStore,
     dep_name: &str,
@@ -8605,6 +8798,7 @@ fn resolve_requirement(
                 source_selector: req.selector.clone(),
                 resolved_ref: None,
                 exports_hash: None,
+                environment_fingerprint: Some(compute_requirement_fingerprint(req, Some(&h), None)),
             })
         }
         Selector::Commit(h) => {
@@ -8630,6 +8824,11 @@ fn resolve_requirement(
                 source_selector: req.selector.clone(),
                 resolved_ref: None,
                 exports_hash: None,
+                environment_fingerprint: Some(compute_requirement_fingerprint(
+                    req,
+                    Some(c.result.as_str()),
+                    Some(&h),
+                )),
             })
         }
         Selector::Ref(rn) => {
@@ -8663,6 +8862,11 @@ fn resolve_requirement(
                 source_selector: req.selector.clone(),
                 resolved_ref: Some(rn),
                 exports_hash: None,
+                environment_fingerprint: Some(compute_requirement_fingerprint(
+                    req,
+                    Some(c.result.as_str()),
+                    Some(&commit_hex),
+                )),
             })
         }
     }

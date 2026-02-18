@@ -39,11 +39,93 @@ impl UpdatePolicy {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResolutionStrategy {
+    Pinned,
+    TrackRef,
+    TagPolicy,
+}
+
+impl ResolutionStrategy {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "pinned" => Some(Self::Pinned),
+            "track-ref" => Some(Self::TrackRef),
+            "tag-policy" => Some(Self::TagPolicy),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pinned => "pinned",
+            Self::TrackRef => "track-ref",
+            Self::TagPolicy => "tag-policy",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectorKind {
+    Commit,
+    Snapshot,
+    Ref,
+    TagRef,
+}
+
+pub fn classify_selector(selector: &str) -> Option<SelectorKind> {
+    let t = selector.trim();
+    if let Some(rest) = t.strip_prefix("commit:") {
+        if is_hex64(rest.trim()) {
+            return Some(SelectorKind::Commit);
+        }
+        return None;
+    }
+    if let Some(rest) = t.strip_prefix("snapshot:") {
+        if is_hex64(rest.trim()) {
+            return Some(SelectorKind::Snapshot);
+        }
+        return None;
+    }
+    if let Some(rest) = t.strip_prefix("ref:") {
+        let r = rest.trim();
+        if r.starts_with("refs/tags/") {
+            return Some(SelectorKind::TagRef);
+        }
+        if r.starts_with("refs/") {
+            return Some(SelectorKind::Ref);
+        }
+        return None;
+    }
+    if t.starts_with("refs/tags/") {
+        return Some(SelectorKind::TagRef);
+    }
+    if t.starts_with("refs/") {
+        return Some(SelectorKind::Ref);
+    }
+    if is_hex64(t) {
+        return Some(SelectorKind::Commit);
+    }
+    None
+}
+
+pub fn infer_strategy(selector: &str) -> ResolutionStrategy {
+    match classify_selector(selector) {
+        Some(SelectorKind::Commit) | Some(SelectorKind::Snapshot) | None => {
+            ResolutionStrategy::Pinned
+        }
+        Some(SelectorKind::Ref) => ResolutionStrategy::TrackRef,
+        Some(SelectorKind::TagRef) => ResolutionStrategy::TagPolicy,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Requirement {
     pub selector: String,
     pub update_policy: UpdatePolicy,
     pub registry: Option<String>,
+    pub strategy: ResolutionStrategy,
+    pub tag_policy: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +136,7 @@ pub struct LockedEntry {
     pub source_selector: String,
     pub resolved_ref: Option<String>,
     pub exports_hash: Option<String>,
+    pub environment_fingerprint: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -97,6 +180,10 @@ struct RequirementToml {
     update_policy: Option<String>,
     #[serde(default)]
     registry: Option<String>,
+    #[serde(default)]
+    strategy: Option<String>,
+    #[serde(default)]
+    tag_policy: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -112,12 +199,14 @@ struct LockedToml {
     resolved_ref: Option<String>,
     #[serde(default)]
     exports_hash: Option<String>,
+    #[serde(default)]
+    environment_fingerprint: Option<String>,
 }
 
 impl GenesisLock {
     pub fn empty(workspace: impl Into<String>) -> Self {
         Self {
-            version: 1,
+            version: 2,
             workspace: workspace.into(),
             policy: "policy:default-v0.1".to_string(),
             registries: BTreeMap::new(),
@@ -139,7 +228,7 @@ impl GenesisLock {
         })?;
 
         let version = lt.version.unwrap_or(1);
-        if version != 1 {
+        if version != 1 && version != 2 {
             return Err(LockError::Invalid {
                 path: path.display().to_string(),
                 msg: format!("unsupported version {version}"),
@@ -160,12 +249,32 @@ impl GenesisLock {
                 .as_deref()
                 .and_then(UpdatePolicy::from_str)
                 .unwrap_or(UpdatePolicy::Manual);
+            let strategy = match r
+                .strategy
+                .as_deref()
+                .and_then(ResolutionStrategy::from_str)
+            {
+                Some(s) => s,
+                None => infer_strategy(&r.selector),
+            };
+            if matches!(strategy, ResolutionStrategy::TagPolicy)
+                && !matches!(classify_selector(&r.selector), Some(SelectorKind::TagRef))
+            {
+                return Err(LockError::Invalid {
+                    path: path.display().to_string(),
+                    msg: format!(
+                        "requirement {name} uses strategy tag-policy but selector is not refs/tags/*"
+                    ),
+                });
+            }
             requirements.insert(
                 name,
                 Requirement {
                     selector: r.selector,
                     update_policy: up,
                     registry: r.registry,
+                    strategy,
+                    tag_policy: r.tag_policy,
                 },
             );
         }
@@ -181,6 +290,7 @@ impl GenesisLock {
                     source_selector: l.source_selector.unwrap_or_default(),
                     resolved_ref: l.resolved_ref,
                     exports_hash: l.exports_hash,
+                    environment_fingerprint: l.environment_fingerprint,
                 },
             );
         }
@@ -197,8 +307,15 @@ impl GenesisLock {
     }
 
     pub fn to_toml_canonical(&self) -> String {
+        let version = if self.version < 2 && has_v2_requirements(&self.requirements) {
+            2
+        } else if self.version == 0 {
+            2
+        } else {
+            self.version
+        };
         let mut out = String::new();
-        out.push_str("version = 1\n");
+        out.push_str(&format!("version = {version}\n"));
         out.push_str(&format!("workspace = {}\n", toml_str(&self.workspace)));
         out.push_str(&format!("policy = {}\n", toml_str(&self.policy)));
         out.push('\n');
@@ -214,12 +331,17 @@ impl GenesisLock {
         out.push_str("[requirements]\n");
         for (name, r) in &self.requirements {
             out.push_str(&format!(
-                "{} = {{ selector = {}, update_policy = {}, registry = {} }}\n",
+                "{} = {{ selector = {}, update_policy = {}, registry = {}, strategy = {}",
                 toml_key(name),
                 toml_str(&r.selector),
                 toml_str(r.update_policy.as_str()),
                 toml_str(r.registry.as_deref().unwrap_or("default")),
+                toml_str(r.strategy.as_str()),
             ));
+            if let Some(tp) = &r.tag_policy {
+                out.push_str(&format!(", tag_policy = {}", toml_str(tp)));
+            }
+            out.push_str(" }\n");
         }
         out.push('\n');
 
@@ -250,6 +372,9 @@ impl GenesisLock {
             if let Some(x) = &l.exports_hash {
                 out.push_str(&format!(", exports_hash = {}", toml_str(x)));
             }
+            if let Some(env_fp) = &l.environment_fingerprint {
+                out.push_str(&format!(", environment_fingerprint = {}", toml_str(env_fp)));
+            }
             out.push_str(" }\n");
         }
         out.push('\n');
@@ -272,12 +397,32 @@ impl GenesisLock {
         update_policy: UpdatePolicy,
         registry: Option<String>,
     ) {
+        self.set_requirement_with_metadata(name, selector, update_policy, registry, None, None);
+    }
+
+    pub fn set_requirement_with_metadata(
+        &mut self,
+        name: &str,
+        selector: &str,
+        update_policy: UpdatePolicy,
+        registry: Option<String>,
+        strategy: Option<ResolutionStrategy>,
+        tag_policy: Option<String>,
+    ) {
+        let strategy = strategy.unwrap_or_else(|| infer_strategy(selector));
+        let tag_policy = if matches!(strategy, ResolutionStrategy::TagPolicy) {
+            Some(tag_policy.unwrap_or_else(|| "exact".to_string()))
+        } else {
+            None
+        };
         self.requirements.insert(
             name.to_string(),
             Requirement {
                 selector: selector.to_string(),
                 update_policy,
                 registry,
+                strategy,
+                tag_policy,
             },
         );
     }
@@ -319,9 +464,27 @@ fn toml_str(s: &str) -> String {
     out
 }
 
+fn has_v2_requirements(requirements: &BTreeMap<String, Requirement>) -> bool {
+    requirements.values().any(|r| {
+        !matches!(r.strategy, ResolutionStrategy::Pinned)
+            || r.tag_policy.is_some()
+            || matches!(
+                classify_selector(&r.selector),
+                Some(SelectorKind::Ref | SelectorKind::TagRef)
+            )
+    })
+}
+
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{GenesisLock, LockError, UpdatePolicy};
+    use super::{
+        GenesisLock, LockError, ResolutionStrategy, SelectorKind, UpdatePolicy, classify_selector,
+        infer_strategy,
+    };
 
     #[test]
     fn canonical_writer_is_deterministic_and_roundtrips() {
@@ -350,6 +513,7 @@ mod tests {
                 source_selector: "refs/heads/main".to_string(),
                 resolved_ref: Some("refs/heads/main".to_string()),
                 exports_hash: None,
+                environment_fingerprint: None,
             },
         );
         let s1 = l.to_toml_canonical();
@@ -360,16 +524,72 @@ mod tests {
         let parsed = GenesisLock::from_toml_str(std::path::Path::new("genesis.lock"), &s1)
             .map_err(|e| format!("{e}"))
             .unwrap();
-        assert_eq!(parsed.version, 1);
+        assert_eq!(parsed.version, 2);
         assert_eq!(parsed.workspace, "ws");
         assert_eq!(parsed.policy, "policy:x");
         assert!(parsed.requirements.contains_key("a"));
         assert!(parsed.requirements.contains_key("b"));
+        assert_eq!(
+            parsed.requirements.get("a").map(|r| r.strategy),
+            Some(ResolutionStrategy::TrackRef)
+        );
+        assert_eq!(
+            parsed.requirements.get("b").map(|r| r.strategy),
+            Some(ResolutionStrategy::Pinned)
+        );
     }
 
     #[test]
     fn rejects_unsupported_version() {
-        let s = "version = 2\nworkspace = \"w\"\npolicy = \"p\"\n[requirements]\n[locked]\n";
+        let s = "version = 3\nworkspace = \"w\"\npolicy = \"p\"\n[requirements]\n[locked]\n";
+        let e = GenesisLock::from_toml_str(std::path::Path::new("genesis.lock"), s).unwrap_err();
+        match e {
+            LockError::Invalid { .. } => {}
+            other => panic!("expected invalid, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn selector_classification_and_strategy_inference_are_stable() {
+        assert_eq!(
+            classify_selector("commit:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            Some(SelectorKind::Commit)
+        );
+        assert_eq!(
+            classify_selector("snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            Some(SelectorKind::Snapshot)
+        );
+        assert_eq!(
+            classify_selector("refs/heads/main"),
+            Some(SelectorKind::Ref)
+        );
+        assert_eq!(
+            classify_selector("refs/tags/v1.2.3"),
+            Some(SelectorKind::TagRef)
+        );
+        assert_eq!(infer_strategy("refs/heads/main"), ResolutionStrategy::TrackRef);
+        assert_eq!(
+            infer_strategy("refs/tags/v1.2.3"),
+            ResolutionStrategy::TagPolicy
+        );
+        assert_eq!(
+            infer_strategy("snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            ResolutionStrategy::Pinned
+        );
+    }
+
+    #[test]
+    fn rejects_tag_policy_on_non_tag_selector() {
+        let s = r#"
+version = 2
+workspace = "w"
+policy = "p"
+
+[requirements]
+"dep" = { selector = "refs/heads/main", update_policy = "manual", registry = "default", strategy = "tag-policy" }
+
+[locked]
+"#;
         let e = GenesisLock::from_toml_str(std::path::Path::new("genesis.lock"), s).unwrap_err();
         match e {
             LockError::Invalid { .. } => {}

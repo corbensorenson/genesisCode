@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 32
+Open checklist items: 23
 
 ## Findings From Current Project Audit
 
@@ -37,9 +37,9 @@ Open checklist items: 32
 ## Workstream B — GCPM Core (Language-Native Project Manager)
 
 ### B1. Workspace Model
-- [ ] Define and implement `genesis.workspace.toml` (or canonical CoreForm equivalent) as workspace root descriptor.
-- [ ] Add multi-package workspace graph support (members, local paths, package roles).
-- [ ] Add workspace-level policy/default registry/toolchain/profile declarations.
+- [x] Define and implement `genesis.workspace.toml` (or canonical CoreForm equivalent) as workspace root descriptor.
+- [x] Add multi-package workspace graph support (members, local paths, package roles).
+- [x] Add workspace-level policy/default registry/toolchain/profile declarations.
 
 ### B2. Lock + Resolution v2
 - [ ] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
@@ -47,13 +47,13 @@ Open checklist items: 32
 - [x] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
 
 ### B3. Environment Automation (Pixi-like UX, deterministic)
-- [ ] Add `gcpm env` surface for deterministic environment realization from lock + toolchain pins.
-- [ ] Materialize environment artifacts under `.genesis/env/<profile-hash>/` with immutable provenance records.
-- [ ] Add profile support (`dev`, `ci`, `release`) with policy-gated capability surfaces.
+- [x] Add `gcpm env` surface for deterministic environment realization from lock + toolchain pins.
+- [x] Materialize environment artifacts under `.genesis/env/<profile-hash>/` with immutable provenance records.
+- [x] Add profile support (`dev`, `ci`, `release`) with policy-gated capability surfaces.
 
 ### B4. Command Surface (AI-First)
-- [ ] Add `genesis gcpm init/new/add/remove/lock/install/update/run/test/publish/info/list`.
-- [ ] Implement `gcpm run <task>` with workspace tasks as canonical data (not ad hoc shell glue).
+- [x] Add `genesis gcpm init/new/add/remove/lock/install/update/run/test/publish/info/list`.
+- [x] Implement `gcpm run <task>` with workspace tasks as canonical data (not ad hoc shell glue).
 - [x] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
 
 ### B5. In-Language Contract Surface
@@ -66,7 +66,7 @@ Open checklist items: 32
 - [ ] Make workspace/project state snapshots first-class `:vcs/snapshot` roots.
 - [ ] Bind `gcpm lock/install/update/publish` operations to explicit commit/evidence provenance edges.
 - [ ] Add branch-aware dependency tracking semantics (`track ref + locked commit`) at workspace level.
-- [ ] Add deterministic migration path from package-only mode to workspace+gcpm mode.
+- [x] Add deterministic migration path from package-only mode to workspace+gcpm mode.
 
 ## Workstream D — AI-First Developer Experience
 

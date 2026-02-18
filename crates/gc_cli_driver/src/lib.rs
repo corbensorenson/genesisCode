@@ -21,7 +21,9 @@ use gc_prelude::{
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
+mod pkg_task_runner;
 mod pkg_telemetry;
+mod pkg_workspace_ops;
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -552,6 +554,33 @@ enum SyncCmd {
 
 #[derive(Subcommand)]
 enum PkgCmd {
+    /// Create a workspace descriptor + lock file in one deterministic step.
+    New {
+        /// Workspace name.
+        #[arg(long)]
+        workspace: String,
+
+        /// Lock path.
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Workspace descriptor path.
+        #[arg(long, default_value = "genesis.workspace.toml")]
+        workspace_file: PathBuf,
+
+        /// Workspace policy alias.
+        #[arg(long, default_value = "policy:default-v0.1")]
+        policy: String,
+
+        /// Default registry remote spec.
+        #[arg(long)]
+        registry_default: Option<String>,
+
+        /// Optional member specs (`name=path` or `path`), repeatable.
+        #[arg(long = "member")]
+        members: Vec<String>,
+    },
+
     /// Initialize a `genesis.lock` workspace lock file.
     Init {
         /// Workspace name.
@@ -591,6 +620,15 @@ enum PkgCmd {
         registry: Option<String>,
     },
 
+    /// Remove a dependency requirement (and its locked entry) from `genesis.lock`.
+    Remove {
+        name: String,
+
+        /// Lock path.
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
     /// Resolve requirements into pinned commits/snapshots in `genesis.lock` (local-only v0.1).
     Lock {
         /// Lock path (relative to the capability base_dir).
@@ -607,6 +645,27 @@ enum PkgCmd {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
+    },
+
+    /// Run a named workspace task from `genesis.workspace.toml` as canonical command data.
+    Run {
+        /// Task name.
+        task: String,
+
+        /// Workspace descriptor path.
+        #[arg(long, default_value = "genesis.workspace.toml")]
+        workspace_file: PathBuf,
+    },
+
+    /// Run package obligations (gcpm alias for `genesis test`).
+    Test {
+        /// Path to package.toml.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Optional capability policy override for effectful tests.
+        #[arg(long)]
+        caps: Option<PathBuf>,
     },
 
     /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
@@ -738,6 +797,48 @@ enum PkgCmd {
         /// Commit hash to publish. If omitted, resolves from the local `refname` in the refs db.
         #[arg(long)]
         commit: Option<String>,
+    },
+
+    /// Realize a deterministic workspace environment profile under `.genesis/env/<profile-hash>/`.
+    Env {
+        /// Profile name (e.g. dev|ci|release).
+        #[arg(long, default_value = "dev")]
+        profile: String,
+
+        /// Lock path.
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Workspace descriptor path.
+        #[arg(long, default_value = "genesis.workspace.toml")]
+        workspace_file: PathBuf,
+
+        /// Environment output root.
+        #[arg(long, default_value = ".genesis/env")]
+        out_dir: PathBuf,
+    },
+
+    /// Migrate a package-only repo into workspace+gcpm mode.
+    Migrate {
+        /// Path to package.toml.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Lock path.
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+
+        /// Workspace descriptor path.
+        #[arg(long, default_value = "genesis.workspace.toml")]
+        workspace_file: PathBuf,
+
+        /// Optional workspace name override.
+        #[arg(long)]
+        workspace: Option<String>,
+
+        /// Default registry remote spec.
+        #[arg(long)]
+        registry_default: Option<String>,
     },
 }
 
@@ -3220,6 +3321,9 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+    if let Some(out) = cmd_pkg_local_workspace_ops(cli, cmd, caps, log, frontend_info.clone())? {
+        return Ok(out);
+    }
 
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
@@ -3227,6 +3331,14 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
     let (prog, kind, log_op, program_hash) = match frontend {
         gc_obligations::CoreformFrontend::Rust => {
             let (forms, kind, log_op) = match cmd {
+                PkgCmd::New { .. }
+                | PkgCmd::Remove { .. }
+                | PkgCmd::Migrate { .. }
+                | PkgCmd::Run { .. }
+                | PkgCmd::Test { .. }
+                | PkgCmd::Env { .. } => {
+                    unreachable!("local workspace ops are handled before frontend dispatch")
+                }
                 PkgCmd::Init {
                     workspace,
                     lock,
@@ -3368,6 +3480,14 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
             load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             let (prog, kind, log_op, desc) = match cmd {
+                PkgCmd::New { .. }
+                | PkgCmd::Remove { .. }
+                | PkgCmd::Migrate { .. }
+                | PkgCmd::Run { .. }
+                | PkgCmd::Test { .. }
+                | PkgCmd::Env { .. } => {
+                    unreachable!("local workspace ops are handled before frontend dispatch")
+                }
                 PkgCmd::Init {
                     workspace,
                     lock,
@@ -4177,6 +4297,14 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
         String::new()
     } else {
         match cmd {
+            PkgCmd::New { .. }
+            | PkgCmd::Remove { .. }
+            | PkgCmd::Migrate { .. }
+            | PkgCmd::Run { .. }
+            | PkgCmd::Test { .. }
+            | PkgCmd::Env { .. } => extract_pkg_lock_hash(&r.value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
             PkgCmd::Init { .. }
             | PkgCmd::Add { .. }
             | PkgCmd::Lock { .. }
@@ -4286,6 +4414,162 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
         stdout,
         json: serde_json::to_value(env).expect("json"),
     })
+}
+
+fn cmd_pkg_local_workspace_ops(
+    cli: &Cli,
+    cmd: &PkgCmd,
+    caps: &Path,
+    log: Option<&Path>,
+    frontend_info: serde_json::Value,
+) -> Result<Option<CmdOut>, CliError> {
+    match cmd {
+        PkgCmd::Run {
+            task,
+            workspace_file,
+        } => {
+            let action = pkg_task_runner::resolve_workspace_task(workspace_file, task)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
+            let out = match action {
+                pkg_task_runner::WorkspaceTaskAction::Test { pkg } => {
+                    cmd_test(cli, &pkg, Some(caps))?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Pack { pkg } => cmd_pack(cli, &pkg)?,
+                pkg_task_runner::WorkspaceTaskAction::Typecheck { pkg } => {
+                    cmd_typecheck(cli, &pkg)?
+                }
+            };
+            return Ok(Some(out));
+        }
+        PkgCmd::Test { pkg, caps: pcaps } => {
+            let out = cmd_test(cli, pkg, pcaps.as_deref().or(Some(caps)))?;
+            return Ok(Some(out));
+        }
+        _ => {}
+    }
+
+    let local = match cmd {
+        PkgCmd::New {
+            workspace,
+            lock,
+            workspace_file,
+            policy,
+            registry_default,
+            members,
+        } => Some(
+            pkg_workspace_ops::handle_new(
+                workspace,
+                lock,
+                workspace_file,
+                policy,
+                registry_default.as_deref(),
+                members,
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/new", e))?,
+        ),
+        PkgCmd::Remove { name, lock } => Some(
+            pkg_workspace_ops::handle_remove(name, lock)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/remove", e))?,
+        ),
+        PkgCmd::Migrate {
+            pkg,
+            lock,
+            workspace_file,
+            workspace,
+            registry_default,
+        } => Some(
+            pkg_workspace_ops::handle_migrate(
+                pkg,
+                lock,
+                workspace_file,
+                workspace.as_deref(),
+                registry_default.as_deref(),
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/migrate", e))?,
+        ),
+        PkgCmd::Env {
+            profile,
+            lock,
+            workspace_file,
+            out_dir,
+        } => Some(
+            pkg_workspace_ops::handle_env(profile, lock, workspace_file, out_dir)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?,
+        ),
+        _ => None,
+    };
+    let Some(local) = local else {
+        return Ok(None);
+    };
+
+    let log_path = log
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_log_path(local.log_op));
+    let log_obj = pkg_workspace_ops::empty_log(local.program_hash);
+    std::fs::write(&log_path, log_obj.to_string_canonical() + "\n")
+        .with_context(|| format!("write {}", log_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let value_v = Value::Data(local.value.clone());
+    let ok = extract_pkg_ok_bool(&value_v).unwrap_or(true);
+    let exit_code = if ok { EX_OK } else { EX_VERIFY };
+    let value = gc_coreform::print_term(&local.value);
+    let value_format = "coreform";
+
+    let mut data = serde_json::json!({
+        "coreform_frontend": frontend_info,
+        "caps": caps.display().to_string(),
+        "log": log_path.display().to_string(),
+        "value": value,
+        "value_format": value_format,
+    });
+    if let Some(report) = pkg_reports::build_pkg_ai_report(cmd, &value_v, caps)
+        && let Some(obj) = data.as_object_mut()
+    {
+        obj.insert("report".to_string(), report);
+    }
+    if let Some(obj) = data.as_object_mut() {
+        obj.insert(
+            "telemetry".to_string(),
+            pkg_telemetry::build_pkg_telemetry(
+                cmd,
+                ok,
+                exit_code,
+                &log_obj,
+                &value_v,
+                obj.get("report"),
+                None,
+            ),
+        );
+    }
+
+    let stdout = if cli.json {
+        String::new()
+    } else {
+        extract_pkg_lock_hash(&value_v)
+            .map(|h| format!("{h}\n"))
+            .unwrap_or_else(|| format!("{value}\n"))
+    };
+    let env = JsonEnvelope {
+        ok,
+        kind: local.kind,
+        data: Some(data),
+        error: if ok {
+            None
+        } else {
+            Some(JsonError {
+                code: "pkg/error",
+                message: "pkg operation failed".to_string(),
+                context: None,
+            })
+        },
+    };
+
+    Ok(Some(CmdOut {
+        exit_code,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    }))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

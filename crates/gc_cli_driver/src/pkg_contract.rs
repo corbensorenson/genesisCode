@@ -2,10 +2,14 @@ use super::PkgCmd;
 
 pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
     match cmd {
+        PkgCmd::New { .. } => "genesis/pkg-new-v0.1",
         PkgCmd::Init { .. } => "genesis/pkg-init-v0.1",
         PkgCmd::Add { .. } => "genesis/pkg-add-v0.1",
+        PkgCmd::Remove { .. } => "genesis/pkg-remove-v0.1",
         PkgCmd::Lock { .. } => "genesis/pkg-lock-v0.1",
         PkgCmd::Update { .. } => "genesis/pkg-update-v0.1",
+        PkgCmd::Run { .. } => "genesis/pkg-run-v0.1",
+        PkgCmd::Test { .. } => "genesis/pkg-test-v0.1",
         PkgCmd::Install { .. } => "genesis/pkg-install-v0.1",
         PkgCmd::Verify { .. } => "genesis/pkg-verify-v0.1",
         PkgCmd::Doctor { .. } => "genesis/pkg-doctor-v0.1",
@@ -15,15 +19,21 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Export { .. } => "genesis/pkg-export-v0.1",
         PkgCmd::Import { .. } => "genesis/pkg-import-v0.1",
         PkgCmd::Publish { .. } => "genesis/pkg-publish-v0.1",
+        PkgCmd::Migrate { .. } => "genesis/pkg-migrate-v0.1",
+        PkgCmd::Env { .. } => "genesis/pkg-env-v0.1",
     }
 }
 
 pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
     match cmd {
+        PkgCmd::New { .. } => "pkg-new",
         PkgCmd::Init { .. } => "pkg-init",
         PkgCmd::Add { .. } => "pkg-add",
+        PkgCmd::Remove { .. } => "pkg-remove",
         PkgCmd::Lock { .. } => "pkg-lock",
         PkgCmd::Update { .. } => "pkg-update",
+        PkgCmd::Run { .. } => "pkg-run",
+        PkgCmd::Test { .. } => "pkg-test",
         PkgCmd::Install { .. } => "pkg-install",
         PkgCmd::Verify { .. } => "pkg-verify",
         PkgCmd::Doctor { .. } => "pkg-doctor",
@@ -33,6 +43,8 @@ pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Export { .. } => "pkg-export",
         PkgCmd::Import { .. } => "pkg-import",
         PkgCmd::Publish { .. } => "pkg-publish",
+        PkgCmd::Migrate { .. } => "pkg-migrate",
+        PkgCmd::Env { .. } => "pkg-env",
     }
 }
 
@@ -47,6 +59,14 @@ mod tests {
     #[test]
     fn pkg_command_contracts_are_unique_and_stable() {
         let cmds = vec![
+            PkgCmd::New {
+                workspace: "ws".to_string(),
+                lock: PathBuf::from("genesis.lock"),
+                workspace_file: PathBuf::from("genesis.workspace.toml"),
+                policy: "policy:default-v0.1".to_string(),
+                registry_default: None,
+                members: vec![],
+            },
             PkgCmd::Init {
                 workspace: "ws".to_string(),
                 lock: PathBuf::from("genesis.lock"),
@@ -59,12 +79,24 @@ mod tests {
                 update_policy: "manual".to_string(),
                 registry: None,
             },
+            PkgCmd::Remove {
+                name: "dep".to_string(),
+                lock: PathBuf::from("genesis.lock"),
+            },
             PkgCmd::Lock {
                 lock: PathBuf::from("genesis.lock"),
                 strict: false,
             },
             PkgCmd::Update {
                 lock: PathBuf::from("genesis.lock"),
+            },
+            PkgCmd::Run {
+                task: "test".to_string(),
+                workspace_file: PathBuf::from("genesis.workspace.toml"),
+            },
+            PkgCmd::Test {
+                pkg: PathBuf::from("package.toml"),
+                caps: None,
             },
             PkgCmd::Install {
                 lock: PathBuf::from("genesis.lock"),
@@ -108,6 +140,19 @@ mod tests {
                 expected_old: None,
                 depth: 0,
                 commit: None,
+            },
+            PkgCmd::Migrate {
+                pkg: PathBuf::from("package.toml"),
+                lock: PathBuf::from("genesis.lock"),
+                workspace_file: PathBuf::from("genesis.workspace.toml"),
+                workspace: None,
+                registry_default: None,
+            },
+            PkgCmd::Env {
+                profile: "dev".to_string(),
+                lock: PathBuf::from("genesis.lock"),
+                workspace_file: PathBuf::from("genesis.workspace.toml"),
+                out_dir: PathBuf::from(".genesis/env"),
             },
         ];
 

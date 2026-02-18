@@ -27,9 +27,13 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 ## Command -> Kind
 
 - `gcpm init` -> `genesis/pkg-init-v0.1`
+- `gcpm new` -> `genesis/pkg-new-v0.1`
 - `gcpm add` -> `genesis/pkg-add-v0.1`
+- `gcpm remove` -> `genesis/pkg-remove-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-v0.1`
 - `gcpm update` -> `genesis/pkg-update-v0.1`
+- `gcpm run <task>` -> forwards to task-target command `kind` (for built-ins: `test -> genesis/test-v0.2`, `pack -> genesis/pack-v0.2`, `typecheck -> genesis/typecheck-v0.2`)
+- `gcpm test` -> `genesis/test-v0.2`
 - `gcpm install` -> `genesis/pkg-install-v0.1`
 - `gcpm verify` -> `genesis/pkg-verify-v0.1`
 - `gcpm doctor` -> `genesis/pkg-doctor-v0.1`
@@ -39,6 +43,8 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm export` -> `genesis/pkg-export-v0.1`
 - `gcpm import` -> `genesis/pkg-import-v0.1`
 - `gcpm publish` -> `genesis/pkg-publish-v0.1`
+- `gcpm migrate` -> `genesis/pkg-migrate-v0.1`
+- `gcpm env` -> `genesis/pkg-env-v0.1`
 
 ## Determinism
 
