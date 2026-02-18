@@ -55,9 +55,16 @@ Compatibility notes:
 - `editor/clipboard::set`
 - `editor/dialog::open`
 - `editor/dialog::save`
+- `editor/plugin::command`
 - `editor/task::cancel`
+- `editor/task::fmt-coreform`
+- `editor/task::lint-module`
+- `editor/task::optimize-module`
+- `editor/task::parse-module`
 - `editor/task::poll`
 - `editor/task::spawn`
+- `editor/task::test-pkg`
+- `editor/task::typecheck-pkg`
 - `editor/watch::poll`
 - `editor/watch::subscribe`
 - `editor/watch::unsubscribe`

@@ -1360,7 +1360,7 @@ fn resolved_engine(
     Ok(FmtEngine::Selfhost)
 }
 
-fn enforce_selfhost_only_cmd(cli: &Cli, flavor: Flavor) -> Result<(), CliError> {
+fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<(), CliError> {
     if !selfhost_only_enabled(cli) {
         return Ok(());
     }
@@ -1382,54 +1382,17 @@ fn enforce_selfhost_only_cmd(cli: &Cli, flavor: Flavor) -> Result<(), CliError> 
         Cmd::Policy { .. } => Ok(()),
         Cmd::Sync { .. } => Ok(()),
         Cmd::Gc { .. } => Ok(()),
+        Cmd::SelfhostArtifact { .. } => Ok(()),
+        Cmd::Keygen { .. } => Ok(()),
+        Cmd::Sign { .. } => Ok(()),
+        Cmd::TransparencyVerify { .. } => Ok(()),
+        Cmd::Verify { .. } => Ok(()),
         Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
             ..
         } => enforce_selfhost_engine(cli, "vcs hash", *engine),
         Cmd::Vcs { .. } => Ok(()),
-        other => {
-            let cmd = match other {
-                Cmd::Explain { .. } => "explain",
-                Cmd::Run { .. } => "run",
-                Cmd::Replay { .. } => "replay",
-                Cmd::Pack { .. } => unreachable!(),
-                Cmd::SelfhostArtifact { .. } => "selfhost-artifact",
-                Cmd::SelfhostDashboard { .. } => unreachable!(),
-                Cmd::Keygen { .. } => "keygen",
-                Cmd::Sign { .. } => "sign",
-                Cmd::TransparencyVerify { .. } => "transparency-verify",
-                Cmd::ApplyPatch { .. } => unreachable!(),
-                Cmd::Verify { .. } => "verify",
-                Cmd::Fmt { .. }
-                | Cmd::Eval { .. }
-                | Cmd::Optimize { .. }
-                | Cmd::Typecheck { .. }
-                | Cmd::Test { .. }
-                | Cmd::Store { .. }
-                | Cmd::Refs { .. }
-                | Cmd::Pkg { .. }
-                | Cmd::Policy { .. }
-                | Cmd::Sync { .. }
-                | Cmd::Gc { .. }
-                | Cmd::Vcs { .. } => unreachable!(),
-            };
-            let supported = match flavor {
-                Flavor::Native => {
-                    "`fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, `selfhost-dashboard`, and `vcs/*`"
-                }
-                Flavor::Wasi => {
-                    "`fmt`, `eval`, `explain`, `optimize`, `run`, `replay`, `test`, `pack`, `typecheck`, `apply-patch`, `selfhost-dashboard`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, and `vcs/*`"
-                }
-            };
-            Err(cli_err(
-                EX_VERIFY,
-                "selfhost-only/unsupported-cmd",
-                format!(
-                    "selfhost-only mode currently supports only {supported}; `{cmd}` is not yet selfhost-routed"
-                ),
-            ))
-        }
     }
 }
 
@@ -1924,6 +1887,127 @@ fn selfhost_parse_term(
         ));
     };
     Ok(term.clone())
+}
+
+fn selfhost_plan_request_map(
+    cli: &Cli,
+    binding: &str,
+    req: Term,
+    cmd_name: &str,
+) -> Result<std::collections::BTreeMap<TermOrdKey, Term>, CliError> {
+    let mut ctx = mk_ctx(cli);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+    let f = env.get(binding).ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "selfhost/missing",
+            format!("missing binding {binding}"),
+        )
+    })?;
+    let out = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+        cli_err(
+            EX_EVAL,
+            "eval/error",
+            format!("{binding} failed for {cmd_name}: {e}"),
+        )
+    })?;
+
+    if let Some((code, message, payload)) = extract_protocol_error(&ctx, &out) {
+        return Err(CliError {
+            exit_code: EX_PARSE,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{cmd_name}: {code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+
+    if let Some(Term::Map(m)) = out.as_data() {
+        return Ok(m.clone());
+    }
+    let fallback = out.to_term_for_log(ctx.protocol.map(|p| p.error));
+    if let Term::Map(m) = fallback {
+        return Ok(m);
+    }
+    Err(cli_err(
+        EX_INTERNAL,
+        "selfhost/bad-return",
+        format!(
+            "{binding} returned non-map for {cmd_name}: {}",
+            out.debug_repr()
+        ),
+    ))
+}
+
+fn planned_required_str(
+    m: &std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+    cmd_name: &str,
+) -> Result<String, CliError> {
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Str(s)) => Ok(s.clone()),
+        _ => Err(cli_err(
+            EX_PARSE,
+            "selfhost/plan",
+            format!("{cmd_name}: planner returned invalid {key}"),
+        )),
+    }
+}
+
+fn planned_optional_str(
+    m: &std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+    cmd_name: &str,
+) -> Result<Option<String>, CliError> {
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(Term::Nil) | None => Ok(None),
+        _ => Err(cli_err(
+            EX_PARSE,
+            "selfhost/plan",
+            format!("{cmd_name}: planner returned invalid {key}"),
+        )),
+    }
+}
+
+fn planned_required_bool(
+    m: &std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+    cmd_name: &str,
+) -> Result<bool, CliError> {
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Bool(b)) => Ok(*b),
+        _ => Err(cli_err(
+            EX_PARSE,
+            "selfhost/plan",
+            format!("{cmd_name}: planner returned invalid {key}"),
+        )),
+    }
+}
+
+fn planned_required_u64(
+    m: &std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+    cmd_name: &str,
+) -> Result<u64, CliError> {
+    let Some(Term::Int(i)) = m.get(&TermOrdKey(Term::symbol(key))) else {
+        return Err(cli_err(
+            EX_PARSE,
+            "selfhost/plan",
+            format!("{cmd_name}: planner returned invalid {key}"),
+        ));
+    };
+    i.to_string().parse::<u64>().map_err(|_| {
+        cli_err(
+            EX_PARSE,
+            "selfhost/plan",
+            format!("{cmd_name}: planner returned out-of-range {key}"),
+        )
+    })
 }
 
 fn cmd_eval(
@@ -8040,6 +8124,200 @@ fn cmd_selfhost_artifact(
     min_stage2_supported_modules: u64,
     min_stage2_validated_modules: u64,
 ) -> Result<CmdOut, CliError> {
+    #[derive(Debug, Clone)]
+    struct Stage2Seed {
+        source: String,
+        forms: Vec<Term>,
+        module_hash: [u8; 32],
+        stage2_module_hash: [u8; 32],
+        stage1_ok: bool,
+        stage1_errors: Vec<String>,
+        supported: bool,
+        ok: bool,
+        errors: Vec<String>,
+        wasm_hash: Option<[u8; 32]>,
+        wasm_bytes_len: Option<usize>,
+    }
+
+    #[derive(Debug, Clone)]
+    struct Stage2Summary {
+        module_hash: [u8; 32],
+        supported: bool,
+        ok: bool,
+        errors: Vec<String>,
+        wasm_hash: Option<[u8; 32]>,
+        wasm_bytes_len: Option<usize>,
+    }
+
+    #[derive(Debug, Clone)]
+    struct Stage2SeedIndex {
+        generated_by: Option<String>,
+        modules: std::collections::BTreeMap<String, Stage2Seed>,
+    }
+
+    fn load_stage2_seed_index(path: &Path) -> Option<Stage2SeedIndex> {
+        let src = std::fs::read_to_string(path).ok()?;
+        let term = parse_term(&src).ok()?;
+        let Term::Map(root) = term else { return None };
+        match root.get(&TermOrdKey(Term::symbol(":kind"))) {
+            Some(Term::Str(s)) if s == "genesis/selfhost-toolchain-artifact-v0.2" => {}
+            _ => return None,
+        }
+        let generated_by = match root.get(&TermOrdKey(Term::symbol(":generated-by"))) {
+            Some(Term::Str(s)) => Some(s.clone()),
+            _ => None,
+        };
+        let modules = match root.get(&TermOrdKey(Term::symbol(":modules"))) {
+            Some(Term::Vector(v)) => v,
+            _ => return None,
+        };
+        let mut out = std::collections::BTreeMap::new();
+        for m in modules {
+            let Term::Map(mm) = m else { continue };
+            let path = match mm.get(&TermOrdKey(Term::symbol(":path"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => continue,
+            };
+            let source = match mm.get(&TermOrdKey(Term::symbol(":source"))) {
+                Some(Term::Str(s)) => s.clone(),
+                _ => continue,
+            };
+            let forms = match mm.get(&TermOrdKey(Term::symbol(":forms"))) {
+                Some(Term::Vector(v)) => v.clone(),
+                _ => continue,
+            };
+            let module_hash = match mm.get(&TermOrdKey(Term::symbol(":module-h"))) {
+                Some(Term::Bytes(b)) if b.len() == 32 => {
+                    let mut h = [0u8; 32];
+                    h.copy_from_slice(b.as_ref());
+                    h
+                }
+                _ => continue,
+            };
+            let stage2_module_hash = match mm.get(&TermOrdKey(Term::symbol(":stage2-module-h"))) {
+                Some(Term::Bytes(b)) if b.len() == 32 => {
+                    let mut h = [0u8; 32];
+                    h.copy_from_slice(b.as_ref());
+                    h
+                }
+                _ => module_hash,
+            };
+            let stage1_ok = matches!(
+                mm.get(&TermOrdKey(Term::symbol(":stage1-ok"))),
+                Some(Term::Bool(true))
+            );
+            let stage1_errors = match mm.get(&TermOrdKey(Term::symbol(":stage1-errors"))) {
+                Some(Term::Vector(v)) => v
+                    .iter()
+                    .filter_map(|t| match t {
+                        Term::Str(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
+            let supported = matches!(
+                mm.get(&TermOrdKey(Term::symbol(":stage2-supported"))),
+                Some(Term::Bool(true))
+            );
+            let ok = matches!(
+                mm.get(&TermOrdKey(Term::symbol(":stage2-ok"))),
+                Some(Term::Bool(true))
+            );
+            let errors = match mm.get(&TermOrdKey(Term::symbol(":stage2-errors"))) {
+                Some(Term::Vector(v)) => v
+                    .iter()
+                    .filter_map(|t| match t {
+                        Term::Str(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
+            let wasm_hash = match mm.get(&TermOrdKey(Term::symbol(":stage2-wasm-h"))) {
+                Some(Term::Bytes(b)) if b.len() == 32 => {
+                    let mut h = [0u8; 32];
+                    h.copy_from_slice(b.as_ref());
+                    Some(h)
+                }
+                _ => None,
+            };
+            let wasm_bytes_len = match mm.get(&TermOrdKey(Term::symbol(":stage2-wasm-bytes"))) {
+                Some(Term::Int(i)) => i.to_string().parse::<usize>().ok(),
+                _ => None,
+            };
+            out.insert(
+                path,
+                Stage2Seed {
+                    source,
+                    forms,
+                    module_hash,
+                    stage2_module_hash,
+                    stage1_ok,
+                    stage1_errors,
+                    supported,
+                    ok,
+                    errors,
+                    wasm_hash,
+                    wasm_bytes_len,
+                },
+            );
+        }
+        Some(Stage2SeedIndex {
+            generated_by,
+            modules: out,
+        })
+    }
+
+    let frontend = resolved_coreform_frontend(cli)?;
+    let (out_buf, min_stage2_supported_modules, min_stage2_validated_modules) = match frontend {
+        gc_obligations::CoreformFrontend::Rust => (
+            out.to_path_buf(),
+            min_stage2_supported_modules,
+            min_stage2_validated_modules,
+        ),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":out")),
+                        Term::Str(out.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":min-stage2-supported-modules")),
+                        Term::Int((min_stage2_supported_modules as i64).into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":min-stage2-validated-modules")),
+                        Term::Int((min_stage2_validated_modules as i64).into()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(
+                cli,
+                "core/cli::selfhost-artifact-request",
+                req,
+                "selfhost-artifact",
+            )?;
+            (
+                PathBuf::from(planned_required_str(&planned, ":out", "selfhost-artifact")?),
+                planned_required_u64(
+                    &planned,
+                    ":min-stage2-supported-modules",
+                    "selfhost-artifact",
+                )?,
+                planned_required_u64(
+                    &planned,
+                    ":min-stage2-validated-modules",
+                    "selfhost-artifact",
+                )?,
+            )
+        }
+    };
+    let out = out_buf.as_path();
+
     // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.
     let step_limit = StepLimit::Unlimited;
     let mem_limits = resolved_mem_limits(cli);
@@ -8048,12 +8326,12 @@ fn cmd_selfhost_artifact(
     } else {
         SelfhostBootstrapMode::ArtifactOnly
     };
-    let artifact = if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly {
+    let bootstrap_artifact = if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly {
         resolved_selfhost_artifact_for_frontend(cli)
     } else {
         None
     };
-    if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly && artifact.is_none() {
+    if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly && bootstrap_artifact.is_none() {
         return Err(cli_err(
             EX_PARSE,
             "selfhost/bootstrap",
@@ -8068,11 +8346,18 @@ fn cmd_selfhost_artifact(
         &mut ctx,
         &mut env,
         bootstrap_mode,
-        artifact.as_deref(),
+        bootstrap_artifact.as_deref(),
     )
     .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
     ctx.steps = 0;
     ctx.step_limit = step_limit.resolve();
+
+    let stage2_seed_index = bootstrap_artifact.as_deref().and_then(load_stage2_seed_index);
+    let reuse_seed_results = stage2_seed_index.as_ref().is_some_and(|idx| {
+        idx.generated_by.as_deref() == Some(&format!("genesis {}", env!("CARGO_PKG_VERSION")))
+    });
+    let mut stage2_seed_hits = 0u64;
+    let mut stage2_computed = 0u64;
 
     let mut modules = Vec::new();
     let mut all_ok = true;
@@ -8081,32 +8366,75 @@ fn cmd_selfhost_artifact(
     let mut gate_errors: Vec<String> = Vec::new();
 
     for (path, src) in selfhost_coreform_toolchain_v1_sources() {
-        let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src).map_err(|e| {
-            cli_err(
-                e.exit_code,
-                "selfhost/canon",
-                format!("{path}: {}", e.json.message),
-            )
-        })?;
-        let module_h = selfhost_hash_module_forms(&mut ctx, &env, &forms).map_err(|e| {
-            cli_err(
-                e.exit_code,
-                "selfhost/hash",
-                format!("{path}: {}", e.json.message),
-            )
-        })?;
+        let seed = if reuse_seed_results {
+            stage2_seed_index
+                .as_ref()
+                .and_then(|idx| idx.modules.get(&path))
+                .filter(|s| s.source == src)
+                .cloned()
+        } else {
+            None
+        };
 
-        let stage1_forms =
-            selfhost_stage1_transform_module(&mut ctx, &env, &forms).map_err(|e| {
+        let (forms, module_h, stage1_ok, stage1_errors, stage2) = if let Some(seed) = seed {
+            stage2_seed_hits = stage2_seed_hits.saturating_add(1);
+            (
+                seed.forms,
+                seed.module_hash,
+                seed.stage1_ok,
+                seed.stage1_errors,
+                Stage2Summary {
+                    module_hash: seed.stage2_module_hash,
+                    supported: seed.supported,
+                    ok: seed.ok,
+                    errors: seed.errors,
+                    wasm_hash: seed.wasm_hash,
+                    wasm_bytes_len: seed.wasm_bytes_len,
+                },
+            )
+        } else {
+            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src).map_err(|e| {
                 cli_err(
                     e.exit_code,
-                    "selfhost/stage1",
+                    "selfhost/canon",
                     format!("{path}: {}", e.json.message),
                 )
             })?;
-        let gate_report = gc_opt::stage1_validation_report(&forms, &stage1_forms);
-        let stage2 = gc_opt::stage2_validation_report(&stage1_forms);
-        if !gate_report.ok || (stage2.supported && !stage2.ok) {
+            let module_h = selfhost_hash_module_forms(&mut ctx, &env, &forms).map_err(|e| {
+                cli_err(
+                    e.exit_code,
+                    "selfhost/hash",
+                    format!("{path}: {}", e.json.message),
+                )
+            })?;
+            let stage1_forms =
+                selfhost_stage1_transform_module(&mut ctx, &env, &forms).map_err(|e| {
+                    cli_err(
+                        e.exit_code,
+                        "selfhost/stage1",
+                        format!("{path}: {}", e.json.message),
+                    )
+                })?;
+            let gate_report = gc_opt::stage1_validation_report(&forms, &stage1_forms);
+            stage2_computed = stage2_computed.saturating_add(1);
+            let report = gc_opt::stage2_validation_report(&stage1_forms);
+            (
+                forms,
+                module_h,
+                gate_report.ok,
+                gate_report.errors,
+                Stage2Summary {
+                    module_hash: report.module_hash,
+                    supported: report.supported,
+                    ok: report.ok,
+                    errors: report.errors,
+                    wasm_hash: report.wasm_hash,
+                    wasm_bytes_len: report.wasm_bytes_len,
+                },
+            )
+        };
+
+        if !stage1_ok || (stage2.supported && !stage2.ok) {
             all_ok = false;
         }
         if stage2.supported {
@@ -8120,11 +8448,11 @@ fn cmd_selfhost_artifact(
             [
                 (
                     TermOrdKey(Term::symbol(":path")),
-                    Term::Str((*path).to_string()),
+                    Term::Str(path.clone()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":source")),
-                    Term::Str((*src).to_string()),
+                    Term::Str(src.clone()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":forms")),
@@ -8136,11 +8464,11 @@ fn cmd_selfhost_artifact(
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage1-ok")),
-                    Term::Bool(gate_report.ok),
+                    Term::Bool(stage1_ok),
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage1-errors")),
-                    Term::Vector(gate_report.errors.into_iter().map(Term::Str).collect()),
+                    Term::Vector(stage1_errors.into_iter().map(Term::Str).collect()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage2-supported")),
@@ -8152,7 +8480,7 @@ fn cmd_selfhost_artifact(
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage2-errors")),
-                    Term::Vector(stage2.errors.into_iter().map(Term::Str).collect()),
+                    Term::Vector(stage2.errors.iter().cloned().map(Term::Str).collect()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage2-module-h")),
@@ -8272,6 +8600,9 @@ fn cmd_selfhost_artifact(
             "min_stage2_validated_modules": min_stage2_validated_modules,
             "stage2_requirements_ok": gate_errors.is_empty(),
             "stage2_requirement_errors": gate_errors,
+            "stage2_cache_hits": stage2_seed_hits,
+            "stage2_computed_modules": stage2_computed,
+            "stage2_seed_artifact": bootstrap_artifact.as_ref().map(|p| p.display().to_string()),
         })),
         error: None,
     };
@@ -8287,6 +8618,24 @@ fn cmd_selfhost_artifact(
 }
 
 fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let out_buf = match frontend {
+        gc_obligations::CoreformFrontend::Rust => out.to_path_buf(),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [(
+                    TermOrdKey(Term::symbol(":out")),
+                    Term::Str(out.display().to_string()),
+                )]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(cli, "core/cli::keygen-request", req, "keygen")?;
+            PathBuf::from(planned_required_str(&planned, ":out", "keygen")?)
+        }
+    };
+    let out = out_buf.as_path();
+
     let k = gc_obligations::KeyFile::generate_ed25519();
     k.write_secure(out)
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
@@ -8319,6 +8668,55 @@ fn cmd_sign(
     acceptance: Option<&str>,
     signatures: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let (pkg_buf, key_path_buf, acceptance_buf, signatures_buf) = match frontend {
+        gc_obligations::CoreformFrontend::Rust => (
+            pkg.to_path_buf(),
+            key_path.to_path_buf(),
+            acceptance.map(|s| s.to_string()),
+            signatures.map(Path::to_path_buf),
+        ),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":pkg")),
+                        Term::Str(pkg.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":key")),
+                        Term::Str(key_path.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":acceptance")),
+                        acceptance
+                            .map(|s| Term::Str(s.to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":signatures")),
+                        signatures
+                            .map(|p| Term::Str(p.display().to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(cli, "core/cli::sign-request", req, "sign")?;
+            (
+                PathBuf::from(planned_required_str(&planned, ":pkg", "sign")?),
+                PathBuf::from(planned_required_str(&planned, ":key", "sign")?),
+                planned_optional_str(&planned, ":acceptance", "sign")?,
+                planned_optional_str(&planned, ":signatures", "sign")?.map(PathBuf::from),
+            )
+        }
+    };
+    let pkg = pkg_buf.as_path();
+    let key_path = key_path_buf.as_path();
+    let acceptance = acceptance_buf.as_deref();
+    let signatures = signatures_buf.as_deref();
+
     let (_manifest, pkg_dir) = PackageManifest::load(pkg)
         .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
@@ -8397,6 +8795,33 @@ fn cmd_sign(
 }
 
 fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let pkg_buf = match frontend {
+        gc_obligations::CoreformFrontend::Rust => pkg.to_path_buf(),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [(
+                    TermOrdKey(Term::symbol(":pkg")),
+                    Term::Str(pkg.display().to_string()),
+                )]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(
+                cli,
+                "core/cli::transparency-verify-request",
+                req,
+                "transparency-verify",
+            )?;
+            PathBuf::from(planned_required_str(
+                &planned,
+                ":pkg",
+                "transparency-verify",
+            )?)
+        }
+    };
+    let pkg = pkg_buf.as_path();
+
     let (_manifest, pkg_dir) = PackageManifest::load(pkg)
         .map_err(|e| cli_err(EX_PARSE, "manifest/parse", format!("{e}")))?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
@@ -8646,6 +9071,61 @@ fn cmd_verify(
     signatures: Option<&Path>,
     scan_store: bool,
 ) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let (pkg_buf, acceptance_buf, policy_buf, signatures_buf, scan_store) = match frontend {
+        gc_obligations::CoreformFrontend::Rust => (
+            pkg.to_path_buf(),
+            acceptance.map(|s| s.to_string()),
+            policy.map(Path::to_path_buf),
+            signatures.map(Path::to_path_buf),
+            scan_store,
+        ),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":pkg")),
+                        Term::Str(pkg.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":acceptance")),
+                        acceptance
+                            .map(|s| Term::Str(s.to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":policy")),
+                        policy
+                            .map(|p| Term::Str(p.display().to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":signatures")),
+                        signatures
+                            .map(|p| Term::Str(p.display().to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (TermOrdKey(Term::symbol(":scan-store")), Term::Bool(scan_store)),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let planned =
+                selfhost_plan_request_map(cli, "core/cli::verify-request", req, "verify")?;
+            (
+                PathBuf::from(planned_required_str(&planned, ":pkg", "verify")?),
+                planned_optional_str(&planned, ":acceptance", "verify")?,
+                planned_optional_str(&planned, ":policy", "verify")?.map(PathBuf::from),
+                planned_optional_str(&planned, ":signatures", "verify")?.map(PathBuf::from),
+                planned_required_bool(&planned, ":scan-store", "verify")?,
+            )
+        }
+    };
+    let pkg = pkg_buf.as_path();
+    let acceptance = acceptance_buf.as_deref();
+    let policy = policy_buf.as_deref();
+    let signatures = signatures_buf.as_deref();
+
     let r =
         gc_obligations::verify_package_with_policy(pkg, acceptance, scan_store, policy, signatures)
             .map_err(obligation_err)?;

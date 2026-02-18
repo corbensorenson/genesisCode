@@ -1,0 +1,59 @@
+{
+  :kind "genesis/selfhost-toolchain-manifest-v0.2"
+  :v 1
+  :module-paths [
+    "selfhost/parse.gc"
+    "selfhost/canon.gc"
+    "selfhost/printer.gc"
+    "selfhost/hash.gc"
+    "selfhost/tool_coreform_v1.gc"
+    "selfhost/cli_coreform_v1.gc"
+    "selfhost/patch_schema_v1.gc"
+    "selfhost/stage1_v1.gc"
+  ]
+  :required-symbols [
+    core/cli::canonicalize-module-src
+    core/cli::fmt-module
+    core/cli::gc-pin-program
+    core/cli::gc-plan-program
+    core/cli::gc-purge-program
+    core/cli::gc-run-program
+    core/cli::gc-unpin-program
+    core/cli::hash-module-forms
+    core/cli::hash-src-with-kind
+    core/cli::pkg-add-program
+    core/cli::pkg-export-program
+    core/cli::pkg-import-program
+    core/cli::pkg-info-program
+    core/cli::pkg-init-program
+    core/cli::pkg-install-program
+    core/cli::pkg-list-program
+    core/cli::pkg-lock-program
+    core/cli::pkg-publish-program
+    core/cli::pkg-snapshot-program
+    core/cli::pkg-update-program
+    core/cli::pkg-verify-program
+    core/cli::keygen-request
+    core/cli::selfhost-artifact-request
+    core/cli::sign-request
+    core/cli::transparency-verify-request
+    core/cli::verify-request
+    core/cli::refs-delete-program
+    core/cli::refs-get-program
+    core/cli::refs-list-program
+    core/cli::refs-set-program
+    core/cli::stage1-transform-module
+    core/cli::store-get-program
+    core/cli::store-has-program
+    core/cli::store-put-program
+    core/cli::sync-pull-program
+    core/cli::sync-push-program
+    core/cli::vcs-apply-program
+    core/cli::vcs-blame-program
+    core/cli::vcs-diff-program
+    core/cli::vcs-log-program
+    core/cli::vcs-merge3-program
+    core/cli::vcs-resolve-conflict-program
+    core/cli::vcs-why-program
+  ]
+}

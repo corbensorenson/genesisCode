@@ -18,11 +18,11 @@ fn build_selfhost_artifact_source() -> String {
                 [
                     (
                         TermOrdKey(Term::symbol(":path")),
-                        Term::Str((*path).to_string()),
+                        Term::Str(path.clone()),
                     ),
                     (
                         TermOrdKey(Term::symbol(":source")),
-                        Term::Str((*src).to_string()),
+                        Term::Str(src.clone()),
                     ),
                     (
                         TermOrdKey(Term::symbol(":module-h")),

@@ -10,6 +10,14 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+fn assert_not_unsupported_selfhost_only(stderr: &[u8]) {
+    let s = String::from_utf8_lossy(stderr);
+    assert!(
+        !s.contains("selfhost-only mode currently supports only"),
+        "unexpected selfhost-only unsupported-cmd gate error: {s}"
+    );
+}
+
 fn write_effect_caps(dir: &Path, allow: &[&str]) -> PathBuf {
     let caps = dir.join("caps.toml");
     let mut s = String::new();
@@ -134,23 +142,91 @@ fn selfhost_only_accepts_fmt_selfhost_with_artifact() {
 }
 
 #[test]
-fn selfhost_only_rejects_non_routed_commands() {
+fn selfhost_only_accepts_selfhost_artifact_and_keygen() {
     let dir = tempdir().unwrap();
-    let out = dir.path().join("k.toml");
+    let bootstrap = build_selfhost_artifact(dir.path());
+    let out_artifact = dir.path().join("toolchain.gc");
 
+    let artifact_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            bootstrap.to_str().unwrap(),
+            "selfhost-artifact",
+            "--out",
+            out_artifact.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&artifact_out.stderr);
+    assert!(out_artifact.exists());
+
+    let out_key = dir.path().join("key.toml");
     cargo_bin_cmd!("genesis")
         .args([
             "--selfhost-only",
             "keygen",
             "--out",
-            out.to_str().unwrap(),
+            out_key.to_str().unwrap(),
         ])
         .assert()
-        .failure()
-        .code(50)
-        .stderr(predicate::str::contains(
-            "selfhost-only mode currently supports only `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store`, `refs`, `pkg`, `policy`, `sync`, `gc`, `selfhost-dashboard`, and `vcs/*`",
-        ));
+        .success();
+    assert!(out_key.exists());
+}
+
+#[test]
+fn selfhost_only_accepts_sign_transparency_verify_command_families() {
+    let dir = tempdir().unwrap();
+    let key = dir.path().join("key.toml");
+    cargo_bin_cmd!("genesis")
+        .args(["--selfhost-only", "keygen", "--out"])
+        .arg(&key)
+        .assert()
+        .success();
+    let missing_pkg = dir.path().join("missing-package.toml");
+    let acceptance = "0".repeat(64);
+
+    let sign_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "sign",
+            "--pkg",
+            missing_pkg.to_str().unwrap(),
+            "--key",
+            key.to_str().unwrap(),
+            "--acceptance",
+        ])
+        .arg(&acceptance)
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&sign_out.stderr);
+    assert!(!sign_out.status.success());
+
+    let tv_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "transparency-verify",
+            "--pkg",
+            missing_pkg.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&tv_out.stderr);
+    assert!(!tv_out.status.success());
+
+    let verify_out = cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "verify",
+            "--pkg",
+            missing_pkg.to_str().unwrap(),
+            "--acceptance",
+        ])
+        .arg(&acceptance)
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&verify_out.stderr);
+    assert!(!verify_out.status.success());
 }
 
 #[test]

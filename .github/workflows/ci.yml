@@ -30,6 +30,9 @@ jobs:
       - name: Host ABI Conformance Guard
         run: bash scripts/check_host_abi_conformance.sh
 
+      - name: Prelude Capability Coverage Guard
+        run: bash scripts/check_prelude_capability_coverage.sh
+
       - name: Rust Engine Compat Guard
         run: bash scripts/check_rust_engine_compat.sh
 

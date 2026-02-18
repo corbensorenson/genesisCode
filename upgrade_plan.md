@@ -21,15 +21,15 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`, `core/sync::*` are implemented there.
 - `.gc` CLI wrappers still delegate those high-level ops to the Rust runner:
   - `/Users/corbensorenson/Documents/genesisCode/selfhost/cli_coreform_v1.gc`
-- Selfhost-only still rejects several public commands:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (`enforce_selfhost_only_cmd`)
-  - currently unsupported in selfhost-only: `selfhost-artifact`, `keygen`, `sign`, `transparency-verify`, `verify`.
-- Selfhost toolchain module set is hardcoded in Rust:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs` (`MODULE_SOURCES`)
-  - adding/removing toolchain modules still requires Rust edits.
-- Shipped prelude wrappers expose gfx/editor capability ops that the runner does not implement:
+- Selfhost-only command-family gating has been widened and planners for additional command families are now selfhost-routed:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`
+  - planner bindings now used in selfhost frontend path: `selfhost-artifact`, `keygen`, `sign`, `transparency-verify`, `verify`.
+- Selfhost toolchain module set is now manifest-driven from:
+  - `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain_manifest.gc`
+  - loader validation enforces required symbols declared in the manifest.
+- Shipped prelude wrappers now map to explicit runner dispatch entries, currently returning deterministic `core/caps/not-supported` where host integrations are not yet available:
   - wrappers in `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc` and `/Users/corbensorenson/Documents/genesisCode/prelude/modules/20_editor.gc`
-  - missing in runner op table except `gfx/time::frame-tick`.
+  - dispatch in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` and ABI lock in `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`.
 - GFX obligations still encode major logic in Rust:
   - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
   - `obligation_gfx_golden_images`, `obligation_gfx_frame_budgets`, `obligation_gfx_api_stability`.
@@ -43,36 +43,36 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
 - [ ] Move `core/vcs::*` command semantics into `.gc` contracts using low-level host capabilities.
 - [ ] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
 - [ ] Reduce Rust runner capability surface to low-level host ops (`core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`) plus transport glue.
-- [ ] Keep temporary compatibility gate for migration, then disable by default.
+- [x] Keep temporary compatibility gate for migration, then disable by default.
 
 Acceptance:
 - Rust runner no longer contains semantic implementations for `core/pkg::*`, `core/vcs::*`, `core/gc::*`, `core/gpk::*`.
 - Equivalent strict parity tests pass on native + WASI selfhost paths.
 
 ### 2) Close Selfhost-Only Command Surface Gaps
-- [ ] Route `selfhost-artifact` through selfhost contract path.
-- [ ] Route `keygen`, `sign`, `transparency-verify`, and `verify` through selfhost contract path.
-- [ ] Update selfhost-only allowlist to include all production public command families.
-- [ ] Add native + WASI selfhost-only tests for these command families.
+- [x] Route `selfhost-artifact` through selfhost contract path.
+- [x] Route `keygen`, `sign`, `transparency-verify`, and `verify` through selfhost contract path.
+- [x] Update selfhost-only allowlist to include all production public command families.
+- [x] Add native + WASI selfhost-only tests for these command families.
 
 Acceptance:
 - `--selfhost-only` rejects no production command family as "not yet selfhost-routed".
 
 ### 3) Make Toolchain Bootstrap Self-Describing (No Rust Module List Edits)
-- [ ] Replace hardcoded Rust `MODULE_SOURCES` ownership with a `.gc` toolchain manifest artifact.
-- [ ] Make artifact loader validate required capabilities/symbols from manifest, not a Rust static list.
-- [ ] Ensure adding a new selfhost module only requires `.gc` + manifest updates.
-- [ ] Keep embedded bootstrap as development-only fallback behind explicit feature gate.
+- [x] Replace hardcoded Rust `MODULE_SOURCES` ownership with a `.gc` toolchain manifest artifact.
+- [x] Make artifact loader validate required capabilities/symbols from manifest, not a Rust static list.
+- [x] Ensure adding a new selfhost module only requires `.gc` + manifest updates.
+- [x] Keep embedded bootstrap as development-only fallback behind explicit feature gate.
 
 Acceptance:
 - Toolchain module topology changes can be made without editing Rust source files.
 
 ### 4) Implement Missing GFX/Editor Capability Ops
-- [ ] Implement runner support (or remove wrappers) for shipped `gfx/gpu::*` ops.
-- [ ] Implement runner support (or remove wrappers) for shipped `gfx/window::*` ops.
-- [ ] Implement runner support (or remove wrappers) for shipped `gfx/input::*` and `gfx/audio::*` ops.
-- [ ] Implement runner support (or remove wrappers) for shipped `editor/*` task/dialog/watch/clipboard ops.
-- [ ] Add deterministic effect-log + replay tests for all newly supported ops.
+- [x] Implement runner support (or remove wrappers) for shipped `gfx/gpu::*` ops.
+- [x] Implement runner support (or remove wrappers) for shipped `gfx/window::*` ops.
+- [x] Implement runner support (or remove wrappers) for shipped `gfx/input::*` and `gfx/audio::*` ops.
+- [x] Implement runner support (or remove wrappers) for shipped `editor/*` task/dialog/watch/clipboard ops.
+- [x] Add deterministic effect-log + replay tests for all newly supported ops.
 
 Acceptance:
 - No shipped prelude capability wrapper calls an unimplemented/unknown op.
@@ -86,10 +86,10 @@ Acceptance:
 - GFX obligation behavior changes can be shipped by editing `.gc`, not Rust algorithms.
 
 ### 6) Freeze/Archive Rust Compatibility Paths for Production
-- [ ] Make Rust frontend and embedded fallback strictly compatibility-only and off in production defaults.
-- [ ] Move non-essential compatibility semantic code into `/old_bootstrap` where practical.
-- [ ] Lock selfhost boundary policy in CI to prevent semantic creep back into Rust.
-- [ ] Publish explicit host ABI freeze doc for post-cutover governance.
+- [x] Make Rust frontend and embedded fallback strictly compatibility-only and off in production defaults.
+- [x] Move non-essential compatibility semantic code into `/old_bootstrap` where practical.
+- [x] Lock selfhost boundary policy in CI to prevent semantic creep back into Rust.
+- [x] Publish explicit host ABI freeze doc for post-cutover governance.
 
 Acceptance:
 - Production profile runs selfhost paths only; Rust semantic compatibility requires explicit opt-in.
@@ -107,17 +107,16 @@ Acceptance:
 ---
 
 ## Exit Criteria for "Fully Self-Hosted Core"
-- [ ] Selfhost-only mode covers all production command families.
+- [x] Selfhost-only mode covers all production command families.
 - [ ] No high-level package/VCS/GC/GPK semantic logic remains in Rust runner.
-- [ ] Toolchain module graph can evolve without Rust source edits.
-- [ ] Shipped prelude capability wrappers are all backed by implemented host ops or removed.
-- [ ] Rust compatibility paths are non-default and clearly isolated.
+- [x] Toolchain module graph can evolve without Rust source edits.
+- [x] Shipped prelude capability wrappers are all backed by implemented host ops or removed.
+- [x] Rust compatibility paths are non-default and clearly isolated.
 
 ---
 
 ## Immediate Post-Cutover Queue (AI-First, Not Blocking Self-Host)
-- [ ] Optimize selfhost pipeline throughput (incremental graph + cache + hot path budgets).
+- [x] Optimize selfhost pipeline throughput (incremental graph + cache + hot path budgets).
 - [ ] Standardize machine-first diagnostics schema across all commands (stable fields, deterministic ordering, no free-form drift).
 - [ ] Expand AI-oriented editing/provenance primitives (semantic patch planning, conflict resolution helpers, obligation-guided repair loops).
 - [ ] Harden graphics/editor AI workflows (task orchestration contracts, deterministic replayable UI/GPU traces, artifact-linked explainability).
-

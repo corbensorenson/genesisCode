@@ -1,6 +1,6 @@
 use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
-use gc_effects::{CapsPolicy, Decision, EffectsError, run};
-use gc_kernel::{EvalCtx, Value, eval_module};
+use gc_effects::{CapsPolicy, Decision, EffectLog, EffectsError, replay, run};
+use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 
 fn documented_host_abi_ops() -> Vec<String> {
@@ -141,4 +141,54 @@ fn unknown_host_abi_op_hits_unknown_op_fallback() {
         sealed_error_code(&result.value, error_tok).as_deref(),
         Some("core/caps/unknown-op")
     );
+}
+
+#[test]
+fn editor_plugin_and_task_ops_are_replay_deterministic() {
+    let ops = vec![
+        "editor/plugin::command".to_string(),
+        "editor/task::fmt-coreform".to_string(),
+        "editor/task::lint-module".to_string(),
+        "editor/task::optimize-module".to_string(),
+        "editor/task::parse-module".to_string(),
+        "editor/task::test-pkg".to_string(),
+        "editor/task::typecheck-pkg".to_string(),
+    ];
+    let policy = allow_policy_for(&ops);
+
+    for op in ops {
+        let (forms, h) = mk_single_effect_program(&op);
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let error_tok = ctx.protocol.expect("protocol").error;
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+        let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+
+        assert_eq!(
+            run_out.log.entries.len(),
+            1,
+            "{op}: expected single log entry"
+        );
+        assert_eq!(run_out.log.entries[0].decision, Decision::Allow, "{op}");
+        assert_eq!(
+            sealed_error_code(&run_out.value, error_tok).as_deref(),
+            Some("core/caps/not-supported"),
+            "{op}: expected deterministic not-supported response"
+        );
+
+        let log_term = run_out.log.to_term();
+        let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+        let run_hash = value_hash(&run_out.value);
+
+        let mut ctx_rep = EvalCtx::new();
+        let prelude_rep = build_prelude(&mut ctx_rep);
+        let mut env_rep = prelude_rep.env;
+        let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+        let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+        let replay_hash = value_hash(&replay_value);
+
+        assert_eq!(run_hash, replay_hash, "{op}: run/replay hash mismatch");
+    }
 }

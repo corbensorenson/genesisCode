@@ -13,6 +13,13 @@ ones remain required for reproducible host/runtime verification.
       - `cargo build -p gc_wasi_cli --target wasm32-wasip1 --release`
     - `scripts/wasi_smoke.sh` now self-builds WASI when no wasm path is supplied
 
+- `old_bootstrap/scripts/host_abi_conformance.sh`
+  - reason: heavy manual parity harness, superseded by focused CI guards
+  - replacement:
+    - `scripts/check_host_abi_conformance.sh`
+    - `scripts/check_prelude_capability_coverage.sh`
+    - `scripts/selfhost_default_profile_guard.sh`
+
 ## Still required (active)
 
 - `scripts/assemble_prelude.sh`

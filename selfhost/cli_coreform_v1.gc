@@ -8,6 +8,100 @@
 
 (def core/cli::pair? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :pair))))
 
+(def core/cli::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/cli::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
+
+(def core/cli::int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/cli::str-or-nil?
+  (fn (x)
+    (if (core/list::is-nil? x)
+      true
+      (core/cli::str? x))))
+
+(def core/cli::keygen-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((out ((core/map::get req) (quote :out))))
+        (if (core/cli::str? out)
+          {:out out}
+          ((core/error::make2 "core/type-error") "core/cli::keygen-request expects :out string")))
+      ((core/error::make2 "core/type-error") "core/cli::keygen-request expects map"))))
+
+(def core/cli::sign-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (pkg ((core/map::get req) (quote :pkg)))
+          (key ((core/map::get req) (quote :key)))
+          (acceptance ((core/map::get req) (quote :acceptance)))
+          (signatures ((core/map::get req) (quote :signatures))))
+        (if (if (core/cli::str? pkg) (core/cli::str? key) false)
+          (if (core/cli::str-or-nil? acceptance)
+            (if (core/cli::str-or-nil? signatures)
+              {:pkg pkg :key key :acceptance acceptance :signatures signatures}
+              ((core/error::make2 "core/type-error") "core/cli::sign-request expects :signatures string or nil"))
+            ((core/error::make2 "core/type-error") "core/cli::sign-request expects :acceptance string or nil"))
+          ((core/error::make2 "core/type-error") "core/cli::sign-request expects :pkg and :key strings")))
+      ((core/error::make2 "core/type-error") "core/cli::sign-request expects map"))))
+
+(def core/cli::transparency-verify-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((pkg ((core/map::get req) (quote :pkg))))
+        (if (core/cli::str? pkg)
+          {:pkg pkg}
+          ((core/error::make2 "core/type-error") "core/cli::transparency-verify-request expects :pkg string")))
+      ((core/error::make2 "core/type-error") "core/cli::transparency-verify-request expects map"))))
+
+(def core/cli::verify-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (pkg ((core/map::get req) (quote :pkg)))
+          (acceptance ((core/map::get req) (quote :acceptance)))
+          (policy ((core/map::get req) (quote :policy)))
+          (signatures ((core/map::get req) (quote :signatures)))
+          (scan-store ((core/map::get req) (quote :scan-store))))
+        (if (core/cli::str? pkg)
+          (if (if (core/cli::str-or-nil? acceptance) (core/cli::str-or-nil? policy) false)
+            (if (core/cli::str-or-nil? signatures)
+              (if (core/cli::bool? scan-store)
+                {
+                  :pkg pkg
+                  :acceptance acceptance
+                  :policy policy
+                  :signatures signatures
+                  :scan-store scan-store}
+                ((core/error::make2 "core/type-error") "core/cli::verify-request expects :scan-store bool"))
+              ((core/error::make2 "core/type-error") "core/cli::verify-request expects :signatures string or nil"))
+            ((core/error::make2 "core/type-error") "core/cli::verify-request expects :acceptance and :policy as string or nil"))
+          ((core/error::make2 "core/type-error") "core/cli::verify-request expects :pkg string")))
+      ((core/error::make2 "core/type-error") "core/cli::verify-request expects map"))))
+
+(def core/cli::selfhost-artifact-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        (
+          (out ((core/map::get req) (quote :out)))
+          (min-supported ((core/map::get req) (quote :min-stage2-supported-modules)))
+          (min-validated ((core/map::get req) (quote :min-stage2-validated-modules))))
+        (if (core/cli::str? out)
+          (if (if (core/cli::int? min-supported) (core/cli::int? min-validated) false)
+            {
+              :out out
+              :min-stage2-supported-modules min-supported
+              :min-stage2-validated-modules min-validated}
+            ((core/error::make2 "core/type-error")
+              "core/cli::selfhost-artifact-request expects integer stage2 minima"))
+          ((core/error::make2 "core/type-error")
+            "core/cli::selfhost-artifact-request expects :out string")))
+      ((core/error::make2 "core/type-error") "core/cli::selfhost-artifact-request expects map"))))
+
 (def core/cli::def-name-or-nil
   (fn (form)
     (if (core/cli::pair? form)
