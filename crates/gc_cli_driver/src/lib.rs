@@ -6661,16 +6661,16 @@ fn mk_pkg_publish_program(
         Term::symbol("quote"),
         Term::symbol("core/pkg::publish"),
     ]);
-    let mut m = std::collections::BTreeMap::new();
-    m.insert(
+    let mut payload = std::collections::BTreeMap::new();
+    payload.insert(
         gc_coreform::TermOrdKey(Term::symbol(":remote")),
         Term::Str(remote.to_string()),
     );
-    m.insert(
+    payload.insert(
         gc_coreform::TermOrdKey(Term::symbol(":ref")),
         Term::Str(refname.to_string()),
     );
-    m.insert(
+    payload.insert(
         gc_coreform::TermOrdKey(Term::symbol(":policy")),
         Term::Str(policy_h.to_string()),
     );
@@ -6680,27 +6680,31 @@ fn mk_pkg_publish_program(
         } else {
             Term::Str(e.to_string())
         };
-        m.insert(gc_coreform::TermOrdKey(Term::symbol(":expected-old")), v);
+        payload.insert(gc_coreform::TermOrdKey(Term::symbol(":expected-old")), v);
     }
     if depth > 0 {
-        m.insert(
+        payload.insert(
             gc_coreform::TermOrdKey(Term::symbol(":depth")),
             Term::Int((depth as i64).into()),
         );
     }
     if let Some(h) = commit {
-        m.insert(
+        payload.insert(
             gc_coreform::TermOrdKey(Term::symbol(":commit")),
             Term::Str(h.to_string()),
         );
     }
-    let payload = Term::Map(m);
     let k = Term::list(vec![
         Term::symbol("fn"),
         Term::list(vec![Term::symbol("r")]),
         Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
     ]);
-    let perform = Term::list(vec![Term::symbol("core/effect::perform"), op, payload, k]);
+    let perform = Term::list(vec![
+        Term::symbol("core/effect::perform"),
+        op,
+        Term::Map(payload),
+        k,
+    ]);
     vec![
         Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
         Term::symbol("prog"),

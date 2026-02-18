@@ -46,6 +46,7 @@ allow = [
   "core/store::has",
 
   "core/pkg-low::save-lock",
+  "core/pkg-low::load-lock",
   "core/pkg::init",
   "core/pkg::add",
   "core/pkg::lock",
@@ -71,6 +72,9 @@ base_dir = "."
 [op."core/pkg-low::save-lock"]
 base_dir = "."
 create_dirs = true
+
+[op."core/pkg-low::load-lock"]
+base_dir = "."
 
 [op."core/pkg::lock"]
 base_dir = "."

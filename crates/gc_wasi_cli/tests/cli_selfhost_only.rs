@@ -312,6 +312,63 @@ fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
 }
 
 #[test]
+fn selfhost_only_pkg_lock_strict_uses_pkg_low_caps_only() {
+    let td = tempdir().unwrap();
+    let caps = write_effect_caps(
+        td.path(),
+        &[
+            "core/pkg-low::save-lock",
+            "core/pkg-low::load-lock",
+            "core/store::put",
+            "core/store::get",
+        ],
+    );
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    let snapshot_file = td.path().join("snapshot.gc");
+    std::fs::write(
+        &snapshot_file,
+        "{:type :vcs/snapshot :v 1 :kind :package :modules [] :obligations []}\n",
+    )
+    .unwrap();
+
+    let put_out = cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "store", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["put", "--input", "snapshot.gc"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let snapshot_h = String::from_utf8(put_out).unwrap().trim().to_string();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["add", &format!("dep@snapshot:{snapshot_h}")])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "pkg", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["lock", "--strict", "--lock", "genesis.lock"])
+        .assert()
+        .success();
+}
+
+#[test]
 fn selfhost_only_accepts_policy_command_group() {
     let td = tempdir().unwrap();
     let policies = td.path().join("policies.toml");

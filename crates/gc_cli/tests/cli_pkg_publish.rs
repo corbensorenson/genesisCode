@@ -14,6 +14,8 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
             r#"
 allow = [
   "core/store::put",
+  "core/refs::get",
+  "core/sync::push",
   "core/pkg::publish"
 ]
 
@@ -22,6 +24,9 @@ dir = "./.genesis/store"
 
 [refs]
 path = "./.genesis/refs.gc"
+
+[op."core/sync::push"]
+remote_allow = ["{remote_allow}"]
 
 [op."core/pkg::publish"]
 remote_allow = ["{remote_allow}"]

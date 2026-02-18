@@ -52,9 +52,10 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - [x] Move `core/vcs::diff` and `core/vcs::apply` semantics into `.gc` contracts.
   - [x] Move `core/vcs::merge3` and `core/vcs::resolve-conflict` semantics into `.gc` contracts.
   - [x] Add low-level host seam ops `core/vcs-low::{merge3-contract-snapshots,resolve-conflict}` and route selfhost merge/resolve flows through `.gc` contracts with parity-preserving exit semantics.
-  - [ ] Move `core/pkg::{install,verify,snapshot,publish}` semantics into `.gc` contracts.
+  - [x] Move `core/pkg::{install,verify}` semantics into `.gc` contracts.
+  - [ ] Move `core/pkg::{snapshot,publish}` semantics into `.gc` contracts.
   - [x] Move `core/pkg::lock` non-strict semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `.gc` selector resolution over `core/store::get`/`core/refs::get`, and prove selfhost-only non-strict lock works with caps that exclude `core/pkg::lock`.
-  - [ ] Remove strict-mode fallback for `core/pkg::lock` by porting strict lock invariants + commit closure/evidence checks to `.gc`.
+  - [x] Remove strict-mode fallback for `core/pkg::lock` by porting strict lock invariants + commit closure/evidence checks to `.gc`.
   - [x] Move `core/pkg::update` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` + `core/store::get` + `core/refs::get`, and prove selfhost-only operation with caps that exclude `core/pkg::update`.
   - [x] Move `core/pkg::{init,add}` semantics into `.gc` contracts via `core/pkg-low::{load-lock,save-lock}` and lock selfhost-only caps/tests away from `core/pkg::{init,add}`.
   - [x] Move `core/pkg::{list,info}` semantics into `.gc` contracts via `core/pkg-low::load-lock` and lock native+WASI caps/tests to the low-level seam.
@@ -64,6 +65,10 @@ Fully self-hosted for GenesisCode does **not** mean deleting all Rust binaries. 
   - [x] Add native + WASI parity tests for `core/pkg::{install,verify}` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/pkg::snapshot` frontend outputs to lock extraction behavior before migration.
   - [x] Add native + WASI parity tests for `core/pkg::publish` frontend outputs to lock extraction behavior before migration.
+  - [x] Add a canonicalization/idempotence guardrail test for `selfhost/cli_coreform_v1.gc` so malformed extraction edits fail fast in `gc_coreform`.
+  - [x] Re-stabilize `pkg publish` parity harnesses (native + WASI) after capability-surface migration attempts.
+  - [x] Keep `selfhost/cli_coreform_v1.gc` canonicalizable/idempotent after publish-path edits.
+  - [x] Rebuild `selfhost/toolchain.gc` from source and re-validate publish parity suites against the rebuilt artifact.
 - [x] Move `core/gc::*` and `core/gpk::*` planning/closure logic into `.gc`.
 - [ ] Reduce Rust runner capability surface to low-level host ops (`core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`) plus transport glue.
 - [x] Keep temporary compatibility gate for migration, then disable by default.

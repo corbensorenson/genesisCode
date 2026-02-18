@@ -716,14 +716,39 @@
                         (((core/vcs/reach::push-if-hash out3) ((core/map::get dep) (quote :snapshot))))))))
                 ((((core/vcs/reach::snapshot-dep-refs2 deps) n) ((core/int::add i) 1)) out)))))))))
 
+(def core/vcs/reach::snapshot-module-refs
+  (fn (modules)
+    (if (core/vcs/reach::vec? modules)
+      ((((core/vcs/reach::snapshot-module-refs2 modules) (core/vec::len modules)) 0) [])
+      (((core/vcs/reach::push-hash-values-from-map []) modules)))))
+
+(def core/vcs/reach::snapshot-module-refs2
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((m ((core/vec::get modules) i)))
+              (if (core/vcs/reach::map? m)
+                ((((core/vcs/reach::snapshot-module-refs2 modules) n) ((core/int::add i) 1))
+                  (((core/vcs/reach::push-if-hash out) ((core/map::get m) (quote :hash)))))
+                ((((core/vcs/reach::snapshot-module-refs2 modules) n) ((core/int::add i) 1))
+                  out)))))))))
+
 (def core/vcs/reach::snapshot-refs
   (fn (snapshot)
     (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get snapshot) (quote :proto))))))
       (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash))))))
         (let ((out3 (((core/vcs/reach::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members))))))
           (let ((out4 (((core/vcs/reach::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs))))))
-            (let ((out5 (((core/vcs/reach::push-hash-values-from-map out4) ((core/map::get snapshot) (quote :modules))))))
-              (((core/vcs/reach::push-hash-values-from-map out5) ((core/map::get snapshot) (quote :overrides)))))))))))
+            (let
+              (
+                (out5
+                  ((core/vcs/reach::vec-append out4)
+                    (core/vcs/reach::snapshot-module-refs ((core/map::get snapshot) (quote :modules)))))
+                (out6 (((core/vcs/reach::push-hash-values-from-map out5) ((core/map::get snapshot) (quote :modules))))))
+              (((core/vcs/reach::push-hash-values-from-map out6) ((core/map::get snapshot) (quote :overrides)))))))))))
 
 (def core/vcs/reach::conflict-refs
   (fn (conflict)

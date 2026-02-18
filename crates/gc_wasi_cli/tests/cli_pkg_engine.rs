@@ -31,7 +31,9 @@ allow = [
   "core/pkg::update",
   "core/pkg::install",
   "core/pkg::verify",
-  "core/pkg::snapshot"
+  "core/pkg::snapshot",
+  "core/store::has",
+  "core/store::get"
 ]
 
 [store]
