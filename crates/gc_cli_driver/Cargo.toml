@@ -27,6 +27,7 @@ gc_patches = { path = "../gc_patches" }
 gc_types = { path = "../gc_types" }
 gc_opt = { path = "../gc_opt" }
 gc_vcs = { path = "../gc_vcs" }
+gc_pkg = { path = "../gc_pkg" }
 
 [dev-dependencies]
 serde_json.workspace = true

@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 41
+Open checklist items: 32
 
 ## Findings From Current Project Audit
 
@@ -16,9 +16,9 @@ Open checklist items: 41
 
 ## Naming Decision (Project Manager)
 
-- [ ] Adopt `GCPM` (GenesisCode Project Manager) as product name.
-- [ ] Keep `genesis pkg` as stable compatibility surface and add `genesis gcpm` as first-class alias.
-- [ ] Freeze command naming and JSON output contracts for AI agents (no churn without schema version bump).
+- [x] Adopt `GCPM` (GenesisCode Project Manager) as product name.
+- [x] Keep `genesis pkg` as stable compatibility surface and add `genesis gcpm` as first-class alias.
+- [x] Freeze command naming and JSON output contracts for AI agents (no churn without schema version bump).
 
 ## Workstream A — Self-Host Completion Blockers
 
@@ -44,7 +44,7 @@ Open checklist items: 41
 ### B2. Lock + Resolution v2
 - [ ] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
 - [ ] Add deterministic resolver strategy modes (`pinned`, `track-ref`, `tag-policy`) with strict lock pinning.
-- [ ] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
+- [x] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
 
 ### B3. Environment Automation (Pixi-like UX, deterministic)
 - [ ] Add `gcpm env` surface for deterministic environment realization from lock + toolchain pins.
@@ -54,7 +54,7 @@ Open checklist items: 41
 ### B4. Command Surface (AI-First)
 - [ ] Add `genesis gcpm init/new/add/remove/lock/install/update/run/test/publish/info/list`.
 - [ ] Implement `gcpm run <task>` with workspace tasks as canonical data (not ad hoc shell glue).
-- [ ] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
+- [x] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
 
 ### B5. In-Language Contract Surface
 - [ ] Define `core/pm::*` contract API so AI can drive project management from Genesis code, not only CLI.
@@ -70,10 +70,10 @@ Open checklist items: 41
 
 ## Workstream D — AI-First Developer Experience
 
-- [ ] Add canonical diagnostic/fix schema docs for `gcpm` errors and resolver conflicts.
-- [ ] Add AI-optimized “what changed / why / fix options” report artifacts for lock/update/publish workflows.
-- [ ] Add deterministic “project doctor” command (`gcpm doctor`) with policy + lock + capability checks.
-- [ ] Add prompt-safe command telemetry artifacts (non-sensitive, deterministic summaries) for agent loops.
+- [x] Add canonical diagnostic/fix schema docs for `gcpm` errors and resolver conflicts.
+- [x] Add AI-optimized “what changed / why / fix options” report artifacts for lock/update/publish workflows.
+- [x] Add deterministic “project doctor” command (`gcpm doctor`) with policy + lock + capability checks.
+- [x] Add prompt-safe command telemetry artifacts (non-sensitive, deterministic summaries) for agent loops.
 
 ## Acceptance Checks (Must Pass Before v1 Declaration)
 

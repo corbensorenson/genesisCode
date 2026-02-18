@@ -25,8 +25,8 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
-    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store/*`, `refs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
-    - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
+    - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
   - Toolchain artifact resolution still follows:
@@ -92,6 +92,16 @@ CI strict selfhost gates:
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
+- `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
+  - See `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`.
+  - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
+- `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
+  - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
+- `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.
+  - See `docs/spec/GCPM_TELEMETRY_v0.1.md`.
+- `genesis gcpm doctor --caps <caps.toml> [--lock genesis.lock]`
+  - emits `kind = "genesis/pkg-doctor-v0.1"` with deterministic `data.doctor` diagnostics.
+  - diagnostic schema is defined in `docs/spec/GCPM_DIAGNOSTICS_v0.1.md`.
 
 ## Exit Codes (Stable)
 

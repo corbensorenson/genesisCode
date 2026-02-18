@@ -18,6 +18,11 @@ use gc_prelude::{
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 
+mod pkg_contract;
+mod pkg_doctor;
+mod pkg_reports;
+mod pkg_telemetry;
+
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
 const EX_PARSE: u8 = 10;
@@ -362,7 +367,8 @@ enum Cmd {
         cmd: RefsCmd,
     },
 
-    /// GenesisPkg operations (snapshot + bundle export/import).
+    /// GenesisPkg/GCPM operations (snapshot + bundle export/import).
+    #[command(visible_alias = "gcpm")]
     Pkg {
         /// Capability policy TOML (deny-by-default allowlist).
         #[arg(long)]
@@ -620,6 +626,13 @@ enum PkgCmd {
 
     /// Verify locked entries and referenced artifacts (strict checks).
     Verify {
+        /// Lock path (relative to the capability base_dir).
+        #[arg(long, default_value = "genesis.lock")]
+        lock: PathBuf,
+    },
+
+    /// Diagnose workspace/package lock and capability configuration with deterministic fix hints.
+    Doctor {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
@@ -3268,6 +3281,11 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     "genesis/pkg-verify-v0.1",
                     "pkg-verify",
                 ),
+                PkgCmd::Doctor { lock } => (
+                    mk_pkg_verify_program(lock),
+                    "genesis/pkg-doctor-v0.1",
+                    "pkg-doctor",
+                ),
                 PkgCmd::List { lock } => (
                     mk_pkg_list_program(lock),
                     "genesis/pkg-list-v0.1",
@@ -3336,6 +3354,8 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     "pkg-publish",
                 ),
             };
+            debug_assert_eq!(kind, pkg_contract::kind(cmd));
+            debug_assert_eq!(log_op, pkg_contract::log_op(cmd));
 
             let forms = canonicalize_module(forms)
                 .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
@@ -3648,6 +3668,45 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                         .collect(),
                     );
                     (prog, "genesis/pkg-verify-v0.1", "pkg-verify", desc)
+                }
+                PkgCmd::Doctor { lock } => {
+                    let f = env.get("core/cli::pkg-verify-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::pkg-verify-program",
+                        )
+                    })?;
+                    let req = Term::Map(
+                        [(
+                            TermOrdKey(Term::symbol(":lock")),
+                            Term::Str(lock.display().to_string()),
+                        )]
+                        .into_iter()
+                        .collect(),
+                    );
+                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli pkg-verify-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("pkg/doctor".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":lock")),
+                                Term::Str(lock.display().to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/pkg-doctor-v0.1", "pkg-doctor", desc)
                 }
                 PkgCmd::List { lock } => {
                     let f = env.get("core/cli::pkg-list-program").ok_or_else(|| {
@@ -4064,6 +4123,8 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                     (prog, "genesis/pkg-publish-v0.1", "pkg-publish", desc)
                 }
             };
+            debug_assert_eq!(kind, pkg_contract::kind(cmd));
+            debug_assert_eq!(log_op, pkg_contract::log_op(cmd));
             let program_hash = gc_coreform::hash_term(&desc);
             Ok((prog, kind, log_op, program_hash))
         }
@@ -4102,8 +4163,10 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                 exit_code = EX_OBLIGATIONS;
             }
         }
-    } else if matches!(cmd, PkgCmd::Install { .. } | PkgCmd::Verify { .. })
-        && let Some(false) = extract_pkg_ok_bool(&r.value)
+    } else if matches!(
+        cmd,
+        PkgCmd::Install { .. } | PkgCmd::Verify { .. } | PkgCmd::Doctor { .. }
+    ) && let Some(false) = extract_pkg_ok_bool(&r.value)
     {
         ok = false;
         exit_code = EX_VERIFY;
@@ -4121,6 +4184,13 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             PkgCmd::Install { .. } | PkgCmd::Verify { .. } => {
+                if ok {
+                    "ok\n".to_string()
+                } else {
+                    format!("{value}\n")
+                }
+            }
+            PkgCmd::Doctor { .. } => {
                 if ok {
                     "ok\n".to_string()
                 } else {
@@ -4149,16 +4219,57 @@ fn cmd_pkg(cli: &Cli, caps: &Path, log: Option<&Path>, cmd: &PkgCmd) -> Result<C
         }
     };
 
+    let doctor_report = if let PkgCmd::Doctor { lock } = cmd {
+        Some(pkg_doctor::build_pkg_doctor_report(
+            &ctx, &r.value, caps, lock, ok, exit_code,
+        ))
+    } else {
+        None
+    };
+    if let Some(report) = &doctor_report
+        && !report.ok
+    {
+        ok = false;
+        if exit_code == EX_OK {
+            exit_code = EX_VERIFY;
+        }
+    }
+    let ai_report = pkg_reports::build_pkg_ai_report(cmd, &r.value, caps);
+
+    let mut data = serde_json::json!({
+        "coreform_frontend": frontend_info,
+        "caps": caps.display().to_string(),
+        "log": log_path.display().to_string(),
+        "value": value,
+        "value_format": value_format,
+    });
+    if let Some(report) = doctor_report
+        && let Some(obj) = data.as_object_mut()
+    {
+        obj.insert("doctor".to_string(), report.json);
+    }
+    if let Some(report) = ai_report
+        && let Some(obj) = data.as_object_mut()
+    {
+        obj.insert("report".to_string(), report);
+    }
+    if let Some(obj) = data.as_object_mut() {
+        let telemetry = pkg_telemetry::build_pkg_telemetry(
+            cmd,
+            ok,
+            exit_code,
+            &r.log,
+            &r.value,
+            obj.get("report"),
+            obj.get("doctor"),
+        );
+        obj.insert("telemetry".to_string(), telemetry);
+    }
+
     let env = JsonEnvelope {
         ok,
         kind,
-        data: Some(serde_json::json!({
-            "coreform_frontend": frontend_info,
-            "caps": caps.display().to_string(),
-            "log": log_path.display().to_string(),
-            "value": value,
-            "value_format": value_format,
-        })),
+        data: Some(data),
         error: if ok {
             None
         } else {

@@ -316,6 +316,54 @@ fn selfhost_only_pkg_update_uses_pkg_low_caps_only() {
 }
 
 #[test]
+fn selfhost_only_accepts_gcpm_alias_command_group() {
+    let dir = tempdir().unwrap();
+    let caps = write_effect_caps(
+        dir.path(),
+        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "gcpm", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--selfhost-only", "gcpm", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["list"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn gcpm_alias_preserves_pkg_json_kind_contract() {
+    let dir = tempdir().unwrap();
+    let caps = write_effect_caps(
+        dir.path(),
+        &["core/pkg-low::save-lock", "core/pkg-low::load-lock"],
+    );
+
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir.path())
+        .args(["--json", "--selfhost-only", "gcpm", "--caps"])
+        .arg(caps.to_str().unwrap())
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let kind = v.get("kind").and_then(JsonValue::as_str).unwrap();
+    assert_eq!(kind, "genesis/pkg-init-v0.1");
+}
+
+#[test]
 fn selfhost_only_pkg_lock_non_strict_uses_pkg_low_caps_only() {
     let dir = tempdir().unwrap();
     let caps = write_effect_caps(
