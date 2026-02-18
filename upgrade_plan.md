@@ -75,7 +75,8 @@ Acceptance gate:
   - [x] Implement `core/cli::infer-effects` (pure effect op inference) in `selfhost/cli_coreform_v1.gc` with parity test vs `gc_types::infer_effects`.
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
   - [x] Add `core/cli::optimize-module` (alias of stage1 transform) as the stable selfhost optimizer entrypoint.
-  - [ ] Prove parity with `gc_opt` stage1 pipeline (or tighten the selfhost optimizer spec to match) before switching `core/obligation::translation-validation` to selfhost, because acceptance artifacts must remain frontend-independent.
+  - [x] Prove parity with `gc_opt` stage1 pipeline using regression tests (`crates/gc_prelude/tests/selfhost_optimize_parity.rs`) before switching `core/obligation::translation-validation` to selfhost.
+  - [ ] Switch `core/obligation::translation-validation` to selfhost optimizer route once parity coverage is widened and acceptance artifact compatibility is frozen.
 - [x] Implement self-host patch schema validation/apply pipeline in `.gc`.
   - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
   - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.
@@ -125,6 +126,7 @@ Acceptance gate:
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
   - [x] 7b) Module-loading hash derivation now prefers selfhost `core/cli::hash-module-forms` instead of Rust-only hashing in selfhost frontend paths.
   - [x] 7c) Stage-1 transform is implemented in `selfhost/stage1_v1.gc` and `selfhost-artifact` uses `core/cli::stage1-transform-module`.
+  - [x] 7d) Added optimizer parity harness: selfhost `core/cli::optimize-module` matches `gc_opt::stage1_pipeline` on representative modules.
 - [x] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
