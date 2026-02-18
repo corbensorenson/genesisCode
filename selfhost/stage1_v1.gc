@@ -41,6 +41,24 @@
 
 (def selfhost/stage1::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
 
+(def selfhost/stage1::starts-with?
+  (fn (s)
+    (fn (prefix)
+      (let ((sb (core/str::to-utf8 s)))
+        (let ((pb (core/str::to-utf8 prefix)))
+          (let ((sn (core/bytes::len sb)))
+            (let ((pn (core/bytes::len pb)))
+              (if ((core/int::lt? sn) pn) false ((core/eq? (((core/bytes::slice sb) 0) pn)) pb)))))))))
+
+(def selfhost/stage1::opaque-call-head?
+  (fn (h)
+    (if (selfhost/stage1::sym? h)
+      (let ((s (core/sym::to-str h)))
+        (if ((selfhost/stage1::starts-with? s) "core/effect::")
+          true
+          ((selfhost/stage1::starts-with? s) "core/contract::")))
+      false)))
+
 (def selfhost/stage1::is-int-zero?
   (fn (x) (if (selfhost/stage1::int? x) ((core/int::eq? x) 0) false)))
 
@@ -176,7 +194,9 @@
 (def selfhost/stage1::optimize-special-or-app
   (fn (h)
     (fn (items)
-      (if ((core/sym::eq? h) (quote quote))
+      (if (selfhost/stage1::opaque-call-head? h)
+        (selfhost/canon::vec->list items)
+        (if ((core/sym::eq? h) (quote quote))
         (selfhost/canon::vec->list items)
         (if ((core/sym::eq? h) (quote fn))
           (selfhost/stage1::optimize-fn items)
@@ -192,7 +212,7 @@
                     (selfhost/canon::vec->list items)
                     (if ((core/sym::eq? h) (quote unseal))
                       (selfhost/canon::vec->list items)
-                      (selfhost/stage1::optimize-app items))))))))))))
+                      (selfhost/stage1::optimize-app items)))))))))))))
 
 (def selfhost/stage1::optimize-fn
   (fn (items)

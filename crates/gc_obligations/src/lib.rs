@@ -494,18 +494,14 @@ pub fn test_package_with_step_limit_and_frontend(
             "core/obligation::replayable-tests" => {
                 obligation_replayable(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
             }
-            "core/obligation::typecheck" => obligation_typecheck(&store, &modules),
+            "core/obligation::typecheck" => {
+                obligation_typecheck(&store, &modules, &frontend, limits)
+            }
             "core/obligation::stage1-validation" => {
                 obligation_stage1_validation(&store, &manifest, &modules)
             }
             "core/obligation::translation-validation" => obligation_translation_validation(
-                &store,
-                &pkg_dir,
-                &manifest,
-                &modules,
-                &caps,
-                &test_runs,
-                limits,
+                &store, &pkg_dir, &manifest, &modules, &caps, &test_runs, limits, &frontend,
             ),
             "core/obligation::gfx-golden-images" => {
                 obligation_gfx_golden_images(&store, &pkg_dir, &manifest, &modules, limits)
@@ -552,15 +548,7 @@ pub fn typecheck_package_with_step_limit_and_frontend(
         mem_limits,
     };
     let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
-    let mut mods = Vec::new();
-    for m in &modules {
-        mods.push(gc_types::ModuleForTypecheck {
-            path: m.entry.path.clone(),
-            forms: m.forms.clone(),
-            meta: m.meta.clone(),
-        });
-    }
-    let report = gc_types::typecheck_package(&mods);
+    let report = typecheck_report_with_frontend(&modules, &frontend, limits)?;
     let report_coreform = print_term(&report.to_term());
     Ok(PackageTypecheckResult {
         ok: report.ok,
@@ -838,6 +826,100 @@ fn selfhost_hash_module_forms(
     Err(ObligationError::Module(
         "missing binding core/cli::hash-module-forms or selfhost/hash::hash-module".to_string(),
     ))
+}
+
+fn selfhost_optimize_module_forms(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    forms: &[Term],
+) -> Result<Vec<Term>, ObligationError> {
+    let optimize_fn = env.get("core/cli::optimize-module").ok_or_else(|| {
+        ObligationError::Module("missing binding core/cli::optimize-module".to_string())
+    })?;
+    let out = optimize_fn
+        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .map_err(|e| ObligationError::Opt(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &out) {
+        return Err(ObligationError::Opt(format!(
+            "selfhost core/cli optimize-module failed: {e}"
+        )));
+    }
+    let Some(Term::Vector(opt_forms)) = out.as_data() else {
+        return Err(ObligationError::Opt(format!(
+            "selfhost core/cli optimize-module returned non-vector: {}",
+            out.debug_repr()
+        )));
+    };
+    Ok(opt_forms.clone())
+}
+
+fn selfhost_infer_effects_forms(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    forms: &[Term],
+) -> Result<gc_types::InferredEffects, ObligationError> {
+    let infer_fn = env.get("core/cli::infer-effects").ok_or_else(|| {
+        ObligationError::Typecheck("missing binding core/cli::infer-effects".to_string())
+    })?;
+    let out = infer_fn
+        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .map_err(|e| ObligationError::Typecheck(e.to_string()))?;
+    if let Some(e) = extract_protocol_error(ctx, &out) {
+        return Err(ObligationError::Typecheck(format!(
+            "selfhost core/cli infer-effects failed: {e}"
+        )));
+    }
+    let out_term = out
+        .as_data()
+        .cloned()
+        .unwrap_or_else(|| out.to_term_for_log(ctx.protocol.map(|p| p.error)));
+    let Term::Map(m) = out_term else {
+        return Err(ObligationError::Typecheck(format!(
+            "selfhost core/cli infer-effects returned non-map: {}",
+            out.debug_repr()
+        )));
+    };
+
+    let mut ops = BTreeSet::new();
+    let ops_term = m
+        .get(&TermOrdKey(Term::symbol(":ops")))
+        .ok_or_else(|| {
+            ObligationError::Typecheck(
+                "selfhost core/cli infer-effects result missing :ops".to_string(),
+            )
+        })?
+        .clone();
+    let Term::Vector(xs) = ops_term else {
+        return Err(ObligationError::Typecheck(
+            "selfhost core/cli infer-effects :ops must be vector".to_string(),
+        ));
+    };
+    for x in xs {
+        match x {
+            Term::Symbol(s) => {
+                ops.insert(s);
+            }
+            other => {
+                return Err(ObligationError::Typecheck(format!(
+                    "selfhost core/cli infer-effects :ops must contain symbols, got {}",
+                    print_term(&other)
+                )));
+            }
+        }
+    }
+
+    let unknown = match m.get(&TermOrdKey(Term::symbol(":unknown"))) {
+        Some(Term::Bool(b)) => *b,
+        Some(other) => {
+            return Err(ObligationError::Typecheck(format!(
+                "selfhost core/cli infer-effects :unknown must be bool, got {}",
+                print_term(other)
+            )));
+        }
+        None => false,
+    };
+
+    Ok(gc_types::InferredEffects { ops, unknown })
 }
 
 fn pin_manifest_hashes(
@@ -2351,17 +2433,10 @@ fn obligation_replayable(
 fn obligation_typecheck(
     store: &EvidenceStore,
     modules: &[LoadedModule],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
 ) -> Result<ObligationResult, ObligationError> {
-    let mut mods = Vec::new();
-    for m in modules {
-        let meta = extract_meta_static(&m.forms);
-        mods.push(gc_types::ModuleForTypecheck {
-            path: m.entry.path.clone(),
-            forms: m.forms.clone(),
-            meta,
-        });
-    }
-    let report = gc_types::typecheck_package(&mods);
+    let report = typecheck_report_with_frontend(modules, frontend, limits)?;
     let ok = report.ok;
     let artifact = store.put_term(&report.to_term())?;
     Ok(ObligationResult {
@@ -2370,6 +2445,64 @@ fn obligation_typecheck(
         artifact: Some(artifact),
         errors: report.errors,
     })
+}
+
+fn typecheck_report_with_frontend(
+    modules: &[LoadedModule],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
+) -> Result<gc_types::TypecheckReport, ObligationError> {
+    let mut mods = Vec::new();
+    for m in modules {
+        mods.push(gc_types::ModuleForTypecheck {
+            path: m.entry.path.clone(),
+            forms: m.forms.clone(),
+            meta: m.meta.clone(),
+        });
+    }
+    let report = gc_types::typecheck_package(&mods);
+    verify_selfhost_infer_effects_parity(modules, frontend, limits)?;
+    Ok(report)
+}
+
+fn verify_selfhost_infer_effects_parity(
+    modules: &[LoadedModule],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
+) -> Result<(), ObligationError> {
+    let CoreformFrontend::Selfhost(cfg) = frontend else {
+        return Ok(());
+    };
+
+    // Toolchain bootstrap is trusted and therefore uncharged.
+    let mut ctx = EvalCtx::with_step_limit(None);
+    ctx.set_mem_limits(limits.mem_limits);
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    load_selfhost_coreform_toolchain_v1_with_mode(
+        &mut ctx,
+        &mut env,
+        cfg.bootstrap_mode,
+        cfg.artifact.as_deref(),
+    )
+    .map_err(|e| ObligationError::Typecheck(format!("selfhost/init: {e}")))?;
+    // Apply user/configured limits to inference work.
+    ctx.steps = 0;
+    ctx.step_limit = limits.step_limit.resolve();
+
+    for m in modules {
+        let rust = gc_types::infer_effects(&m.forms);
+        let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &m.forms)?;
+        if rust.ops != selfhost.ops || rust.unknown != selfhost.unknown {
+            let rust_ops = rust.ops.into_iter().collect::<Vec<_>>().join(",");
+            let self_ops = selfhost.ops.into_iter().collect::<Vec<_>>().join(",");
+            return Err(ObligationError::Typecheck(format!(
+                "selfhost core/cli::infer-effects parity mismatch for {} (rust_ops=[{}] rust_unknown={} selfhost_ops=[{}] selfhost_unknown={})",
+                m.entry.path, rust_ops, rust.unknown, self_ops, selfhost.unknown
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn obligation_lint(
@@ -2671,10 +2804,7 @@ fn obligation_stage1_validation(
                     TermOrdKey(Term::symbol(":path")),
                     Term::Str(m.entry.path.clone()),
                 ),
-                (
-                    TermOrdKey(Term::symbol(":ok")),
-                    Term::Bool(gate_report.ok),
-                ),
+                (TermOrdKey(Term::symbol(":ok")), Term::Bool(gate_report.ok)),
                 (
                     TermOrdKey(Term::symbol(":original-module-h")),
                     Term::Bytes(gate_report.original_module_hash.to_vec().into()),
@@ -2699,14 +2829,7 @@ fn obligation_stage1_validation(
                 ),
                 (
                     TermOrdKey(Term::symbol(":errors")),
-                    Term::Vector(
-                        gate_report
-                            .errors
-                            .iter()
-                            .cloned()
-                            .map(Term::Str)
-                            .collect(),
-                    ),
+                    Term::Vector(gate_report.errors.iter().cloned().map(Term::Str).collect()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":optimizer")),
@@ -2783,6 +2906,7 @@ fn obligation_translation_validation(
     caps: &CapsPolicy,
     test_runs: &[TestRun],
     limits: KernelLimits,
+    frontend: &CoreformFrontend,
 ) -> Result<ObligationResult, ObligationError> {
     // Conservative v0.2: we only validate optimization by re-running the *whole package*
     // tests against an optimized copy of each module and comparing per-test hashes.
@@ -2819,6 +2943,28 @@ fn obligation_translation_validation(
     let mut stage2_entries = Vec::new();
     let mut stage2_supported: u64 = 0;
     let mut stage2_validated: u64 = 0;
+    let mut selfhost_ctx = None;
+    let mut selfhost_env = None;
+    if let CoreformFrontend::Selfhost(cfg) = frontend {
+        // Toolchain bootstrap is trusted and therefore uncharged.
+        let mut ctx = EvalCtx::with_step_limit(None);
+        ctx.set_mem_limits(limits.mem_limits);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            cfg.bootstrap_mode,
+            cfg.artifact.as_deref(),
+        )
+        .map_err(|e| ObligationError::Opt(format!("selfhost/init: {e}")))?;
+
+        // Apply user/configured limits to optimization work.
+        ctx.steps = 0;
+        ctx.step_limit = limits.step_limit.resolve();
+        selfhost_ctx = Some(ctx);
+        selfhost_env = Some(env);
+    }
 
     // Optimize modules once and record optimizer statistics as evidence.
     let mut opt_modules = Vec::new();
@@ -2826,22 +2972,44 @@ fn obligation_translation_validation(
     let mut mod_terms: Vec<Term> = Vec::new();
     for m in modules {
         let orig_h = hash_module(&m.forms);
-        let stage1 =
-            gc_opt::stage1_pipeline(&m.forms).map_err(|e| ObligationError::Opt(format!("{e}")))?;
-        let opt_forms = stage1.transformed_forms;
+        let (rust_opt_raw, rust_opt_report) = gc_opt::optimize_module_with_report(&m.forms);
+        let rust_opt_forms = canonicalize_module(rust_opt_raw)
+            .map_err(|e| ObligationError::Opt(format!("stage1 canonicalize: {e}")))?;
+        let opt_forms = match frontend {
+            CoreformFrontend::Rust => rust_opt_forms.clone(),
+            CoreformFrontend::Selfhost(_) => {
+                let ctx = selfhost_ctx.as_mut().expect("selfhost ctx initialized");
+                let env = selfhost_env.as_ref().expect("selfhost env initialized");
+                let selfhost_opt_raw = selfhost_optimize_module_forms(ctx, env, &m.forms)?;
+                let selfhost_opt = canonicalize_module(selfhost_opt_raw).map_err(|e| {
+                    ObligationError::Opt(format!("selfhost optimize canonicalize: {e}"))
+                })?;
+                if selfhost_opt != rust_opt_forms {
+                    let rust_h = hash_module(&rust_opt_forms);
+                    let selfhost_h = hash_module(&selfhost_opt);
+                    return Err(ObligationError::Opt(format!(
+                        "selfhost core/cli::optimize-module parity mismatch for {} (rust={} selfhost={})",
+                        m.entry.path,
+                        hex32(rust_h),
+                        hex32(selfhost_h),
+                    )));
+                }
+                selfhost_opt
+            }
+        };
         opt_stats.egg_runs = opt_stats
             .egg_runs
-            .saturating_add(stage1.optimize_report.stats.egg_runs);
+            .saturating_add(rust_opt_report.stats.egg_runs);
         opt_stats.iterations = opt_stats
             .iterations
-            .saturating_add(stage1.optimize_report.stats.iterations);
+            .saturating_add(rust_opt_report.stats.iterations);
         opt_stats.eclasses = opt_stats
             .eclasses
-            .saturating_add(stage1.optimize_report.stats.eclasses);
+            .saturating_add(rust_opt_report.stats.eclasses);
         opt_stats.enodes = opt_stats
             .enodes
-            .saturating_add(stage1.optimize_report.stats.enodes);
-        for (k, v) in stage1.optimize_report.stats.rewrites_applied {
+            .saturating_add(rust_opt_report.stats.enodes);
+        for (k, v) in rust_opt_report.stats.rewrites_applied {
             *opt_stats.rewrites_applied.entry(k).or_insert(0) += v;
         }
         let opt_h = hash_module(&opt_forms);
@@ -2959,14 +3127,7 @@ fn obligation_translation_validation(
             ));
         }
 
-        let opt = run_one_test(
-            pkg_dir,
-            manifest,
-            &opt_modules,
-            caps,
-            tr.id.clone(),
-            limits,
-        )?;
+        let opt = run_one_test(pkg_dir, manifest, &opt_modules, caps, tr.id.clone(), limits)?;
 
         if tr.value_hash != opt.value_hash {
             ok = false;
@@ -4619,6 +4780,220 @@ mod tests {
         assert!(
             format!("{err}").contains("missing binding core/cli::hash-module-forms"),
             "expected missing-binding error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_optimize_prefers_core_cli_optimize_module_handler_when_present() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        env.set_local(
+            "core/cli::optimize-module",
+            Value::Data(Term::Str("shadowed".to_string())),
+        );
+
+        let forms = canonicalize_module(parse_module("(def x (prim int/add 1 2))\n x\n").unwrap())
+            .expect("canonical module");
+        let err = selfhost_optimize_module_forms(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("not callable"),
+            "expected core/cli optimize-module path to be attempted first, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_optimize_requires_core_cli_binding_and_does_not_fallback_to_rust() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let env = prelude.env;
+        let forms = canonicalize_module(parse_module("(def x (prim int/add 1 2))\n x\n").unwrap())
+            .expect("canonical module");
+        let err = selfhost_optimize_module_forms(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("missing binding core/cli::optimize-module"),
+            "expected missing-binding error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_infer_effects_prefers_core_cli_handler_when_present() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        env.set_local(
+            "core/cli::infer-effects",
+            Value::Data(Term::Str("shadowed".to_string())),
+        );
+
+        let forms = canonicalize_module(
+            parse_module("(def p (core/effect::perform 'sys/time::now {} (fn (x) x)))\n").unwrap(),
+        )
+        .expect("canonical module");
+        let err = selfhost_infer_effects_forms(&mut ctx, &env, &forms).unwrap_err();
+        assert!(
+            format!("{err}").contains("not callable"),
+            "expected core/cli infer-effects path to be attempted first, got: {err}"
+        );
+    }
+
+    #[test]
+    fn selfhost_infer_effects_matches_gc_types_for_pkg_basic_fixture() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        let forms = canonicalize_module(
+            parse_module(include_str!("../../../tests/spec/pkg_basic/basic.gc")).unwrap(),
+        )
+        .expect("canonical module");
+        let rust = gc_types::infer_effects(&forms);
+        let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &forms).expect("infer");
+        assert_eq!(selfhost.unknown, rust.unknown);
+        assert_eq!(selfhost.ops, rust.ops);
+    }
+
+    #[test]
+    fn selfhost_infer_effects_matches_gc_types_for_pkg_fail_caps_declared_fixture() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        let forms = canonicalize_module(
+            parse_module(include_str!(
+                "../../../tests/spec/pkg_fail_caps_declared/fail.gc"
+            ))
+            .unwrap(),
+        )
+        .expect("canonical module");
+        let rust = gc_types::infer_effects(&forms);
+        let selfhost = selfhost_infer_effects_forms(&mut ctx, &env, &forms).expect("infer");
+        assert_eq!(selfhost.unknown, rust.unknown);
+        assert_eq!(selfhost.ops, rust.ops);
+    }
+
+    #[test]
+    fn selfhost_literal_op_and_flatten_app_detect_quoted_effect_op() {
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("selfhost/toolchain.gc");
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            SelfhostBootstrapMode::ArtifactOnly,
+            Some(&artifact),
+        )
+        .expect("load selfhost toolchain");
+
+        let forms = canonicalize_module(parse_module("(((core/effect::perform (quote io/fs::write)) {:data \"x\" :path \"out.txt\"}) (fn (_) (core/effect::pure nil)))\n").unwrap())
+            .expect("canonical module");
+        let app = forms.first().expect("one form").clone();
+        let app_items = app.as_proper_list().expect("app proper list");
+        let inner = app_items[0].clone();
+        let inner_debug = format!("{inner:?}");
+
+        let flatten = env
+            .get("core/cli::flatten-app")
+            .expect("flatten-app binding");
+        let flat_v = flatten
+            .clone()
+            .apply(&mut ctx, Value::Data(app.clone()))
+            .expect("flatten apply");
+        let flat_t = flat_v.to_term_for_log(ctx.protocol.map(|p| p.error));
+        let flat_map = match flat_t {
+            Term::Map(m) => m,
+            other => panic!("flatten-app returned non-map: {}", print_term(&other)),
+        };
+        let args = match flat_map.get(&TermOrdKey(Term::symbol(":args"))) {
+            Some(Term::Vector(v)) => v.clone(),
+            other => panic!("flatten-app args missing/non-vector: {:?}", other),
+        };
+        let args_debug = format!("{args:?}");
+        assert_eq!(args.len(), 3, "flatten-app args length mismatch");
+
+        let lit = env
+            .get("core/cli::literal-op-sym-or-nil")
+            .expect("literal-op binding");
+        let mut found = false;
+        let mut debug_rows: Vec<String> = Vec::new();
+        let app_render = print_term(&app);
+        let inner_render = print_term(&inner);
+        let flat_render = print_term(&Term::Map(flat_map.clone()));
+        let flat_inner_v = flatten
+            .clone()
+            .apply(&mut ctx, Value::Data(inner))
+            .expect("flatten inner apply");
+        let flat_inner_t = flat_inner_v.to_term_for_log(ctx.protocol.map(|p| p.error));
+        let flat_inner_render = print_term(&flat_inner_t);
+        for arg in args {
+            let arg_render = print_term(&arg);
+            let op_v = lit
+                .clone()
+                .apply(&mut ctx, Value::Data(arg))
+                .expect("literal-op apply");
+            let op_t = op_v.to_term_for_log(ctx.protocol.map(|p| p.error));
+            debug_rows.push(format!("{arg_render} => {}", print_term(&op_t)));
+            if let Term::Symbol(s) = op_t
+                && s == "io/fs::write"
+            {
+                found = true;
+            }
+        }
+        assert!(
+            found,
+            "literal-op-sym-or-nil failed to detect io/fs::write; app={} inner={} inner_debug={} flat={} flat_inner={} args_debug={} rows={}",
+            app_render,
+            inner_render,
+            inner_debug,
+            flat_render,
+            flat_inner_render,
+            args_debug,
+            debug_rows.join(" | ")
         );
     }
 }

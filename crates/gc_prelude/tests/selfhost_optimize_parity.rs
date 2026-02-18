@@ -117,11 +117,15 @@ fn selfhost_core_cli_optimize_matches_gc_opt_stage1_pipeline() {
               p
             "#,
         ),
+        (
+            "pkg-basic-fixture",
+            include_str!("../../../tests/spec/pkg_basic/basic.gc"),
+        ),
     ];
 
     for (name, src) in cases {
-        let forms = canonicalize_module(parse_module(src).expect("parse case"))
-            .expect("canonicalize case");
+        let forms =
+            canonicalize_module(parse_module(src).expect("parse case")).expect("canonicalize case");
         let rust_stage1 = gc_opt::stage1_pipeline(&forms)
             .expect("stage1 pipeline")
             .transformed_forms;

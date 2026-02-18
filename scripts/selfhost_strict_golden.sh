@@ -11,7 +11,15 @@ GEN="$ROOT_DIR/target/debug/genesis"
 GWASI="$ROOT_DIR/target/debug/genesis_wasi"
 
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+pids=()
+cleanup() {
+  for pid in "${pids[@]}"; do
+    kill "$pid" >/dev/null 2>&1 || true
+  done
+  wait >/dev/null 2>&1 || true
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
 ART="$TMP_DIR/selfhost_toolchain.gc"
 REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"
@@ -138,31 +146,47 @@ wasi_replay="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" replay "$TMP_
 # Package golden sweep (selfhost strict) over every package fixture.
 PKGS_TMP="$TMP_DIR/pkgs"
 mkdir -p "$PKGS_TMP"
+STRICT_GOLDEN_JOBS="${GENESIS_STRICT_GOLDEN_JOBS:-4}"
+if ! [[ "$STRICT_GOLDEN_JOBS" =~ ^[0-9]+$ ]] || [[ "$STRICT_GOLDEN_JOBS" -lt 1 ]]; then
+  fail "GENESIS_STRICT_GOLDEN_JOBS must be a positive integer"
+fi
+
 for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   [[ -d "$src_dir" ]] || continue
   [[ -f "$src_dir/package.toml" ]] || continue
+
   name="$(basename "$src_dir")"
-  dst_dir="$PKGS_TMP/$name"
-  cp -R "$src_dir" "$dst_dir"
-  pkg_toml="$dst_dir/package.toml"
-  check_typecheck_parity "$pkg_toml" "$name"
+  (
+    dst_dir="$PKGS_TMP/$name"
+    cp -R "$src_dir" "$dst_dir"
+    pkg_toml="$dst_dir/package.toml"
+    check_typecheck_parity "$pkg_toml" "$name"
 
-  if [[ "$name" == pkg_fail_* ]]; then
-    if "$GEN" --coreform-frontend rust test --pkg "$pkg_toml" >/dev/null 2>&1; then
-      fail "expected rust test failure for fixture ${name}"
-    fi
-    if "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" >/dev/null 2>&1; then
-      fail "expected strict selfhost test failure for fixture ${name}"
-    fi
-  else
-    rust_pack="$("$GEN" --coreform-frontend rust pack --pkg "$pkg_toml" | tr -d '\n')"
-    self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$pkg_toml" | tr -d '\n')"
-    [[ "$rust_pack" == "$self_pack" ]] || fail "native strict pack mismatch for fixture ${name}"
+    if [[ "$name" == pkg_fail_* ]]; then
+      if "$GEN" --coreform-frontend rust test --pkg "$pkg_toml" >/dev/null 2>&1; then
+        fail "expected rust test failure for fixture ${name}"
+      fi
+      if "$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" >/dev/null 2>&1; then
+        fail "expected strict selfhost test failure for fixture ${name}"
+      fi
+    else
+      rust_pack="$("$GEN" --coreform-frontend rust pack --pkg "$pkg_toml" | tr -d '\n')"
+      self_pack="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost pack --pkg "$pkg_toml" | tr -d '\n')"
+      [[ "$rust_pack" == "$self_pack" ]] || fail "native strict pack mismatch for fixture ${name}"
 
-    rust_test="$("$GEN" --coreform-frontend rust test --pkg "$pkg_toml" | tr -d '\n')"
-    self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" | tr -d '\n')"
-    [[ "$rust_test" == "$self_test" ]] || fail "native strict test mismatch for fixture ${name}"
+      rust_test="$("$GEN" --coreform-frontend rust test --pkg "$pkg_toml" | tr -d '\n')"
+      self_test="$("$GEN" --selfhost-only --selfhost-artifact "$ART" --coreform-frontend selfhost test --pkg "$pkg_toml" | tr -d '\n')"
+      [[ "$rust_test" == "$self_test" ]] || fail "native strict test mismatch for fixture ${name}"
+    fi
+  ) &
+  pids+=("$!")
+  if [[ "${#pids[@]}" -ge "$STRICT_GOLDEN_JOBS" ]]; then
+    wait "${pids[0]}" || fail "parallel package fixture worker failed"
+    pids=("${pids[@]:1}")
   fi
+done
+for pid in "${pids[@]}"; do
+  wait "$pid" || fail "parallel package fixture worker failed"
 done
 
 # Ensure strict selfhost package paths in WASI remain healthy on canonical baseline fixture.
