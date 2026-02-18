@@ -144,6 +144,7 @@ These are important but not blockers for the fast-path self-hosted core mileston
 - [ ] Full `.gc` lock/resolver and `.gpk` planner internals (beyond current runtime parity coverage).
 - [ ] Second host implementation conformance harness for host ABI portability proof.
 - [ ] `.gc` profiling/incremental build graph/perf acceleration wave.
+  - [x] Add `scripts/test_fast.sh` to keep local iteration under a small, deterministic, high-signal subset without weakening CI coverage.
 - [ ] Graphics/WebGPU/editor stack and higher-level developer UX layers.
 
 ---
