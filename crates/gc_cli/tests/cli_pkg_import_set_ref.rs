@@ -13,8 +13,8 @@ fn write_caps(dir: &Path) -> PathBuf {
 allow = [
   "core/store::put",
   "core/refs::get",
-  "core/gpk::export",
-  "core/gpk::import"
+  "core/gpk-low::export",
+  "core/gpk-low::import"
 ]
 
 [store]
@@ -23,10 +23,10 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/gpk::export"]
+[op."core/gpk-low::export"]
 base_dir = "."
 
-[op."core/gpk::import"]
+[op."core/gpk-low::import"]
 base_dir = "."
 "#,
     )

@@ -20,13 +20,13 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
         format!(
             r#"
 allow = [
-  "core/pkg::init",
-  "core/pkg::lock",
+  "core/pkg-low::init",
+  "core/pkg-low::lock",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
-  "core/pkg::install",
-  "core/pkg::verify",
-  "core/pkg::publish",
+  "core/pkg-low::install",
+  "core/pkg-low::verify",
+  "core/pkg-low::publish",
   "core/store::put",
   "core/store::get",
   "core/store::has",
@@ -47,21 +47,21 @@ create_dirs = true
 [op."core/pkg-low::load-lock"]
 base_dir = "."
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::install"]
+[op."core/pkg-low::install"]
 base_dir = "."
 
-[op."core/pkg::verify"]
+[op."core/pkg-low::verify"]
 base_dir = "."
 
-[op."core/pkg::publish"]
+[op."core/pkg-low::publish"]
 base_dir = "."
 remote_allow = ["{remote_allow}"]
 

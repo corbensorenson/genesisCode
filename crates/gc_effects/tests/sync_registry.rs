@@ -265,7 +265,7 @@ fn mk_caps_for_pkg_publish(
 ) -> CapsPolicy {
     let s = format!(
         r#"
-allow = ["core/pkg::publish"]
+allow = ["core/pkg-low::publish"]
 
 [store]
 dir = "{store_dir}"
@@ -273,7 +273,7 @@ dir = "{store_dir}"
 [refs]
 path = "{refs_path}"
 
-[op."core/pkg::publish"]
+[op."core/pkg-low::publish"]
 remote_allow = ["{remote_allow}"]
 "#,
         store_dir = store_dir.display(),
@@ -772,7 +772,7 @@ fn pkg_publish_validates_policy_and_pushes_commit_closure() {
         }}"#
     ))
     .unwrap();
-    let (forms, h) = mk_prog("core/pkg::publish", &payload);
+    let (forms, h) = mk_prog("core/pkg-low::publish", &payload);
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
@@ -834,7 +834,7 @@ fn pkg_publish_validates_policy_and_pushes_commit_closure() {
         }}"#
     ))
     .unwrap();
-    let (forms_bad, h_bad) = mk_prog("core/pkg::publish", &payload_bad);
+    let (forms_bad, h_bad) = mk_prog("core/pkg-low::publish", &payload_bad);
     let mut ctx_bad = EvalCtx::new();
     let prelude_bad = build_prelude(&mut ctx_bad);
     let mut env_bad = prelude_bad.env;

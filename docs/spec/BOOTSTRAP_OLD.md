@@ -20,6 +20,12 @@ ones remain required for reproducible host/runtime verification.
     - `scripts/check_prelude_capability_coverage.sh`
     - `scripts/selfhost_default_profile_guard.sh`
 
+- `old_bootstrap/rust_semantics/`
+  - reason: isolate bootstrap-only Rust semantic program builders from production CLI wiring
+  - replacement:
+    - selfhost contract programs in `selfhost/cli_coreform_v1.gc`
+    - low-level host capability execution in `crates/gc_effects/src/runner.rs`
+
 ## Still required (active)
 
 - `scripts/assemble_prelude.sh`

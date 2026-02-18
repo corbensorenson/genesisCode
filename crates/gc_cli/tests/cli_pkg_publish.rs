@@ -8,14 +8,14 @@ mod support;
 
 fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> PathBuf {
     let publish_line = if include_pkg_publish {
-        "  \"core/pkg::publish\",\n"
+        "  \"core/pkg-low::publish\",\n"
     } else {
         ""
     };
     let publish_op = if include_pkg_publish {
         format!(
             r#"
-[op."core/pkg::publish"]
+[op."core/pkg-low::publish"]
 remote_allow = ["{remote_allow}"]
 "#
         )

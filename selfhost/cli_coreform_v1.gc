@@ -311,7 +311,7 @@
   (fn (req)
     (if (core/cli::map? req)
       (
-        ((core/effect::perform (quote core/gc::plan))
+        ((core/effect::perform (quote core/gc-low::plan))
           {
             :depth ((core/map::get req) (quote :depth))
             :include-lock ((core/map::get req) (quote :include-lock))
@@ -341,14 +341,14 @@
               (if (core/list::is-nil? qd)
                 payload0
                 (((core/map::put payload0) (quote :quarantine-dir)) qd))))
-          (((core/effect::perform (quote core/gc::run)) payload) (fn (r) (core/effect::pure r)))))
+          (((core/effect::perform (quote core/gc-low::run)) payload) (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::gc-run-program expects map"))))
 
 (def core/cli::gc-pin-program
   (fn (req)
     (if (core/cli::map? req)
       (
-        ((core/effect::perform (quote core/gc::pin))
+        ((core/effect::perform (quote core/gc-low::pin))
           {
             :pins ((core/map::get req) (quote :pins))
             :target ((core/map::get req) (quote :target))})
@@ -359,7 +359,7 @@
   (fn (req)
     (if (core/cli::map? req)
       (
-        ((core/effect::perform (quote core/gc::unpin))
+        ((core/effect::perform (quote core/gc-low::unpin))
           {
             :pins ((core/map::get req) (quote :pins))
             :target ((core/map::get req) (quote :target))})
@@ -381,7 +381,7 @@
               (if (core/list::is-nil? qd)
                 payload0
                 (((core/map::put payload0) (quote :quarantine-dir)) qd))))
-          (((core/effect::perform (quote core/gc::purge)) payload) (fn (r) (core/effect::pure r)))))
+          (((core/effect::perform (quote core/gc-low::purge)) payload) (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::gc-purge-program expects map"))))
 
 (def core/cli::vcs-log::vec-take
@@ -2453,7 +2453,7 @@
                   (if ((core/int::eq? (core/vec::len refs)) 0)
                     payload1
                     (((core/map::put payload1) (quote :refs)) refs))))
-              (((core/effect::perform (quote core/gpk::export)) payload)
+              (((core/effect::perform (quote core/gpk-low::export)) payload)
                 (fn (r) (core/effect::pure r)))))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-export-program expects map"))))
 
@@ -2469,7 +2469,7 @@
                 (if ((core/int::eq? (core/vec::len set-refs)) 0)
                   payload0
                   (((core/map::put payload0) (quote :set-refs)) set-refs))))
-            (((core/effect::perform (quote core/gpk::import)) payload)
+            (((core/effect::perform (quote core/gpk-low::import)) payload)
               (fn (r) (core/effect::pure r))))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-import-program expects map"))))
 

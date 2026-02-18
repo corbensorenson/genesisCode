@@ -16,8 +16,8 @@ allow = [
   "core/vcs-low::apply-patch",
   "io/fs::read",
   "io/fs::write",
-  "core/vcs::diff",
-  "core/vcs::apply"
+  "core/vcs-low::diff",
+  "core/vcs-low::apply"
 ]
 
 [store]
@@ -26,11 +26,11 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/vcs::diff"]
+[op."core/vcs-low::diff"]
 base_dir = "."
 create_dirs = true
 
-[op."core/vcs::apply"]
+[op."core/vcs-low::apply"]
 base_dir = "."
 create_dirs = true
 

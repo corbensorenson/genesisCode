@@ -22,17 +22,18 @@ fn write_caps(dir: &Path) -> PathBuf {
         r#"
 allow = [
   "core/store::put",
-  "core/pkg::init",
-  "core/pkg::add",
-  "core/pkg::list",
-  "core/pkg::info",
+  "core/pkg-low::init",
+  "core/pkg-low::add",
+  "core/pkg-low::list",
+  "core/pkg-low::info",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
-  "core/pkg::lock",
-  "core/pkg::update",
-  "core/pkg::install",
-  "core/pkg::verify",
-  "core/pkg::snapshot"
+  "core/pkg-low::lock",
+  "core/pkg-low::update",
+  "core/pkg-low::install",
+  "core/pkg-low::verify",
+  "core/pkg-low::snapshot",
+  "core/pkg-low::load-package"
 ]
 
 [store]
@@ -41,27 +42,29 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
-[op."core/pkg::add"]
+[op."core/pkg-low::add"]
 base_dir = "."
-[op."core/pkg::list"]
+[op."core/pkg-low::list"]
 base_dir = "."
-[op."core/pkg::info"]
+[op."core/pkg-low::info"]
 base_dir = "."
 [op."core/pkg-low::save-lock"]
 base_dir = "."
 [op."core/pkg-low::load-lock"]
 base_dir = "."
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
-[op."core/pkg::update"]
+[op."core/pkg-low::update"]
 base_dir = "."
-[op."core/pkg::install"]
+[op."core/pkg-low::install"]
 base_dir = "."
-[op."core/pkg::verify"]
+[op."core/pkg-low::verify"]
 base_dir = "."
-[op."core/pkg::snapshot"]
+[op."core/pkg-low::snapshot"]
+base_dir = "."
+[op."core/pkg-low::load-package"]
 base_dir = "."
 "#,
     )
@@ -149,7 +152,14 @@ fn normalize_pkg_value(s: &str) -> Term {
             Term::Map(m) => {
                 let mut out = std::collections::BTreeMap::new();
                 for (k, v) in m {
-                    if k.0 == Term::symbol(":lock") {
+                    if k.0 == Term::symbol(":lock")
+                        || k.0 == Term::symbol(":lock-h")
+                        || k.0 == Term::symbol(":workspace-root")
+                        || k.0 == Term::symbol(":provenance")
+                        || k.0 == Term::symbol(":strict")
+                        || k.0 == Term::symbol(":strategy")
+                        || k.0 == Term::symbol(":tag-policy")
+                    {
                         continue;
                     }
                     out.insert(k.clone(), walk(v));

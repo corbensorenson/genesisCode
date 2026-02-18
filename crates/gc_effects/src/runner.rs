@@ -1058,7 +1058,10 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
     Ok(Term::Map(m))
 }
 
-fn effective_capability_op(op: &str) -> &str {
+fn effective_capability_op<'a>(op: &'a str, policy: &CapsPolicy) -> &'a str {
+    if !policy.legacy_semantic_compat() {
+        return op;
+    }
     match op {
         "core/pkg::init" => "core/pkg-low::init",
         "core/pkg::add" => "core/pkg-low::add",
@@ -1097,7 +1100,7 @@ fn call_capability(
     refs: Option<&RefsDb>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let op_eff = effective_capability_op(op);
+    let op_eff = effective_capability_op(op, policy);
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
     if timeout_ms.is_some() && op_eff == "io/fs::write" {
         return Ok(mk_error(

@@ -11,8 +11,8 @@ fn write_caps_src(dir: &Path) -> PathBuf {
         r#"
 allow = [
   "core/store::put",
-  "core/pkg::snapshot",
-  "core/gpk::export",
+  "core/pkg-low::snapshot",
+  "core/gpk-low::export",
   "core/store::get"
 ]
 
@@ -22,10 +22,10 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/pkg::snapshot"]
+[op."core/pkg-low::snapshot"]
 base_dir = "."
 
-[op."core/gpk::export"]
+[op."core/gpk-low::export"]
 base_dir = "."
 "#,
     )
@@ -39,16 +39,16 @@ fn write_caps_dst(dir: &Path) -> PathBuf {
         &caps,
         r#"
 allow = [
-  "core/gpk::import",
+  "core/gpk-low::import",
   "core/store::get",
   "core/store::has",
 
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
-  "core/pkg::init",
-  "core/pkg::add",
-  "core/pkg::lock",
-  "core/pkg::install"
+  "core/pkg-low::init",
+  "core/pkg-low::add",
+  "core/pkg-low::lock",
+  "core/pkg-low::install"
 ]
 
 [store]
@@ -57,14 +57,14 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/gpk::import"]
+[op."core/gpk-low::import"]
 base_dir = "."
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::add"]
+[op."core/pkg-low::add"]
 base_dir = "."
 
 [op."core/pkg-low::save-lock"]
@@ -74,10 +74,10 @@ create_dirs = true
 [op."core/pkg-low::load-lock"]
 base_dir = "."
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 
-[op."core/pkg::install"]
+[op."core/pkg-low::install"]
 base_dir = "."
 "#,
     )

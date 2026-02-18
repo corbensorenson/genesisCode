@@ -63,7 +63,7 @@ fn write_vcs_caps(dir: &Path) -> PathBuf {
     std::fs::write(
         &caps,
         r#"
-allow = ["core/vcs::log", "core/store::get", "core/refs::get", "core/refs::list"]
+allow = ["core/vcs-low::log", "core/store::get", "core/refs::get", "core/refs::list"]
 
 [store]
 dir = "./.genesis/store"
@@ -242,7 +242,7 @@ fn selfhost_only_accepts_store_refs_pkg_and_gc() {
             "core/refs::get",
             "core/pkg-low::save-lock",
             "core/pkg-low::load-lock",
-            "core/gc::pin",
+            "core/gc-low::pin",
         ],
     );
     let term = dir.path().join("value.gc");
@@ -820,6 +820,121 @@ create_dirs = true
             "selfhost-only mode detected legacy semantic fallback",
         ))
         .stderr(predicate::str::contains("core/pkg::init"));
+}
+
+#[test]
+fn selfhost_only_rejects_legacy_gc_semantic_fallback_in_run_logs() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let file = dir.path().join("legacy_gc.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog
+            (((core/effect::perform (quote core/gc::pin))
+               {:pins "pins.toml"
+                :target "refs/heads/main"})
+             (fn (r) (core/effect::pure r))))
+          prog
+        "#,
+    )
+    .unwrap();
+    let caps = dir.path().join("caps_legacy_gc.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/gc::pin"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/gc::pin"]
+base_dir = "."
+create_dirs = true
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode detected legacy semantic fallback",
+        ))
+        .stderr(predicate::str::contains("core/gc::pin"));
+}
+
+#[test]
+fn selfhost_only_rejects_legacy_gpk_semantic_fallback_in_run_logs() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    std::fs::write(dir.path().join("bad.gpk"), b"not-a-gpk-bundle").unwrap();
+    let file = dir.path().join("legacy_gpk.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def prog
+            (((core/effect::perform (quote core/gpk::import))
+               {:in "bad.gpk"})
+             (fn (r) (core/effect::pure r))))
+          prog
+        "#,
+    )
+    .unwrap();
+    let caps = dir.path().join("caps_legacy_gpk.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/gpk::import"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/gpk::import"]
+base_dir = "."
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "--no-step-limit",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "selfhost-only mode detected legacy semantic fallback",
+        ))
+        .stderr(predicate::str::contains("core/gpk::import"));
 }
 
 #[test]

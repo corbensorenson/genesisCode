@@ -92,7 +92,7 @@ fn gc_plan_then_run_deletes_unreachable_artifacts() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc::plan", "core/gc::run"]);
+    let caps = write_caps(dir, &["core/store::put", "core/gc-low::plan", "core/gc-low::run"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead");
@@ -153,7 +153,7 @@ fn gc_quarantine_and_purge_roundtrip() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc::run", "core/gc::purge"]);
+    let caps = write_caps(dir, &["core/store::put", "core/gc-low::run", "core/gc-low::purge"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep2");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead2");
@@ -212,7 +212,7 @@ fn gc_pin_prevents_deletion() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc::pin", "core/gc::run"]);
+    let caps = write_caps(dir, &["core/store::put", "core/gc-low::pin", "core/gc-low::run"]);
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep3");
     let pinned_h = store_put(dir, &caps, "{:pin true}\n", "pin3");
@@ -263,9 +263,9 @@ fn gc_unpin_allows_reclaim_after_run() {
         dir,
         &[
             "core/store::put",
-            "core/gc::pin",
-            "core/gc::unpin",
-            "core/gc::run",
+            "core/gc-low::pin",
+            "core/gc-low::unpin",
+            "core/gc-low::run",
         ],
     );
 
@@ -330,8 +330,8 @@ fn gc_pin_ref_keeps_target_even_with_no_refs_root_scan() {
         dir,
         &[
             "core/store::put",
-            "core/gc::pin",
-            "core/gc::run",
+            "core/gc-low::pin",
+            "core/gc-low::run",
             "core/refs::set",
         ],
     );
@@ -391,7 +391,7 @@ fn gc_keeps_tag_ref_commit_closure_and_prunes_unreachable() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc::run"]);
+    let caps = write_caps(dir, &["core/store::put", "core/gc-low::run"]);
 
     let patch_h = store_put(
         dir,

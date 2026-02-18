@@ -14,8 +14,8 @@ allow = [
   "core/store::get",
   "core/refs::set",
   "core/refs::list",
-  "core/vcs::blame",
-  "core/vcs::why"
+  "core/vcs-low::blame",
+  "core/vcs-low::why"
 ]
 
 [store]

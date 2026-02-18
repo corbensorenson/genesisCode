@@ -130,7 +130,7 @@ fn vcs_log_value_matches_between_frontends() {
 
     let caps = write_caps(
         dir,
-        &["core/store::put", "core/store::get", "core/vcs::log"],
+        &["core/store::put", "core/store::get", "core/vcs-low::log"],
     );
     let artifact = build_selfhost_artifact(dir);
 
@@ -213,7 +213,7 @@ fn vcs_log_selfhost_frontend_fails_when_contract_is_poisoned() {
 
     let caps = write_caps(
         dir,
-        &["core/store::put", "core/store::get", "core/vcs::log"],
+        &["core/store::put", "core/store::get", "core/vcs-low::log"],
     );
     let artifact = build_selfhost_artifact(dir);
     poison_cli_vcs_log_program(&artifact);
@@ -282,8 +282,8 @@ fn vcs_blame_and_why_values_match_between_frontends() {
             "core/store::get",
             "core/refs::set",
             "core/refs::list",
-            "core/vcs::blame",
-            "core/vcs::why",
+            "core/vcs-low::blame",
+            "core/vcs-low::why",
         ],
     );
     let artifact = build_selfhost_artifact(dir);
@@ -478,8 +478,8 @@ fn vcs_diff_and_apply_values_match_between_frontends() {
         &[
             "core/store::put",
             "core/store::get",
-            "core/vcs::diff",
-            "core/vcs::apply",
+            "core/vcs-low::diff",
+            "core/vcs-low::apply",
             "core/vcs-low::diff-terms",
             "core/vcs-low::apply-patch",
         ],
@@ -691,10 +691,10 @@ fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
         &[
             "core/store::put",
             "core/store::get",
-            "core/vcs::merge3",
-            "core/vcs::resolve-conflict",
-            "core/vcs-low::merge3-contract-snapshots",
+            "core/vcs-low::merge3",
             "core/vcs-low::resolve-conflict",
+            "core/vcs-low::resolve-conflict-legacy",
+            "core/vcs-low::merge3-contract-snapshots",
             "core/vcs-low::diff-terms",
         ],
     );

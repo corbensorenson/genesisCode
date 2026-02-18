@@ -22,11 +22,11 @@ allow = [
   "core/refs::set",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
-  "core/pkg::init",
-  "core/pkg::add",
-  "core/pkg::lock",
-  "core/pkg::update",
-  "core/pkg::info"
+  "core/pkg-low::init",
+  "core/pkg-low::add",
+  "core/pkg-low::lock",
+  "core/pkg-low::update",
+  "core/pkg-low::info"
 ]
 
 [store]
@@ -35,18 +35,18 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::add"]
+[op."core/pkg-low::add"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 
-[op."core/pkg::update"]
+[op."core/pkg-low::update"]
 base_dir = "."
 
 [op."core/pkg-low::save-lock"]
@@ -55,7 +55,7 @@ base_dir = "."
 [op."core/pkg-low::load-lock"]
 base_dir = "."
 
-[op."core/pkg::info"]
+[op."core/pkg-low::info"]
 base_dir = "."
 "#,
     )

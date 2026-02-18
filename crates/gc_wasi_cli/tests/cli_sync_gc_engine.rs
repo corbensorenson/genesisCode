@@ -89,7 +89,7 @@ fn sync_and_gc_selfhost_frontend_fail_when_contracts_are_poisoned() {
     let td = tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/sync::pull", "core/gc::plan"]);
+    let caps = write_caps(dir, &["core/sync::pull", "core/gc-low::plan"]);
     let artifact = build_selfhost_artifact(dir);
 
     poison_cli_binding(&artifact, "core/cli::sync-pull-program");

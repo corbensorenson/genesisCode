@@ -13,26 +13,29 @@ fn write_caps(dir: &Path) -> PathBuf {
 allow = [
   "core/store::put",
   "core/store::get",
-  "core/vcs::merge3",
-  "core/vcs::resolve-conflict",
-  "core/vcs::apply",
+  "core/vcs-low::merge3",
+  "core/vcs-low::resolve-conflict",
+  "core/vcs-low::resolve-conflict-legacy",
+  "core/vcs-low::apply",
   "core/vcs-low::diff-terms",
   "core/vcs-low::apply-patch",
   "core/vcs-low::merge3-contract-snapshots",
-  "core/vcs-low::resolve-conflict",
   "io/fs::write"
 ]
 
 [store]
 dir = "./.genesis/store"
 
-[op."core/vcs::merge3"]
+[op."core/vcs-low::merge3"]
 base_dir = "."
 
-[op."core/vcs::resolve-conflict"]
+[op."core/vcs-low::resolve-conflict"]
 base_dir = "."
 
-[op."core/vcs::apply"]
+[op."core/vcs-low::resolve-conflict-legacy"]
+base_dir = "."
+
+[op."core/vcs-low::apply"]
 base_dir = "."
 
 [op."io/fs::write"]
