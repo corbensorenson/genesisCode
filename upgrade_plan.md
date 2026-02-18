@@ -73,7 +73,8 @@ Acceptance gate:
 - [x] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
   - [x] Implement `core/cli::infer-effects` (pure effect op inference) in `selfhost/cli_coreform_v1.gc` with parity test vs `gc_types::infer_effects`.
-- [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
+- [x] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
+  - [x] Add `core/cli::optimize-module` (alias of stage1 transform) and switch `core/obligation::{stage1-validation,translation-validation}` to use it when the CoreForm frontend is `selfhost`.
 - [x] Implement self-host patch schema validation/apply pipeline in `.gc`.
   - [x] Add `selfhost/patch_schema_v1.gc` and expose `core/cli::validate-patch` in the selfhost toolchain.
   - [x] Enforce patch schema acceptance via `core/cli::validate-patch` when `--coreform-frontend selfhost` is active.

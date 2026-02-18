@@ -372,3 +372,7 @@
   (fn (forms)
     (let ((opt (selfhost/stage1::optimize-module forms)))
       (if (selfhost/stage1::is-error opt) opt (selfhost/canon::canonicalize-module opt)))))
+
+; Stable optimizer entrypoint for toolchain consumers.
+; v0.2: stage1 optimization is the canonical selfhost optimizer.
+(def core/cli::optimize-module core/cli::stage1-transform-module)
