@@ -1070,6 +1070,20 @@ fn effective_capability_op(op: &str) -> &str {
         "core/pkg::verify" => "core/pkg-low::verify",
         "core/pkg::snapshot" => "core/pkg-low::snapshot",
         "core/pkg::publish" => "core/pkg-low::publish",
+        "core/vcs::log" => "core/vcs-low::log",
+        "core/vcs::blame" => "core/vcs-low::blame",
+        "core/vcs::why" => "core/vcs-low::why",
+        "core/vcs::diff" => "core/vcs-low::diff",
+        "core/vcs::apply" => "core/vcs-low::apply",
+        "core/vcs::merge3" => "core/vcs-low::merge3",
+        "core/vcs::resolve-conflict" => "core/vcs-low::resolve-conflict-legacy",
+        "core/gc::plan" => "core/gc-low::plan",
+        "core/gc::run" => "core/gc-low::run",
+        "core/gc::pin" => "core/gc-low::pin",
+        "core/gc::unpin" => "core/gc-low::unpin",
+        "core/gc::purge" => "core/gc-low::purge",
+        "core/gpk::export" => "core/gpk-low::export",
+        "core/gpk::import" => "core/gpk-low::import",
         _ => op,
     }
 }
@@ -3901,7 +3915,7 @@ fn call_capability(
             m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::log" => {
+        "core/vcs-low::log" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::log".to_string())
             })?;
@@ -4052,7 +4066,7 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":commits")), Term::Vector(out));
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::blame" => {
+        "core/vcs-low::blame" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::blame".to_string())
             })?;
@@ -4205,7 +4219,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::why" => {
+        "core/vcs-low::why" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::why".to_string())
             })?;
@@ -5049,7 +5063,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(out)))
         }
-        "core/vcs::diff" => {
+        "core/vcs-low::diff" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::diff".to_string())
             })?;
@@ -5168,7 +5182,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::apply" => {
+        "core/vcs-low::apply" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::apply".to_string())
             })?;
@@ -5331,7 +5345,7 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(snap_h));
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::merge3" => {
+        "core/vcs-low::merge3" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs::merge3".to_string())
             })?;
@@ -5582,7 +5596,7 @@ fn call_capability(
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/vcs::resolve-conflict" => {
+        "core/vcs-low::resolve-conflict-legacy" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log(
                     "missing artifact store for core/vcs::resolve-conflict".to_string(),
@@ -6000,7 +6014,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gc::plan" => {
+        "core/gc-low::plan" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gc::plan".to_string())
             })?;
@@ -6097,7 +6111,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gc::run" => {
+        "core/gc-low::run" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gc::run".to_string())
             })?;
@@ -6206,7 +6220,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gc::pin" => {
+        "core/gc-low::pin" => {
             let base_dir = effective_base_dir(pol)?;
             let pins_s =
                 payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
@@ -6247,7 +6261,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gc::unpin" => {
+        "core/gc-low::unpin" => {
             let base_dir = effective_base_dir(pol)?;
             let pins_s =
                 payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
@@ -6283,7 +6297,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gc::purge" => {
+        "core/gc-low::purge" => {
             let base_dir = effective_base_dir(pol)?;
             let ttl_days = payload_gc_ttl_days(payload)
                 .ok_or_else(|| EffectsError::BadPayload("missing :ttl-days int".to_string()))?;
@@ -6342,7 +6356,7 @@ fn call_capability(
             );
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gpk::export" => {
+        "core/gpk-low::export" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gpk::export".to_string())
             })?;
@@ -6665,7 +6679,7 @@ fn call_capability(
             }
             Ok(Value::Data(Term::Map(m)))
         }
-        "core/gpk::import" => {
+        "core/gpk-low::import" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gpk::import".to_string())
             })?;
@@ -10426,9 +10440,12 @@ fn gpk_export_closure_local(
             Ok(t) => t,
             Err(_) => continue,
         };
+        let is_evidence_artifact = gc_vcs::Evidence::from_term(&t).is_ok();
         let include_commit_evidence = match opts.include_evidence {
             GpkIncludeEvidence::None => false,
-            GpkIncludeEvidence::Required => is_root,
+            // Required mode includes evidence directly referenced by the root object, and once an
+            // evidence artifact is traversed we continue following its internal evidence refs.
+            GpkIncludeEvidence::Required => is_root || is_evidence_artifact,
             GpkIncludeEvidence::All => true,
         };
         let follow_deps = match opts.include_deps {

@@ -256,6 +256,21 @@ fn op_compat_aliases(op: &str) -> &'static [&'static str] {
         "core/pkg-low::snapshot" => &["core/pkg::snapshot"],
         "core/pkg-low::publish" => &["core/pkg::publish"],
         "core/pkg-low::load-package" => &["core/pkg::snapshot"],
+        "core/vcs-low::log" => &["core/vcs::log"],
+        "core/vcs-low::blame" => &["core/vcs::blame"],
+        "core/vcs-low::why" => &["core/vcs::why"],
+        "core/vcs-low::diff" => &["core/vcs::diff"],
+        "core/vcs-low::apply" => &["core/vcs::apply"],
+        "core/vcs-low::merge3" => &["core/vcs::merge3"],
+        "core/vcs-low::resolve-conflict" => &["core/vcs::resolve-conflict"],
+        "core/vcs-low::resolve-conflict-legacy" => &["core/vcs::resolve-conflict"],
+        "core/gc-low::plan" => &["core/gc::plan"],
+        "core/gc-low::run" => &["core/gc::run"],
+        "core/gc-low::pin" => &["core/gc::pin"],
+        "core/gc-low::unpin" => &["core/gc::unpin"],
+        "core/gc-low::purge" => &["core/gc::purge"],
+        "core/gpk-low::export" => &["core/gpk::export"],
+        "core/gpk-low::import" => &["core/gpk::import"],
         _ => &[],
     }
 }
@@ -586,5 +601,16 @@ base_dir = "."
         .unwrap();
         assert!(p.is_allowed("core/pkg-low::lock"));
         assert!(p.op_policy("core/pkg-low::lock").is_some());
+    }
+
+    #[test]
+    fn supports_vcs_low_diff_compat_alias() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/vcs::diff"]
+"#,
+        )
+        .unwrap();
+        assert!(p.is_allowed("core/vcs-low::diff"));
     }
 }

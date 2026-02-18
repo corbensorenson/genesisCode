@@ -4,7 +4,7 @@ Last updated: 2026-02-18
 
 This plan now contains only unfinished work. Completed checklist items were removed.
 
-Open checklist items: 7
+Open checklist items: 6
 
 ## Findings From Current Project Audit
 
@@ -27,7 +27,7 @@ Open checklist items: 7
 - [x] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
 - [x] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
 - [x] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
-- [ ] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
+- [x] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
 - [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, graphics/editor host ops.
 - [x] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first (enforced by `scripts/check_selfhost_artifact_fresh.sh` + `scripts/test_fast.sh`).
 - [ ] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
