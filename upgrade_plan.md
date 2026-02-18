@@ -70,7 +70,7 @@ Acceptance gate:
 - [x] Finalize self-host parser/canon/printer/hash as canonical source of truth.
   - [x] Remove legacy `selfhost/tool::*` fallback bindings from the CLI driver; selfhost routes require `core/cli::*` contracts.
   - [x] Toolchain artifact loader enforces canonical `:forms` (idempotent canonicalization) and hashes canonical forms to prevent semantic skew.
-- [ ] Implement self-host Stage-1 transform pipeline in `.gc`.
+- [x] Implement self-host Stage-1 transform pipeline in `.gc`.
 - [ ] Implement self-host type/effect checker in `.gc` and wire to `core/obligation::typecheck`.
 - [ ] Implement self-host optimizer pipeline in `.gc` and wire to translation-validation obligation.
 - [ ] Implement self-host patch schema validation/apply pipeline in `.gc`.
@@ -117,6 +117,7 @@ Acceptance gate:
 - [ ] 7) Complete `.gc` stage1/typecheck/optimize/patch ownership and switch obligations to those paths.
   - [x] 7a) Typecheck-prep path now prefers selfhost `core/cli::module-meta` contract for module metadata extraction.
   - [x] 7b) Module-loading hash derivation now prefers selfhost `core/cli::hash-module-forms` instead of Rust-only hashing in selfhost frontend paths.
+  - [x] 7c) Stage-1 transform is implemented in `selfhost/stage1_v1.gc` and `selfhost-artifact` uses `core/cli::stage1-transform-module`.
 - [x] 8) Move replaced Rust semantic modules to `/old_bootstrap` and enforce default exclusion.
 - [x] 9) Run strict full cutover rehearsal (native + WASI) and freeze.
 - [x] 10) Add explicit `coreform_frontend` provenance fields in JSON outputs (`test`, `pack`, `typecheck`, `apply-patch`) for deterministic AI-agent orchestration.
@@ -145,6 +146,7 @@ These are important but not blockers for the fast-path self-hosted core mileston
 - [ ] Second host implementation conformance harness for host ABI portability proof.
 - [ ] `.gc` profiling/incremental build graph/perf acceleration wave.
   - [x] Add `scripts/test_fast.sh` to keep local iteration under a small, deterministic, high-signal subset without weakening CI coverage.
+  - [x] Speed up WASI CLI engine tests by reusing the repo `selfhost/toolchain.gc` instead of rebuilding a selfhost artifact per test file.
 - [ ] Graphics/WebGPU/editor stack and higher-level developer UX layers.
 
 ---

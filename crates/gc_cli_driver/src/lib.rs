@@ -1833,6 +1833,52 @@ fn selfhost_hash_module_forms(
     parse_hex32_for_cli(hex, "selfhost hash-module")
 }
 
+fn selfhost_stage1_transform_module(
+    ctx: &mut EvalCtx,
+    env: &gc_kernel::Env,
+    forms: &[Term],
+) -> Result<Vec<Term>, CliError> {
+    let stage1_fn = env
+        .get("core/cli::stage1-transform-module")
+        .ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "selfhost/missing",
+                "missing binding core/cli::stage1-transform-module",
+            )
+        })?;
+    let out = stage1_fn
+        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
+        .map_err(|e| {
+            cli_err(
+                EX_EVAL,
+                "eval/error",
+                format!("selfhost stage1 failed: {e}"),
+            )
+        })?;
+    if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
+        return Err(CliError {
+            exit_code: EX_INTERNAL,
+            json: JsonError {
+                code: "selfhost/error",
+                message: format!("{code}: {message}"),
+                context: payload.map(serde_json::Value::String),
+            },
+        });
+    }
+    let Some(Term::Vector(transformed)) = out.as_data() else {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/bad-return",
+            format!(
+                "core/cli stage1-transform-module returned non-vector: {}",
+                out.debug_repr()
+            ),
+        ));
+    };
+    Ok(transformed.clone())
+}
+
 fn selfhost_parse_term(
     ctx: &mut EvalCtx,
     env: &gc_kernel::Env,
@@ -8050,10 +8096,17 @@ fn cmd_selfhost_artifact(
             )
         })?;
 
-        let stage1 = gc_opt::stage1_pipeline(&forms)
-            .map_err(|e| cli_err(EX_INTERNAL, "stage1/error", format!("{path}: {e}")))?;
-        let stage2 = gc_opt::stage2_validation_report(&stage1.transformed_forms);
-        if !stage1.gate_report.ok || (stage2.supported && !stage2.ok) {
+        let stage1_forms =
+            selfhost_stage1_transform_module(&mut ctx, &env, &forms).map_err(|e| {
+                cli_err(
+                    e.exit_code,
+                    "selfhost/stage1",
+                    format!("{path}: {}", e.json.message),
+                )
+            })?;
+        let gate_report = gc_opt::stage1_validation_report(&forms, &stage1_forms);
+        let stage2 = gc_opt::stage2_validation_report(&stage1_forms);
+        if !gate_report.ok || (stage2.supported && !stage2.ok) {
             all_ok = false;
         }
         if stage2.supported {
@@ -8083,18 +8136,11 @@ fn cmd_selfhost_artifact(
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage1-ok")),
-                    Term::Bool(stage1.gate_report.ok),
+                    Term::Bool(gate_report.ok),
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage1-errors")),
-                    Term::Vector(
-                        stage1
-                            .gate_report
-                            .errors
-                            .into_iter()
-                            .map(Term::Str)
-                            .collect(),
-                    ),
+                    Term::Vector(gate_report.errors.into_iter().map(Term::Str).collect()),
                 ),
                 (
                     TermOrdKey(Term::symbol(":stage2-supported")),

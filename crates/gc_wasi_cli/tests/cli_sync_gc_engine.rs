@@ -8,6 +8,8 @@ use gc_coreform::{
 use predicates::prelude::*;
 use tempfile::tempdir;
 
+mod common;
+
 fn cmd() -> assert_cmd::Command {
     let mut c = cargo_bin_cmd!("genesis_wasi");
     c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
@@ -34,14 +36,7 @@ fn write_caps(dir: &Path, allow: &[&str]) -> PathBuf {
 }
 
 fn build_selfhost_artifact(dir: &Path) -> PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cmd()
-        .current_dir(dir)
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    common::copy_repo_selfhost_toolchain_artifact(dir)
 }
 
 fn poison_cli_binding(artifact: &Path, binding: &str) {
@@ -81,6 +76,10 @@ fn poison_cli_binding(artifact: &Path, binding: &str) {
     cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
+    );
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
     );
     fs::write(artifact, print_term(&term)).unwrap();
 }

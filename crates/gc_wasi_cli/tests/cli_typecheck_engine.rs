@@ -6,6 +6,8 @@ use predicates::prelude::*;
 use serde_json::Value as JsonValue;
 use tempfile::tempdir;
 
+mod common;
+
 fn cmd() -> assert_cmd::Command {
     let mut c = cargo_bin_cmd!("genesis_wasi");
     c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
@@ -13,13 +15,7 @@ fn cmd() -> assert_cmd::Command {
 }
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cmd()
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    common::copy_repo_selfhost_toolchain_artifact(dir)
 }
 
 fn copy_pkg_basic_fixture(dst: &std::path::Path) -> std::path::PathBuf {
@@ -83,6 +79,10 @@ fn poison_cli_module_meta_contract(artifact: &std::path::Path) {
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
     );
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
+    );
     std::fs::write(artifact, print_term(&term)).unwrap();
 }
 
@@ -123,6 +123,10 @@ fn poison_cli_hash_module_forms_contract(artifact: &std::path::Path) {
     cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),
+    );
+    cli_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms.clone()),
     );
     std::fs::write(artifact, print_term(&term)).unwrap();
 }

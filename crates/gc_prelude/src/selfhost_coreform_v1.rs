@@ -17,12 +17,13 @@ const HASH_SRC: &str = include_str!("../../../selfhost/hash.gc");
 const TOOL_SRC: &str = include_str!("../../../selfhost/tool_coreform_v1.gc");
 const CLI_TOOL_SRC: &str = include_str!("../../../selfhost/cli_coreform_v1.gc");
 const PATCH_SCHEMA_SRC: &str = include_str!("../../../selfhost/patch_schema_v1.gc");
+const STAGE1_SRC: &str = include_str!("../../../selfhost/stage1_v1.gc");
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artifact-v0.2";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 
-const MODULE_SOURCES: [(&str, &str); 7] = [
+const MODULE_SOURCES: [(&str, &str); 8] = [
     ("selfhost/parse.gc", PARSE_SRC),
     ("selfhost/canon.gc", CANON_SRC),
     ("selfhost/printer.gc", PRINTER_SRC),
@@ -30,6 +31,7 @@ const MODULE_SOURCES: [(&str, &str); 7] = [
     ("selfhost/tool_coreform_v1.gc", TOOL_SRC),
     ("selfhost/cli_coreform_v1.gc", CLI_TOOL_SRC),
     ("selfhost/patch_schema_v1.gc", PATCH_SCHEMA_SRC),
+    ("selfhost/stage1_v1.gc", STAGE1_SRC),
 ];
 
 #[cfg(feature = "embedded-bootstrap")]

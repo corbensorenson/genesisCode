@@ -3,6 +3,8 @@ use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 use tempfile::tempdir;
 
+mod common;
+
 fn cmd() -> assert_cmd::Command {
     let mut c = cargo_bin_cmd!("genesis_wasi");
     c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
@@ -10,13 +12,7 @@ fn cmd() -> assert_cmd::Command {
 }
 
 fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
-    let artifact = dir.join("selfhost_toolchain.gc");
-    cmd()
-        .args(["selfhost-artifact", "--out"])
-        .arg(&artifact)
-        .assert()
-        .success();
-    artifact
+    common::copy_repo_selfhost_toolchain_artifact(dir)
 }
 
 #[test]
