@@ -4,6 +4,16 @@ mod log;
 mod policy;
 mod refs;
 mod runner;
+mod runner_gc_payload;
+mod runner_gpk_payload;
+mod runner_io_ops;
+mod runner_pkg_payload;
+mod runner_refs_ops;
+mod runner_store_ops;
+mod runner_sync_payload;
+mod runner_task;
+mod runner_timeout;
+mod runner_vcs_payload;
 mod store;
 
 pub use crate::error::EffectsError;

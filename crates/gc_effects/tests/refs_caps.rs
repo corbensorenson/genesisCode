@@ -323,3 +323,135 @@ path = "./.genesis/refs.gc"
     ));
     assert_eq!(refs.get("refs/heads/dev").unwrap(), None);
 }
+
+#[test]
+fn refs_set_enforces_obligation_bound_evidence_kinds() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/refs::set"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let store_dir = td.path().join(".genesis").join("store");
+    let store = ArtifactStore::open(&store_dir).unwrap();
+
+    let policy_term = parse_term(
+        r#"
+        {
+          :type :vcs/policy
+          :v 1
+          :refs {:frozen-prefixes []}
+          :classes {
+            :main {
+              :patterns ["refs/**/heads/main"]
+              :required-obligations ["core/obligation::unit-tests"]
+              :obligation-evidence-kinds {
+                "core/obligation::unit-tests" [:effect-log]
+              }
+            }
+          }
+        }
+        "#,
+    )
+    .unwrap();
+    let policy_h = store
+        .put_bytes(print_term(&policy_term).as_bytes())
+        .unwrap();
+
+    let ev_unit = parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let ev_unit_h = store.put_bytes(print_term(&ev_unit).as_bytes()).unwrap();
+    let ev_effect =
+        parse_term(r#"{:type :vcs/evidence :v 1 :kind :effect-log :data nil}"#).unwrap();
+    let ev_effect_h = store.put_bytes(print_term(&ev_effect).as_bytes()).unwrap();
+
+    let mk_commit = |evidence_list: &str| -> String {
+        let commit_term = parse_term(&format!(
+            r#"
+            {{
+              :type :vcs/commit
+              :v 1
+              :parents []
+              :base nil
+              :patch "{z}"
+              :result "{z}"
+              :obligations ["core/obligation::unit-tests"]
+              :evidence [{evidence_list}]
+              :attestations []
+              :message "t"
+            }}
+            "#,
+            z = "0".repeat(64)
+        ))
+        .unwrap();
+        store
+            .put_bytes(print_term(&commit_term).as_bytes())
+            .unwrap()
+    };
+
+    let commit_missing_h = mk_commit(&format!("\"{ev_unit_h}\""));
+    let src_missing = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::set
+            {{:name "refs/heads/main" :hash "{commit_missing_h}" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_missing = parse_module(&src_missing).unwrap();
+    let hash_missing = hash_module(&forms_missing);
+    let (mut ctx_missing, prog_missing) = eval_prog(&forms_missing);
+    let r_missing = run(
+        &mut ctx_missing,
+        &pol,
+        prog_missing,
+        hash_missing,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error_code(
+        &ctx_missing,
+        &r_missing.value,
+        "core/refs/missing-evidence-kind"
+    ));
+
+    let commit_ok_h = mk_commit(&format!("\"{ev_unit_h}\" \"{ev_effect_h}\""));
+    let src_ok = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::set
+            {{:name "refs/heads/main" :hash "{commit_ok_h}" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let forms_ok = parse_module(&src_ok).unwrap();
+    let hash_ok = hash_module(&forms_ok);
+    let (mut ctx_ok, prog_ok) = eval_prog(&forms_ok);
+    let r_ok = run(
+        &mut ctx_ok,
+        &pol,
+        prog_ok,
+        hash_ok,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(
+        matches!(r_ok.value, Value::Data(_)),
+        "expected successful set, got {}",
+        r_ok.value.debug_repr()
+    );
+}

@@ -70,3 +70,56 @@ fn warm_mode_rejects_nested_warm_request() {
     assert!(!r.get("ok").and_then(|v| v.as_bool()).unwrap_or(true));
     assert_eq!(r["error"]["code"], "warm/nested");
 }
+
+#[test]
+fn warm_mode_matches_cold_json_and_exposes_stable_session_cache_key() {
+    let td = tempfile::tempdir().unwrap();
+    let file = td.path().join("prog.gc");
+    fs::write(&file, "(prim int/add 9 4)\n").unwrap();
+
+    let cold_out = cmd()
+        .arg("--json")
+        .arg("eval")
+        .arg(&file)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let cold_json: JsonValue = serde_json::from_slice(&cold_out).unwrap();
+
+    let req = serde_json::json!({
+        "argv": ["--json", "eval", file.to_str().unwrap()]
+    });
+    let stop = serde_json::json!({
+        "argv": ["exit"]
+    });
+    let input = format!("{req}\n{stop}\n");
+    let out = cmd()
+        .arg("warm")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(out).unwrap();
+    let lines: Vec<&str> = stdout.lines().filter(|l| !l.trim().is_empty()).collect();
+    assert_eq!(lines.len(), 1, "unexpected warm output lines: {stdout}");
+    let warm_json: JsonValue = serde_json::from_str(lines[0]).unwrap();
+
+    assert!(warm_json["ok"].as_bool().unwrap_or(false));
+    assert_eq!(warm_json["kind"], "genesis/warm-response-v0.1");
+    let warm_result = warm_json["data"]["result"].clone();
+    assert_eq!(warm_result, cold_json);
+
+    let key = warm_json["data"]["session_cache_key"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    assert_eq!(key.len(), 64);
+    assert!(
+        key.chars().all(|c| c.is_ascii_hexdigit()),
+        "session_cache_key must be hex, got {key}"
+    );
+}

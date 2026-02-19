@@ -131,6 +131,18 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_ai_iteration_slo.sh
 
+      - name: Hot Path Budgets
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_hot_path_budgets.sh
+
+      - name: Upload Perf Trend Artifacts
+        if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-trend-artifacts
+          path: .genesis/perf/*.json
+          if-no-files-found: warn
+
       - name: Selfhost Strict Smoke (Native + WASI CLI)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_smoke.sh
