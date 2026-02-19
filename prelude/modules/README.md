@@ -5,6 +5,7 @@
 Authoring source lives in ordered module files:
 - `00_core.gc`
 - `10_gfx.gc`
+- `11_gpu_compute.gc`
 - `20_editor.gc`
 
 To rebuild the assembled prelude:

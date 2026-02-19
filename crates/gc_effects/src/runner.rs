@@ -191,11 +191,11 @@ pub fn run(
                     ) {
                         task_resp
                     } else if let Some(gfx_resp) =
-                        gfx_host_call(&mut gfx_runtime, &req.op, &req.payload, proto.error)
+                        gfx_host_call(&mut gfx_runtime, &req.op, &req.payload, pol, proto.error)
                     {
                         gfx_resp
                     } else if let Some(gpu_resp) =
-                        gpu_host_call(&mut gpu_runtime, &req.op, &req.payload, proto.error)
+                        gpu_host_call(&mut gpu_runtime, &req.op, &req.payload, pol, proto.error)
                     {
                         gpu_resp
                     } else if let Some(editor_resp) = editor_host_call(

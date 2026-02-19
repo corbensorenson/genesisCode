@@ -1,0 +1,421 @@
+(def core/cli::pkg-load-lock-program
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg-low::load-lock)) {:lock lock})
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::pkg-list-requirements
+  (fn (reqs)
+    (if (core/cli::map? reqs)
+      (let ((entries (core/cli::map-entries-vec reqs)))
+        ((((core/cli::pkg-list-requirements2 entries) (core/vec::len entries)) 0) []))
+      [])))
+
+(def core/cli::pkg-list-requirements2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli::pkg-list-requirements2 entries) n) ((core/int::add i) 1))))
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (r ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? r) false)
+                        (next
+                          ((core/vec::push out)
+                            {
+                              :name name
+                              :registry ((core/map::get r) (quote :registry))
+                              :selector ((core/map::get r) (quote :selector))
+                              :update-policy ((core/map::get r) (quote :update-policy))}))
+                        (next out)))
+                    (next out)))))))))))
+
+(def core/cli::pkg-list-locked
+  (fn (locked)
+    (if (core/cli::map? locked)
+      (let ((entries (core/cli::map-entries-vec locked)))
+        ((((core/cli::pkg-list-locked2 entries) (core/vec::len entries)) 0) []))
+      [])))
+
+(def core/cli::pkg-list-locked2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli::pkg-list-locked2 entries) n) ((core/int::add i) 1))))
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (l ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? l) false)
+                        (next
+                          ((core/vec::push out)
+                            {
+                              :commit ((core/map::get l) (quote :commit))
+                              :name name
+                              :snapshot ((core/map::get l) (quote :snapshot))}))
+                        (next out)))
+                    (next out)))))))))))
+
+(def core/cli::pkg-info-requirement-view
+  (fn (r)
+    (if (core/cli::map? r)
+      {
+        :registry ((core/map::get r) (quote :registry))
+        :selector ((core/map::get r) (quote :selector))
+        :update-policy ((core/map::get r) (quote :update-policy))}
+      nil)))
+
+(def core/cli::pkg-info-locked-view
+  (fn (l)
+    (if (core/cli::map? l)
+      {
+        :commit ((core/map::get l) (quote :commit))
+        :resolved-ref ((core/map::get l) (quote :resolved-ref))
+        :snapshot ((core/map::get l) (quote :snapshot))}
+      nil)))
+
+(def core/cli::pkg-list-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((lock ((core/map::get req) (quote :lock))))
+        ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+          (fn (low-r)
+            (if (core/cli::is-error low-r)
+              (core/effect::pure low-r)
+              (if (core/cli::map? low-r)
+                (core/effect::pure
+                  {
+                    :lock ((core/map::get low-r) (quote :lock))
+                    :locked (core/cli::pkg-list-locked ((core/map::get low-r) (quote :locked)))
+                    :ok true
+                    :requirements
+                      (core/cli::pkg-list-requirements ((core/map::get low-r) (quote :requirements)))})
+                (core/effect::pure
+                  ((core/error::make2 "core/type-error") "core/pkg-low::load-lock returned non-map")))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-list-program expects map"))))
+
+(def core/cli::pkg-info-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((lock ((core/map::get req) (quote :lock))) (name ((core/map::get req) (quote :name))))
+        (if (core/cli::str? name)
+          ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+            (fn (low-r)
+              (if (core/cli::is-error low-r)
+                (core/effect::pure low-r)
+                (if (core/cli::map? low-r)
+                  (let ((reqs ((core/map::get low-r) (quote :requirements))))
+                    (let ((locked ((core/map::get low-r) (quote :locked))))
+                      (core/effect::pure
+                        {
+                          :locked
+                            (core/cli::pkg-info-locked-view
+                              (if (core/cli::map? locked) ((core/map::get locked) name) nil))
+                          :name name
+                          :ok true
+                          :requirement
+                            (core/cli::pkg-info-requirement-view
+                              (if (core/cli::map? reqs) ((core/map::get reqs) name) nil))})))
+                  (core/effect::pure
+                    ((core/error::make2 "core/type-error")
+                      "core/pkg-low::load-lock returned non-map"))))))
+          (core/effect::pure ((core/error::make2 "core/pkg/bad-payload") ":name must be string"))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-info-program expects map"))))
+
+(def core/cli::pkg-snapshot-store-module-program
+  (fn (m)
+    (if (core/cli::map? m)
+      (let
+        ((path ((core/map::get m) (quote :path))) (module ((core/map::get m) (quote :module)))
+          (module-h ((core/map::get m) (quote :module-h))))
+        (if (if (core/cli::str? path) (core/cli::vec? module) false)
+          ((core/effect::bind (core/cli::store-put-program module))
+            (fn (put-r)
+              (if (core/cli::is-error put-r)
+                (core/effect::pure put-r)
+                (let ((h (core/cli::store-put-hash put-r)))
+                  (if (core/cli::is-error h)
+                    (core/effect::pure h)
+                    (core/effect::pure
+                      {
+                        :hash h
+                        :module-h module-h
+                        :path path}))))))
+          (core/effect::pure
+            ((core/error::make2 "core/pkg/bad-package")
+              "module entry requires :path string and :module vector"))))
+      (core/effect::pure ((core/error::make2 "core/pkg/bad-package") "module entry must be map")))))
+
+(def core/cli::pkg-snapshot-store-modules2
+  (fn (mods)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            (core/effect::pure out)
+            ((core/effect::bind (core/cli::pkg-snapshot-store-module-program ((core/vec::get mods) i)))
+              (fn (stored)
+                (if (core/cli::is-error stored)
+                  (core/effect::pure stored)
+                  ((((core/cli::pkg-snapshot-store-modules2 mods) n) ((core/int::add i) 1))
+                    ((core/vec::push out) stored)))))))))))
+
+(def core/cli::pkg-snapshot-store-modules-program
+  (fn (mods)
+    (if (core/cli::vec? mods)
+      ((((core/cli::pkg-snapshot-store-modules2 mods) (core/vec::len mods)) 0) [])
+      (core/effect::pure ((core/error::make2 "core/pkg/bad-package") ":modules must be vector")))))
+
+(def core/cli::pkg-load-package-program
+  (fn (pkg)
+    (((core/effect::perform (quote core/pkg-low::load-package)) {:pkg pkg})
+      (fn (r) (core/effect::pure r)))))
+
+(def core/cli::pkg-snapshot-program
+  (fn (req)
+    (if (core/cli::map? req)
+      ((core/effect::bind
+        (core/cli::pkg-load-package-program ((core/map::get req) (quote :pkg))))
+        (fn (low-r)
+          (if (core/cli::is-error low-r)
+            (core/effect::pure low-r)
+            (if (core/cli::map? low-r)
+              (let
+                ((name ((core/map::get low-r) (quote :name)))
+                  (version ((core/map::get low-r) (quote :version)))
+                  (modules ((core/map::get low-r) (quote :modules)))
+                  (obligations0 ((core/map::get low-r) (quote :obligations))))
+                (if (if (core/cli::str? name) (core/cli::str? version) false)
+                  (let ((obligations (if (core/cli::vec? obligations0) obligations0 [])))
+                    ((core/effect::bind (core/cli::pkg-snapshot-store-modules-program modules))
+                      (fn (modules-out)
+                        (if (core/cli::is-error modules-out)
+                          (core/effect::pure modules-out)
+                          (let
+                            (
+                              (snapshot
+                                {
+                                  :kind (quote :package)
+                                  :modules modules-out
+                                  :obligations obligations
+                                  :pkg/name name
+                                  :pkg/version version
+                                  :type (quote :vcs/snapshot)
+                                  :v 1}))
+                            ((core/effect::bind (core/cli::store-put-program snapshot))
+                              (fn (put-r)
+                                (if (core/cli::is-error put-r)
+                                  (core/effect::pure put-r)
+                                  (let ((h (core/cli::store-put-hash put-r)))
+                                    (if (core/cli::is-error h)
+                                      (core/effect::pure h)
+                                      (core/effect::pure
+                                        {
+                                          :modules modules-out
+                                          :snapshot h})))))))))))
+                  (core/effect::pure
+                    ((core/error::make2 "core/pkg/bad-package")
+                      "core/pkg-low::load-package returned invalid :name/:version"))))
+              (core/effect::pure
+                ((core/error::make2 "core/type-error")
+                  "core/pkg-low::load-package returned non-map"))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-snapshot-program expects map"))))
+
+(def core/cli::pkg-export-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((root ((core/map::get req) (quote :root))) (out ((core/map::get req) (quote :out)))
+          (mode ((core/map::get req) (quote :mode)))
+          (depth ((core/map::get req) (quote :depth)))
+          (include-evidence ((core/map::get req) (quote :include-evidence)))
+          (include-deps ((core/map::get req) (quote :include-deps)))
+          (refs ((core/map::get req) (quote :refs))))
+        (let
+          (
+            (payload0
+              {
+                :include-deps include-deps
+                :include-evidence include-evidence
+                :mode mode
+                :out out
+                :root root}))
+          (let
+            ((payload1 (if ((core/int::eq? depth) 0) payload0 (((core/map::put payload0) (quote :depth)) depth))))
+            (let
+              (
+                (payload
+                  (if ((core/int::eq? (core/vec::len refs)) 0)
+                    payload1
+                    (((core/map::put payload1) (quote :refs)) refs))))
+              (((core/effect::perform (quote core/gpk-low::export)) payload)
+                (fn (r) (core/effect::pure r)))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-export-program expects map"))))
+
+(def core/cli::pkg-import-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((inp ((core/map::get req) (quote :in))) (set-refs ((core/map::get req) (quote :set-refs))))
+        (let ((payload0 {:in inp}))
+          (let
+            (
+              (payload
+                (if ((core/int::eq? (core/vec::len set-refs)) 0)
+                  payload0
+                  (((core/map::put payload0) (quote :set-refs)) set-refs))))
+            (((core/effect::perform (quote core/gpk-low::import)) payload)
+              (fn (r) (core/effect::pure r))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-import-program expects map"))))
+
+(def core/cli::pkg-resolve-publish-commit-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((ref ((core/map::get req) (quote :ref))) (commit ((core/map::get req) (quote :commit))))
+        (if (core/list::is-nil? commit)
+          ((core/effect::bind (core/cli::refs-get-program ref))
+            (fn (rr)
+              (if (core/cli::is-error rr)
+                (core/effect::pure rr)
+                (if (core/cli::map? rr)
+                  (let ((h ((core/map::get rr) (quote :hash))))
+                    (if (core/cli::hash-hex? h)
+                      (core/effect::pure h)
+                      (core/effect::pure
+                        ((core/error::make2 "core/pkg/ref-not-found")
+                          ((core/str::concat "local ref is unset: ") ref)))))
+                  (core/effect::pure
+                    ((core/error::make2 "core/type-error") "core/refs::get returned non-map"))))))
+          (if (core/cli::hash-hex? commit)
+            (core/effect::pure commit)
+            (core/effect::pure ((core/error::make2 "core/pkg/bad-payload") "commit must be 64-hex")))))
+      ((core/error::make2 "core/type-error")
+        "core/cli::pkg-resolve-publish-commit-program expects map"))))
+
+(def core/cli::vec-normalize-strs
+  (fn (xs)
+    (if (core/cli::vec? xs) ((((core/cli::vec-normalize-strs2 xs) (core/vec::len xs)) 0) []) [])))
+
+(def core/cli::vec-normalize-strs2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli::vec-normalize-strs2 xs) n) ((core/int::add i) 1))))
+              (let ((x ((core/vec::get xs) i)))
+                (let ((s (core/cli::sym-or-str->str x)))
+                  (if (core/cli::str? s) (next ((core/vec::push out) s)) (next out)))))))))))
+
+(def core/cli::pkg-commit-provenance
+  (fn (commit)
+    (if (core/cli::map? commit)
+      {
+        :attestations (core/cli::vec-normalize-strs ((core/map::get commit) (quote :attestations)))
+        :base ((core/map::get commit) (quote :base))
+        :evidence (core/cli::vec-normalize-strs ((core/map::get commit) (quote :evidence)))
+        :obligations (core/cli::vec-normalize-strs ((core/map::get commit) (quote :obligations)))
+        :parents (core/cli::vec-normalize-strs ((core/map::get commit) (quote :parents)))
+        :patch ((core/map::get commit) (quote :patch))
+        :result ((core/map::get commit) (quote :result))}
+      ((core/error::make2 "core/type-error") "core/cli::pkg-commit-provenance expects map"))))
+
+(def core/cli::pkg-publish-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((remote ((core/map::get req) (quote :remote))) (ref ((core/map::get req) (quote :ref)))
+          (policy ((core/map::get req) (quote :policy)))
+          (expected-old-present ((core/map::get req) (quote :expected-old-present)))
+          (expected-old ((core/map::get req) (quote :expected-old)))
+          (depth ((core/map::get req) (quote :depth)))
+          (commit ((core/map::get req) (quote :commit))))
+        (if (core/cli::hash-hex? policy)
+          ((core/effect::bind (core/cli::pkg-resolve-publish-commit-program req))
+            (fn (commit-h)
+              (if (core/cli::is-error commit-h)
+                (core/effect::pure commit-h)
+                ((core/effect::bind (core/cli::pkg-ensure-hash-program policy))
+                  (fn (policy-art)
+                    (if (core/cli::is-error policy-art)
+                      (core/effect::pure policy-art)
+                      ((core/effect::bind (core/cli::pkg-ensure-hash-program commit-h))
+                        (fn (commit-art)
+                          (if (core/cli::is-error commit-art)
+                            (core/effect::pure commit-art)
+                            (let ((commit1 (core/cli::vcs-validate-commit commit-art)))
+                              (if (core/cli::is-error commit1)
+                                (core/effect::pure
+                                  ((core/error::make2 "core/pkg/bad-commit")
+                                    "invalid commit artifact"))
+                                (let
+                                  ((snapshot-h ((core/map::get commit1) (quote :result)))
+                                    (provenance (core/cli::pkg-commit-provenance commit1)))
+                                  (if (core/cli::is-error provenance)
+                                    (core/effect::pure provenance)
+                                    ((core/effect::bind (((core/cli::pkg-validate-commit-closure-program ref) snapshot-h) commit-h))
+                                      (fn (closure-ok)
+                                        (if (core/cli::is-error closure-ok)
+                                          (core/effect::pure closure-ok)
+                                          (let
+                                            (
+                                              (set-ref
+                                                (if expected-old-present
+                                                  {
+                                                    :expected-old expected-old
+                                                    :hash commit-h
+                                                    :name ref
+                                                    :policy policy}
+                                                  {
+                                                    :hash commit-h
+                                                    :name ref
+                                                    :policy policy}))
+                                              (roots0 ((core/vec::push []) commit-h))
+                                              (roots1 ((core/vec::push roots0) policy))
+                                              (set-refs0 ((core/vec::push []) set-ref))
+                                              (payload
+                                                (if ((core/int::eq? depth) 0)
+                                                  {
+                                                    :remote remote
+                                                    :roots roots1
+                                                    :set-refs set-refs0}
+                                                  {
+                                                    :depth depth
+                                                    :remote remote
+                                                    :roots roots1
+                                                    :set-refs set-refs0})))
+                                            (((core/effect::perform (quote core/sync::push)) payload)
+                                              (fn (push-r)
+                                                (if (core/cli::is-error push-r)
+                                                  (core/effect::pure push-r)
+                                                  (if (core/cli::map? push-r)
+                                                    (core/effect::pure
+                                                      {
+                                                        :commit commit-h
+                                                        :ok ((core/map::get push-r) (quote :ok))
+                                                        :present
+                                                          ((core/map::get push-r) (quote :present))
+                                                        :provenance provenance
+                                                        :ref ref
+                                                        :refs-updated
+                                                          ((core/map::get push-r)
+                                                            (quote :refs-updated))
+                                                        :remote
+                                                          ((core/map::get push-r) (quote :remote))
+                                                        :total
+                                                          ((core/map::get push-r) (quote :total))
+                                                        :uploaded
+                                                          ((core/map::get push-r) (quote :uploaded))})
+                                                    (core/effect::pure
+                                                      ((core/error::make2 "core/type-error")
+                                                        "core/sync::push returned non-map")))))))))))))))))))))))
+          (core/effect::pure ((core/error::make2 "core/pkg/bad-payload") "policy must be 64-hex"))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-publish-program expects map"))))
+

@@ -109,6 +109,28 @@ fn selfhost_only_rejects_rust_engine_for_eval() {
 }
 
 #[test]
+fn selfhost_only_requires_explicit_artifact_for_runtime_commands() {
+    let td = tempdir().unwrap();
+    let file = td.path().join("m.gc");
+    std::fs::write(&file, "(def x 1)\nx\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "--selfhost-only",
+            "eval",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "explicit selfhost artifact required",
+        ));
+}
+
+#[test]
 fn selfhost_only_accepts_selfhost_artifact_and_keygen() {
     let td = tempdir().unwrap();
     let bootstrap = build_selfhost_artifact(td.path());
@@ -1085,31 +1107,26 @@ base_dir = "."
 }
 
 #[test]
-fn fmt_defaults_to_selfhost_via_workspace_artifact_fallback() {
+fn fmt_default_selfhost_requires_explicit_artifact() {
     let td = tempdir().unwrap();
     let file = td.path().join("m.gc");
     std::fs::write(&file, "(def x 1)\n").unwrap();
 
-    let out = cargo_bin_cmd!("genesis_wasi")
-        .args(["--json", "fmt", file.to_str().unwrap()])
+    cargo_bin_cmd!("genesis_wasi")
+        .args(["fmt", file.to_str().unwrap()])
         .current_dir(td.path())
         .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let v: JsonValue = serde_json::from_slice(&out).unwrap();
-    let engine = v
-        .get("data")
-        .and_then(|d| d.get("engine"))
-        .and_then(JsonValue::as_str)
-        .unwrap();
-    assert_eq!(engine, "selfhost");
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "explicit selfhost artifact required",
+        ));
 }
 
 #[test]
 fn wasi_legacy_high_level_caps_ops_are_rejected_in_default_profile() {
     let td = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(td.path());
     let file = td.path().join("prog.gc");
     std::fs::write(&file, "(def prog (core/effect::pure 1))\nprog\n").unwrap();
     let caps = td.path().join("caps_legacy.toml");
@@ -1124,6 +1141,8 @@ allow = ["core/pkg::init"]
     cargo_bin_cmd!("genesis_wasi")
         .args([
             "--json",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
             "run",
             file.to_str().unwrap(),
             "--engine",

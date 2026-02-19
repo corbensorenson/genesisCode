@@ -18,7 +18,7 @@ use gc_coreform::{
 use gc_effects::{CapsPolicy, EffectLog};
 use gc_kernel::{
     Apply, Env, EvalCtx, MemLimits, StepLimit, Value, compile_module, eval_compiled_module,
-    eval_module, value_hash,
+    value_hash,
 };
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
@@ -122,7 +122,6 @@ const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
 const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const OBLIGATION_TEST_WORKERS_ENV: &str = "GENESIS_TEST_WORKERS";
 const OBLIGATION_CACHE_DISABLE_ENV: &str = "GENESIS_OBLIGATION_CACHE_DISABLE";
-const DISABLE_COMPILED_EVAL_ENV: &str = "GENESIS_DISABLE_COMPILED_EVAL";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -3451,12 +3450,8 @@ fn eval_module_default(
     ctx: &mut EvalCtx,
     forms: &[Term],
 ) -> Result<Value, gc_kernel::KernelError> {
-    if !env_truthy(DISABLE_COMPILED_EVAL_ENV)
-        && let Ok(compiled) = compile_module(forms)
-    {
-        return eval_compiled_module(ctx, env, &compiled);
-    }
-    eval_module(ctx, env, forms)
+    let compiled = compile_module(forms)?;
+    eval_compiled_module(ctx, env, &compiled)
 }
 
 fn parse_def(t: &Term) -> Option<(String, Term)> {

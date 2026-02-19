@@ -244,7 +244,7 @@ fn eval_stage2_gate_matches_baseline_for_scalar_pure_module() {
 }
 
 #[test]
-fn eval_stage2_gate_allows_unsupported_module() {
+fn eval_stage2_gate_rejects_unsupported_module() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("effect.gc");
     std::fs::write(
@@ -261,7 +261,11 @@ fn eval_stage2_gate_allows_unsupported_module() {
     cargo_bin_cmd!("genesis")
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
-        .success();
+        .failure()
+        .code(30)
+        .stderr(predicates::str::contains(
+            "core/obligation::translation-validation",
+        ));
 }
 
 #[test]
@@ -1558,7 +1562,7 @@ fn eval_stage2_gate_validates_branch_sensitive_concat_wrappers_both_if_sides() {
 }
 
 #[test]
-fn optimize_stage2_gate_allows_unsupported_module() {
+fn optimize_stage2_gate_rejects_unsupported_module() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("effect.gc");
     std::fs::write(
@@ -1575,7 +1579,11 @@ fn optimize_stage2_gate_allows_unsupported_module() {
     cargo_bin_cmd!("genesis")
         .args(["optimize", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
-        .success();
+        .failure()
+        .code(30)
+        .stderr(predicates::str::contains(
+            "core/obligation::translation-validation",
+        ));
 }
 
 #[test]

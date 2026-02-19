@@ -19,6 +19,8 @@ In-scope:
 - a step/resume interface for running `EffectProgram` values produced by evaluation
 - deterministic request/response hashing compatible with `docs/spec/VALUE_EFFECT_HASH.md`
 - deterministic printing/serialization for payloads and responses as CoreForm terms
+- bridge-backed host capability transport conformance with `docs/spec/HOST_BRIDGE_PROTOCOL.md`
+  and WASI bridge profile response configuration (`caps.toml`).
 
 Out of scope:
 - a specific JS/TS SDK design
@@ -37,6 +39,21 @@ All payloads and responses are represented as **CoreForm terms** serialized with
 - The WASM module returns CoreForm **term strings** for payloads and final values.
 
 Terms are required to parse as a *single* term (no trailing tokens).
+
+## WASI Bridge Profile (Normative)
+
+When running under WASI, host bridge command spawning is replaced with a deterministic
+response profile:
+
+- per-op policy response:
+  - `wasi_bridge_profile = true` (explicit profile enable for non-WASI hosts/tests)
+  - `wasi_bridge_response` (CoreForm term string)
+  - `wasi_bridge_response_file` (path to CoreForm term or `op -> response` CoreForm map)
+- optional process-level fallback:
+  - `GENESIS_WASI_BRIDGE_RESPONSES` (CoreForm map keyed by op symbol/string)
+
+If no profile response is configured, bridge-backed ops fail closed with deterministic
+`<family>/bridge-wasi-profile-required` errors.
 
 ## Hashing (Normative)
 
@@ -119,4 +136,3 @@ Behavior:
 For the same program/module and the same sequence of host decisions + responses:
 - the sequence of `(payload_h, cont_h, req_h, resp_h)` MUST match native runs
 - replay checking MUST succeed when given a log recorded from either host
-

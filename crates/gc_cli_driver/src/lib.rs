@@ -28,7 +28,6 @@ mod cmd_sync;
 mod cmd_vcs;
 mod diagnostics;
 mod kernel_exec;
-mod policy_config;
 mod pkg_abi;
 mod pkg_contract;
 mod pkg_doctor;
@@ -37,6 +36,7 @@ mod pkg_self_opt;
 mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
+mod policy_config;
 mod program_builders;
 mod selfhost_bridge;
 mod selfhost_frontend;
@@ -1583,7 +1583,7 @@ fn cmd_warm(cli: &Cli, flavor: Flavor, prime_selfhost: bool) -> Result<CmdOut, C
             let mut ctx = mk_ctx(cli);
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            load_runtime_selfhost_toolchain(cli, &mut ctx, &mut env)?;
         }
     }
 
@@ -1797,6 +1797,7 @@ fn cmd_fmt(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
         })),
         error: if ok {
             None
@@ -1812,474 +1813,6 @@ fn cmd_fmt(
         exit_code,
         stdout: String::new(),
         json: json_envelope_value(env)?,
-    })
-}
-
-fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<(String, String, Option<String>)> {
-    let tok = ctx.protocol?.error;
-    let Value::Sealed { token, payload } = v else {
-        return None;
-    };
-    if *token != tok {
-        return None;
-    }
-
-    let payload_term = payload.to_term_for_log(Some(tok));
-    let (code, msg) = match &payload_term {
-        Term::Map(m) => {
-            let code = m
-                .get(&gc_coreform::TermOrdKey(Term::Symbol(
-                    ":error/code".to_string(),
-                )))
-                .and_then(|t| match t {
-                    Term::Str(s) => Some(s.clone()),
-                    _ => None,
-                })
-                .unwrap_or_else(|| "core/error".to_string());
-            let msg = m
-                .get(&gc_coreform::TermOrdKey(Term::Symbol(
-                    ":error/message".to_string(),
-                )))
-                .and_then(|t| match t {
-                    Term::Str(s) => Some(s.clone()),
-                    _ => None,
-                })
-                .unwrap_or_else(|| "error".to_string());
-            (code, msg)
-        }
-        _ => ("core/error".to_string(), "error".to_string()),
-    };
-    Some((code, msg, Some(gc_coreform::print_term(&payload_term))))
-}
-
-fn selfhost_parse_canonicalize_module(
-    ctx: &mut EvalCtx,
-    env: &gc_kernel::Env,
-    src: &str,
-) -> Result<Vec<Term>, CliError> {
-    if let Some(canon_src_fn) = env.get("core/cli::canonicalize-module-src") {
-        let canon = canon_src_fn
-            .apply(ctx, Value::Data(Term::Str(src.to_string())))
-            .map_err(|e| {
-                cli_err(
-                    EX_EVAL,
-                    "eval/error",
-                    format!("core/cli canonicalize-module-src failed: {e}"),
-                )
-            })?;
-
-        if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
-            return Err(CliError {
-                exit_code: EX_PARSE,
-                json: JsonError {
-                    code: "selfhost/error",
-                    message: format!("{code}: {message}"),
-                    context: payload.map(serde_json::Value::String),
-                },
-            });
-        }
-
-        let Some(Term::Vector(forms)) = canon.as_data() else {
-            return Err(cli_err(
-                EX_INTERNAL,
-                "selfhost/bad-return",
-                format!(
-                    "core/cli canonicalize-module-src returned non-vector: {}",
-                    canon.debug_repr()
-                ),
-            ));
-        };
-        return Ok(forms.clone());
-    }
-
-    let parse_fn = env.get("selfhost/parse::parse-module").ok_or_else(|| {
-        cli_err(
-            EX_INTERNAL,
-            "selfhost/missing",
-            "missing binding selfhost/parse::parse-module",
-        )
-    })?;
-    let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_string())))
-        .map_err(|e| {
-            cli_err(
-                EX_EVAL,
-                "eval/error",
-                format!("selfhost parse-module failed: {e}"),
-            )
-        })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &parsed) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-
-    let Some(Term::Vector(parsed_forms)) = parsed.as_data() else {
-        return Err(cli_err(
-            EX_INTERNAL,
-            "selfhost/bad-return",
-            format!(
-                "selfhost parse-module returned non-vector: {}",
-                parsed.debug_repr()
-            ),
-        ));
-    };
-
-    let canon_fn = env
-        .get("selfhost/canon::canonicalize-module")
-        .ok_or_else(|| {
-            cli_err(
-                EX_INTERNAL,
-                "selfhost/missing",
-                "missing binding selfhost/canon::canonicalize-module",
-            )
-        })?;
-    let canon = canon_fn
-        .apply(ctx, Value::Data(Term::Vector(parsed_forms.clone())))
-        .map_err(|e| {
-            cli_err(
-                EX_EVAL,
-                "eval/error",
-                format!("selfhost canonicalize-module failed: {e}"),
-            )
-        })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &canon) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-
-    let Some(Term::Vector(forms)) = canon.as_data() else {
-        return Err(cli_err(
-            EX_INTERNAL,
-            "selfhost/bad-return",
-            format!(
-                "selfhost canonicalize-module returned non-vector: {}",
-                canon.debug_repr()
-            ),
-        ));
-    };
-    Ok(forms.clone())
-}
-
-fn parse_hex32_for_cli(hex: &str, context: &str) -> Result<[u8; 32], CliError> {
-    let s = hex.trim();
-    if s.len() != 64 {
-        return Err(cli_err(
-            EX_PARSE,
-            "selfhost/hash",
-            format!("{context} returned non-64-byte hex hash"),
-        ));
-    }
-    let mut out = [0u8; 32];
-    for (i, pair) in s.as_bytes().chunks_exact(2).enumerate() {
-        let hi = (pair[0] as char).to_digit(16).ok_or_else(|| {
-            cli_err(
-                EX_PARSE,
-                "selfhost/hash",
-                format!("{context} returned invalid hex hash"),
-            )
-        })?;
-        let lo = (pair[1] as char).to_digit(16).ok_or_else(|| {
-            cli_err(
-                EX_PARSE,
-                "selfhost/hash",
-                format!("{context} returned invalid hex hash"),
-            )
-        })?;
-        out[i] = ((hi << 4) | lo) as u8;
-    }
-    Ok(out)
-}
-
-fn selfhost_hash_module_forms(
-    ctx: &mut EvalCtx,
-    env: &gc_kernel::Env,
-    forms: &[Term],
-) -> Result<[u8; 32], CliError> {
-    if let Some(hash_forms_fn) = env.get("core/cli::hash-module-forms") {
-        let out = hash_forms_fn
-            .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-            .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
-        if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
-            return Err(CliError {
-                exit_code: EX_PARSE,
-                json: JsonError {
-                    code: "selfhost/error",
-                    message: format!("{code}: {message}"),
-                    context: payload.map(serde_json::Value::String),
-                },
-            });
-        }
-        let Some(Term::Str(hex)) = out.as_data() else {
-            return Err(cli_err(
-                EX_INTERNAL,
-                "selfhost/bad-return",
-                format!(
-                    "core/cli hash-module-forms returned non-string: {}",
-                    out.debug_repr()
-                ),
-            ));
-        };
-        return parse_hex32_for_cli(hex, "core/cli hash-module-forms");
-    }
-
-    let hash_fn = env.get("selfhost/hash::hash-module").ok_or_else(|| {
-        cli_err(
-            EX_INTERNAL,
-            "selfhost/missing",
-            "missing binding selfhost/hash::hash-module",
-        )
-    })?;
-    let out = hash_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("selfhost hash failed: {e}")))?;
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-    let Some(Term::Str(hex)) = out.as_data() else {
-        return Err(cli_err(
-            EX_INTERNAL,
-            "selfhost/bad-return",
-            format!(
-                "selfhost hash-module returned non-string: {}",
-                out.debug_repr()
-            ),
-        ));
-    };
-    parse_hex32_for_cli(hex, "selfhost hash-module")
-}
-
-fn selfhost_stage1_transform_module(
-    ctx: &mut EvalCtx,
-    env: &gc_kernel::Env,
-    forms: &[Term],
-) -> Result<Vec<Term>, CliError> {
-    let stage1_fn = env
-        .get("core/cli::stage1-transform-module")
-        .ok_or_else(|| {
-            cli_err(
-                EX_INTERNAL,
-                "selfhost/missing",
-                "missing binding core/cli::stage1-transform-module",
-            )
-        })?;
-    let out = stage1_fn
-        .apply(ctx, Value::Data(Term::Vector(forms.to_vec())))
-        .map_err(|e| {
-            cli_err(
-                EX_EVAL,
-                "eval/error",
-                format!("selfhost stage1 failed: {e}"),
-            )
-        })?;
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &out) {
-        return Err(CliError {
-            exit_code: EX_INTERNAL,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-    let Some(Term::Vector(transformed)) = out.as_data() else {
-        return Err(cli_err(
-            EX_INTERNAL,
-            "selfhost/bad-return",
-            format!(
-                "core/cli stage1-transform-module returned non-vector: {}",
-                out.debug_repr()
-            ),
-        ));
-    };
-    Ok(transformed.clone())
-}
-
-fn selfhost_parse_term(
-    ctx: &mut EvalCtx,
-    env: &gc_kernel::Env,
-    src: &str,
-    arg_name: &str,
-) -> Result<Term, CliError> {
-    let parse_fn = env.get("selfhost/parse::parse-term").ok_or_else(|| {
-        cli_err(
-            EX_INTERNAL,
-            "selfhost/missing",
-            "missing binding selfhost/parse::parse-term",
-        )
-    })?;
-    let parsed = parse_fn
-        .apply(ctx, Value::Data(Term::Str(src.to_string())))
-        .map_err(|e| {
-            cli_err(
-                EX_EVAL,
-                "eval/error",
-                format!("selfhost parse-term failed for {arg_name}: {e}"),
-            )
-        })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(ctx, &parsed) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{arg_name}: {code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-
-    let Some(term) = parsed.as_data() else {
-        return Err(cli_err(
-            EX_INTERNAL,
-            "selfhost/bad-return",
-            format!(
-                "selfhost parse-term returned non-data for {arg_name}: {}",
-                parsed.debug_repr()
-            ),
-        ));
-    };
-    Ok(term.clone())
-}
-
-fn selfhost_plan_request_map(
-    cli: &Cli,
-    binding: &str,
-    req: Term,
-    cmd_name: &str,
-) -> Result<std::collections::BTreeMap<TermOrdKey, Term>, CliError> {
-    let mut ctx = mk_ctx(cli);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-
-    let f = env.get(binding).ok_or_else(|| {
-        cli_err(
-            EX_INTERNAL,
-            "selfhost/missing",
-            format!("missing binding {binding}"),
-        )
-    })?;
-    let out = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
-        cli_err(
-            EX_EVAL,
-            "eval/error",
-            format!("{binding} failed for {cmd_name}: {e}"),
-        )
-    })?;
-
-    if let Some((code, message, payload)) = extract_protocol_error(&ctx, &out) {
-        return Err(CliError {
-            exit_code: EX_PARSE,
-            json: JsonError {
-                code: "selfhost/error",
-                message: format!("{cmd_name}: {code}: {message}"),
-                context: payload.map(serde_json::Value::String),
-            },
-        });
-    }
-
-    if let Some(Term::Map(m)) = out.as_data() {
-        return Ok(m.clone());
-    }
-    let fallback = out.to_term_for_log(ctx.protocol.map(|p| p.error));
-    if let Term::Map(m) = fallback {
-        return Ok(m);
-    }
-    Err(cli_err(
-        EX_INTERNAL,
-        "selfhost/bad-return",
-        format!(
-            "{binding} returned non-map for {cmd_name}: {}",
-            out.debug_repr()
-        ),
-    ))
-}
-
-fn planned_required_str(
-    m: &std::collections::BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    cmd_name: &str,
-) -> Result<String, CliError> {
-    match m.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Str(s)) => Ok(s.clone()),
-        _ => Err(cli_err(
-            EX_PARSE,
-            "selfhost/plan",
-            format!("{cmd_name}: planner returned invalid {key}"),
-        )),
-    }
-}
-
-fn planned_optional_str(
-    m: &std::collections::BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    cmd_name: &str,
-) -> Result<Option<String>, CliError> {
-    match m.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Str(s)) => Ok(Some(s.clone())),
-        Some(Term::Nil) | None => Ok(None),
-        _ => Err(cli_err(
-            EX_PARSE,
-            "selfhost/plan",
-            format!("{cmd_name}: planner returned invalid {key}"),
-        )),
-    }
-}
-
-fn planned_required_bool(
-    m: &std::collections::BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    cmd_name: &str,
-) -> Result<bool, CliError> {
-    match m.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Bool(b)) => Ok(*b),
-        _ => Err(cli_err(
-            EX_PARSE,
-            "selfhost/plan",
-            format!("{cmd_name}: planner returned invalid {key}"),
-        )),
-    }
-}
-
-fn planned_required_u64(
-    m: &std::collections::BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    cmd_name: &str,
-) -> Result<u64, CliError> {
-    let Some(Term::Int(i)) = m.get(&TermOrdKey(Term::symbol(key))) else {
-        return Err(cli_err(
-            EX_PARSE,
-            "selfhost/plan",
-            format!("{cmd_name}: planner returned invalid {key}"),
-        ));
-    };
-    i.to_string().parse::<u64>().map_err(|_| {
-        cli_err(
-            EX_PARSE,
-            "selfhost/plan",
-            format!("{cmd_name}: planner returned out-of-range {key}"),
-        )
     })
 }
 
@@ -2314,7 +1847,7 @@ fn cmd_eval(
             parse_ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut parse_ctx);
             let mut parse_env = prelude.env;
-            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+            load_runtime_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
@@ -2373,7 +1906,7 @@ fn cmd_eval(
                 "stage2 gate enabled but no stage2 report was produced",
             ));
         };
-        if s2.supported && !s2.ok {
+        if !s2.supported || !s2.ok {
             return Err(CliError {
                 exit_code: EX_OBLIGATIONS,
                 json: JsonError {
@@ -2400,6 +1933,7 @@ fn cmd_eval(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "stage1": stage1.as_ref().map(gc_opt::stage1_pipeline_json),
             "stage2": stage2.as_ref().map(gc_opt::stage2_report_json),
@@ -2451,7 +1985,7 @@ fn cmd_explain(
             parse_ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut parse_ctx);
             let mut parse_env = prelude.env;
-            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+            load_runtime_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
@@ -2497,6 +2031,7 @@ fn cmd_explain(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "contract": contract_src,
             "msg": msg_src,
@@ -2545,7 +2080,7 @@ fn cmd_run(
             parse_ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut parse_ctx);
             let mut parse_env = prelude.env;
-            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+            load_runtime_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
@@ -2593,6 +2128,7 @@ fn cmd_run(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "caps": caps.display().to_string(),
             "log": log_path.display().to_string(),
@@ -2629,120 +2165,6 @@ fn default_log_path(op: &str) -> PathBuf {
     dir.join(format!("{op}-{stamp}.gclog"))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct PoliciesConfig {
-    #[serde(default = "policy_config_version_one")]
-    version: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    default: Option<String>,
-    #[serde(default)]
-    aliases: std::collections::BTreeMap<String, String>,
-}
-
-fn policy_config_version_one() -> u64 {
-    1
-}
-
-impl Default for PoliciesConfig {
-    fn default() -> Self {
-        Self {
-            version: 1,
-            default: None,
-            aliases: std::collections::BTreeMap::new(),
-        }
-    }
-}
-
-fn normalize_policies_config(mut cfg: PoliciesConfig) -> Result<PoliciesConfig, String> {
-    if cfg.version != 1 {
-        return Err(format!(
-            "unsupported policies config version {} (expected 1)",
-            cfg.version
-        ));
-    }
-    let mut aliases = std::collections::BTreeMap::new();
-    for (name_raw, hash_raw) in cfg.aliases {
-        let name = name_raw.trim();
-        if name.is_empty() {
-            return Err("policy alias names must be non-empty".to_string());
-        }
-        let hash = hash_raw.trim();
-        if !is_hex64(hash) {
-            return Err(format!("policy alias `{name}` must map to a 64-hex hash"));
-        }
-        if aliases
-            .insert(name.to_string(), hash.to_ascii_lowercase())
-            .is_some()
-        {
-            return Err(format!("duplicate policy alias `{name}`"));
-        }
-    }
-    cfg.aliases = aliases;
-    if let Some(default_raw) = cfg.default.take() {
-        let d = default_raw.trim();
-        if d.is_empty() {
-            return Err("default policy selector must be non-empty".to_string());
-        }
-        cfg.default = Some(if is_hex64(d) {
-            d.to_ascii_lowercase()
-        } else {
-            d.to_string()
-        });
-    } else {
-        cfg.default = None;
-    }
-    Ok(cfg)
-}
-
-fn load_policies_config(path: &Path) -> Result<PoliciesConfig, CliError> {
-    if !path.exists() {
-        return Ok(PoliciesConfig::default());
-    }
-    let s = std::fs::read_to_string(path)
-        .with_context(|| format!("read {}", path.display()))
-        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-    let cfg: PoliciesConfig =
-        toml::from_str(&s).map_err(|e| cli_err(EX_PARSE, "policy/parse", format!("{e}")))?;
-    normalize_policies_config(cfg).map_err(|e| cli_err(EX_PARSE, "policy/parse", e))
-}
-
-fn save_policies_config(path: &Path, cfg: &PoliciesConfig) -> Result<(), CliError> {
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("create {}", parent.display()))
-            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
-    }
-    let s = toml::to_string_pretty(cfg)
-        .map_err(|e| cli_err(EX_INTERNAL, "policy/serialize", format!("{e}")))?;
-    std::fs::write(path, s)
-        .with_context(|| format!("write {}", path.display()))
-        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))
-}
-
-fn resolve_policy_selector(query: &str, cfg: &PoliciesConfig) -> Result<(String, String), String> {
-    let q = query.trim();
-    if q.is_empty() {
-        return Err("policy selector must be non-empty".to_string());
-    }
-    if q == "default" {
-        let Some(def) = cfg.default.as_deref() else {
-            return Err("no default policy configured".to_string());
-        };
-        return resolve_policy_selector(def, cfg);
-    }
-    if is_hex64(q) {
-        let h = q.to_ascii_lowercase();
-        return Ok((h.clone(), h));
-    }
-    let h = cfg
-        .aliases
-        .get(q)
-        .ok_or_else(|| format!("unknown policy alias `{q}`"))?;
-    Ok((q.to_string(), h.clone()))
-}
-
 fn cmd_replay(
     cli: &Cli,
     file: &PathBuf,
@@ -2771,7 +2193,7 @@ fn cmd_replay(
             parse_ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut parse_ctx);
             let mut parse_env = prelude.env;
-            load_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+            load_runtime_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
 
             parse_ctx.steps = 0;
             parse_ctx.step_limit = None;
@@ -2826,6 +2248,7 @@ fn cmd_replay(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "log": log_path.display().to_string(),
             "store": store_dir.map(|p| p.display().to_string()),
@@ -2879,7 +2302,7 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
             "pkg": pkg.display().to_string(),
             "caps": caps.map(|p| p.display().to_string()),
             "coreform_frontend": frontend_info,
-            "kernel_eval_backend_default": "compiled-with-treewalk-fallback",
+            "kernel_eval_backend_default": "compiled",
             "acceptance_artifact": r.acceptance_artifact,
             "obligations": obligations,
         })),

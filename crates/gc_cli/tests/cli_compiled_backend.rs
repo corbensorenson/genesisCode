@@ -58,7 +58,7 @@ fn eval_defaults_to_compiled_backend() {
 }
 
 #[test]
-fn eval_can_force_tree_walk_backend_for_parity_guard() {
+fn eval_ignores_legacy_disable_compiled_eval_env() {
     let td = tempdir().unwrap();
     let file = td.path().join("eval.gc");
     fs::write(&file, "(def demo/x 41)\n(prim int/add demo/x 1)\n").unwrap();
@@ -76,7 +76,7 @@ fn eval_can_force_tree_walk_backend_for_parity_guard() {
         v.get("data")
             .and_then(|d| d.get("kernel_eval_backend"))
             .and_then(|x| x.as_str()),
-        Some("tree-walk")
+        Some("compiled")
     );
 }
 
@@ -160,6 +160,6 @@ fn run_replay_and_test_include_compiled_backend_metadata() {
             .get("data")
             .and_then(|d| d.get("kernel_eval_backend_default"))
             .and_then(|x| x.as_str()),
-        Some("compiled-with-treewalk-fallback")
+        Some("compiled")
     );
 }

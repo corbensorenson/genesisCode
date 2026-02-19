@@ -37,7 +37,8 @@ The WASM module exports these functions via `wasm-bindgen`:
 - `eval_coreform_module_with_gates(src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
   - Pure evaluation with optional Stage-1/Stage-2 obligation gates.
   - `stage1_gate` enforces `core/obligation::stage1-validation`.
-  - `stage2_gate` enforces Stage-2 translation validation only for Stage-2-supported modules.
+  - `stage2_gate` enforces Stage-2 translation validation in fail-closed mode:
+    unsupported modules fail, and supported modules must validate successfully.
   - Stage-2 validation uses Stage-1 transformed CoreForm input (same policy as package translation-validation), even when `stage1_pipeline=false`.
 - `eval_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Run self-hosted parse+canonicalize in-kernel, then pure-evaluate the module.

@@ -14,6 +14,7 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
 fn vcs_hash_hashes_terms_and_modules_deterministically() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
+    let artifact = build_selfhost_artifact(dir);
 
     // Term hashing.
     let term_src =
@@ -24,7 +25,14 @@ fn vcs_hash_hashes_terms_and_modules_deterministically() {
 
     let out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
-        .args(["vcs", "hash", "--in", "t.gc"])
+        .args([
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "vcs",
+            "hash",
+            "--in",
+            "t.gc",
+        ])
         .assert()
         .success()
         .get_output()
@@ -44,7 +52,14 @@ fn vcs_hash_hashes_terms_and_modules_deterministically() {
 
     let out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
-        .args(["vcs", "hash", "--in", "m.gc"])
+        .args([
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "vcs",
+            "hash",
+            "--in",
+            "m.gc",
+        ])
         .assert()
         .success()
         .get_output()
@@ -114,5 +129,17 @@ fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
     assert_eq!(
         rust_d.get("hash_kind").and_then(JsonValue::as_str),
         Some("term")
+    );
+    assert!(rust_d.get("selfhost_artifact").is_some());
+    assert_eq!(
+        rust_d.get("selfhost_artifact").and_then(JsonValue::as_null),
+        Some(())
+    );
+    assert_eq!(
+        self_d
+            .get("selfhost_artifact")
+            .and_then(|v| v.get("source"))
+            .and_then(JsonValue::as_str),
+        Some("explicit")
     );
 }

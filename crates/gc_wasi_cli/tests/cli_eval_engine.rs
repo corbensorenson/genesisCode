@@ -73,3 +73,19 @@ fn eval_selfhost_engine_surfaces_parse_errors() {
         .code(10)
         .stderr(predicate::str::contains("core/parse/"));
 }
+
+#[test]
+fn eval_selfhost_engine_requires_explicit_artifact_even_without_selfhost_only() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+    std::fs::write(&file, "1\n").unwrap();
+
+    cargo_bin_cmd!("genesis_wasi")
+        .args(["eval", file.to_str().unwrap(), "--engine", "selfhost"])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "explicit selfhost artifact required",
+        ));
+}

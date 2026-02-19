@@ -1,37 +1,17 @@
 use gc_coreform::Term;
-use gc_kernel::{
-    Env, EvalCtx, KernelError, Value, compile_module, eval_compiled_module, eval_module,
-};
-
-const DISABLE_COMPILED_EVAL_ENV: &str = "GENESIS_DISABLE_COMPILED_EVAL";
+use gc_kernel::{Env, EvalCtx, KernelError, Value, compile_module, eval_compiled_module};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ModuleEvalBackend {
     Compiled,
-    TreeWalk,
 }
 
 impl ModuleEvalBackend {
     pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Compiled => "compiled",
-            Self::TreeWalk => "tree-walk",
         }
     }
-}
-
-fn compiled_eval_enabled() -> bool {
-    std::env::var(DISABLE_COMPILED_EVAL_ENV)
-        .ok()
-        .map(|v| !is_truthy(&v))
-        .unwrap_or(true)
-}
-
-fn is_truthy(value: &str) -> bool {
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes" | "on"
-    )
 }
 
 pub(crate) fn eval_module_default(
@@ -39,14 +19,9 @@ pub(crate) fn eval_module_default(
     env: &mut Env,
     forms: &[Term],
 ) -> Result<(Value, ModuleEvalBackend), KernelError> {
-    if compiled_eval_enabled()
-        && let Ok(compiled) = compile_module(forms)
-    {
-        let value = eval_compiled_module(ctx, env, &compiled)?;
-        return Ok((value, ModuleEvalBackend::Compiled));
-    }
-    let value = eval_module(ctx, env, forms)?;
-    Ok((value, ModuleEvalBackend::TreeWalk))
+    let compiled = compile_module(forms)?;
+    let value = eval_compiled_module(ctx, env, &compiled)?;
+    Ok((value, ModuleEvalBackend::Compiled))
 }
 
 #[cfg(test)]

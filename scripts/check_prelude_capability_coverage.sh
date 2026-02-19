@@ -8,6 +8,7 @@ cd "$ROOT_DIR"
 
 PRELUDE_FILES=(
   "prelude/modules/10_gfx.gc"
+  "prelude/modules/11_gpu_compute.gc"
   "prelude/modules/20_editor.gc"
 )
 RUNNER_FILE="crates/gc_effects/src/runner.rs"
@@ -30,23 +31,23 @@ WRAPPER_OPS="$TMP_DIR/wrapper_ops.txt"
 RUNNER_OPS="$TMP_DIR/runner_ops.txt"
 MISSING="$TMP_DIR/missing.txt"
 
-rg -o --no-filename --pcre2 '\(quote\s+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' \
+rg -o --no-filename --pcre2 '\(quote\s+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' \
   "${PRELUDE_FILES[@]}" \
   | sed -E 's/^\(quote[[:space:]]+//; s/\)$//' \
   | sort -u >"$WRAPPER_OPS"
 
 if [[ ! -s "$WRAPPER_OPS" ]]; then
-  echo "prelude-capability-coverage: no gfx/editor capability wrapper ops found"
+  echo "prelude-capability-coverage: no gfx/gpu-compute/editor capability wrapper ops found"
   exit 1
 fi
 
-rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' \
+rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' \
   "$RUNNER_FILE" \
   | tr -d '"' \
   | sort -u >"$RUNNER_OPS"
 
 if [[ ! -s "$RUNNER_OPS" ]]; then
-  echo "prelude-capability-coverage: no gfx/editor ops found in runner dispatch"
+  echo "prelude-capability-coverage: no gfx/gpu-compute/editor ops found in runner dispatch"
   exit 1
 fi
 

@@ -9,6 +9,7 @@ All operations are deny-by-default, effect-logged, and replay-checked where resp
 
 - `editor/clipboard::*`
 - `editor/dialog::*`
+- `editor/plugin::*`
 - `editor/task::*`
 - `editor/watch::*`
 
@@ -35,6 +36,17 @@ Determinism:
 
 Determinism:
 - replay consumes logged selected paths.
+- headless hosts may return `{ :ok false }` when no dialog bridge is configured.
+
+## `editor/plugin::*`
+
+- `editor/plugin::command`
+  - payload: `{ :plugin str|sym :command str|sym :payload term }`
+  - response: bridge-defined CoreForm term | ERROR
+
+Determinism:
+- replay consumes logged bridge responses.
+- production hosts must execute a configured bridge command; synthetic echo responses are forbidden.
 
 ## `editor/task::*`
 
@@ -70,6 +82,32 @@ Filesystem/workspace change notifications.
 
 Determinism:
 - editor reactions are deterministic from logged watch event batches.
+- host polls must return filesystem-derived deltas (`:create/:modify/:delete`) and must not emit synthetic heartbeat events.
+
+## Bridge command contract (host runtime)
+
+For editor ops that require host integration (`editor/plugin::command`, optionally
+`editor/dialog::*`, and bridge-routed task kinds), the runtime reads per-op
+`caps.toml` fields:
+
+- `bridge_cmd` (string, required): executable path under the op `base_dir`.
+- `bridge_args` (array<string>, optional): fixed args prepended before the op symbol.
+
+Invocation contract:
+
+- process cwd = op `base_dir`
+- argv = `<bridge_cmd> <bridge_args...> <op-symbol>`
+- env:
+  - `GENESIS_HOST_BRIDGE_OP=<op-symbol>`
+  - `GENESIS_HOST_BRIDGE_FAMILY=editor`
+- stdin:
+  - framed payload `<len>\n<payload>` where `payload` is canonical CoreForm
+- stdout:
+  - empty => `{ :ok true }`
+  - framed response `<len>\n<payload>` where `payload` is one CoreForm term
+- non-zero exit, invalid UTF-8, or invalid CoreForm => sealed ERROR
+
+Normative framing details are specified in `docs/spec/HOST_BRIDGE_PROTOCOL.md`.
 
 ## Policy requirements
 

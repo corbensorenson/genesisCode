@@ -33,6 +33,63 @@ fn fixture(path: &str) -> PathBuf {
         .join(path)
 }
 
+#[cfg(unix)]
+fn install_gpu_bridge(dst: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let bridge = dst.join("host_bridge.sh");
+    fs::write(
+        &bridge,
+        r#"#!/bin/sh
+resp='{:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}'
+printf '%s\n%s' "${#resp}" "$resp"
+"#,
+    )
+    .unwrap();
+    let mut perms = fs::metadata(&bridge).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&bridge, perms).unwrap();
+    append_gpu_bridge_policy(dst, "host_bridge.sh");
+}
+
+#[cfg(windows)]
+fn install_gpu_bridge(dst: &Path) {
+    let bridge = dst.join("host_bridge.cmd");
+    fs::write(
+        &bridge,
+        "@echo {:ok true :id \"gpu-bridge-0\" :data b\"\\x01\\x02\\x03\\x04\" :written 4}\r\n",
+    )
+    .unwrap();
+    append_gpu_bridge_policy(dst, "host_bridge.cmd");
+}
+
+fn append_gpu_bridge_policy(dst: &Path, bridge_name: &str) {
+    let caps = dst.join("caps.toml");
+    let patch = format!(
+        r#"
+
+[op."gfx/gpu::create-buffer"]
+base_dir = "."
+bridge_cmd = "{bridge_name}"
+
+[op."gfx/gpu::write-buffer"]
+base_dir = "."
+bridge_cmd = "{bridge_name}"
+
+[op."gfx/gpu::read-buffer"]
+base_dir = "."
+bridge_cmd = "{bridge_name}"
+
+[op."gfx/gpu::destroy-resource"]
+base_dir = "."
+bridge_cmd = "{bridge_name}"
+"#
+    );
+    let mut text = fs::read_to_string(&caps).unwrap();
+    text.push_str(&patch);
+    fs::write(caps, text).unwrap();
+}
+
 fn parse_hash_line(stdout: &[u8]) -> String {
     let s = String::from_utf8_lossy(stdout);
     s.lines()
@@ -75,6 +132,7 @@ fn selfhost_only_gpu_parallel_reference_pkg_emits_obligation_evidence() {
     let src = fixture("pkg_gpu_parallel_obligations");
     let dst = td.path().join("pkg_gpu_parallel_obligations");
     copy_dir_all(&src, &dst).unwrap();
+    install_gpu_bridge(&dst);
     let artifact = support::copy_repo_toolchain_artifact(td.path());
 
     let pkg = dst.join("package.toml");

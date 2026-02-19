@@ -118,15 +118,12 @@ jobs:
               --index "${GENESIS_TEST_SHARD_INDEX}" \
               --seed "${GITHUB_SHA}" \
               --out ".genesis/ci-shards" \
-              --runner nextest \
-              --exclude-crate "gc_wasi_cli"
+              --runner nextest
           else
-            # gc_wasi_cli command invariants are exercised by dedicated WASI smoke/strict lanes.
             cargo nextest run \
               --workspace \
               --cargo-profile selfhost-strict \
-              --profile ci \
-              --exclude gc_wasi_cli
+              --profile ci
           fi
 
       - name: Changed-File Fast Loop Budget

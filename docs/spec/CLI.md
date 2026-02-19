@@ -27,6 +27,10 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
   - Current routed set:
     - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
     - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+- Runtime commands that resolve `--engine selfhost` must use an explicit pinned artifact identity
+  (`--selfhost-artifact` or `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`), and
+  `--selfhost-bootstrap artifact-only`; implicit filesystem fallback discovery is rejected.
+  - Applies to: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, and `vcs hash`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
   - Toolchain artifact resolution still follows:
@@ -34,8 +38,8 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
     - `./.genesis/selfhost/toolchain.gc` if present, or
     - workspace fallback `selfhost/toolchain.gc` if present.
-- `GENESIS_DISABLE_COMPILED_EVAL=1|true|yes|on`: force tree-walking kernel evaluation path.
-  - Default (`unset`/false): commands use compiled kernel evaluation with deterministic tree-walk fallback when compilation is not available.
+- Kernel module evaluation uses the compiled evaluator by default and fails closed on compilation errors.
+- Tree-walk evaluation is reserved for explicit parity harnesses and is not a mainline CLI execution mode.
 
 ## Rust Engine Compatibility Mode (Historical Comparisons Only)
 
@@ -66,26 +70,29 @@ Dedicated compatibility harness entrypoints:
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine rust` remains available for parity/comparison workflows.
   - `--engine selfhost` runs the self-hosted CoreForm toolchain inside the kernel and therefore honors `--step-limit/--no-step-limit`.
+  - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
 - `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
   - `--engine selfhost` runs self-hosted parse+canonicalize in-kernel before evaluation.
   - `--stage1-pipeline` runs Stage-1 CoreForm->CoreForm transforms before evaluation.
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
-  - `--stage2-gate` enforces `core/obligation::translation-validation` only when the module is Stage-2 supported.
+  - `--stage2-gate` enforces `core/obligation::translation-validation` in fail-closed mode:
+    unsupported modules fail the gate, and supported modules must validate successfully.
   - For Stage-2 gating, validation input is Stage-1 transformed CoreForm (matching package translation-validation flow), even when `--stage1-pipeline` is not requested.
-  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
+  - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
 - `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize for the input module and self-hosted parse for `--contract`/`--msg`.
-  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
 - `genesis run <file> --caps <policy.toml> [--log <out.gclog>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before evaluating the effect program.
-  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
 - `genesis replay <file> --log <log.gclog> [--store <dir>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before replaying against the deterministic log.
-  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
 - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
   - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.
@@ -111,6 +118,7 @@ CI strict selfhost gates:
   - output kind: `genesis/semantic-edit-index-v0.1`.
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
+  - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
 - `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
   - See `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`.
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
@@ -126,7 +134,7 @@ CI strict selfhost gates:
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
   - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
-  - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled-with-treewalk-fallback"`.
+  - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.

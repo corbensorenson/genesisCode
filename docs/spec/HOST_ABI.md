@@ -14,6 +14,14 @@ Rules:
 Compatibility notes:
 - `core/sync::*` is part of the ABI surface and is enforced by explicit WASI remote profiles (`none|local|preview2`), deny-by-default.
 - Adding or removing an op is a versioned ABI change and must be reflected in release notes.
+- Host-integrated domains (`editor/*`, `gfx/*`, `gpu/compute::*`) execute through
+  per-op bridge policy (`bridge_cmd`, `bridge_args`) and return deterministic
+  sealed errors when bridge policy is missing.
+- Under WASI profile, bridge-backed domains execute through deterministic response
+  configuration (`wasi_bridge_response`, `wasi_bridge_response_file`, or
+  `GENESIS_WASI_BRIDGE_RESPONSES`) instead of process spawning.
+- Bridge transport framing and limits are normative in:
+  `docs/spec/HOST_BRIDGE_PROTOCOL.md`.
 
 ## Stable Operation Surface (v0.2)
 

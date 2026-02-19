@@ -1,0 +1,778 @@
+(def core/cli::pkg-lock-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((lock ((core/map::get req) (quote :lock))) (strict0 ((core/map::get req) (quote :strict))))
+        (let ((strict (if (core/cli::bool? strict0) strict0 false)))
+          ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+            (fn (low-r)
+              (if (core/cli::is-error low-r)
+                (core/effect::pure low-r)
+                (if (core/cli::map? low-r)
+                  (let
+                    ((reqs0 ((core/map::get low-r) (quote :requirements)))
+                      (reqs (if (core/cli::map? reqs0) reqs0 (quote {})))
+                      (entries (core/cli::map-entries-vec reqs)))
+                    (
+                      (core/effect::bind
+                        ((((((core/cli::pkg-lock-loop entries) strict) (core/vec::len entries)) 0) (quote {}))
+                          0))
+                      (fn (plan)
+                        (if (core/cli::is-error plan)
+                          (core/effect::pure plan)
+                          (if (core/cli::map? plan)
+                            (let
+                              ((locked2 ((core/map::get plan) (quote :locked)))
+                                (count ((core/map::get plan) (quote :count)))
+                                (artifacts ((core/map::get low-r) (quote :artifacts)))
+                                (policy ((core/map::get low-r) (quote :policy)))
+                                (registries ((core/map::get low-r) (quote :registries)))
+                                (workspace ((core/map::get low-r) (quote :workspace)))
+                                (payload0
+                                  (quote
+                                    {
+                                      :artifacts {}
+                                      :lock ""
+                                      :locked {}
+                                      :policy nil
+                                      :registries {}
+                                      :requirements {}
+                                      :workspace ""}))
+                                (payload1 (((core/map::put payload0) (quote :artifacts)) artifacts))
+                                (payload2 (((core/map::put payload1) (quote :lock)) lock))
+                                (payload3 (((core/map::put payload2) (quote :locked)) locked2))
+                                (payload4 (((core/map::put payload3) (quote :policy)) policy))
+                                (payload5
+                                  (((core/map::put payload4) (quote :registries)) registries))
+                                (payload6 (((core/map::put payload5) (quote :requirements)) reqs))
+                                (payload7 (((core/map::put payload6) (quote :workspace)) workspace)))
+                              (((core/effect::perform (quote core/pkg-low::save-lock)) payload7)
+                                (fn (save-r)
+                                  (if (core/cli::is-error save-r)
+                                    (core/effect::pure save-r)
+                                    (if (core/cli::map? save-r)
+                                      (let
+                                        ((save1 (((core/map::put save-r) (quote :locked-count)) count)))
+                                        (core/effect::pure
+                                          (((core/map::put save1) (quote :strict)) strict)))
+                                      (core/effect::pure
+                                        ((core/error::make2 "core/type-error")
+                                          "core/pkg-low::save-lock returned non-map")))))))
+                            (core/effect::pure
+                              ((core/error::make2 "core/type-error")
+                                "core/cli::pkg-lock-loop returned non-map")))))))
+                  (core/effect::pure
+                    ((core/error::make2 "core/type-error")
+                      "core/pkg-low::load-lock returned non-map"))))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-lock-program expects map"))))
+
+(def core/cli::vcs-validate-attestation
+  (fn (attestation)
+    (if (core/cli::map? attestation)
+      (let
+        ((ty ((core/map::get attestation) (quote :type)))
+          (v ((core/map::get attestation) (quote :v)))
+          (alg ((core/map::get attestation) (quote :alg)))
+          (signing-h ((core/map::get attestation) (quote :signing-h)))
+          (pk ((core/map::get attestation) (quote :pk)))
+          (sig ((core/map::get attestation) (quote :sig))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/attestation)) false)
+            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (core/cli::str? alg)
+            (if
+              (if ((core/sym::eq? (core/data::tag signing-h)) (quote :bytes))
+                ((core/int::eq? (core/bytes::len signing-h)) 32)
+                false)
+              (if
+                (if ((core/sym::eq? (core/data::tag pk)) (quote :bytes))
+                  ((core/int::eq? (core/bytes::len pk)) 32)
+                  false)
+                (if
+                  (if ((core/sym::eq? (core/data::tag sig)) (quote :bytes))
+                    ((core/int::eq? (core/bytes::len sig)) 64)
+                    false)
+                  attestation
+                  ((core/error::make2 "core/vcs/bad-attestation")
+                    "attestation :sig must be 64-byte bytes"))
+                ((core/error::make2 "core/vcs/bad-attestation")
+                  "attestation :pk must be 32-byte bytes"))
+              ((core/error::make2 "core/vcs/bad-attestation")
+                "attestation :signing-h must be 32-byte bytes"))
+            ((core/error::make2 "core/vcs/bad-attestation") "attestation :alg must be string"))
+          ((core/error::make2 "core/vcs/bad-attestation") "attestation :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-attestation expects map"))))
+
+(def core/cli::pkg-ensure-hash-program
+  (fn (hash)
+    ((core/effect::bind (core/cli::store-get-program hash))
+      (fn (resp)
+        (if (core/cli::is-error resp)
+          (core/effect::pure resp)
+          (let ((artifact (core/cli::store-get-artifact resp)))
+            (if (core/cli::is-error artifact)
+              (core/effect::pure artifact)
+              (core/effect::pure artifact))))))))
+
+(def core/cli::pkg-validate-evidence-loop-program
+  (fn (evidence)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          (core/effect::pure true)
+          (let ((h ((core/vec::get evidence) i)))
+            (if (core/cli::hash-hex? h)
+              ((core/effect::bind (core/cli::pkg-ensure-hash-program h))
+                (fn (artifact)
+                  (if (core/cli::is-error artifact)
+                    (core/effect::pure artifact)
+                    (let ((ok (core/cli::vcs-validate-evidence artifact)))
+                      (if (core/cli::is-error ok)
+                        (core/effect::pure
+                          ((core/error::make2 "core/pkg/bad-evidence") "invalid evidence artifact"))
+                        (((core/cli::pkg-validate-evidence-loop-program evidence) n)
+                          ((core/int::add i) 1)))))))
+              (core/effect::pure
+                ((core/error::make2 "core/pkg/bad-evidence") "evidence hash must be 64-hex")))))))))
+
+(def core/cli::pkg-validate-attestations-loop-program
+  (fn (attestations)
+    (fn (n)
+      (fn (i)
+        (if ((core/int::eq? i) n)
+          (core/effect::pure true)
+          (let ((h ((core/vec::get attestations) i)))
+            (if (core/cli::hash-hex? h)
+              ((core/effect::bind (core/cli::pkg-ensure-hash-program h))
+                (fn (artifact)
+                  (if (core/cli::is-error artifact)
+                    (core/effect::pure artifact)
+                    (let ((ok (core/cli::vcs-validate-attestation artifact)))
+                      (if (core/cli::is-error ok)
+                        (core/effect::pure
+                          ((core/error::make2 "core/pkg/bad-attestation")
+                            "invalid attestation artifact"))
+                        (((core/cli::pkg-validate-attestations-loop-program attestations) n)
+                          ((core/int::add i) 1)))))))
+              (core/effect::pure
+                ((core/error::make2 "core/pkg/bad-attestation") "attestation hash must be 64-hex")))))))))
+
+(def core/cli::pkg-validate-commit-closure-program
+  (fn (name)
+    (fn (snapshot-h)
+      (fn (commit-h)
+        ((core/effect::bind (core/cli::pkg-ensure-hash-program commit-h))
+          (fn (commit-artifact)
+            (if (core/cli::is-error commit-artifact)
+              (core/effect::pure commit-artifact)
+              (let ((commit (core/cli::vcs-validate-commit commit-artifact)))
+                (if (core/cli::is-error commit)
+                  (core/effect::pure
+                    ((core/error::make2 "core/pkg/bad-commit") "invalid commit artifact"))
+                  (let
+                    ((result-h ((core/map::get commit) (quote :result)))
+                      (patch-h ((core/map::get commit) (quote :patch)))
+                      (base-h ((core/map::get commit) (quote :base)))
+                      (obligations ((core/map::get commit) (quote :obligations)))
+                      (evidence ((core/map::get commit) (quote :evidence)))
+                      (attestations ((core/map::get commit) (quote :attestations))))
+                    (if (if (core/cli::str? result-h) ((core/eq? result-h) snapshot-h) false)
+                      (
+                        (core/effect::bind
+                          (if (core/list::is-nil? base-h)
+                            (core/effect::pure true)
+                            (core/cli::pkg-ensure-hash-program base-h)))
+                        (fn (base-r)
+                          (if (core/cli::is-error base-r)
+                            (core/effect::pure base-r)
+                            ((core/effect::bind (core/cli::pkg-ensure-hash-program patch-h))
+                              (fn (patch-r)
+                                (if (core/cli::is-error patch-r)
+                                  (core/effect::pure patch-r)
+                                  ((core/effect::bind (core/cli::pkg-ensure-hash-program result-h))
+                                    (fn (result-r)
+                                      (if (core/cli::is-error result-r)
+                                        (core/effect::pure result-r)
+                                        (if
+                                          (if (core/cli::vec? obligations)
+                                            (if ((core/int::lt? 0) (core/vec::len obligations))
+                                              (if (core/cli::vec? evidence)
+                                                ((core/int::eq? (core/vec::len evidence)) 0)
+                                                true)
+                                              false)
+                                            false)
+                                          (core/effect::pure
+                                            ((core/error::make2 "core/pkg/missing-evidence")
+                                              ((core/str::concat "commit has obligations but no evidence for ")
+                                                name)))
+                                          (if (core/cli::vec? evidence)
+                                            (
+                                              (core/effect::bind
+                                                (((core/cli::pkg-validate-evidence-loop-program evidence) (core/vec::len evidence))
+                                                  0))
+                                              (fn (ev-r)
+                                                (if (core/cli::is-error ev-r)
+                                                  (core/effect::pure ev-r)
+                                                  (if (core/cli::vec? attestations)
+                                                    (((core/cli::pkg-validate-attestations-loop-program attestations) (core/vec::len attestations))
+                                                      0)
+                                                    (core/effect::pure
+                                                      ((core/error::make2 "core/pkg/bad-attestation")
+                                                        "commit :attestations must be vector of 64-hex hashes"))))))
+                                            (core/effect::pure
+                                              ((core/error::make2 "core/pkg/bad-evidence")
+                                                "commit :evidence must be vector of 64-hex hashes")))))))))))))
+                      (core/effect::pure
+                        ((core/error::make2 "core/pkg/commit-snapshot-mismatch")
+                          ((core/str::concat "commit.result != locked.snapshot for ") name))))))))))))))
+
+(def core/cli::pkg-lock-strict-selector-check
+  (fn (req)
+    (fn (resolved)
+      (if (if (core/cli::map? req) (core/cli::map? resolved) false)
+        (let
+          ((selector ((core/map::get req) (quote :selector)))
+            (kind (core/cli::lock-selector-kind ((core/map::get req) (quote :selector))))
+            (value (core/cli::pkg-selector-value ((core/map::get req) (quote :selector))))
+            (commit ((core/map::get resolved) (quote :commit)))
+            (resolved-ref ((core/map::get resolved) (quote :resolved_ref)))
+            (snapshot ((core/map::get resolved) (quote :snapshot))))
+          (if (core/cli::str? selector)
+            (if (core/cli::hash-hex? snapshot)
+              (if ((core/sym::eq? kind) (quote :snapshot))
+                (if (core/list::is-nil? resolved-ref)
+                  true
+                  ((core/error::make2 "core/pkg/lock-invariant")
+                    "snapshot selector must not set resolved_ref"))
+                (if ((core/sym::eq? kind) (quote :commit))
+                  (if (core/list::is-nil? resolved-ref)
+                    (if (if (core/cli::hash-hex? commit) ((core/eq? commit) value) false)
+                      true
+                      ((core/error::make2 "core/pkg/lock-invariant") "commit selector hash mismatch"))
+                    ((core/error::make2 "core/pkg/lock-invariant")
+                      "commit selector must not set resolved_ref"))
+                  (if ((core/sym::eq? kind) (quote :ref))
+                    (if (if (core/cli::str? resolved-ref) ((core/eq? resolved-ref) value) false)
+                      (if (core/cli::hash-hex? commit)
+                        true
+                        ((core/error::make2 "core/pkg/lock-invariant")
+                          "ref selector resolved without commit"))
+                      ((core/error::make2 "core/pkg/lock-invariant")
+                        "ref selector resolved_ref mismatch"))
+                    ((core/error::make2 "core/pkg/bad-selector")
+                      ((core/str::concat "unsupported selector: ") selector)))))
+              ((core/error::make2 "core/pkg/lock-invariant") "locked snapshot must be 64-hex"))
+            ((core/error::make2 "core/pkg/bad-selector") ":selector must be string")))
+        ((core/error::make2 "core/type-error")
+          "core/cli::pkg-lock-strict-selector-check expects maps")))))
+
+(def core/cli::pkg-lock-strict-validate-entry-program
+  (fn (name)
+    (fn (req)
+      (fn (resolved)
+        (let ((selector-check ((core/cli::pkg-lock-strict-selector-check req) resolved)))
+          (if (core/cli::is-error selector-check)
+            (core/effect::pure selector-check)
+            (let ((snapshot-h ((core/map::get resolved) (quote :snapshot))))
+              ((core/effect::bind (core/cli::pkg-ensure-hash-program snapshot-h))
+                (fn (snapshot-artifact)
+                  (if (core/cli::is-error snapshot-artifact)
+                    (core/effect::pure snapshot-artifact)
+                    (let ((snapshot (core/cli::vcs-validate-snapshot snapshot-artifact)))
+                      (if (core/cli::is-error snapshot)
+                        (core/effect::pure
+                          ((core/error::make2 "core/pkg/bad-snapshot") "invalid snapshot artifact"))
+                        (let ((commit-h ((core/map::get resolved) (quote :commit))))
+                          (if (core/list::is-nil? commit-h)
+                            (core/effect::pure true)
+                            (((core/cli::pkg-validate-commit-closure-program name) snapshot-h)
+                              commit-h)))))))))))))))
+
+(def core/cli::pkg-lock-loop
+  (fn (entries)
+    (fn (strict)
+      (fn (n)
+        (fn (i)
+          (fn (locked)
+            (fn (count)
+              (if ((core/int::eq? i) n)
+                (let
+                  (
+                    (st0
+                      (quote
+                        {
+                          :count 0
+                          :locked {}}))
+                    (st1 (((core/map::put st0) (quote :count)) count))
+                    (st2 (((core/map::put st1) (quote :locked)) locked)))
+                  (core/effect::pure st2))
+                (let ((e0 ((core/vec::get entries) i)))
+                  (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                    (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                      (let ((name ((core/vec::get e) 0)) (req ((core/vec::get e) 1)))
+                        (if (if (core/cli::str? name) (core/cli::map? req) false)
+                          ((core/effect::bind (core/cli::pkg-resolve-requirement-program req))
+                            (fn (resolved)
+                              (if (core/cli::is-error resolved)
+                                (core/effect::pure resolved)
+                                (
+                                  (core/effect::bind
+                                    (if strict
+                                      (((core/cli::pkg-lock-strict-validate-entry-program name) req)
+                                        resolved)
+                                      (core/effect::pure true)))
+                                  (fn (strict-r)
+                                    (if (core/cli::is-error strict-r)
+                                      (core/effect::pure strict-r)
+                                      (let ((entry ((core/cli::lock-make-entry req) resolved)))
+                                        (if (core/cli::is-error entry)
+                                          (core/effect::pure entry)
+                                          (
+                                            (((((core/cli::pkg-lock-loop entries) strict) n) ((core/int::add i) 1))
+                                              (((core/map::put locked) name) entry))
+                                            ((core/int::add count) 1))))))))))
+                          ((((((core/cli::pkg-lock-loop entries) strict) n) ((core/int::add i) 1)) locked)
+                            count)))
+                      ((((((core/cli::pkg-lock-loop entries) strict) n) ((core/int::add i) 1)) locked)
+                        count))))))))))))
+
+(def core/cli::str-drop-prefix
+  (fn (s)
+    (fn (n)
+      (if (if (core/cli::str? s) (core/cli::int? n) false)
+        (let ((sb (core/str::to-utf8 s)))
+          (let ((sn (core/bytes::len sb)))
+            (if ((core/int::lt? sn) n)
+              nil
+              (core/str::from-utf8 (((core/bytes::slice sb) n) ((core/int::sub sn) n))))))
+        nil))))
+
+(def core/cli::pkg-selector-value
+  (fn (selector)
+    (let ((kind (core/cli::lock-selector-kind selector)))
+      (if ((core/sym::eq? kind) (quote :commit))
+        (if ((core/cli::str-starts-with? selector) "commit:")
+          ((core/cli::str-drop-prefix selector) 7)
+          selector)
+        (if ((core/sym::eq? kind) (quote :snapshot))
+          (if ((core/cli::str-starts-with? selector) "snapshot:")
+            ((core/cli::str-drop-prefix selector) 9)
+            selector)
+          (if ((core/sym::eq? kind) (quote :ref))
+            (if ((core/cli::str-starts-with? selector) "ref:")
+              ((core/cli::str-drop-prefix selector) 4)
+              selector)
+            nil))))))
+
+(def core/cli::pkg-update-policy-auto?
+  (fn (up)
+    (if (core/cli::sym? up)
+      (if ((core/sym::eq? up) (quote :auto)) true false)
+      (if (core/cli::str? up)
+        (if (if ((core/eq? up) ":auto") true ((core/eq? up) "auto")) true false)
+        false))))
+
+(def core/cli::pkg-resolve-from-commit-program
+  (fn (commit-h)
+    (fn (registry)
+      (fn (resolved-ref)
+        (if (core/cli::hash-hex? commit-h)
+          ((core/effect::bind (core/cli::store-get-program commit-h))
+            (fn (resp)
+              (if (core/cli::is-error resp)
+                (core/effect::pure resp)
+                (let
+                  ((commit (core/cli::vcs-validate-commit ((core/map::get resp) (quote :artifact)))))
+                  (if (core/cli::is-error commit)
+                    (core/effect::pure commit)
+                    (core/effect::pure
+                      {
+                        :commit commit-h
+                        :registry registry
+                        :resolved_ref resolved-ref
+                        :snapshot ((core/map::get commit) (quote :result))}))))))
+          (core/effect::pure
+            ((core/error::make2 "core/pkg/bad-selector") "commit hash must be 64-hex")))))))
+
+(def core/cli::pkg-resolve-requirement-program
+  (fn (requirement)
+    (if (core/cli::map? requirement)
+      (let
+        ((selector ((core/map::get requirement) (quote :selector)))
+          (registry ((core/map::get requirement) (quote :registry))))
+        (if (core/cli::str? selector)
+          (let
+            ((kind (core/cli::lock-selector-kind selector))
+              (value (core/cli::pkg-selector-value selector)))
+            (if ((core/sym::eq? kind) (quote :snapshot))
+              (if (core/cli::hash-hex? value)
+                (core/effect::pure
+                  {
+                    :commit nil
+                    :registry registry
+                    :resolved_ref nil
+                    :snapshot value})
+                (core/effect::pure
+                  ((core/error::make2 "core/pkg/bad-selector") "snapshot hash must be 64-hex")))
+              (if ((core/sym::eq? kind) (quote :commit))
+                (((core/cli::pkg-resolve-from-commit-program value) registry) nil)
+                (if ((core/sym::eq? kind) (quote :ref))
+                  ((core/effect::bind (core/cli::refs-get-program value))
+                    (fn (rr)
+                      (if (core/cli::is-error rr)
+                        (core/effect::pure rr)
+                        (let ((commit-h ((core/map::get rr) (quote :hash))))
+                          (if (core/cli::hash-hex? commit-h)
+                            (((core/cli::pkg-resolve-from-commit-program commit-h) registry) value)
+                            (core/effect::pure
+                              ((core/error::make2 "core/pkg/ref-not-found") "ref is unset")))))))
+                  (core/effect::pure
+                    ((core/error::make2 "core/pkg/bad-selector") "unsupported selector"))))))
+          (core/effect::pure
+            ((core/error::make2 "core/pkg/bad-selector") ":selector must be string"))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-resolve-requirement-program expects map"))))
+
+(def core/cli::pkg-update-loop
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (locked)
+          (fn (updated)
+            (if ((core/int::eq? i) n)
+              (core/effect::pure {:locked locked :updated updated})
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (req ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? req) false)
+                        (let
+                          ((up ((core/map::get req) (quote :update-policy)))
+                            (selector ((core/map::get req) (quote :selector)))
+                            (existing ((core/map::get locked) name))
+                            (kind (core/cli::lock-selector-kind selector)))
+                          (let
+                            (
+                              (should-update
+                                (if (core/cli::pkg-update-policy-auto? up)
+                                  (if ((core/sym::eq? kind) (quote :ref)) true false)
+                                  false)))
+                            (let
+                              ((should-resolve (if should-update true (if (core/list::is-nil? existing) true false))))
+                              (if should-resolve
+                                ((core/effect::bind (core/cli::pkg-resolve-requirement-program req))
+                                  (fn (resolved)
+                                    (if (core/cli::is-error resolved)
+                                      (core/effect::pure resolved)
+                                      (let ((entry ((core/cli::lock-make-entry req) resolved)))
+                                        (if (core/cli::is-error entry)
+                                          (core/effect::pure entry)
+                                          (
+                                            ((((core/cli::pkg-update-loop entries) n) ((core/int::add i) 1))
+                                              (((core/map::put locked) name) entry))
+                                            ((core/int::add updated) 1)))))))
+                                (((((core/cli::pkg-update-loop entries) n) ((core/int::add i) 1)) locked)
+                                  updated)))))
+                        (((((core/cli::pkg-update-loop entries) n) ((core/int::add i) 1)) locked)
+                          updated)))
+                    (((((core/cli::pkg-update-loop entries) n) ((core/int::add i) 1)) locked)
+                      updated)))))))))))
+
+(def core/cli::pkg-update-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((lock ((core/map::get req) (quote :lock))))
+        ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+          (fn (low-r)
+            (if (core/cli::is-error low-r)
+              (core/effect::pure low-r)
+              (if (core/cli::map? low-r)
+                (let
+                  ((reqs0 ((core/map::get low-r) (quote :requirements)))
+                    (locked0 ((core/map::get low-r) (quote :locked)))
+                    (reqs (if (core/cli::map? reqs0) reqs0 (quote {})))
+                    (locked (if (core/cli::map? locked0) locked0 (quote {})))
+                    (entries (core/cli::map-entries-vec reqs)))
+                  ((core/effect::bind (((((core/cli::pkg-update-loop entries) (core/vec::len entries)) 0) locked) 0))
+                    (fn (plan)
+                      (if (core/cli::is-error plan)
+                        (core/effect::pure plan)
+                        (if (core/cli::map? plan)
+                          (let
+                            ((locked2 ((core/map::get plan) (quote :locked)))
+                              (updated ((core/map::get plan) (quote :updated)))
+                              (artifacts ((core/map::get low-r) (quote :artifacts)))
+                              (policy ((core/map::get low-r) (quote :policy)))
+                              (registries ((core/map::get low-r) (quote :registries)))
+                              (workspace ((core/map::get low-r) (quote :workspace)))
+                              (payload0
+                                (quote
+                                  {
+                                    :artifacts {}
+                                    :lock ""
+                                    :locked {}
+                                    :policy nil
+                                    :registries {}
+                                    :requirements {}
+                                    :workspace ""}))
+                              (payload1 (((core/map::put payload0) (quote :artifacts)) artifacts))
+                              (payload2 (((core/map::put payload1) (quote :lock)) lock))
+                              (payload3 (((core/map::put payload2) (quote :locked)) locked2))
+                              (payload4 (((core/map::put payload3) (quote :policy)) policy))
+                              (payload5 (((core/map::put payload4) (quote :registries)) registries))
+                              (payload6 (((core/map::put payload5) (quote :requirements)) reqs))
+                              (payload7 (((core/map::put payload6) (quote :workspace)) workspace)))
+                            (((core/effect::perform (quote core/pkg-low::save-lock)) payload7)
+                              (fn (save-r)
+                                (if (core/cli::is-error save-r)
+                                  (core/effect::pure save-r)
+                                  (if (core/cli::map? save-r)
+                                    (core/effect::pure
+                                      (((core/map::put save-r) (quote :updated)) updated))
+                                    (core/effect::pure
+                                      ((core/error::make2 "core/type-error")
+                                        "core/pkg-low::save-lock returned non-map")))))))
+                          (core/effect::pure
+                            ((core/error::make2 "core/type-error")
+                              "core/cli::pkg-update-loop returned non-map")))))))
+                (core/effect::pure
+                  ((core/error::make2 "core/type-error") "core/pkg-low::load-lock returned non-map")))))))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-update-program expects map"))))
+
+(def core/cli::pkg-has-present
+  (fn (resp)
+    (if (core/cli::map? resp)
+      (let ((p ((core/map::get resp) (quote :present))))
+        (if ((core/sym::eq? (core/data::tag p)) (quote :bool)) p false))
+      false)))
+
+(def core/cli::pkg-checked-count
+  (fn (state)
+    (if (core/cli::map? state)
+      (let ((n ((core/map::get state) (quote :checked)))) (if (core/cli::int? n) n 0))
+      0)))
+
+(def core/cli::pkg-missing-vec
+  (fn (state)
+    (if (core/cli::map? state)
+      (let ((xs ((core/map::get state) (quote :missing)))) (if (core/cli::vec? xs) xs []))
+      [])))
+
+(def core/cli::pkg-state-add-checked
+  (fn (state)
+    (fn (delta)
+      (((core/map::put state) (quote :checked))
+        ((core/int::add (core/cli::pkg-checked-count state)) delta)))))
+
+(def core/cli::pkg-state-add-missing
+  (fn (state)
+    (fn (h)
+      (((core/map::put state) (quote :missing))
+        ((core/vec::push (core/cli::pkg-missing-vec state)) h)))))
+
+(def core/cli::pkg-check-hashes-loop-program
+  (fn (hashes)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            (core/effect::pure state)
+            (let ((h ((core/vec::get hashes) i)))
+              (if (core/cli::hash-hex? h)
+                ((core/effect::bind (core/cli::store-has-program h))
+                  (fn (has-r)
+                    (if (core/cli::is-error has-r)
+                      (core/effect::pure has-r)
+                      (if (core/cli::pkg-has-present has-r)
+                        ((core/effect::bind (core/cli::pkg-ensure-hash-program h))
+                          (fn (artifact)
+                            (if (core/cli::is-error artifact)
+                              (core/effect::pure artifact)
+                              ((((core/cli::pkg-check-hashes-loop-program hashes) n) ((core/int::add i) 1))
+                                ((core/cli::pkg-state-add-checked state) 1)))))
+                        ((((core/cli::pkg-check-hashes-loop-program hashes) n) ((core/int::add i) 1))
+                          ((core/cli::pkg-state-add-missing state) h))))))
+                (core/effect::pure
+                  ((core/error::make2 "core/pkg/lock-invariant")
+                    "hash list contains non-64-hex value"))))))))))
+
+(def core/cli::pkg-requirements-missing-locks
+  (fn (requirements)
+    (fn (locked)
+      (if (if (core/cli::map? requirements) (core/cli::map? locked) false)
+        (let ((entries (core/cli::map-entries-vec requirements)))
+          (((((core/cli::pkg-requirements-missing-locks2 entries) locked) (core/vec::len entries)) 0)
+            []))
+        []))))
+
+(def core/cli::pkg-requirements-missing-locks2
+  (fn (entries)
+    (fn (locked)
+      (fn (n)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) n)
+              out
+              (let
+                ((next ((((core/cli::pkg-requirements-missing-locks2 entries) locked) n) ((core/int::add i) 1))))
+                (let ((e0 ((core/vec::get entries) i)))
+                  (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                    (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                      (let ((name ((core/vec::get e) 0)))
+                        (if (core/cli::str? name)
+                          (if (core/list::is-nil? ((core/map::get locked) name))
+                            (next ((core/vec::push out) name))
+                            (next out))
+                          (next out)))
+                      (next out))))))))))))
+
+(def core/cli::pkg-verify-present-snapshot-program
+  (fn (name)
+    (fn (entry)
+      (fn (snapshot-h)
+        (fn (strict-commits)
+          (fn (st1)
+            ((core/effect::bind (core/cli::pkg-ensure-hash-program snapshot-h))
+              (fn (snapshot-artifact)
+                (if (core/cli::is-error snapshot-artifact)
+                  (core/effect::pure snapshot-artifact)
+                  (let ((snapshot (core/cli::vcs-validate-snapshot snapshot-artifact)))
+                    (if (core/cli::is-error snapshot)
+                      (core/effect::pure
+                        ((core/error::make2 "core/pkg/bad-snapshot") "invalid snapshot artifact"))
+                      (let ((refs0 (core/cli::vcs-snapshot-refs snapshot)))
+                        (let ((refs (if (core/cli::vec? refs0) refs0 [])))
+                          ((core/effect::bind ((((core/cli::pkg-check-hashes-loop-program refs) (core/vec::len refs)) 0) st1))
+                            (fn (st2)
+                              (if (core/cli::is-error st2)
+                                (core/effect::pure st2)
+                                (if strict-commits
+                                  (let ((commit-h ((core/map::get entry) (quote :commit))))
+                                    (if (core/list::is-nil? commit-h)
+                                      (core/effect::pure st2)
+                                      (if (core/cli::hash-hex? commit-h)
+                                        ((core/effect::bind (((core/cli::pkg-validate-commit-closure-program name) snapshot-h) commit-h))
+                                          (fn (cr)
+                                            (if (core/cli::is-error cr)
+                                              (core/effect::pure cr)
+                                              (core/effect::pure st2))))
+                                        (core/effect::pure
+                                          ((core/error::make2 "core/pkg/lock-invariant")
+                                            "locked commit must be 64-hex or nil")))))
+                                  (core/effect::pure st2))))))))))))))))))
+
+(def core/cli::pkg-verify-locked-entry-program
+  (fn (name)
+    (fn (entry)
+      (fn (strict-commits)
+        (fn (state)
+          (let ((snapshot-h ((core/map::get entry) (quote :snapshot))))
+            (if (core/cli::hash-hex? snapshot-h)
+              (
+                (core/effect::bind
+                  ((((core/cli::pkg-check-hashes-loop-program ((core/vec::push []) snapshot-h)) 1) 0)
+                    state))
+                (fn (st1)
+                  (if (core/cli::is-error st1)
+                    (core/effect::pure st1)
+                    ((core/effect::bind (core/cli::store-has-program snapshot-h))
+                      (fn (has-r)
+                        (if (core/cli::is-error has-r)
+                          (core/effect::pure has-r)
+                          (if (core/cli::pkg-has-present has-r)
+                            (((((core/cli::pkg-verify-present-snapshot-program name) entry) snapshot-h) strict-commits)
+                              st1)
+                            (core/effect::pure st1))))))))
+              (core/effect::pure
+                ((core/error::make2 "core/pkg/lock-invariant") "locked snapshot must be 64-hex")))))))))
+
+(def core/cli::pkg-verify-locked-loop-program
+  (fn (entries)
+    (fn (strict-commits)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              (core/effect::pure state)
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (if (core/cli::vec? e) ((core/int::eq? (core/vec::len e)) 2) false)
+                    (let ((name ((core/vec::get e) 0)) (entry ((core/vec::get e) 1)))
+                      (if (if (core/cli::str? name) (core/cli::map? entry) false)
+                        (
+                          (core/effect::bind
+                            ((((core/cli::pkg-verify-locked-entry-program name) entry) strict-commits)
+                              state))
+                          (fn (next-state)
+                            (if (core/cli::is-error next-state)
+                              (core/effect::pure next-state)
+                              (((((core/cli::pkg-verify-locked-loop-program entries) strict-commits) n) ((core/int::add i) 1))
+                                next-state))))
+                        (((((core/cli::pkg-verify-locked-loop-program entries) strict-commits) n) ((core/int::add i) 1))
+                          state)))
+                    (((((core/cli::pkg-verify-locked-loop-program entries) strict-commits) n) ((core/int::add i) 1))
+                      state)))))))))))
+
+(def core/cli::pkg-verify-lock-program
+  (fn (lock)
+    (fn (frozen)
+      (fn (strict-commits)
+        ((core/effect::bind (core/cli::pkg-load-lock-program lock))
+          (fn (low-r)
+            (if (core/cli::is-error low-r)
+              (core/effect::pure low-r)
+              (if (core/cli::map? low-r)
+                (let
+                  ((requirements0 ((core/map::get low-r) (quote :requirements)))
+                    (locked0 ((core/map::get low-r) (quote :locked)))
+                    (requirements (if (core/cli::map? requirements0) requirements0 (quote {})))
+                    (locked (if (core/cli::map? locked0) locked0 (quote {})))
+                    (missing-locks
+                      (if frozen
+                        ((core/cli::pkg-requirements-missing-locks requirements) locked)
+                        [])))
+                  (if (if frozen ((core/int::lt? 0) (core/vec::len missing-locks)) false)
+                    (core/effect::pure
+                      ((core/error::make2 "core/pkg/not-locked") "lock is missing locked entries"))
+                    (let
+                      ((entries (core/cli::map-entries-vec locked))
+                        (state0
+                          (quote
+                            {
+                              :checked 0
+                              :missing []})))
+                      (
+                        (core/effect::bind
+                          (((((core/cli::pkg-verify-locked-loop-program entries) strict-commits) (core/vec::len entries)) 0)
+                            state0))
+                        (fn (st)
+                          (if (core/cli::is-error st)
+                            (core/effect::pure st)
+                            (let ((missing (core/cli::pkg-missing-vec st)))
+                              (core/effect::pure
+                                {
+                                  :checked (core/cli::pkg-checked-count st)
+                                  :lock lock
+                                  :missing missing
+                                  :ok ((core/int::eq? (core/vec::len missing)) 0)}))))))))
+                (core/effect::pure
+                  ((core/error::make2 "core/type-error") "core/pkg-low::load-lock returned non-map"))))))))))
+
+(def core/cli::pkg-install-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((lock ((core/map::get req) (quote :lock))))
+        (let
+          ((frozen0 ((core/map::get req) (quote :frozen)))
+            (strict0 ((core/map::get req) (quote :strict)))
+            (frozen (if ((core/sym::eq? (core/data::tag frozen0)) (quote :bool)) frozen0 false))
+            (strict (if ((core/sym::eq? (core/data::tag strict0)) (quote :bool)) strict0 false)))
+          (((core/cli::pkg-verify-lock-program lock) frozen) strict)))
+      ((core/error::make2 "core/type-error") "core/cli::pkg-install-program expects map"))))
+
+(def core/cli::pkg-verify-program
+  (fn (req)
+    (if (core/cli::map? req)
+      (((core/cli::pkg-verify-lock-program ((core/map::get req) (quote :lock))) false) true)
+      ((core/error::make2 "core/type-error") "core/cli::pkg-verify-program expects map"))))
+

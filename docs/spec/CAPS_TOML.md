@@ -89,9 +89,19 @@ Supported keys:
 - `create_dirs` (bool): if true, `io/fs::write` may create parent directories.
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
+- `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
+  - used by host-integrated ops such as `editor/plugin::command`,
+    `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`, `gfx/gpu::*`,
+    and `gpu/compute::*`.
+- `bridge_args` (array<string>): optional fixed args passed to `bridge_cmd` before the op symbol.
+- `wasi_bridge_profile` (bool): when true, enables deterministic WASI bridge response mode for this op (also always enabled on actual WASI targets).
+- `wasi_bridge_response` (string): optional CoreForm term used as deterministic host response for bridge-backed ops under WASI bridge profile.
+- `wasi_bridge_response_file` (string): optional path (under `base_dir`) to a CoreForm term or op->response map used under WASI bridge profile.
 - `max_bytes` (int): optional per-op byte budget for payload-heavy operations.
   - `core/store::put`: maximum artifact byte size accepted for each put request.
   - `core/store::get` and `io/fs::read`: maximum bytes allowed in the fetched/read payload.
+  - bridge-backed ops (`editor/*`, `gfx/*`, `gpu/compute::*`): maximum bytes for both framed
+    request payload and framed response payload.
 - `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg-low::publish` (see below).
 - `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg-low::publish` (default is false).
 - `auth_token` (string): optional bearer token for remote auth.
@@ -112,6 +122,19 @@ timeout_ms = 250
 [op."io/fs::write"]
 base_dir = "./sandbox"
 create_dirs = true
+
+[op."editor/plugin::command"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/editor_bridge.sh"
+bridge_args = ["--mode", "stdio-coreform"]
+
+[op."gfx/gpu::create-buffer"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."gfx/window::create-surface"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/host_bridge.sh"
 ```
 
 ## Sync/Publish Remotes (`core/sync::*`, `core/pkg-low::publish`)
@@ -171,6 +194,14 @@ Notes on `timeout_ms`:
 - Timeouts are enforced by running the capability in a background thread and waiting for a result.
 - If the timeout elapses, the runner returns a sealed ERROR response with code `core/caps/timeout` and records it in the log.
 - Timeouts are rejected for mutating ops like `io/fs::write` (policy error), to avoid "timed out but side-effect happened" ambiguity.
+- Bridge-backed ops also honor `timeout_ms`; timeout yields deterministic `<family>/bridge-timeout`.
+
+Bridge protocol:
+- Bridge-backed ops use framed stdin/stdout payloads as defined in
+  `docs/spec/HOST_BRIDGE_PROTOCOL.md`.
+- Under WASI bridge profile, command spawning is replaced by deterministic configured responses:
+  - per-op `wasi_bridge_response` / `wasi_bridge_response_file`, or
+  - process-level `GENESIS_WASI_BRIDGE_RESPONSES` (CoreForm map `op -> response`).
 
 ## Normative Behavior
 

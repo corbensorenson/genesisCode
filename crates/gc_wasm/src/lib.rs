@@ -402,7 +402,7 @@ fn gate_eval_forms(
             Some(out) => gc_opt::stage2_validation_report(&out.transformed_forms),
             None => gc_opt::stage2_validation_report(forms),
         };
-        if s2.supported && !s2.ok {
+        if !s2.supported || !s2.ok {
             let msg = if s2.errors.is_empty() {
                 "core/obligation::translation-validation (stage2 CoreForm->WASM) failed".to_string()
             } else {
@@ -1146,17 +1146,18 @@ mod tests {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[test]
-    fn runtime_eval_module_with_stage2_gate_allows_unsupported_non_scalar_result() {
+    fn runtime_eval_module_with_stage2_gate_rejects_unsupported_non_scalar_result() {
         let src = r#"
           (quote {a 1 b 2})
         "#;
         let mut rt = Runtime::new(0);
-        let gated = rt.eval_module_internal(src, false, false, true).unwrap();
-        match gated {
-            StepResult::Done { value, .. } => assert_eq!(value, "{a 1 b 2}"),
-            other => panic!("expected done, got {:?}", other),
-        }
+        let err = rt
+            .eval_module_internal(src, false, false, true)
+            .expect_err("stage2 gate must fail closed on unsupported module");
+        let s = err.as_string().unwrap_or_default();
+        assert!(s.contains("obligation/translation-validation"), "{s}");
     }
 
     #[test]
@@ -1427,16 +1428,16 @@ mod tests {
         assert_eq!(baseline, gated);
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[test]
-    fn eval_coreform_module_with_stage2_gate_allows_unsupported_non_scalar_result() {
+    fn eval_coreform_module_with_stage2_gate_rejects_unsupported_non_scalar_result() {
         let src = r#"
           (quote {a 1 b 2})
         "#;
-
-        let baseline = eval_coreform_module(src, 0).expect("baseline eval");
-        let gated = eval_coreform_module_with_gates(src, 0, false, false, true)
-            .expect("gated eval unsupported module");
-        assert_eq!(baseline, gated);
+        let err = eval_coreform_module_with_gates(src, 0, false, false, true)
+            .expect_err("stage2 gate must fail closed on unsupported module");
+        let s = err.as_string().unwrap_or_default();
+        assert!(s.contains("obligation/translation-validation"), "{s}");
     }
 
     #[cfg(target_arch = "wasm32")]

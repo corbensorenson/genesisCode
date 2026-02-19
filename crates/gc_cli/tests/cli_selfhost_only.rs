@@ -123,6 +123,28 @@ fn selfhost_only_rejects_non_artifact_bootstrap_mode() {
 }
 
 #[test]
+fn selfhost_only_requires_explicit_artifact_for_runtime_commands() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("m.gc");
+    std::fs::write(&file, "(def x 1)\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-only",
+            "fmt",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "explicit selfhost artifact required",
+        ));
+}
+
+#[test]
 fn selfhost_only_accepts_fmt_selfhost_with_artifact() {
     let dir = tempdir().unwrap();
     let artifact = build_selfhost_artifact(dir.path());
@@ -142,6 +164,42 @@ fn selfhost_only_accepts_fmt_selfhost_with_artifact() {
         ])
         .assert()
         .success();
+}
+
+#[test]
+fn selfhost_runtime_json_reports_explicit_artifact_identity() {
+    let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
+    let file = dir.path().join("m.gc");
+    std::fs::write(&file, "1\n").unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "--selfhost-only",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "eval",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let art = &v["data"]["selfhost_artifact"];
+    assert_eq!(art["source"].as_str(), Some("explicit"), "{v}");
+    assert!(
+        art["path"].as_str().is_some_and(|s| !s.is_empty()),
+        "missing artifact path in {v}"
+    );
+    assert!(
+        art["hash"].as_str().is_some_and(|s| s.len() == 64),
+        "missing artifact hash in {v}"
+    );
 }
 
 #[test]
@@ -1188,26 +1246,20 @@ fn default_profile_rejects_rust_coreform_frontend_without_compat_opt_in() {
 }
 
 #[test]
-fn fmt_defaults_to_selfhost_via_workspace_artifact_fallback() {
+fn fmt_default_selfhost_requires_explicit_artifact() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("m.gc");
     std::fs::write(&file, "(def x 1)\n").unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
-        .args(["--json", "fmt", file.to_str().unwrap()])
+    cargo_bin_cmd!("genesis")
+        .args(["fmt", file.to_str().unwrap()])
         .current_dir(dir.path())
         .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let v: JsonValue = serde_json::from_slice(&out).unwrap();
-    let engine = v
-        .get("data")
-        .and_then(|d| d.get("engine"))
-        .and_then(JsonValue::as_str)
-        .unwrap();
-    assert_eq!(engine, "selfhost");
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains(
+            "explicit selfhost artifact required",
+        ));
 }
 
 #[test]
@@ -1338,6 +1390,7 @@ fn selfhost_only_full_production_workflow_runs_without_rust_fallbacks() {
 #[test]
 fn legacy_high_level_caps_ops_are_rejected_in_default_profile() {
     let dir = tempdir().unwrap();
+    let artifact = build_selfhost_artifact(dir.path());
     let file = dir.path().join("prog.gc");
     std::fs::write(&file, "(def prog (core/effect::pure 1))\nprog\n").unwrap();
     let caps = dir.path().join("caps_legacy.toml");
@@ -1352,6 +1405,8 @@ allow = ["core/pkg::init"]
     cargo_bin_cmd!("genesis")
         .args([
             "--json",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
             "run",
             file.to_str().unwrap(),
             "--engine",

@@ -56,10 +56,12 @@ Approved host ABI operation families (qualified op names):
 - `core/sync::*`
 - `io/fs::*`
 - `sys/time::now`
-- `io/window::*` (planned)
-- `io/gpu::*` (planned)
-- `io/input::*` (planned)
-- `io/audio::*` (planned)
+- `gfx/window::*`
+- `gfx/input::*`
+- `gfx/audio::*`
+- `gfx/gpu::*`
+- `gpu/compute::*`
+- `editor/*`
 
 Guardrail rule:
 - New parser/canonicalizer/typechecker/optimizer/contract semantics should be implemented in `.gc`
@@ -70,8 +72,9 @@ CI enforcement:
 - `scripts/check_selfhost_boundary.sh` fails when a change adds core semantic API usage
   (`parse_module`, `canonicalize_module`, `print_module`, `hash_module`, `eval_module`, `eval_term`)
   in non-approved Rust files.
-- `scripts/check_prelude_capability_coverage.sh` fails when a shipped `prelude/modules/10_gfx.gc`
-  or `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by
+- `scripts/check_prelude_capability_coverage.sh` fails when a shipped
+  `prelude/modules/10_gfx.gc`, `prelude/modules/11_gpu_compute.gc`, or
+  `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by
   `crates/gc_effects/src/runner.rs`.
 
 ## Self-Host Definition (v0.2)

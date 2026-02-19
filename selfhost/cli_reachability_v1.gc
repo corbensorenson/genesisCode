@@ -1,0 +1,751 @@
+(def core/cli::empty-vec (core/pair::as-proper-list nil))
+
+(def core/cli::vec2
+  (fn (a) (fn (b) (core/pair::as-proper-list ((core/pair::cons a) ((core/pair::cons b) nil))))))
+
+(def core/cli::vec-slice-from
+  (fn (v)
+    (fn (start)
+      (if (core/cli::vec? v)
+        (let ((n (core/vec::len v)))
+          (((((core/cli::vec-slice-from2 v) start) n) 0) core/cli::empty-vec))
+        ((core/error::make2 "core/type-error") "core/cli::vec-slice-from expects vector")))))
+
+(def core/cli::vec-slice-from2
+  (fn (v)
+    (fn (start)
+      (fn (n)
+        (fn (i)
+          (fn (out)
+            (if ((core/int::eq? i) n)
+              out
+              (if ((core/int::lt? i) start)
+                (((((core/cli::vec-slice-from2 v) start) n) ((core/int::add i) 1)) out)
+                (let ((x ((core/vec::get v) i)))
+                  (((((core/cli::vec-slice-from2 v) start) n) ((core/int::add i) 1))
+                    ((core/vec::push out) x)))))))))))
+
+(def core/cli::literal-op-sym-or-nil
+  (fn (t)
+    (if (core/cli::pair? t)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 2)
+            (let ((h ((core/vec::get items) 0)) (v ((core/vec::get items) 1)))
+              (if (core/cli::sym? h)
+                (if ((core/sym::eq? h) (quote quote)) (if (core/cli::sym? v) v nil) nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def core/cli::flatten-app
+  (fn (t)
+    (if (core/cli::pair? t)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (let ((n (core/vec::len items)))
+            (if ((core/int::eq? n) 2)
+              (let ((f ((core/vec::get items) 0)) (x ((core/vec::get items) 1)))
+                (let ((r (core/cli::flatten-app f)))
+                  (if (core/cli::map? r)
+                    (let
+                      ((head ((core/map::get r) (quote :head)))
+                        (args0 ((core/map::get r) (quote :args))))
+                      {
+                        :args ((core/vec::push args0) x)
+                        :head head})
+                    {
+                      :args (core/pair::as-proper-list ((core/pair::cons x) nil))
+                      :head f})))
+              (if (if ((core/int::lt? n) 1) true false)
+                nil
+                (let ((head ((core/vec::get items) 0)) (args ((core/cli::vec-slice-from items) 1)))
+                  {:args args :head head}))))
+          nil))
+      nil)))
+
+(def core/cli::infer-effects
+  (fn (forms)
+    (if (core/cli::vec? forms)
+      (let
+        (
+          (st
+            ((((core/cli::infer-effects-vec forms) (core/vec::len forms)) 0)
+              ((core/cli::vec2 (quote {})) false))))
+        {
+          :ops (core/cli::set-keys->vec ((core/vec::get st) 0))
+          :unknown ((core/vec::get st) 1)})
+      ((core/error::make2 "core/type-error") "core/cli::infer-effects expects vector of forms"))))
+
+(def core/cli::infer-effects-vec
+  (fn (forms)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((st2 ((core/cli::infer-effects-term ((core/vec::get forms) i)) st)))
+              ((((core/cli::infer-effects-vec forms) n) ((core/int::add i) 1)) st2))))))))
+
+(def core/cli::infer-effects-term
+  (fn (t)
+    (fn (st)
+      (let ((set0 ((core/vec::get st) 0)) (unk0 ((core/vec::get st) 1)))
+        (let ((tg (core/data::tag t)))
+          (if (if ((core/sym::eq? tg) (quote :pair)) true false)
+            ((core/cli::infer-effects-list t) st)
+            (if (if ((core/sym::eq? tg) (quote :map)) true false)
+              ((core/cli::infer-effects-map t) st)
+              st)))))))
+
+(def core/cli::infer-effects-map
+  (fn (m)
+    (fn (st)
+      (let ((entries (core/map::entries m)))
+        (if (core/cli::vec? entries)
+          ((((core/cli::infer-effects-map2 entries) (core/vec::len entries)) 0) st)
+          st)))))
+
+(def core/cli::infer-effects-map2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((e ((core/vec::get entries) i)))
+              (if (core/cli::vec? e)
+                (if ((core/int::eq? (core/vec::len e)) 2)
+                  (let ((v ((core/vec::get e) 1)))
+                    ((((core/cli::infer-effects-map2 entries) n) ((core/int::add i) 1))
+                      ((core/cli::infer-effects-term v) st)))
+                  ((((core/cli::infer-effects-map2 entries) n) ((core/int::add i) 1)) st))
+                ((((core/cli::infer-effects-map2 entries) n) ((core/int::add i) 1)) st)))))))))
+
+(def core/cli::infer-effects-list
+  (fn (t)
+    (fn (st)
+      (let ((items (core/pair::as-proper-list t)))
+        (if (core/cli::vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 0)
+            st
+            (let ((h ((core/vec::get items) 0)))
+              (if (core/cli::sym? h)
+                (((core/cli::infer-effects-special-or-app h) items) st)
+                ((core/cli::infer-effects-app t) st))))
+          st)))))
+
+(def core/cli::infer-effects-special-or-app
+  (fn (h)
+    (fn (items)
+      (fn (st)
+        (if ((core/sym::eq? h) (quote quote))
+          st
+          (if ((core/sym::eq? h) (quote def))
+            (if ((core/int::eq? (core/vec::len items)) 3)
+              ((core/cli::infer-effects-term ((core/vec::get items) 2)) st)
+              st)
+            (if ((core/sym::eq? h) (quote fn))
+              (if (if ((core/int::lt? (core/vec::len items)) 3) true false)
+                st
+                (let ((body ((core/cli::vec-slice-from items) 2)))
+                  ((((core/cli::infer-effects-vec body) (core/vec::len body)) 0) st)))
+              (if ((core/sym::eq? h) (quote if))
+                (if ((core/int::eq? (core/vec::len items)) 4)
+                  (let ((st2 ((core/cli::infer-effects-term ((core/vec::get items) 1)) st)))
+                    (let ((st3 ((core/cli::infer-effects-term ((core/vec::get items) 2)) st2)))
+                      ((core/cli::infer-effects-term ((core/vec::get items) 3)) st3)))
+                  st)
+                (if ((core/sym::eq? h) (quote begin))
+                  (let ((rest ((core/cli::vec-slice-from items) 1)))
+                    ((((core/cli::infer-effects-vec rest) (core/vec::len rest)) 0) st))
+                  (if ((core/sym::eq? h) (quote let))
+                    ((core/cli::infer-effects-let items) st)
+                    (if ((core/sym::eq? h) (quote prim))
+                      (let ((args ((core/cli::vec-slice-from items) 2)))
+                        ((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st))
+                      (if
+                        (if ((core/sym::eq? h) (quote seal))
+                          ((core/sym::eq? h) (quote unseal))
+                          false)
+                        (let ((xs ((core/cli::vec-slice-from items) 1)))
+                          ((((core/cli::infer-effects-vec xs) (core/vec::len xs)) 0) st))
+                        ((core/cli::infer-effects-app (selfhost/canon::vec->list items)) st)))))))))))))
+
+(def core/cli::infer-effects-let
+  (fn (items)
+    (fn (st)
+      (if (if ((core/int::lt? (core/vec::len items)) 3) true false)
+        st
+        (let ((binds ((core/vec::get items) 1)))
+          (let ((xs (core/pair::as-proper-list binds)))
+            (let
+              (
+                (st2
+                  (if (core/cli::vec? xs)
+                    ((((core/cli::infer-effects-let-binds xs) (core/vec::len xs)) 0) st)
+                    st)))
+              (let ((body ((core/cli::vec-slice-from items) 2)))
+                ((((core/cli::infer-effects-vec body) (core/vec::len body)) 0) st2)))))))))
+
+(def core/cli::infer-effects-let-binds
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((b ((core/vec::get xs) i)))
+              (let ((pair (core/pair::as-proper-list b)))
+                (if (core/cli::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    ((((core/cli::infer-effects-let-binds xs) n) ((core/int::add i) 1))
+                      ((core/cli::infer-effects-term ((core/vec::get pair) 1)) st))
+                    ((((core/cli::infer-effects-let-binds xs) n) ((core/int::add i) 1)) st))
+                  ((((core/cli::infer-effects-let-binds xs) n) ((core/int::add i) 1)) st))))))))))
+
+(def core/cli::infer-effects-app
+  (fn (t)
+    (fn (st)
+      (let ((flat (core/cli::flatten-app t)))
+        (if (core/cli::map? flat)
+          (let
+            ((head ((core/map::get flat) (quote :head))) (args ((core/map::get flat) (quote :args))))
+            (let ((st2 (((core/cli::infer-effects-perform head) args) st)))
+              (let ((st3 ((core/cli::infer-effects-term head) st2)))
+                ((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st3))))
+          st)))))
+
+(def core/cli::infer-effects-perform
+  (fn (head)
+    (fn (args)
+      (fn (st)
+        (if (core/cli::sym? head)
+          (if ((core/sym::eq? head) (quote core/effect::perform))
+            (if ((core/int::eq? (core/vec::len args)) 3)
+              (let ((op0 (core/cli::literal-op-sym-or-nil ((core/vec::get args) 0))))
+                (let
+                  ((op1 (if (core/cli::sym? op0) op0 (core/cli::literal-op-sym-or-nil ((core/vec::get args) 1)))))
+                  (let
+                    ((op (if (core/cli::sym? op1) op1 (core/cli::literal-op-sym-or-nil ((core/vec::get args) 2)))))
+                    (if (core/cli::sym? op)
+                      ((core/cli::vec2 (((core/map::put ((core/vec::get st) 0)) op) true))
+                        ((core/vec::get st) 1))
+                      ((core/cli::vec2 ((core/vec::get st) 0)) true)))))
+              st)
+            st)
+          st)))))
+
+(def core/cli::set-keys->vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/cli::vec? entries)
+        ((((core/cli::set-keys->vec2 entries) (core/vec::len entries)) 0) core/cli::empty-vec)
+        core/cli::empty-vec))))
+
+(def core/cli::set-keys->vec2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (if (core/cli::vec? e)
+                (if ((core/int::eq? (core/vec::len e)) 2)
+                  (let ((k ((core/vec::get e) 0)))
+                    ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1))
+                      ((core/vec::push out) k)))
+                  ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out))
+                ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/cli::int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/cli::hash-hex?
+  (fn (x) (if (core/cli::str? x) ((core/int::eq? (core/str::len x)) 64) false)))
+
+(def core/cli::hash-vec?
+  (fn (xs) (if (core/cli::vec? xs) ((((core/cli::hash-vec2 xs) (core/vec::len xs)) 0) true) false)))
+
+(def core/cli::hash-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (ok)
+          (if ((core/int::eq? i) n)
+            ok
+            (if ok
+              ((((core/cli::hash-vec2 xs) n) ((core/int::add i) 1))
+                (core/cli::hash-hex? ((core/vec::get xs) i)))
+              false)))))))
+
+(def core/cli::vcs-make-commit
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :attestations ((core/map::get req) (quote :attestations))
+        :base ((core/map::get req) (quote :base))
+        :evidence ((core/map::get req) (quote :evidence))
+        :message ((core/map::get req) (quote :message))
+        :obligations ((core/map::get req) (quote :obligations))
+        :parents ((core/map::get req) (quote :parents))
+        :patch ((core/map::get req) (quote :patch))
+        :result ((core/map::get req) (quote :result))
+        :type (quote :vcs/commit)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-commit expects map"))))
+
+(def core/cli::vcs-make-evidence
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :data ((core/map::get req) (quote :data))
+        :inputs ((core/map::get req) (quote :inputs))
+        :kind ((core/map::get req) (quote :kind))
+        :outputs ((core/map::get req) (quote :outputs))
+        :type (quote :vcs/evidence)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-evidence expects map"))))
+
+(def core/cli::vcs-make-snapshot
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :deps ((core/map::get req) (quote :deps))
+        :kind ((core/map::get req) (quote :kind))
+        :members ((core/map::get req) (quote :members))
+        :obligations ((core/map::get req) (quote :obligations))
+        :type (quote :vcs/snapshot)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-snapshot expects map"))))
+
+(def core/cli::vcs-validate-commit
+  (fn (commit)
+    (if (core/cli::map? commit)
+      (let
+        ((ty ((core/map::get commit) (quote :type))) (v ((core/map::get commit) (quote :v)))
+          (parents ((core/map::get commit) (quote :parents)))
+          (base ((core/map::get commit) (quote :base)))
+          (patch ((core/map::get commit) (quote :patch)))
+          (result ((core/map::get commit) (quote :result)))
+          (evidence ((core/map::get commit) (quote :evidence)))
+          (attestations ((core/map::get commit) (quote :attestations))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (if (core/cli::hash-hex? patch) (core/cli::hash-hex? result) false)
+            (if (if (core/list::is-nil? base) true (core/cli::hash-hex? base))
+              (if (if (core/cli::hash-vec? parents) (core/cli::hash-vec? evidence) false)
+                (if (core/cli::hash-vec? attestations)
+                  commit
+                  ((core/error::make2 "core/vcs/bad-commit")
+                    "commit :attestations must be vector of 64-hex hashes"))
+                ((core/error::make2 "core/vcs/bad-commit")
+                  "commit parents/evidence must be vectors of 64-hex hashes"))
+              ((core/error::make2 "core/vcs/bad-commit") "commit :base must be nil or 64-hex hash"))
+            ((core/error::make2 "core/vcs/bad-commit") "commit :patch/:result must be 64-hex hashes"))
+          ((core/error::make2 "core/vcs/bad-commit") "commit :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-commit expects map"))))
+
+(def core/cli::vcs-validate-evidence
+  (fn (evidence)
+    (if (core/cli::map? evidence)
+      (let
+        ((ty ((core/map::get evidence) (quote :type))) (v ((core/map::get evidence) (quote :v)))
+          (kind ((core/map::get evidence) (quote :kind)))
+          (inputs ((core/map::get evidence) (quote :inputs)))
+          (outputs ((core/map::get evidence) (quote :outputs)))
+          (data ((core/map::get evidence) (quote :data))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
+            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (core/cli::sym? kind)
+            (if (if (core/cli::hash-vec? inputs) (core/cli::hash-vec? outputs) false)
+              (if (if (core/list::is-nil? data) true (core/cli::hash-hex? data))
+                evidence
+                ((core/error::make2 "core/vcs/bad-evidence")
+                  "evidence :data must be nil or 64-hex hash"))
+              ((core/error::make2 "core/vcs/bad-evidence")
+                "evidence :inputs/:outputs must be vectors of 64-hex hashes"))
+            ((core/error::make2 "core/vcs/bad-evidence") "evidence :kind must be symbol"))
+          ((core/error::make2 "core/vcs/bad-evidence") "evidence :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-evidence expects map"))))
+
+(def core/cli::vcs-validate-snapshot
+  (fn (snapshot)
+    (if (core/cli::map? snapshot)
+      (let
+        ((ty ((core/map::get snapshot) (quote :type))) (v ((core/map::get snapshot) (quote :v)))
+          (kind ((core/map::get snapshot) (quote :kind))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
+            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (core/cli::sym? kind)
+            snapshot
+            ((core/error::make2 "core/vcs/bad-snapshot") "snapshot :kind must be symbol"))
+          ((core/error::make2 "core/vcs/bad-snapshot") "snapshot :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-snapshot expects map"))))
+
+(def core/cli::str-starts-with?
+  (fn (s)
+    (fn (prefix)
+      (if (if (core/cli::str? s) (core/cli::str? prefix) false)
+        (let ((sb (core/str::to-utf8 s)))
+          (let ((pb (core/str::to-utf8 prefix)))
+            (let ((sn (core/bytes::len sb)))
+              (let ((pn (core/bytes::len pb)))
+                (if ((core/int::lt? sn) pn) false ((core/eq? (((core/bytes::slice sb) 0) pn)) pb))))))
+        false))))
+
+(def core/cli::lock-selector-kind
+  (fn (selector)
+    (if (core/cli::str? selector)
+      (if ((core/cli::str-starts-with? selector) "commit:")
+        (quote :commit)
+        (if ((core/cli::str-starts-with? selector) "snapshot:")
+          (quote :snapshot)
+          (if ((core/cli::str-starts-with? selector) "ref:")
+            (quote :ref)
+            (if ((core/cli::str-starts-with? selector) "refs/") (quote :ref) (quote :unknown)))))
+      (quote :unknown))))
+
+(def core/cli::lock-make-entry
+  (fn (requirement)
+    (fn (resolved)
+      (if (if (core/cli::map? requirement) (core/cli::map? resolved) false)
+        (let
+          (
+            (e0
+              (quote
+                {
+                  :commit nil
+                  :registry nil
+                  :resolved_ref nil
+                  :snapshot ""
+                  :source_selector ""}))
+            (e1 (((core/map::put e0) (quote :commit)) ((core/map::get resolved) (quote :commit))))
+            (e2
+              (((core/map::put e1) (quote :registry)) ((core/map::get resolved) (quote :registry))))
+            (e3
+              (((core/map::put e2) (quote :resolved_ref))
+                ((core/map::get resolved) (quote :resolved_ref))))
+            (e4
+              (((core/map::put e3) (quote :snapshot)) ((core/map::get resolved) (quote :snapshot))))
+            (e5
+              (((core/map::put e4) (quote :source_selector))
+                ((core/map::get requirement) (quote :selector)))))
+          e5)
+        ((core/error::make2 "core/type-error") "core/cli::lock-make-entry expects maps")))))
+
+(def core/cli::opt-bool
+  (fn (opts)
+    (fn (k)
+      (fn (fallback)
+        (if (core/cli::map? opts)
+          (let ((v ((core/map::get opts) k)))
+            (if ((core/sym::eq? (core/data::tag v)) (quote :bool)) v fallback))
+          fallback)))))
+
+(def core/cli::vec-append
+  (fn (a) (fn (b) (if (core/cli::vec? b) ((((core/cli::vec-append2 b) (core/vec::len b)) 0) a) a))))
+
+(def core/cli::vec-append2
+  (fn (b)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/cli::vec-append2 b) n) ((core/int::add i) 1))
+              ((core/vec::push out) ((core/vec::get b) i)))))))))
+
+(def core/cli::push-if-hash
+  (fn (out) (fn (x) (if (core/cli::hash-hex? x) ((core/vec::push out) x) out))))
+
+(def core/cli::push-hashes-from-vec
+  (fn (out)
+    (fn (xs)
+      (if (core/cli::vec? xs)
+        ((((core/cli::push-hashes-from-vec2 xs) (core/vec::len xs)) 0) out)
+        out))))
+
+(def core/cli::push-hashes-from-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/cli::push-hashes-from-vec2 xs) n) ((core/int::add i) 1))
+              ((core/cli::push-if-hash out) ((core/vec::get xs) i)))))))))
+
+(def core/cli::map-entries-vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/cli::vec? entries)
+        entries
+        (let ((as-list (core/pair::as-proper-list entries)))
+          (if (core/cli::vec? as-list) as-list []))))))
+
+(def core/cli::push-hash-values-from-map
+  (fn (out)
+    (fn (m)
+      (if (core/cli::map? m)
+        (let ((entries (core/cli::map-entries-vec m)))
+          ((((core/cli::push-hash-values-from-map2 entries) (core/vec::len entries)) 0) out))
+        out))))
+
+(def core/cli::push-hash-values-from-map2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (let ((pair (if (core/cli::vec? e) e (core/pair::as-proper-list e))))
+                (if (core/cli::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1))
+                      ((core/cli::push-if-hash out) ((core/vec::get pair) 1)))
+                    ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))
+                  ((((core/cli::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))))))))))
+
+(def core/cli::vcs-patch-refs
+  (fn (patch)
+    (let ((ops ((core/map::get patch) (quote :ops))))
+      (if (core/cli::vec? ops) ((((core/cli::vcs-patch-refs2 ops) (core/vec::len ops)) 0) []) []))))
+
+(def core/cli::vcs-patch-refs2
+  (fn (ops)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((op ((core/vec::get ops) i)))
+              (if (core/cli::map? op)
+                (let ((out1 ((core/cli::push-if-hash out) ((core/map::get op) (quote :value)))))
+                  (let ((out2 ((core/cli::push-if-hash out1) ((core/map::get op) (quote :base)))))
+                    (let ((out3 ((core/cli::push-if-hash out2) ((core/map::get op) (quote :left)))))
+                      ((((core/cli::vcs-patch-refs2 ops) n) ((core/int::add i) 1))
+                        ((core/cli::push-if-hash out3) ((core/map::get op) (quote :right)))))))
+                ((((core/cli::vcs-patch-refs2 ops) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::vcs-evidence-refs
+  (fn (evidence)
+    (let ((out1 ((core/cli::push-hashes-from-vec []) ((core/map::get evidence) (quote :inputs)))))
+      (let
+        ((out2 ((core/cli::push-hashes-from-vec out1) ((core/map::get evidence) (quote :outputs)))))
+        ((core/cli::push-if-hash out2) ((core/map::get evidence) (quote :data)))))))
+
+(def core/cli::vcs-snapshot-dep-refs
+  (fn (snapshot)
+    (let ((deps ((core/map::get snapshot) (quote :deps))))
+      (if (core/cli::vec? deps)
+        ((((core/cli::vcs-snapshot-dep-refs2 deps) (core/vec::len deps)) 0) [])
+        []))))
+
+(def core/cli::vcs-snapshot-dep-refs2
+  (fn (deps)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((dep ((core/vec::get deps) i)))
+              (if (core/cli::map? dep)
+                (let
+                  ((out1 ((core/cli::push-if-hash out) ((core/map::get dep) (quote :dep/commit)))))
+                  (let
+                    ((out2 ((core/cli::push-if-hash out1) ((core/map::get dep) (quote :dep/snapshot)))))
+                    (let
+                      ((out3 ((core/cli::push-if-hash out2) ((core/map::get dep) (quote :commit)))))
+                      ((((core/cli::vcs-snapshot-dep-refs2 deps) n) ((core/int::add i) 1))
+                        ((core/cli::push-if-hash out3) ((core/map::get dep) (quote :snapshot)))))))
+                ((((core/cli::vcs-snapshot-dep-refs2 deps) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::vcs-snapshot-module-refs
+  (fn (modules)
+    (if (core/cli::vec? modules)
+      ((((core/cli::vcs-snapshot-module-refs2 modules) (core/vec::len modules)) 0) [])
+      ((core/cli::push-hash-values-from-map []) modules))))
+
+(def core/cli::vcs-snapshot-module-refs2
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((m ((core/vec::get modules) i)))
+              (if (core/cli::map? m)
+                ((((core/cli::vcs-snapshot-module-refs2 modules) n) ((core/int::add i) 1))
+                  ((core/cli::push-if-hash out) ((core/map::get m) (quote :hash))))
+                ((((core/cli::vcs-snapshot-module-refs2 modules) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::vcs-snapshot-refs
+  (fn (snapshot)
+    (let ((out1 ((core/cli::push-if-hash []) ((core/map::get snapshot) (quote :proto)))))
+      (let ((out2 ((core/cli::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash)))))
+        (let
+          ((out3 ((core/cli::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members)))))
+          (let
+            ((out4 ((core/cli::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs)))))
+            (let
+              (
+                (out5
+                  ((core/cli::vec-append out4)
+                    (core/cli::vcs-snapshot-module-refs ((core/map::get snapshot) (quote :modules)))))
+                (out6
+                  ((core/cli::push-hash-values-from-map out5)
+                    ((core/map::get snapshot) (quote :modules)))))
+              ((core/cli::push-hash-values-from-map out6)
+                ((core/map::get snapshot) (quote :overrides))))))))))
+
+(def core/cli::vcs-artifact-refs
+  (fn (artifact)
+    (fn (opts)
+      (if (core/cli::map? artifact)
+        (let ((ty ((core/map::get artifact) (quote :type))))
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+            (let ((out1 ((core/cli::push-if-hash []) ((core/map::get artifact) (quote :base)))))
+              (let
+                ((out2 ((core/cli::push-if-hash out1) ((core/map::get artifact) (quote :patch)))))
+                (let
+                  ((out3 ((core/cli::push-if-hash out2) ((core/map::get artifact) (quote :result)))))
+                  (let
+                    (
+                      (out4
+                        (if (((core/cli::opt-bool opts) (quote :include-evidence)) true)
+                          ((core/cli::push-hashes-from-vec out3)
+                            ((core/map::get artifact) (quote :evidence)))
+                          out3)))
+                    (let
+                      ((out5 ((core/cli::push-hashes-from-vec out4) ((core/map::get artifact) (quote :attestations)))))
+                      (if (((core/cli::opt-bool opts) (quote :include-parents)) true)
+                        ((core/cli::push-hashes-from-vec out5)
+                          ((core/map::get artifact) (quote :parents)))
+                        out5))))))
+            (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/patch)) false)
+              (core/cli::vcs-patch-refs artifact)
+              (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
+                (if (((core/cli::opt-bool opts) (quote :include-evidence)) true)
+                  (core/cli::vcs-evidence-refs artifact)
+                  [])
+                (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
+                  (let ((refs0 (core/cli::vcs-snapshot-refs artifact)))
+                    (if (((core/cli::opt-bool opts) (quote :include-deps)) false)
+                      ((core/cli::vec-append refs0) (core/cli::vcs-snapshot-dep-refs artifact))
+                      refs0))
+                  [])))))
+        []))))
+
+(def core/cli::vcs-plan-reachability
+  (fn (artifact-index)
+    (fn (roots)
+      (fn (opts)
+        (if (if (core/cli::map? artifact-index) (core/cli::vec? roots) false)
+          (((core/cli::vcs-plan-reachability2 artifact-index) opts)
+            {
+              :i 0
+              :live []
+              :missing []
+              :queue roots
+              :seen {}})
+          ((core/error::make2 "core/type-error")
+            "core/cli::vcs-plan-reachability expects (map index, vector roots, map opts)"))))))
+
+(def core/cli::vcs-plan-reachability2
+  (fn (artifact-index)
+    (fn (opts)
+      (fn (st)
+        (let ((queue ((core/map::get st) (quote :queue))) (i ((core/map::get st) (quote :i))))
+          (if ((core/int::eq? i) (core/vec::len queue))
+            {
+              :live ((core/map::get st) (quote :live))
+              :missing ((core/map::get st) (quote :missing))}
+            (let ((h ((core/vec::get queue) i)))
+              (if (core/cli::hash-hex? h)
+                (let ((seen ((core/map::get st) (quote :seen))))
+                  (if ((core/map::get seen) h)
+                    (((core/cli::vcs-plan-reachability2 artifact-index) opts)
+                      (((core/map::put st) (quote :i)) ((core/int::add i) 1)))
+                    (let ((seen2 (((core/map::put seen) h) true)))
+                      (let ((artifact ((core/map::get artifact-index) h)))
+                        (if (core/list::is-nil? artifact)
+                          (((core/cli::vcs-plan-reachability2 artifact-index) opts)
+                            {
+                              :i ((core/int::add i) 1)
+                              :live ((core/map::get st) (quote :live))
+                              :missing ((core/vec::push ((core/map::get st) (quote :missing))) h)
+                              :queue queue
+                              :seen seen2})
+                          (let ((refs ((core/cli::vcs-artifact-refs artifact) opts)))
+                            (let ((queue2 ((core/cli::vec-append queue) refs)))
+                              (((core/cli::vcs-plan-reachability2 artifact-index) opts)
+                                {
+                                  :i ((core/int::add i) 1)
+                                  :live ((core/vec::push ((core/map::get st) (quote :live))) h)
+                                  :missing ((core/map::get st) (quote :missing))
+                                  :queue queue2
+                                  :seen seen2}))))))))
+                (((core/cli::vcs-plan-reachability2 artifact-index) opts)
+                  (((core/map::put st) (quote :i)) ((core/int::add i) 1)))))))))))
+
+(def core/cli::lock-plan-from-requirements
+  (fn (requirements)
+    (fn (resolved-by-name)
+      (if (if (core/cli::map? requirements) (core/cli::map? resolved-by-name) false)
+        (let ((entries (core/cli::map-entries-vec requirements)))
+          (
+            ((((core/cli::lock-plan-from-requirements2 entries) (core/vec::len entries)) 0)
+              {
+                :count 0
+                :locked {}
+                :missing []})
+            resolved-by-name))
+        ((core/error::make2 "core/type-error") "core/cli::lock-plan-from-requirements expects maps")))))
+
+(def core/cli::lock-plan-from-requirements2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (fn (resolved-by-name)
+            (if ((core/int::eq? i) n)
+              st
+              (let ((e0 ((core/vec::get entries) i)))
+                (let ((e (if (core/cli::vec? e0) e0 (core/pair::as-proper-list e0))))
+                  (if (core/cli::vec? e)
+                    (if ((core/int::eq? (core/vec::len e)) 2)
+                      (let ((name ((core/vec::get e) 0)) (req ((core/vec::get e) 1)))
+                        (let ((resolved ((core/map::get resolved-by-name) name)))
+                          (if (core/cli::map? resolved)
+                            (
+                              ((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
+                                {
+                                  :count ((core/int::add ((core/map::get st) (quote :count))) 1)
+                                  :locked
+                                    (((core/map::put ((core/map::get st) (quote :locked))) name)
+                                      ((core/cli::lock-make-entry req) resolved))
+                                  :missing ((core/map::get st) (quote :missing))})
+                              resolved-by-name)
+                            (
+                              ((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1))
+                                {
+                                  :count ((core/map::get st) (quote :count))
+                                  :locked ((core/map::get st) (quote :locked))
+                                  :missing
+                                    ((core/vec::push ((core/map::get st) (quote :missing))) name)})
+                              resolved-by-name))))
+                      (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1)) st)
+                        resolved-by-name))
+                    (((((core/cli::lock-plan-from-requirements2 entries) n) ((core/int::add i) 1)) st)
+                      resolved-by-name)))))))))))

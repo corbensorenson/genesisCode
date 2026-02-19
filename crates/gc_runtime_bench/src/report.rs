@@ -8,6 +8,8 @@ use crate::config::Budgets;
 pub struct Metrics {
     pub eval_ms: u128,
     pub runner_ms: u128,
+    pub bridge_runner_ms: u128,
+    pub task_runner_ms: u128,
     pub patch_apply_ms: u128,
     pub store_cycle_ms: u128,
     pub sync_pull_ms: u128,
@@ -55,6 +57,18 @@ impl Report {
             violations.push(format!(
                 "runner_ms={} > {}",
                 self.metrics.runner_ms, self.budgets.runner_ms
+            ));
+        }
+        if self.metrics.bridge_runner_ms > self.budgets.bridge_runner_ms {
+            violations.push(format!(
+                "bridge_runner_ms={} > {}",
+                self.metrics.bridge_runner_ms, self.budgets.bridge_runner_ms
+            ));
+        }
+        if self.metrics.task_runner_ms > self.budgets.task_runner_ms {
+            violations.push(format!(
+                "task_runner_ms={} > {}",
+                self.metrics.task_runner_ms, self.budgets.task_runner_ms
             ));
         }
         if self.metrics.patch_apply_ms > self.budgets.patch_apply_ms {

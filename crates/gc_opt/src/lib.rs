@@ -161,8 +161,7 @@ pub fn optimize_command_pipeline(
     };
     if stage2_gate
         && let Some(s2) = &stage2
-        && s2.supported
-        && !s2.ok
+        && (!s2.supported || !s2.ok)
     {
         return Err(OptimizeCommandError::Stage2Gate(Box::new(s2.clone())));
     }

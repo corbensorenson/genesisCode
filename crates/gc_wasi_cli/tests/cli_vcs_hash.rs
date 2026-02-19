@@ -158,4 +158,16 @@ fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
         rust_d.get("hash_kind").and_then(JsonValue::as_str),
         Some("term")
     );
+    assert!(rust_d.get("selfhost_artifact").is_some());
+    assert_eq!(
+        rust_d.get("selfhost_artifact").and_then(JsonValue::as_null),
+        Some(())
+    );
+    assert_eq!(
+        self_d
+            .get("selfhost_artifact")
+            .and_then(|v| v.get("source"))
+            .and_then(JsonValue::as_str),
+        Some("explicit")
+    );
 }

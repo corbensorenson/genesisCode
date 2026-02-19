@@ -1,0 +1,51 @@
+(def core/gpu/compute::create-buffer
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-buffer)) {:desc desc})))
+
+(def core/gpu/compute::create-shader-module
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-shader-module)) {:desc desc})))
+
+(def core/gpu/compute::create-bind-group-layout
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-bind-group-layout)) {:desc desc})))
+
+(def core/gpu/compute::create-bind-group
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-bind-group)) {:desc desc})))
+
+(def core/gpu/compute::create-pipeline-layout
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-pipeline-layout)) {:desc desc})))
+
+(def core/gpu/compute::create-compute-pipeline
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
+
+(def core/gpu/compute::create-kernel core/gpu/compute::create-compute-pipeline)
+
+(def core/gpu/compute::destroy-resource
+  (fn (id) ((core/caps::perform (quote gpu/compute::destroy-resource)) {:id id})))
+
+(def core/gpu/compute::write-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (data)
+        ((core/caps::perform (quote gpu/compute::write-buffer))
+          {
+            :data data
+            :id id
+            :offset offset})))))
+
+(def core/gpu/compute::read-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (size)
+        ((core/caps::perform (quote gpu/compute::read-buffer))
+          {
+            :id id
+            :offset offset
+            :size size})))))
+
+(def core/gpu/compute::submit
+  (fn (graph) ((core/caps::perform (quote gpu/compute::submit)) {:graph graph})))
+
+(def core/gpu/compute::limits
+  (fn (_) ((core/caps::perform (quote gpu/compute::limits)) {})))
+
+(def core/gpu/compute::features
+  (fn (_) ((core/caps::perform (quote gpu/compute::features)) {})))

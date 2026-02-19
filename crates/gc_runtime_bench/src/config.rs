@@ -6,6 +6,8 @@ use anyhow::{Result, bail};
 pub struct Budgets {
     pub eval_ms: u128,
     pub runner_ms: u128,
+    pub bridge_runner_ms: u128,
+    pub task_runner_ms: u128,
     pub patch_apply_ms: u128,
     pub store_cycle_ms: u128,
     pub sync_pull_ms: u128,
@@ -55,6 +57,8 @@ pub fn parse() -> Result<BenchConfig> {
     let budgets = Budgets {
         eval_ms: env_u128("GENESIS_BUDGET_MICRO_EVAL_MS", 2_000),
         runner_ms: env_u128("GENESIS_BUDGET_MICRO_RUNNER_MS", 4_000),
+        bridge_runner_ms: env_u128("GENESIS_BUDGET_MICRO_BRIDGE_RUNNER_MS", 6_000),
+        task_runner_ms: env_u128("GENESIS_BUDGET_MICRO_TASK_RUNNER_MS", 6_000),
         patch_apply_ms: env_u128("GENESIS_BUDGET_MICRO_PATCH_APPLY_MS", 45_000),
         store_cycle_ms: env_u128("GENESIS_BUDGET_MICRO_STORE_CYCLE_MS", 1_000),
         sync_pull_ms: env_u128("GENESIS_BUDGET_MICRO_SYNC_PULL_MS", 4_000),

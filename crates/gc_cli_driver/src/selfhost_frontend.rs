@@ -86,14 +86,8 @@ pub(super) fn workspace_selfhost_artifact_path() -> PathBuf {
 }
 
 pub(super) fn resolved_selfhost_artifact_for_frontend(cli: &Cli) -> Option<PathBuf> {
-    if let Some(p) = cli.selfhost_artifact.clone() {
+    if let Some(p) = resolved_explicit_selfhost_artifact(cli) {
         return Some(p);
-    }
-    if let Ok(raw) = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV) {
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed));
-        }
     }
     let p = default_selfhost_artifact_path();
     if p.is_file() {
@@ -104,6 +98,78 @@ pub(super) fn resolved_selfhost_artifact_for_frontend(cli: &Cli) -> Option<PathB
         return Some(wp);
     }
     None
+}
+
+pub(super) fn resolved_explicit_selfhost_artifact(cli: &Cli) -> Option<PathBuf> {
+    if let Some(p) = cli.selfhost_artifact.clone() {
+        return Some(p);
+    }
+    if let Ok(raw) = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV) {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    None
+}
+
+fn canonicalize_if_exists(path: &Path) -> Option<PathBuf> {
+    if !path.is_file() {
+        return None;
+    }
+    Some(
+        std::fs::canonicalize(path)
+            .ok()
+            .unwrap_or_else(|| path.to_path_buf()),
+    )
+}
+
+pub(super) fn require_explicit_selfhost_artifact(
+    cli: &Cli,
+    context: &str,
+) -> Result<PathBuf, CliError> {
+    let Some(path) = resolved_explicit_selfhost_artifact(cli) else {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost/artifact-required",
+            format!(
+                "{context}: explicit selfhost artifact required; pass --selfhost-artifact <file> or set {SELFHOST_TOOLCHAIN_ARTIFACT_ENV}"
+            ),
+        ));
+    };
+    canonicalize_if_exists(&path).ok_or_else(|| {
+        cli_err(
+            EX_PARSE,
+            "selfhost/artifact-missing",
+            format!(
+                "{context}: selfhost artifact file does not exist: {}",
+                path.display()
+            ),
+        )
+    })
+}
+
+fn artifact_hash_hex(path: &Path) -> Option<String> {
+    let bytes = std::fs::read(path).ok()?;
+    Some(blake3::hash(&bytes).to_hex().to_string())
+}
+
+pub(super) fn selfhost_artifact_identity_for_engine(
+    cli: &Cli,
+    engine: FmtEngine,
+) -> serde_json::Value {
+    if engine != FmtEngine::Selfhost {
+        return serde_json::Value::Null;
+    }
+    let path = require_explicit_selfhost_artifact(cli, "runtime").ok();
+    match path {
+        Some(path) => serde_json::json!({
+            "path": path.display().to_string(),
+            "hash": artifact_hash_hex(&path),
+            "source": "explicit",
+        }),
+        None => serde_json::Value::Null,
+    }
 }
 
 pub(super) fn resolved_coreform_frontend(
@@ -183,10 +249,11 @@ pub(super) fn coreform_frontend_for_engine(
         FmtEngine::Selfhost => {
             let mode = resolved_selfhost_bootstrap_mode(cli);
             enforce_bootstrap_mode_allowed(mode, "engine frontend")?;
+            let artifact = Some(require_explicit_selfhost_artifact(cli, "engine frontend")?);
             Ok(gc_obligations::CoreformFrontend::Selfhost(
                 gc_obligations::SelfhostFrontendConfig {
                     bootstrap_mode: mode,
-                    artifact: resolved_selfhost_artifact_for_frontend(cli),
+                    artifact,
                 },
             ))
         }
@@ -210,6 +277,15 @@ pub(super) fn resolved_engine(
     cmd_name: &str,
     engine: Option<FmtEngine>,
 ) -> Result<FmtEngine, CliError> {
+    if selfhost_only_enabled(cli)
+        && resolved_selfhost_bootstrap_mode(cli) != SelfhostBootstrapMode::ArtifactOnly
+    {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost-only/bootstrap",
+            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
+        ));
+    }
     enforce_selfhost_engine(cli, cmd_name, engine)?;
     if let Some(e) = engine {
         if e == FmtEngine::Rust && !rust_engine_compat_enabled() {
@@ -220,10 +296,27 @@ pub(super) fn resolved_engine(
             ));
         }
         if e == FmtEngine::Selfhost {
-            enforce_bootstrap_mode_allowed(resolved_selfhost_bootstrap_mode(cli), cmd_name)?;
+            if resolved_selfhost_bootstrap_mode(cli) != SelfhostBootstrapMode::ArtifactOnly {
+                return Err(cli_err(
+                    EX_VERIFY,
+                    "selfhost/bootstrap",
+                    format!(
+                        "{cmd_name}: selfhost runtime requires --selfhost-bootstrap artifact-only"
+                    ),
+                ));
+            }
+            let _ = require_explicit_selfhost_artifact(cli, cmd_name)?;
         }
         return Ok(e);
     }
+    if resolved_selfhost_bootstrap_mode(cli) != SelfhostBootstrapMode::ArtifactOnly {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost/bootstrap",
+            format!("{cmd_name}: selfhost runtime requires --selfhost-bootstrap artifact-only"),
+        ));
+    }
+    let _ = require_explicit_selfhost_artifact(cli, cmd_name)?;
     Ok(FmtEngine::Selfhost)
 }
 
@@ -243,6 +336,24 @@ pub(super) fn load_selfhost_toolchain(
     }
     let artifact = resolved_selfhost_artifact_for_frontend(cli);
     load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+}
+
+pub(super) fn load_runtime_selfhost_toolchain(
+    cli: &Cli,
+    ctx: &mut EvalCtx,
+    env: &mut gc_kernel::Env,
+) -> Result<(), CliError> {
+    let mode = resolved_selfhost_bootstrap_mode(cli);
+    if mode != SelfhostBootstrapMode::ArtifactOnly {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost/bootstrap",
+            "selfhost runtime requires --selfhost-bootstrap artifact-only",
+        ));
+    }
+    let artifact = require_explicit_selfhost_artifact(cli, "selfhost runtime")?;
+    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, Some(artifact.as_path()))
         .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
 }
 

@@ -16,7 +16,7 @@ pub(super) fn cmd_vcs(
             ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            load_runtime_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
             let f = env.get("core/cli::hash-src-with-kind").ok_or_else(|| {
                 cli_err(
@@ -130,6 +130,7 @@ pub(super) fn cmd_vcs(
                 "hash_kind": hk,
                 "hash_format": "hex",
                 "engine": if engine == FmtEngine::Selfhost { "selfhost" } else { "rust" },
+                "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             })),
             error: None,
         };

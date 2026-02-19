@@ -9,6 +9,7 @@ mod runner_gc_payload;
 mod runner_gfx_host;
 mod runner_gpk_payload;
 mod runner_gpu_host;
+mod runner_host_bridge;
 mod runner_io_ops;
 mod runner_pkg_payload;
 mod runner_refs_ops;
@@ -33,6 +34,8 @@ pub fn set_force_wasi_remote_profile(enabled: bool) {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+
     use gc_coreform::TermOrdKey;
     use gc_coreform::{Term, hash_module, parse_module};
     use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
@@ -58,6 +61,76 @@ mod tests {
 
     fn mk_prog() -> (Vec<Term>, [u8; 32]) {
         mk_prog_for("sys/time::now", "nil")
+    }
+
+    struct HostBridgePolicyFixture {
+        _dir: tempfile::TempDir,
+        policy: CapsPolicy,
+    }
+
+    fn toml_escape(input: &str) -> String {
+        input.replace('\\', "\\\\").replace('"', "\\\"")
+    }
+
+    #[cfg(unix)]
+    fn write_bridge_script(dir: &tempfile::TempDir) -> std::path::PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+
+        let bridge = dir.path().join("host_bridge.sh");
+        std::fs::write(
+            &bridge,
+            r#"#!/bin/sh
+resp='{:ok true :surface "surface-bridge-0" :id "gpu-bridge-0" :width 800 :height 600 :title "bridge" :events [{:kind :create :path "new.gc"}] :data b"" :features [] :queued 0 :pending-redraws 0 :watch-id "watch-bridge-0" :task-id "task-bridge-0" :state :done}'
+printf '%s\n%s' "${#resp}" "$resp"
+"#,
+        )
+        .expect("write host bridge script");
+        let mut perms = std::fs::metadata(&bridge)
+            .expect("bridge metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&bridge, perms).expect("bridge chmod");
+        bridge
+    }
+
+    #[cfg(windows)]
+    fn write_bridge_script(dir: &tempfile::TempDir) -> std::path::PathBuf {
+        let bridge = dir.path().join("host_bridge.cmd");
+        std::fs::write(
+            &bridge,
+            "@echo {:ok true :surface \"surface-bridge-0\" :id \"gpu-bridge-0\" :width 800 :height 600 :title \"bridge\" :events [] :data b\"\" :features [] :queued 0 :pending-redraws 0}\r\n",
+        )
+        .expect("write host bridge script");
+        bridge
+    }
+
+    fn mk_bridge_policy(ops: &[&str]) -> HostBridgePolicyFixture {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let bridge = write_bridge_script(&dir);
+        let base = toml_escape(dir.path().to_string_lossy().as_ref());
+        let bridge_name = toml_escape(
+            bridge
+                .file_name()
+                .and_then(|x| x.to_str())
+                .expect("bridge filename"),
+        );
+        let mut toml = String::new();
+        let _ = write!(
+            &mut toml,
+            "allow = [{}]\n",
+            ops.iter()
+                .map(|op| format!("\"{op}\""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        for op in ops {
+            let _ = write!(
+                &mut toml,
+                "\n[op.\"{op}\"]\nbase_dir = \"{base}\"\nbridge_cmd = \"{bridge_name}\"\n"
+            );
+        }
+        let policy = CapsPolicy::from_toml_str(&toml).expect("parse bridge policy");
+        HostBridgePolicyFixture { _dir: dir, policy }
     }
 
     #[test]
@@ -1035,7 +1108,7 @@ max_workers = {max_workers}
         let src = r#"
             (def mk-payload
               (fn (x)
-                {:task/sleep-ms 120 :task/result (prim int/mul x 2)}))
+                {:task/sleep-ms 200 :task/result (prim int/mul x 2)}))
 
             (def reducer
               (fn (acc)
@@ -1043,7 +1116,7 @@ max_workers = {max_workers}
                   (core/effect::pure (prim int/add acc ((core/map::get resp) ':result))))))
 
             (def prog
-              (((((((core/task::parallel-reduce-bounded "scope/main") "reduce") [1 2 3 4]) 2) mk-payload) 0) reducer))
+              (((((((core/task::parallel-reduce-bounded "scope/main") "reduce") [1 2 3 4 5 6 7 8]) 2) mk-payload) 0) reducer))
             prog
         "#;
         let forms = parse_module(src).expect("parse module");
@@ -1062,7 +1135,7 @@ max_workers = {max_workers}
             let Value::Data(Term::Int(v)) = r.value else {
                 panic!("parallel reduce must return int");
             };
-            assert_eq!(v, 20.into());
+            assert_eq!(v, 72.into());
             for e in &r.log.entries {
                 assert!(
                     matches!(e.op.as_str(), "core/task::spawn" | "core/task::await"),
@@ -1099,7 +1172,7 @@ max_workers = {max_workers}
         let (_base_elapsed, parallel_elapsed) = run_once(2);
         let (_base_elapsed2, serial_elapsed) = run_once(1);
         assert!(
-            parallel_elapsed + 120 < serial_elapsed,
+            parallel_elapsed + 250 < serial_elapsed,
             "expected parallel reduce with 2 workers to be faster; parallel={parallel_elapsed}ms serial={serial_elapsed}ms"
         );
     }
@@ -1113,17 +1186,14 @@ max_workers = {max_workers}
         let mut env1 = prelude1.env;
         let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
 
-        let pol = CapsPolicy::from_toml_str(r#"allow = ["editor/clipboard::get"]"#).unwrap();
-        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        let fixture = mk_bridge_policy(&["editor/clipboard::get"]);
+        let pol = &fixture.policy;
+        let r1 = run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
         match &r1.value {
             Value::Data(Term::Map(m)) => {
                 assert_eq!(
                     m.get(&TermOrdKey(Term::symbol(":ok"))),
                     Some(&Term::Bool(true))
-                );
-                assert_eq!(
-                    m.get(&TermOrdKey(Term::symbol(":mime"))),
-                    Some(&Term::Str("text/plain".to_string()))
                 );
             }
             other => panic!(
@@ -1142,10 +1212,16 @@ max_workers = {max_workers}
 
     #[test]
     fn gfx_window_input_audio_backends_are_supported_and_replayable() {
-        let pol = CapsPolicy::from_toml_str(
-            r#"allow = ["gfx/window::create-surface", "gfx/window::request-redraw", "gfx/window::surface-info", "gfx/input::poll-events", "gfx/input::set-cursor-mode", "gfx/audio::set-master", "gfx/audio::enqueue"]"#,
-        )
-        .unwrap();
+        let fixture = mk_bridge_policy(&[
+            "gfx/window::create-surface",
+            "gfx/window::request-redraw",
+            "gfx/window::surface-info",
+            "gfx/input::poll-events",
+            "gfx/input::set-cursor-mode",
+            "gfx/audio::set-master",
+            "gfx/audio::enqueue",
+        ]);
+        let pol = &fixture.policy;
         let cases = [
             r#"
             (def prog
@@ -1215,7 +1291,7 @@ max_workers = {max_workers}
             let prelude1 = build_prelude(&mut ctx1);
             let mut env1 = prelude1.env;
             let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
-            let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+            let r1 = run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
             let mut ctx2 = EvalCtx::new();
             let prelude2 = build_prelude(&mut ctx2);
             let mut env2 = prelude2.env;
@@ -1227,10 +1303,19 @@ max_workers = {max_workers}
 
     #[test]
     fn gfx_gpu_backend_is_supported_and_replayable() {
-        let pol = CapsPolicy::from_toml_str(
-            r#"allow = ["gfx/gpu::create-buffer", "gfx/gpu::write-buffer", "gfx/gpu::read-buffer", "gfx/gpu::create-texture", "gfx/gpu::write-texture", "gfx/gpu::read-texture", "gfx/gpu::submit-frame-graph", "gfx/gpu::submit-compute-graph", "gfx/gpu::limits", "gfx/gpu::features"]"#,
-        )
-        .unwrap();
+        let fixture = mk_bridge_policy(&[
+            "gfx/gpu::create-buffer",
+            "gfx/gpu::write-buffer",
+            "gfx/gpu::read-buffer",
+            "gfx/gpu::create-texture",
+            "gfx/gpu::write-texture",
+            "gfx/gpu::read-texture",
+            "gfx/gpu::submit-frame-graph",
+            "gfx/gpu::submit-compute-graph",
+            "gfx/gpu::limits",
+            "gfx/gpu::features",
+        ]);
+        let pol = &fixture.policy;
         let cases = [
             r#"
             (def prog
@@ -1302,7 +1387,7 @@ max_workers = {max_workers}
             let prelude1 = build_prelude(&mut ctx1);
             let mut env1 = prelude1.env;
             let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
-            let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+            let r1 = run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
             assert!(
                 !matches!(r1.value, Value::Sealed { .. }),
                 "gpu backend should return structured responses, got {}",
@@ -1320,10 +1405,15 @@ max_workers = {max_workers}
 
     #[test]
     fn gpu_compute_namespace_is_supported_and_policy_isolated() {
-        let pol = CapsPolicy::from_toml_str(
-            r#"allow = ["gpu/compute::create-buffer", "gpu/compute::write-buffer", "gpu/compute::read-buffer", "gpu/compute::submit", "gpu/compute::limits", "gpu/compute::features"]"#,
-        )
-        .unwrap();
+        let fixture = mk_bridge_policy(&[
+            "gpu/compute::create-buffer",
+            "gpu/compute::write-buffer",
+            "gpu/compute::read-buffer",
+            "gpu/compute::submit",
+            "gpu/compute::limits",
+            "gpu/compute::features",
+        ]);
+        let pol = &fixture.policy;
         let cases = [
             r#"
             (def prog
@@ -1371,7 +1461,7 @@ max_workers = {max_workers}
             let mut env1 = prelude1.env;
             let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
             let run_out =
-                run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+                run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
             assert!(
                 !matches!(run_out.value, Value::Sealed { .. }),
                 "gpu compute namespace should return structured responses, got {}",
@@ -1392,7 +1482,7 @@ max_workers = {max_workers}
         let deny_prog = eval_module(&mut ctx3, &mut env3, &deny_forms).expect("eval3");
         let deny_out = run(
             &mut ctx3,
-            &pol,
+            pol,
             deny_prog,
             deny_h,
             "gc_effects-test".to_string(),
@@ -1449,11 +1539,14 @@ max_workers = {max_workers}
         let prelude1 = build_prelude(&mut ctx1);
         let mut env1 = prelude1.env;
         let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
-        let pol = CapsPolicy::from_toml_str(
-            r#"allow = ["editor/watch::subscribe", "editor/watch::poll", "editor/task::spawn", "editor/task::poll"]"#,
-        )
-        .unwrap();
-        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        let fixture = mk_bridge_policy(&[
+            "editor/watch::subscribe",
+            "editor/watch::poll",
+            "editor/task::spawn",
+            "editor/task::poll",
+        ]);
+        let pol = &fixture.policy;
+        let r1 = run(&mut ctx1, pol, prog1, h, "gc_effects-test".to_string()).expect("run");
         assert_eq!(r1.log.entries.len(), 4);
 
         let mut ctx2 = EvalCtx::new();

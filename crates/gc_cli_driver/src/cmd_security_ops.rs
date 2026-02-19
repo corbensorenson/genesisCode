@@ -295,7 +295,7 @@ pub(super) fn cmd_optimize(
             ctx.set_mem_limits(resolved_mem_limits(cli));
             let prelude = build_prelude(&mut ctx);
             let mut env = prelude.env;
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            load_runtime_selfhost_toolchain(cli, &mut ctx, &mut env)?;
             ctx.steps = 0;
             ctx.step_limit = None;
             selfhost_parse_canonicalize_module(&mut ctx, &env, &src)?
@@ -373,6 +373,7 @@ pub(super) fn cmd_optimize(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "coreform_frontend": frontend_info,
             "stage1": gc_opt::stage1_pipeline_json(&pipeline.stage1),
             "stage2": pipeline.stage2.as_ref().map(gc_opt::stage2_report_json),
