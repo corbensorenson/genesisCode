@@ -62,23 +62,32 @@ use crate::runner_vcs_payload::{
 };
 use crate::store::ArtifactStore;
 
-#[path = "runner_gc_ops.rs"]
-mod runner_gc_ops;
-#[path = "runner_remote_ops.rs"]
-mod runner_remote_ops;
-#[path = "runner_capability_dispatch.rs"]
-mod runner_capability_dispatch;
+#[path = "runner_cap_gc_gpk_low.rs"]
+mod runner_cap_gc_gpk_low;
+#[path = "runner_cap_pkg_low.rs"]
+mod runner_cap_pkg_low;
 #[path = "runner_cap_refs.rs"]
 mod runner_cap_refs;
 #[path = "runner_cap_store.rs"]
 mod runner_cap_store;
+#[path = "runner_cap_vcs_low.rs"]
+mod runner_cap_vcs_low;
+#[path = "runner_capability_dispatch.rs"]
+mod runner_capability_dispatch;
+#[path = "runner_gc_ops.rs"]
+mod runner_gc_ops;
+#[path = "runner_remote_ops.rs"]
+mod runner_remote_ops;
 #[path = "runner_response_budget.rs"]
 mod runner_response_budget;
 #[path = "runner_vcs_pkg_helpers.rs"]
 mod runner_vcs_pkg_helpers;
-use runner_capability_dispatch::*;
+use runner_cap_gc_gpk_low::*;
+use runner_cap_pkg_low::*;
 use runner_cap_refs::*;
 use runner_cap_store::*;
+use runner_cap_vcs_low::*;
+use runner_capability_dispatch::*;
 use runner_gc_ops::*;
 use runner_remote_ops::*;
 use runner_response_budget::*;

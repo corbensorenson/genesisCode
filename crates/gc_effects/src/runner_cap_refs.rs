@@ -1,9 +1,6 @@
 use super::*;
 
-pub(super) fn cap_refs_get(
-    payload: &Term,
-    refs: Option<&RefsDb>,
-) -> Result<Value, EffectsError> {
+pub(super) fn cap_refs_get(payload: &Term, refs: Option<&RefsDb>) -> Result<Value, EffectsError> {
     let refs =
         refs.ok_or_else(|| EffectsError::Log("missing refs db for core/refs::get".to_string()))?;
     let name = payload_refs_name(payload)?;
@@ -20,12 +17,9 @@ pub(super) fn cap_refs_get(
     Ok(Value::Data(Term::Map(m)))
 }
 
-pub(super) fn cap_refs_list(
-    payload: &Term,
-    refs: Option<&RefsDb>,
-) -> Result<Value, EffectsError> {
-    let refs = refs
-        .ok_or_else(|| EffectsError::Log("missing refs db for core/refs::list".to_string()))?;
+pub(super) fn cap_refs_list(payload: &Term, refs: Option<&RefsDb>) -> Result<Value, EffectsError> {
+    let refs =
+        refs.ok_or_else(|| EffectsError::Log("missing refs db for core/refs::list".to_string()))?;
     let prefix = payload_refs_prefix(payload)?;
     let xs = refs.list(prefix.as_deref())?;
     let mut out = Vec::new();
@@ -85,7 +79,10 @@ pub(super) fn cap_refs_set(
     match result {
         SetResult::Updated => {
             let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::Symbol(":ok".to_string())), Term::Bool(true));
+            m.insert(
+                TermOrdKey(Term::Symbol(":ok".to_string())),
+                Term::Bool(true),
+            );
             m.insert(
                 TermOrdKey(Term::Symbol(":name".to_string())),
                 Term::Str(name),
@@ -123,8 +120,8 @@ pub(super) fn cap_refs_delete(
     let store = store.ok_or_else(|| {
         EffectsError::Log("missing artifact store for core/refs::delete".to_string())
     })?;
-    let refs = refs
-        .ok_or_else(|| EffectsError::Log("missing refs db for core/refs::delete".to_string()))?;
+    let refs =
+        refs.ok_or_else(|| EffectsError::Log("missing refs db for core/refs::delete".to_string()))?;
     let name = payload_refs_name(payload)?;
     let expected_old = payload_refs_expected_old(payload)?;
     let policy_h = payload_refs_policy_hash(payload)?;
@@ -147,7 +144,10 @@ pub(super) fn cap_refs_delete(
     match result {
         SetResult::Updated => {
             let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::Symbol(":ok".to_string())), Term::Bool(true));
+            m.insert(
+                TermOrdKey(Term::Symbol(":ok".to_string())),
+                Term::Bool(true),
+            );
             m.insert(
                 TermOrdKey(Term::Symbol(":name".to_string())),
                 Term::Str(name),

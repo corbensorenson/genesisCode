@@ -9,8 +9,9 @@ pub(super) fn cap_store_put(
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let store = store
-        .ok_or_else(|| EffectsError::Log("missing artifact store for core/store::put".to_string()))?;
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/store::put".to_string())
+    })?;
     let art = payload_store_artifact(payload)?;
     let bytes = print_term(&art);
     let configured_max = match op_extra_positive_usize(pol, "max_bytes") {
@@ -47,8 +48,9 @@ pub(super) fn cap_store_has(
     timeout_ms: Option<u64>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let store = store
-        .ok_or_else(|| EffectsError::Log("missing artifact store for core/store::has".to_string()))?;
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/store::has".to_string())
+    })?;
     let h = payload_store_hash(payload)?;
     let p = store.path_for(&h);
     let mut present = false;
@@ -99,8 +101,9 @@ pub(super) fn cap_store_get(
     timeout_ms: Option<u64>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let store = store
-        .ok_or_else(|| EffectsError::Log("missing artifact store for core/store::get".to_string()))?;
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/store::get".to_string())
+    })?;
     let configured_max = match op_extra_positive_usize(pol, "max_bytes") {
         Ok(v) => v,
         Err(e) => {

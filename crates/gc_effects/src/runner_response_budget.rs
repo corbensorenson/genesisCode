@@ -281,7 +281,10 @@ pub(super) fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, Effects
     Ok(Term::Map(m))
 }
 
-pub(super) fn op_extra_positive_usize(pol: Option<&OpPolicy>, key: &str) -> Result<Option<usize>, String> {
+pub(super) fn op_extra_positive_usize(
+    pol: Option<&OpPolicy>,
+    key: &str,
+) -> Result<Option<usize>, String> {
     let Some(pol) = pol else {
         return Ok(None);
     };
@@ -436,4 +439,3 @@ pub(super) fn store_put_with_budget(
     consume_budget(&mut budget.store_written_bytes, bytes.len());
     Ok(hex)
 }
-

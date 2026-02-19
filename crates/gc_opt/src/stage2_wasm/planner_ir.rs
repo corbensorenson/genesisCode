@@ -113,11 +113,7 @@ impl PExpr {
 
 #[derive(Debug, Clone)]
 pub(super) enum PStmt {
-    Def {
-        name: String,
-        idx: u32,
-        expr: PExpr,
-    },
+    Def { name: String, idx: u32, expr: PExpr },
     Expr(PExpr),
 }
 
@@ -259,11 +255,7 @@ pub(super) fn const_string_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) -
         } if *ty == Ty::StrI32 => {
             let a = const_string_id_with_map(then_expr, map);
             let b = const_string_id_with_map(else_expr, map);
-            if a.is_some() && a == b {
-                a
-            } else {
-                None
-            }
+            if a.is_some() && a == b { a } else { None }
         }
         _ => None,
     }
@@ -359,11 +351,7 @@ pub(super) fn const_symbol_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) -
         } if *ty == Ty::SymI32 => {
             let a = const_symbol_id_with_map(then_expr, map);
             let b = const_symbol_id_with_map(else_expr, map);
-            if a.is_some() && a == b {
-                a
-            } else {
-                None
-            }
+            if a.is_some() && a == b { a } else { None }
         }
         _ => None,
     }
@@ -396,11 +384,7 @@ pub(super) fn const_bytes_id_with_map(expr: &PExpr, map: &BTreeMap<u32, i32>) ->
         } if *ty == Ty::BytesI32 => {
             let a = const_bytes_id_with_map(then_expr, map);
             let b = const_bytes_id_with_map(else_expr, map);
-            if a.is_some() && a == b {
-                a
-            } else {
-                None
-            }
+            if a.is_some() && a == b { a } else { None }
         }
         _ => None,
     }
