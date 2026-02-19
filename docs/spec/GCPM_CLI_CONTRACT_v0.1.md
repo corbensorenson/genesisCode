@@ -15,6 +15,7 @@ This document freezes the first AI-agent-facing contract for GenesisCode project
 - workspace lock lifecycle (`init`, `add`, `lock`, `update`, `install`)
 - lock hygiene (`remove`, `doctor`, `verify`)
 - dependency inspection (`list`, `info`)
+- ABI/introspection export for autonomous planning (`abi`)
 - deterministic diagnostics (`doctor`)
 - workspace task execution (`run`)
 - package obligation execution alias (`test`)

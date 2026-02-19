@@ -127,6 +127,13 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("import"),
         "pkg --help output missing import subcommand"
     );
+    assert!(
+        s.contains("abi"),
+        "pkg --help output missing abi subcommand"
+    );
+
+    let s = stdout_str(&["pkg", "abi", "--help"]);
+    assert!(s.contains("--pkg"), "pkg abi --help output missing --pkg");
 
     let s = stdout_str(&["pkg", "import", "--help"]);
     assert!(

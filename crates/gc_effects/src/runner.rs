@@ -26,7 +26,7 @@ use crate::runner_gpk_payload::{
 use crate::runner_io_ops::{
     FsReadError, atomic_write_text, effective_base_dir, io_error_payload, path_to_slash,
     payload_path, payload_pkg_path, read_file_with_optional_limit, sandbox_path_allow_missing,
-    sandbox_path_read, sandbox_path_write,
+    sandbox_path_read, sandbox_path_write, write_file_no_follow,
 };
 use crate::runner_pkg_payload::{
     payload_pkg_bool, payload_pkg_lock, payload_pkg_name, payload_pkg_policy,
@@ -61,6 +61,12 @@ type GcStoreLock = ExclusiveLock;
 
 const HARD_REMOTE_ARTIFACT_MAX_BYTES: usize = 32 * 1024 * 1024;
 const HARD_SYNC_PULL_BATCH_MAX_BYTES: usize = 64 * 1024 * 1024;
+
+#[derive(Debug, Clone, Default)]
+struct ArtifactBudgetState {
+    store_written_bytes: usize,
+    log_artifact_written_bytes: usize,
+}
 
 struct HashingWriter<'a, W: std::io::Write> {
     inner: &'a mut W,
@@ -119,6 +125,7 @@ pub fn run(
     let mut cur = program;
     let mut task_budget_state = TaskBudgetState::default();
     let mut task_runtime = TaskRuntime::default();
+    let mut artifact_budget_state = ArtifactBudgetState::default();
 
     loop {
         let Value::EffectProgram(p) = cur else {
@@ -172,6 +179,7 @@ pub fn run(
                             policy,
                             store.as_ref(),
                             refs.as_ref(),
+                            &mut artifact_budget_state,
                             proto.error,
                         )?
                     };
@@ -194,6 +202,17 @@ pub fn run(
                     cap_term = Term::Nil;
                     resp_val = limit_err;
                 };
+                if decision == Decision::Allow
+                    && let Some(limit_err) = enforce_log_artifact_budget(
+                        policy,
+                        &mut artifact_budget_state,
+                        &req.op,
+                        &resp_val,
+                        proto.error,
+                    )?
+                {
+                    resp_val = limit_err;
+                }
                 let resp_logged = logged_resp(policy, &req.op, &store, &resp_val, proto.error)?;
 
                 let resp_h = value_hash(&resp_val);
@@ -667,6 +686,148 @@ fn mk_resource_limit_error(
     )
 }
 
+fn dispatch_op_alias(op: &str) -> &str {
+    match op {
+        "core/pkg::init" => "core/pkg-low::init",
+        "core/pkg::add" => "core/pkg-low::add",
+        "core/pkg::list" => "core/pkg-low::list",
+        "core/pkg::info" => "core/pkg-low::info",
+        "core/pkg::lock" => "core/pkg-low::lock",
+        "core/pkg::update" => "core/pkg-low::update",
+        "core/pkg::install" => "core/pkg-low::install",
+        "core/pkg::verify" => "core/pkg-low::verify",
+        "core/pkg::snapshot" => "core/pkg-low::snapshot",
+        "core/pkg::publish" => "core/pkg-low::publish",
+        "core/gpk::export" => "core/gpk-low::export",
+        "core/gpk::import" => "core/gpk-low::import",
+        "core/gc::plan" => "core/gc-low::plan",
+        "core/gc::run" => "core/gc-low::run",
+        "core/gc::pin" => "core/gc-low::pin",
+        "core/gc::unpin" => "core/gc-low::unpin",
+        "core/gc::purge" => "core/gc-low::purge",
+        "core/vcs::log" => "core/vcs-low::log",
+        "core/vcs::blame" => "core/vcs-low::blame",
+        "core/vcs::why" => "core/vcs-low::why",
+        "core/vcs::diff" => "core/vcs-low::diff",
+        "core/vcs::apply" => "core/vcs-low::apply",
+        "core/vcs::merge3" => "core/vcs-low::merge3",
+        "core/vcs::resolve-conflict" => "core/vcs-low::resolve-conflict",
+        other => other,
+    }
+}
+
+fn consume_budget(used: &mut usize, incoming: usize) {
+    *used = used.saturating_add(incoming);
+}
+
+fn externalized_resp_bytes(
+    policy: &CapsPolicy,
+    op: &str,
+    value: &Value,
+    error_tok: SealId,
+) -> Result<Option<usize>, EffectsError> {
+    let resp = logged_resp_inline(value, error_tok)?;
+    let Some(max_inline) = policy.inline_max_bytes_for(op) else {
+        return Ok(None);
+    };
+
+    match resp {
+        LoggedResp::Ok(Term::Bytes(bytes)) | LoggedResp::Error(Term::Bytes(bytes)) => {
+            if bytes.len() > max_inline {
+                Ok(Some(bytes.len()))
+            } else {
+                Ok(None)
+            }
+        }
+        LoggedResp::Ok(t) | LoggedResp::Error(t) => {
+            let rendered = print_term(&t);
+            if rendered.len() > max_inline {
+                Ok(Some(rendered.len()))
+            } else {
+                Ok(None)
+            }
+        }
+        LoggedResp::OkArtifact { .. }
+        | LoggedResp::ErrorArtifact { .. }
+        | LoggedResp::OkBytesArtifact { .. }
+        | LoggedResp::ErrorBytesArtifact { .. } => Ok(None),
+    }
+}
+
+fn enforce_log_artifact_budget(
+    policy: &CapsPolicy,
+    budget: &mut ArtifactBudgetState,
+    op: &str,
+    value: &Value,
+    error_tok: SealId,
+) -> Result<Option<Value>, EffectsError> {
+    let Some(bytes) = externalized_resp_bytes(policy, op, value, error_tok)? else {
+        return Ok(None);
+    };
+
+    if let Some(limit) = policy.log.max_artifact_bytes_per_run {
+        let observed = budget.log_artifact_written_bytes.saturating_add(bytes);
+        if observed > limit {
+            return Ok(Some(mk_resource_limit_error(
+                error_tok,
+                op,
+                "log artifact bytes",
+                observed,
+                limit,
+            )));
+        }
+    }
+    if let Some(limit) = policy.store.max_run_bytes {
+        let observed = budget.store_written_bytes.saturating_add(bytes);
+        if observed > limit {
+            return Ok(Some(mk_resource_limit_error(
+                error_tok,
+                op,
+                "store artifact bytes",
+                observed,
+                limit,
+            )));
+        }
+    }
+
+    consume_budget(&mut budget.log_artifact_written_bytes, bytes);
+    consume_budget(&mut budget.store_written_bytes, bytes);
+    Ok(None)
+}
+
+fn store_put_with_budget(
+    store: &ArtifactStore,
+    bytes: &[u8],
+    policy: &CapsPolicy,
+    budget: &mut ArtifactBudgetState,
+    error_tok: SealId,
+    op: &str,
+) -> Result<String, Value> {
+    if let Some(limit) = policy.store.max_run_bytes {
+        let observed = budget.store_written_bytes.saturating_add(bytes.len());
+        if observed > limit {
+            return Err(mk_resource_limit_error(
+                error_tok,
+                op,
+                "store artifact bytes",
+                observed,
+                limit,
+            ));
+        }
+        let hex = store
+            .put_bytes(bytes)
+            .map_err(|e| mk_error(error_tok, "core/store/io-error", e.to_string(), Some(op)))?;
+        budget.store_written_bytes = observed;
+        return Ok(hex);
+    }
+
+    let hex = store
+        .put_bytes(bytes)
+        .map_err(|e| mk_error(error_tok, "core/store/io-error", e.to_string(), Some(op)))?;
+    consume_budget(&mut budget.store_written_bytes, bytes.len());
+    Ok(hex)
+}
+
 fn call_capability(
     op: &str,
     payload: &Term,
@@ -674,9 +835,10 @@ fn call_capability(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    budget: &mut ArtifactBudgetState,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let op_eff = op;
+    let op_eff = dispatch_op_alias(op);
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
     if timeout_ms.is_some() && op_eff == "io/fs::write" {
         return Ok(mk_error(
@@ -753,18 +915,21 @@ fn call_capability(
                         return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
                     }
                 };
-                let client = match gc_registry::RegistryClient::new(
+                let auth = match sync_registry_auth(&sp) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                    }
+                };
+                let client = match gc_registry::RegistryClient::new_with_auth(
                     &base,
                     timeout_ms.map(std::time::Duration::from_millis),
+                    auth,
                 ) {
                     Ok(c) => c,
                     Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/sync/remote-error",
-                            format!("{e}"),
-                            Some(op),
-                        ));
+                        let code = registry_error_code(&e, "core/sync/remote-auth");
+                        return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
                     }
                 };
 
@@ -777,6 +942,8 @@ fn call_capability(
                     let mut stats = SyncPullStats {
                         pulled: &mut pulled,
                         already: &mut already,
+                        store_written_bytes: &mut budget.store_written_bytes,
+                        store_max_run_bytes: policy.store.max_run_bytes,
                         error_tok,
                         op,
                         transfer_workers: sp.transfer_workers,
@@ -802,17 +969,15 @@ fn call_capability(
                             ));
                         }
                         Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/sync/remote-error",
-                                format!("{e}"),
-                                Some(op),
-                            ));
+                            let code = registry_error_code(&e, "core/sync/remote-auth");
+                            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
                         }
                     };
                     let mut stats = SyncPullStats {
                         pulled: &mut pulled,
                         already: &mut already,
+                        store_written_bytes: &mut budget.store_written_bytes,
+                        store_max_run_bytes: policy.store.max_run_bytes,
                         error_tok,
                         op,
                         transfer_workers: sp.transfer_workers,
@@ -959,18 +1124,21 @@ fn call_capability(
                         return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
                     }
                 };
-                let client = match gc_registry::RegistryClient::new(
+                let auth = match sync_registry_auth(&sp) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                    }
+                };
+                let client = match gc_registry::RegistryClient::new_with_auth(
                     &base,
                     timeout_ms.map(std::time::Duration::from_millis),
+                    auth,
                 ) {
                     Ok(c) => c,
                     Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/sync/remote-error",
-                            format!("{e}"),
-                            Some(op),
-                        ));
+                        let code = registry_error_code(&e, "core/sync/remote-auth");
+                        return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
                     }
                 };
 
@@ -993,12 +1161,8 @@ fn call_capability(
                     let mp = match &has_results[chunk_i] {
                         Ok(m) => m,
                         Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/sync/remote-error",
-                                e.clone(),
-                                Some(op),
-                            ));
+                            let code = registry_error_code(e, "core/sync/remote-auth");
+                            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
                         }
                     };
                     for h in chunk {
@@ -1020,6 +1184,8 @@ fn call_capability(
                         Err(e) => {
                             let (code, msg) = if e.starts_with("store-read:") {
                                 ("core/store/not-found", e)
+                            } else if e.starts_with("auth error:") {
+                                ("core/sync/remote-auth", e)
                             } else {
                                 ("core/sync/remote-error", e)
                             };
@@ -1052,12 +1218,8 @@ fn call_capability(
                                 refs_updated = refs_updated.saturating_add(1);
                             }
                             Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/sync/remote-error",
-                                    format!("{e}"),
-                                    Some(op),
-                                ));
+                                let code = registry_error_code(&e, "core/sync/remote-auth");
+                                return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
                             }
                         }
                     }
@@ -2841,16 +3003,16 @@ fn call_capability(
 
                 let module_art = Term::Vector(forms);
                 let module_bytes = print_term(&module_art);
-                let store_hex = match store.put_bytes(module_bytes.as_bytes()) {
+                let store_hex = match store_put_with_budget(
+                    store,
+                    module_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
                     Ok(h) => h,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/io-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
+                    Err(v) => return Ok(v),
                 };
                 let mut mm = BTreeMap::new();
                 mm.insert(
@@ -2909,16 +3071,17 @@ fn call_capability(
                 .into_iter()
                 .collect(),
             );
-            let snap_hex = match store.put_bytes(print_term(&snapshot).as_bytes()) {
+            let snapshot_bytes = print_term(&snapshot);
+            let snap_hex = match store_put_with_budget(
+                store,
+                snapshot_bytes.as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
                 Ok(h) => h,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
+                Err(v) => return Ok(v),
             };
 
             let mut out = BTreeMap::new();
@@ -3298,6 +3461,7 @@ fn call_capability(
                     policy,
                     Some(store),
                     Some(refs),
+                    budget,
                     error_tok,
                 )?;
 
@@ -3322,17 +3486,28 @@ fn call_capability(
             })?;
             let art = payload_store_artifact(payload)?;
             let bytes = print_term(&art);
-            let h = match store.put_bytes(bytes.as_bytes()) {
-                Ok(h) => h,
+            let configured_max = match op_extra_positive_usize(pol, "max_bytes") {
+                Ok(v) => v,
                 Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
                 }
             };
+            let max_bytes = effective_limit(configured_max, HARD_REMOTE_ARTIFACT_MAX_BYTES);
+            if bytes.len() > max_bytes {
+                return Ok(mk_resource_limit_error(
+                    error_tok,
+                    op,
+                    "store put bytes",
+                    bytes.len(),
+                    max_bytes,
+                ));
+            }
+            let h =
+                match store_put_with_budget(store, bytes.as_bytes(), policy, budget, error_tok, op)
+                {
+                    Ok(h) => h,
+                    Err(v) => return Ok(v),
+                };
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::Symbol(":hash".to_string())), Term::Str(h));
             Ok(Value::Data(Term::Map(m)))
@@ -3372,12 +3547,11 @@ fn call_capability(
                         let mp = match client.store_has(std::slice::from_ref(&h)) {
                             Ok(m) => m,
                             Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/remote-error",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
+                                let code = match &e {
+                                    gc_registry::RegistryError::Auth(_) => "core/store/remote-auth",
+                                    _ => "core/store/remote-error",
+                                };
+                                return Ok(mk_error(error_tok, code, e.to_string(), Some(op)));
                             }
                         };
                         present = mp.get(&h).copied().unwrap_or(false);
@@ -3441,12 +3615,11 @@ fn call_capability(
                                         max_bytes,
                                     ));
                                 }
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/remote-error",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
+                                let code = match &e {
+                                    gc_registry::RegistryError::Auth(_) => "core/store/remote-auth",
+                                    _ => "core/store/remote-error",
+                                };
+                                return Ok(mk_error(error_tok, code, e.to_string(), Some(op)));
                             }
                         };
                         let got = hash_bytes_hex(&bytes);
@@ -3458,7 +3631,7 @@ fn call_capability(
                                 Some(op),
                             ));
                         }
-                        match store.put_bytes(&bytes) {
+                        match store_put_with_budget(store, &bytes, policy, budget, error_tok, op) {
                             Ok(stored_h) if stored_h == h => {}
                             Ok(_) => {
                                 return Ok(mk_error(
@@ -3468,14 +3641,7 @@ fn call_capability(
                                     Some(op),
                                 ));
                             }
-                            Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/io-error",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
+                            Err(v) => return Ok(v),
                         }
                     }
                     Ok(None) => {}
@@ -4770,16 +4936,16 @@ fn call_capability(
             };
             let patch_bytes = print_term(&patch_term);
             let patch_h = if store_patch {
-                match store.put_bytes(patch_bytes.as_bytes()) {
+                match store_put_with_budget(
+                    store,
+                    patch_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
                     Ok(h) => h,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/io-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
+                    Err(v) => return Ok(v),
                 }
             } else {
                 hash_bytes_hex(patch_bytes.as_bytes())
@@ -4939,16 +5105,16 @@ fn call_capability(
 
             let snap_bytes = print_term(&cur);
             let snap_h = if store_result {
-                match store.put_bytes(snap_bytes.as_bytes()) {
+                match store_put_with_budget(
+                    store,
+                    snap_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
                     Ok(h) => h,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/io-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
+                    Err(v) => return Ok(v),
                 }
             } else {
                 hash_bytes_hex(snap_bytes.as_bytes())
@@ -5081,7 +5247,17 @@ fn call_capability(
                     )],
                 );
                 let conflict_bytes = print_term(&conflict_term);
-                let conflict_h = store.put_bytes(conflict_bytes.as_bytes())?;
+                let conflict_h = match store_put_with_budget(
+                    store,
+                    conflict_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(h) => h,
+                    Err(v) => return Ok(v),
+                };
 
                 if let Some(out_s) = &out_s {
                     let base_dir = effective_base_dir(pol)?;
@@ -5171,7 +5347,17 @@ fn call_capability(
                     conflicts,
                 );
                 let conflict_bytes = print_term(&conflict_term);
-                let conflict_h = store.put_bytes(conflict_bytes.as_bytes())?;
+                let conflict_h = match store_put_with_budget(
+                    store,
+                    conflict_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(h) => h,
+                    Err(v) => return Ok(v),
+                };
 
                 if let Some(out_s) = &out_s {
                     let base_dir = effective_base_dir(pol)?;
@@ -5203,7 +5389,17 @@ fn call_capability(
             }
             .to_term();
             let merged_bytes = print_term(&merged_snapshot);
-            let merged_h = store.put_bytes(merged_bytes.as_bytes())?;
+            let merged_h = match store_put_with_budget(
+                store,
+                merged_bytes.as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
 
             if let Some(out_s) = &out_s {
                 let base_dir = effective_base_dir(pol)?;
@@ -5554,16 +5750,17 @@ fn call_capability(
                     &conflict.right,
                     unresolved,
                 );
-                let conflict_hex = match store.put_bytes(print_term(&conflict_term).as_bytes()) {
+                let conflict_bytes = print_term(&conflict_term);
+                let conflict_hex = match store_put_with_budget(
+                    store,
+                    conflict_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
                     Ok(h) => h,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/io-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
+                    Err(v) => return Ok(v),
                 };
                 let mut m = BTreeMap::new();
                 m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
@@ -5580,16 +5777,16 @@ fn call_capability(
             }
             .to_term();
             let merged_bytes = print_term(&merged_snapshot);
-            let merged_h = match store.put_bytes(merged_bytes.as_bytes()) {
+            let merged_h = match store_put_with_budget(
+                store,
+                merged_bytes.as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
                 Ok(h) => h,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
+                Err(v) => return Ok(v),
             };
 
             let (patch_term, values) = match vcs_diff_patch_term(store, &base_t, &merged_snapshot) {
@@ -5604,16 +5801,16 @@ fn call_capability(
                 }
             };
             let patch_bytes = print_term(&patch_term);
-            let patch_h = match store.put_bytes(patch_bytes.as_bytes()) {
+            let patch_h = match store_put_with_budget(
+                store,
+                patch_bytes.as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
                 Ok(h) => h,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
+                Err(v) => return Ok(v),
             };
 
             if let Some(out_s) = out_s {
@@ -6419,17 +6616,11 @@ fn call_capability(
 
             for e in &bundle.entries {
                 let expected = gc_vcs::bytes32_to_hex(&e.hash);
-                let got = match store.put_bytes(&e.bytes) {
-                    Ok(h) => h,
-                    Err(err) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/io-error",
-                            err.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
+                let got =
+                    match store_put_with_budget(store, &e.bytes, policy, budget, error_tok, op) {
+                        Ok(h) => h,
+                        Err(v) => return Ok(v),
+                    };
                 if got != expected {
                     return Ok(mk_error(
                         error_tok,
@@ -6858,17 +7049,7 @@ fn call_capability(
             let base_dir = effective_base_dir(pol)?;
             let create_dirs = pol.is_some_and(|p| p.create_dirs);
             let path = sandbox_path_write(&base_dir, &path_s, create_dirs)?;
-            if path.exists() {
-                let md = std::fs::symlink_metadata(&path)?;
-                if md.file_type().is_symlink() {
-                    let e = std::io::Error::other("refusing to write through symlink");
-                    return Ok(Value::Sealed {
-                        token: error_tok,
-                        payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
-                    });
-                }
-            }
-            match std::fs::write(&path, data) {
+            match write_file_no_follow(&path, &data) {
                 Ok(()) => Ok(Value::Data(Term::Nil)),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,
@@ -8056,6 +8237,10 @@ fn resolve_requirement(
 struct SyncPolicy {
     remote_allow: Vec<String>,
     allow_http: bool,
+    auth_token: Option<String>,
+    auth_token_env: Option<String>,
+    mtls_ca_pem: Option<std::path::PathBuf>,
+    mtls_identity_pem: Option<std::path::PathBuf>,
     transfer_workers: usize,
     max_artifact_bytes: usize,
     max_batch_bytes: usize,
@@ -8065,6 +8250,10 @@ struct SyncPolicy {
 fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
+    let mut auth_token: Option<String> = None;
+    let mut auth_token_env: Option<String> = None;
+    let mut mtls_ca_pem: Option<std::path::PathBuf> = None;
+    let mut mtls_identity_pem: Option<std::path::PathBuf> = None;
     let mut transfer_workers: usize = 4;
     let mut max_artifact_bytes: usize = HARD_REMOTE_ARTIFACT_MAX_BYTES;
     let mut max_batch_bytes: usize = HARD_SYNC_PULL_BATCH_MAX_BYTES;
@@ -8086,6 +8275,26 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
             && let Some(b) = v.as_bool()
         {
             allow_http = b;
+        }
+        if let Some(v) = pol.extra.get("auth_token")
+            && let Some(s) = v.as_str()
+        {
+            auth_token = Some(s.to_string());
+        }
+        if let Some(v) = pol.extra.get("auth_token_env")
+            && let Some(s) = v.as_str()
+        {
+            auth_token_env = Some(s.to_string());
+        }
+        if let Some(v) = pol.extra.get("mtls_ca_pem")
+            && let Some(s) = v.as_str()
+        {
+            mtls_ca_pem = Some(std::path::PathBuf::from(s));
+        }
+        if let Some(v) = pol.extra.get("mtls_identity_pem")
+            && let Some(s) = v.as_str()
+        {
+            mtls_identity_pem = Some(std::path::PathBuf::from(s));
         }
         if let Some(v) = pol.extra.get("transfer_workers")
             && let Some(n) = v.as_integer()
@@ -8127,6 +8336,10 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     Ok(SyncPolicy {
         remote_allow,
         allow_http,
+        auth_token,
+        auth_token_env,
+        mtls_ca_pem,
+        mtls_identity_pem,
         transfer_workers,
         max_artifact_bytes,
         max_batch_bytes,
@@ -8208,6 +8421,82 @@ fn ensure_trailing_slash(path: &str) -> String {
 }
 
 #[cfg(not(target_os = "wasi"))]
+fn registry_error_code(err: &gc_registry::RegistryError, auth_code: &'static str) -> &'static str {
+    match err {
+        gc_registry::RegistryError::Auth(_) => auth_code,
+        _ => "core/sync/remote-error",
+    }
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn resolve_auth_token(
+    inline: Option<&str>,
+    env_name: Option<&str>,
+) -> Result<Option<String>, String> {
+    if inline.is_some() && env_name.is_some() {
+        return Err("auth_token and auth_token_env are mutually exclusive".to_string());
+    }
+    if let Some(token) = inline {
+        return Ok(Some(token.to_string()));
+    }
+    if let Some(name) = env_name {
+        let v = std::env::var(name)
+            .map_err(|_| format!("auth_token_env `{name}` is not set in environment"))?;
+        if v.trim().is_empty() {
+            return Err(format!(
+                "auth_token_env `{name}` resolved to an empty token"
+            ));
+        }
+        return Ok(Some(v));
+    }
+    Ok(None)
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
+    std::fs::read(path).map_err(|e| format!("failed reading PEM `{}`: {e}", path.display()))
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn store_registry_auth(policy: &CapsPolicy) -> Result<gc_registry::RegistryAuth, String> {
+    let bearer_token = resolve_auth_token(
+        policy.store.auth_token.as_deref(),
+        policy.store.auth_token_env.as_deref(),
+    )?;
+    let mtls_ca_pem = match policy.store.mtls_ca_pem.as_deref() {
+        Some(path) => Some(read_pem_path(path)?),
+        None => None,
+    };
+    let mtls_identity_pem = match policy.store.mtls_identity_pem.as_deref() {
+        Some(path) => Some(read_pem_path(path)?),
+        None => None,
+    };
+    Ok(gc_registry::RegistryAuth {
+        bearer_token,
+        mtls_ca_pem,
+        mtls_identity_pem,
+    })
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
+    let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
+    let mtls_ca_pem = match sp.mtls_ca_pem.as_deref() {
+        Some(path) => Some(read_pem_path(path)?),
+        None => None,
+    };
+    let mtls_identity_pem = match sp.mtls_identity_pem.as_deref() {
+        Some(path) => Some(read_pem_path(path)?),
+        None => None,
+    };
+    Ok(gc_registry::RegistryAuth {
+        bearer_token,
+        mtls_ca_pem,
+        mtls_identity_pem,
+    })
+}
+
+#[cfg(not(target_os = "wasi"))]
 fn store_remote_client(
     policy: &CapsPolicy,
     timeout_ms: Option<u64>,
@@ -8223,18 +8512,24 @@ fn store_remote_client(
             return Err(mk_error(error_tok, "core/store/remote-denied", e, Some(op)));
         }
     };
-    let client = match gc_registry::RegistryClient::new(
+    let auth = match store_registry_auth(policy) {
+        Ok(a) => a,
+        Err(e) => {
+            return Err(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let client = match gc_registry::RegistryClient::new_with_auth(
         &base,
         timeout_ms.map(std::time::Duration::from_millis),
+        auth,
     ) {
         Ok(c) => c,
         Err(e) => {
-            return Err(mk_error(
-                error_tok,
-                "core/store/remote-error",
-                format!("{e}"),
-                Some(op),
-            ));
+            let code = match &e {
+                gc_registry::RegistryError::Auth(_) => "core/store/remote-auth",
+                _ => "core/store/remote-error",
+            };
+            return Err(mk_error(error_tok, code, format!("{e}"), Some(op)));
         }
     };
     Ok(Some((client, base)))
@@ -8244,6 +8539,8 @@ fn store_remote_client(
 struct SyncPullStats<'a> {
     pulled: &'a mut u64,
     already: &'a mut u64,
+    store_written_bytes: &'a mut usize,
+    store_max_run_bytes: Option<usize>,
     error_tok: SealId,
     op: &'a str,
     transfer_workers: usize,
@@ -8322,26 +8619,41 @@ fn sync_pull_closure(
                 let bytes = match &dl_results[i] {
                     Ok(b) => b,
                     Err(e) => {
-                        if e.contains("resource-limit:") {
+                        if let gc_registry::RegistryError::Protocol(msg) = e
+                            && msg.contains("resource-limit:")
+                        {
                             return Err(mk_error(
                                 stats.error_tok,
                                 "core/caps/resource-limit",
-                                e.split("resource-limit:")
+                                msg.split("resource-limit:")
                                     .nth(1)
-                                    .unwrap_or(e)
+                                    .unwrap_or(msg)
                                     .trim()
                                     .to_string(),
                                 Some(stats.op),
                             ));
                         }
+                        let code = registry_error_code(e, "core/sync/remote-auth");
                         return Err(mk_error(
                             stats.error_tok,
-                            "core/sync/remote-error",
-                            e.clone(),
+                            code,
+                            format!("{e}"),
                             Some(stats.op),
                         ));
                     }
                 };
+                if let Some(limit) = stats.store_max_run_bytes {
+                    let observed = (*stats.store_written_bytes).saturating_add(bytes.len());
+                    if observed > limit {
+                        return Err(mk_resource_limit_error(
+                            stats.error_tok,
+                            stats.op,
+                            "store artifact bytes",
+                            observed,
+                            limit,
+                        ));
+                    }
+                }
                 let got = store.put_bytes(bytes).map_err(|e| {
                     mk_error(
                         stats.error_tok,
@@ -8358,6 +8670,8 @@ fn sync_pull_closure(
                         Some(stats.op),
                     ));
                 }
+                *stats.store_written_bytes =
+                    (*stats.store_written_bytes).saturating_add(bytes.len());
                 *stats.pulled = stats.pulled.saturating_add(1);
             }
         }
@@ -8432,7 +8746,7 @@ fn sync_parallel_store_get_bytes(
     workers: usize,
     max_artifact_bytes: usize,
     max_batch_bytes: usize,
-) -> Vec<Result<Vec<u8>, String>> {
+) -> Vec<Result<Vec<u8>, gc_registry::RegistryError>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
@@ -8447,13 +8761,13 @@ fn sync_parallel_store_get_bytes(
             .map(|h| {
                 client
                     .store_get_bounded(h, Some(max_artifact_bytes))
-                    .map_err(|e| format!("{e}"))
+                    .map_err(|e| e)
                     .and_then(|b| {
                         total = total.saturating_add(b.len());
                         if total > max_batch_bytes {
-                            return Err(format!(
+                            return Err(gc_registry::RegistryError::Protocol(format!(
                                 "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
-                            ));
+                            )));
                         }
                         Ok(b)
                     })
@@ -8462,7 +8776,7 @@ fn sync_parallel_store_get_bytes(
     }
 
     let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<Vec<u8>, String>>>>> =
+    let out: Arc<Mutex<Vec<Option<Result<Vec<u8>, gc_registry::RegistryError>>>>> =
         Arc::new(Mutex::new((0..hashes.len()).map(|_| None).collect()));
     std::thread::scope(|scope| {
         for _ in 0..workers {
@@ -8477,7 +8791,7 @@ fn sync_parallel_store_get_bytes(
                     }
                     let res = c
                         .store_get_bounded(&hashes[i], Some(max_artifact_bytes))
-                        .map_err(|e| format!("{e}"));
+                        .map_err(|e| e);
                     if let Ok(mut g) = out.lock() {
                         g[i] = Some(res);
                     } else {
@@ -8491,20 +8805,28 @@ fn sync_parallel_store_get_bytes(
         Ok(g) => g,
         Err(_) => {
             return (0..hashes.len())
-                .map(|_| Err("sync get results lock poisoned".to_string()))
+                .map(|_| {
+                    Err(gc_registry::RegistryError::Protocol(
+                        "sync get results lock poisoned".to_string(),
+                    ))
+                })
                 .collect();
         }
     };
     let mut total: usize = 0;
     g.drain(..)
         .map(|x| {
-            x.unwrap_or_else(|| Err("sync get worker produced no result".to_string()))
+            x.unwrap_or_else(|| {
+                Err(gc_registry::RegistryError::Protocol(
+                    "sync get worker produced no result".to_string(),
+                ))
+            })
                 .and_then(|b| {
                     total = total.saturating_add(b.len());
                     if total > max_batch_bytes {
-                        return Err(format!(
+                        return Err(gc_registry::RegistryError::Protocol(format!(
                             "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
-                        ));
+                        )));
                     }
                     Ok(b)
                 })
@@ -8517,7 +8839,7 @@ fn sync_parallel_store_has_chunks(
     client: &gc_registry::RegistryClient,
     chunks: &[Vec<String>],
     workers: usize,
-) -> Vec<Result<BTreeMap<String, bool>, String>> {
+) -> Vec<Result<BTreeMap<String, bool>, gc_registry::RegistryError>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
@@ -8526,14 +8848,11 @@ fn sync_parallel_store_has_chunks(
     }
     let workers = workers.clamp(1, 64).min(chunks.len());
     if workers <= 1 {
-        return chunks
-            .iter()
-            .map(|chunk| client.store_has(chunk).map_err(|e| format!("{e}")))
-            .collect();
+        return chunks.iter().map(|chunk| client.store_has(chunk)).collect();
     }
 
     let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<BTreeMap<String, bool>, String>>>>> =
+    let out: Arc<Mutex<Vec<Option<Result<BTreeMap<String, bool>, gc_registry::RegistryError>>>>> =
         Arc::new(Mutex::new((0..chunks.len()).map(|_| None).collect()));
     std::thread::scope(|scope| {
         for _ in 0..workers {
@@ -8546,7 +8865,7 @@ fn sync_parallel_store_has_chunks(
                     if i >= chunks.len() {
                         break;
                     }
-                    let res = c.store_has(&chunks[i]).map_err(|e| format!("{e}"));
+                    let res = c.store_has(&chunks[i]);
                     if let Ok(mut g) = out.lock() {
                         g[i] = Some(res);
                     } else {
@@ -8560,12 +8879,22 @@ fn sync_parallel_store_has_chunks(
         Ok(g) => g,
         Err(_) => {
             return (0..chunks.len())
-                .map(|_| Err("sync has results lock poisoned".to_string()))
+                .map(|_| {
+                    Err(gc_registry::RegistryError::Protocol(
+                        "sync has results lock poisoned".to_string(),
+                    ))
+                })
                 .collect();
         }
     };
     g.drain(..)
-        .map(|x| x.unwrap_or_else(|| Err("sync has worker produced no result".to_string())))
+        .map(|x| {
+            x.unwrap_or_else(|| {
+                Err(gc_registry::RegistryError::Protocol(
+                    "sync has worker produced no result".to_string(),
+                ))
+            })
+        })
         .collect()
 }
 

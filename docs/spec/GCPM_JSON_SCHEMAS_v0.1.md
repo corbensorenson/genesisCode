@@ -39,6 +39,7 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm doctor` -> `genesis/pkg-doctor-v0.1`
 - `gcpm list` -> `genesis/pkg-list-v0.1`
 - `gcpm info` -> `genesis/pkg-info-v0.1`
+- `gcpm abi` -> `genesis/pkg-abi-v0.1` (schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`)
 - `gcpm snapshot` -> `genesis/pkg-snapshot-v0.1`
 - `gcpm export` -> `genesis/pkg-export-v0.1`
 - `gcpm import` -> `genesis/pkg-import-v0.1`

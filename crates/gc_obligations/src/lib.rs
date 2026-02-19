@@ -13,7 +13,10 @@ use gc_coreform::{
     print_term,
 };
 use gc_effects::{CapsPolicy, EffectLog};
-use gc_kernel::{Apply, Env, EvalCtx, MemLimits, StepLimit, Value, eval_term, value_hash};
+use gc_kernel::{
+    Apply, Env, EvalCtx, MemLimits, StepLimit, Value, compile_module, eval_compiled_module,
+    eval_module, value_hash,
+};
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, load_selfhost_coreform_toolchain_v1_with_mode,
 };
@@ -112,6 +115,7 @@ const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
 const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const OBLIGATION_TEST_WORKERS_ENV: &str = "GENESIS_TEST_WORKERS";
 const OBLIGATION_CACHE_DISABLE_ENV: &str = "GENESIS_OBLIGATION_CACHE_DISABLE";
+const DISABLE_COMPILED_EVAL_ENV: &str = "GENESIS_DISABLE_COMPILED_EVAL";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 
@@ -165,12 +169,52 @@ fn env_truthy(name: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn rust_frontend_compat_enabled() -> bool {
+    cfg!(debug_assertions) && env_truthy(ALLOW_RUST_ENGINE_ENV)
+}
+
+fn non_artifact_bootstrap_modes_allowed() -> bool {
+    cfg!(debug_assertions)
+}
+
+fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {
+    match mode {
+        SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
+        SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
+        SelfhostBootstrapMode::Embedded => "embedded",
+    }
+}
+
+fn enforce_frontend_bootstrap_mode_with_flag(
+    frontend: &CoreformFrontend,
+    context: &str,
+    allow_non_artifact_bootstrap_modes: bool,
+) -> Result<(), ObligationError> {
+    let CoreformFrontend::Selfhost(cfg) = frontend else {
+        return Ok(());
+    };
+    if cfg.bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
+        || allow_non_artifact_bootstrap_modes
+    {
+        return Ok(());
+    }
+    Err(ObligationError::Module(format!(
+        "non-artifact selfhost bootstrap mode `{}` is development-only in {context}; use artifact-only",
+        bootstrap_mode_label(cfg.bootstrap_mode)
+    )))
+}
+
 fn enforce_frontend_allowed_with_flag(
     frontend: &CoreformFrontend,
     context: &str,
     selfhost_only: bool,
     rust_compat_enabled: bool,
 ) -> Result<(), ObligationError> {
+    enforce_frontend_bootstrap_mode_with_flag(
+        frontend,
+        context,
+        non_artifact_bootstrap_modes_allowed(),
+    )?;
     if selfhost_only && matches!(frontend, CoreformFrontend::Rust) {
         return Err(ObligationError::Module(format!(
             "selfhost-only mode forbids Rust frontend in {context}; use CoreformFrontend::Selfhost"
@@ -192,7 +236,7 @@ fn enforce_frontend_allowed(
         frontend,
         context,
         env_truthy(SELFHOST_ONLY_ENV),
-        env_truthy(ALLOW_RUST_ENGINE_ENV),
+        rust_frontend_compat_enabled(),
     )
 }
 
@@ -2629,8 +2673,15 @@ fn obligation_property_tests(
     })
 }
 
+fn is_callable_value(v: &Value) -> bool {
+    matches!(
+        v,
+        Value::Closure { .. } | Value::CompiledClosure { .. } | Value::NativeFn(_)
+    )
+}
+
 fn parse_property_entry(v: &Value, default_cases: u64) -> Result<(Value, u64), ObligationError> {
-    if matches!(v, Value::Closure { .. } | Value::NativeFn(_)) {
+    if is_callable_value(v) {
         return Ok((v.clone(), default_cases));
     }
     let Some(m) = value_as_map(v) else {
@@ -2642,7 +2693,7 @@ fn parse_property_entry(v: &Value, default_cases: u64) -> Result<(Value, u64), O
     let body = m
         .get(&TermOrdKey(Term::Symbol(":body".to_string())))
         .ok_or_else(|| ObligationError::Test("property map missing :body".to_string()))?;
-    if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !is_callable_value(body) {
         return Err(ObligationError::Test(
             "property :body must be callable".to_string(),
         ));
@@ -2680,14 +2731,14 @@ fn seed_for_case(pkg: &str, suite: &str, name: &str, i: u64) -> u64 {
 
 fn parse_test_entry(v: &Value) -> Result<(Value, Option<Term>), ObligationError> {
     // Either a callable directly, or a map { :body callable :expect datum }
-    if matches!(v, Value::Closure { .. } | Value::NativeFn(_)) {
+    if is_callable_value(v) {
         return Ok((v.clone(), None));
     }
     if let Some(m) = value_as_map(v) {
         let body = m
             .get(&TermOrdKey(Term::Symbol(":body".to_string())))
             .ok_or_else(|| ObligationError::Test("test map missing :body".to_string()))?;
-        if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+        if !is_callable_value(body) {
             return Err(ObligationError::Test(
                 "test :body must be callable".to_string(),
             ));
@@ -4909,7 +4960,7 @@ fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, ObligationE
     let body = m
         .get(&TermOrdKey(Term::symbol(":body")))
         .ok_or_else(|| ObligationError::Test("golden entry missing :body".to_string()))?;
-    if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !is_callable_value(body) {
         return Err(ObligationError::Test(
             "golden entry :body must be callable".to_string(),
         ));
@@ -5002,7 +5053,7 @@ fn parse_gfx_golden_entry(v: &Value) -> Result<ParsedGfxGoldenEntry, ObligationE
 }
 
 fn parse_gfx_frame_budget_entry(v: &Value) -> Result<Value, ObligationError> {
-    if matches!(v, Value::Closure { .. } | Value::NativeFn(_)) {
+    if is_callable_value(v) {
         return Ok(v.clone());
     }
     let Some(m) = value_as_map(v) else {
@@ -5013,7 +5064,7 @@ fn parse_gfx_frame_budget_entry(v: &Value) -> Result<Value, ObligationError> {
     let body = m
         .get(&TermOrdKey(Term::symbol(":body")))
         .ok_or_else(|| ObligationError::Test("frame budget entry missing :body".to_string()))?;
-    if !matches!(body, Value::Closure { .. } | Value::NativeFn(_)) {
+    if !is_callable_value(body) {
         return Err(ObligationError::Test(
             "frame budget entry :body must be callable".to_string(),
         ));
@@ -5322,24 +5373,20 @@ fn eval_one_module(
     path: &Path,
 ) -> Result<ModuleEval, ObligationError> {
     let mut env = base.clone();
-    let mut defined: BTreeMap<String, Value> = BTreeMap::new();
+    let def_names: Vec<String> = forms
+        .iter()
+        .filter_map(|form| parse_def(form).map(|(name, _)| name))
+        .collect();
+    eval_module_default(&mut env, ctx, forms).map_err(|e| {
+        ObligationError::Module(format!("{}: module eval failed: {e}", path.display()))
+    })?;
 
-    let mut last = Value::Data(Term::Nil);
-    for form in forms {
-        if let Some((name, expr)) = parse_def(form) {
-            let v = eval_term(ctx, &env, &expr).map_err(|e| {
-                ObligationError::Module(format!("{}: def {name} eval failed: {e}", path.display()))
-            })?;
-            env = Env::with_binding(&env, name.clone(), v.clone());
-            defined.insert(name, v);
-            last = Value::Data(Term::Nil);
-            continue;
+    let mut defined: BTreeMap<String, Value> = BTreeMap::new();
+    for name in def_names {
+        if let Some(value) = env.get(&name) {
+            defined.insert(name, value);
         }
-        last = eval_term(ctx, &env, form).map_err(|e| {
-            ObligationError::Module(format!("{}: expr eval failed: {e}", path.display()))
-        })?;
     }
-    let _ = last;
 
     let meta = match defined.get("::meta") {
         None => None,
@@ -5359,6 +5406,19 @@ fn eval_one_module(
         defined,
         exports,
     })
+}
+
+fn eval_module_default(
+    env: &mut Env,
+    ctx: &mut EvalCtx,
+    forms: &[Term],
+) -> Result<Value, gc_kernel::KernelError> {
+    if !env_truthy(DISABLE_COMPILED_EVAL_ENV)
+        && let Ok(compiled) = compile_module(forms)
+    {
+        return eval_compiled_module(ctx, env, &compiled);
+    }
+    eval_module(ctx, env, forms)
 }
 
 fn parse_def(t: &Term) -> Option<(String, Term)> {
@@ -5861,6 +5921,19 @@ mod tests {
     }
 
     #[test]
+    fn eval_module_default_executes_with_compiled_fast_path() {
+        let forms = parse_module("(def pkg/a::x 41)\n(prim int/add pkg/a::x 1)\n").expect("parse");
+        let mut ctx = EvalCtx::with_step_limit(None);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let value = eval_module_default(&mut env, &mut ctx, &forms).expect("eval");
+        let Value::Data(Term::Int(n)) = value else {
+            panic!("expected int result");
+        };
+        assert_eq!(n, BigInt::from(42));
+    }
+
+    #[test]
     fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
         let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", true, true)
             .expect_err("rust frontend must be blocked in selfhost-only mode");
@@ -5876,6 +5949,19 @@ mod tests {
         assert!(format!("{err}").contains("Rust frontend is disabled by default"));
         enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, true)
             .expect("rust frontend should be permitted when compatibility mode is enabled");
+    }
+
+    #[test]
+    fn non_artifact_bootstrap_mode_is_dev_only_at_library_boundary() {
+        let frontend = CoreformFrontend::Selfhost(SelfhostFrontendConfig {
+            bootstrap_mode: SelfhostBootstrapMode::Embedded,
+            artifact: None,
+        });
+        let err = enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", false)
+            .expect_err("embedded bootstrap should be blocked outside development mode");
+        assert!(format!("{err}").contains("development-only"));
+        enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", true)
+            .expect("embedded bootstrap should be allowed in development mode");
     }
 
     #[test]

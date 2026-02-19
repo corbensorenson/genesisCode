@@ -16,6 +16,7 @@ struct RegistryState {
 #[derive(Debug)]
 struct MemRegistry {
     st: Mutex<RegistryState>,
+    required_bearer: Option<String>,
 }
 
 fn hash_bytes_hex(bytes: &[u8]) -> String {
@@ -26,6 +27,14 @@ impl MemRegistry {
     fn new() -> Self {
         Self {
             st: Mutex::new(RegistryState::default()),
+            required_bearer: None,
+        }
+    }
+
+    fn new_with_required_bearer(token: &str) -> Self {
+        Self {
+            st: Mutex::new(RegistryState::default()),
+            required_bearer: Some(token.to_string()),
         }
     }
 
@@ -48,6 +57,23 @@ impl MemRegistry {
 }
 
 impl gc_registry::InProcRegistry for MemRegistry {
+    fn authorize(
+        &self,
+        auth: &gc_registry::RegistryAuth,
+    ) -> Result<(), gc_registry::RegistryError> {
+        if let Some(expected) = &self.required_bearer {
+            match auth.bearer_token.as_deref() {
+                Some(got) if got == expected => {}
+                _ => {
+                    return Err(gc_registry::RegistryError::Auth(
+                        "missing or invalid bearer token".to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn ping(&self) -> Result<gc_registry::PingResp, gc_registry::RegistryError> {
         Ok(gc_registry::PingResp {
             ok: true,
@@ -243,7 +269,32 @@ fn mk_caps_for_sync(
     refs_path: &std::path::Path,
     remote_allow: &str,
 ) -> CapsPolicy {
-    mk_caps_for_sync_with_limits(store_dir, refs_path, remote_allow, None, None)
+    mk_caps_for_sync_with_limits_and_auth(
+        store_dir,
+        refs_path,
+        remote_allow,
+        None,
+        None,
+        None,
+        None,
+    )
+}
+
+fn mk_caps_for_sync_with_auth_token(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+    auth_token: &str,
+) -> CapsPolicy {
+    mk_caps_for_sync_with_limits_and_auth(
+        store_dir,
+        refs_path,
+        remote_allow,
+        None,
+        None,
+        Some(auth_token),
+        None,
+    )
 }
 
 fn mk_caps_for_sync_with_limits(
@@ -252,6 +303,26 @@ fn mk_caps_for_sync_with_limits(
     remote_allow: &str,
     max_artifact_bytes: Option<usize>,
     max_batch_bytes: Option<usize>,
+) -> CapsPolicy {
+    mk_caps_for_sync_with_limits_and_auth(
+        store_dir,
+        refs_path,
+        remote_allow,
+        max_artifact_bytes,
+        max_batch_bytes,
+        None,
+        None,
+    )
+}
+
+fn mk_caps_for_sync_with_limits_and_auth(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+    max_artifact_bytes: Option<usize>,
+    max_batch_bytes: Option<usize>,
+    auth_token: Option<&str>,
+    auth_token_env: Option<&str>,
 ) -> CapsPolicy {
     let pull_limits = {
         let mut parts: Vec<String> = Vec::new();
@@ -267,6 +338,12 @@ fn mk_caps_for_sync_with_limits(
             format!("\n{}\n", parts.join("\n"))
         }
     };
+    let auth_pull = match (auth_token, auth_token_env) {
+        (Some(token), None) => format!("\nauth_token = \"{token}\""),
+        (None, Some(env)) => format!("\nauth_token_env = \"{env}\""),
+        _ => String::new(),
+    };
+    let auth_push = auth_pull.clone();
     let s = format!(
         r#"
 allow = ["core/sync::push", "core/sync::pull"]
@@ -280,16 +357,20 @@ path = "{refs_path}"
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
 transfer_workers = 4
+{auth_push}
 
 [op."core/sync::pull"]
 remote_allow = ["{remote_allow}"]
 transfer_workers = 4
+{auth_pull}
 {pull_limits}
 "#,
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),
         remote_allow = remote_allow,
-        pull_limits = pull_limits
+        pull_limits = pull_limits,
+        auth_pull = auth_pull,
+        auth_push = auth_push
     );
     CapsPolicy::from_toml_str(&s).expect("caps")
 }
@@ -1165,6 +1246,88 @@ fn sync_remote_allowlist_is_enforced() {
     let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
     let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
     assert!(is_sealed_error(&ctx, &r.value, "core/sync/remote-denied"));
+}
+
+#[test]
+fn sync_remote_auth_is_enforced_when_registry_requires_bearer() {
+    let reg = Arc::new(MemRegistry::new_with_required_bearer("secret-token"));
+    gc_registry::register_inproc("t_sync_auth_required", reg).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_required");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/sync/remote-auth"));
+}
+
+#[test]
+fn sync_remote_auth_accepts_valid_bearer_token() {
+    let reg = Arc::new(MemRegistry::new_with_required_bearer("secret-token"));
+    gc_registry::register_inproc("t_sync_auth_ok", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_ok");
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = reg.put_artifact(print_term(&module_art).as_bytes());
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = reg.put_artifact(print_term(&snap_t).as_bytes());
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = reg.put_artifact(print_term(&patch_t).as_bytes());
+    let ev_t = parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let ev_hex = reg.put_artifact(print_term(&ev_t).as_bytes());
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &ev_hex);
+    let commit_hex = reg.put_artifact(print_term(&commit_t).as_bytes());
+    {
+        let mut g = reg.st.lock().unwrap();
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
+    }
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps =
+        mk_caps_for_sync_with_auth_token(&store_dir, &refs_path, &remote_allow, "secret-token");
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "pull returned error: {}",
+        r.value.debug_repr()
+    );
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+    assert_eq!(refs.get("refs/heads/main").unwrap(), Some(commit_hex));
 }
 
 #[test]

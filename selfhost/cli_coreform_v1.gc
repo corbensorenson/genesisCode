@@ -86,6 +86,44 @@
           ((core/error::make2 "core/type-error") "core/cli::verify-request expects :pkg string")))
       ((core/error::make2 "core/type-error") "core/cli::verify-request expects map"))))
 
+(def core/cli::policy-list-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let ((policies ((core/map::get req) (quote :policies))))
+        (if (core/cli::str? policies)
+          {:policies policies}
+          ((core/error::make2 "core/type-error")
+            "core/cli::policy-list-request expects :policies string")))
+      ((core/error::make2 "core/type-error") "core/cli::policy-list-request expects map"))))
+
+(def core/cli::policy-show-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((name-or-hash ((core/map::get req) (quote :name-or-hash)))
+          (policies ((core/map::get req) (quote :policies)))
+          (store ((core/map::get req) (quote :store))))
+        (if (if (core/cli::str? name-or-hash) (core/cli::str? policies) false)
+          (if (core/cli::str? store)
+            {:name-or-hash name-or-hash :policies policies :store store}
+            ((core/error::make2 "core/type-error")
+              "core/cli::policy-show-request expects :store string"))
+          ((core/error::make2 "core/type-error")
+            "core/cli::policy-show-request expects :name-or-hash and :policies strings")))
+      ((core/error::make2 "core/type-error") "core/cli::policy-show-request expects map"))))
+
+(def core/cli::policy-set-default-request
+  (fn (req)
+    (if (core/cli::map? req)
+      (let
+        ((name-or-hash ((core/map::get req) (quote :name-or-hash)))
+          (policies ((core/map::get req) (quote :policies))))
+        (if (if (core/cli::str? name-or-hash) (core/cli::str? policies) false)
+          {:name-or-hash name-or-hash :policies policies}
+          ((core/error::make2 "core/type-error")
+            "core/cli::policy-set-default-request expects :name-or-hash and :policies strings")))
+      ((core/error::make2 "core/type-error") "core/cli::policy-set-default-request expects map"))))
+
 (def core/cli::selfhost-artifact-request
   (fn (req)
     (if (core/cli::map? req)

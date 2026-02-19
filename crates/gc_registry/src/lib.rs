@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub trait InProcRegistry: Send + Sync {
+    fn authorize(&self, _auth: &RegistryAuth) -> Result<(), RegistryError> {
+        Ok(())
+    }
     fn ping(&self) -> Result<PingResp, RegistryError>;
     fn store_has(&self, hashes: &[String]) -> Result<BTreeMap<String, bool>, RegistryError>;
     fn store_get(&self, hash: &str) -> Result<Vec<u8>, RegistryError>;
@@ -27,6 +30,9 @@ pub trait InProcRegistry: Send + Sync {
 pub enum RegistryError {
     #[error("remote spec error: {0}")]
     RemoteSpec(String),
+
+    #[error("auth error: {0}")]
+    Auth(String),
 
     #[error("http error: {0}")]
     Http(String),
@@ -64,6 +70,7 @@ pub fn unregister_inproc(id: &str) -> Result<(), RegistryError> {
 pub struct RegistryClient {
     base: Url,
     kind: RegistryKind,
+    auth: RegistryAuth,
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +78,37 @@ enum RegistryKind {
     Http { http: Client },
     InProc { id: String },
     File { root: PathBuf },
+}
+
+#[derive(Clone, Default)]
+pub struct RegistryAuth {
+    pub bearer_token: Option<String>,
+    pub mtls_ca_pem: Option<Vec<u8>>,
+    pub mtls_identity_pem: Option<Vec<u8>>,
+}
+
+impl std::fmt::Debug for RegistryAuth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RegistryAuth")
+            .field(
+                "bearer_token",
+                &self.bearer_token.as_ref().map(|_| "<redacted>"),
+            )
+            .field("mtls_ca_pem", &self.mtls_ca_pem.as_ref().map(|b| b.len()))
+            .field(
+                "mtls_identity_pem",
+                &self.mtls_identity_pem.as_ref().map(|b| b.len()),
+            )
+            .finish()
+    }
+}
+
+impl RegistryAuth {
+    fn has_any(&self) -> bool {
+        self.bearer_token.is_some()
+            || self.mtls_ca_pem.is_some()
+            || self.mtls_identity_pem.is_some()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -126,12 +164,31 @@ pub struct RefsSetResp {
 
 impl RegistryClient {
     pub fn new(remote: &str, timeout: Option<Duration>) -> Result<Self, RegistryError> {
+        Self::new_with_auth(remote, timeout, RegistryAuth::default())
+    }
+
+    pub fn new_with_auth(
+        remote: &str,
+        timeout: Option<Duration>,
+        auth: RegistryAuth,
+    ) -> Result<Self, RegistryError> {
         let base = normalize_remote_base(remote)?;
         let kind = match base.scheme() {
             "https" | "http" => {
                 let mut b = Client::builder();
                 if let Some(t) = timeout {
                     b = b.timeout(t);
+                }
+                if let Some(ca_pem) = auth.mtls_ca_pem.as_ref() {
+                    let cert = reqwest::Certificate::from_pem(ca_pem)
+                        .map_err(|e| RegistryError::Auth(format!("invalid mTLS CA PEM: {e}")))?;
+                    b = b.add_root_certificate(cert);
+                }
+                if let Some(identity_pem) = auth.mtls_identity_pem.as_ref() {
+                    let identity = reqwest::Identity::from_pem(identity_pem).map_err(|e| {
+                        RegistryError::Auth(format!("invalid mTLS identity PEM: {e}"))
+                    })?;
+                    b = b.identity(identity);
                 }
                 let http = b
                     .build()
@@ -156,7 +213,7 @@ impl RegistryClient {
                 )));
             }
         };
-        Ok(Self { base, kind })
+        Ok(Self { base, kind, auth })
     }
 
     pub fn base_url(&self) -> &Url {
@@ -169,9 +226,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.ping();
         }
         if let RegistryKind::File { .. } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             return Ok(PingResp {
                 ok: true,
                 version: "0.1".to_string(),
@@ -184,12 +247,11 @@ impl RegistryClient {
             .join("ping")
             .map_err(|e| RegistryError::RemoteSpec(format!("join ping: {e}")))?;
         let r = self
-            .http()
-            .get(u)
+            .apply_auth(self.http().get(u))
             .send()
             .map_err(|e| RegistryError::Http(format!("ping: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!("ping: status {}", r.status())));
+            return Err(status_error("ping", r.status()));
         }
         r.json::<PingResp>()
             .map_err(|e| RegistryError::Protocol(format!("ping json: {e}")))
@@ -201,9 +263,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.store_has(hashes);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let mut out = BTreeMap::new();
             for h in hashes {
@@ -216,16 +284,12 @@ impl RegistryClient {
             .join("store/has")
             .map_err(|e| RegistryError::RemoteSpec(format!("join store/has: {e}")))?;
         let r = self
-            .http()
-            .post(u)
+            .apply_auth(self.http().post(u))
             .json(&StoreHasReq { hashes })
             .send()
             .map_err(|e| RegistryError::Http(format!("store/has: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "store/has: status {}",
-                r.status()
-            )));
+            return Err(status_error("store/has", r.status()));
         }
         let resp = r
             .json::<StoreHasResp>()
@@ -247,11 +311,17 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             let bytes = reg.store_get(hash)?;
             enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
             return Ok(bytes);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let p = file_store_path(root, hash);
             if !p.exists() {
@@ -272,15 +342,11 @@ impl RegistryClient {
             .join(&format!("store/get/{hash}"))
             .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
         let r = self
-            .http()
-            .get(u)
+            .apply_auth(self.http().get(u))
             .send()
             .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "store/get: status {}",
-                r.status()
-            )));
+            return Err(status_error("store/get", r.status()));
         }
         read_response_bytes_limited("store/get", r, max_bytes)
     }
@@ -299,6 +365,7 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return match reg.store_get(hash) {
                 Ok(b) => {
                     enforce_body_limit("store/get", max_bytes, b.len() as u64)?;
@@ -309,6 +376,11 @@ impl RegistryClient {
             };
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let p = file_store_path(root, hash);
             if !p.exists() {
@@ -329,18 +401,14 @@ impl RegistryClient {
             .join(&format!("store/get/{hash}"))
             .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
         let r = self
-            .http()
-            .get(u)
+            .apply_auth(self.http().get(u))
             .send()
             .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
         if r.status() == StatusCode::NOT_FOUND {
             return Ok(None);
         }
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "store/get: status {}",
-                r.status()
-            )));
+            return Err(status_error("store/get", r.status()));
         }
         read_response_bytes_limited("store/get", r, max_bytes).map(Some)
     }
@@ -351,9 +419,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.store_put(hash, bytes);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let got = blake3::hash(bytes).to_hex().to_string();
             if got != hash {
@@ -378,16 +452,12 @@ impl RegistryClient {
             .join(&format!("store/put/{hash}"))
             .map_err(|e| RegistryError::RemoteSpec(format!("join store/put: {e}")))?;
         let r = self
-            .http()
-            .put(u)
+            .apply_auth(self.http().put(u))
             .body(bytes.to_vec())
             .send()
             .map_err(|e| RegistryError::Http(format!("store/put: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "store/put: status {}",
-                r.status()
-            )));
+            return Err(status_error("store/put", r.status()));
         }
         Ok(())
     }
@@ -398,9 +468,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.refs_get(name);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let _lk = file_refs_lock(root)?;
             let refs = file_load_refs_locked(root)?;
@@ -412,15 +488,11 @@ impl RegistryClient {
             .map_err(|e| RegistryError::RemoteSpec(format!("join refs/get: {e}")))?;
         u.query_pairs_mut().append_pair("name", name);
         let r = self
-            .http()
-            .get(u)
+            .apply_auth(self.http().get(u))
             .send()
             .map_err(|e| RegistryError::Http(format!("refs/get: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "refs/get: status {}",
-                r.status()
-            )));
+            return Err(status_error("refs/get", r.status()));
         }
         let resp = r
             .json::<RefsGetResp>()
@@ -434,9 +506,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.refs_list(prefix);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let _lk = file_refs_lock(root)?;
             let refs = file_load_refs_locked(root)?;
@@ -463,15 +541,11 @@ impl RegistryClient {
             u.query_pairs_mut().append_pair("prefix", p);
         }
         let r = self
-            .http()
-            .get(u)
+            .apply_auth(self.http().get(u))
             .send()
             .map_err(|e| RegistryError::Http(format!("refs/list: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "refs/list: status {}",
-                r.status()
-            )));
+            return Err(status_error("refs/list", r.status()));
         }
         let resp = r
             .json::<RefsListResp>()
@@ -485,9 +559,15 @@ impl RegistryClient {
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
+            reg.authorize(&self.auth)?;
             return reg.refs_set(req);
         }
         if let RegistryKind::File { root } = &self.kind {
+            if self.auth.has_any() {
+                return Err(RegistryError::Auth(
+                    "file registry does not support transport auth".to_string(),
+                ));
+            }
             file_ensure_dirs(root)?;
             let mut lk = file_refs_lock(root)?;
             let mut refs = file_load_refs_locked(root)?;
@@ -514,16 +594,12 @@ impl RegistryClient {
             .join("refs/set")
             .map_err(|e| RegistryError::RemoteSpec(format!("join refs/set: {e}")))?;
         let r = self
-            .http()
-            .post(u)
+            .apply_auth(self.http().post(u))
             .json(req)
             .send()
             .map_err(|e| RegistryError::Http(format!("refs/set: {e}")))?;
         if !r.status().is_success() {
-            return Err(RegistryError::Http(format!(
-                "refs/set: status {}",
-                r.status()
-            )));
+            return Err(status_error("refs/set", r.status()));
         }
         r.json::<RefsSetResp>()
             .map_err(|e| RegistryError::Protocol(format!("refs/set json: {e}")))
@@ -536,6 +612,25 @@ impl RegistryClient {
                 unreachable!("http client requested for non-http registry")
             }
         }
+    }
+
+    fn apply_auth(
+        &self,
+        req: reqwest::blocking::RequestBuilder,
+    ) -> reqwest::blocking::RequestBuilder {
+        if let Some(token) = &self.auth.bearer_token {
+            req.bearer_auth(token)
+        } else {
+            req
+        }
+    }
+}
+
+fn status_error(op: &str, status: StatusCode) -> RegistryError {
+    if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+        RegistryError::Auth(format!("{op}: status {status}"))
+    } else {
+        RegistryError::Http(format!("{op}: status {status}"))
     }
 }
 

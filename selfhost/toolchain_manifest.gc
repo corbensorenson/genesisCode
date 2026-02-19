@@ -34,6 +34,9 @@
     core/cli::pkg-update-program
     core/cli::pkg-verify-program
     core/cli::keygen-request
+    core/cli::policy-list-request
+    core/cli::policy-show-request
+    core/cli::policy-set-default-request
     core/cli::selfhost-artifact-request
     core/cli::sign-request
     core/cli::transparency-verify-request

@@ -303,6 +303,7 @@ fn io_fs_read_enforces_max_bytes_budget() {
     let td = tempfile::tempdir().unwrap();
     let sandbox = td.path().join("sandbox");
     std::fs::create_dir_all(&sandbox).unwrap();
+    let sandbox_canon = std::fs::canonicalize(&sandbox).unwrap();
     std::fs::write(sandbox.join("big.bin"), vec![7u8; 4096]).unwrap();
 
     let caps_path = td.path().join("caps.toml");
@@ -316,7 +317,144 @@ allow = ["io/fs::read"]
 base_dir = "{}"
 max_bytes = 256
 "#,
-            sandbox.display()
+            sandbox_canon.display()
+        ),
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let src = r#"
+      (def prog
+        (core/effect::perform
+          'io/fs::read
+          {:path "big.bin"}
+          (fn (r) (core/effect::pure r))))
+      prog
+    "#;
+    let forms = parse_module(src).unwrap();
+    let mh = hash_module(&forms);
+    let (mut ctx, prog) = eval_prog(&forms);
+    let r = run(&mut ctx, &pol, prog, mh, "gc_effects-test".to_string()).unwrap();
+
+    assert_eq!(
+        sealed_error_code(&r.value).as_deref(),
+        Some("core/caps/resource-limit")
+    );
+}
+
+#[test]
+fn store_put_enforces_max_bytes_budget() {
+    let td = tempfile::tempdir().unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::put"]
+
+[store]
+dir = "./.genesis/store"
+
+[op."core/store::put"]
+max_bytes = 256
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let large_payload = "x".repeat(2048);
+    let put_src = format!(
+        r#"
+      (def prog
+        (core/effect::perform
+          'core/store::put
+          {{:artifact (quote {{:blob "{large_payload}"}})}}
+          (fn (r) (core/effect::pure r))))
+      prog
+    "#
+    );
+    let forms = parse_module(&put_src).unwrap();
+    let mh = hash_module(&forms);
+    let (mut ctx, prog) = eval_prog(&forms);
+    let r = run(&mut ctx, &pol, prog, mh, "gc_effects-test".to_string()).unwrap();
+
+    assert_eq!(
+        sealed_error_code(&r.value).as_deref(),
+        Some("core/caps/resource-limit")
+    );
+}
+
+#[test]
+fn store_put_enforces_cumulative_store_run_budget() {
+    let td = tempfile::tempdir().unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::put"]
+
+[store]
+dir = "./.genesis/store"
+max_run_bytes = 5000
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let blob1 = "a".repeat(3000);
+    let blob2 = "b".repeat(3000);
+    let src = format!(
+        r#"
+      (def prog
+        (core/effect::perform
+          'core/store::put
+          {{:artifact (quote {{:blob "{blob1}"}})}}
+          (fn (_r1)
+            (core/effect::perform
+              'core/store::put
+              {{:artifact (quote {{:blob "{blob2}"}})}}
+              (fn (r2) (core/effect::pure r2))))))
+      prog
+    "#
+    );
+    let forms = parse_module(&src).unwrap();
+    let mh = hash_module(&forms);
+    let (mut ctx, prog) = eval_prog(&forms);
+    let r = run(&mut ctx, &pol, prog, mh, "gc_effects-test".to_string()).unwrap();
+
+    assert_eq!(
+        sealed_error_code(&r.value).as_deref(),
+        Some("core/caps/resource-limit")
+    );
+}
+
+#[test]
+fn log_externalization_enforces_cumulative_log_artifact_budget() {
+    let td = tempfile::tempdir().unwrap();
+    let sandbox = td.path().join("sandbox");
+    std::fs::create_dir_all(&sandbox).unwrap();
+    let sandbox_canon = std::fs::canonicalize(&sandbox).unwrap();
+    std::fs::write(sandbox.join("big.bin"), vec![7u8; 4096]).unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        format!(
+            r#"
+allow = ["io/fs::read"]
+
+[log]
+inline_max_bytes = 64
+max_artifact_bytes_per_run = 32
+
+[store]
+dir = "./.genesis/store"
+
+[op."io/fs::read"]
+base_dir = "{}"
+"#,
+            sandbox_canon.display()
         ),
     )
     .unwrap();

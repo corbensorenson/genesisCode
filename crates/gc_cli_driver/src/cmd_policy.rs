@@ -1,8 +1,125 @@
 use super::*;
 
+fn planned_policy_list_args(cli: &Cli, policies: &Path) -> Result<PathBuf, CliError> {
+    match resolved_coreform_frontend(cli)? {
+        gc_obligations::CoreformFrontend::Rust => Ok(policies.to_path_buf()),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [(
+                    TermOrdKey(Term::symbol(":policies")),
+                    Term::Str(policies.display().to_string()),
+                )]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(
+                cli,
+                "core/cli::policy-list-request",
+                req,
+                "policy list",
+            )?;
+            Ok(PathBuf::from(planned_required_str(
+                &planned,
+                ":policies",
+                "policy list",
+            )?))
+        }
+    }
+}
+
+fn planned_policy_show_args(
+    cli: &Cli,
+    name_or_hash: &str,
+    policies: &Path,
+    store: &Path,
+) -> Result<(String, PathBuf, PathBuf), CliError> {
+    match resolved_coreform_frontend(cli)? {
+        gc_obligations::CoreformFrontend::Rust => Ok((
+            name_or_hash.to_string(),
+            policies.to_path_buf(),
+            store.to_path_buf(),
+        )),
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":name-or-hash")),
+                        Term::Str(name_or_hash.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":policies")),
+                        Term::Str(policies.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":store")),
+                        Term::Str(store.display().to_string()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(
+                cli,
+                "core/cli::policy-show-request",
+                req,
+                "policy show",
+            )?;
+            Ok((
+                planned_required_str(&planned, ":name-or-hash", "policy show")?,
+                PathBuf::from(planned_required_str(&planned, ":policies", "policy show")?),
+                PathBuf::from(planned_required_str(&planned, ":store", "policy show")?),
+            ))
+        }
+    }
+}
+
+fn planned_policy_set_default_args(
+    cli: &Cli,
+    name_or_hash: &str,
+    policies: &Path,
+) -> Result<(String, PathBuf), CliError> {
+    match resolved_coreform_frontend(cli)? {
+        gc_obligations::CoreformFrontend::Rust => {
+            Ok((name_or_hash.to_string(), policies.to_path_buf()))
+        }
+        gc_obligations::CoreformFrontend::Selfhost(_) => {
+            let req = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":name-or-hash")),
+                        Term::Str(name_or_hash.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":policies")),
+                        Term::Str(policies.display().to_string()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let planned = selfhost_plan_request_map(
+                cli,
+                "core/cli::policy-set-default-request",
+                req,
+                "policy set-default",
+            )?;
+            Ok((
+                planned_required_str(&planned, ":name-or-hash", "policy set-default")?,
+                PathBuf::from(planned_required_str(
+                    &planned,
+                    ":policies",
+                    "policy set-default",
+                )?),
+            ))
+        }
+    }
+}
+
 pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError> {
     match cmd {
         PolicyCmd::List { policies } => {
+            let policies_buf = planned_policy_list_args(cli, policies)?;
+            let policies = policies_buf.as_path();
             let cfg = load_policies_config(policies)?;
             let default_resolved = cfg
                 .default
@@ -53,8 +170,12 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             policies,
             store,
         } => {
+            let (name_or_hash, policies_buf, store_buf) =
+                planned_policy_show_args(cli, name_or_hash, policies, store)?;
+            let policies = policies_buf.as_path();
+            let store = store_buf.as_path();
             let cfg = load_policies_config(policies)?;
-            let (resolved, hash) = resolve_policy_selector(name_or_hash, &cfg)
+            let (resolved, hash) = resolve_policy_selector(&name_or_hash, &cfg)
                 .map_err(|e| cli_err(EX_VERIFY, "policy/resolve", e))?;
             let p = store.join(&hash);
             let bytes = std::fs::read(&p)
@@ -106,8 +227,11 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             name_or_hash,
             policies,
         } => {
+            let (name_or_hash, policies_buf) =
+                planned_policy_set_default_args(cli, name_or_hash, policies)?;
+            let policies = policies_buf.as_path();
             let mut cfg = load_policies_config(policies)?;
-            if is_hex64(name_or_hash) {
+            if is_hex64(&name_or_hash) {
                 cfg.default = Some(name_or_hash.to_ascii_lowercase());
             } else {
                 let alias = name_or_hash.trim();

@@ -196,6 +196,49 @@ fn selfhost_only_accepts_sign_transparency_verify_command_families() {
 }
 
 #[test]
+fn selfhost_only_accepts_policy_command_family() {
+    let td = tempdir().unwrap();
+    let policies = td.path().join("policies.toml");
+
+    cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args(["--selfhost-only", "policy", "list", "--policies"])
+        .arg(&policies)
+        .assert()
+        .success();
+
+    let show_out = cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args([
+            "--selfhost-only",
+            "policy",
+            "show",
+            "policy:missing",
+            "--policies",
+        ])
+        .arg(&policies)
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&show_out.stderr);
+    assert!(!show_out.status.success());
+
+    let set_default_out = cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .args([
+            "--selfhost-only",
+            "policy",
+            "set-default",
+            "policy:missing",
+            "--policies",
+        ])
+        .arg(&policies)
+        .output()
+        .unwrap();
+    assert_not_unsupported_selfhost_only(&set_default_out.stderr);
+    assert!(!set_default_out.status.success());
+}
+
+#[test]
 fn selfhost_only_accepts_store_refs_pkg_and_gc() {
     let td = tempdir().unwrap();
     let caps = write_effect_caps(

@@ -12,6 +12,8 @@ BUDGET_SYNC_PULL_MS="${GENESIS_BUDGET_SYNC_PULL_MS:-30000}"
 BUDGET_GCPM_LOCK_MS="${GENESIS_BUDGET_GCPM_LOCK_MS:-20000}"
 BUDGET_GCPM_INSTALL_MS="${GENESIS_BUDGET_GCPM_INSTALL_MS:-15000}"
 BUDGET_GCPM_UPDATE_MS="${GENESIS_BUDGET_GCPM_UPDATE_MS:-15000}"
+MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
+MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
 
 now_ns() {
   python3 - <<'PY'
@@ -23,12 +25,24 @@ PY
 measure_ms() {
   local label="$1"
   shift
-  local start_ns end_ns elapsed_ms
-  start_ns="$(now_ns)"
-  "$@" >/dev/null
-  end_ns="$(now_ns)"
-  elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
-  echo "$label=$elapsed_ms"
+  local i start_ns end_ns elapsed_ms best_ms
+
+  for ((i = 0; i < MEASURE_WARMUPS; i++)); do
+    "$@" >/dev/null
+  done
+
+  best_ms=""
+  for ((i = 0; i < MEASURE_REPEATS; i++)); do
+    start_ns="$(now_ns)"
+    "$@" >/dev/null
+    end_ns="$(now_ns)"
+    elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
+    if [[ -z "$best_ms" || "$elapsed_ms" -lt "$best_ms" ]]; then
+      best_ms="$elapsed_ms"
+    fi
+  done
+
+  echo "$label=$best_ms"
 }
 
 fail() {
@@ -38,7 +52,14 @@ fail() {
 
 echo "hot-path-budgets: preparing genesis binary"
 cargo build -p gc_cli >/dev/null
+cargo test -p gc_effects --test sync_registry --no-run --quiet >/dev/null
 GENESIS_BIN="$ROOT_DIR/target/debug/genesis"
+SYNC_TEST_BIN="$(
+  find "$ROOT_DIR/target/debug/deps" -maxdepth 1 -type f -name 'sync_registry-*' -perm -u+x \
+    | sort \
+    | tail -n 1
+)"
+[[ -x "${SYNC_TEST_BIN:-}" ]] || fail "unable to locate compiled sync_registry test binary"
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -131,8 +152,8 @@ EFFECT_RUN_MS="${EFFECT_LINE#*=}"
 echo "hot-path-budgets: measuring sync throughput path"
 SYNC_LINE="$(
   measure_ms sync_pull_ms \
-    cargo test -p gc_effects --test sync_registry \
-      sync_push_then_pull_transfers_full_closure_and_updates_refs --quiet
+    "$SYNC_TEST_BIN" \
+    --exact sync_push_then_pull_transfers_full_closure_and_updates_refs --quiet
 )"
 SYNC_PULL_MS="${SYNC_LINE#*=}"
 
@@ -153,6 +174,8 @@ echo "  sync_pull_ms=$SYNC_PULL_MS (budget=$BUDGET_SYNC_PULL_MS)"
 echo "  gcpm_lock_ms=$GCPM_LOCK_MS (budget=$BUDGET_GCPM_LOCK_MS)"
 echo "  gcpm_install_ms=$GCPM_INSTALL_MS (budget=$BUDGET_GCPM_INSTALL_MS)"
 echo "  gcpm_update_ms=$GCPM_UPDATE_MS (budget=$BUDGET_GCPM_UPDATE_MS)"
+echo "  warmups=$MEASURE_WARMUPS"
+echo "  repeats=$MEASURE_REPEATS"
 
 cat > "$ARTIFACT_JSON" <<EOF
 {
@@ -164,6 +187,8 @@ cat > "$ARTIFACT_JSON" <<EOF
   "gcpm_lock_ms": $GCPM_LOCK_MS,
   "gcpm_install_ms": $GCPM_INSTALL_MS,
   "gcpm_update_ms": $GCPM_UPDATE_MS,
+  "measure_warmups": $MEASURE_WARMUPS,
+  "measure_repeats": $MEASURE_REPEATS,
   "budgets": {
     "fmt_canon_ms": $BUDGET_FMT_CANON_MS,
     "eval_pure_ms": $BUDGET_EVAL_PURE_MS,

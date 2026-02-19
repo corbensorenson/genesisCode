@@ -19,19 +19,30 @@ allow = ["sys/time::now", "io/fs::read"]
 Supported keys:
 - `dir` (string): directory used for content-addressed artifacts for `core/store::*`.
   - If omitted, defaults to `<caps.toml directory>/.genesis/store`.
+- `max_run_bytes` (int, optional): cumulative byte budget for store writes during a single `genesis run`.
+  - Applies to `core/store::put`, remote cache writes from `core/store::get`, sync/gpk ingest, and log artifact externalization.
+  - Exceeding this budget returns sealed ERROR `core/caps/resource-limit`.
 - `remote` (string, optional): remote registry base used as a read-through source for `core/store::{has,get}`.
   - If set, the runner may query/download artifacts from the remote when they are missing locally.
   - Remote normalization and allowlisting are enforced (see below).
 - `remote_allow` (array of strings, optional): allowlist of normalized remote base URL prefixes permitted for `store.remote`.
   - If `store.remote` is set, `store.remote_allow` must be non-empty or the remote is denied.
 - `allow_http` (bool, optional): if true, `http://` remotes are permitted (default false).
+- `auth_token` (string, optional): bearer token for remote registry auth.
+- `auth_token_env` (string, optional): env var name containing bearer token (mutually exclusive with `auth_token`).
+- `mtls_ca_pem` (string, optional): PEM file path for additional trusted CA roots.
+- `mtls_identity_pem` (string, optional): PEM file path containing client cert+key for mTLS.
 
 Example:
 ```toml
 [store]
 dir = "./.genesis/store"
+max_run_bytes = 16777216
 remote = "gen://registry.example.com/registry"
 remote_allow = ["https://registry.example.com/registry/v1/"]
+auth_token_env = "GENESIS_REGISTRY_TOKEN"
+mtls_ca_pem = "./certs/registry-ca.pem"
+mtls_identity_pem = "./certs/client-identity.pem"
 ```
 
 Remote normalization and matching:
@@ -58,12 +69,15 @@ Supported keys:
   - If a response exceeds this limit, the runner stores the response as a content-addressed artifact and records an artifact reference in the log.
 - `store_dir` (string): directory used for content-addressed artifacts referenced by logs.
   - If omitted and `inline_max_bytes` is set, `store_dir` defaults to `<caps.toml directory>/.genesis/store`.
+- `max_artifact_bytes_per_run` (int, optional): cumulative byte budget for log response artifacts externalized to store in a single run.
+  - Exceeding this budget returns sealed ERROR `core/caps/resource-limit`.
 
 Example:
 ```toml
 [log]
 inline_max_bytes = 1048576
 store_dir = "./.genesis/store"
+max_artifact_bytes_per_run = 8388608
 ```
 
 ## Per-Op Configuration
@@ -75,8 +89,15 @@ Supported keys:
 - `create_dirs` (bool): if true, `io/fs::write` may create parent directories.
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
+- `max_bytes` (int): optional per-op byte budget for payload-heavy operations.
+  - `core/store::put`: maximum artifact byte size accepted for each put request.
+  - `core/store::get` and `io/fs::read`: maximum bytes allowed in the fetched/read payload.
 - `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg::publish` (see below).
 - `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg::publish` (default is false).
+- `auth_token` (string): optional bearer token for remote auth.
+- `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
+- `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
+- `mtls_identity_pem` (string): optional PEM path for client cert+key.
 
 Note: the effect log (`.gclog`) does not record `base_dir` values.
 
@@ -110,12 +131,19 @@ allow = ["core/sync::pull", "core/sync::push", "core/pkg::publish"]
 
 [op."core/sync::pull"]
 remote_allow = ["https://registry.example.com/v1/"]
+auth_token_env = "GENESIS_REGISTRY_TOKEN"
+mtls_ca_pem = "./certs/registry-ca.pem"
+mtls_identity_pem = "./certs/client-identity.pem"
 
 [op."core/sync::push"]
 remote_allow = ["https://registry.example.com/v1/"]
+auth_token_env = "GENESIS_REGISTRY_TOKEN"
+mtls_ca_pem = "./certs/registry-ca.pem"
+mtls_identity_pem = "./certs/client-identity.pem"
 
 [op."core/pkg::publish"]
 remote_allow = ["https://registry.example.com/v1/"]
+auth_token_env = "GENESIS_REGISTRY_TOKEN"
 ```
 
 ### `base_dir` For Non-`io/fs::*` Ops

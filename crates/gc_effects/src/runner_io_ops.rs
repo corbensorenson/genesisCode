@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey};
@@ -117,9 +117,10 @@ pub(crate) fn effective_base_dir(pol: Option<&OpPolicy>) -> Result<PathBuf, Effe
     if let Some(pol) = pol
         && let Some(base) = &pol.base_dir
     {
-        return Ok(base.clone());
+        return Ok(std::fs::canonicalize(base).unwrap_or_else(|_| base.clone()));
     }
-    Ok(std::env::current_dir()?)
+    let cwd = std::env::current_dir()?;
+    Ok(std::fs::canonicalize(&cwd).unwrap_or(cwd))
 }
 
 pub(crate) fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf, EffectsError> {
@@ -185,6 +186,33 @@ pub(crate) fn atomic_write_text(path: &Path, bytes: &[u8]) -> Result<(), std::io
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(&tmp, path)?;
     Ok(())
+}
+
+pub(crate) fn write_file_no_follow(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(path)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        if path.exists() {
+            let md = std::fs::symlink_metadata(path)?;
+            if md.file_type().is_symlink() {
+                return Err(std::io::Error::other("refusing to write through symlink"));
+            }
+        }
+        std::fs::write(path, bytes)
+    }
 }
 
 pub(crate) fn sandbox_path_allow_missing(

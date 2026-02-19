@@ -25,6 +25,9 @@ mod cmd_refs;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
+mod diagnostics;
+mod kernel_exec;
+mod pkg_abi;
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
@@ -48,6 +51,8 @@ use cmd_vcs::{
     mk_store_get_program, mk_store_has_program, mk_store_put_program, normalize_pkg_add_strategy,
     parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
 };
+use diagnostics::annotate_envelope;
+use kernel_exec::eval_module_default;
 use program_builders::*;
 
 const EX_OK: u8 = 0;
@@ -745,6 +750,13 @@ enum PkgCmd {
         lock: PathBuf,
     },
 
+    /// Export deterministic package ABI/introspection index for agent planning.
+    Abi {
+        /// Path to package.toml (relative to the capability base_dir).
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+    },
+
     /// Build and store a `:vcs/snapshot` for a `package.toml`.
     Snapshot {
         /// Path to package.toml (relative to the capability base_dir).
@@ -1157,6 +1169,7 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
                     error: Some(e.json),
                 })
                 .expect("json serialization");
+                let out = annotate_envelope(out, e.exit_code);
                 println!("{}", json_canonical_string(&out));
             } else {
                 eprintln!("{}", e.json.message);
@@ -1234,7 +1247,7 @@ struct CmdOut {
 
 fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
     enforce_selfhost_only_cmd(cli, flavor)?;
-    match &cli.cmd {
+    let mut out = match &cli.cmd {
         Cmd::Fmt {
             file,
             check,
@@ -1335,7 +1348,9 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps, log.as_deref(), cmd),
         Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps.as_deref(), log.as_deref(), cmd),
-    }
+    }?;
+    out.json = annotate_envelope(out.json, out.exit_code);
+    Ok(out)
 }
 
 fn resolved_step_limit(cli: &Cli) -> StepLimit {
@@ -1394,9 +1409,47 @@ fn selfhost_only_enabled(cli: &Cli) -> bool {
 }
 
 fn rust_engine_compat_enabled() -> bool {
-    std::env::var(ALLOW_RUST_ENGINE_ENV)
-        .map(|v| parse_truthy_env_flag(&v))
-        .unwrap_or(false)
+    cfg!(debug_assertions)
+        && std::env::var(ALLOW_RUST_ENGINE_ENV)
+            .map(|v| parse_truthy_env_flag(&v))
+            .unwrap_or(false)
+}
+
+fn non_artifact_bootstrap_modes_allowed() -> bool {
+    cfg!(debug_assertions)
+}
+
+fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {
+    match mode {
+        SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
+        SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
+        SelfhostBootstrapMode::Embedded => "embedded",
+    }
+}
+
+fn enforce_bootstrap_mode_allowed_with_flag(
+    mode: SelfhostBootstrapMode,
+    context: &str,
+    allow_non_artifact_bootstrap_modes: bool,
+) -> Result<(), CliError> {
+    if mode == SelfhostBootstrapMode::ArtifactOnly || allow_non_artifact_bootstrap_modes {
+        return Ok(());
+    }
+    Err(cli_err(
+        EX_VERIFY,
+        "selfhost/bootstrap-mode",
+        format!(
+            "{context}: `--selfhost-bootstrap {}` is development-only; release profile requires --selfhost-bootstrap artifact-only",
+            bootstrap_mode_label(mode)
+        ),
+    ))
+}
+
+fn enforce_bootstrap_mode_allowed(
+    mode: SelfhostBootstrapMode,
+    context: &str,
+) -> Result<(), CliError> {
+    enforce_bootstrap_mode_allowed_with_flag(mode, context, non_artifact_bootstrap_modes_allowed())
 }
 
 fn default_selfhost_artifact_path() -> PathBuf {
@@ -1447,18 +1500,20 @@ fn resolved_coreform_frontend(cli: &Cli) -> Result<gc_obligations::CoreformFront
                 ));
             }
             if !rust_engine_compat_enabled() {
-                return Err(cli_err(
-                    EX_VERIFY,
-                    "engine/rust-disabled",
+                let msg = if cfg!(debug_assertions) {
                     format!(
                         "`--coreform-frontend rust` is disabled in the default selfhost profile; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
-                    ),
-                ));
+                    )
+                } else {
+                    "`--coreform-frontend rust` is disabled in release profile; rust compatibility is development-only for offline parity harnesses".to_string()
+                };
+                return Err(cli_err(EX_VERIFY, "engine/rust-disabled", msg));
             }
             Ok(gc_obligations::CoreformFrontend::Rust)
         }
         CoreformFrontendArg::Selfhost => {
             let mode = resolved_selfhost_bootstrap_mode(cli);
+            enforce_bootstrap_mode_allowed(mode, "coreform frontend")?;
             if strict && mode != SelfhostBootstrapMode::ArtifactOnly {
                 return Err(cli_err(
                     EX_VERIFY,
@@ -1494,18 +1549,94 @@ fn coreform_frontend_json(frontend: &gc_obligations::CoreformFrontend) -> serde_
     }
 }
 
-fn coreform_frontend_for_engine(cli: &Cli, engine: FmtEngine) -> gc_obligations::CoreformFrontend {
+fn coreform_frontend_for_engine(
+    cli: &Cli,
+    engine: FmtEngine,
+) -> Result<gc_obligations::CoreformFrontend, CliError> {
     match engine {
-        FmtEngine::Rust => gc_obligations::CoreformFrontend::Rust,
+        FmtEngine::Rust => Ok(gc_obligations::CoreformFrontend::Rust),
         FmtEngine::Selfhost => {
-            gc_obligations::CoreformFrontend::Selfhost(gc_obligations::SelfhostFrontendConfig {
-                bootstrap_mode: resolved_selfhost_bootstrap_mode(cli),
-                artifact: resolved_selfhost_artifact_for_frontend(cli),
-            })
+            let mode = resolved_selfhost_bootstrap_mode(cli);
+            enforce_bootstrap_mode_allowed(mode, "engine frontend")?;
+            Ok(gc_obligations::CoreformFrontend::Selfhost(
+                gc_obligations::SelfhostFrontendConfig {
+                    bootstrap_mode: mode,
+                    artifact: resolved_selfhost_artifact_for_frontend(cli),
+                },
+            ))
         }
     }
 }
 
+fn rust_engine_disabled_message(cmd_name: &str) -> String {
+    if cfg!(debug_assertions) {
+        format!(
+            "`--engine rust` is disabled in the default selfhost profile for `{cmd_name}`; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
+        )
+    } else {
+        format!(
+            "`--engine rust` is disabled in release profile for `{cmd_name}`; rust compatibility is development-only for offline parity harnesses"
+        )
+    }
+}
+
+fn resolved_engine(
+    cli: &Cli,
+    cmd_name: &str,
+    engine: Option<FmtEngine>,
+) -> Result<FmtEngine, CliError> {
+    enforce_selfhost_engine(cli, cmd_name, engine)?;
+    if let Some(e) = engine {
+        if e == FmtEngine::Rust && !rust_engine_compat_enabled() {
+            return Err(cli_err(
+                EX_VERIFY,
+                "compat/rust-engine-disabled",
+                rust_engine_disabled_message(cmd_name),
+            ));
+        }
+        if e == FmtEngine::Selfhost {
+            enforce_bootstrap_mode_allowed(resolved_selfhost_bootstrap_mode(cli), cmd_name)?;
+        }
+        return Ok(e);
+    }
+    Ok(FmtEngine::Selfhost)
+}
+
+fn load_selfhost_toolchain(
+    cli: &Cli,
+    ctx: &mut EvalCtx,
+    env: &mut gc_kernel::Env,
+) -> Result<(), CliError> {
+    let mode = resolved_selfhost_bootstrap_mode(cli);
+    enforce_bootstrap_mode_allowed(mode, "selfhost runtime")?;
+    if selfhost_only_enabled(cli) && mode != SelfhostBootstrapMode::ArtifactOnly {
+        return Err(cli_err(
+            EX_VERIFY,
+            "selfhost-only/bootstrap",
+            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
+        ));
+    }
+    let artifact = resolved_selfhost_artifact_for_frontend(cli);
+    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+}
+
+fn maybe_embedded_bootstrap_mode() -> SelfhostBootstrapMode {
+    if embedded_bootstrap_available() && non_artifact_bootstrap_modes_allowed() {
+        SelfhostBootstrapMode::Embedded
+    } else {
+        SelfhostBootstrapMode::ArtifactOnly
+    }
+}
+
+fn coreform_frontend_for_engine_json(
+    cli: &Cli,
+    engine: FmtEngine,
+) -> Result<serde_json::Value, CliError> {
+    Ok(coreform_frontend_json(&coreform_frontend_for_engine(
+        cli, engine,
+    )?))
+}
 fn enforce_selfhost_engine(
     cli: &Cli,
     cmd_name: &str,
@@ -1524,27 +1655,6 @@ fn enforce_selfhost_engine(
             "selfhost-only mode requires --engine selfhost for `{cmd_name}` (got --engine rust)"
         ),
     ))
-}
-
-fn resolved_engine(
-    cli: &Cli,
-    cmd_name: &str,
-    engine: Option<FmtEngine>,
-) -> Result<FmtEngine, CliError> {
-    enforce_selfhost_engine(cli, cmd_name, engine)?;
-    if let Some(e) = engine {
-        if e == FmtEngine::Rust && !rust_engine_compat_enabled() {
-            return Err(cli_err(
-                EX_VERIFY,
-                "compat/rust-engine-disabled",
-                format!(
-                    "`--engine rust` is disabled in the default selfhost profile for `{cmd_name}`; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
-                ),
-            ));
-        }
-        return Ok(e);
-    }
-    Ok(FmtEngine::Selfhost)
 }
 
 fn is_legacy_high_level_semantic_op(op: &str) -> bool {
@@ -1623,24 +1733,6 @@ fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<(), CliError>
         } => enforce_selfhost_engine(cli, "vcs hash", *engine),
         Cmd::Vcs { .. } => Ok(()),
     }
-}
-
-fn load_selfhost_toolchain(
-    cli: &Cli,
-    ctx: &mut EvalCtx,
-    env: &mut gc_kernel::Env,
-) -> Result<(), CliError> {
-    let mode = resolved_selfhost_bootstrap_mode(cli);
-    if selfhost_only_enabled(cli) && mode != SelfhostBootstrapMode::ArtifactOnly {
-        return Err(cli_err(
-            EX_VERIFY,
-            "selfhost-only/bootstrap",
-            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
-        ));
-    }
-    let artifact = resolved_selfhost_artifact_for_frontend(cli);
-    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
-        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
 }
 
 fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> CliError {
@@ -1746,7 +1838,7 @@ fn warm_session_cache_key(
         "flavor": flavor_token(flavor),
         "prime_selfhost": prime_selfhost,
         "selfhost_only": cli.selfhost_only,
-        "selfhost_bootstrap": match cli.selfhost_bootstrap {
+            "selfhost_bootstrap": match cli.selfhost_bootstrap {
             SelfhostBootstrapArg::ArtifactOnly => "artifact-only",
             SelfhostBootstrapArg::ArtifactPreferred => "artifact-preferred",
             SelfhostBootstrapArg::Embedded => "embedded",
@@ -2573,7 +2665,7 @@ fn cmd_eval(
         }
     }
 
-    let v = eval_module(&mut ctx, &mut env, &forms)
+    let (v, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
 
     let (value, value_format) = render_value_for_cli(&ctx, &v);
@@ -2586,6 +2678,7 @@ fn cmd_eval(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "kernel_eval_backend": eval_backend.as_str(),
             "stage1": stage1.as_ref().map(gc_opt::stage1_pipeline_json),
             "stage2": stage2.as_ref().map(gc_opt::stage2_report_json),
             "value": value,
@@ -2651,7 +2744,7 @@ fn cmd_explain(
         }
     };
 
-    eval_module(&mut ctx, &mut env, &forms)
+    let (_, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
 
     let contract = eval_term(&mut ctx, &env, &contract_term)
@@ -2682,6 +2775,7 @@ fn cmd_explain(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "kernel_eval_backend": eval_backend.as_str(),
             "contract": contract_src,
             "msg": msg_src,
             "trace": value,
@@ -2746,7 +2840,7 @@ fn cmd_run(
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
 
-    let prog = eval_module(&mut ctx, &mut env, &forms)
+    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
 
     let toolchain = match flavor {
@@ -2777,6 +2871,7 @@ fn cmd_run(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "kernel_eval_backend": eval_backend.as_str(),
             "caps": caps.display().to_string(),
             "log": log_path.display().to_string(),
             "program_hash_hex": hex32(program_hash),
@@ -2982,7 +3077,7 @@ fn cmd_replay(
         ));
     }
 
-    let prog = eval_module(&mut ctx, &mut env, &forms)
+    let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
         .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
     let store = match store_dir {
         Some(p) => Some(
@@ -3009,6 +3104,7 @@ fn cmd_replay(
                 FmtEngine::Rust => "rust",
                 FmtEngine::Selfhost => "selfhost",
             },
+            "kernel_eval_backend": eval_backend.as_str(),
             "log": log_path.display().to_string(),
             "store": store_dir.map(|p| p.display().to_string()),
             "value": value,
@@ -3061,6 +3157,7 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
             "pkg": pkg.display().to_string(),
             "caps": caps.map(|p| p.display().to_string()),
             "coreform_frontend": frontend_info,
+            "kernel_eval_backend_default": "compiled-with-treewalk-fallback",
             "acceptance_artifact": r.acceptance_artifact,
             "obligations": obligations,
         })),
@@ -3170,20 +3267,20 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     SelfhostCutoverRow {
         cmd: "keygen",
         fast_path_required: false,
-        selfhost_routed: false,
-        default_selfhost: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "sign",
         fast_path_required: false,
-        selfhost_routed: false,
-        default_selfhost: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "transparency-verify",
         fast_path_required: false,
-        selfhost_routed: false,
-        default_selfhost: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "typecheck",
@@ -3206,8 +3303,8 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     SelfhostCutoverRow {
         cmd: "verify",
         fast_path_required: false,
-        selfhost_routed: false,
-        default_selfhost: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "store/*",
@@ -3230,8 +3327,8 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     SelfhostCutoverRow {
         cmd: "policy/*",
         fast_path_required: false,
-        selfhost_routed: false,
-        default_selfhost: false,
+        selfhost_routed: true,
+        default_selfhost: true,
     },
     SelfhostCutoverRow {
         cmd: "sync/*",
@@ -3713,11 +3810,7 @@ fn cmd_selfhost_artifact(
     // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.
     let step_limit = StepLimit::Unlimited;
     let mem_limits = resolved_mem_limits(cli);
-    let bootstrap_mode = if embedded_bootstrap_available() {
-        SelfhostBootstrapMode::Embedded
-    } else {
-        SelfhostBootstrapMode::ArtifactOnly
-    };
+    let bootstrap_mode = maybe_embedded_bootstrap_mode();
     let bootstrap_artifact = if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly {
         resolved_selfhost_artifact_for_frontend(cli)
     } else {
@@ -4285,7 +4378,7 @@ fn cmd_optimize(
     stage2_gate: bool,
 ) -> Result<CmdOut, CliError> {
     let engine = resolved_engine(cli, "optimize", engine)?;
-    let frontend_info = coreform_frontend_json(&coreform_frontend_for_engine(cli, engine));
+    let frontend_info = coreform_frontend_for_engine_json(cli, engine)?;
     let src = std::fs::read_to_string(file)
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
@@ -4580,7 +4673,10 @@ fn hex32(h: [u8; 32]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{EX_PARSE, json_canonical_string, parse_sync_set_refs};
+    use super::{
+        EX_PARSE, EX_VERIFY, SelfhostBootstrapMode, enforce_bootstrap_mode_allowed_with_flag,
+        json_canonical_string, parse_sync_set_refs,
+    };
     use crate::cmd_vcs::parse_set_ref_spec;
 
     #[test]
@@ -4651,5 +4747,19 @@ mod tests {
         ];
         let err = parse_sync_set_refs(&specs).expect_err("must fail");
         assert_eq!(err.exit_code, EX_PARSE);
+    }
+
+    #[test]
+    fn non_artifact_bootstrap_mode_is_dev_only() {
+        let err = enforce_bootstrap_mode_allowed_with_flag(
+            SelfhostBootstrapMode::Embedded,
+            "test",
+            false,
+        )
+        .expect_err("embedded bootstrap should be rejected outside development mode");
+        assert_eq!(err.exit_code, EX_VERIFY);
+        assert!(err.json.message.contains("development-only"));
+        enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, "test", true)
+            .expect("embedded bootstrap should be allowed in development mode");
     }
 }

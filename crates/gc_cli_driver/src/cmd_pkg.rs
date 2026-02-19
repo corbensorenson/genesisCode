@@ -12,7 +12,9 @@ pub(super) fn cmd_pkg(
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
-    if let Some(out) = cmd_pkg_local_workspace_ops(cli, cmd, caps, log, frontend_info.clone())? {
+    if let Some(out) =
+        cmd_pkg_local_workspace_ops(cli, cmd, caps, log, &frontend, frontend_info.clone())?
+    {
         return Ok(out);
     }
 
@@ -27,6 +29,7 @@ pub(super) fn cmd_pkg(
                 | PkgCmd::Migrate { .. }
                 | PkgCmd::Run { .. }
                 | PkgCmd::Test { .. }
+                | PkgCmd::Abi { .. }
                 | PkgCmd::Env { .. } => {
                     unreachable!("local workspace ops are handled before frontend dispatch")
                 }
@@ -185,6 +188,7 @@ pub(super) fn cmd_pkg(
                 | PkgCmd::Migrate { .. }
                 | PkgCmd::Run { .. }
                 | PkgCmd::Test { .. }
+                | PkgCmd::Abi { .. }
                 | PkgCmd::Env { .. } => {
                     unreachable!("local workspace ops are handled before frontend dispatch")
                 }
@@ -1070,7 +1074,9 @@ pub(super) fn cmd_pkg(
                     format!("{value}\n")
                 }
             }
-            PkgCmd::List { .. } | PkgCmd::Info { .. } => format!("{value}\n"),
+            PkgCmd::List { .. } | PkgCmd::Info { .. } | PkgCmd::Abi { .. } => {
+                format!("{value}\n")
+            }
             PkgCmd::Snapshot { .. } => extract_pkg_snapshot_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
@@ -1166,6 +1172,7 @@ fn cmd_pkg_local_workspace_ops(
     cmd: &PkgCmd,
     caps: &Path,
     log: Option<&Path>,
+    frontend: &gc_obligations::CoreformFrontend,
     frontend_info: serde_json::Value,
 ) -> Result<Option<CmdOut>, CliError> {
     match cmd {
@@ -1231,6 +1238,15 @@ fn cmd_pkg_local_workspace_ops(
                 registry_default.as_deref(),
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/migrate", e))?,
+        ),
+        PkgCmd::Abi { pkg } => Some(
+            pkg_abi::handle_abi(
+                pkg,
+                frontend,
+                resolved_step_limit(cli),
+                resolved_mem_limits(cli),
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/abi", e))?,
         ),
         PkgCmd::Env {
             profile,

@@ -23,6 +23,9 @@ pub struct LogPolicy {
     /// Directory containing content-addressed artifacts for logs (defaults to `<caps-dir>/.genesis/store`
     /// when `inline_max_bytes` is set and `store_dir` is omitted).
     pub store_dir: Option<PathBuf>,
+
+    /// Optional cumulative per-run byte budget for response artifacts externalized by the logger.
+    pub max_artifact_bytes_per_run: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +44,21 @@ pub struct StorePolicy {
 
     /// If true, `http://` remotes are permitted (default false).
     pub allow_http: bool,
+
+    /// Optional cumulative per-run byte budget for content-addressed store writes.
+    pub max_run_bytes: Option<usize>,
+
+    /// Optional bearer token presented to remote registries.
+    pub auth_token: Option<String>,
+
+    /// Optional env var name containing bearer token for remote registries.
+    pub auth_token_env: Option<String>,
+
+    /// Optional PEM path for additional trusted CA roots used by remote TLS.
+    pub mtls_ca_pem: Option<PathBuf>,
+
+    /// Optional PEM path for client identity used by mTLS.
+    pub mtls_identity_pem: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,12 +92,18 @@ impl CapsPolicy {
             log: LogPolicy {
                 inline_max_bytes: None,
                 store_dir: None,
+                max_artifact_bytes_per_run: None,
             },
             store: StorePolicy {
                 dir: None,
                 remote: None,
                 remote_allow: Vec::new(),
                 allow_http: false,
+                max_run_bytes: None,
+                auth_token: None,
+                auth_token_env: None,
+                mtls_ca_pem: None,
+                mtls_identity_pem: None,
             },
             refs: RefsPolicy { path: None },
             task: TaskPolicy {
@@ -225,6 +249,16 @@ impl CapsPolicy {
         {
             self.store.dir = Some(base.join(sd));
         }
+        if let Some(ca) = &self.store.mtls_ca_pem
+            && ca.is_relative()
+        {
+            self.store.mtls_ca_pem = Some(base.join(ca));
+        }
+        if let Some(id) = &self.store.mtls_identity_pem
+            && id.is_relative()
+        {
+            self.store.mtls_identity_pem = Some(base.join(id));
+        }
         if let Some(rp) = &self.refs.path
             && rp.is_relative()
         {
@@ -236,6 +270,16 @@ impl CapsPolicy {
             {
                 p.base_dir = Some(base.join(bd));
             }
+            for key in ["mtls_ca_pem", "mtls_identity_pem"] {
+                if let Some(v) = p.extra.get_mut(key)
+                    && let Some(s) = v.as_str()
+                {
+                    let pb = PathBuf::from(s);
+                    if pb.is_relative() {
+                        *v = toml::Value::String(base.join(pb).to_string_lossy().to_string());
+                    }
+                }
+            }
         }
     }
 }
@@ -244,6 +288,31 @@ fn low_level_aliases(op: &str) -> &'static [&'static str] {
     match op {
         // Internal low-level alias: `pkg snapshot` checks call `load-package`.
         "core/pkg-low::load-package" => &["core/pkg-low::snapshot"],
+        // High-level host ABI aliases routed through low-level capability implementations.
+        "core/pkg::init" => &["core/pkg-low::init"],
+        "core/pkg::add" => &["core/pkg-low::add"],
+        "core/pkg::list" => &["core/pkg-low::list"],
+        "core/pkg::info" => &["core/pkg-low::info"],
+        "core/pkg::lock" => &["core/pkg-low::lock"],
+        "core/pkg::update" => &["core/pkg-low::update"],
+        "core/pkg::install" => &["core/pkg-low::install"],
+        "core/pkg::verify" => &["core/pkg-low::verify"],
+        "core/pkg::snapshot" => &["core/pkg-low::snapshot"],
+        "core/pkg::publish" => &["core/pkg-low::publish"],
+        "core/gpk::export" => &["core/gpk-low::export"],
+        "core/gpk::import" => &["core/gpk-low::import"],
+        "core/gc::plan" => &["core/gc-low::plan"],
+        "core/gc::run" => &["core/gc-low::run"],
+        "core/gc::pin" => &["core/gc-low::pin"],
+        "core/gc::unpin" => &["core/gc-low::unpin"],
+        "core/gc::purge" => &["core/gc-low::purge"],
+        "core/vcs::log" => &["core/vcs-low::log"],
+        "core/vcs::blame" => &["core/vcs-low::blame"],
+        "core/vcs::why" => &["core/vcs-low::why"],
+        "core/vcs::diff" => &["core/vcs-low::diff"],
+        "core/vcs::apply" => &["core/vcs-low::apply"],
+        "core/vcs::merge3" => &["core/vcs-low::merge3"],
+        "core/vcs::resolve-conflict" => &["core/vcs-low::resolve-conflict"],
         _ => &[],
     }
 }
@@ -253,6 +322,7 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
         return Ok(LogPolicy {
             inline_max_bytes: None,
             store_dir: None,
+            max_artifact_bytes_per_run: None,
         });
     };
     let log_tbl = v
@@ -265,17 +335,47 @@ fn parse_log_policy(tbl: &toml::value::Table) -> Result<LogPolicy, EffectsError>
             let n = x.as_integer().ok_or_else(|| {
                 EffectsError::Log("caps.toml: log.inline_max_bytes must be an integer".to_string())
             })?;
-            if n <= 0 { None } else { Some(n as usize) }
+            if n <= 0 {
+                None
+            } else {
+                Some(usize::try_from(n).map_err(|_| {
+                    EffectsError::Log(
+                        "caps.toml: log.inline_max_bytes is too large for this platform"
+                            .to_string(),
+                    )
+                })?)
+            }
         }
     };
     let store_dir = log_tbl
         .get("store_dir")
         .and_then(|x| x.as_str())
         .map(PathBuf::from);
+    let max_artifact_bytes_per_run = match log_tbl.get("max_artifact_bytes_per_run") {
+        None => None,
+        Some(x) => {
+            let n = x.as_integer().ok_or_else(|| {
+                EffectsError::Log(
+                    "caps.toml: log.max_artifact_bytes_per_run must be an integer".to_string(),
+                )
+            })?;
+            if n <= 0 {
+                None
+            } else {
+                Some(usize::try_from(n).map_err(|_| {
+                    EffectsError::Log(
+                        "caps.toml: log.max_artifact_bytes_per_run is too large for this platform"
+                            .to_string(),
+                    )
+                })?)
+            }
+        }
+    };
 
     Ok(LogPolicy {
         inline_max_bytes,
         store_dir,
+        max_artifact_bytes_per_run,
     })
 }
 
@@ -286,6 +386,11 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
             remote: None,
             remote_allow: Vec::new(),
             allow_http: false,
+            max_run_bytes: None,
+            auth_token: None,
+            auth_token_env: None,
+            mtls_ca_pem: None,
+            mtls_identity_pem: None,
         });
     };
     let store_tbl = v
@@ -299,10 +404,43 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         .get("remote")
         .and_then(|x| x.as_str())
         .map(|s| s.to_string());
+    let auth_token = store_tbl
+        .get("auth_token")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let auth_token_env = store_tbl
+        .get("auth_token_env")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let mtls_ca_pem = store_tbl
+        .get("mtls_ca_pem")
+        .and_then(|x| x.as_str())
+        .map(PathBuf::from);
+    let mtls_identity_pem = store_tbl
+        .get("mtls_identity_pem")
+        .and_then(|x| x.as_str())
+        .map(PathBuf::from);
     let allow_http = store_tbl
         .get("allow_http")
         .and_then(|x| x.as_bool())
         .unwrap_or(false);
+    let max_run_bytes = match store_tbl.get("max_run_bytes") {
+        None => None,
+        Some(x) => {
+            let n = x.as_integer().ok_or_else(|| {
+                EffectsError::Log("caps.toml: store.max_run_bytes must be an integer".to_string())
+            })?;
+            if n <= 0 {
+                None
+            } else {
+                Some(usize::try_from(n).map_err(|_| {
+                    EffectsError::Log(
+                        "caps.toml: store.max_run_bytes is too large for this platform".to_string(),
+                    )
+                })?)
+            }
+        }
+    };
     let remote_allow = match store_tbl.get("remote_allow") {
         None => Vec::new(),
         Some(v) => {
@@ -326,6 +464,11 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         remote,
         remote_allow,
         allow_http,
+        max_run_bytes,
+        auth_token,
+        auth_token_env,
+        mtls_ca_pem,
+        mtls_identity_pem,
     })
 }
 
@@ -427,7 +570,15 @@ fn apply_op_cfg(
                     "caps.toml: op {op} log_inline_max_bytes must be integer"
                 ))
             })?;
-            if n <= 0 { None } else { Some(n as usize) }
+            if n <= 0 {
+                None
+            } else {
+                Some(usize::try_from(n).map_err(|_| {
+                    EffectsError::Log(format!(
+                        "caps.toml: op {op} log_inline_max_bytes is too large for this platform"
+                    ))
+                })?)
+            }
         }
     };
 
@@ -460,6 +611,7 @@ fn apply_op_cfg(
 #[cfg(test)]
 mod tests {
     use super::CapsPolicy;
+    use std::path::Path;
 
     #[test]
     fn supports_legacy_top_level_op_tables() {
@@ -500,11 +652,83 @@ allow = ["sys/time::now"]
 [log]
 inline_max_bytes = 123
 store_dir = "./s"
+max_artifact_bytes_per_run = 456
 "#,
         )
         .unwrap();
         assert_eq!(p.log.inline_max_bytes, Some(123));
+        assert_eq!(p.log.max_artifact_bytes_per_run, Some(456));
         assert!(p.log.store_dir.is_some());
+    }
+
+    #[test]
+    fn parses_store_run_budget() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/store::put"]
+
+[store]
+max_run_bytes = 2048
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.store.max_run_bytes, Some(2048));
+    }
+
+    #[test]
+    fn parses_store_auth_policy_fields() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/store::get"]
+
+[store]
+auth_token = "token-value"
+auth_token_env = "GENESIS_TEST_TOKEN"
+mtls_ca_pem = "./ca.pem"
+mtls_identity_pem = "./id.pem"
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.store.auth_token.as_deref(), Some("token-value"));
+        assert_eq!(
+            p.store.auth_token_env.as_deref(),
+            Some("GENESIS_TEST_TOKEN")
+        );
+        assert_eq!(p.store.mtls_ca_pem.as_deref(), Some(Path::new("./ca.pem")));
+        assert_eq!(
+            p.store.mtls_identity_pem.as_deref(),
+            Some(Path::new("./id.pem"))
+        );
+    }
+
+    #[test]
+    fn load_resolves_relative_mtls_paths() {
+        let td = tempfile::tempdir().unwrap();
+        let caps = td.path().join("caps.toml");
+        std::fs::write(
+            &caps,
+            r#"
+allow = ["core/sync::pull"]
+
+[store]
+mtls_ca_pem = "./certs/ca.pem"
+mtls_identity_pem = "./certs/id.pem"
+
+[op."core/sync::pull"]
+mtls_ca_pem = "./certs/op-ca.pem"
+"#,
+        )
+        .unwrap();
+        let p = CapsPolicy::load(&caps).unwrap();
+        assert!(p.store.mtls_ca_pem.as_ref().unwrap().is_absolute());
+        assert!(p.store.mtls_identity_pem.as_ref().unwrap().is_absolute());
+        let op = p.op_policy("core/sync::pull").unwrap();
+        assert!(
+            op.extra
+                .get("mtls_ca_pem")
+                .and_then(|v| v.as_str())
+                .is_some_and(|s| Path::new(s).is_absolute())
+        );
     }
 
     #[test]
@@ -559,6 +783,24 @@ base_dir = "."
         .unwrap();
         assert!(p.is_allowed("core/pkg-low::load-package"));
         assert!(p.op_policy("core/pkg-low::load-package").is_some());
+    }
+
+    #[test]
+    fn low_level_allow_authorizes_high_level_alias() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/gc-low::pin"]
+
+[op."core/gc-low::pin"]
+timeout_ms = 10
+"#,
+        )
+        .unwrap();
+        assert!(p.is_allowed("core/gc::pin"));
+        assert_eq!(
+            p.op_policy("core/gc::pin").and_then(|op| op.timeout_ms),
+            Some(10)
+        );
     }
 
     #[test]

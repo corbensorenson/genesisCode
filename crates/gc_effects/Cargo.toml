@@ -24,6 +24,9 @@ gc_pkg = { path = "../gc_pkg" }
 fs2 = "0.4"
 gc_registry = { path = "../gc_registry" }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 proptest = "1"
 tempfile = "3"

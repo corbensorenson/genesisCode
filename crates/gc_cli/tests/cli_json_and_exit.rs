@@ -60,6 +60,16 @@ fn test_json_output_is_valid_and_exit_code_is_stable() {
         v.get("kind").and_then(|x| x.as_str()),
         Some("genesis/test-v0.2")
     );
+    assert_eq!(
+        v.get("diagnostics_schema").and_then(|x| x.as_str()),
+        Some("genesis/diagnostics-schema-v1")
+    );
+    assert_eq!(
+        v.get("diagnostics")
+            .and_then(|x| x.as_array())
+            .map(|xs| xs.len()),
+        Some(0)
+    );
     let acc = v
         .get("data")
         .and_then(|d| d.get("acceptance_artifact"))
@@ -312,6 +322,18 @@ fn manifest_memory_limit_causes_preflight_obligation_exit_code_30() {
     assert_eq!(
         v.get("kind").and_then(|x| x.as_str()),
         Some("genesis/test-v0.2")
+    );
+    assert_eq!(
+        v.get("diagnostics_schema").and_then(|x| x.as_str()),
+        Some("genesis/diagnostics-schema-v1")
+    );
+    assert_eq!(
+        v.get("diagnostics")
+            .and_then(|x| x.as_array())
+            .and_then(|xs| xs.first())
+            .and_then(|d| d.get("exit_code"))
+            .and_then(|x| x.as_u64()),
+        Some(30)
     );
     assert_eq!(
         v.get("data")

@@ -192,6 +192,7 @@ Host tooling defaults:
   - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
   - `--selfhost-only` enforce hard selfhost mode (also `GENESIS_SELFHOST_ONLY=1`)
 - `embedded` mode remains available as a deliberate bootstrap/development fallback.
+- release profiles reject `artifact-preferred` and `embedded` at runtime; only `artifact-only` is accepted.
 
 Selfhost-only hard mode:
 - commands with `--engine` must use `--engine selfhost`

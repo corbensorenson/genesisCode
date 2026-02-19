@@ -261,6 +261,26 @@ pub enum SelfhostBootstrapMode {
     Embedded,
 }
 
+fn non_artifact_bootstrap_modes_allowed() -> bool {
+    cfg!(debug_assertions)
+}
+
+fn enforce_bootstrap_mode_allowed_with_flag(
+    mode: SelfhostBootstrapMode,
+    allow_non_artifact_bootstrap_modes: bool,
+) -> anyhow::Result<()> {
+    if mode == SelfhostBootstrapMode::ArtifactOnly || allow_non_artifact_bootstrap_modes {
+        return Ok(());
+    }
+    Err(anyhow::anyhow!(
+        "non-artifact selfhost bootstrap modes are development-only; release profile requires artifact-only"
+    ))
+}
+
+fn enforce_bootstrap_mode_allowed(mode: SelfhostBootstrapMode) -> anyhow::Result<()> {
+    enforce_bootstrap_mode_allowed_with_flag(mode, non_artifact_bootstrap_modes_allowed())
+}
+
 fn map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
     m.get(&TermOrdKey(Term::symbol(k)))
 }
@@ -806,6 +826,7 @@ pub fn load_selfhost_coreform_toolchain_v1_with_mode(
     mode: SelfhostBootstrapMode,
     artifact_path: Option<&Path>,
 ) -> anyhow::Result<()> {
+    enforce_bootstrap_mode_allowed(mode)?;
     match mode {
         SelfhostBootstrapMode::Embedded => load_selfhost_coreform_toolchain_v1_embedded(ctx, env),
         SelfhostBootstrapMode::ArtifactOnly | SelfhostBootstrapMode::ArtifactPreferred => {
@@ -857,6 +878,15 @@ pub fn load_selfhost_coreform_toolchain_v1(ctx: &mut EvalCtx, env: &mut Env) -> 
 mod tests {
     use super::*;
     use gc_kernel::{compile_module, eval_compiled_module};
+
+    #[test]
+    fn non_artifact_bootstrap_mode_is_dev_only() {
+        let err = enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, false)
+            .expect_err("embedded mode must be rejected outside development mode");
+        assert!(format!("{err}").contains("development-only"));
+        enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, true)
+            .expect("embedded mode should be allowed in development mode");
+    }
 
     #[test]
     fn compiled_cache_blob_roundtrip_preserves_modules() {

@@ -87,6 +87,7 @@ Commands:
 - `genesis pkg install [--frozen] [--log <path>]`
 - `genesis pkg update [<pkg-name> ...] [--log <path>]`
 - `genesis pkg info <pkg-name>`
+- `genesis pkg abi --pkg <package.toml>`
 - `genesis pkg export <pkg-name> --ref <ref-or-commit-or-snapshot> --out <file.gpk> [--shallow|--full] [--depth <n>] [--include-evidence <required|all|none>] [--include-deps <none|locked|all>]`
 - `genesis pkg import <file.gpk> [--set-ref <refname>=<hash|nil>[@<expected-old|nil>] ...] [--policy <policy-hash>] [--log <path>]`
 - `genesis pkg publish <pkg-name> --remote <registry> --ref <refname> [--policy <name-or-hash>] [--log <path>]`

@@ -34,15 +34,19 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
     - `./.genesis/selfhost/toolchain.gc` if present, or
     - workspace fallback `selfhost/toolchain.gc` if present.
+- `GENESIS_DISABLE_COMPILED_EVAL=1|true|yes|on`: force tree-walking kernel evaluation path.
+  - Default (`unset`/false): commands use compiled kernel evaluation with deterministic tree-walk fallback when compilation is not available.
 
 ## Rust Engine Compatibility Mode (Historical Comparisons Only)
 
 `--engine rust` and `--coreform-frontend rust` exist solely to support deterministic parity checks
 against prior Rust semantics during the selfhost cutover.
 
-They are disabled by default and require explicit opt-in:
+They are disabled by default and require explicit opt-in in development/debug profiles:
 
 - `GENESIS_ALLOW_RUST_ENGINE=1`
+
+Release builds reject `--engine rust` and `--coreform-frontend rust` unconditionally.
 
 CI must keep `GENESIS_ALLOW_RUST_ENGINE=0` by default, and only set it to `1` inside
 explicit parity/golden harnesses (e.g. `scripts/selfhost_strict_smoke.sh` /
@@ -61,15 +65,19 @@ explicit parity/golden harnesses (e.g. `scripts/selfhost_strict_smoke.sh` /
   - `--stage1-gate` enforces `core/obligation::stage1-validation` for the eval input.
   - `--stage2-gate` enforces `core/obligation::translation-validation` only when the module is Stage-2 supported.
   - For Stage-2 gating, validation input is Stage-1 transformed CoreForm (matching package translation-validation flow), even when `--stage1-pipeline` is not requested.
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
 - `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize for the input module and self-hosted parse for `--contract`/`--msg`.
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
 - `genesis run <file> --caps <policy.toml> [--log <out.gclog>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before evaluating the effect program.
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
 - `genesis replay <file> --log <log.gclog> [--store <dir>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before replaying against the deterministic log.
+  - JSON output includes `data.kernel_eval_backend` (`"compiled"` or `"tree-walk"`).
 - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - emits a canonical self-host toolchain artifact used by `--engine selfhost` bootstrap.
   - runs Stage-1 + Stage-2 validation for each embedded selfhost module and records per-module gate metadata.
@@ -99,11 +107,14 @@ CI strict selfhost gates:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
+  - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
   - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`.
+  - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
   - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
+  - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled-with-treewalk-fallback"`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.
@@ -143,7 +154,9 @@ All `--json` outputs use the same top-level envelope shape:
   "ok": true,
   "kind": "genesis/<command>-v0.2",
   "data": { },
-  "error": null
+  "error": null,
+  "diagnostics_schema": "genesis/diagnostics-schema-v1",
+  "diagnostics": []
 }
 ```
 
@@ -158,8 +171,22 @@ On failure:
     "code": "parse/coreform",
     "message": "…",
     "context": null
-  }
+  },
+  "diagnostics_schema": "genesis/diagnostics-schema-v1",
+  "diagnostics": [
+    {
+      "version": "v1",
+      "severity": "error",
+      "code": "parse/coreform",
+      "message": "…",
+      "exit_code": 10,
+      "suggested_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`."
+    }
+  ]
 }
 ```
 
 `error.context` is optional and may be omitted or `null`.
+`diagnostics` is always present in JSON output:
+- success cases: `[]`
+- failure cases: at least one typed diagnostic entry with stable `code` and `exit_code`

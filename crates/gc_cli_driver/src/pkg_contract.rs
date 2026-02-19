@@ -15,6 +15,7 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Doctor { .. } => "genesis/pkg-doctor-v0.1",
         PkgCmd::List { .. } => "genesis/pkg-list-v0.1",
         PkgCmd::Info { .. } => "genesis/pkg-info-v0.1",
+        PkgCmd::Abi { .. } => "genesis/pkg-abi-v0.1",
         PkgCmd::Snapshot { .. } => "genesis/pkg-snapshot-v0.1",
         PkgCmd::Export { .. } => "genesis/pkg-export-v0.1",
         PkgCmd::Import { .. } => "genesis/pkg-import-v0.1",
@@ -39,6 +40,7 @@ pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Doctor { .. } => "pkg-doctor",
         PkgCmd::List { .. } => "pkg-list",
         PkgCmd::Info { .. } => "pkg-info",
+        PkgCmd::Abi { .. } => "pkg-abi",
         PkgCmd::Snapshot { .. } => "pkg-snapshot",
         PkgCmd::Export { .. } => "pkg-export",
         PkgCmd::Import { .. } => "pkg-import",
@@ -117,6 +119,9 @@ mod tests {
             PkgCmd::Info {
                 name: "dep".to_string(),
                 lock: PathBuf::from("genesis.lock"),
+            },
+            PkgCmd::Abi {
+                pkg: PathBuf::from("package.toml"),
             },
             PkgCmd::Snapshot {
                 pkg: PathBuf::from("package.toml"),
