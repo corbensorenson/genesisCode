@@ -5,7 +5,7 @@ Last updated: 2026-02-19
 This file contains only unfinished work from a fresh red-team pass.
 Completed work was intentionally removed.
 
-Open checklist items: 4
+Open checklist items: 1
 
 ## P0 - Self-Host Completion Blockers
 
@@ -29,10 +29,12 @@ Open checklist items: 4
   - Completed (2026-02-19): runtime JSON envelopes include `data.selfhost_artifact` (`null` for rust engine; `{path,hash,source:"explicit"}` for selfhost engine).
   - Acceptance: selfhost execution requires an explicit pinned artifact identity (hash + path or store hash), and reports it in every JSON envelope.
 
-- [ ] Expand Stage2 compiler support to cover the full v1 selfhost workload surface.
+- [x] Expand Stage2 compiler support to cover the full v1 selfhost workload surface.
   - Risk: selfhost optimization/validation pipeline is incomplete while major expression and primitive classes remain unsupported.
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:1679`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:3649`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:4159`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:6279`
-  - Known parity gap (2026-02-19): `scripts/selfhost_strict_golden.sh` currently reports `pkg_gpu_parallel_obligations` typecheck mismatch (`rust=0`, `selfhost=20`) and blocks full strict-golden parity closure for this workload class.
+  - Completed (2026-02-19): selfhost effect inference now tracks direct `core/task::*` and `core/editor/task::*` wrappers in `/Users/corbensorenson/Documents/genesisCode/selfhost/cli_reachability_v1.gc`, closing the strict-golden `pkg_gpu_parallel_obligations` parity blocker.
+  - Completed (2026-02-19): strict-golden package sweep now provisions deterministic GPU bridge policy for `pkg_gpu_parallel_obligations` inside `/Users/corbensorenson/Documents/genesisCode/scripts/selfhost_strict_golden.sh`, eliminating runtime false negatives during obligation runs.
+  - Completed (2026-02-19): `genesis selfhost-artifact --json` reports `stage2_supported_modules=11` and `stage2_validated_modules=11`, and `scripts/selfhost_strict_golden.sh` passes end-to-end.
   - Acceptance: Stage2 supports required pure CoreForm subset used by selfhost toolchain modules with obligation-backed parity coverage and no unsupported hot-path forms.
 
 - [x] Tighten Stage2 gate semantics to fail closed for protected pipelines.
@@ -62,9 +64,13 @@ Open checklist items: 4
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:81`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:373`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:419`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:444`
   - Acceptance: editor ops execute through stable host bridge contracts with deterministic log/replay semantics and no synthetic fallback in production profile.
 
-- [ ] Upgrade `core/task::*` from payload mini-DSL to executable effect programs/closures.
+- [x] Upgrade `core/task::*` from payload mini-DSL to executable effect programs/closures.
   - Risk: current task runtime executes a restricted map-step DSL rather than first-class Genesis computations.
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:326`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task_exec.rs:12`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task_exec.rs:72`, `/Users/corbensorenson/Documents/genesisCode/prelude/modules/00_core.gc:431`
+  - Completed (2026-02-19): task executor now supports executable payloads via `:task/eval` (+ `:task/arg` / `:task/args`) with callable application and effect-program execution under the parent capability policy in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task_exec.rs`.
+  - Completed (2026-02-19): worker/runtime plumbing passes policy through async task jobs so queued and worker-executed tasks share identical capability semantics in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs`.
+  - Completed (2026-02-19): prelude gained AI-oriented helpers `core/task::spawn-eval`, `core/task::spawn-eval1`, and `core/task::spawn-evaln` in `/Users/corbensorenson/Documents/genesisCode/prelude/modules/00_core.gc` and synchronized `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`.
+  - Completed (2026-02-19): coverage added for callable/effect-program execution + replay and capability enforcement in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs`; strict parity gate `scripts/selfhost_strict_golden.sh` passes.
   - Acceptance: task spawn/await/cancel can run closure/effect-program payloads with deterministic scheduling traces and replay validation.
 
 - [x] Split compute-first GPU APIs into a dedicated prelude module/package (not nested in gfx bundle).
@@ -88,12 +94,23 @@ Open checklist items: 4
 
 - [ ] Decompose Rust megafiles into domain modules with stable internal interfaces.
   - Risk: very large source files slow review, increase regression risk, and degrade AI editing quality.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` (~7726 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` (~6291 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` (~4324 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (~3362 LOC)
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` (~6152 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_response_budget.rs` (~439 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_vcs_pkg_helpers.rs` (~1144 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` (~6291 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` (~3766 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/frontend.rs` (~143 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_cache.rs` (~446 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (~3336 LOC), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_json.rs` (~63 LOC)
+  - Completed (2026-02-19): extracted VCS + package-lock helper subsystem from `gc_effects::runner` into `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_vcs_pkg_helpers.rs`; this removed ~1140 LOC of cross-domain logic from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` while keeping behavior unchanged.
+  - Completed (2026-02-19): decomposition regression guard passed via `cargo test -p gc_effects --lib` (57 tests).
+  - Completed (2026-02-19): extracted error/response serialization + artifact budget helpers from `gc_effects::runner` into `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_response_budget.rs`, shrinking runtime-loop file complexity without semantic drift.
+  - Completed (2026-02-19): extracted selfhost frontend policy/config surface from `gc_obligations::lib` into `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/frontend.rs` with public re-exports preserved.
+  - Completed (2026-02-19): decomposition regression guard passed via `cargo test -p gc_obligations --lib` (24 tests).
+  - Completed (2026-02-19): extracted obligation cache/acceptance persistence logic from `gc_obligations::lib` into `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_cache.rs`, isolating deterministic cache policy from obligation orchestration.
+  - Completed (2026-02-19): extracted CLI JSON canonicalization + envelope serialization helpers into `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_json.rs`.
+  - Completed (2026-02-19): decomposition regression guard passed via `cargo test -p gc_cli_driver` (13 tests).
+  - Remaining for closure: split `gc_effects::runner` capability dispatch arms by domain (`store/refs/sync/pkg/vcs/gc`) into command modules; split `gc_opt::stage2_wasm` planning/lowering/execution pipelines into staged modules; split `gc_obligations::lib` remaining obligation execution orchestration into obligation-family modules; split `gc_cli_driver::lib` command handler bodies (`cmd_eval`/`cmd_run`/`cmd_replay`/selfhost dashboard/artifact) into focused modules.
   - Acceptance: each module is split by subsystem with focused tests and no behavior drift in existing conformance suites.
 
-- [ ] Decompose `selfhost/toolchain.gc` into smaller selfhost packages with explicit import graph.
+- [x] Decompose `selfhost/toolchain.gc` into smaller selfhost packages with explicit import graph.
   - Risk: the monolithic selfhost artifact source slows AI generation, review, and selective optimization.
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain.gc` (~6353 LOC), `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain_manifest.gc:1`
+  - Completed (2026-02-19): selfhost source is module-split and assembled from manifest-defined module paths in `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain_manifest.gc`.
+  - Completed (2026-02-19): deterministic artifact composition is gate-tested (`selfhost_artifact_is_byte_for_byte_deterministic_across_rebuilds`) in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_selfhost_artifact.rs`.
   - Acceptance: toolchain source is packageized (frontend, vcs/pkg/gcpm, optimizer, diagnostics) and assembled reproducibly through manifest-defined composition.
 
 - [x] Raise WASI parity test coverage from smoke+strict lanes to regular shard coverage.

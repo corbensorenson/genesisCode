@@ -459,6 +459,33 @@
         (((core/task::spawn scope) label)
           {:task/program program})))))
 
+(def core/task::spawn-eval
+  (fn (scope)
+    (fn (label)
+      (fn (expr)
+        (((core/task::spawn scope) label)
+          {:task/eval expr})))))
+
+(def core/task::spawn-eval1
+  (fn (scope)
+    (fn (label)
+      (fn (expr)
+        (fn (arg)
+          (((core/task::spawn scope) label)
+            {
+              :task/arg arg
+              :task/eval expr}))))))
+
+(def core/task::spawn-evaln
+  (fn (scope)
+    (fn (label)
+      (fn (expr)
+        (fn (args)
+          (((core/task::spawn scope) label)
+            {
+              :task/args args
+              :task/eval expr}))))))
+
 (def core/contract::call
   (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))
 

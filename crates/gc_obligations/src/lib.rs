@@ -1,4 +1,6 @@
 mod error;
+mod frontend;
+mod obligation_cache;
 mod obligation_gfx;
 mod obligation_lint;
 mod obligation_stage;
@@ -27,6 +29,11 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
+pub use crate::frontend::{CoreformFrontend, SelfhostFrontendConfig, default_coreform_frontend};
+use crate::frontend::{
+    enforce_frontend_allowed, env_truthy,
+};
+use crate::obligation_cache::*;
 use crate::obligation_lint::{obligation_ai_style, obligation_lint};
 use crate::obligation_stage::{
     PackageEval, obligation_stage1_validation, obligation_translation_validation,
@@ -105,145 +112,8 @@ struct KernelLimits {
     mem_limits: MemLimits,
 }
 
-#[derive(Debug, Clone)]
-pub struct SelfhostFrontendConfig {
-    pub bootstrap_mode: SelfhostBootstrapMode,
-    pub artifact: Option<PathBuf>,
-}
-
-#[derive(Debug, Clone)]
-pub enum CoreformFrontend {
-    Rust,
-    Selfhost(SelfhostFrontendConfig),
-}
-
-const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
-const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
 const OBLIGATION_TEST_WORKERS_ENV: &str = "GENESIS_TEST_WORKERS";
 const OBLIGATION_CACHE_DISABLE_ENV: &str = "GENESIS_OBLIGATION_CACHE_DISABLE";
-const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
-const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
-
-fn default_selfhost_artifact_path() -> PathBuf {
-    std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
-}
-
-fn workspace_selfhost_artifact_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join(WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL)
-}
-
-fn resolved_selfhost_artifact_for_frontend() -> Option<PathBuf> {
-    if let Ok(raw) = std::env::var(SELFHOST_TOOLCHAIN_ARTIFACT_ENV) {
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed));
-        }
-    }
-    let p = default_selfhost_artifact_path();
-    if p.is_file() {
-        return Some(p);
-    }
-    let wp = workspace_selfhost_artifact_path();
-    if wp.is_file() {
-        return Some(wp);
-    }
-    None
-}
-
-pub fn default_coreform_frontend() -> CoreformFrontend {
-    CoreformFrontend::Selfhost(SelfhostFrontendConfig {
-        bootstrap_mode: SelfhostBootstrapMode::ArtifactOnly,
-        artifact: resolved_selfhost_artifact_for_frontend(),
-    })
-}
-
-fn env_truthy(name: &str) -> bool {
-    fn is_truthy(value: &str) -> bool {
-        matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    }
-    std::env::var(name)
-        .ok()
-        .map(|v| is_truthy(&v))
-        .unwrap_or(false)
-}
-
-fn rust_frontend_compat_enabled() -> bool {
-    cfg!(debug_assertions)
-}
-
-fn non_artifact_bootstrap_modes_allowed() -> bool {
-    cfg!(debug_assertions)
-}
-
-fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {
-    match mode {
-        SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
-        SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
-        SelfhostBootstrapMode::Embedded => "embedded",
-    }
-}
-
-fn enforce_frontend_bootstrap_mode_with_flag(
-    frontend: &CoreformFrontend,
-    context: &str,
-    allow_non_artifact_bootstrap_modes: bool,
-) -> Result<(), ObligationError> {
-    let CoreformFrontend::Selfhost(cfg) = frontend else {
-        return Ok(());
-    };
-    if cfg.bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
-        || allow_non_artifact_bootstrap_modes
-    {
-        return Ok(());
-    }
-    Err(ObligationError::Module(format!(
-        "non-artifact selfhost bootstrap mode `{}` is development-only in {context}; use artifact-only",
-        bootstrap_mode_label(cfg.bootstrap_mode)
-    )))
-}
-
-fn enforce_frontend_allowed_with_flag(
-    frontend: &CoreformFrontend,
-    context: &str,
-    selfhost_only: bool,
-    rust_compat_enabled: bool,
-) -> Result<(), ObligationError> {
-    enforce_frontend_bootstrap_mode_with_flag(
-        frontend,
-        context,
-        non_artifact_bootstrap_modes_allowed(),
-    )?;
-    if selfhost_only && matches!(frontend, CoreformFrontend::Rust) {
-        return Err(ObligationError::Module(format!(
-            "selfhost-only mode forbids Rust frontend in {context}; use CoreformFrontend::Selfhost"
-        )));
-    }
-    if !rust_compat_enabled && matches!(frontend, CoreformFrontend::Rust) {
-        return Err(ObligationError::Module(format!(
-            "Rust frontend is disabled in this profile in {context}; use dedicated parity harness binaries for CLI compatibility workflows"
-        )));
-    }
-    Ok(())
-}
-
-fn enforce_frontend_allowed(
-    frontend: &CoreformFrontend,
-    context: &str,
-) -> Result<(), ObligationError> {
-    enforce_frontend_allowed_with_flag(
-        frontend,
-        context,
-        env_truthy(SELFHOST_ONLY_ENV),
-        rust_frontend_compat_enabled(),
-    )
-}
 
 pub fn parse_canonicalize_module_source_with_frontend(
     src: &str,
@@ -664,450 +534,6 @@ fn effective_mem_limits(manifest: &PackageManifest, cli: MemLimits) -> MemLimits
         max_bytes_len: min_opt(cli.max_bytes_len, manifest.limits.max_bytes_len),
         max_string_len: min_opt(cli.max_string_len, manifest.limits.max_string_len),
     }
-}
-
-fn hash_optional_file(path: Option<&Path>) -> Result<Option<String>, ObligationError> {
-    let Some(path) = path else {
-        return Ok(None);
-    };
-    let bytes = std::fs::read(path)?;
-    Ok(Some(blake3::hash(&bytes).to_hex().to_string()))
-}
-
-fn step_limit_term(step_limit: StepLimit) -> Term {
-    match step_limit {
-        StepLimit::Default => Term::symbol(":default"),
-        StepLimit::Unlimited => Term::symbol(":unlimited"),
-        StepLimit::Limit(n) => Term::Int(BigInt::from(n)),
-    }
-}
-
-fn option_u64_term(v: Option<u64>) -> Term {
-    match v {
-        Some(n) => Term::Int(BigInt::from(n)),
-        None => Term::Nil,
-    }
-}
-
-fn mem_limits_term(mem: MemLimits) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":max-pair-cells")),
-                option_u64_term(mem.max_pair_cells),
-            ),
-            (
-                TermOrdKey(Term::symbol(":max-vec-len")),
-                option_u64_term(mem.max_vec_len),
-            ),
-            (
-                TermOrdKey(Term::symbol(":max-map-len")),
-                option_u64_term(mem.max_map_len),
-            ),
-            (
-                TermOrdKey(Term::symbol(":max-bytes-len")),
-                option_u64_term(mem.max_bytes_len),
-            ),
-            (
-                TermOrdKey(Term::symbol(":max-string-len")),
-                option_u64_term(mem.max_string_len),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
-fn frontend_term(frontend: &CoreformFrontend) -> Term {
-    match frontend {
-        CoreformFrontend::Rust => Term::Map(
-            [(
-                TermOrdKey(Term::symbol(":kind")),
-                Term::symbol(":frontend/rust"),
-            )]
-            .into_iter()
-            .collect(),
-        ),
-        CoreformFrontend::Selfhost(cfg) => {
-            let mode = match cfg.bootstrap_mode {
-                SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
-                SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
-                SelfhostBootstrapMode::Embedded => ":embedded",
-            };
-            Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":kind")),
-                        Term::symbol(":frontend/selfhost"),
-                    ),
-                    (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
-                    (
-                        TermOrdKey(Term::symbol(":artifact")),
-                        cfg.artifact
-                            .as_ref()
-                            .map(|p| Term::Str(p.display().to_string()))
-                            .unwrap_or(Term::Nil),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            )
-        }
-    }
-}
-
-fn obligation_cache_key(
-    pkg_toml: &Path,
-    manifest: &PackageManifest,
-    modules: &[LoadedModule],
-    caps_policy_hash: Option<&str>,
-    limits: KernelLimits,
-    frontend: &CoreformFrontend,
-) -> Result<String, ObligationError> {
-    let pkg_toml_hash = hash_optional_file(Some(pkg_toml))?.unwrap_or_default();
-    let module_hashes = Term::Vector(
-        modules
-            .iter()
-            .map(|m| {
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":path")),
-                            Term::Str(m.entry.path.clone()),
-                        ),
-                        (TermOrdKey(Term::symbol(":hash")), Term::Str(hex32(m.hash))),
-                    ]
-                    .into_iter()
-                    .collect(),
-                )
-            })
-            .collect(),
-    );
-    let key_term = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/obligation-cache-key-v0.1".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":pkg-name")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":pkg-version")),
-                Term::Str(manifest.version.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":pkg-toml-h")),
-                Term::Str(pkg_toml_hash),
-            ),
-            (TermOrdKey(Term::symbol(":module-hashes")), module_hashes),
-            (
-                TermOrdKey(Term::symbol(":caps-policy-h")),
-                caps_policy_hash
-                    .map(|s| Term::Str(s.to_string()))
-                    .unwrap_or(Term::Nil),
-            ),
-            (
-                TermOrdKey(Term::symbol(":obligations")),
-                Term::Vector(
-                    manifest
-                        .obligations
-                        .iter()
-                        .cloned()
-                        .map(Term::Symbol)
-                        .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":tests")),
-                Term::Vector(manifest.tests.iter().cloned().map(Term::Symbol).collect()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":property-tests")),
-                Term::Vector(
-                    manifest
-                        .property_tests
-                        .iter()
-                        .cloned()
-                        .map(Term::Symbol)
-                        .collect(),
-                ),
-            ),
-            (
-                TermOrdKey(Term::symbol(":step-limit")),
-                step_limit_term(limits.step_limit),
-            ),
-            (
-                TermOrdKey(Term::symbol(":mem-limits")),
-                mem_limits_term(limits.mem_limits),
-            ),
-            (
-                TermOrdKey(Term::symbol(":frontend")),
-                frontend_term(frontend),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    Ok(hex32(hash_term(&key_term)))
-}
-
-fn obligation_cache_dir(pkg_dir: &Path) -> PathBuf {
-    pkg_dir.join(".genesis").join("cache").join("obligations")
-}
-
-fn obligation_cache_path(pkg_dir: &Path, key: &str) -> PathBuf {
-    obligation_cache_dir(pkg_dir).join(format!("{key}.gc"))
-}
-
-fn obligation_result_to_cache_term(r: &ObligationResult) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":name")),
-                Term::Symbol(r.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(r.ok)),
-            (
-                TermOrdKey(Term::symbol(":artifact")),
-                r.artifact
-                    .as_ref()
-                    .map(|a| Term::Str(a.clone()))
-                    .unwrap_or(Term::Nil),
-            ),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(r.errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
-fn cache_term_to_obligation_result(t: &Term) -> Option<ObligationResult> {
-    let Term::Map(m) = t else { return None };
-    let name = match m.get(&TermOrdKey(Term::symbol(":name")))? {
-        Term::Symbol(s) | Term::Str(s) => s.clone(),
-        _ => return None,
-    };
-    let ok = match m.get(&TermOrdKey(Term::symbol(":ok")))? {
-        Term::Bool(b) => *b,
-        _ => return None,
-    };
-    let artifact = match m.get(&TermOrdKey(Term::symbol(":artifact"))) {
-        None | Some(Term::Nil) => None,
-        Some(Term::Str(s)) | Some(Term::Symbol(s)) => Some(s.clone()),
-        Some(_) => return None,
-    };
-    let errors = match m.get(&TermOrdKey(Term::symbol(":errors"))) {
-        None => Vec::new(),
-        Some(Term::Vector(xs)) => xs
-            .iter()
-            .filter_map(|x| match x {
-                Term::Str(s) | Term::Symbol(s) => Some(s.clone()),
-                _ => None,
-            })
-            .collect(),
-        Some(_) => return None,
-    };
-    Some(ObligationResult {
-        name,
-        ok,
-        artifact,
-        errors,
-    })
-}
-
-fn cached_result_to_term(key: &str, result: &PackageTestResult) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/obligation-cache-v0.1".to_string()),
-            ),
-            (TermOrdKey(Term::symbol(":key")), Term::Str(key.to_string())),
-            (
-                TermOrdKey(Term::symbol(":acceptance")),
-                Term::Str(result.acceptance_artifact.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(result.ok)),
-            (
-                TermOrdKey(Term::symbol(":obligations")),
-                Term::Vector(
-                    result
-                        .obligation_results
-                        .iter()
-                        .map(obligation_result_to_cache_term)
-                        .collect(),
-                ),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
-fn parse_cached_result_term(key: &str, t: &Term) -> Option<PackageTestResult> {
-    let Term::Map(m) = t else { return None };
-    if !matches!(
-        m.get(&TermOrdKey(Term::symbol(":kind"))),
-        Some(Term::Str(s)) if s == "genesis/obligation-cache-v0.1"
-    ) {
-        return None;
-    }
-    if !matches!(
-        m.get(&TermOrdKey(Term::symbol(":key"))),
-        Some(Term::Str(s)) if s == key
-    ) {
-        return None;
-    }
-    let acceptance_artifact = match m.get(&TermOrdKey(Term::symbol(":acceptance")))? {
-        Term::Str(s) | Term::Symbol(s) => s.clone(),
-        _ => return None,
-    };
-    let ok = match m.get(&TermOrdKey(Term::symbol(":ok")))? {
-        Term::Bool(b) => *b,
-        _ => return None,
-    };
-    let obligation_results = match m.get(&TermOrdKey(Term::symbol(":obligations")))? {
-        Term::Vector(xs) => xs
-            .iter()
-            .map(cache_term_to_obligation_result)
-            .collect::<Option<Vec<_>>>()?,
-        _ => return None,
-    };
-    Some(PackageTestResult {
-        ok,
-        acceptance_artifact,
-        obligation_results,
-    })
-}
-
-fn cache_artifacts_present_and_valid(
-    store: &EvidenceStore,
-    result: &PackageTestResult,
-) -> Result<bool, ObligationError> {
-    let acceptance_path = store.path_for(&result.acceptance_artifact);
-    if !acceptance_path.exists() {
-        return Ok(false);
-    }
-    store.verify_hex(&result.acceptance_artifact)?;
-    for ob in &result.obligation_results {
-        if let Some(artifact) = &ob.artifact {
-            let path = store.path_for(artifact);
-            if !path.exists() {
-                return Ok(false);
-            }
-            store.verify_hex(artifact)?;
-        }
-    }
-    Ok(true)
-}
-
-fn try_load_cached_test_result(
-    pkg_dir: &Path,
-    store: &EvidenceStore,
-    key: &str,
-) -> Result<Option<PackageTestResult>, ObligationError> {
-    if env_truthy(OBLIGATION_CACHE_DISABLE_ENV) {
-        return Ok(None);
-    }
-    let path = obligation_cache_path(pkg_dir, key);
-    if !path.exists() {
-        return Ok(None);
-    }
-    let src = std::fs::read_to_string(&path)?;
-    let parsed = match parse_term(&src) {
-        Ok(t) => t,
-        Err(_) => {
-            let _ = std::fs::remove_file(&path);
-            return Ok(None);
-        }
-    };
-    let Some(result) = parse_cached_result_term(key, &parsed) else {
-        let _ = std::fs::remove_file(&path);
-        return Ok(None);
-    };
-    if !cache_artifacts_present_and_valid(store, &result)? {
-        return Ok(None);
-    }
-    write_last_acceptance(pkg_dir, &result.acceptance_artifact)?;
-    Ok(Some(result))
-}
-
-fn write_cached_test_result(
-    pkg_dir: &Path,
-    key: &str,
-    result: &PackageTestResult,
-) -> Result<(), ObligationError> {
-    if env_truthy(OBLIGATION_CACHE_DISABLE_ENV) {
-        return Ok(());
-    }
-    let dir = obligation_cache_dir(pkg_dir);
-    std::fs::create_dir_all(&dir)?;
-    let path = obligation_cache_path(pkg_dir, key);
-    let payload = print_term(&cached_result_to_term(key, result));
-
-    let mut i: u64 = 0;
-    let tmp = loop {
-        let cand = dir.join(format!(".tmp-{}-{}-{}", key, std::process::id(), i));
-        i = i.saturating_add(1);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&cand)
-        {
-            Ok(mut f) => {
-                use std::io::Write;
-                f.write_all(payload.as_bytes())?;
-                let _ = f.sync_all();
-                break cand;
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(e.into()),
-        }
-    };
-    std::fs::rename(&tmp, &path)?;
-    #[cfg(unix)]
-    {
-        let d = std::fs::File::open(&dir)?;
-        let _ = d.sync_all();
-    }
-    Ok(())
-}
-
-fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), ObligationError> {
-    let genesis_dir = pkg_dir.join(".genesis");
-    std::fs::create_dir_all(&genesis_dir)?;
-    let path = genesis_dir.join("last_acceptance");
-    let mut i: u64 = 0;
-    let tmp = loop {
-        let cand = genesis_dir.join(format!(".tmp-last_acceptance-{}-{}", std::process::id(), i));
-        i = i.saturating_add(1);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&cand)
-        {
-            Ok(mut f) => {
-                use std::io::Write;
-                f.write_all(format!("{hex}\n").as_bytes())?;
-                let _ = f.sync_all();
-                break cand;
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(e.into()),
-        }
-    };
-    std::fs::rename(&tmp, &path)?;
-    #[cfg(unix)]
-    {
-        let d = std::fs::File::open(&genesis_dir)?;
-        let _ = d.sync_all();
-    }
-    Ok(())
 }
 
 fn extract_protocol_error(ctx: &EvalCtx, v: &Value) -> Option<String> {
@@ -3968,20 +3394,40 @@ mod tests {
 
     #[test]
     fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
-        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", true, true)
-            .expect_err("rust frontend must be blocked in selfhost-only mode");
+        let err = crate::frontend::enforce_frontend_allowed_with_flag(
+            &CoreformFrontend::Rust,
+            "test",
+            true,
+            true,
+        )
+        .expect_err("rust frontend must be blocked in selfhost-only mode");
         assert!(format!("{err}").contains("selfhost-only mode forbids Rust frontend"));
-        enforce_frontend_allowed_with_flag(&default_coreform_frontend(), "test", true, true)
-            .expect("selfhost frontend must be allowed");
+        crate::frontend::enforce_frontend_allowed_with_flag(
+            &default_coreform_frontend(),
+            "test",
+            true,
+            true,
+        )
+        .expect("selfhost frontend must be allowed");
     }
 
     #[test]
     fn rust_frontend_requires_compat_flag_at_library_boundary() {
-        let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, false)
-            .expect_err("rust frontend must require explicit compatibility mode");
+        let err = crate::frontend::enforce_frontend_allowed_with_flag(
+            &CoreformFrontend::Rust,
+            "test",
+            false,
+            false,
+        )
+        .expect_err("rust frontend must require explicit compatibility mode");
         assert!(format!("{err}").contains("Rust frontend is disabled in this profile"));
-        enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, true)
-            .expect("rust frontend should be permitted when compatibility mode is enabled");
+        crate::frontend::enforce_frontend_allowed_with_flag(
+            &CoreformFrontend::Rust,
+            "test",
+            false,
+            true,
+        )
+        .expect("rust frontend should be permitted when compatibility mode is enabled");
     }
 
     #[test]
@@ -3990,10 +3436,12 @@ mod tests {
             bootstrap_mode: SelfhostBootstrapMode::Embedded,
             artifact: None,
         });
-        let err = enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", false)
-            .expect_err("embedded bootstrap should be blocked outside development mode");
+        let err = crate::frontend::enforce_frontend_bootstrap_mode_with_flag(
+            &frontend, "test", false,
+        )
+        .expect_err("embedded bootstrap should be blocked outside development mode");
         assert!(format!("{err}").contains("development-only"));
-        enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", true)
+        crate::frontend::enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", true)
             .expect("embedded bootstrap should be allowed in development mode");
     }
 

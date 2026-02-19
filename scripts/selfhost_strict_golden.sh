@@ -43,6 +43,55 @@ fail() {
   exit 1
 }
 
+install_fixture_gpu_bridge() {
+  local fixture_dir="$1"
+  local caps="$fixture_dir/caps.toml"
+  [[ -f "$caps" ]] || fail "missing caps.toml for gpu fixture at ${fixture_dir}"
+  if grep -q '^\[op\."gfx/gpu::create-buffer"\]$' "$caps"; then
+    return
+  fi
+
+  local bridge_name bridge_path
+  case "${OSTYPE:-}" in
+    msys*|cygwin*|win32*)
+      bridge_name="host_bridge.cmd"
+      bridge_path="$fixture_dir/$bridge_name"
+      cat >"$bridge_path" <<'CMD'
+@echo {:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}
+CMD
+      ;;
+    *)
+      bridge_name="host_bridge.sh"
+      bridge_path="$fixture_dir/$bridge_name"
+      cat >"$bridge_path" <<'SH'
+#!/bin/sh
+resp='{:ok true :id "gpu-bridge-0" :data b"\x01\x02\x03\x04" :written 4}'
+printf '%s\n%s' "${#resp}" "$resp"
+SH
+      chmod +x "$bridge_path"
+      ;;
+  esac
+
+  cat >>"$caps" <<EOF
+
+[op."gfx/gpu::create-buffer"]
+base_dir = "."
+bridge_cmd = "${bridge_name}"
+
+[op."gfx/gpu::write-buffer"]
+base_dir = "."
+bridge_cmd = "${bridge_name}"
+
+[op."gfx/gpu::read-buffer"]
+base_dir = "."
+bridge_cmd = "${bridge_name}"
+
+[op."gfx/gpu::destroy-resource"]
+base_dir = "."
+bridge_cmd = "${bridge_name}"
+EOF
+}
+
 check_typecheck_parity() {
   local pkg_toml="$1"
   local name="$2"
@@ -160,6 +209,9 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   (
     dst_dir="$PKGS_TMP/$name"
     cp -R "$src_dir" "$dst_dir"
+    if [[ "$name" == "pkg_gpu_parallel_obligations" ]]; then
+      install_fixture_gpu_bridge "$dst_dir"
+    fi
     pkg_toml="$dst_dir/package.toml"
     check_typecheck_parity "$pkg_toml" "$name"
 

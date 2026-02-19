@@ -20,6 +20,7 @@ use gc_prelude::{
 };
 
 mod cmd_gc;
+mod cli_json;
 mod cmd_pkg;
 mod cmd_policy;
 mod cmd_refs;
@@ -43,6 +44,7 @@ mod selfhost_bridge;
 mod selfhost_frontend;
 
 use cmd_gc::cmd_gc;
+use cli_json::*;
 use cmd_pkg::cmd_pkg;
 use cmd_policy::cmd_policy;
 use cmd_refs::cmd_refs;
@@ -1271,68 +1273,6 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
             std::process::ExitCode::from(e.exit_code)
         }
     }
-}
-
-fn canonicalize_json(v: &serde_json::Value) -> serde_json::Value {
-    match v {
-        serde_json::Value::Object(m) => {
-            let mut sorted: BTreeMap<String, serde_json::Value> = BTreeMap::new();
-            for (k, vv) in m {
-                sorted.insert(k.clone(), canonicalize_json(vv));
-            }
-            let mut out = serde_json::Map::new();
-            for (k, vv) in sorted {
-                out.insert(k, vv);
-            }
-            serde_json::Value::Object(out)
-        }
-        serde_json::Value::Array(xs) => {
-            serde_json::Value::Array(xs.iter().map(canonicalize_json).collect())
-        }
-        _ => v.clone(),
-    }
-}
-
-fn json_canonical_string(v: &serde_json::Value) -> String {
-    serde_json::to_string(&canonicalize_json(v)).unwrap_or_else(|e| {
-        format!(
-            "{{\"ok\":false,\"kind\":\"genesis/error-v0.2\",\"error\":{{\"code\":\"json/serialize\",\"message\":\"failed to render json output: {e}\"}}}}"
-        )
-    })
-}
-
-#[derive(Debug)]
-struct CliError {
-    exit_code: u8,
-    json: JsonError,
-}
-
-#[derive(Debug, Serialize)]
-struct JsonError {
-    code: &'static str,
-    message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    context: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Serialize)]
-struct JsonEnvelope<T> {
-    ok: bool,
-    kind: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<JsonError>,
-}
-
-fn json_envelope_value<T: Serialize>(env: JsonEnvelope<T>) -> Result<serde_json::Value, CliError> {
-    serde_json::to_value(env).map_err(|e| {
-        cli_err(
-            EX_INTERNAL,
-            "json/serialize",
-            format!("failed to serialize CLI json envelope: {e}"),
-        )
-    })
 }
 
 #[derive(Debug, Deserialize)]

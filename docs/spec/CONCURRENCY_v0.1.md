@@ -41,6 +41,18 @@ Request payload:
 ```coreform
 {:scope <str|symbol|nil> :label <str|symbol|nil> :payload <term>}
 ```
+Optional executable payload forms inside `:payload`:
+```coreform
+{:task/eval <coreform-expr-term>}
+{:task/eval <coreform-expr-term> :task/arg <term>}
+{:task/eval <coreform-expr-term> :task/args [<term> ...]}
+```
+Semantics:
+- The runner evaluates `:task/eval` in a fresh prelude environment.
+- If `:task/arg`/`:task/args` are present, the evaluated value must be callable and is applied left-to-right.
+- If evaluation yields an effect program, it is executed under the same capability policy as the parent run.
+- Final non-datum results are rejected as `core/task/program-error`.
+
 Result payload:
 ```coreform
 {:task-id <symbol|str> :state :running|:done|:failed|:cancelled}

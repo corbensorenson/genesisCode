@@ -102,6 +102,7 @@ struct TaskJob {
     task_id: String,
     payload: Term,
     cancel_flag: Arc<AtomicBool>,
+    policy: Arc<CapsPolicy>,
 }
 
 #[derive(Debug, Clone)]
@@ -483,7 +484,7 @@ pub(crate) fn task_runtime_call(
                     let cancel_flag = AtomicBool::new(false);
                     let completion = TaskCompletion {
                         task_id: task_id.clone(),
-                        outcome: execute_task_payload(payload, &cancel_flag),
+                        outcome: execute_task_payload(payload, &cancel_flag, policy),
                     };
                     apply_completion(runtime, completion);
                     promote_queued_task(runtime, policy, op);
@@ -628,7 +629,7 @@ fn worker_loop(
             Ok(job) => job,
             Err(_) => break,
         };
-        let outcome = execute_task_payload(job.payload, &job.cancel_flag);
+        let outcome = execute_task_payload(job.payload, &job.cancel_flag, job.policy.as_ref());
         let _ = done_tx.send(TaskCompletion {
             task_id: job.task_id,
             outcome,
@@ -850,6 +851,7 @@ fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str)
             task_id: task_id.clone(),
             payload,
             cancel_flag: Arc::clone(&cancel_flag),
+            policy: Arc::new(policy.clone()),
         };
         let dispatch_result = runtime.pool.dispatch(job);
         if let Some(rec) = runtime.tasks.get_mut(&task_id) {

@@ -722,6 +722,98 @@ max_workers = 1
     }
 
     #[test]
+    fn task_eval_payload_executes_callable_effect_program_and_replays() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind
+                 (((core/task::spawn "scope/main") "eval")
+                   {
+                     :task/args [2 40]
+                     :task/eval '(fn (x) (fn (y) (core/effect::pure (prim int/add x y))))
+                   }))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    (core/task::await tid)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+        let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        assert_eq!(run_out.log.entries.len(), 2);
+        assert_eq!(run_out.log.entries[0].op, "core/task::spawn");
+        assert_eq!(run_out.log.entries[1].op, "core/task::await");
+        let Value::Data(Term::Map(m)) = &run_out.value else {
+            panic!("expected await response map");
+        };
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":state"))),
+            Some(&Term::symbol(":done"))
+        );
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":result"))),
+            Some(&Term::Int(42.into()))
+        );
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+        assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+    }
+
+    #[test]
+    fn task_eval_effect_program_respects_parent_cap_policy() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind
+                 (((core/task::spawn "scope/main") "denied-subprogram")
+                   {
+                     :task/eval
+                       '(core/effect::perform
+                          'sys/time::now
+                          nil
+                          (fn (t) (core/effect::pure t)))
+                   }))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    (core/task::await tid)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+        let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+        let Value::Data(Term::Map(m)) = out.value else {
+            panic!("expected await response map");
+        };
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":state"))),
+            Some(&Term::symbol(":failed"))
+        );
+        let Some(Term::Map(err)) = m.get(&TermOrdKey(Term::symbol(":error"))) else {
+            panic!("expected failed task error payload");
+        };
+        assert_eq!(
+            err.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(&Term::Str("core/caps/denied".to_string()))
+        );
+    }
+
+    #[test]
     fn task_policy_max_queue_limit_denies_spawn_and_returns_budget_error() {
         let (forms, h) = mk_prog_for(
             "core/task::spawn",

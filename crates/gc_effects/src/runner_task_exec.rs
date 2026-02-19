@@ -3,15 +3,31 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, hash_term};
+use gc_kernel::{Apply, EvalCtx, Value, eval_term, value_hash};
+use gc_prelude::build_prelude;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::runner_task::TaskOutcome;
+use crate::{CapsPolicy, run};
 
-pub(crate) fn execute_task_payload(payload: Term, cancel_flag: &AtomicBool) -> TaskOutcome {
+pub(crate) fn execute_task_payload(
+    payload: Term,
+    cancel_flag: &AtomicBool,
+    policy: &CapsPolicy,
+) -> TaskOutcome {
     if cancel_flag.load(Ordering::Acquire) {
         return TaskOutcome::Cancelled;
+    }
+    if let Some(expr) = map_field(&payload, ":task/eval") {
+        return execute_task_eval(
+            expr.clone(),
+            map_field(&payload, ":task/arg").cloned(),
+            map_field(&payload, ":task/args").cloned(),
+            cancel_flag,
+            policy,
+        );
     }
     if let Some(program) = map_field(&payload, ":task/program") {
         return execute_task_program(program.clone(), cancel_flag);
@@ -33,6 +49,137 @@ pub(crate) fn execute_task_payload(payload: Term, cancel_flag: &AtomicBool) -> T
         return TaskOutcome::Done(result.clone());
     }
     TaskOutcome::Done(payload)
+}
+
+fn execute_task_eval(
+    expr: Term,
+    arg: Option<Term>,
+    args: Option<Term>,
+    cancel_flag: &AtomicBool,
+    policy: &CapsPolicy,
+) -> TaskOutcome {
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let env = prelude.env;
+    let expr_hash = hash_term(&expr);
+
+    let mut current = match eval_term(&mut ctx, &env, &expr) {
+        Ok(v) => v,
+        Err(e) => {
+            return TaskOutcome::Failed(task_program_error(
+                0,
+                format!("task eval failed: {}", e.msg),
+            ));
+        }
+    };
+
+    if let Some(args_t) = args {
+        let Term::Vector(xs) = args_t else {
+            return TaskOutcome::Failed(task_program_error(
+                0,
+                "task eval :task/args must be a vector".to_string(),
+            ));
+        };
+        for (idx, x) in xs.into_iter().enumerate() {
+            if cancel_flag.load(Ordering::Acquire) {
+                return TaskOutcome::Cancelled;
+            }
+            current = match current.apply(&mut ctx, Value::Data(x)) {
+                Ok(v) => v,
+                Err(e) => {
+                    return TaskOutcome::Failed(task_program_error(
+                        idx,
+                        format!("task eval apply failed: {}", e.msg),
+                    ));
+                }
+            };
+        }
+    } else if let Some(arg_t) = arg {
+        current = match current.apply(&mut ctx, Value::Data(arg_t)) {
+            Ok(v) => v,
+            Err(e) => {
+                return TaskOutcome::Failed(task_program_error(
+                    0,
+                    format!("task eval apply failed: {}", e.msg),
+                ));
+            }
+        };
+    }
+
+    resolve_task_value(current, expr_hash, cancel_flag, policy, &mut ctx)
+}
+
+fn resolve_task_value(
+    mut current: Value,
+    expr_hash: [u8; 32],
+    cancel_flag: &AtomicBool,
+    policy: &CapsPolicy,
+    ctx: &mut EvalCtx,
+) -> TaskOutcome {
+    loop {
+        if cancel_flag.load(Ordering::Acquire) {
+            return TaskOutcome::Cancelled;
+        }
+        match current {
+            Value::EffectProgram(_) => {
+                let program_hash = value_hash(&current);
+                let out = run(
+                    ctx,
+                    policy,
+                    current,
+                    if program_hash == [0u8; 32] {
+                        expr_hash
+                    } else {
+                        program_hash
+                    },
+                    "gc_effects-task".to_string(),
+                );
+                let run_out = match out {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return TaskOutcome::Failed(task_program_error(
+                            0,
+                            format!("task effect run failed: {e}"),
+                        ));
+                    }
+                };
+                current = run_out.value;
+            }
+            Value::Sealed { payload, .. } => match value_to_term(payload.as_ref()) {
+                Ok(t) => return TaskOutcome::Failed(t),
+                Err(msg) => return TaskOutcome::Failed(task_program_error(0, msg)),
+            },
+            other => match value_to_term(&other) {
+                Ok(t) => return TaskOutcome::Done(t),
+                Err(msg) => return TaskOutcome::Failed(task_program_error(0, msg)),
+            },
+        }
+    }
+}
+
+fn value_to_term(v: &Value) -> Result<Term, String> {
+    match v {
+        Value::Data(t) => Ok(t.clone()),
+        Value::Vector(xs) => {
+            let mut out = Vec::with_capacity(xs.len());
+            for x in xs {
+                out.push(value_to_term(x)?);
+            }
+            Ok(Term::Vector(out))
+        }
+        Value::Map(m) => {
+            let mut out = BTreeMap::new();
+            for (k, vv) in m {
+                out.insert(TermOrdKey(k.0.clone()), value_to_term(vv)?);
+            }
+            Ok(Term::Map(out))
+        }
+        Value::Sealed { payload, .. } => value_to_term(payload.as_ref()),
+        _ => Err(format!(
+            "task evaluation returned non-datum value: {}",
+            v.debug_repr()
+        )),
+    }
 }
 
 fn execute_task_program(program: Term, cancel_flag: &AtomicBool) -> TaskOutcome {
