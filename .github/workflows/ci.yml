@@ -81,6 +81,9 @@ jobs:
       - name: Selfhost Boundary Guard
         run: bash scripts/check_selfhost_boundary.sh
 
+      - name: Old Bootstrap Retirement Guard
+        run: bash scripts/check_old_bootstrap_retirement.sh
+
       - name: Host ABI Conformance Guard
         run: bash scripts/check_host_abi_conformance.sh
 

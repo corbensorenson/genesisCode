@@ -40,14 +40,24 @@ fn inproc_map() -> &'static Mutex<BTreeMap<String, Arc<dyn InProcRegistry>>> {
     MAP.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-pub fn register_inproc(id: &str, reg: Arc<dyn InProcRegistry>) {
-    let mut g = inproc_map().lock().expect("inproc registry lock");
-    g.insert(id.to_string(), reg);
+fn lock_inproc_map()
+-> Result<std::sync::MutexGuard<'static, BTreeMap<String, Arc<dyn InProcRegistry>>>, RegistryError>
+{
+    inproc_map()
+        .lock()
+        .map_err(|_| RegistryError::Protocol("inproc registry lock poisoned".to_string()))
 }
 
-pub fn unregister_inproc(id: &str) {
-    let mut g = inproc_map().lock().expect("inproc registry lock");
+pub fn register_inproc(id: &str, reg: Arc<dyn InProcRegistry>) -> Result<(), RegistryError> {
+    let mut g = lock_inproc_map()?;
+    g.insert(id.to_string(), reg);
+    Ok(())
+}
+
+pub fn unregister_inproc(id: &str) -> Result<(), RegistryError> {
+    let mut g = lock_inproc_map()?;
     g.remove(id);
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -155,7 +165,7 @@ impl RegistryClient {
 
     pub fn ping(&self) -> Result<PingResp, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -187,7 +197,7 @@ impl RegistryClient {
 
     pub fn store_has(&self, hashes: &[String]) -> Result<BTreeMap<String, bool>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -233,7 +243,7 @@ impl RegistryClient {
         max_bytes: Option<usize>,
     ) -> Result<Vec<u8>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -285,7 +295,7 @@ impl RegistryClient {
         max_bytes: Option<usize>,
     ) -> Result<Option<Vec<u8>>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -337,7 +347,7 @@ impl RegistryClient {
 
     pub fn store_put(&self, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -384,7 +394,7 @@ impl RegistryClient {
 
     pub fn refs_get(&self, name: &str) -> Result<Option<String>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -420,7 +430,7 @@ impl RegistryClient {
 
     pub fn refs_list(&self, prefix: Option<&str>) -> Result<Vec<RefsListEntry>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
@@ -471,7 +481,7 @@ impl RegistryClient {
 
     pub fn refs_set(&self, req: &RefsSetReq<'_>) -> Result<RefsSetResp, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
-            let g = inproc_map().lock().expect("inproc registry lock");
+            let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;

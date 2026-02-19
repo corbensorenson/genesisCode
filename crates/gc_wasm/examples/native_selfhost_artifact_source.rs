@@ -3,6 +3,7 @@ use gc_prelude::selfhost_coreform_toolchain_v1_sources;
 
 fn main() {
     let modules = selfhost_coreform_toolchain_v1_sources()
+        .expect("load selfhost toolchain sources")
         .iter()
         .map(|(path, src)| {
             let forms = canonicalize_module(parse_module(src).expect("parse selfhost module"))

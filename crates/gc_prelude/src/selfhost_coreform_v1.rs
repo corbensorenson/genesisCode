@@ -214,8 +214,9 @@ fn read_manifest_sources_from_workspace(
 
 #[cfg(feature = "embedded-bootstrap")]
 static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Lazy::new(|| {
+    let sources = selfhost_coreform_toolchain_v1_sources().map_err(|e| e.to_string())?;
     let mut out = Vec::new();
-    for (name, src) in selfhost_coreform_toolchain_v1_sources() {
+    for (name, src) in sources {
         let forms = parse_module(&src).map_err(|e| format!("{name}: parse: {e}"))?;
         let forms = canonicalize_module(forms).map_err(|e| format!("{name}: canon: {e}"))?;
         let compiled = compile_module(&forms).map_err(|e| format!("{name}: compile: {e}"))?;
@@ -224,7 +225,7 @@ static SELFHOST_COREFORM_V1: Lazy<Result<SelfhostCompiledModules, String>> = Laz
     Ok(out)
 });
 
-pub fn selfhost_coreform_toolchain_v1_sources() -> Vec<(String, String)> {
+pub fn selfhost_coreform_toolchain_v1_sources() -> anyhow::Result<Vec<(String, String)>> {
     let r = EMBEDDED_MODULE_SOURCES.get_or_init(|| {
         let manifest = toolchain_manifest().map_err(|e| e.to_string())?;
         if let Ok(sources) = read_manifest_sources_from_workspace(manifest) {
@@ -242,8 +243,10 @@ pub fn selfhost_coreform_toolchain_v1_sources() -> Vec<(String, String)> {
         Ok(ordered)
     });
     match r {
-        Ok(v) => v.clone(),
-        Err(e) => panic!("selfhost toolchain embedded sources unavailable: {e}"),
+        Ok(v) => Ok(v.clone()),
+        Err(e) => Err(anyhow::anyhow!(
+            "selfhost toolchain embedded sources unavailable: {e}"
+        )),
     }
 }
 
@@ -287,6 +290,14 @@ fn env_truthy(name: &str) -> bool {
             )
         })
         .unwrap_or(false)
+}
+
+fn lock_artifact_compiled_cache<'a>(
+    cache: &'a Mutex<BTreeMap<[u8; 32], CachedCompiledModules>>,
+) -> anyhow::Result<std::sync::MutexGuard<'a, BTreeMap<[u8; 32], CachedCompiledModules>>> {
+    cache
+        .lock()
+        .map_err(|_| anyhow::anyhow!("artifact cache lock poisoned"))
 }
 
 fn hex32(h: [u8; 32]) -> String {
@@ -548,9 +559,12 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
     let artifact_h: [u8; 32] = *h.finalize().as_bytes();
 
     if let Some(cache) = ARTIFACT_COMPILED_CACHE.get() {
-        if let Some(compiled) = cache.lock().expect("artifact cache lock").get(&artifact_h) {
+        let cached = lock_artifact_compiled_cache(cache)?
+            .get(&artifact_h)
+            .cloned();
+        if let Some(compiled) = cached {
             return with_trusted_bootstrap_limits(ctx, |ctx| {
-                for (name, m) in compiled {
+                for (name, m) in &compiled {
                     eval_compiled_module(ctx, env, m).with_context(|| format!("eval {name}"))?;
                 }
                 Ok(())
@@ -575,10 +589,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         });
         if out.is_ok() {
             let cache = ARTIFACT_COMPILED_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
-            cache
-                .lock()
-                .expect("artifact cache lock")
-                .insert(artifact_h, compiled_in_order);
+            lock_artifact_compiled_cache(cache)?.insert(artifact_h, compiled_in_order);
             return out;
         }
     }
@@ -751,10 +762,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
 
     if out.is_ok() {
         let cache = ARTIFACT_COMPILED_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
-        cache
-            .lock()
-            .expect("artifact cache lock")
-            .insert(artifact_h, compiled_in_order.clone());
+        lock_artifact_compiled_cache(cache)?.insert(artifact_h, compiled_in_order.clone());
         let _ = write_compiled_cache(artifact_h, &compiled_in_order);
     }
     out

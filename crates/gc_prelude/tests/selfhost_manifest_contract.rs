@@ -80,6 +80,7 @@ fn build_selfhost_artifact_source(modules: &[(String, String)]) -> String {
 fn toolchain_sources_follow_manifest_paths_and_order() {
     let expected_paths = manifest_module_paths();
     let actual_paths: Vec<String> = selfhost_coreform_toolchain_v1_sources()
+        .expect("load selfhost toolchain sources")
         .into_iter()
         .map(|(path, _)| path)
         .collect();
@@ -88,7 +89,8 @@ fn toolchain_sources_follow_manifest_paths_and_order() {
 
 #[test]
 fn artifact_loader_enforces_manifest_required_symbols() {
-    let modules = selfhost_coreform_toolchain_v1_sources();
+    let modules =
+        selfhost_coreform_toolchain_v1_sources().expect("load selfhost toolchain sources");
     let mutated: Vec<(String, String)> = modules
         .into_iter()
         .map(|(path, src)| {

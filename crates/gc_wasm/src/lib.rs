@@ -972,6 +972,7 @@ mod tests {
 
     fn build_selfhost_artifact_source() -> String {
         let modules = selfhost_coreform_toolchain_v1_sources()
+            .expect("load selfhost toolchain sources")
             .iter()
             .map(|(path, src)| {
                 let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();

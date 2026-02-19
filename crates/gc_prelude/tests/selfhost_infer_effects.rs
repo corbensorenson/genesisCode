@@ -10,6 +10,7 @@ use gc_prelude::{
 fn build_selfhost_artifact_source() -> String {
     // Keep artifact building deterministic and in-tree; tests should not depend on workspace files.
     let modules = selfhost_coreform_toolchain_v1_sources()
+        .expect("load selfhost toolchain sources")
         .iter()
         .map(|(path, src)| {
             let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();

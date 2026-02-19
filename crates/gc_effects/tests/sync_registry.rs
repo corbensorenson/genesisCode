@@ -522,7 +522,7 @@ fn mk_remote(id: &str) -> (String, String) {
 #[test]
 fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t1", reg.clone());
+    gc_registry::register_inproc("t1", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t1");
 
     // Policy artifact is remote-known (preloaded).
@@ -680,7 +680,7 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
 #[test]
 fn sync_push_rejects_duplicate_set_ref_targets_in_payload() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t_sync_dup_set_ref", reg);
+    gc_registry::register_inproc("t_sync_dup_set_ref", reg).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_sync_dup_set_ref");
 
     let td = tempfile::tempdir().unwrap();
@@ -714,7 +714,7 @@ fn sync_push_rejects_duplicate_set_ref_targets_in_payload() {
 #[test]
 fn sync_push_set_refs_preflight_fails_before_upload() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t_sync_preflight", reg.clone());
+    gc_registry::register_inproc("t_sync_preflight", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_sync_preflight");
 
     let td = tempfile::tempdir().unwrap();
@@ -790,7 +790,7 @@ fn sync_push_set_refs_preflight_fails_before_upload() {
 #[test]
 fn pkg_publish_validates_policy_and_pushes_commit_closure() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t_pkg_publish", reg.clone());
+    gc_registry::register_inproc("t_pkg_publish", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_pkg_publish");
 
     let td = tempfile::tempdir().unwrap();
@@ -930,7 +930,7 @@ fn pkg_publish_validates_policy_and_pushes_commit_closure() {
 #[test]
 fn pkg_publish_enforces_obligation_bound_evidence_kinds() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t_pkg_publish_kinds", reg.clone());
+    gc_registry::register_inproc("t_pkg_publish_kinds", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_pkg_publish_kinds");
 
     let td = tempfile::tempdir().unwrap();
@@ -1061,7 +1061,7 @@ fn pkg_publish_enforces_obligation_bound_evidence_kinds() {
 #[test]
 fn sync_pull_ref_conflict_requires_force() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t2", reg.clone());
+    gc_registry::register_inproc("t2", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t2");
 
     // Remote commit, snapshot, patch, evidence (minimal closure).
@@ -1141,7 +1141,7 @@ fn sync_pull_ref_conflict_requires_force() {
 #[test]
 fn sync_remote_allowlist_is_enforced() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t3", reg);
+    gc_registry::register_inproc("t3", reg).expect("register inproc");
     let (remote, _remote_allow) = mk_remote("t3");
 
     let td = tempfile::tempdir().unwrap();
@@ -1170,7 +1170,7 @@ fn sync_remote_allowlist_is_enforced() {
 #[test]
 fn sync_pull_enforces_max_artifact_bytes_budget() {
     let reg = Arc::new(MemRegistry::new());
-    gc_registry::register_inproc("t_sync_limit", reg.clone());
+    gc_registry::register_inproc("t_sync_limit", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_sync_limit");
 
     let module_art = parse_term(&format!(

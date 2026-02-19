@@ -51,3 +51,13 @@ Move artifacts to `old_bootstrap/` only when all are true:
 2. CI no longer references the archived path.
 3. Specs/docs point to the replacement path.
 4. Determinism and obligation coverage remains intact after removal.
+
+## Rust-to-old_bootstrap Retirement Gate
+
+Cutover Status: APPROVED
+Approval Date: 2026-02-19
+Approver: genesis-core-maintainers
+
+- [x] Active crates have zero runtime imports of `old_bootstrap/rust_semantics`.
+- [x] CI enforces zero archived bootstrap semantic references via `scripts/check_old_bootstrap_retirement.sh`.
+- [x] Archive intent and replacement surfaces are documented in this spec.

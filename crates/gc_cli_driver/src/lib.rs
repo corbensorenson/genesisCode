@@ -25,14 +25,13 @@ mod cmd_refs;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
-#[path = "../../../old_bootstrap/rust_semantics/mod.rs"]
-mod legacy_program_builders;
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
 mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
+mod program_builders;
 
 use cmd_gc::cmd_gc;
 use cmd_pkg::cmd_pkg;
@@ -49,7 +48,7 @@ use cmd_vcs::{
     mk_store_get_program, mk_store_has_program, mk_store_put_program, normalize_pkg_add_strategy,
     parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
 };
-use legacy_program_builders::*;
+use program_builders::*;
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -3760,7 +3759,9 @@ fn cmd_selfhost_artifact(
     let mut stage2_validated = 0u64;
     let mut gate_errors: Vec<String> = Vec::new();
 
-    for (path, src) in selfhost_coreform_toolchain_v1_sources() {
+    let toolchain_sources = selfhost_coreform_toolchain_v1_sources()
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?;
+    for (path, src) in toolchain_sources {
         let seed = if reuse_seed_results {
             stage2_seed_index
                 .as_ref()
