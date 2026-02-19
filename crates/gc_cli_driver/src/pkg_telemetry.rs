@@ -109,7 +109,7 @@ mod tests {
             toolchain: "genesis test".to_string(),
             entries: vec![EffectLogEntry {
                 i: 0,
-                op: "core/pkg::lock".to_string(),
+                op: "core/pkg-low::lock".to_string(),
                 payload_h: [1; 32],
                 cont_h: [2; 32],
                 req_h: [3; 32],
@@ -118,7 +118,7 @@ mod tests {
                 schedule_step: None,
                 await_edge: None,
                 decision: Decision::Allow,
-                cap: Term::symbol("core/pkg::lock"),
+                cap: Term::symbol("core/pkg-low::lock"),
                 resp: LoggedResp::Ok(Term::Map(BTreeMap::new())),
                 resp_h: [4; 32],
             }],

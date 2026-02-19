@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use blake3::Hasher;
@@ -16,6 +17,9 @@ use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::store::ArtifactStore;
 
 type GcStoreLock = ExclusiveLock;
+
+const HARD_REMOTE_ARTIFACT_MAX_BYTES: usize = 32 * 1024 * 1024;
+const HARD_SYNC_PULL_BATCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 
 struct HashingWriter<'a, W: std::io::Write> {
     inner: &'a mut W,
@@ -430,11 +434,17 @@ fn task_runtime_call(
                     Some(op),
                 ));
             }
-            let state_before = runtime
-                .tasks
-                .get(&task_id)
-                .map(|r| r.state.clone())
-                .expect("task-id existence checked");
+            let state_before = match runtime.tasks.get(&task_id) {
+                Some(rec) => rec.state.clone(),
+                None => {
+                    return Some(mk_error(
+                        error_tok,
+                        "core/task/internal-state",
+                        format!("task disappeared before cancel: {task_id}"),
+                        Some(op),
+                    ));
+                }
+            };
             if state_before == TaskState::Queued {
                 runtime.queue.retain(|q| q != &task_id);
             }
@@ -446,10 +456,15 @@ fn task_runtime_call(
             if state_before == TaskState::Running {
                 promote_queued_task(runtime, policy);
             }
-            let rec = runtime
-                .tasks
-                .get(&task_id)
-                .expect("task-id existence checked");
+            let rec = runtime.tasks.get(&task_id);
+            let Some(rec) = rec else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/internal-state",
+                    format!("task disappeared during cancel: {task_id}"),
+                    Some(op),
+                ));
+            };
             Some(Value::Data(task_map([
                 (":task-id", Term::Str(task_id)),
                 (":state", task_state_term(&rec.state)),
@@ -476,11 +491,17 @@ fn task_runtime_call(
                     Some(op),
                 ));
             }
-            let state_before = runtime
-                .tasks
-                .get(&task_id)
-                .map(|r| r.state.clone())
-                .expect("task-id existence checked");
+            let state_before = match runtime.tasks.get(&task_id) {
+                Some(rec) => rec.state.clone(),
+                None => {
+                    return Some(mk_error(
+                        error_tok,
+                        "core/task/internal-state",
+                        format!("task disappeared before await: {task_id}"),
+                        Some(op),
+                    ));
+                }
+            };
             if state_before == TaskState::Queued {
                 runtime.queue.retain(|q| q != &task_id);
             }
@@ -492,10 +513,15 @@ fn task_runtime_call(
             if state_before == TaskState::Running {
                 promote_queued_task(runtime, policy);
             }
-            let rec = runtime
-                .tasks
-                .get(&task_id)
-                .expect("task-id existence checked");
+            let rec = runtime.tasks.get(&task_id);
+            let Some(rec) = rec else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/internal-state",
+                    format!("task disappeared during await: {task_id}"),
+                    Some(op),
+                ));
+            };
             let (result, error) = match rec.state {
                 TaskState::Done => (rec.payload.clone(), Term::Nil),
                 TaskState::Cancelled | TaskState::Running | TaskState::Queued => {
@@ -1058,37 +1084,77 @@ fn cap_term(op: &str, pol: Option<&OpPolicy>) -> Result<Term, EffectsError> {
     Ok(Term::Map(m))
 }
 
-fn effective_capability_op<'a>(op: &'a str, policy: &CapsPolicy) -> &'a str {
-    if !policy.legacy_semantic_compat() {
-        return op;
+fn op_extra_positive_usize(pol: Option<&OpPolicy>, key: &str) -> Result<Option<usize>, String> {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    let Some(v) = pol.extra.get(key) else {
+        return Ok(None);
+    };
+    let n = v
+        .as_integer()
+        .ok_or_else(|| format!("{key} must be a positive integer"))?;
+    if n <= 0 {
+        return Err(format!("{key} must be > 0"));
     }
-    match op {
-        "core/pkg::init" => "core/pkg-low::init",
-        "core/pkg::add" => "core/pkg-low::add",
-        "core/pkg::list" => "core/pkg-low::list",
-        "core/pkg::info" => "core/pkg-low::info",
-        "core/pkg::lock" => "core/pkg-low::lock",
-        "core/pkg::update" => "core/pkg-low::update",
-        "core/pkg::install" => "core/pkg-low::install",
-        "core/pkg::verify" => "core/pkg-low::verify",
-        "core/pkg::snapshot" => "core/pkg-low::snapshot",
-        "core/pkg::publish" => "core/pkg-low::publish",
-        "core/vcs::log" => "core/vcs-low::log",
-        "core/vcs::blame" => "core/vcs-low::blame",
-        "core/vcs::why" => "core/vcs-low::why",
-        "core/vcs::diff" => "core/vcs-low::diff",
-        "core/vcs::apply" => "core/vcs-low::apply",
-        "core/vcs::merge3" => "core/vcs-low::merge3",
-        "core/vcs::resolve-conflict" => "core/vcs-low::resolve-conflict-legacy",
-        "core/gc::plan" => "core/gc-low::plan",
-        "core/gc::run" => "core/gc-low::run",
-        "core/gc::pin" => "core/gc-low::pin",
-        "core/gc::unpin" => "core/gc-low::unpin",
-        "core/gc::purge" => "core/gc-low::purge",
-        "core/gpk::export" => "core/gpk-low::export",
-        "core/gpk::import" => "core/gpk-low::import",
-        _ => op,
+    usize::try_from(n)
+        .map(Some)
+        .map_err(|_| format!("{key} is too large for this platform (max {})", usize::MAX))
+}
+
+fn effective_limit(configured: Option<usize>, hard_limit: usize) -> usize {
+    match configured {
+        Some(v) => v.min(hard_limit),
+        None => hard_limit,
     }
+}
+
+fn mk_resource_limit_error(
+    error_tok: SealId,
+    op: &str,
+    subject: &str,
+    observed: usize,
+    limit: usize,
+) -> Value {
+    mk_error(
+        error_tok,
+        "core/caps/resource-limit",
+        format!("{subject} exceeded configured limit ({observed} > {limit} bytes)"),
+        Some(op),
+    )
+}
+
+#[derive(Debug)]
+enum FsReadError {
+    Io(std::io::Error),
+    LimitExceeded { observed: usize, limit: usize },
+}
+
+fn read_file_with_optional_limit(
+    path: &Path,
+    max_bytes: Option<usize>,
+) -> Result<Vec<u8>, FsReadError> {
+    let Some(limit) = max_bytes else {
+        return std::fs::read(path).map_err(FsReadError::Io);
+    };
+    let mut f = std::fs::File::open(path).map_err(FsReadError::Io)?;
+    let mut out = Vec::new();
+    let mut buf = [0u8; 8 * 1024];
+    loop {
+        let n = f.read(&mut buf).map_err(FsReadError::Io)?;
+        if n == 0 {
+            break;
+        }
+        let next = out.len().saturating_add(n);
+        if next > limit {
+            return Err(FsReadError::LimitExceeded {
+                observed: next,
+                limit,
+            });
+        }
+        out.extend_from_slice(&buf[..n]);
+    }
+    Ok(out)
 }
 
 fn call_capability(
@@ -1100,7 +1166,7 @@ fn call_capability(
     refs: Option<&RefsDb>,
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
-    let op_eff = effective_capability_op(op, policy);
+    let op_eff = op;
     let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
     if timeout_ms.is_some() && op_eff == "io/fs::write" {
         return Ok(mk_error(
@@ -1204,6 +1270,8 @@ fn call_capability(
                         error_tok,
                         op,
                         transfer_workers: sp.transfer_workers,
+                        max_artifact_bytes: sp.max_artifact_bytes,
+                        max_batch_bytes: sp.max_batch_bytes,
                     };
                     match sync_pull_closure(&client, store, h, depth, &mut stats) {
                         Ok(()) => {}
@@ -1238,6 +1306,8 @@ fn call_capability(
                         error_tok,
                         op,
                         transfer_workers: sp.transfer_workers,
+                        max_artifact_bytes: sp.max_artifact_bytes,
+                        max_batch_bytes: sp.max_batch_bytes,
                     };
                     match sync_pull_closure(&client, store, &h, depth, &mut stats) {
                         Ok(()) => {}
@@ -2546,10 +2616,10 @@ fn call_capability(
 
         "core/pkg-low::lock" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/pkg::lock".to_string())
+                EffectsError::Log("missing artifact store for core/pkg-low::lock".to_string())
             })?;
             let refs = refs.ok_or_else(|| {
-                EffectsError::Log("missing refs db for core/pkg::lock".to_string())
+                EffectsError::Log("missing refs db for core/pkg-low::lock".to_string())
             })?;
             let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
             let lock_s = match payload_pkg_lock(payload) {
@@ -2681,10 +2751,10 @@ fn call_capability(
 
         "core/pkg-low::update" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/pkg::update".to_string())
+                EffectsError::Log("missing artifact store for core/pkg-low::update".to_string())
             })?;
             let refs = refs.ok_or_else(|| {
-                EffectsError::Log("missing refs db for core/pkg::update".to_string())
+                EffectsError::Log("missing refs db for core/pkg-low::update".to_string())
             })?;
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
@@ -2823,7 +2893,7 @@ fn call_capability(
 
         "core/pkg-low::install" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/pkg::install".to_string())
+                EffectsError::Log("missing artifact store for core/pkg-low::install".to_string())
             })?;
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
@@ -3001,7 +3071,7 @@ fn call_capability(
 
         "core/pkg-low::verify" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/pkg::verify".to_string())
+                EffectsError::Log("missing artifact store for core/pkg-low::verify".to_string())
             })?;
             let lock_s = match payload_pkg_lock(payload) {
                 Ok(s) => s,
@@ -3127,7 +3197,7 @@ fn call_capability(
 
         "core/pkg-low::snapshot" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/pkg::snapshot".to_string())
+                EffectsError::Log("missing artifact store for core/pkg-low::snapshot".to_string())
             })?;
             let pkg_path_s = match payload_pkg_path(payload) {
                 Ok(s) => s,
@@ -3364,7 +3434,7 @@ fn call_capability(
                 return Ok(mk_error(
                     error_tok,
                     "core/pkg/not-supported",
-                    "core/pkg::publish is not supported on WASI (no networking in the bootstrap)"
+                    "core/pkg-low::publish is not supported on WASI (no networking in the bootstrap)"
                         .to_string(),
                     Some(op),
                 ));
@@ -3372,10 +3442,12 @@ fn call_capability(
             #[cfg(not(target_os = "wasi"))]
             {
                 let store = store.ok_or_else(|| {
-                    EffectsError::Log("missing artifact store for core/pkg::publish".to_string())
+                    EffectsError::Log(
+                        "missing artifact store for core/pkg-low::publish".to_string(),
+                    )
                 })?;
                 let refs = refs.ok_or_else(|| {
-                    EffectsError::Log("missing refs db for core/pkg::publish".to_string())
+                    EffectsError::Log("missing refs db for core/pkg-low::publish".to_string())
                 })?;
 
                 let remote_s = match payload_pkg_publish_remote(payload) {
@@ -3560,6 +3632,8 @@ fn call_capability(
                         Some(op),
                     ));
                 }
+                let mut evidence_kinds: std::collections::BTreeSet<String> =
+                    std::collections::BTreeSet::new();
                 for ev_h in &commit.evidence {
                     let ev_term = match store_get_term(store, ev_h) {
                         Ok(t) => t,
@@ -3572,14 +3646,31 @@ fn call_capability(
                             ));
                         }
                     };
-                    if let Err(e) = gc_vcs::Evidence::from_term(&ev_term) {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-evidence",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
+                    let ev = match gc_vcs::Evidence::from_term(&ev_term) {
+                        Ok(ev) => ev,
+                        Err(e) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/pkg/bad-evidence",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+                }
+                let missing_kinds =
+                    class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
+                if !missing_kinds.is_empty() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-evidence-kind",
+                        format!(
+                            "commit evidence missing required kinds: {}",
+                            missing_kinds.join(", ")
+                        ),
+                        Some(op),
+                    ));
                 }
 
                 if class.require_signatures {
@@ -3796,6 +3887,13 @@ fn call_capability(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/store::get".to_string())
             })?;
+            let configured_max = match op_extra_positive_usize(pol, "max_bytes") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let max_bytes = effective_limit(configured_max, HARD_REMOTE_ARTIFACT_MAX_BYTES);
             let h = payload_store_hash(payload)?;
             let p = store.path_for(&h);
             if !p.exists() {
@@ -3813,7 +3911,7 @@ fn call_capability(
                 #[cfg(not(target_os = "wasi"))]
                 match store_remote_client(policy, timeout_ms, error_tok, op) {
                     Ok(Some((client, _base))) => {
-                        let bytes = match client.store_get_opt(&h) {
+                        let bytes = match client.store_get_opt_bounded(&h, Some(max_bytes)) {
                             Ok(Some(b)) => b,
                             Ok(None) => {
                                 return Ok(mk_error(
@@ -3824,6 +3922,15 @@ fn call_capability(
                                 ));
                             }
                             Err(e) => {
+                                if format!("{e}").contains("resource-limit:") {
+                                    return Ok(mk_resource_limit_error(
+                                        error_tok,
+                                        op,
+                                        "remote artifact bytes",
+                                        max_bytes.saturating_add(1),
+                                        max_bytes,
+                                    ));
+                                }
                                 return Ok(mk_error(
                                     error_tok,
                                     "core/store/remote-error",
@@ -3881,7 +3988,18 @@ fn call_capability(
                     Some(op),
                 ));
             }
-            let bytes = match std::fs::read(store.path_for(&h)) {
+            if let Ok(md) = std::fs::metadata(store.path_for(&h))
+                && md.len() > max_bytes as u64
+            {
+                return Ok(mk_resource_limit_error(
+                    error_tok,
+                    op,
+                    "artifact bytes",
+                    md.len() as usize,
+                    max_bytes,
+                ));
+            }
+            let bytes = match store.get_bytes_limited(&h, max_bytes) {
                 Ok(b) => b,
                 Err(e) => {
                     return Ok(mk_error(
@@ -3920,7 +4038,7 @@ fn call_capability(
         }
         "core/vcs-low::log" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::log".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::log".to_string())
             })?;
 
             let root_s = match payload_vcs_root(payload) {
@@ -4071,7 +4189,7 @@ fn call_capability(
         }
         "core/vcs-low::blame" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::blame".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::blame".to_string())
             })?;
 
             let sym = match payload_vcs_sym(payload, ":sym") {
@@ -4224,7 +4342,7 @@ fn call_capability(
         }
         "core/vcs-low::why" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::why".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::why".to_string())
             })?;
 
             let sym = match payload_vcs_sym(payload, ":sym") {
@@ -5068,7 +5186,7 @@ fn call_capability(
         }
         "core/vcs-low::diff" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::diff".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::diff".to_string())
             })?;
 
             let base_h = match payload_vcs_hash(payload, ":base") {
@@ -5187,7 +5305,7 @@ fn call_capability(
         }
         "core/vcs-low::apply" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::apply".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::apply".to_string())
             })?;
 
             let base_h = match payload_vcs_hash(payload, ":base") {
@@ -5350,7 +5468,7 @@ fn call_capability(
         }
         "core/vcs-low::merge3" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/vcs::merge3".to_string())
+                EffectsError::Log("missing artifact store for core/vcs-low::merge3".to_string())
             })?;
 
             let out_s = match payload_vcs_out(payload) {
@@ -5602,7 +5720,7 @@ fn call_capability(
         "core/vcs-low::resolve-conflict-legacy" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log(
-                    "missing artifact store for core/vcs::resolve-conflict".to_string(),
+                    "missing artifact store for core/vcs-low::resolve-conflict".to_string(),
                 )
             })?;
 
@@ -6019,7 +6137,7 @@ fn call_capability(
         }
         "core/gc-low::plan" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/gc::plan".to_string())
+                EffectsError::Log("missing artifact store for core/gc-low::plan".to_string())
             })?;
 
             let base_dir = effective_base_dir(pol)?;
@@ -6116,7 +6234,7 @@ fn call_capability(
         }
         "core/gc-low::run" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/gc::run".to_string())
+                EffectsError::Log("missing artifact store for core/gc-low::run".to_string())
             })?;
 
             let base_dir = effective_base_dir(pol)?;
@@ -6310,7 +6428,9 @@ fn call_capability(
                 Some(s) => sandbox_path_allow_missing(&base_dir, &s, false)?,
                 None => {
                     let store = store.ok_or_else(|| {
-                        EffectsError::Log("missing artifact store for core/gc::purge".to_string())
+                        EffectsError::Log(
+                            "missing artifact store for core/gc-low::purge".to_string(),
+                        )
                     })?;
                     store
                         .root_dir()
@@ -6361,10 +6481,10 @@ fn call_capability(
         }
         "core/gpk-low::export" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/gpk::export".to_string())
+                EffectsError::Log("missing artifact store for core/gpk-low::export".to_string())
             })?;
             let refs = refs.ok_or_else(|| {
-                EffectsError::Log("missing refs db for core/gpk::export".to_string())
+                EffectsError::Log("missing refs db for core/gpk-low::export".to_string())
             });
             let root_spec = match payload_gpk_root(payload) {
                 Ok(s) => s,
@@ -6684,7 +6804,7 @@ fn call_capability(
         }
         "core/gpk-low::import" => {
             let store = store.ok_or_else(|| {
-                EffectsError::Log("missing artifact store for core/gpk::import".to_string())
+                EffectsError::Log("missing artifact store for core/gpk-low::import".to_string())
             })?;
             let set_refs = match payload_gpk_set_refs(payload) {
                 Ok(v) => v,
@@ -6712,7 +6832,7 @@ fn call_capability(
                 None
             } else {
                 Some(refs.ok_or_else(|| {
-                    EffectsError::Log("missing refs db for core/gpk::import".to_string())
+                    EffectsError::Log("missing refs db for core/gpk-low::import".to_string())
                 })?)
             };
             let base_dir = effective_base_dir(pol)?;
@@ -6728,9 +6848,55 @@ fn call_capability(
                     ));
                 }
             };
-            let bundle = match gc_vcs::read_bundle(&mut f) {
+            let max_entries = match op_extra_positive_usize(pol, "max_bundle_entries") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let max_entry_bytes = match op_extra_positive_usize(pol, "max_bundle_entry_bytes") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let max_bundle_bytes = match op_extra_positive_usize(pol, "max_bundle_bytes") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let max_refs = match op_extra_positive_usize(pol, "max_bundle_refs") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
+            let mut limits = gc_vcs::GpkReadLimits::default_hard();
+            if let Some(v) = max_entries {
+                limits.max_entries = (v as u64).min(limits.max_entries);
+            }
+            if let Some(v) = max_entry_bytes {
+                limits.max_entry_bytes = (v as u64).min(limits.max_entry_bytes);
+            }
+            if let Some(v) = max_bundle_bytes {
+                limits.max_total_bytes = (v as u64).min(limits.max_total_bytes);
+            }
+            if let Some(v) = max_refs {
+                limits.max_refs = (v as u64).min(limits.max_refs);
+            }
+
+            let bundle = match gc_vcs::read_bundle_with_limits(&mut f, &limits) {
                 Ok(b) => b,
                 Err(e) => {
+                    if matches!(e, gc_vcs::GpkError::LimitExceeded(_)) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/caps/resource-limit",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
                     return Ok(mk_error(
                         error_tok,
                         "core/gpk/read-error",
@@ -7077,20 +7243,53 @@ fn call_capability(
         "io/fs::read" => {
             let path_s = payload_path(payload)?;
             let base_dir = effective_base_dir(pol)?;
+            let max_read_bytes = match op_extra_positive_usize(pol, "max_bytes") {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+                }
+            };
             if let Some(ms) = timeout_ms {
                 let base_dir2 = base_dir.clone();
                 let path_s2 = path_s.clone();
+                let max_read_bytes2 = max_read_bytes;
                 let r = with_timeout(ms, move || {
                     let path = sandbox_path_read(&base_dir2, &path_s2)?;
-                    let bytes = std::fs::read(&path);
+                    let bytes = read_file_with_optional_limit(&path, max_read_bytes2);
                     Ok((path, bytes))
                 })?;
                 return Ok(match r {
                     Some((_path, Ok(bytes))) => Value::Data(Term::Bytes(bytes.into())),
-                    Some((path, Err(e))) => Value::Sealed {
+                    Some((path, Err(FsReadError::Io(e)))) => Value::Sealed {
                         token: error_tok,
                         payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                     },
+                    Some((path, Err(FsReadError::LimitExceeded { observed, limit }))) => {
+                        mk_error_with_ctx(
+                            error_tok,
+                            "core/caps/resource-limit",
+                            format!(
+                                "file read exceeds configured limit ({observed} > {limit} bytes)"
+                            ),
+                            Some(op),
+                            Term::Map(
+                                [
+                                    (
+                                        TermOrdKey(Term::symbol(":path")),
+                                        Term::Str(path_to_slash(
+                                            path.strip_prefix(&base_dir).unwrap_or(&path),
+                                        )),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":limit-bytes")),
+                                        Term::Int((limit as i64).into()),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        )
+                    }
                     None => mk_error(
                         error_tok,
                         "core/caps/timeout",
@@ -7100,12 +7299,34 @@ fn call_capability(
                 });
             }
             let path = sandbox_path_read(&base_dir, &path_s)?;
-            match std::fs::read(&path) {
+            match read_file_with_optional_limit(&path, max_read_bytes) {
                 Ok(bytes) => Ok(Value::Data(Term::Bytes(bytes.into()))),
-                Err(e) => Ok(Value::Sealed {
+                Err(FsReadError::Io(e)) => Ok(Value::Sealed {
                     token: error_tok,
                     payload: Box::new(Value::Data(io_error_payload(op, &base_dir, &path, &e))),
                 }),
+                Err(FsReadError::LimitExceeded { observed, limit }) => Ok(mk_error_with_ctx(
+                    error_tok,
+                    "core/caps/resource-limit",
+                    format!("file read exceeds configured limit ({observed} > {limit} bytes)"),
+                    Some(op),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":path")),
+                                Term::Str(path_to_slash(
+                                    path.strip_prefix(&base_dir).unwrap_or(&path),
+                                )),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":limit-bytes")),
+                                Term::Int((limit as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                )),
             }
         }
         "io/fs::write" => {
@@ -7342,6 +7563,8 @@ fn local_refs_validate_policy_gate(
                 Some(op),
             ));
         }
+        let mut evidence_kinds: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
         for ev_h in &commit.evidence {
             if store.path_for(ev_h).exists() {
                 if store.verify_hex(ev_h).is_err() {
@@ -7371,14 +7594,32 @@ fn local_refs_validate_policy_gate(
                     ));
                 }
             };
-            if let Err(e) = gc_vcs::Evidence::from_term(&ev_t) {
-                return Err(mk_error(
-                    error_tok,
-                    "core/refs/bad-evidence",
-                    format!("{e}"),
-                    Some(op),
-                ));
-            }
+            let ev = match gc_vcs::Evidence::from_term(&ev_t) {
+                Ok(ev) => ev,
+                Err(e) => {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/refs/bad-evidence",
+                        format!("{e}"),
+                        Some(op),
+                    ));
+                }
+            };
+            evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+        }
+
+        let missing_kinds =
+            class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
+        if !missing_kinds.is_empty() {
+            return Err(mk_error(
+                error_tok,
+                "core/refs/missing-evidence-kind",
+                format!(
+                    "commit evidence missing required kinds: {}",
+                    missing_kinds.join(", ")
+                ),
+                Some(op),
+            ));
         }
 
         if class.require_signatures {
@@ -7612,25 +7853,32 @@ where
 {
     use std::sync::mpsc;
     let (tx, rx) = mpsc::channel();
-    let mut f_slot = Some(f);
     let job: TimeoutJob = Box::new(move || {
-        let run = f_slot.take().expect("timeout closure taken");
-        let r = run();
+        let r = f();
         let _ = tx.send(r);
     });
     let mut fallback_job = Some(job);
-    let submitted = match timeout_pool() {
-        Some(pool) => match pool.submit(fallback_job.take().expect("timeout job")) {
-            Ok(()) => true,
-            Err(job) => {
-                fallback_job = Some(job);
-                false
+    let submitted = if let Some(pool) = timeout_pool() {
+        if let Some(job) = fallback_job.take() {
+            match pool.submit(job) {
+                Ok(()) => true,
+                Err(job) => {
+                    fallback_job = Some(job);
+                    false
+                }
             }
-        },
-        None => false,
+        } else {
+            false
+        }
+    } else {
+        false
     };
     if !submitted {
-        let job = fallback_job.expect("timeout fallback job");
+        let Some(job) = fallback_job.take() else {
+            return Err(EffectsError::Log(
+                "timeout job scheduling failed".to_string(),
+            ));
+        };
         std::thread::spawn(move || job());
     }
     match rx.recv_timeout(std::time::Duration::from_millis(timeout_ms)) {
@@ -7661,6 +7909,33 @@ mod timeout_tests {
         })
         .unwrap();
         assert_eq!(out, None);
+    }
+}
+
+#[cfg(all(test, not(target_os = "wasi")))]
+mod remote_allow_tests {
+    use super::remote_allow_matches;
+
+    #[test]
+    fn remote_allow_rejects_host_confusion() {
+        assert!(
+            !remote_allow_matches(
+                "https://trusted.example.com.evil",
+                "https://trusted.example.com"
+            )
+            .expect("allow check")
+        );
+    }
+
+    #[test]
+    fn remote_allow_accepts_exact_origin_and_path_prefix() {
+        assert!(
+            remote_allow_matches(
+                "https://registry.example.com",
+                "https://registry.example.com"
+            )
+            .expect("allow check")
+        );
     }
 }
 
@@ -9637,6 +9912,8 @@ struct SyncPolicy {
     remote_allow: Vec<String>,
     allow_http: bool,
     transfer_workers: usize,
+    max_artifact_bytes: usize,
+    max_batch_bytes: usize,
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -9644,6 +9921,8 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
     let mut transfer_workers: usize = 4;
+    let mut max_artifact_bytes: usize = HARD_REMOTE_ARTIFACT_MAX_BYTES;
+    let mut max_batch_bytes: usize = HARD_SYNC_PULL_BATCH_MAX_BYTES;
     if let Some(pol) = pol {
         if let Some(v) = pol.extra.get("remote_allow")
             && let Some(arr) = v.as_array()
@@ -9667,29 +9946,65 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
             && let Some(n) = v.as_integer()
             && n > 0
         {
-            transfer_workers = (n as usize).clamp(1, 64);
+            if let Ok(nn) = usize::try_from(n) {
+                transfer_workers = nn.clamp(1, 64);
+            }
+        }
+        if let Some(v) = pol.extra.get("max_artifact_bytes") {
+            let n = v
+                .as_integer()
+                .ok_or_else(|| "max_artifact_bytes must be a positive integer".to_string())?;
+            if n <= 0 {
+                return Err("max_artifact_bytes must be > 0".to_string());
+            }
+            let nn = usize::try_from(n)
+                .map_err(|_| "max_artifact_bytes is too large for this platform".to_string())?;
+            max_artifact_bytes = nn.min(HARD_REMOTE_ARTIFACT_MAX_BYTES);
+        }
+        if let Some(v) = pol.extra.get("max_batch_bytes") {
+            let n = v
+                .as_integer()
+                .ok_or_else(|| "max_batch_bytes must be a positive integer".to_string())?;
+            if n <= 0 {
+                return Err("max_batch_bytes must be > 0".to_string());
+            }
+            let nn = usize::try_from(n)
+                .map_err(|_| "max_batch_bytes is too large for this platform".to_string())?;
+            max_batch_bytes = nn.min(HARD_SYNC_PULL_BATCH_MAX_BYTES);
         }
     }
     if remote_allow.is_empty() {
         return Err("sync requires per-op remote_allow allowlist in caps.toml".to_string());
     }
+    if max_batch_bytes < max_artifact_bytes {
+        max_batch_bytes = max_artifact_bytes;
+    }
     Ok(SyncPolicy {
         remote_allow,
         allow_http,
         transfer_workers,
+        max_artifact_bytes,
+        max_batch_bytes,
     })
 }
 
 #[cfg(not(target_os = "wasi"))]
 fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
+    let base_s = base.as_str().to_string();
     if base.scheme() == "http" && !sp.allow_http {
         return Err("http remotes are disabled by policy (set allow_http=true)".to_string());
     }
-    let base_s = base.as_str().to_string();
     for p in &sp.remote_allow {
-        if base_s.starts_with(p) {
-            return Ok(base_s);
+        let t = p.trim();
+        if t.ends_with("://") {
+            if base.scheme() == t.trim_end_matches("://") {
+                return Ok(base_s.clone());
+            }
+            continue;
+        }
+        if remote_allow_matches(&base_s, t).map_err(|e| format!("bad remote_allow: {e}"))? {
+            return Ok(base_s.clone());
         }
     }
     Err("remote is not in policy remote_allow allowlist".to_string())
@@ -9698,19 +10013,53 @@ fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<Stri
 #[cfg(not(target_os = "wasi"))]
 fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
+    let base_s = base.as_str().to_string();
     if base.scheme() == "http" && !policy.store.allow_http {
         return Err("http remotes are disabled by policy (set store.allow_http=true)".to_string());
     }
     if policy.store.remote_allow.is_empty() {
         return Err("store remote requires store.remote_allow allowlist in caps.toml".to_string());
     }
-    let base_s = base.as_str().to_string();
     for p in &policy.store.remote_allow {
-        if base_s.starts_with(p) {
-            return Ok(base_s);
+        let t = p.trim();
+        if t.ends_with("://") {
+            if base.scheme() == t.trim_end_matches("://") {
+                return Ok(base_s.clone());
+            }
+            continue;
+        }
+        if remote_allow_matches(&base_s, t).map_err(|e| format!("bad remote_allow: {e}"))? {
+            return Ok(base_s.clone());
         }
     }
     Err("store remote is not in policy store.remote_allow allowlist".to_string())
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn remote_allow_matches(base: &str, allow: &str) -> Result<bool, gc_registry::RegistryError> {
+    let base = gc_registry::normalize_remote_base(base)?;
+    let allow = gc_registry::normalize_remote_base(allow)?;
+    if base.scheme() != allow.scheme() {
+        return Ok(false);
+    }
+    if base.host_str() != allow.host_str() {
+        return Ok(false);
+    }
+    if base.port_or_known_default() != allow.port_or_known_default() {
+        return Ok(false);
+    }
+    let base_path = ensure_trailing_slash(base.path());
+    let allow_path = ensure_trailing_slash(allow.path());
+    Ok(base_path.starts_with(&allow_path))
+}
+
+#[cfg(not(target_os = "wasi"))]
+fn ensure_trailing_slash(path: &str) -> String {
+    if path.ends_with('/') {
+        path.to_string()
+    } else {
+        format!("{path}/")
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -9906,6 +10255,8 @@ struct SyncPullStats<'a> {
     error_tok: SealId,
     op: &'a str,
     transfer_workers: usize,
+    max_artifact_bytes: usize,
+    max_batch_bytes: usize,
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -9922,7 +10273,9 @@ fn sync_pull_closure(
     q.push_back((root.to_string(), depth));
     let mut seen: HashSet<String> = HashSet::new();
     let mut obj_count: u64 = 0;
-    let batch_cap = (stats.transfer_workers.max(1) * 8).max(8);
+    let base_batch_cap = (stats.transfer_workers.max(1) * 8).max(8);
+    let by_budget = (stats.max_batch_bytes / stats.max_artifact_bytes.max(1)).max(1);
+    let batch_cap = base_batch_cap.min(by_budget);
 
     while !q.is_empty() {
         let mut batch: Vec<(String, u64)> = Vec::new();
@@ -9966,12 +10319,29 @@ fn sync_pull_closure(
         }
 
         if !missing_hashes.is_empty() {
-            let dl_results =
-                sync_parallel_store_get_bytes(client, &missing_hashes, stats.transfer_workers);
+            let dl_results = sync_parallel_store_get_bytes(
+                client,
+                &missing_hashes,
+                stats.transfer_workers,
+                stats.max_artifact_bytes,
+                stats.max_batch_bytes,
+            );
             for (i, h) in missing_hashes.iter().enumerate() {
                 let bytes = match &dl_results[i] {
                     Ok(b) => b,
                     Err(e) => {
+                        if e.contains("resource-limit:") {
+                            return Err(mk_error(
+                                stats.error_tok,
+                                "core/caps/resource-limit",
+                                e.split("resource-limit:")
+                                    .nth(1)
+                                    .unwrap_or(e)
+                                    .trim()
+                                    .to_string(),
+                                Some(stats.op),
+                            ));
+                        }
                         return Err(mk_error(
                             stats.error_tok,
                             "core/sync/remote-error",
@@ -10068,6 +10438,8 @@ fn sync_parallel_store_get_bytes(
     client: &gc_registry::RegistryClient,
     hashes: &[String],
     workers: usize,
+    max_artifact_bytes: usize,
+    max_batch_bytes: usize,
 ) -> Vec<Result<Vec<u8>, String>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
@@ -10077,9 +10449,23 @@ fn sync_parallel_store_get_bytes(
     }
     let workers = workers.clamp(1, 64).min(hashes.len());
     if workers <= 1 {
+        let mut total: usize = 0;
         return hashes
             .iter()
-            .map(|h| client.store_get(h).map_err(|e| format!("{e}")))
+            .map(|h| {
+                client
+                    .store_get_bounded(h, Some(max_artifact_bytes))
+                    .map_err(|e| format!("{e}"))
+                    .and_then(|b| {
+                        total = total.saturating_add(b.len());
+                        if total > max_batch_bytes {
+                            return Err(format!(
+                                "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
+                            ));
+                        }
+                        Ok(b)
+                    })
+            })
             .collect();
     }
 
@@ -10097,15 +10483,41 @@ fn sync_parallel_store_get_bytes(
                     if i >= hashes.len() {
                         break;
                     }
-                    let res = c.store_get(&hashes[i]).map_err(|e| format!("{e}"));
-                    let mut g = out.lock().expect("sync get results lock");
-                    g[i] = Some(res);
+                    let res = c
+                        .store_get_bounded(&hashes[i], Some(max_artifact_bytes))
+                        .map_err(|e| format!("{e}"));
+                    if let Ok(mut g) = out.lock() {
+                        g[i] = Some(res);
+                    } else {
+                        return;
+                    }
                 }
             });
         }
     });
-    let mut g = out.lock().expect("sync get results lock");
-    g.drain(..).map(|x| x.expect("filled")).collect()
+    let mut g = match out.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            return (0..hashes.len())
+                .map(|_| Err("sync get results lock poisoned".to_string()))
+                .collect();
+        }
+    };
+    let mut total: usize = 0;
+    g.drain(..)
+        .map(|x| {
+            x.unwrap_or_else(|| Err("sync get worker produced no result".to_string()))
+                .and_then(|b| {
+                    total = total.saturating_add(b.len());
+                    if total > max_batch_bytes {
+                        return Err(format!(
+                            "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
+                        ));
+                    }
+                    Ok(b)
+                })
+        })
+        .collect()
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -10143,14 +10555,26 @@ fn sync_parallel_store_has_chunks(
                         break;
                     }
                     let res = c.store_has(&chunks[i]).map_err(|e| format!("{e}"));
-                    let mut g = out.lock().expect("sync has results lock");
-                    g[i] = Some(res);
+                    if let Ok(mut g) = out.lock() {
+                        g[i] = Some(res);
+                    } else {
+                        return;
+                    }
                 }
             });
         }
     });
-    let mut g = out.lock().expect("sync has results lock");
-    g.drain(..).map(|x| x.expect("filled")).collect()
+    let mut g = match out.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            return (0..chunks.len())
+                .map(|_| Err("sync has results lock poisoned".to_string()))
+                .collect();
+        }
+    };
+    g.drain(..)
+        .map(|x| x.unwrap_or_else(|| Err("sync has worker produced no result".to_string())))
+        .collect()
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -10197,14 +10621,26 @@ fn sync_parallel_upload_missing(
                         .get_bytes(h)
                         .map_err(|e| format!("store-read:{e}"))
                         .and_then(|bytes| c.store_put(h, &bytes).map_err(|e| format!("{e}")));
-                    let mut g = out.lock().expect("sync put results lock");
-                    g[i] = Some(res);
+                    if let Ok(mut g) = out.lock() {
+                        g[i] = Some(res);
+                    } else {
+                        return;
+                    }
                 }
             });
         }
     });
-    let mut g = out.lock().expect("sync put results lock");
-    g.drain(..).map(|x| x.expect("filled")).collect()
+    let mut g = match out.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            return (0..missing.len())
+                .map(|_| Err("sync put results lock poisoned".to_string()))
+                .collect();
+        }
+    };
+    g.drain(..)
+        .map(|x| x.unwrap_or_else(|| Err("sync put worker produced no result".to_string())))
+        .collect()
 }
 
 fn sync_closure_local(

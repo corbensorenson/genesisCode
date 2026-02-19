@@ -92,7 +92,10 @@ fn gc_plan_then_run_deletes_unreachable_artifacts() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::plan", "core/gc-low::run"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::plan", "core/gc-low::run"],
+    );
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead");
@@ -153,7 +156,10 @@ fn gc_quarantine_and_purge_roundtrip() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::run", "core/gc-low::purge"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::run", "core/gc-low::purge"],
+    );
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep2");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead2");
@@ -212,7 +218,10 @@ fn gc_pin_prevents_deletion() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::pin", "core/gc-low::run"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::pin", "core/gc-low::run"],
+    );
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep3");
     let pinned_h = store_put(dir, &caps, "{:pin true}\n", "pin3");

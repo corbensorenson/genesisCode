@@ -87,7 +87,11 @@ pub(crate) fn mk_refs_set_program(
     ]
 }
 
-pub(crate) fn mk_refs_delete_program(name: &str, policy: &str, expected_old: Option<&str>) -> Vec<Term> {
+pub(crate) fn mk_refs_delete_program(
+    name: &str,
+    policy: &str,
+    expected_old: Option<&str>,
+) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/refs::delete"),
@@ -121,4 +125,3 @@ pub(crate) fn mk_refs_delete_program(name: &str, policy: &str, expected_old: Opt
         Term::symbol("prog"),
     ]
 }
-

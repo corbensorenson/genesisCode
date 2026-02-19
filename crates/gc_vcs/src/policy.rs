@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use base64ct::{Base64, Encoding};
 use ed25519_dalek::VerifyingKey;
@@ -22,6 +22,8 @@ pub struct PolicyClass {
     patterns: GlobSet,
     excludes: GlobSet,
     pub required_obligations: Vec<String>,
+    pub required_evidence_kinds: Vec<String>,
+    pub obligation_evidence_kinds: BTreeMap<String, Vec<String>>,
     pub require_signatures: bool,
     pub min_signatures: u64,
     pub allowed_public_keys: Vec<VerifyingKey>,
@@ -30,6 +32,48 @@ pub struct PolicyClass {
 impl PolicyClass {
     pub fn matches(&self, refname: &str) -> bool {
         self.patterns.is_match(refname) && !self.excludes.is_match(refname)
+    }
+
+    pub fn normalize_evidence_kind(kind: &str) -> String {
+        let trimmed = kind.trim();
+        if trimmed.starts_with(':') {
+            trimmed.to_string()
+        } else {
+            format!(":{trimmed}")
+        }
+    }
+
+    pub fn required_evidence_kind_set(&self, obligations: &[String]) -> BTreeSet<String> {
+        let mut out: BTreeSet<String> = self
+            .required_evidence_kinds
+            .iter()
+            .map(|k| Self::normalize_evidence_kind(k))
+            .collect();
+        let obligation_set: BTreeSet<&str> = obligations.iter().map(String::as_str).collect();
+        for (ob, kinds) in &self.obligation_evidence_kinds {
+            if !obligation_set.contains(ob.as_str()) {
+                continue;
+            }
+            for k in kinds {
+                out.insert(Self::normalize_evidence_kind(k));
+            }
+        }
+        out
+    }
+
+    pub fn missing_required_evidence_kinds(
+        &self,
+        obligations: &[String],
+        observed_kinds: &BTreeSet<String>,
+    ) -> Vec<String> {
+        let mut missing: Vec<String> = Vec::new();
+        let required = self.required_evidence_kind_set(obligations);
+        for k in required {
+            if !observed_kinds.contains(&k) {
+                missing.push(k);
+            }
+        }
+        missing
     }
 }
 
@@ -165,6 +209,10 @@ fn parse_class(
     }
     let excludes = opt_vec_str(m, ":exclude")?;
     let required_obligations = opt_vec_str_or_sym(m, ":required-obligations")?;
+    let required_evidence_kinds =
+        normalize_kind_vec(opt_vec_str_or_sym(m, ":required-evidence-kinds")?);
+    let obligation_evidence_kinds =
+        parse_obligation_evidence_kind_map(m, key, ":obligation-evidence-kinds")?;
 
     let require_signatures = match m.get(&TermOrdKey(Term::symbol(":require-signatures"))) {
         Some(Term::Bool(b)) => *b,
@@ -238,10 +286,74 @@ fn parse_class(
         patterns,
         excludes,
         required_obligations,
+        required_evidence_kinds,
+        obligation_evidence_kinds,
         require_signatures,
         min_signatures,
         allowed_public_keys,
     }))
+}
+
+fn normalize_kind_vec(xs: Vec<String>) -> Vec<String> {
+    let mut set: BTreeSet<String> = BTreeSet::new();
+    for x in xs {
+        set.insert(PolicyClass::normalize_evidence_kind(&x));
+    }
+    set.into_iter().collect()
+}
+
+fn parse_obligation_evidence_kind_map(
+    m: &BTreeMap<TermOrdKey, Term>,
+    class_key: &str,
+    field: &str,
+) -> Result<BTreeMap<String, Vec<String>>, PolicyError> {
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(field))) else {
+        return Ok(BTreeMap::new());
+    };
+    let Term::Map(mm) = t else {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} must be map, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (k, v) in mm {
+        let ob = match &k.0 {
+            Term::Str(s) => s.clone(),
+            Term::Symbol(s) => s.clone(),
+            other => {
+                return Err(PolicyError::Schema(format!(
+                    "{class_key}: {field} keys must be strings/symbols, got {}",
+                    print_term(other)
+                )));
+            }
+        };
+        let Term::Vector(xs) = v else {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field}[{ob}] must be vector, got {}",
+                print_term(v)
+            )));
+        };
+        let mut kinds: Vec<String> = Vec::new();
+        for x in xs {
+            match x {
+                Term::Str(s) => kinds.push(PolicyClass::normalize_evidence_kind(s)),
+                Term::Symbol(s) => kinds.push(PolicyClass::normalize_evidence_kind(s)),
+                other => {
+                    return Err(PolicyError::Schema(format!(
+                        "{class_key}: {field}[{ob}] entries must be strings/symbols, got {}",
+                        print_term(other)
+                    )));
+                }
+            }
+        }
+        let mut dedup = BTreeSet::new();
+        for k in kinds {
+            dedup.insert(k);
+        }
+        out.insert(ob, dedup.into_iter().collect());
+    }
+    Ok(out)
 }
 
 fn compile_globs(pats: &[String]) -> Result<GlobSet, String> {
@@ -361,5 +473,51 @@ fn opt_vec_str_or_sym(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Vec<Str
 impl From<SchemaError> for PolicyError {
     fn from(e: SchemaError) -> Self {
         PolicyError::Schema(format!("{e}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Policy;
+    use gc_coreform::parse_term;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn policy_parses_required_evidence_kinds_and_obligation_mapping() {
+        let t = parse_term(
+            r#"
+            {
+              :type :vcs/policy
+              :v 1
+              :classes {
+                :main {
+                  :patterns ["refs/**/heads/main"]
+                  :required-obligations [core/obligation::unit-tests]
+                  :required-evidence-kinds [:unit-tests]
+                  :obligation-evidence-kinds {
+                    core/obligation::unit-tests [:effect-log]
+                  }
+                }
+              }
+            }
+            "#,
+        )
+        .expect("policy term");
+
+        let pol = Policy::from_term(&t).expect("policy parse");
+        let class = pol.class_for_ref("refs/heads/main").expect("class");
+        let required = class.required_evidence_kind_set(&[
+            "core/obligation::unit-tests".to_string(),
+            "core/obligation::other".to_string(),
+        ]);
+        assert!(required.contains(":unit-tests"));
+        assert!(required.contains(":effect-log"));
+
+        let observed: BTreeSet<String> = [":unit-tests".to_string()].into_iter().collect();
+        let missing = class.missing_required_evidence_kinds(
+            &["core/obligation::unit-tests".to_string()],
+            &observed,
+        );
+        assert_eq!(missing, vec![":effect-log".to_string()]);
     }
 }

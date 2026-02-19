@@ -5,7 +5,10 @@ use gc_coreform::Term;
 use crate::{CliError, EX_PARSE, cli_err};
 
 pub(crate) fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs-low::log")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs-low::log"),
+    ]);
     let payload = Term::Map(
         [
             (
@@ -43,7 +46,10 @@ pub(crate) fn mk_vcs_blame_program(
         return Err(cli_err(EX_PARSE, "vcs/blame", "invalid --sym: empty value"));
     }
 
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs-low::blame")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs-low::blame"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":snapshot")),
@@ -83,7 +89,10 @@ pub(crate) fn mk_vcs_why_program(
         return Err(cli_err(EX_PARSE, "vcs/why", "invalid --sym: empty value"));
     }
 
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs-low::why")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs-low::why"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":snapshot")),
@@ -115,8 +124,16 @@ pub(crate) fn mk_vcs_why_program(
     ])
 }
 
-pub(crate) fn mk_vcs_diff_program(base: &str, to: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs-low::diff")]);
+pub(crate) fn mk_vcs_diff_program(
+    base: &str,
+    to: &str,
+    out: Option<&Path>,
+    store: bool,
+) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs-low::diff"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":base")),
@@ -149,8 +166,16 @@ pub(crate) fn mk_vcs_diff_program(base: &str, to: &str, out: Option<&Path>, stor
     ]
 }
 
-pub(crate) fn mk_vcs_apply_program(base: &str, patch: &str, out: Option<&Path>, store: bool) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/vcs-low::apply")]);
+pub(crate) fn mk_vcs_apply_program(
+    base: &str,
+    patch: &str,
+    out: Option<&Path>,
+    store: bool,
+) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/vcs-low::apply"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":base")),
@@ -183,7 +208,12 @@ pub(crate) fn mk_vcs_apply_program(base: &str, patch: &str, out: Option<&Path>, 
     ]
 }
 
-pub(crate) fn mk_vcs_merge3_program(base: &str, left: &str, right: &str, out: Option<&Path>) -> Vec<Term> {
+pub(crate) fn mk_vcs_merge3_program(
+    base: &str,
+    left: &str,
+    right: &str,
+    out: Option<&Path>,
+) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/vcs-low::merge3"),

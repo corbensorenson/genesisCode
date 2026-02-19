@@ -1,84 +1,59 @@
-# GenesisCode Upgrade Plan — Self-Hosted v1 + GCPM Fast Path
+# GenesisCode Upgrade Plan — Red-Team + Optimization Backlog
 
 Last updated: 2026-02-18
 
-This plan now contains only unfinished work. Completed checklist items were removed.
+This plan contains active unfinished work derived from a targeted red-team review.
 
-Open checklist items: 2
+Open checklist items: 6
 
-## Findings From Current Project Audit
+## High-Priority Security Hardening
 
-- The foundation is strong: Genesis already ships integrated `store`, `refs`, `sync`, `vcs`, `pkg`, `policy`, and obligation pipelines in the CLI/runtime.
-- Current package management is lock-centric (`genesis.lock`) and package-centric (`package.toml`), but not yet workspace-native in the way Cargo/Pixi users expect.
-- Environment setup is not yet modeled as a first-class, deterministic workspace artifact (toolchain/deps/profile environment closure).
-- High-level semantic dispatch for package/VCS/GC/GPK still exists in Rust capability runner; full self-host cutover remains open.
-- Selfhost-only enforcement is strong, but production-grade removal/relocation of bootstrap Rust semantics is not completed yet.
+- [x] Replace URL prefix allowlisting with origin/path-boundary matching for remotes.
+  - Risk: `starts_with` checks can allow host confusion (`trusted.com.evil`).
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:9657`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:9675`.
+  - Acceptance: parse allowlist into normalized URL components and require exact scheme/host/port plus constrained path prefix semantics.
 
-## Naming Decision (Project Manager)
+- [ ] Strengthen ref-policy gate: bind required obligations to required evidence kinds.
+  - Risk: current gate checks obligation symbol presence + non-empty evidence, but not obligation->evidence-kind satisfaction.
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:7294`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_vcs/src/policy.rs:24`.
+  - Acceptance: extend policy schema with required evidence kinds (and optionally obligation mappings), enforce at `refs::set` and publish paths.
 
-- [x] Adopt `GCPM` (GenesisCode Project Manager) as product name.
-- [x] Keep `genesis pkg` as stable compatibility surface and add `genesis gcpm` as first-class alias.
-- [x] Freeze command naming and JSON output contracts for AI agents (no churn without schema version bump).
+- [x] Eliminate panic paths in production capability execution and sync worker aggregation.
+  - Risk: `expect`-based lock/slot assumptions can terminate process under contention/poisoning.
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:7584`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:10068`.
+  - Acceptance: replace `expect` with typed errors and convert to sealed ERROR at boundaries.
 
-## Workstream A — Self-Host Completion Blockers
+- [x] Add hard resource caps for remote artifact ingestion and bundle decode.
+  - Risk: unbounded allocation/read paths permit memory DoS.
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:264`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_vcs/src/gpk.rs:176`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_vcs/src/gpk.rs:210`.
+  - Acceptance: enforce max artifact bytes, max bundle entries, max per-entry bytes, and fail deterministically with explicit error codes.
 
-- [x] All production command semantics are owned by `.gc` contracts.
-- [ ] Rust runtime is limited to kernel + low-level host ABI + transport.
-- [x] Move `core/pkg::snapshot` semantics fully into `.gc` contracts (host only provides low-level capabilities).
-- [x] Move `core/pkg::publish` semantics fully into `.gc` contracts (closure planning, policy prechecks, reports).
-- [x] Remove remaining high-level `core/pkg::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after parity lock.
-- [x] Remove remaining high-level `core/vcs::*`, `core/gc::*`, and `core/gpk::*` execution branches from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` after low-level seam parity.
-- [ ] Keep Rust capability surface to low-level ops only: `core/store::*`, `core/refs::*`, `core/sync::*`, `io/fs::*`, `sys/time::now`, graphics/editor host ops.
-- [x] Complete Stage-2 selfhost path so toolchain evolution is authored and validated in Genesis code first (enforced by `scripts/check_selfhost_artifact_fresh.sh` + `scripts/test_fast.sh`).
-- [x] Remove production fallback to Rust semantic implementations once parity + replay + obligation gates pass.
-- [x] In `--selfhost-only` mode, fail fast when runtime logs show legacy high-level `core/pkg::*`, `core/vcs::*`, `core/gc::*`, or `core/gpk::*` semantic ops (prevents production fallback drift).
-- [x] Move remaining bootstrap-only Rust semantic code under `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` after cutover.
-- [x] Package publish/install workflows are fully `.gc`-owned semantics with low-level host caps only.
+- [ ] Introduce cancellable timeouts for capability jobs.
+  - Risk: current timeout returns early but underlying job continues, enabling runaway thread/work accumulation.
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:7567`.
+  - Acceptance: cooperative cancellation token or bounded worker with drop-safe cancellation protocol and load tests.
 
-## Workstream B — GCPM Core (Language-Native Project Manager)
+## Performance + Scale
 
-### B1. Workspace Model
-- [x] Define and implement `genesis.workspace.toml` (or canonical CoreForm equivalent) as workspace root descriptor.
-- [x] Add multi-package workspace graph support (members, local paths, package roles).
-- [x] Add workspace-level policy/default registry/toolchain/profile declarations.
+- [ ] Split `gc_effects` runner into maintainable modules (sync/store/refs/pkg/vcs/gc/gpk/io/task).
+  - Risk: single 11k-line file slows iteration, review, and regression isolation.
+  - Code ref: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`.
+  - Acceptance: module boundaries with unchanged public behavior and parity tests preserved.
 
-### B2. Lock + Resolution v2
-- [x] Extend `genesis.lock` to workspace-scoped deterministic lock v2 with per-package resolved snapshots/commits and environment fingerprints.
-- [x] Add deterministic resolver strategy modes (`pinned`, `track-ref`, `tag-policy`) with strict lock pinning.
-- [x] Add lock drift diagnostics with canonical AI-fix metadata (actionable by agents).
+- [ ] Split CLI driver monolith into command-domain modules with shared typed helpers.
+  - Risk: single 8.8k-line file limits safe parallel development and increases merge risk.
+  - Code ref: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`.
+  - Acceptance: per-command modules (`pkg`, `vcs`, `gc`, `sync`, `policy`, `store`, `gcpm`) plus stable JSON contract tests.
 
-### B3. Environment Automation (Pixi-like UX, deterministic)
-- [x] Add `gcpm env` surface for deterministic environment realization from lock + toolchain pins.
-- [x] Materialize environment artifacts under `.genesis/env/<profile-hash>/` with immutable provenance records.
-- [x] Add profile support (`dev`, `ci`, `release`) with policy-gated capability surfaces.
+- [x] Add policy-configurable byte budgets for `io/fs::read`, `core/store::get`, and sync pull batches.
+  - Risk: capability caller can request arbitrarily large payloads even when op is allowlisted.
+  - Code refs: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:7044`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:3761`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:9879`.
+  - Acceptance: per-op max read bytes + deterministic error code (`core/caps/resource-limit`) + replay-safe behavior.
 
-### B4. Command Surface (AI-First)
-- [x] Add `genesis gcpm init/new/add/remove/lock/install/update/run/test/publish/info/list`.
-- [x] Implement `gcpm run <task>` with workspace tasks as canonical data (not ad hoc shell glue).
-- [x] Ensure every `gcpm` command has stable JSON schema + deterministic machine-readable diagnostics.
+- [ ] Add reproducible microbench + regression budget gates for hot paths.
+  - Targets: parser/canonicalizer, evaluator, effect runner step cost, sync throughput, lock/install/update flows.
+  - Acceptance: CI job enforcing budgets with trend artifacts and fail thresholds.
 
-### B5. In-Language Contract Surface
-- [x] Define `core/pm::*` contract API so AI can drive project management from Genesis code, not only CLI.
-- [x] Keep state-mutating `core/pm::*` operations effectful and replay-logged.
-- [x] Add obligation/policy gates to `core/pm::publish`, `core/pm::update`, `core/pm::lock`.
-
-## Workstream C — VCS + PM Unification
-
-- [x] Make workspace/project state snapshots first-class `:vcs/snapshot` roots.
-- [x] Bind `gcpm lock/install/update/publish` operations to explicit commit/evidence provenance edges.
-- [x] Add branch-aware dependency tracking semantics (`track ref + locked commit`) at workspace level.
-- [x] Add deterministic migration path from package-only mode to workspace+gcpm mode.
-
-## Workstream D — AI-First Developer Experience
-
-- [x] Add canonical diagnostic/fix schema docs for `gcpm` errors and resolver conflicts.
-- [x] Add AI-optimized “what changed / why / fix options” report artifacts for lock/update/publish workflows.
-- [x] Add deterministic “project doctor” command (`gcpm doctor`) with policy + lock + capability checks.
-- [x] Add prompt-safe command telemetry artifacts (non-sensitive, deterministic summaries) for agent loops.
-
-## Acceptance Checks (Must Pass Before v1 Declaration)
-
-- [x] `--selfhost-only` + `gcpm` executes full workspace lifecycle (init/add/lock/install/run/test/publish) with no Rust semantic fallback.
-- [x] End-to-end workspace operations are replayable and policy-gated with deterministic logs.
-- [x] Lock v2 + environment realization meets AI iteration targets in CI budget checks.
-- [x] Rust semantic bootstrap code is relocated to `/Users/corbensorenson/Documents/genesisCode/old_bootstrap` and no longer used in production path.
+- [ ] Add warm-cache daemon/session mode for repeated CLI invocations in agent loops.
+  - Goal: avoid repeated bootstrap/parse/canonicalize overhead for high-frequency AI workflows.
+  - Acceptance: opt-in long-lived mode with deterministic cache keys and parity tests versus cold execution.

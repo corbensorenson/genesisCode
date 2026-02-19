@@ -5,7 +5,10 @@ mod schema;
 mod signing;
 mod snapshot;
 
-pub use crate::gpk::{GpkBundle, GpkEntry, GpkError, GpkRef, read_bundle, write_bundle};
+pub use crate::gpk::{
+    GpkBundle, GpkEntry, GpkError, GpkReadLimits, GpkRef, read_bundle, read_bundle_with_limits,
+    write_bundle,
+};
 pub use crate::patch::{Patch, PatchError, PatchOp, PathStep, path_from_term, path_to_term};
 pub use crate::policy::{Policy, PolicyClass, PolicyError};
 pub use crate::schema::{

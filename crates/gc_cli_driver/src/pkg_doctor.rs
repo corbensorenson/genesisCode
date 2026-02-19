@@ -154,10 +154,10 @@ pub(crate) fn build_pkg_doctor_report(
                 "action": {
                     "op": "caps.allow",
                     "args": {
-                        "ops": ["core/pkg::verify", "core/pkg-low::load-lock", "core/store::has", "core/store::get"]
+                        "ops": ["core/pkg-low::verify", "core/pkg-low::load-lock", "core/store::has", "core/store::get"]
                     }
                 },
-                "command": "update caps.toml allowlist for core/pkg::verify, core/pkg-low::load-lock, core/store::{has,get}",
+                "command": "update caps.toml allowlist for core/pkg-low::verify, core/pkg-low::load-lock, core/store::{has,get}",
                 "why": "doctor requires lock loading and artifact-presence checks"
             }));
         } else if code == "core/pkg/not-locked" {

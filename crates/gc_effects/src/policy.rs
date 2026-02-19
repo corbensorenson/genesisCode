@@ -6,7 +6,6 @@ use crate::error::EffectsError;
 #[derive(Debug, Clone)]
 pub struct CapsPolicy {
     ops: BTreeMap<String, OpPolicy>,
-    legacy_semantic_compat: bool,
     pub log: LogPolicy,
     pub store: StorePolicy,
     pub refs: RefsPolicy,
@@ -72,7 +71,6 @@ impl CapsPolicy {
     pub fn empty() -> Self {
         Self {
             ops: BTreeMap::new(),
-            legacy_semantic_compat: false,
             log: LogPolicy {
                 inline_max_bytes: None,
                 store_dir: None,
@@ -95,41 +93,18 @@ impl CapsPolicy {
     }
 
     pub fn is_allowed(&self, op: &str) -> bool {
-        if self.ops.contains_key(op) {
-            return true;
-        }
-        if low_level_aliases(op)
-            .iter()
-            .any(|alias| self.ops.contains_key(*alias))
-        {
-            return true;
-        }
-        self.legacy_semantic_compat
-            && legacy_compat_aliases(op)
+        self.ops.contains_key(op)
+            || low_level_aliases(op)
                 .iter()
                 .any(|alias| self.ops.contains_key(*alias))
     }
 
     pub fn op_policy(&self, op: &str) -> Option<&OpPolicy> {
         self.ops.get(op).or_else(|| {
-            if !self.legacy_semantic_compat {
-                return low_level_aliases(op)
-                    .iter()
-                    .find_map(|alias| self.ops.get(*alias));
-            }
             low_level_aliases(op)
                 .iter()
                 .find_map(|alias| self.ops.get(*alias))
-                .or_else(|| {
-                    legacy_compat_aliases(op)
-                        .iter()
-                        .find_map(|alias| self.ops.get(*alias))
-                })
         })
-    }
-
-    pub fn legacy_semantic_compat(&self) -> bool {
-        self.legacy_semantic_compat
     }
 
     pub fn inline_max_bytes_for(&self, op: &str) -> Option<usize> {
@@ -161,11 +136,6 @@ impl CapsPolicy {
         })?;
 
         let _version = tbl.get("version").and_then(|v| v.as_integer()).unwrap_or(1);
-        let legacy_semantic_compat = tbl
-            .get("legacy_semantic_compat")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-
         let mut ops: BTreeMap<String, OpPolicy> = BTreeMap::new();
         let log = parse_log_policy(tbl)?;
         let store = parse_store_policy(tbl)?;
@@ -210,7 +180,6 @@ impl CapsPolicy {
                 || k == "store"
                 || k == "refs"
                 || k == "task"
-                || k == "legacy_semantic_compat"
             {
                 continue;
             }
@@ -221,7 +190,6 @@ impl CapsPolicy {
 
         Ok(Self {
             ops,
-            legacy_semantic_compat,
             log,
             store,
             refs,
@@ -276,40 +244,6 @@ fn low_level_aliases(op: &str) -> &'static [&'static str] {
     match op {
         // Internal low-level alias: `pkg snapshot` checks call `load-package`.
         "core/pkg-low::load-package" => &["core/pkg-low::snapshot"],
-        _ => &[],
-    }
-}
-
-fn legacy_compat_aliases(op: &str) -> &'static [&'static str] {
-    match op {
-        // Transitional aliases: pkg semantics have moved to low-level ops, but existing
-        // policies may still authorize legacy high-level package ops.
-        "core/pkg-low::init" => &["core/pkg::init"],
-        "core/pkg-low::add" => &["core/pkg::add"],
-        "core/pkg-low::list" => &["core/pkg::list"],
-        "core/pkg-low::info" => &["core/pkg::info"],
-        "core/pkg-low::lock" => &["core/pkg::lock"],
-        "core/pkg-low::update" => &["core/pkg::update"],
-        "core/pkg-low::install" => &["core/pkg::install"],
-        "core/pkg-low::verify" => &["core/pkg::verify"],
-        "core/pkg-low::snapshot" => &["core/pkg::snapshot"],
-        "core/pkg-low::publish" => &["core/pkg::publish"],
-        "core/pkg-low::load-package" => &["core/pkg::snapshot"],
-        "core/vcs-low::log" => &["core/vcs::log"],
-        "core/vcs-low::blame" => &["core/vcs::blame"],
-        "core/vcs-low::why" => &["core/vcs::why"],
-        "core/vcs-low::diff" => &["core/vcs::diff"],
-        "core/vcs-low::apply" => &["core/vcs::apply"],
-        "core/vcs-low::merge3" => &["core/vcs::merge3"],
-        "core/vcs-low::resolve-conflict" => &["core/vcs::resolve-conflict"],
-        "core/vcs-low::resolve-conflict-legacy" => &["core/vcs::resolve-conflict"],
-        "core/gc-low::plan" => &["core/gc::plan"],
-        "core/gc-low::run" => &["core/gc::run"],
-        "core/gc-low::pin" => &["core/gc::pin"],
-        "core/gc-low::unpin" => &["core/gc::unpin"],
-        "core/gc-low::purge" => &["core/gc::purge"],
-        "core/gpk-low::export" => &["core/gpk::export"],
-        "core/gpk-low::import" => &["core/gpk::import"],
         _ => &[],
     }
 }
@@ -613,22 +547,6 @@ max_time_ms_per_task = 50
     }
 
     #[test]
-    fn supports_pkg_snapshot_compat_alias_for_low_level_loader() {
-        let p = CapsPolicy::from_toml_str(
-            r#"
-legacy_semantic_compat = true
-allow = ["core/pkg::snapshot"]
-
-[op."core/pkg::snapshot"]
-base_dir = "."
-"#,
-        )
-        .unwrap();
-        assert!(p.is_allowed("core/pkg-low::load-package"));
-        assert!(p.op_policy("core/pkg-low::load-package").is_some());
-    }
-
-    #[test]
     fn supports_pkg_snapshot_low_level_alias_for_low_level_loader() {
         let p = CapsPolicy::from_toml_str(
             r#"
@@ -644,10 +562,9 @@ base_dir = "."
     }
 
     #[test]
-    fn supports_pkg_low_lock_compat_alias() {
+    fn legacy_high_level_ops_do_not_authorize_low_level_ops() {
         let p = CapsPolicy::from_toml_str(
             r#"
-legacy_semantic_compat = true
 allow = ["core/pkg::lock"]
 
 [op."core/pkg::lock"]
@@ -655,30 +572,7 @@ base_dir = "."
 "#,
         )
         .unwrap();
-        assert!(p.is_allowed("core/pkg-low::lock"));
-        assert!(p.op_policy("core/pkg-low::lock").is_some());
-    }
-
-    #[test]
-    fn supports_vcs_low_diff_compat_alias() {
-        let p = CapsPolicy::from_toml_str(
-            r#"
-legacy_semantic_compat = true
-allow = ["core/vcs::diff"]
-"#,
-        )
-        .unwrap();
-        assert!(p.is_allowed("core/vcs-low::diff"));
-    }
-
-    #[test]
-    fn legacy_compat_aliases_are_disabled_by_default() {
-        let p = CapsPolicy::from_toml_str(
-            r#"
-allow = ["core/vcs::diff"]
-"#,
-        )
-        .unwrap();
-        assert!(!p.is_allowed("core/vcs-low::diff"));
+        assert!(!p.is_allowed("core/pkg-low::lock"));
+        assert!(p.op_policy("core/pkg-low::lock").is_none());
     }
 }

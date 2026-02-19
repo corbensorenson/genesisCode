@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
@@ -224,12 +224,22 @@ impl RegistryClient {
     }
 
     pub fn store_get(&self, hash: &str) -> Result<Vec<u8>, RegistryError> {
+        self.store_get_bounded(hash, None)
+    }
+
+    pub fn store_get_bounded(
+        &self,
+        hash: &str,
+        max_bytes: Option<usize>,
+    ) -> Result<Vec<u8>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
             let g = inproc_map().lock().expect("inproc registry lock");
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
-            return reg.store_get(hash);
+            let bytes = reg.store_get(hash)?;
+            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
+            return Ok(bytes);
         }
         if let RegistryKind::File { root } = &self.kind {
             file_ensure_dirs(root)?;
@@ -238,6 +248,7 @@ impl RegistryClient {
                 return Err(RegistryError::Http("store/get: status 404".to_string()));
             }
             let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
+            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
             let got = blake3::hash(&bytes).to_hex().to_string();
             if got != hash {
                 return Err(RegistryError::Protocol(
@@ -261,19 +272,28 @@ impl RegistryClient {
                 r.status()
             )));
         }
-        r.bytes()
-            .map(|b| b.to_vec())
-            .map_err(|e| RegistryError::Http(format!("store/get bytes: {e}")))
+        read_response_bytes_limited("store/get", r, max_bytes)
     }
 
     pub fn store_get_opt(&self, hash: &str) -> Result<Option<Vec<u8>>, RegistryError> {
+        self.store_get_opt_bounded(hash, None)
+    }
+
+    pub fn store_get_opt_bounded(
+        &self,
+        hash: &str,
+        max_bytes: Option<usize>,
+    ) -> Result<Option<Vec<u8>>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
             let g = inproc_map().lock().expect("inproc registry lock");
             let reg = g.get(id).ok_or_else(|| {
                 RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
             })?;
             return match reg.store_get(hash) {
-                Ok(b) => Ok(Some(b)),
+                Ok(b) => {
+                    enforce_body_limit("store/get", max_bytes, b.len() as u64)?;
+                    Ok(Some(b))
+                }
                 Err(RegistryError::Http(s)) if s.contains("status 404") => Ok(None),
                 Err(e) => Err(e),
             };
@@ -285,6 +305,7 @@ impl RegistryClient {
                 return Ok(None);
             }
             let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
+            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
             let got = blake3::hash(&bytes).to_hex().to_string();
             if got != hash {
                 return Err(RegistryError::Protocol(
@@ -311,9 +332,7 @@ impl RegistryClient {
                 r.status()
             )));
         }
-        r.bytes()
-            .map(|b| Some(b.to_vec()))
-            .map_err(|e| RegistryError::Http(format!("store/get bytes: {e}")))
+        read_response_bytes_limited("store/get", r, max_bytes).map(Some)
     }
 
     pub fn store_put(&self, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
@@ -507,6 +526,55 @@ impl RegistryClient {
                 unreachable!("http client requested for non-http registry")
             }
         }
+    }
+}
+
+fn enforce_body_limit(
+    op: &str,
+    max_bytes: Option<usize>,
+    observed: u64,
+) -> Result<(), RegistryError> {
+    let Some(max) = max_bytes else {
+        return Ok(());
+    };
+    if observed > max as u64 {
+        return Err(RegistryError::Protocol(format!(
+            "resource-limit: {op}: response exceeds configured limit ({observed} > {max} bytes)"
+        )));
+    }
+    Ok(())
+}
+
+fn read_response_bytes_limited(
+    op: &str,
+    mut r: reqwest::blocking::Response,
+    max_bytes: Option<usize>,
+) -> Result<Vec<u8>, RegistryError> {
+    if let Some(max) = max_bytes {
+        if let Some(cl) = r.content_length() {
+            enforce_body_limit(op, Some(max), cl)?;
+        }
+        let mut out: Vec<u8> = Vec::new();
+        let mut buf = [0u8; 8 * 1024];
+        loop {
+            let n = r
+                .read(&mut buf)
+                .map_err(|e| RegistryError::Http(format!("{op} read: {e}")))?;
+            if n == 0 {
+                break;
+            }
+            if out.len().saturating_add(n) > max {
+                return Err(RegistryError::Protocol(format!(
+                    "resource-limit: {op}: response exceeds configured limit (> {max} bytes)"
+                )));
+            }
+            out.extend_from_slice(&buf[..n]);
+        }
+        Ok(out)
+    } else {
+        r.bytes()
+            .map(|b| b.to_vec())
+            .map_err(|e| RegistryError::Http(format!("{op} bytes: {e}")))
     }
 }
 
@@ -743,6 +811,7 @@ fn file_gate_refs_set(
     if !class.required_obligations.is_empty() && commit.evidence.is_empty() {
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
+    let mut evidence_kinds: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for ev_h in &commit.evidence {
         let ev_bytes = std::fs::read(file_store_path(root, ev_h))
             .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
@@ -755,8 +824,13 @@ fn file_gate_refs_set(
             .map_err(|_| RegistryError::Protocol("refs/set: evidence not utf8".to_string()))?;
         let ev_t = gc_coreform::parse_term(&ev_s)
             .map_err(|e| RegistryError::Protocol(format!("refs/set: bad evidence term: {e}")))?;
-        gc_vcs::Evidence::from_term(&ev_t)
+        let ev = gc_vcs::Evidence::from_term(&ev_t)
             .map_err(|e| RegistryError::Protocol(format!("refs/set: bad evidence schema: {e}")))?;
+        evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+    }
+    let missing_kinds = class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
+    if !missing_kinds.is_empty() {
+        return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
 
     if class.require_signatures {

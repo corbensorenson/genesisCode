@@ -10,6 +10,11 @@ const VERSION_V1: u32 = 1;
 const VERSION_V2: u32 = 2;
 const KIND_RAW_CANONICAL: u8 = 0;
 const INDEX_ENTRY_BYTES: usize = 32 + 1 + 7 + 8 + 8;
+const HARD_MAX_ENTRIES: u64 = 100_000;
+const HARD_MAX_ENTRY_BYTES: u64 = 32 * 1024 * 1024;
+const HARD_MAX_TOTAL_BYTES: u64 = 256 * 1024 * 1024;
+const HARD_MAX_REFS: u64 = 20_000;
+const HARD_MAX_REF_NAME_BYTES: usize = 1024;
 
 #[derive(Debug, Error)]
 pub enum GpkError {
@@ -25,6 +30,8 @@ pub enum GpkError {
     Hash(String),
     #[error("gpk: invalid index layout: {0}")]
     BadIndex(String),
+    #[error("gpk: resource limit exceeded: {0}")]
+    LimitExceeded(String),
     #[error("gpk: io error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -48,6 +55,27 @@ pub struct GpkBundle {
     pub root: [u8; 32],
     pub entries: Vec<GpkEntry>,
     pub refs: Vec<GpkRef>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GpkReadLimits {
+    pub max_entries: u64,
+    pub max_entry_bytes: u64,
+    pub max_total_bytes: u64,
+    pub max_refs: u64,
+    pub max_ref_name_bytes: usize,
+}
+
+impl GpkReadLimits {
+    pub fn default_hard() -> Self {
+        Self {
+            max_entries: HARD_MAX_ENTRIES,
+            max_entry_bytes: HARD_MAX_ENTRY_BYTES,
+            max_total_bytes: HARD_MAX_TOTAL_BYTES,
+            max_refs: HARD_MAX_REFS,
+            max_ref_name_bytes: HARD_MAX_REF_NAME_BYTES,
+        }
+    }
 }
 
 pub fn write_bundle<W: Write>(
@@ -146,6 +174,13 @@ pub fn write_bundle<W: Write>(
 }
 
 pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
+    read_bundle_with_limits(&mut r, &GpkReadLimits::default_hard())
+}
+
+pub fn read_bundle_with_limits<R: Read>(
+    mut r: R,
+    limits: &GpkReadLimits,
+) -> Result<GpkBundle, GpkError> {
     let mut magic = [0u8; 4];
     r.read_exact(&mut magic).map_err(|_| GpkError::Truncated)?;
     if &magic != MAGIC {
@@ -163,6 +198,12 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
     let mut cntb = [0u8; 8];
     r.read_exact(&mut cntb).map_err(|_| GpkError::Truncated)?;
     let cnt = u64::from_le_bytes(cntb);
+    if cnt > limits.max_entries {
+        return Err(GpkError::LimitExceeded(format!(
+            "entry count {cnt} exceeds limit {}",
+            limits.max_entries
+        )));
+    }
 
     let header_len = MAGIC.len() + 4 + 32 + 8;
     let index_len = (INDEX_ENTRY_BYTES as u64)
@@ -195,12 +236,19 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
         let mut lenb = [0u8; 8];
         r.read_exact(&mut lenb).map_err(|_| GpkError::Truncated)?;
         let len = u64::from_le_bytes(lenb);
+        if len > limits.max_entry_bytes {
+            return Err(GpkError::LimitExceeded(format!(
+                "entry length {len} exceeds per-entry limit {}",
+                limits.max_entry_bytes
+            )));
+        }
 
         index.push((h, kind, off, len));
     }
 
     let mut entries = Vec::with_capacity(index.len());
     let mut expected_off = payload_start;
+    let mut total_payload: u64 = 0;
     for (h, kind, off, len) in index {
         if off != expected_off {
             return Err(GpkError::BadIndex(format!(
@@ -209,6 +257,15 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
         }
         if len > (usize::MAX as u64) {
             return Err(GpkError::Truncated);
+        }
+        total_payload = total_payload
+            .checked_add(len)
+            .ok_or_else(|| GpkError::BadIndex("payload length overflow".to_string()))?;
+        if total_payload > limits.max_total_bytes {
+            return Err(GpkError::LimitExceeded(format!(
+                "payload bytes {total_payload} exceed limit {}",
+                limits.max_total_bytes
+            )));
         }
         let mut bytes = vec![0u8; len as usize];
         r.read_exact(&mut bytes).map_err(|_| GpkError::Truncated)?;
@@ -236,11 +293,23 @@ pub fn read_bundle<R: Read>(mut r: R) -> Result<GpkBundle, GpkError> {
         let mut cntb = [0u8; 8];
         r.read_exact(&mut cntb).map_err(|_| GpkError::Truncated)?;
         let rcnt = u64::from_le_bytes(cntb);
+        if rcnt > limits.max_refs {
+            return Err(GpkError::LimitExceeded(format!(
+                "refs count {rcnt} exceeds limit {}",
+                limits.max_refs
+            )));
+        }
         let mut seen_names: BTreeSet<String> = BTreeSet::new();
         for _ in 0..rcnt {
             let mut nlb = [0u8; 2];
             r.read_exact(&mut nlb).map_err(|_| GpkError::Truncated)?;
             let nlen = u16::from_le_bytes(nlb) as usize;
+            if nlen > limits.max_ref_name_bytes {
+                return Err(GpkError::LimitExceeded(format!(
+                    "ref name length {nlen} exceeds limit {}",
+                    limits.max_ref_name_bytes
+                )));
+            }
             let mut nb = vec![0u8; nlen];
             r.read_exact(&mut nb).map_err(|_| GpkError::Truncated)?;
             let name = String::from_utf8(nb)

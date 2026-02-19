@@ -192,6 +192,7 @@ impl gc_registry::InProcRegistry for MemRegistry {
                 "refs/set: missing evidence".to_string(),
             ));
         }
+        let mut evidence_kinds: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
         for ev_h in &commit.evidence {
             let ev_bytes = g.store.get(ev_h).ok_or_else(|| {
                 gc_registry::RegistryError::Protocol("refs/set: evidence not found".to_string())
@@ -202,9 +203,17 @@ impl gc_registry::InProcRegistry for MemRegistry {
             let ev_t = parse_term(&ev_s).map_err(|e| {
                 gc_registry::RegistryError::Protocol(format!("refs/set: bad evidence term: {e}"))
             })?;
-            gc_vcs::Evidence::from_term(&ev_t).map_err(|e| {
+            let ev = gc_vcs::Evidence::from_term(&ev_t).map_err(|e| {
                 gc_registry::RegistryError::Protocol(format!("refs/set: bad evidence schema: {e}"))
             })?;
+            evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+        }
+        let missing_kinds =
+            class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
+        if !missing_kinds.is_empty() {
+            return Err(gc_registry::RegistryError::Protocol(
+                "refs/set: missing evidence kinds".to_string(),
+            ));
         }
 
         drop(g);
@@ -233,6 +242,30 @@ fn mk_caps_for_sync(
     refs_path: &std::path::Path,
     remote_allow: &str,
 ) -> CapsPolicy {
+    mk_caps_for_sync_with_limits(store_dir, refs_path, remote_allow, None, None)
+}
+
+fn mk_caps_for_sync_with_limits(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+    max_artifact_bytes: Option<usize>,
+    max_batch_bytes: Option<usize>,
+) -> CapsPolicy {
+    let pull_limits = {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(v) = max_artifact_bytes {
+            parts.push(format!("max_artifact_bytes = {v}"));
+        }
+        if let Some(v) = max_batch_bytes {
+            parts.push(format!("max_batch_bytes = {v}"));
+        }
+        if parts.is_empty() {
+            String::new()
+        } else {
+            format!("\n{}\n", parts.join("\n"))
+        }
+    };
     let s = format!(
         r#"
 allow = ["core/sync::push", "core/sync::pull"]
@@ -250,10 +283,12 @@ transfer_workers = 4
 [op."core/sync::pull"]
 remote_allow = ["{remote_allow}"]
 transfer_workers = 4
+{pull_limits}
 "#,
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),
-        remote_allow = remote_allow
+        remote_allow = remote_allow,
+        pull_limits = pull_limits
     );
     CapsPolicy::from_toml_str(&s).expect("caps")
 }
@@ -962,4 +997,55 @@ fn sync_remote_allowlist_is_enforced() {
     let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
     let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
     assert!(is_sealed_error(&ctx, &r.value, "core/sync/remote-denied"));
+}
+
+#[test]
+fn sync_pull_enforces_max_artifact_bytes_budget() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_limit", reg.clone());
+    let (remote, remote_allow) = mk_remote("t_sync_limit");
+
+    let module_art = parse_term(&format!(
+        r#"{{:kind "module" :v 1 :blob "{}"}}"#,
+        "z".repeat(4096)
+    ))
+    .unwrap();
+    let module_hex = reg.put_artifact(print_term(&module_art).as_bytes());
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = reg.put_artifact(print_term(&snap_t).as_bytes());
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = reg.put_artifact(print_term(&patch_t).as_bytes());
+    let ev_t = parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let ev_hex = reg.put_artifact(print_term(&ev_t).as_bytes());
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &ev_hex);
+    let commit_hex = reg.put_artifact(print_term(&commit_t).as_bytes());
+    {
+        let mut g = reg.st.lock().unwrap();
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
+    }
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps =
+        mk_caps_for_sync_with_limits(&store_dir, &refs_path, &remote_allow, Some(256), Some(1024));
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/caps/resource-limit"));
 }

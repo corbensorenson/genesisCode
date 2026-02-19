@@ -10,7 +10,10 @@ pub(crate) fn mk_pkg_init_program(
     policy: &str,
     registry_default: Option<&str>,
 ) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg-low::init")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::init"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":workspace")),
@@ -52,7 +55,10 @@ pub(crate) fn mk_pkg_add_program(
     strategy: Option<&str>,
     tag_policy: Option<&str>,
 ) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg-low::add")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::add"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":lock")),
@@ -102,7 +108,10 @@ pub(crate) fn mk_pkg_add_program(
 }
 
 pub(crate) fn mk_pkg_lock_program(lock: &Path, strict: bool) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg-low::lock")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::lock"),
+    ]);
     let payload = Term::Map(
         [
             (
@@ -215,7 +224,10 @@ pub(crate) fn mk_pkg_verify_program(lock: &Path) -> Vec<Term> {
 }
 
 pub(crate) fn mk_pkg_list_program(lock: &Path) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg-low::list")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::list"),
+    ]);
     let payload = Term::Map(
         [(
             gc_coreform::TermOrdKey(Term::symbol(":lock")),
@@ -237,7 +249,10 @@ pub(crate) fn mk_pkg_list_program(lock: &Path) -> Vec<Term> {
 }
 
 pub(crate) fn mk_pkg_info_program(lock: &Path, name: &str) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/pkg-low::info")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::info"),
+    ]);
     let payload = Term::Map(
         [
             (
@@ -476,4 +491,3 @@ pub(crate) fn mk_gpk_import_program(input: &Path, set_refs: &[SetRefSpec]) -> Ve
         Term::symbol("prog"),
     ]
 }
-

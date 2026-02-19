@@ -19,6 +19,19 @@ fn extract_str_field(map: &std::collections::BTreeMap<TermOrdKey, Term>, k: &str
     }
 }
 
+fn sealed_error_code(v: &Value) -> Option<String> {
+    let Value::Sealed { payload, .. } = v else {
+        return None;
+    };
+    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+        return None;
+    };
+    match m.get(&TermOrdKey(Term::symbol(":error/code"))) {
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 #[test]
 fn store_put_has_get_roundtrip_and_replay_does_not_need_store() {
     let td = tempfile::tempdir().unwrap();
@@ -215,4 +228,115 @@ dir = "./.genesis/store"
         Value::Sealed { token, .. } => assert_eq!(token, proto.error),
         other => panic!("expected sealed error, got {}", other.debug_repr()),
     }
+}
+
+#[test]
+fn store_get_enforces_max_bytes_budget() {
+    let td = tempfile::tempdir().unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::put", "core/store::get"]
+
+[store]
+dir = "./.genesis/store"
+
+[op."core/store::get"]
+max_bytes = 128
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let large_payload = "x".repeat(4096);
+    let put_src = format!(
+        r#"
+      (def prog
+        (core/effect::perform
+          'core/store::put
+          {{:artifact (quote {{:blob "{large_payload}"}})}}
+          (fn (r) (core/effect::pure r))))
+      prog
+    "#
+    );
+    let put_forms = parse_module(&put_src).unwrap();
+    let put_hash = hash_module(&put_forms);
+    let (mut ctx_put, prog_put) = eval_prog(&put_forms);
+    let r_put = run(
+        &mut ctx_put,
+        &pol,
+        prog_put,
+        put_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    let Value::Data(Term::Map(put_m)) = r_put.value else {
+        panic!("expected put result map");
+    };
+    let h = extract_str_field(&put_m, ":hash");
+
+    let get_src = format!(
+        r#"
+      (def prog
+        (core/effect::perform
+          'core/store::get
+          {{:hash "{h}"}}
+          (fn (r) (core/effect::pure r))))
+      prog
+    "#
+    );
+    let forms = parse_module(&get_src).unwrap();
+    let mh = hash_module(&forms);
+    let (mut ctx, prog) = eval_prog(&forms);
+    let r = run(&mut ctx, &pol, prog, mh, "gc_effects-test".to_string()).unwrap();
+
+    assert_eq!(
+        sealed_error_code(&r.value).as_deref(),
+        Some("core/caps/resource-limit")
+    );
+}
+
+#[test]
+fn io_fs_read_enforces_max_bytes_budget() {
+    let td = tempfile::tempdir().unwrap();
+    let sandbox = td.path().join("sandbox");
+    std::fs::create_dir_all(&sandbox).unwrap();
+    std::fs::write(sandbox.join("big.bin"), vec![7u8; 4096]).unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        format!(
+            r#"
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+base_dir = "{}"
+max_bytes = 256
+"#,
+            sandbox.display()
+        ),
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let src = r#"
+      (def prog
+        (core/effect::perform
+          'io/fs::read
+          {:path "big.bin"}
+          (fn (r) (core/effect::pure r))))
+      prog
+    "#;
+    let forms = parse_module(src).unwrap();
+    let mh = hash_module(&forms);
+    let (mut ctx, prog) = eval_prog(&forms);
+    let r = run(&mut ctx, &pol, prog, mh, "gc_effects-test".to_string()).unwrap();
+
+    assert_eq!(
+        sealed_error_code(&r.value).as_deref(),
+        Some("core/caps/resource-limit")
+    );
 }

@@ -18,14 +18,14 @@ use gc_prelude::{
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 
+#[path = "../../../old_bootstrap/rust_semantics/mod.rs"]
+mod legacy_program_builders;
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
 mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
-#[path = "../../../old_bootstrap/rust_semantics/mod.rs"]
-mod legacy_program_builders;
 
 use legacy_program_builders::*;
 

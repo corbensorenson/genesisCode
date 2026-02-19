@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use gc_coreform::Term;
 use crate::SetRefSpec;
+use gc_coreform::Term;
 
 pub(crate) fn mk_sync_pull_program(
     remote: &str,
@@ -126,7 +126,10 @@ pub(crate) fn mk_gc_plan_program(
     include_lock: bool,
     include_refs: bool,
 ) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/gc-low::plan")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gc-low::plan"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":lock")),
@@ -170,7 +173,10 @@ pub(crate) fn mk_gc_run_program(
     quarantine: bool,
     quarantine_dir: Option<&Path>,
 ) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/gc-low::run")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gc-low::run"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":lock")),
@@ -216,7 +222,10 @@ pub(crate) fn mk_gc_run_program(
 }
 
 pub(crate) fn mk_gc_pin_program(target: &str, pins: &Path) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/gc-low::pin")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gc-low::pin"),
+    ]);
     let payload = Term::Map(
         [
             (
@@ -244,7 +253,10 @@ pub(crate) fn mk_gc_pin_program(target: &str, pins: &Path) -> Vec<Term> {
 }
 
 pub(crate) fn mk_gc_unpin_program(target: &str, pins: &Path) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/gc-low::unpin")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gc-low::unpin"),
+    ]);
     let payload = Term::Map(
         [
             (
@@ -272,7 +284,10 @@ pub(crate) fn mk_gc_unpin_program(target: &str, pins: &Path) -> Vec<Term> {
 }
 
 pub(crate) fn mk_gc_purge_program(ttl_days: u64, quarantine_dir: Option<&Path>) -> Vec<Term> {
-    let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/gc-low::purge")]);
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/gc-low::purge"),
+    ]);
     let mut m = std::collections::BTreeMap::new();
     m.insert(
         gc_coreform::TermOrdKey(Term::symbol(":ttl-days")),

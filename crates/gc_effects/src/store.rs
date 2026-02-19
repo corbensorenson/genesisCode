@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::UNIX_EPOCH;
@@ -244,6 +244,31 @@ impl ArtifactStore {
         Self::verify_named_bytes(hex, &bytes)?;
         self.cache_mark_verified(hex, sig);
         Ok(bytes)
+    }
+
+    pub fn get_bytes_limited(&self, hex: &str, max_bytes: usize) -> Result<Vec<u8>, EffectsError> {
+        let path = self.path_for(hex);
+        let mut f = std::fs::File::open(&path)?;
+        let mut out = Vec::new();
+        let mut buf = [0u8; 8 * 1024];
+        loop {
+            let n = f.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            if out.len().saturating_add(n) > max_bytes {
+                return Err(EffectsError::Log(format!(
+                    "artifact size exceeds configured max bytes ({max_bytes}) for {hex}"
+                )));
+            }
+            out.extend_from_slice(&buf[..n]);
+        }
+        Self::verify_named_bytes(hex, &out)?;
+        if self.integrity_cache.is_some() {
+            let sig = Self::file_sig(&std::fs::metadata(&path)?);
+            self.cache_mark_verified(hex, sig);
+        }
+        Ok(out)
     }
 }
 

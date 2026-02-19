@@ -95,7 +95,10 @@ fn wasi_gc_plan_then_run_deletes_unreachable_artifacts() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::plan", "core/gc-low::run"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::plan", "core/gc-low::run"],
+    );
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead");
@@ -155,7 +158,10 @@ fn wasi_gc_quarantine_and_purge_roundtrip() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::run", "core/gc-low::purge"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::run", "core/gc-low::purge"],
+    );
 
     let keep_h = store_put(dir, &caps, "{:keep true}\n", "keep2");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead2");
@@ -281,7 +287,10 @@ fn wasi_gc_pin_ref_keeps_target_even_with_no_refs_root_scan() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
 
-    let caps = write_caps(dir, &["core/store::put", "core/gc-low::pin", "core/gc-low::run"]);
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/gc-low::pin", "core/gc-low::run"],
+    );
 
     let kept_via_ref_h = store_put(dir, &caps, "{:kept-via-ref true}\n", "keep_ref");
     let dead_h = store_put(dir, &caps, "{:dead true}\n", "dead_ref");
