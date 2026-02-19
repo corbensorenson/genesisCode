@@ -68,11 +68,17 @@ mod runner_gc_ops;
 mod runner_remote_ops;
 #[path = "runner_capability_dispatch.rs"]
 mod runner_capability_dispatch;
+#[path = "runner_cap_refs.rs"]
+mod runner_cap_refs;
+#[path = "runner_cap_store.rs"]
+mod runner_cap_store;
 #[path = "runner_response_budget.rs"]
 mod runner_response_budget;
 #[path = "runner_vcs_pkg_helpers.rs"]
 mod runner_vcs_pkg_helpers;
 use runner_capability_dispatch::*;
+use runner_cap_refs::*;
+use runner_cap_store::*;
 use runner_gc_ops::*;
 use runner_remote_ops::*;
 use runner_response_budget::*;
