@@ -608,11 +608,10 @@ fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "--engine rust` is disabled in the default selfhost profile",
+            "dedicated parity harness binaries",
         ));
 
-    cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_wasi_parity")
         .args([
             "--selfhost-artifact",
             bad_artifact.to_str().unwrap(),

@@ -54,7 +54,7 @@ remote_allow = ["{remote_allow}"]
 fn cli_store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     let p = dir.join(filename);
     fs::write(&p, term_src).unwrap();
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["store", "--caps"])
         .arg(caps)
@@ -191,7 +191,7 @@ fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     );
     set_local_ref(dir, &commit_bad);
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -237,7 +237,7 @@ fn pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     );
     set_local_ref(dir, &commit_ok);
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -386,7 +386,7 @@ fn selfhost_publish_works_without_core_pkg_publish_capability() {
     );
     set_local_ref(dir, &commit_ok);
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .arg("--json")
         .args(["--coreform-frontend", "selfhost"])
@@ -424,9 +424,8 @@ fn pkg_publish_value_matches_between_frontends() {
         setup_publish_ok_fixture(&self_dir);
     let artifact = build_selfhost_artifact(&self_dir);
 
-    let rust_out = cargo_bin_cmd!("genesis")
+    let rust_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(&rust_dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .arg("--json")
         .args(["--coreform-frontend", "rust"])
         .args(["pkg", "--caps"])
@@ -445,9 +444,8 @@ fn pkg_publish_value_matches_between_frontends() {
         .get_output()
         .stdout
         .clone();
-    let self_out = cargo_bin_cmd!("genesis")
+    let self_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(&self_dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .arg("--json")
         .args(["--coreform-frontend", "selfhost"])
         .args(["--selfhost-artifact", artifact.to_str().unwrap()])

@@ -73,7 +73,6 @@ fn default_profile_rejects_rust_coreform_frontend_for_semantic_groups() {
 
     for args in commands {
         cargo_bin_cmd!("genesis_wasi")
-            .env_remove("GENESIS_ALLOW_RUST_ENGINE")
             .arg("--coreform-frontend")
             .arg("rust")
             .args(args)
@@ -81,7 +80,7 @@ fn default_profile_rejects_rust_coreform_frontend_for_semantic_groups() {
             .failure()
             .code(50)
             .stderr(predicate::str::contains(
-                "--coreform-frontend rust` is disabled in the default selfhost profile",
+                "dedicated parity harness binaries",
             ));
     }
 }
@@ -91,8 +90,7 @@ fn compat_opt_in_allows_rust_coreform_frontend_for_refs_group() {
     let td = tempdir().unwrap();
     let caps = write_caps(td.path());
 
-    cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_wasi_parity")
         .args([
             "--coreform-frontend",
             "rust",

@@ -31,7 +31,7 @@ The interface mirrors the native `genesis` CLI for these commands:
   - rejects commands not yet selfhost-routed with exit code `50`
   - current WASI routed set: `fmt`, `eval`, `test`, `pack`, `vcs hash`
   - for `fmt`/`eval` (and `vcs hash`), when `--engine` is omitted the engine defaults to `selfhost`
-  - `--engine rust` remains available only in development/debug parity workflows with explicit opt-in (`GENESIS_ALLOW_RUST_ENGINE=1`)
+  - `--engine rust` remains available only in development/debug parity workflows through `genesis_wasi_parity`
   - release builds reject `--engine rust` unconditionally
   - artifact resolution for selfhost bootstrap remains:
     - `--selfhost-artifact`

@@ -9,7 +9,6 @@ pub(super) fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMo
 }
 
 pub(super) const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
-pub(super) const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 pub(super) const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 pub(super) const WORKSPACE_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = "selfhost/toolchain.gc";
 pub(super) const DASHBOARD_MARKDOWN_DEFAULT_REL: &str = "docs/status/SELFHOST_CUTOVER.md";
@@ -30,10 +29,7 @@ pub(super) fn selfhost_only_enabled(cli: &Cli) -> bool {
 }
 
 pub(super) fn rust_engine_compat_enabled() -> bool {
-    cfg!(debug_assertions)
-        && std::env::var(ALLOW_RUST_ENGINE_ENV)
-            .map(|v| parse_truthy_env_flag(&v))
-            .unwrap_or(false)
+    matches!(runtime_profile(), RuntimeProfile::ParityHarness)
 }
 
 pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
@@ -190,11 +186,9 @@ pub(super) fn resolved_coreform_frontend(
             }
             if !rust_engine_compat_enabled() {
                 let msg = if cfg!(debug_assertions) {
-                    format!(
-                        "`--coreform-frontend rust` is disabled in the default selfhost profile; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
-                    )
+                    "`--coreform-frontend rust` is disabled in this binary; use dedicated parity harness binaries (`genesis_parity` / `genesis_wasi_parity`) for Rust frontend comparisons".to_string()
                 } else {
-                    "`--coreform-frontend rust` is disabled in release profile; rust compatibility is development-only for offline parity harnesses".to_string()
+                    "`--coreform-frontend rust` is disabled in production binaries; use dedicated parity harness binaries (`genesis_parity` / `genesis_wasi_parity`) for Rust frontend comparisons".to_string()
                 };
                 return Err(cli_err(EX_VERIFY, "engine/rust-disabled", msg));
             }
@@ -263,11 +257,11 @@ pub(super) fn coreform_frontend_for_engine(
 pub(super) fn rust_engine_disabled_message(cmd_name: &str) -> String {
     if cfg!(debug_assertions) {
         format!(
-            "`--engine rust` is disabled in the default selfhost profile for `{cmd_name}`; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
+            "`--engine rust` is disabled in this binary for `{cmd_name}`; use dedicated parity harness binaries (`genesis_parity` / `genesis_wasi_parity`) for Rust engine comparisons"
         )
     } else {
         format!(
-            "`--engine rust` is disabled in release profile for `{cmd_name}`; rust compatibility is development-only for offline parity harnesses"
+            "`--engine rust` is disabled in production binaries for `{cmd_name}`; use dedicated parity harness binaries (`genesis_parity` / `genesis_wasi_parity`) for Rust engine comparisons"
         )
     }
 }

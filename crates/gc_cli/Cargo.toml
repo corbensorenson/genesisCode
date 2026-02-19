@@ -8,6 +8,10 @@ license.workspace = true
 name = "genesis"
 path = "src/main.rs"
 
+[[bin]]
+name = "genesis_parity"
+path = "src/main_parity.rs"
+
 [features]
 default = []
 embedded-bootstrap = ["gc_cli_driver/embedded-bootstrap"]

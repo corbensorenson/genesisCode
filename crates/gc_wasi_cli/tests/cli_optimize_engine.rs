@@ -22,8 +22,7 @@ fn optimize_selfhost_engine_matches_rust_engine_output() {
     )
     .unwrap();
 
-    let rust_out = cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_wasi_parity")
         .args(["optimize", file.to_str().unwrap(), "--engine", "rust"])
         .assert()
         .success()
@@ -65,8 +64,7 @@ fn optimize_json_reports_coreform_frontend_for_ai_drivers() {
     )
     .unwrap();
 
-    let rust_out = cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_wasi_parity")
         .args([
             "--json",
             "optimize",
@@ -124,8 +122,7 @@ fn optimize_stage1_gate_fails_for_effect_program() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_wasi_parity")
         .args([
             "optimize",
             file.to_str().unwrap(),
@@ -152,8 +149,7 @@ fn optimize_stage2_gate_and_emit_wasm_succeeds_for_scalar_pure_module() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_wasi_parity")
         .args([
             "optimize",
             file.to_str().unwrap(),

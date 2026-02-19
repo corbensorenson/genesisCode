@@ -5,8 +5,7 @@ use tempfile::tempdir;
 mod common;
 
 fn cmd() -> assert_cmd::Command {
-    let mut c = cargo_bin_cmd!("genesis_wasi");
-    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    let c = cargo_bin_cmd!("genesis_wasi_parity");
     c
 }
 

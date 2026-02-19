@@ -1184,11 +1184,10 @@ fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
         .failure()
         .code(50)
         .stderr(predicate::str::contains(
-            "--engine rust` is disabled in the default selfhost profile",
+            "dedicated parity harness binaries",
         ));
 
-    cargo_bin_cmd!("genesis")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_parity")
         .args([
             "--selfhost-artifact",
             bad_artifact.to_str().unwrap(),
@@ -1232,13 +1231,12 @@ fn default_profile_rejects_rust_coreform_frontend_without_compat_opt_in() {
             .failure()
             .code(50)
             .stderr(predicate::str::contains(
-                "--coreform-frontend rust` is disabled in the default selfhost profile",
+                "dedicated parity harness binaries",
             ));
     }
 
     // Explicit compat opt-in is still available.
-    cargo_bin_cmd!("genesis")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_parity")
         .args(["--coreform-frontend", "rust", "pack", "--pkg"])
         .arg(&pkg)
         .assert()

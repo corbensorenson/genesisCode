@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
@@ -1196,7 +1197,35 @@ pub enum Flavor {
     Wasi,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeProfile {
+    Production,
+    ParityHarness,
+}
+
+static RUNTIME_PROFILE: AtomicU8 = AtomicU8::new(0);
+
+pub(crate) fn runtime_profile() -> RuntimeProfile {
+    match RUNTIME_PROFILE.load(Ordering::Relaxed) {
+        1 => RuntimeProfile::ParityHarness,
+        _ => RuntimeProfile::Production,
+    }
+}
+
+fn set_runtime_profile(profile: RuntimeProfile) {
+    let encoded = match profile {
+        RuntimeProfile::Production => 0,
+        RuntimeProfile::ParityHarness => 1,
+    };
+    RUNTIME_PROFILE.store(encoded, Ordering::Relaxed);
+}
+
 pub fn run(flavor: Flavor) -> std::process::ExitCode {
+    run_with_profile(flavor, RuntimeProfile::Production)
+}
+
+pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process::ExitCode {
+    set_runtime_profile(profile);
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {

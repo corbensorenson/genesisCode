@@ -4,8 +4,7 @@ use tempfile::tempdir;
 mod support;
 
 fn run_ok(args: &[&str]) {
-    cargo_bin_cmd!("genesis")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_parity")
         .args(args)
         .assert()
         .success();
@@ -56,8 +55,7 @@ fn fmt_selfhost_check_agrees_with_rust_check() {
     let noncanon = "(def x 1)   (def y 2)\n";
     std::fs::write(&file, noncanon).unwrap();
 
-    cargo_bin_cmd!("genesis")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    cargo_bin_cmd!("genesis_parity")
         .args(["fmt", file.to_str().unwrap(), "--check", "--engine", "rust"])
         .assert()
         .failure()

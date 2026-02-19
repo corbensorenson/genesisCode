@@ -212,9 +212,169 @@
         (if (core/cli::map? flat)
           (let
             ((head ((core/map::get flat) (quote :head))) (args ((core/map::get flat) (quote :args))))
-            (let ((st2 (((core/cli::infer-effects-perform head) args) st)))
-              (let ((st3 ((core/cli::infer-effects-term head) st2)))
-                ((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st3))))
+            (let ((st1 (((core/cli::infer-effects-direct-head head) args) st)))
+              (let ((st2 (((core/cli::infer-effects-perform head) args) st1)))
+                (let ((st3 ((core/cli::infer-effects-term head) st2)))
+                  ((((core/cli::infer-effects-vec args) (core/vec::len args)) 0) st3)))))
+          st)))))
+
+(def core/cli::arity-ge? (fn (n) (fn (k) (if ((core/int::lt? n) k) false true))))
+
+(def core/cli::infer-effects-add-op
+  (fn (st)
+    (fn (op)
+      (if (core/cli::sym? op)
+        ((core/cli::vec2 (((core/map::put ((core/vec::get st) 0)) op) true)) ((core/vec::get st) 1))
+        st))))
+
+(def core/cli::infer-effects-add-ops
+  (fn (st)
+    (fn (ops)
+      (if (core/cli::vec? ops)
+        ((((core/cli::infer-effects-add-ops2 ops) (core/vec::len ops)) 0) st)
+        st))))
+
+(def core/cli::infer-effects-add-ops2
+  (fn (ops)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((op ((core/vec::get ops) i)))
+              ((((core/cli::infer-effects-add-ops2 ops) n) ((core/int::add i) 1))
+                ((core/cli::infer-effects-add-op st) op)))))))))
+
+(def core/cli::direct-effect-rules
+  (quote
+    {
+      core/editor/task::cancel
+        {
+          :min 1
+          :ops [editor/task::cancel]}
+      core/editor/task::poll
+        {
+          :min 1
+          :ops [editor/task::poll]}
+      core/editor/task::spawn
+        {
+          :min 3
+          :ops [editor/task::spawn]}
+      core/task::all
+        {
+          :min 1
+          :ops [core/task::await]}
+      core/task::await
+        {
+          :min 1
+          :ops [core/task::await]}
+      core/task::await-all
+        {
+          :min 1
+          :ops [core/task::await]}
+      core/task::await-all-loop
+        {
+          :min 3
+          :ops [core/task::await]}
+      core/task::cancel
+        {
+          :min 1
+          :ops [core/task::cancel]}
+      core/task::channel-close
+        {
+          :min 1
+          :ops [core/task::channel-close]}
+      core/task::channel-open
+        {
+          :min 1
+          :ops [core/task::channel-open]}
+      core/task::channel-recv
+        {
+          :min 1
+          :ops [core/task::channel-recv]}
+      core/task::channel-send
+        {
+          :min 2
+          :ops [core/task::channel-send]}
+      core/task::channel-status
+        {
+          :min 1
+          :ops [core/task::channel-status]}
+      core/task::map-bounded
+        {
+          :min 5
+          :ops [core/task::spawn core/task::await]}
+      core/task::map-bounded-loop
+        {
+          :min 7
+          :ops [core/task::spawn core/task::await]}
+      core/task::parallel-map-bounded
+        {
+          :min 5
+          :ops [core/task::spawn core/task::await]}
+      core/task::parallel-reduce
+        {
+          :min 7
+          :ops [core/task::spawn core/task::await]}
+      core/task::parallel-reduce-bounded
+        {
+          :min 7
+          :ops [core/task::spawn core/task::await]}
+      core/task::race
+        {
+          :min 1
+          :ops [core/task::await core/task::cancel]}
+      core/task::race-cancel-rest
+        {
+          :min 3
+          :ops [core/task::cancel]}
+      core/task::scope
+        {
+          :min 1
+          :ops [core/task::scope]}
+      core/task::spawn
+        {
+          :min 3
+          :ops [core/task::spawn]}
+      core/task::spawn-batch
+        {
+          :min 6
+          :ops [core/task::spawn]}
+      core/task::spawn-batch-loop
+        {
+          :min 7
+          :ops [core/task::spawn]}
+      core/task::status
+        {
+          :min 1
+          :ops [core/task::status]}
+      core/task::task-group
+        {
+          :min 4
+          :ops [core/task::spawn]}
+      core/task::task-group-await
+        {
+          :min 1
+          :ops [core/task::await]}}))
+
+(def core/cli::infer-effects-apply-direct-rule
+  (fn (st)
+    (fn (arity)
+      (fn (rule)
+        (if (core/cli::map? rule)
+          (let ((min ((core/map::get rule) (quote :min))) (ops ((core/map::get rule) (quote :ops))))
+            (if (if (core/cli::int? min) ((core/cli::arity-ge? arity) min) false)
+              ((core/cli::infer-effects-add-ops st) ops)
+              st))
+          st)))))
+
+(def core/cli::infer-effects-direct-head
+  (fn (head)
+    (fn (args)
+      (fn (st)
+        (if (core/cli::sym? head)
+          (let ((rule ((core/map::get core/cli::direct-effect-rules) head)))
+            (((core/cli::infer-effects-apply-direct-rule st) (core/vec::len args)) rule))
           st)))))
 
 (def core/cli::infer-effects-perform

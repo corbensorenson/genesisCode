@@ -58,9 +58,8 @@ fn gcpm_self_optimize_promotes_only_after_obligation_gate() {
     let caps = write_caps(dir);
     write_pkg(dir);
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["self-optimize", "--pkg", "package.toml"])
@@ -106,9 +105,8 @@ fn gcpm_self_optimize_dry_run_restores_original_sources() {
     let original_module = fs::read_to_string(dir.join("lib.gc")).unwrap();
     let original_manifest = fs::read_to_string(dir.join("package.toml")).unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["self-optimize", "--pkg", "package.toml", "--dry-run"])

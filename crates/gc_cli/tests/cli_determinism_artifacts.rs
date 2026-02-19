@@ -50,32 +50,28 @@ fn pack_is_deterministic_across_reruns_under_selfhost_frontend() {
 
     let artifact = support::copy_repo_toolchain_artifact(&dir);
 
-    let mut c1 = cargo_bin_cmd!("genesis");
-    c1.env("GENESIS_ALLOW_RUST_ENGINE", "1")
-        .current_dir(&dir)
-        .args([
-            "--coreform-frontend",
-            "selfhost",
-            "--selfhost-artifact",
-            artifact.to_str().unwrap(),
-            "pack",
-            "--pkg",
-            pkg.to_str().unwrap(),
-        ]);
+    let mut c1 = cargo_bin_cmd!("genesis_parity");
+    c1.current_dir(&dir).args([
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "pack",
+        "--pkg",
+        pkg.to_str().unwrap(),
+    ]);
     let h1 = run_hash_stdout(&mut c1);
 
-    let mut c2 = cargo_bin_cmd!("genesis");
-    c2.env("GENESIS_ALLOW_RUST_ENGINE", "1")
-        .current_dir(&dir)
-        .args([
-            "--coreform-frontend",
-            "selfhost",
-            "--selfhost-artifact",
-            artifact.to_str().unwrap(),
-            "pack",
-            "--pkg",
-            pkg.to_str().unwrap(),
-        ]);
+    let mut c2 = cargo_bin_cmd!("genesis_parity");
+    c2.current_dir(&dir).args([
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "pack",
+        "--pkg",
+        pkg.to_str().unwrap(),
+    ]);
     let h2 = run_hash_stdout(&mut c2);
     assert_eq!(h1, h2, "pack output hash must be deterministic");
 }
@@ -89,36 +85,32 @@ fn test_acceptance_is_deterministic_across_reruns_under_selfhost_frontend() {
     let artifact = support::copy_repo_toolchain_artifact(&dir);
     let caps = dir.join("caps.toml");
 
-    let mut c1 = cargo_bin_cmd!("genesis");
-    c1.env("GENESIS_ALLOW_RUST_ENGINE", "1")
-        .current_dir(&dir)
-        .args([
-            "--coreform-frontend",
-            "selfhost",
-            "--selfhost-artifact",
-            artifact.to_str().unwrap(),
-            "test",
-            "--pkg",
-            pkg.to_str().unwrap(),
-            "--caps",
-            caps.to_str().unwrap(),
-        ]);
+    let mut c1 = cargo_bin_cmd!("genesis_parity");
+    c1.current_dir(&dir).args([
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "test",
+        "--pkg",
+        pkg.to_str().unwrap(),
+        "--caps",
+        caps.to_str().unwrap(),
+    ]);
     let h1 = run_hash_stdout(&mut c1);
 
-    let mut c2 = cargo_bin_cmd!("genesis");
-    c2.env("GENESIS_ALLOW_RUST_ENGINE", "1")
-        .current_dir(&dir)
-        .args([
-            "--coreform-frontend",
-            "selfhost",
-            "--selfhost-artifact",
-            artifact.to_str().unwrap(),
-            "test",
-            "--pkg",
-            pkg.to_str().unwrap(),
-            "--caps",
-            caps.to_str().unwrap(),
-        ]);
+    let mut c2 = cargo_bin_cmd!("genesis_parity");
+    c2.current_dir(&dir).args([
+        "--coreform-frontend",
+        "selfhost",
+        "--selfhost-artifact",
+        artifact.to_str().unwrap(),
+        "test",
+        "--pkg",
+        pkg.to_str().unwrap(),
+        "--caps",
+        caps.to_str().unwrap(),
+    ]);
     let h2 = run_hash_stdout(&mut c2);
     assert_eq!(h1, h2, "test acceptance hash must be deterministic");
 }

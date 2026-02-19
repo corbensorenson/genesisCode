@@ -7,7 +7,7 @@ use gc_coreform::{Term, TermOrdKey, parse_term};
 mod common;
 
 fn cmd() -> assert_cmd::Command {
-    cargo_bin_cmd!("genesis_wasi")
+    cargo_bin_cmd!("genesis_wasi_parity")
 }
 
 fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> PathBuf {
@@ -343,7 +343,6 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
 
     let rust_out = cmd()
         .current_dir(&rust_dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .arg("--json")
         .args(["--coreform-frontend", "rust"])
         .args(["pkg", "--caps"])
@@ -364,7 +363,6 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
         .clone();
     let self_out = cmd()
         .current_dir(&self_dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .arg("--json")
         .args(["--coreform-frontend", "selfhost"])
         .args(["--selfhost-artifact", artifact.to_str().unwrap()])
@@ -425,7 +423,6 @@ fn wasi_selfhost_publish_works_without_core_pkg_publish_capability() {
 
     let out = cmd()
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .arg("--json")
         .args(["--coreform-frontend", "selfhost"])
         .args(["--selfhost-artifact", artifact.to_str().unwrap()])

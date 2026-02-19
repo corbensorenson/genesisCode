@@ -99,9 +99,8 @@ fn gcpm_abi_exports_contract_ops_caps_effects_and_obligations() {
     let caps = write_caps(dir);
     write_pkg(dir);
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["abi", "--pkg", "package.toml"])
@@ -173,9 +172,8 @@ fn gcpm_abi_output_is_deterministic_for_identical_inputs() {
 
     let run_once = || -> String {
         String::from_utf8(
-            cargo_bin_cmd!("genesis")
+            cargo_bin_cmd!("genesis_parity")
                 .current_dir(dir)
-                .env("GENESIS_ALLOW_RUST_ENGINE", "1")
                 .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
                 .arg(&caps)
                 .args(["--log", "abi.gclog", "abi", "--pkg", "package.toml"])

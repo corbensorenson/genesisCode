@@ -35,9 +35,8 @@ fn semantic_edit_index_emits_stable_node_inventory() {
     write_pkg(dir);
 
     let run_once = || {
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
-            .env("GENESIS_ALLOW_RUST_ENGINE", "1")
             .args([
                 "--json",
                 "--coreform-frontend",

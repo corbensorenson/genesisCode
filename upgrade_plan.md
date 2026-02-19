@@ -5,13 +5,16 @@ Last updated: 2026-02-19
 This file contains only unfinished work from a fresh red-team pass.
 Completed work was intentionally removed.
 
-Open checklist items: 5
+Open checklist items: 4
 
 ## P0 - Self-Host Completion Blockers
 
-- [ ] Retire debug-only Rust engine compatibility from the main CLI binaries.
+- [x] Retire debug-only Rust engine compatibility from the main CLI binaries.
   - Risk: production behavior can still depend on Rust-only compatibility switches during local/dev execution, which weakens the self-host boundary.
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:12`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:32`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:125`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:196`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md:42`
+  - Completed (2026-02-19): added runtime profiles in `gc_cli_driver`; `genesis`/`genesis_wasi` always run production profile, while `genesis_parity`/`genesis_wasi_parity` provide explicit Rust parity surface.
+  - Completed (2026-02-19): removed env-toggle compatibility from main CLI/runtime guards and migrated parity tests/scripts/docs to dedicated parity binaries.
+  - Completed (2026-02-19): updated retirement gates (`check_rust_engine_compat`, `selfhost_default_profile_guard`, `selfhost_release_profile_guard`, `check_bootstrap_retirement_gate`) to enforce parity-binary-only Rust comparisons.
   - Acceptance: parity paths live only in dedicated parity harness binaries; `genesis` and `genesis_wasi` ship selfhost-only engine/frontend behavior without env toggles.
 
 - [x] Remove tree-walk fallback as the default kernel execution contract.
@@ -29,6 +32,7 @@ Open checklist items: 5
 - [ ] Expand Stage2 compiler support to cover the full v1 selfhost workload surface.
   - Risk: selfhost optimization/validation pipeline is incomplete while major expression and primitive classes remain unsupported.
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:1679`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:3649`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:4159`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs:6279`
+  - Known parity gap (2026-02-19): `scripts/selfhost_strict_golden.sh` currently reports `pkg_gpu_parallel_obligations` typecheck mismatch (`rust=0`, `selfhost=20`) and blocks full strict-golden parity closure for this workload class.
   - Acceptance: Stage2 supports required pure CoreForm subset used by selfhost toolchain modules with obligation-backed parity coverage and no unsupported hot-path forms.
 
 - [x] Tighten Stage2 gate semantics to fail closed for protected pipelines.

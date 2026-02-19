@@ -20,6 +20,14 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+ART="$TMP_DIR/selfhost_toolchain.gc"
+REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"
+if [[ -f "$REPO_ART" ]]; then
+  cp "$REPO_ART" "$ART"
+else
+  "$GEN" selfhost-artifact --out "$ART" >/dev/null
+fi
+
 cat >"$TMP_DIR/mod.gc" <<'GC'
 (def m::x (prim int/add 1 2))
 m::x
@@ -48,7 +56,7 @@ expect_rust_engine_rejected() {
   local code=$?
   set -e
   [[ "$code" == "50" ]] || fail "$label expected exit 50, got $code (out=$out)"
-  [[ "$out" == *"disabled in the default selfhost profile"* ]] || {
+  [[ "$out" == *"dedicated parity harness binaries"* ]] || {
     fail "$label missing compat rejection message (out=$out)"
   }
 }
@@ -61,7 +69,7 @@ expect_rust_engine_rejected "native eval --engine rust" \
 expect_rust_engine_rejected "native run --engine rust" \
   "$GEN" run "$TMP_DIR/prog.gc" --engine rust --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/n.rust.gclog"
 
-n_eval="$("$GEN" eval "$TMP_DIR/mod.gc" | tr -d '\n')"
+n_eval="$("$GEN" --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" | tr -d '\n')"
 [[ "$n_eval" == "3" ]] || fail "native eval default selfhost produced unexpected output: $n_eval"
 
 # WASI native binary: same guarantees.
@@ -72,7 +80,7 @@ expect_rust_engine_rejected "wasi eval --engine rust" \
 expect_rust_engine_rejected "wasi run --engine rust" \
   "$GWASI" run "$TMP_DIR/prog.gc" --engine rust --caps "$TMP_DIR/caps.toml" --log "$TMP_DIR/w.rust.gclog"
 
-w_eval="$("$GWASI" eval "$TMP_DIR/mod.gc" | tr -d '\n')"
+w_eval="$("$GWASI" --selfhost-artifact "$ART" eval "$TMP_DIR/mod.gc" | tr -d '\n')"
 [[ "$w_eval" == "3" ]] || fail "wasi eval default selfhost produced unexpected output: $w_eval"
 
 echo "selfhost-default-profile-guard: ok"

@@ -119,7 +119,6 @@ pub enum CoreformFrontend {
 
 const SELFHOST_TOOLCHAIN_ARTIFACT_ENV: &str = "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT";
 const SELFHOST_ONLY_ENV: &str = "GENESIS_SELFHOST_ONLY";
-const ALLOW_RUST_ENGINE_ENV: &str = "GENESIS_ALLOW_RUST_ENGINE";
 const OBLIGATION_TEST_WORKERS_ENV: &str = "GENESIS_TEST_WORKERS";
 const OBLIGATION_CACHE_DISABLE_ENV: &str = "GENESIS_OBLIGATION_CACHE_DISABLE";
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
@@ -176,7 +175,7 @@ fn env_truthy(name: &str) -> bool {
 }
 
 fn rust_frontend_compat_enabled() -> bool {
-    cfg!(debug_assertions) && env_truthy(ALLOW_RUST_ENGINE_ENV)
+    cfg!(debug_assertions)
 }
 
 fn non_artifact_bootstrap_modes_allowed() -> bool {
@@ -228,7 +227,7 @@ fn enforce_frontend_allowed_with_flag(
     }
     if !rust_compat_enabled && matches!(frontend, CoreformFrontend::Rust) {
         return Err(ObligationError::Module(format!(
-            "Rust frontend is disabled by default in {context}; set {ALLOW_RUST_ENGINE_ENV}=1 to enable compatibility mode"
+            "Rust frontend is disabled in this profile in {context}; use dedicated parity harness binaries for CLI compatibility workflows"
         )));
     }
     Ok(())
@@ -3980,7 +3979,7 @@ mod tests {
     fn rust_frontend_requires_compat_flag_at_library_boundary() {
         let err = enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, false)
             .expect_err("rust frontend must require explicit compatibility mode");
-        assert!(format!("{err}").contains("Rust frontend is disabled by default"));
+        assert!(format!("{err}").contains("Rust frontend is disabled in this profile"));
         enforce_frontend_allowed_with_flag(&CoreformFrontend::Rust, "test", false, true)
             .expect("rust frontend should be permitted when compatibility mode is enabled");
     }

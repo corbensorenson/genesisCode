@@ -50,11 +50,11 @@ expect_release_rejected() {
   shift
   set +e
   local out
-  out="$(GENESIS_ALLOW_RUST_ENGINE=1 "$@" 2>&1)"
+  out="$("$@" 2>&1)"
   local code=$?
   set -e
   [[ "$code" == "50" ]] || fail "$label expected exit 50, got $code (out=$out)"
-  [[ "$out" == *"disabled in release profile"* ]] || {
+  [[ "$out" == *"disabled in production binaries"* ]] || {
     fail "$label missing release-profile rejection message (out=$out)"
   }
 }
@@ -68,7 +68,7 @@ expect_bootstrap_mode_rejected() {
   local code=$?
   set -e
   [[ "$code" == "50" ]] || fail "$label expected exit 50, got $code (out=$out)"
-  [[ "$out" == *"release profile requires --selfhost-bootstrap artifact-only"* ]] || {
+  [[ "$out" == *"--selfhost-bootstrap artifact-only"* ]] || {
     fail "$label missing release bootstrap-mode rejection message (out=$out)"
   }
 }

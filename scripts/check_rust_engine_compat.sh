@@ -15,7 +15,16 @@ find_candidates() {
 
 has_rust_engine_usage() {
   local file="$1"
-  rg -q -e "--engine rust" -e "engine\\\", \\\"rust\\\"" "$file"
+  rg -q \
+    -e "--engine rust" \
+    -e "coreform-frontend rust" \
+    -e "engine\\\", \\\"rust\\\"" \
+    "$file"
+}
+
+has_parity_harness_usage() {
+  local file="$1"
+  rg -q "genesis_parity|genesis_wasi_parity" "$file"
 }
 
 violations=0
@@ -28,37 +37,22 @@ while IFS= read -r file; do
     continue
   fi
 
-  case "$file" in
-    *.rs)
-      if rg -q "RUST_ENGINE_COMPAT_EXCEPTION" "$file"; then
-        continue
-      fi
-      if ! rg -q "GENESIS_ALLOW_RUST_ENGINE" "$file"; then
-        echo "rust-engine compat violation: $file uses --engine rust without explicit GENESIS_ALLOW_RUST_ENGINE opt-in"
-        violations=$((violations + 1))
-      fi
-      ;;
-    *.sh|*.yml|*.yaml)
-      if rg -q "RUST_ENGINE_COMPAT_EXCEPTION" "$file"; then
-        continue
-      fi
-      if ! rg -q "GENESIS_ALLOW_RUST_ENGINE=1|GENESIS_ALLOW_RUST_ENGINE:\\s*\"?1\"?" "$file"; then
-        echo "rust-engine compat violation: $file uses --engine rust without explicit GENESIS_ALLOW_RUST_ENGINE=1 opt-in"
-        violations=$((violations + 1))
-      fi
-      ;;
-    *)
-      echo "rust-engine compat violation: unsupported file type with --engine rust usage: $file"
-      violations=$((violations + 1))
-      ;;
-  esac
+  if rg -q "RUST_ENGINE_COMPAT_EXCEPTION" "$file"; then
+    continue
+  fi
+  if has_parity_harness_usage "$file"; then
+    continue
+  fi
+
+  echo "rust-engine compat violation: $file uses rust-engine/frontend without parity harness binary (genesis_parity/genesis_wasi_parity) or explicit RUST_ENGINE_COMPAT_EXCEPTION"
+  violations=$((violations + 1))
 done < <(find_candidates)
 
 if [[ "$violations" -gt 0 ]]; then
   cat <<'EOF'
 rust-engine compat guard: failed.
-All rust-engine usages must declare explicit compatibility mode via GENESIS_ALLOW_RUST_ENGINE=1.
-Default profile must remain selfhost-first and rust-engine-free.
+Rust engine/frontend paths are parity-only and must run through dedicated parity binaries
+(`genesis_parity` / `genesis_wasi_parity`) unless explicitly exempted.
 EOF
   exit 1
 fi

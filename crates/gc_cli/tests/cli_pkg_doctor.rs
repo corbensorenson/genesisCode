@@ -52,9 +52,8 @@ policy = "policy:default-v0.1"
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["doctor", "--lock", "genesis.lock"])
@@ -105,9 +104,8 @@ policy = "policy:default-v0.1"
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["doctor", "--lock", "genesis.lock"])
@@ -165,9 +163,8 @@ policy = "policy:default-v0.1"
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["doctor", "--lock", "genesis.lock"])

@@ -54,18 +54,16 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     let dir = td.path();
     let caps = write_caps(dir);
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["init", "--workspace", "ws"])
         .assert()
         .success();
 
-    let lock_out = cargo_bin_cmd!("genesis")
+    let lock_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["lock", "--lock", "genesis.lock"])
@@ -104,9 +102,8 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
     assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
 
-    let update_out = cargo_bin_cmd!("genesis")
+    let update_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["update", "--lock", "genesis.lock"])
@@ -152,9 +149,8 @@ fn gcpm_publish_failure_still_emits_publish_report_artifact() {
     let dir = td.path();
     let caps = write_caps(dir);
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args([

@@ -5,8 +5,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use tempfile::tempdir;
 
 fn cmd() -> assert_cmd::Command {
-    let mut c = cargo_bin_cmd!("genesis");
-    c.env("GENESIS_ALLOW_RUST_ENGINE", "1");
+    let c = cargo_bin_cmd!("genesis_parity");
     c
 }
 

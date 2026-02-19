@@ -45,18 +45,16 @@ fn gcpm_lock_emits_prompt_safe_telemetry() {
     let dir = td.path();
     let caps = write_caps(dir);
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["init", "--workspace", "ws"])
         .assert()
         .success();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["lock", "--lock", "genesis.lock"])

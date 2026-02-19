@@ -76,8 +76,7 @@ fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
     let artifact = build_selfhost_artifact(dir);
     fs::write(dir.join("t.gc"), "{:k 1}").unwrap();
 
-    let rust_out = cargo_bin_cmd!("genesis")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["--json", "vcs", "hash", "--in", "t.gc", "--engine", "rust"])
         .assert()

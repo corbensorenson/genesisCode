@@ -76,7 +76,7 @@ base_dir = "."
 fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
     fs::write(dir.join(filename), term_src).unwrap();
     String::from_utf8(
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
             .args(["store", "--caps"])
             .arg(caps)
@@ -122,7 +122,7 @@ fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &st
         "commit_missing_patch.gc",
     );
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(caps)
@@ -130,7 +130,7 @@ fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &st
         .assert()
         .success();
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(caps)
@@ -140,7 +140,7 @@ fn setup_locked_commit_with_missing_patch(dir: &Path, caps: &Path, dep_name: &st
         .success();
 
     // Non-strict lock resolves selector to commit/snapshot.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(caps)
@@ -190,7 +190,7 @@ mini::x
 
     // Snapshot produces store artifacts we can lock/install against.
     let snapshot_h = String::from_utf8(
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
             .args(["pkg", "--caps"])
             .arg(&caps)
@@ -213,7 +213,7 @@ mini::x
 
     // Init genesis.lock.
     let lock_h1 = String::from_utf8(
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
             .args(["pkg", "--caps"])
             .arg(&caps)
@@ -236,7 +236,7 @@ mini::x
 
     // Add requirement as snapshot selector.
     let lock_h2 = String::from_utf8(
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
             .args(["pkg", "--caps"])
             .arg(&caps)
@@ -259,7 +259,7 @@ mini::x
 
     // Lock resolves requirements into [locked].
     let lock_h3 = String::from_utf8(
-        cargo_bin_cmd!("genesis")
+        cargo_bin_cmd!("genesis_parity")
             .current_dir(dir)
             .args(["pkg", "--caps"])
             .arg(&caps)
@@ -280,7 +280,7 @@ mini::x
     );
 
     // Running lock again is deterministic for the same store/refs state.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -290,7 +290,7 @@ mini::x
         .stdout(format!("{lock_h3}\n"));
 
     // Install verifies shallow closure exists in local store.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -300,7 +300,7 @@ mini::x
         .stdout("ok\n");
 
     // Verify is strict (commit/evidence checks when present); snapshot-only locks still pass.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -312,7 +312,7 @@ mini::x
     // Deleting the store makes install fail with exit code 50 (verify).
     let store_dir = dir.join(".genesis").join("store");
     fs::remove_dir_all(&store_dir).unwrap();
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -367,18 +367,16 @@ fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
         "commit_p.gc",
     );
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["init", "--workspace", "ws"])
         .assert()
         .success();
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["add"])
@@ -386,9 +384,8 @@ fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
         .assert()
         .success();
 
-    let lock_out = cargo_bin_cmd!("genesis")
+    let lock_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["lock", "--strict"])
@@ -449,9 +446,8 @@ fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
         Some(&Term::symbol(":workspace"))
     );
 
-    let install_out = cargo_bin_cmd!("genesis")
+    let install_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
         .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
         .arg(&caps)
         .args(["install", "--frozen", "--strict"])
@@ -518,7 +514,7 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         "commit.gc",
     );
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -526,7 +522,7 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .assert()
         .success();
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -536,7 +532,7 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .success();
 
     // Non-strict lock still resolves commit pins.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -545,7 +541,7 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .success();
 
     // Strict lock rejects commit entries with obligations but no evidence.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -563,7 +559,7 @@ fn pkg_lock_strict_rejects_commit_with_missing_patch_closure() {
     let _commit_h = setup_locked_commit_with_missing_patch(dir, &caps, "badpatch");
 
     // Strict lock enforces closure integrity and rejects missing commit.patch artifact.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -581,7 +577,7 @@ fn pkg_install_strict_rejects_commit_with_missing_patch_closure() {
     let _commit_h = setup_locked_commit_with_missing_patch(dir, &caps, "badpatch-install");
 
     // Non-strict install checks snapshot shallow closure only and succeeds.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -590,7 +586,7 @@ fn pkg_install_strict_rejects_commit_with_missing_patch_closure() {
         .success();
 
     // Strict install must enforce commit closure and fail on missing patch.
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)
@@ -607,7 +603,7 @@ fn pkg_verify_rejects_commit_with_missing_patch_closure() {
     let caps = write_caps(dir);
     let _commit_h = setup_locked_commit_with_missing_patch(dir, &caps, "badpatch-verify");
 
-    cargo_bin_cmd!("genesis")
+    cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
         .args(["pkg", "--caps"])
         .arg(&caps)

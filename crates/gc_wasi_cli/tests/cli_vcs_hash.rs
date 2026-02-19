@@ -23,8 +23,7 @@ fn vcs_hash_hashes_terms_and_modules_deterministically_for_rust_and_selfhost_eng
     let t = parse_term(term_src).unwrap();
     let expected_term = blake3::Hash::from_bytes(hash_term(&t)).to_hex().to_string();
 
-    let rust_out = cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_wasi_parity")
         .current_dir(dir)
         .args(["vcs", "hash", "--in", "t.gc", "--engine", "rust"])
         .assert()
@@ -65,8 +64,7 @@ fn vcs_hash_hashes_terms_and_modules_deterministically_for_rust_and_selfhost_eng
         .to_hex()
         .to_string();
 
-    let rust_out = cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_wasi_parity")
         .current_dir(dir)
         .args(["vcs", "hash", "--in", "m.gc", "--engine", "rust"])
         .assert()
@@ -104,8 +102,7 @@ fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
     let artifact = build_selfhost_artifact(dir);
     fs::write(dir.join("t.gc"), "{:k 1}").unwrap();
 
-    let rust_out = cargo_bin_cmd!("genesis_wasi")
-        .env("GENESIS_ALLOW_RUST_ENGINE", "1")
+    let rust_out = cargo_bin_cmd!("genesis_wasi_parity")
         .current_dir(dir)
         .args(["--json", "vcs", "hash", "--in", "t.gc", "--engine", "rust"])
         .assert()
