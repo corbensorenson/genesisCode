@@ -267,7 +267,7 @@ pub(crate) fn mk_vcs_resolve_conflict_program(
 
     let op = Term::list(vec![
         Term::symbol("quote"),
-        Term::symbol("core/vcs-low::resolve-conflict-legacy"),
+        Term::symbol("core/vcs-low::resolve-conflict"),
     ]);
 
     let mut payload: std::collections::BTreeMap<gc_coreform::TermOrdKey, Term> =

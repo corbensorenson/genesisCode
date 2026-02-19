@@ -184,7 +184,11 @@ fn fmt_list(t: &Term, indent: usize) -> Vec<String> {
             }
             out.append(&mut lines);
             if idx + 1 == items.len() {
-                out.last_mut().unwrap().push(')');
+                if let Some(last) = out.last_mut() {
+                    last.push(')');
+                } else {
+                    out.push(format!("{})", spaces(indent)));
+                }
             }
         }
         return out;
@@ -206,8 +210,11 @@ fn fmt_list(t: &Term, indent: usize) -> Vec<String> {
 
     if items.len() == head_count {
         // Close paren on the only line.
-        let last = out.last_mut().unwrap();
-        last.push(')');
+        if let Some(last) = out.last_mut() {
+            last.push(')');
+        } else {
+            out.push(format!("{})", spaces(indent)));
+        }
         return out;
     }
 
@@ -221,7 +228,11 @@ fn fmt_list(t: &Term, indent: usize) -> Vec<String> {
 
         if idx + 1 == items.len() {
             // Close list on last line.
-            out.last_mut().unwrap().push(')');
+            if let Some(last) = out.last_mut() {
+                last.push(')');
+            } else {
+                out.push(format!("{})", spaces(indent)));
+            }
         }
     }
 
@@ -239,7 +250,11 @@ fn fmt_vector(xs: &[Term], indent: usize) -> Vec<String> {
         let mut lines = fmt_term(x, indent + INDENT);
         out.append(&mut lines);
         if i + 1 == xs.len() {
-            out.last_mut().unwrap().push(']');
+            if let Some(last) = out.last_mut() {
+                last.push(']');
+            } else {
+                out.push(format!("{}]", spaces(indent)));
+            }
         }
     }
     out
@@ -270,7 +285,11 @@ fn fmt_map(m: &BTreeMap<TermOrdKey, Term>, indent: usize) -> Vec<String> {
         }
 
         if i + 1 == pairs.len() {
-            out.last_mut().unwrap().push('}');
+            if let Some(last) = out.last_mut() {
+                last.push('}');
+            } else {
+                out.push(format!("{}}}", spaces(indent)));
+            }
         }
     }
     out

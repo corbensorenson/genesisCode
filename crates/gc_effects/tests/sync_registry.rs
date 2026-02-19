@@ -5,7 +5,7 @@ use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 
-use gc_effects::{CapsPolicy, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, Decision, EffectLog, replay, run};
 
 #[derive(Debug, Default)]
 struct RegistryState {
@@ -17,6 +17,18 @@ struct RegistryState {
 struct MemRegistry {
     st: Mutex<RegistryState>,
     required_bearer: Option<String>,
+    required_basic: Option<(String, String)>,
+    require_mtls: bool,
+    auth_audit: Mutex<Vec<AuthAudit>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct AuthAudit {
+    bearer_present: bool,
+    basic_username: Option<String>,
+    basic_password_present: bool,
+    mtls_ca_present: bool,
+    mtls_identity_present: bool,
 }
 
 fn hash_bytes_hex(bytes: &[u8]) -> String {
@@ -28,6 +40,9 @@ impl MemRegistry {
         Self {
             st: Mutex::new(RegistryState::default()),
             required_bearer: None,
+            required_basic: None,
+            require_mtls: false,
+            auth_audit: Mutex::new(Vec::new()),
         }
     }
 
@@ -35,6 +50,29 @@ impl MemRegistry {
         Self {
             st: Mutex::new(RegistryState::default()),
             required_bearer: Some(token.to_string()),
+            required_basic: None,
+            require_mtls: false,
+            auth_audit: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn new_with_required_basic(username: &str, password: &str) -> Self {
+        Self {
+            st: Mutex::new(RegistryState::default()),
+            required_bearer: None,
+            required_basic: Some((username.to_string(), password.to_string())),
+            require_mtls: false,
+            auth_audit: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn new_with_required_mtls() -> Self {
+        Self {
+            st: Mutex::new(RegistryState::default()),
+            required_bearer: None,
+            required_basic: None,
+            require_mtls: true,
+            auth_audit: Mutex::new(Vec::new()),
         }
     }
 
@@ -54,6 +92,10 @@ impl MemRegistry {
         let g = self.st.lock().expect("lock");
         g.refs.get(name).cloned()
     }
+
+    fn auth_audit(&self) -> Vec<AuthAudit> {
+        self.auth_audit.lock().expect("lock").clone()
+    }
 }
 
 impl gc_registry::InProcRegistry for MemRegistry {
@@ -61,6 +103,16 @@ impl gc_registry::InProcRegistry for MemRegistry {
         &self,
         auth: &gc_registry::RegistryAuth,
     ) -> Result<(), gc_registry::RegistryError> {
+        {
+            let mut g = self.auth_audit.lock().expect("lock");
+            g.push(AuthAudit {
+                bearer_present: auth.bearer_token.is_some(),
+                basic_username: auth.basic_username.clone(),
+                basic_password_present: auth.basic_password.is_some(),
+                mtls_ca_present: auth.mtls_ca_pem.is_some(),
+                mtls_identity_present: auth.mtls_identity_pem.is_some(),
+            });
+        }
         if let Some(expected) = &self.required_bearer {
             match auth.bearer_token.as_deref() {
                 Some(got) if got == expected => {}
@@ -70,6 +122,25 @@ impl gc_registry::InProcRegistry for MemRegistry {
                     ));
                 }
             }
+        }
+        if let Some((expected_user, expected_password)) = &self.required_basic {
+            match (
+                auth.basic_username.as_deref(),
+                auth.basic_password.as_deref(),
+            ) {
+                (Some(user), Some(password))
+                    if user == expected_user && password == expected_password => {}
+                _ => {
+                    return Err(gc_registry::RegistryError::Auth(
+                        "missing or invalid basic auth credentials".to_string(),
+                    ));
+                }
+            }
+        }
+        if self.require_mtls && (auth.mtls_ca_pem.is_none() || auth.mtls_identity_pem.is_none()) {
+            return Err(gc_registry::RegistryError::Auth(
+                "missing mTLS identity materials".to_string(),
+            ));
         }
         Ok(())
     }
@@ -295,6 +366,82 @@ fn mk_caps_for_sync_with_auth_token(
         Some(auth_token),
         None,
     )
+}
+
+fn mk_caps_for_sync_with_basic_auth(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+    basic_username: &str,
+    basic_password: &str,
+) -> CapsPolicy {
+    let s = format!(
+        r#"
+allow = ["core/sync::push", "core/sync::pull"]
+
+[store]
+dir = "{store_dir}"
+
+[refs]
+path = "{refs_path}"
+
+[op."core/sync::push"]
+remote_allow = ["{remote_allow}"]
+transfer_workers = 4
+basic_username = "{basic_username}"
+basic_password = "{basic_password}"
+
+[op."core/sync::pull"]
+remote_allow = ["{remote_allow}"]
+transfer_workers = 4
+basic_username = "{basic_username}"
+basic_password = "{basic_password}"
+"#,
+        store_dir = store_dir.display(),
+        refs_path = refs_path.display(),
+        remote_allow = remote_allow,
+        basic_username = basic_username,
+        basic_password = basic_password
+    );
+    CapsPolicy::from_toml_str(&s).expect("caps")
+}
+
+fn mk_caps_for_sync_with_mtls_files(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+    ca_pem_path: &std::path::Path,
+    identity_pem_path: &std::path::Path,
+) -> CapsPolicy {
+    let s = format!(
+        r#"
+allow = ["core/sync::push", "core/sync::pull"]
+
+[store]
+dir = "{store_dir}"
+
+[refs]
+path = "{refs_path}"
+
+[op."core/sync::push"]
+remote_allow = ["{remote_allow}"]
+transfer_workers = 4
+mtls_ca_pem = "{ca_pem_path}"
+mtls_identity_pem = "{identity_pem_path}"
+
+[op."core/sync::pull"]
+remote_allow = ["{remote_allow}"]
+transfer_workers = 4
+mtls_ca_pem = "{ca_pem_path}"
+mtls_identity_pem = "{identity_pem_path}"
+"#,
+        store_dir = store_dir.display(),
+        refs_path = refs_path.display(),
+        remote_allow = remote_allow,
+        ca_pem_path = ca_pem_path.display(),
+        identity_pem_path = identity_pem_path.display(),
+    );
+    CapsPolicy::from_toml_str(&s).expect("caps")
 }
 
 fn mk_caps_for_sync_with_limits(
@@ -1251,7 +1398,7 @@ fn sync_remote_allowlist_is_enforced() {
 #[test]
 fn sync_remote_auth_is_enforced_when_registry_requires_bearer() {
     let reg = Arc::new(MemRegistry::new_with_required_bearer("secret-token"));
-    gc_registry::register_inproc("t_sync_auth_required", reg).expect("register inproc");
+    gc_registry::register_inproc("t_sync_auth_required", reg.clone()).expect("register inproc");
     let (remote, remote_allow) = mk_remote("t_sync_auth_required");
 
     let td = tempfile::tempdir().unwrap();
@@ -1275,6 +1422,12 @@ fn sync_remote_auth_is_enforced_when_registry_requires_bearer() {
     let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
     let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
     assert!(is_sealed_error(&ctx, &r.value, "core/sync/remote-auth"));
+    assert_eq!(r.log.entries.len(), 1);
+    assert_eq!(r.log.entries[0].op, "core/sync::pull");
+    assert_eq!(r.log.entries[0].decision, Decision::Allow);
+    let audit = reg.auth_audit();
+    assert!(!audit.is_empty());
+    assert!(!audit.last().expect("audit entry").bearer_present);
 }
 
 #[test]
@@ -1326,8 +1479,217 @@ fn sync_remote_auth_accepts_valid_bearer_token() {
         "pull returned error: {}",
         r.value.debug_repr()
     );
+    assert_eq!(r.log.entries.len(), 1);
+    assert_eq!(r.log.entries[0].op, "core/sync::pull");
+    assert_eq!(r.log.entries[0].decision, Decision::Allow);
     let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
     assert_eq!(refs.get("refs/heads/main").unwrap(), Some(commit_hex));
+    let audit = reg.auth_audit();
+    assert!(!audit.is_empty());
+    assert!(audit.last().expect("audit entry").bearer_present);
+}
+
+#[test]
+fn sync_remote_auth_is_enforced_when_registry_requires_basic_auth() {
+    let reg = Arc::new(MemRegistry::new_with_required_basic("robot", "hunter2"));
+    gc_registry::register_inproc("t_sync_auth_basic_required", reg.clone())
+        .expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_basic_required");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/sync/remote-auth"));
+    assert_eq!(r.log.entries.len(), 1);
+    assert_eq!(r.log.entries[0].op, "core/sync::pull");
+    assert_eq!(r.log.entries[0].decision, Decision::Allow);
+    let audit = reg.auth_audit();
+    assert!(!audit.is_empty());
+    let last = audit.last().expect("audit entry");
+    assert_eq!(last.basic_username.as_deref(), None);
+    assert!(!last.basic_password_present);
+}
+
+#[test]
+fn sync_remote_auth_accepts_valid_basic_credentials() {
+    let reg = Arc::new(MemRegistry::new_with_required_basic("robot", "hunter2"));
+    gc_registry::register_inproc("t_sync_auth_basic_ok", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_basic_ok");
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = reg.put_artifact(print_term(&module_art).as_bytes());
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = reg.put_artifact(print_term(&snap_t).as_bytes());
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = reg.put_artifact(print_term(&patch_t).as_bytes());
+    let ev_t = parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let ev_hex = reg.put_artifact(print_term(&ev_t).as_bytes());
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &ev_hex);
+    let commit_hex = reg.put_artifact(print_term(&commit_t).as_bytes());
+    {
+        let mut g = reg.st.lock().unwrap();
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
+    }
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps =
+        mk_caps_for_sync_with_basic_auth(&store_dir, &refs_path, &remote_allow, "robot", "hunter2");
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "pull returned error: {}",
+        r.value.debug_repr()
+    );
+    assert_eq!(r.log.entries.len(), 1);
+    assert_eq!(r.log.entries[0].op, "core/sync::pull");
+    assert_eq!(r.log.entries[0].decision, Decision::Allow);
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+    assert_eq!(refs.get("refs/heads/main").unwrap(), Some(commit_hex));
+    let audit = reg.auth_audit();
+    assert!(!audit.is_empty());
+    let last = audit.last().expect("audit entry");
+    assert_eq!(last.basic_username.as_deref(), Some("robot"));
+    assert!(last.basic_password_present);
+}
+
+#[test]
+fn sync_remote_auth_accepts_mtls_materials_from_policy_files() {
+    let reg = Arc::new(MemRegistry::new_with_required_mtls());
+    gc_registry::register_inproc("t_sync_auth_mtls_ok", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_mtls_ok");
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = reg.put_artifact(print_term(&module_art).as_bytes());
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = reg.put_artifact(print_term(&snap_t).as_bytes());
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = reg.put_artifact(print_term(&patch_t).as_bytes());
+    let ev_t = parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let ev_hex = reg.put_artifact(print_term(&ev_t).as_bytes());
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &ev_hex);
+    let commit_hex = reg.put_artifact(print_term(&commit_t).as_bytes());
+    {
+        let mut g = reg.st.lock().unwrap();
+        g.refs
+            .insert("refs/heads/main".to_string(), commit_hex.clone());
+    }
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let ca_pem = td.path().join("ca.pem");
+    let id_pem = td.path().join("id.pem");
+    std::fs::write(
+        &ca_pem,
+        "-----BEGIN CERTIFICATE-----\nZmFrZQ==\n-----END CERTIFICATE-----\n",
+    )
+    .unwrap();
+    std::fs::write(
+        &id_pem,
+        "-----BEGIN PRIVATE KEY-----\nZmFrZQ==\n-----END PRIVATE KEY-----\n",
+    )
+    .unwrap();
+    let caps =
+        mk_caps_for_sync_with_mtls_files(&store_dir, &refs_path, &remote_allow, &ca_pem, &id_pem);
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "pull returned error: {}",
+        r.value.debug_repr()
+    );
+    let audit = reg.auth_audit();
+    assert!(!audit.is_empty());
+    let last = audit.last().expect("audit entry");
+    assert!(last.mtls_ca_present);
+    assert!(last.mtls_identity_present);
+}
+
+#[test]
+fn sync_remote_auth_rejects_missing_mtls_pem_files() {
+    let reg = Arc::new(MemRegistry::new_with_required_mtls());
+    gc_registry::register_inproc("t_sync_auth_mtls_missing", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_auth_mtls_missing");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync_with_mtls_files(
+        &store_dir,
+        &refs_path,
+        &remote_allow,
+        &td.path().join("missing-ca.pem"),
+        &td.path().join("missing-id.pem"),
+    );
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/main"]
+          :depth 0
+          :force true
+        }}"#
+    ))
+    .unwrap();
+    let (forms, h) = mk_prog("core/sync::pull", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/caps/policy-error"));
+    assert_eq!(reg.auth_audit().len(), 0);
 }
 
 #[test]

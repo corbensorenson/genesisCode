@@ -172,10 +172,9 @@ impl<'a> Lexer<'a> {
                 break;
             }
             // Advance by one UTF-8 scalar to keep `self.i` on a char boundary.
-            let ch = self.s[self.i..]
-                .chars()
-                .next()
-                .expect("peek_byte implies non-empty");
+            let Some(ch) = self.s[self.i..].chars().next() else {
+                break;
+            };
             self.i += ch.len_utf8();
         }
         self.s[start..self.i].to_owned()
@@ -245,10 +244,12 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 _ => {
-                    let ch = self.s[self.i..]
-                        .chars()
-                        .next()
-                        .expect("peek_byte implies non-empty");
+                    let Some(ch) = self.s[self.i..].chars().next() else {
+                        return Err(ParseError::Unexpected {
+                            at,
+                            msg: "invalid string character boundary".to_string(),
+                        });
+                    };
                     out.push(ch);
                     self.i += ch.len_utf8();
                 }
@@ -356,7 +357,10 @@ impl<'a> Parser<'a> {
         if self.peek.is_none() {
             self.peek = Some(self.lex.next()?);
         }
-        Ok(self.peek.as_ref().unwrap())
+        self.peek.as_ref().ok_or_else(|| ParseError::Unexpected {
+            at: self.lex.i,
+            msg: "parser internal error: missing lookahead token".to_string(),
+        })
     }
 
     fn bump(&mut self) -> Result<(Tok, usize), ParseError> {

@@ -66,13 +66,14 @@ fn poison_cli_binding(artifact: &Path, binding: &str) {
         })
         .expect("selfhost/cli_coreform_v1.gc entry");
 
-    let poisoned_src = format!("(def {binding} \"shadowed\")\n");
+    let module_src = match cli_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("cli module missing :source"),
+    };
+    let poisoned_src = format!("{module_src}\n(def {binding} \"shadowed\")\n");
     let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
     let poisoned_hash = hash_module(&poisoned_forms);
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":source")),
-        Term::Str(poisoned_src.to_string()),
-    );
+    cli_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
     cli_mod.insert(
         TermOrdKey(Term::symbol(":module-h")),
         Term::Bytes(poisoned_hash.to_vec().into()),

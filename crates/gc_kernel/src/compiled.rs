@@ -843,9 +843,20 @@ pub(crate) fn eval_cexpr(
 
                 match fv {
                     Value::Closure { param, body, env } => {
-                        // Fall back to the Term evaluator for legacy closures.
-                        let env2 = Env::with_binding(&env, param, xv);
-                        return crate::eval::eval_term(ctx, &env2, &body);
+                        // Legacy closures can be present in mixed-mode envs (e.g., values created
+                        // by tree-walk eval before compiled execution). Compile on-demand so
+                        // compiled execution never deopts to the term evaluator.
+                        let compiled_body = compile_term(&body).map_err(|e| {
+                            KernelError::new(
+                                e.kind.clone(),
+                                format!(
+                                    "failed to compile legacy closure body in compiled mode: {e}"
+                                ),
+                            )
+                        })?;
+                        cur_env = Env::with_binding(&env, param, xv);
+                        cur = compiled_body;
+                        continue;
                     }
                     Value::CompiledClosure {
                         param,

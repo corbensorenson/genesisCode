@@ -6,6 +6,9 @@ pub(super) struct SyncPolicy {
     pub(super) wasi_network_profile: Option<String>,
     pub(super) auth_token: Option<String>,
     pub(super) auth_token_env: Option<String>,
+    pub(super) basic_username: Option<String>,
+    pub(super) basic_password: Option<String>,
+    pub(super) basic_password_env: Option<String>,
     pub(super) mtls_ca_pem: Option<std::path::PathBuf>,
     pub(super) mtls_identity_pem: Option<std::path::PathBuf>,
     pub(super) transfer_workers: usize,
@@ -73,6 +76,9 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
     let wasi_network_profile: Option<String> = parse_wasi_network_profile(pol)?;
     let mut auth_token: Option<String> = None;
     let mut auth_token_env: Option<String> = None;
+    let mut basic_username: Option<String> = None;
+    let mut basic_password: Option<String> = None;
+    let mut basic_password_env: Option<String> = None;
     let mut mtls_ca_pem: Option<std::path::PathBuf> = None;
     let mut mtls_identity_pem: Option<std::path::PathBuf> = None;
     let mut transfer_workers: usize = 4;
@@ -106,6 +112,21 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
             && let Some(s) = v.as_str()
         {
             auth_token_env = Some(s.to_string());
+        }
+        if let Some(v) = pol.extra.get("basic_username")
+            && let Some(s) = v.as_str()
+        {
+            basic_username = Some(s.to_string());
+        }
+        if let Some(v) = pol.extra.get("basic_password")
+            && let Some(s) = v.as_str()
+        {
+            basic_password = Some(s.to_string());
+        }
+        if let Some(v) = pol.extra.get("basic_password_env")
+            && let Some(s) = v.as_str()
+        {
+            basic_password_env = Some(s.to_string());
         }
         if let Some(v) = pol.extra.get("mtls_ca_pem")
             && let Some(s) = v.as_str()
@@ -160,6 +181,9 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
         wasi_network_profile,
         auth_token,
         auth_token_env,
+        basic_username,
+        basic_password,
+        basic_password_env,
         mtls_ca_pem,
         mtls_identity_pem,
         transfer_workers,
@@ -284,6 +308,24 @@ fn resolve_auth_token(
     Ok(None)
 }
 
+fn resolve_basic_password(
+    inline: Option<&str>,
+    env_name: Option<&str>,
+) -> Result<Option<String>, String> {
+    if inline.is_some() && env_name.is_some() {
+        return Err("basic_password and basic_password_env are mutually exclusive".to_string());
+    }
+    if let Some(password) = inline {
+        return Ok(Some(password.to_string()));
+    }
+    if let Some(name) = env_name {
+        let v = std::env::var(name)
+            .map_err(|_| format!("basic_password_env `{name}` is not set in environment"))?;
+        return Ok(Some(v));
+    }
+    Ok(None)
+}
+
 fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("failed reading PEM `{}`: {e}", path.display()))
 }
@@ -295,6 +337,24 @@ pub(super) fn store_registry_auth(
         policy.store.auth_token.as_deref(),
         policy.store.auth_token_env.as_deref(),
     )?;
+    let basic_password = resolve_basic_password(
+        policy.store.basic_password.as_deref(),
+        policy.store.basic_password_env.as_deref(),
+    )?;
+    let basic_username = policy.store.basic_username.clone();
+    if bearer_token.is_some() && basic_username.is_some() {
+        return Err(
+            "auth_token/auth_token_env and basic_username are mutually exclusive".to_string(),
+        );
+    }
+    if basic_username.is_none() && basic_password.is_some() {
+        return Err("basic_password/basic_password_env requires basic_username".to_string());
+    }
+    let basic_password = if basic_username.is_some() {
+        Some(basic_password.unwrap_or_default())
+    } else {
+        None
+    };
     let mtls_ca_pem = match policy.store.mtls_ca_pem.as_deref() {
         Some(path) => Some(read_pem_path(path)?),
         None => None,
@@ -305,6 +365,8 @@ pub(super) fn store_registry_auth(
     };
     Ok(gc_registry::RegistryAuth {
         bearer_token,
+        basic_username,
+        basic_password,
         mtls_ca_pem,
         mtls_identity_pem,
     })
@@ -312,6 +374,24 @@ pub(super) fn store_registry_auth(
 
 pub(super) fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
     let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
+    let basic_password = resolve_basic_password(
+        sp.basic_password.as_deref(),
+        sp.basic_password_env.as_deref(),
+    )?;
+    let basic_username = sp.basic_username.clone();
+    if bearer_token.is_some() && basic_username.is_some() {
+        return Err(
+            "auth_token/auth_token_env and basic_username are mutually exclusive".to_string(),
+        );
+    }
+    if basic_username.is_none() && basic_password.is_some() {
+        return Err("basic_password/basic_password_env requires basic_username".to_string());
+    }
+    let basic_password = if basic_username.is_some() {
+        Some(basic_password.unwrap_or_default())
+    } else {
+        None
+    };
     let mtls_ca_pem = match sp.mtls_ca_pem.as_deref() {
         Some(path) => Some(read_pem_path(path)?),
         None => None,
@@ -322,6 +402,8 @@ pub(super) fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::Registr
     };
     Ok(gc_registry::RegistryAuth {
         bearer_token,
+        basic_username,
+        basic_password,
         mtls_ca_pem,
         mtls_identity_pem,
     })

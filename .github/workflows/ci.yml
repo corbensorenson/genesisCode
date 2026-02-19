@@ -102,6 +102,9 @@ jobs:
       - name: Selfhost Default Profile Guard
         run: bash scripts/selfhost_default_profile_guard.sh
 
+      - name: User-Path Panic Guard
+        run: bash scripts/check_no_user_panics.sh
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
@@ -126,6 +129,19 @@ jobs:
               --exclude gc_wasi_cli
           fi
 
+      - name: Changed-File Fast Loop Budget
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: |
+          BASE=""
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [[ -n "$BASE" ]]; then
+            bash scripts/test_changed_fast.sh --base "$BASE" --runner nextest --min-history 1
+          else
+            bash scripts/test_changed_fast.sh --runner nextest --min-history 1
+          fi
+
       - name: Upload Test Shard Artifacts
         if: ${{ always() && env.GENESIS_TEST_SHARDS_TOTAL != '1' }}
         uses: actions/upload-artifact@v4
@@ -146,12 +162,18 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_hot_path_budgets.sh
 
+      - name: Runtime Microbench Budgets
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_runtime_microbench_budgets.sh
+
       - name: Upload Perf Trend Artifacts
         if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
         uses: actions/upload-artifact@v4
         with:
           name: perf-trend-artifacts
-          path: .genesis/perf/*.json
+          path: |
+            .genesis/perf/*.json
+            .genesis/perf/*.jsonl
           if-no-files-found: warn
 
       - name: Selfhost Strict Smoke (Native + WASI CLI)

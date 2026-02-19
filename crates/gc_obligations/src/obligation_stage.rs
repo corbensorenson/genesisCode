@@ -201,8 +201,16 @@ pub(super) fn obligation_translation_validation(
         let opt_forms = match frontend {
             CoreformFrontend::Rust => rust_opt_forms.clone(),
             CoreformFrontend::Selfhost(_) => {
-                let ctx = selfhost_ctx.as_mut().expect("selfhost ctx initialized");
-                let env = selfhost_env.as_ref().expect("selfhost env initialized");
+                let Some(ctx) = selfhost_ctx.as_mut() else {
+                    return Err(ObligationError::Opt(
+                        "selfhost optimizer context was not initialized".to_string(),
+                    ));
+                };
+                let Some(env) = selfhost_env.as_ref() else {
+                    return Err(ObligationError::Opt(
+                        "selfhost optimizer environment was not initialized".to_string(),
+                    ));
+                };
                 let selfhost_opt_raw = selfhost_optimize_module_forms(ctx, env, &m.forms)?;
                 let selfhost_opt = canonicalize_module(selfhost_opt_raw).map_err(|e| {
                     ObligationError::Opt(format!("selfhost optimize canonicalize: {e}"))

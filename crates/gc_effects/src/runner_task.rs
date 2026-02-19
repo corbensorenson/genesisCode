@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::{self, JoinHandle};
@@ -35,7 +35,9 @@ struct TaskBudgetCounters {
 pub(crate) struct TaskRuntime {
     next_task_id: u64,
     tasks: BTreeMap<String, TaskRecord>,
-    queue: Vec<String>,
+    queue: VecDeque<String>,
+    running_count: u64,
+    queued_count: u64,
     completed: BTreeMap<String, TaskCompletion>,
     pool: TaskWorkerPool,
 }
@@ -139,7 +141,8 @@ pub(crate) fn task_runtime_call(
                     cancel_flag: None,
                 },
             );
-            runtime.queue.push(task_id.clone());
+            runtime.queue.push_back(task_id.clone());
+            runtime.queued_count = runtime.queued_count.saturating_add(1);
             promote_queued_task(runtime, policy, op);
             let state = runtime
                 .tasks
@@ -206,7 +209,7 @@ pub(crate) fn task_runtime_call(
                 }
             };
             if state_before == TaskState::Queued {
-                runtime.queue.retain(|q| q != &task_id);
+                runtime.queued_count = runtime.queued_count.saturating_sub(1);
             }
             if state_before == TaskState::Running
                 && let Some(flag) = runtime
@@ -222,6 +225,9 @@ pub(crate) fn task_runtime_call(
                 rec.state = TaskState::Cancelled;
                 rec.result = None;
                 rec.error = None;
+            }
+            if state_before == TaskState::Running {
+                runtime.running_count = runtime.running_count.saturating_sub(1);
             }
             if state_before == TaskState::Queued {
                 promote_queued_task(runtime, policy, op);
@@ -274,7 +280,7 @@ pub(crate) fn task_runtime_call(
             };
             match state_before {
                 TaskState::Queued => {
-                    runtime.queue.retain(|q| q != &task_id);
+                    runtime.queued_count = runtime.queued_count.saturating_sub(1);
                     let payload = runtime
                         .tasks
                         .get(&task_id)
@@ -469,6 +475,9 @@ fn apply_completion(runtime: &mut TaskRuntime, completion: TaskCompletion) {
     let Some(rec) = runtime.tasks.get_mut(&completion.task_id) else {
         return;
     };
+    if rec.state == TaskState::Running {
+        runtime.running_count = runtime.running_count.saturating_sub(1);
+    }
     if rec.state == TaskState::Cancelled {
         rec.cancel_flag = None;
         return;
@@ -634,15 +643,11 @@ fn task_state_term(state: &TaskState) -> Term {
 }
 
 fn runtime_running_count(runtime: &TaskRuntime) -> u64 {
-    runtime
-        .tasks
-        .values()
-        .filter(|t| t.state == TaskState::Running)
-        .count() as u64
+    runtime.running_count
 }
 
 fn runtime_queue_count(runtime: &TaskRuntime) -> u64 {
-    runtime.queue.len() as u64
+    runtime.queued_count
 }
 
 fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str) {
@@ -652,13 +657,20 @@ fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str)
     }
     runtime.pool.ensure_started(worker_budget as usize);
     while runtime_running_count(runtime) < worker_budget {
-        let Some(task_id) = runtime.queue.first().cloned() else {
+        let Some(task_id) = runtime.queue.pop_front() else {
             break;
         };
-        runtime.queue.remove(0);
-        let Some(payload) = runtime.tasks.get(&task_id).map(|rec| rec.payload.clone()) else {
+        let Some((is_queued, payload)) = runtime
+            .tasks
+            .get(&task_id)
+            .map(|rec| (rec.state == TaskState::Queued, rec.payload.clone()))
+        else {
             continue;
         };
+        if !is_queued {
+            continue;
+        }
+        runtime.queued_count = runtime.queued_count.saturating_sub(1);
         let cancel_flag = Arc::new(AtomicBool::new(false));
         let job = TaskJob {
             task_id: task_id.clone(),
@@ -673,6 +685,7 @@ fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str)
                     rec.result = None;
                     rec.error = None;
                     rec.cancel_flag = Some(cancel_flag);
+                    runtime.running_count = runtime.running_count.saturating_add(1);
                 }
                 Err(e) => {
                     rec.state = TaskState::Failed;
@@ -688,9 +701,7 @@ fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str)
 fn task_worker_budget(policy: &CapsPolicy) -> u64 {
     match policy.task.max_workers {
         Some(v) => v,
-        None => thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1) as u64,
+        None => policy.task.default_workers.max(1),
     }
 }
 

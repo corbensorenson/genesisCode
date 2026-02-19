@@ -19,7 +19,6 @@ allow = [
   "core/store::get",
   "core/vcs-low::merge3",
   "core/vcs-low::resolve-conflict",
-  "core/vcs-low::resolve-conflict-legacy",
   "core/vcs-low::apply",
   "core/vcs-low::diff-terms",
   "core/vcs-low::apply-patch",
@@ -34,9 +33,6 @@ dir = "./.genesis/store"
 base_dir = "."
 
 [op."core/vcs-low::resolve-conflict"]
-base_dir = "."
-
-[op."core/vcs-low::resolve-conflict-legacy"]
 base_dir = "."
 
 [op."core/vcs-low::apply"]

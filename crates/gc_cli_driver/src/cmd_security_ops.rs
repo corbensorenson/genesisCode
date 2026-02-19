@@ -41,7 +41,7 @@ pub(super) fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
         } else {
             format!("{}\n", out.display())
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -174,7 +174,7 @@ pub(super) fn cmd_sign(
         } else {
             format!("{sig_artifact}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -230,7 +230,7 @@ pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, C
     Ok(CmdOut {
         exit_code,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -264,7 +264,7 @@ pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         } else {
             format!("{report_s}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -391,7 +391,7 @@ pub(super) fn cmd_optimize(
     Ok(CmdOut {
         exit_code: EX_OK,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -469,7 +469,7 @@ pub(super) fn cmd_semantic_edit_index(
     Ok(CmdOut {
         exit_code: EX_OK,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -521,7 +521,7 @@ pub(super) fn cmd_apply_patch(
         } else {
             format!("{}\n", r.report_artifact)
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -623,6 +623,6 @@ pub(super) fn cmd_verify(
     Ok(CmdOut {
         exit_code,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }

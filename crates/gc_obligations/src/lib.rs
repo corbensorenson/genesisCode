@@ -636,9 +636,16 @@ fn effective_step_limit(
         return Ok(StepLimit::Unlimited);
     }
 
-    // Both are finite (Default or explicit Limit).
-    let cli_n = cli.resolve().expect("finite step limit");
-    let pkg_n = pkg.resolve().expect("finite step limit");
+    // Both are expected finite here (Default or explicit Limit), but keep this path
+    // non-panicking so malformed/internal states surface as typed errors.
+    let cli_n = cli.resolve().ok_or_else(|| {
+        ObligationError::Manifest("invalid CLI step limit resolution (expected finite)".to_string())
+    })?;
+    let pkg_n = pkg.resolve().ok_or_else(|| {
+        ObligationError::Manifest(
+            "invalid package step limit resolution (expected finite)".to_string(),
+        )
+    })?;
     Ok(StepLimit::Limit(cli_n.min(pkg_n)))
 }
 

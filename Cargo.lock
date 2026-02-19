@@ -803,6 +803,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "gc_runtime_bench"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "gc_coreform",
+ "gc_effects",
+ "gc_kernel",
+ "gc_obligations",
+ "gc_patches",
+ "gc_prelude",
+ "gc_registry",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "gc_types"
 version = "0.1.0"
 dependencies = [

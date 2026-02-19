@@ -206,3 +206,119 @@ fn vcs_diff_then_apply_roundtrips_snapshot_bytes() {
     .to_string();
     assert_eq!(got2_h, to_h);
 }
+
+#[test]
+fn vcs_apply_supports_patch_rename_op() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let h1 = "a".repeat(64);
+    let h2 = "b".repeat(64);
+
+    let base_snap = format!(
+        r#"
+{{
+  :type :vcs/snapshot
+  :v 1
+  :kind :contract
+  :proto nil
+  :overrides {{
+    my/op::a "{h1}"
+    my/op::b "{h2}"
+  }}
+}}
+"#
+    );
+    let expect_snap = format!(
+        r#"
+{{
+  :type :vcs/snapshot
+  :v 1
+  :kind :contract
+  :proto nil
+  :overrides {{
+    my/op::b "{h2}"
+    my/op::z "{h1}"
+  }}
+}}
+"#
+    );
+    let patch_src = r#"
+{
+  :type :vcs/patch
+  :v 1
+  :ops [
+    {:op :rename :from my/op::a :to my/op::z}
+  ]
+}
+"#;
+
+    let base_h = store_put(dir, &caps, &base_snap, "base.gc");
+    let expect_h = store_put(dir, &caps, &expect_snap, "expect.gc");
+    let patch_h = store_put(dir, &caps, patch_src, "rename.patch");
+
+    let got_h = String::from_utf8(
+        cargo_bin_cmd!("genesis")
+            .current_dir(dir)
+            .args(["vcs", "--caps"])
+            .arg(&caps)
+            .args(["apply", "--base", &base_h, "--patch", &patch_h])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone(),
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+
+    assert_eq!(got_h, expect_h);
+}
+
+#[test]
+fn vcs_apply_rename_collision_fails() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    let h1 = "c".repeat(64);
+    let h2 = "d".repeat(64);
+
+    let base_snap = format!(
+        r#"
+{{
+  :type :vcs/snapshot
+  :v 1
+  :kind :contract
+  :proto nil
+  :overrides {{
+    my/op::a "{h1}"
+    my/op::b "{h2}"
+  }}
+}}
+"#
+    );
+    let patch_src = r#"
+{
+  :type :vcs/patch
+  :v 1
+  :ops [
+    {:op :rename :from my/op::a :to my/op::b}
+  ]
+}
+"#;
+
+    let base_h = store_put(dir, &caps, &base_snap, "base.gc");
+    let patch_h = store_put(dir, &caps, patch_src, "rename-collision.patch");
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args(["apply", "--base", &base_h, "--patch", &patch_h])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("patch rename collision"));
+}

@@ -267,14 +267,32 @@ pub fn build_prelude(ctx: &mut EvalCtx) -> Prelude {
         ctx.mem_limits = gc_kernel::MemLimits::default();
 
         const PRELUDE_SRC: &str = include_str!("../../../prelude/prelude.gc");
-        let forms = parse_module(PRELUDE_SRC).expect("embedded prelude must parse");
-        let forms = canonicalize_module(forms).expect("embedded prelude must canonicalize");
-        let _ = gc_kernel::eval_module_compiled(ctx, &mut env, &forms)
-            .expect("embedded prelude must eval");
+        let prelude_bootstrap_err = match parse_module(PRELUDE_SRC) {
+            Ok(forms) => match canonicalize_module(forms) {
+                Ok(forms) => gc_kernel::eval_module_compiled(ctx, &mut env, &forms)
+                    .map(|_| ())
+                    .err()
+                    .map(|e| e.to_string()),
+                Err(e) => Some(e.to_string()),
+            },
+            Err(e) => Some(e.to_string()),
+        };
 
         ctx.step_limit = saved_step_limit;
         ctx.mem_limits = saved_mem_limits;
         ctx.reset_counters();
+        if let Some(err) = prelude_bootstrap_err {
+            env = Env::with_binding(
+                &env,
+                "core/prelude::bootstrap-error",
+                mk_error_with(
+                    ctx,
+                    "core/prelude/bootstrap-failed",
+                    format!("embedded prelude bootstrap failed: {err}"),
+                    None,
+                ),
+            );
+        }
     }
 
     Prelude { env, protocol }

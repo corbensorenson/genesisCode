@@ -17,7 +17,7 @@ print results, but kernel evaluation remains pure.
   - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
   - `genesis run <file> --caps <caps.toml> [--log <out.gclog>]` (local effects only)
   - `genesis replay <file> --log <log.gclog> [--store <dir>]`
-  - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has} ...` (local store only)
+  - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has|verify} ...` (local store only)
   - `genesis refs --caps <caps.toml> [--log <out.gclog>] {get|list|set|delete} ...` (local refs only)
   - `genesis pkg --caps <caps.toml> [--log <out.gclog>] {init|add|lock|update|install|verify|list|info|snapshot|export|import} ...` (local-only; no sync)
   - `genesis vcs hash --in <file> [--engine rust|selfhost]`

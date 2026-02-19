@@ -26,7 +26,7 @@ REBUILT="$TMP_DIR/toolchain.rebuilt.gc"
 
 if ! cmp -s "$REPO_ARTIFACT" "$REBUILT"; then
   echo "selfhost-artifact-fresh: committed selfhost/toolchain.gc is stale." >&2
-  echo "  expected: byte-for-byte match with a fresh `genesis selfhost-artifact --out ...` build" >&2
+  echo "  expected: byte-for-byte match with a fresh 'genesis selfhost-artifact --out ...' build" >&2
   echo "  fix: cargo run -p gc_cli -- selfhost-artifact --out selfhost/toolchain.gc" >&2
   exit 1
 fi

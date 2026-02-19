@@ -97,6 +97,8 @@ enum RegistryKind {
 #[derive(Clone, Default)]
 pub struct RegistryAuth {
     pub bearer_token: Option<String>,
+    pub basic_username: Option<String>,
+    pub basic_password: Option<String>,
     pub mtls_ca_pem: Option<Vec<u8>>,
     pub mtls_identity_pem: Option<Vec<u8>>,
 }
@@ -107,6 +109,14 @@ impl std::fmt::Debug for RegistryAuth {
             .field(
                 "bearer_token",
                 &self.bearer_token.as_ref().map(|_| "<redacted>"),
+            )
+            .field(
+                "basic_username",
+                &self.basic_username.as_ref().map(|_| "<redacted>"),
+            )
+            .field(
+                "basic_password",
+                &self.basic_password.as_ref().map(|_| "<redacted>"),
             )
             .field("mtls_ca_pem", &self.mtls_ca_pem.as_ref().map(|b| b.len()))
             .field(
@@ -120,6 +130,8 @@ impl std::fmt::Debug for RegistryAuth {
 impl RegistryAuth {
     fn has_any(&self) -> bool {
         self.bearer_token.is_some()
+            || self.basic_username.is_some()
+            || self.basic_password.is_some()
             || self.mtls_ca_pem.is_some()
             || self.mtls_identity_pem.is_some()
     }
@@ -189,6 +201,16 @@ impl RegistryClient {
         timeout: Option<Duration>,
         auth: RegistryAuth,
     ) -> Result<Self, RegistryError> {
+        if auth.bearer_token.is_some() && auth.basic_username.is_some() {
+            return Err(RegistryError::Auth(
+                "bearer and basic auth are mutually exclusive".to_string(),
+            ));
+        }
+        if auth.basic_username.is_none() && auth.basic_password.is_some() {
+            return Err(RegistryError::Auth(
+                "basic auth password requires basic username".to_string(),
+            ));
+        }
         #[cfg(target_os = "wasi")]
         let _ = timeout;
         let base = normalize_remote_base(remote)?;
@@ -709,10 +731,12 @@ impl RegistryClient {
         req: reqwest::blocking::RequestBuilder,
     ) -> reqwest::blocking::RequestBuilder {
         if let Some(token) = &self.auth.bearer_token {
-            req.bearer_auth(token)
-        } else {
-            req
+            return req.bearer_auth(token);
         }
+        if let Some(user) = &self.auth.basic_username {
+            return req.basic_auth(user, self.auth.basic_password.as_deref());
+        }
+        req
     }
 }
 

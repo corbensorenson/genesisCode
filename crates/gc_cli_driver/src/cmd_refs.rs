@@ -381,6 +381,6 @@ pub(super) fn cmd_refs(
     Ok(CmdOut {
         exit_code,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }

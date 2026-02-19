@@ -50,10 +50,8 @@ pub(crate) use cmd_vcs::SetRefSpec;
 use cmd_vcs::{
     cmd_vcs, extract_pkg_export_bundle_hash, extract_pkg_import_root, extract_pkg_lock_hash,
     extract_pkg_ok_bool, extract_pkg_publish_commit, extract_pkg_snapshot_hash,
-    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash,
-    extract_store_get_artifact, extract_store_has_present, extract_store_put_hash, is_hex64,
-    mk_store_get_program, mk_store_has_program, mk_store_put_program, normalize_pkg_add_strategy,
-    parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
+    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash, is_hex64,
+    normalize_pkg_add_strategy, parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
 };
 use diagnostics::annotate_envelope;
 use kernel_exec::eval_module_default;
@@ -517,6 +515,11 @@ enum StoreCmd {
     Has {
         /// Content hash (hex).
         hash: String,
+    },
+    /// Verify artifact integrity by hash or scan the whole local store.
+    Verify {
+        /// Optional content hash (hex). If omitted, scans all store blobs.
+        hash: Option<String>,
     },
 }
 
@@ -1203,13 +1206,23 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
         }
         Err(e) => {
             if cli.json {
-                let out = serde_json::to_value(JsonEnvelope::<serde_json::Value> {
+                let out = match json_envelope_value(JsonEnvelope::<serde_json::Value> {
                     ok: false,
                     kind: "genesis/error-v0.2",
                     data: None,
                     error: Some(e.json),
-                })
-                .expect("json serialization");
+                }) {
+                    Ok(v) => v,
+                    Err(serr) => serde_json::json!({
+                        "ok": false,
+                        "kind": "genesis/error-v0.2",
+                        "error": {
+                            "code": serr.json.code,
+                            "message": serr.json.message,
+                            "context": serr.json.context,
+                        },
+                    }),
+                };
                 let out = annotate_envelope(out, e.exit_code);
                 println!("{}", json_canonical_string(&out));
             } else {
@@ -1247,7 +1260,11 @@ fn canonicalize_json(v: &serde_json::Value) -> serde_json::Value {
 }
 
 fn json_canonical_string(v: &serde_json::Value) -> String {
-    serde_json::to_string(&canonicalize_json(v)).expect("json serialization")
+    serde_json::to_string(&canonicalize_json(v)).unwrap_or_else(|e| {
+        format!(
+            "{{\"ok\":false,\"kind\":\"genesis/error-v0.2\",\"error\":{{\"code\":\"json/serialize\",\"message\":\"failed to render json output: {e}\"}}}}"
+        )
+    })
 }
 
 #[derive(Debug)]
@@ -1272,6 +1289,16 @@ struct JsonEnvelope<T> {
     data: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<JsonError>,
+}
+
+fn json_envelope_value<T: Serialize>(env: JsonEnvelope<T>) -> Result<serde_json::Value, CliError> {
+    serde_json::to_value(env).map_err(|e| {
+        cli_err(
+            EX_INTERNAL,
+            "json/serialize",
+            format!("failed to serialize CLI json envelope: {e}"),
+        )
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -1662,7 +1689,7 @@ fn cmd_warm(cli: &Cli, flavor: Flavor, prime_selfhost: bool) -> Result<CmdOut, C
     Ok(CmdOut {
         exit_code: EX_OK,
         stdout: String::new(),
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -1779,7 +1806,7 @@ fn cmd_fmt(
     Ok(CmdOut {
         exit_code,
         stdout: String::new(),
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2334,9 +2361,13 @@ fn cmd_eval(
         None
     };
     if stage2_gate {
-        let s2 = stage2
-            .as_ref()
-            .expect("stage2 report must exist when stage2 gate is enabled");
+        let Some(s2) = stage2.as_ref() else {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "stage2/error",
+                "stage2 gate enabled but no stage2 report was produced",
+            ));
+        };
         if s2.supported && !s2.ok {
             return Err(CliError {
                 exit_code: EX_OBLIGATIONS,
@@ -2379,7 +2410,7 @@ fn cmd_eval(
         } else {
             format!("{value}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2476,7 +2507,7 @@ fn cmd_explain(
         } else {
             format!("{value}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2575,7 +2606,7 @@ fn cmd_run(
         } else {
             format!("{value}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2805,7 +2836,7 @@ fn cmd_replay(
         } else {
             format!("{value}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2857,7 +2888,7 @@ fn cmd_test(cli: &Cli, pkg: &Path, caps: Option<&Path>) -> Result<CmdOut, CliErr
         } else {
             format!("{}\n", r.acceptance_artifact)
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -2883,7 +2914,7 @@ fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         } else {
             format!("{h}\n")
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -3295,7 +3326,7 @@ fn cmd_selfhost_dashboard(
                 markdown_path.display()
             )
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 
@@ -3788,7 +3819,7 @@ fn cmd_selfhost_artifact(
         } else {
             format!("{}\n", out.display())
         },
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }
 

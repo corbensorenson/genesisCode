@@ -693,7 +693,6 @@ fn vcs_merge3_and_resolve_conflict_values_match_between_frontends() {
             "core/store::get",
             "core/vcs-low::merge3",
             "core/vcs-low::resolve-conflict",
-            "core/vcs-low::resolve-conflict-legacy",
             "core/vcs-low::merge3-contract-snapshots",
             "core/vcs-low::diff-terms",
         ],

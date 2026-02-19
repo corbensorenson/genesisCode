@@ -384,6 +384,11 @@
     (((core/effect::perform (quote core/store::has)) {:hash hash})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/store::verify
+  (fn (hash-or-nil)
+    (((core/effect::perform (quote core/store::verify)) {:hash hash-or-nil})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/refs::get
   (fn (name)
     (((core/effect::perform (quote core/refs::get)) {:name name})
@@ -4480,4 +4485,3 @@
         (fn (depth)
           ((core/effect::map ((((core/sync::push remote) refs) roots) depth))
             (core/editor/pkg::status-panel-from-response (quote :editor/sync-push-panel))))))))
-

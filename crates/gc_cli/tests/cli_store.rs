@@ -225,6 +225,124 @@ fn store_get_missing_is_exit_20_and_does_not_write_out() {
 }
 
 #[test]
+fn store_verify_hash_and_scan_succeed() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(dir, &["core/store::put", "core/store::verify"]);
+    let inp = dir.join("artifact.gc");
+    fs::write(&inp, "{:k \"v\"}\n").unwrap();
+
+    let put_out = cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["put", "--input"])
+        .arg(&inp)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let h = String::from_utf8(put_out).unwrap().trim().to_string();
+
+    cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["verify"])
+        .arg(&h)
+        .assert()
+        .success()
+        .stdout("ok 1\n");
+
+    cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["verify"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ok "));
+}
+
+#[test]
+fn store_verify_corruption_is_exit_50() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(dir, &["core/store::put", "core/store::verify"]);
+    let inp = dir.join("artifact.gc");
+    fs::write(&inp, "{:k 1}\n").unwrap();
+
+    let put_out = cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["put", "--input"])
+        .arg(&inp)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let h = String::from_utf8(put_out).unwrap().trim().to_string();
+
+    fs::write(dir.join(".genesis").join("store").join(&h), "corrupted\n").unwrap();
+
+    cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["verify"])
+        .arg(&h)
+        .assert()
+        .code(50)
+        .stdout(predicate::str::contains("core/store/corruption"));
+}
+
+#[test]
+fn store_verify_selfhost_frontend_works_without_selfhost_store_contract_binding() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let caps = write_caps(dir, &["core/store::put", "core/store::verify"]);
+    let artifact = build_selfhost_artifact(dir);
+    let inp = dir.join("artifact.gc");
+    fs::write(&inp, "{:k 7}\n").unwrap();
+
+    let put_out = cmd()
+        .current_dir(dir)
+        .args(["store", "--caps"])
+        .arg(&caps)
+        .args(["put", "--input"])
+        .arg(&inp)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let h = String::from_utf8(put_out).unwrap().trim().to_string();
+
+    cmd()
+        .current_dir(dir)
+        .args([
+            "--coreform-frontend",
+            "selfhost",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "store",
+            "--caps",
+        ])
+        .arg(&caps)
+        .args(["verify"])
+        .arg(&h)
+        .assert()
+        .success()
+        .stdout("ok 1\n");
+}
+
+#[test]
 fn store_put_hash_matches_between_frontends() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

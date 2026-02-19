@@ -742,11 +742,11 @@ base_dir = "./sandbox"
         let src = r#"
             (def prog
               ((core/effect::bind (((core/task::spawn "scope/main") "t1")
-                                   {:task/sleep-ms 200 :task/result {:ok "t1"}}))
+                                   {:task/sleep-ms 350 :task/result {:ok "t1"}}))
                 (fn (spawn-1)
                   (let ((tid-1 ((core/map::get spawn-1) ':task-id)))
                     ((core/effect::bind (((core/task::spawn "scope/main") "t2")
-                                         {:task/sleep-ms 200 :task/result {:ok "t2"}}))
+                                         {:task/sleep-ms 350 :task/result {:ok "t2"}}))
                       (fn (spawn-2)
                         (let ((tid-2 ((core/map::get spawn-2) ':task-id)))
                           ((core/effect::bind (core/task::await tid-1))
@@ -788,11 +788,11 @@ max_workers = {max_workers}
         let elapsed_parallel_ms = run_elapsed_ms(2);
         let elapsed_serial_ms = run_elapsed_ms(1);
         assert!(
-            elapsed_parallel_ms + 120 < elapsed_serial_ms,
+            elapsed_parallel_ms + 180 < elapsed_serial_ms,
             "expected max_workers=2 runtime to be materially faster; parallel={elapsed_parallel_ms}ms serial={elapsed_serial_ms}ms"
         );
         assert!(
-            elapsed_parallel_ms >= 160,
+            elapsed_parallel_ms >= 280,
             "parallel runtime should still reflect real task work, got {elapsed_parallel_ms}ms"
         );
     }

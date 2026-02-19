@@ -118,6 +118,15 @@ fn bootstrap_selfhost(
 
 #[wasm_bindgen]
 pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
+    if cfg!(target_arch = "wasm32") {
+        fmt_coreform_module_selfhost(src, 0)
+    } else {
+        fmt_coreform_module_rust(src)
+    }
+}
+
+#[wasm_bindgen]
+pub fn fmt_coreform_module_rust(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     Ok(print_module(&forms))
@@ -125,6 +134,15 @@ pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
 
 #[wasm_bindgen]
 pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
+    if cfg!(target_arch = "wasm32") {
+        hash_coreform_module_selfhost(src, 0)
+    } else {
+        hash_coreform_module_rust(src)
+    }
+}
+
+#[wasm_bindgen]
+pub fn hash_coreform_module_rust(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     Ok(hex::encode(hash_module(&forms)))
@@ -413,6 +431,38 @@ pub fn eval_coreform_module_with_gates(
     stage1_gate: bool,
     stage2_gate: bool,
 ) -> Result<String, JsValue> {
+    if cfg!(target_arch = "wasm32") {
+        eval_coreform_module_selfhost_with_gates(
+            src,
+            step_limit,
+            stage1_pipeline,
+            stage1_gate,
+            stage2_gate,
+        )
+    } else {
+        eval_coreform_module_with_gates_rust(
+            src,
+            step_limit,
+            stage1_pipeline,
+            stage1_gate,
+            stage2_gate,
+        )
+    }
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_rust(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    eval_coreform_module_with_gates_rust(src, step_limit, false, false, false)
+}
+
+#[wasm_bindgen]
+pub fn eval_coreform_module_with_gates_rust(
+    src: &str,
+    step_limit: u32,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let mut forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
@@ -601,6 +651,33 @@ impl Runtime {
 
     /// Parse + canonicalize + eval with optional Stage-1/Stage-2 gate enforcement, then step.
     pub fn eval_module_with_gates(
+        &mut self,
+        src: &str,
+        stage1_pipeline: bool,
+        stage1_gate: bool,
+        stage2_gate: bool,
+    ) -> Result<JsValue, JsValue> {
+        let r = if cfg!(target_arch = "wasm32") {
+            self.eval_module_selfhost_internal(
+                src,
+                None,
+                stage1_pipeline,
+                stage1_gate,
+                stage2_gate,
+            )?
+        } else {
+            self.eval_module_internal(src, stage1_pipeline, stage1_gate, stage2_gate)?
+        };
+        serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
+    }
+
+    /// Rust frontend parity-only path: parse + canonicalize outside the kernel, then step.
+    pub fn eval_module_rust(&mut self, src: &str) -> Result<JsValue, JsValue> {
+        self.eval_module_with_gates_rust(src, false, false, false)
+    }
+
+    /// Rust frontend parity-only path with optional Stage-1/Stage-2 gate enforcement.
+    pub fn eval_module_with_gates_rust(
         &mut self,
         src: &str,
         stage1_pipeline: bool,

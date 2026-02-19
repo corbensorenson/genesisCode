@@ -109,7 +109,10 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
         let params = items.remove(1);
         let body_terms: Vec<Term> = items.drain(1..).collect();
         let body = if body_terms.len() == 1 {
-            canon_code(body_terms.into_iter().next().unwrap())?
+            let Some(only) = body_terms.into_iter().next() else {
+                bail!("(fn ...) internal error: missing body term");
+            };
+            canon_code(only)?
         } else {
             // Canonicalize multi-body as (begin ...).
             let mut canon = Vec::with_capacity(body_terms.len() + 1);
@@ -192,7 +195,10 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
 
         let body_terms: Vec<Term> = items.into_iter().skip(1).collect();
         let body = if body_terms.len() == 1 {
-            canon_code(body_terms.into_iter().next().unwrap())?
+            let Some(only) = body_terms.into_iter().next() else {
+                bail!("(let ...) internal error: missing body term");
+            };
+            canon_code(only)?
         } else {
             let mut b = Vec::with_capacity(body_terms.len() + 1);
             b.push(Term::symbol("begin"));
@@ -255,7 +261,10 @@ fn canon_list_code(mut items: Vec<Term>) -> anyhow::Result<Term> {
 
     // Singleton lists are just redundant grouping; evaluation of `(f)` is the same as `f`.
     if canon_items.len() == 1 {
-        return Ok(canon_items.into_iter().next().expect("len == 1"));
+        let Some(only) = canon_items.into_iter().next() else {
+            bail!("application canonicalization internal error: empty item list");
+        };
+        return Ok(only);
     }
     if canon_items.len() == 2 {
         return Ok(Term::list(canon_items));

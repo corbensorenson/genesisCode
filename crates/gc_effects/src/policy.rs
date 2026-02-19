@@ -54,6 +54,15 @@ pub struct StorePolicy {
     /// Optional env var name containing bearer token for remote registries.
     pub auth_token_env: Option<String>,
 
+    /// Optional username for HTTP basic auth against remote registries.
+    pub basic_username: Option<String>,
+
+    /// Optional inline password for HTTP basic auth.
+    pub basic_password: Option<String>,
+
+    /// Optional env var name containing HTTP basic auth password.
+    pub basic_password_env: Option<String>,
+
     /// Optional PEM path for additional trusted CA roots used by remote TLS.
     pub mtls_ca_pem: Option<PathBuf>,
 
@@ -69,6 +78,7 @@ pub struct RefsPolicy {
 
 #[derive(Debug, Clone)]
 pub struct TaskPolicy {
+    pub default_workers: u64,
     pub max_tasks: Option<u64>,
     pub max_workers: Option<u64>,
     pub max_queue: Option<u64>,
@@ -102,11 +112,15 @@ impl CapsPolicy {
                 max_run_bytes: None,
                 auth_token: None,
                 auth_token_env: None,
+                basic_username: None,
+                basic_password: None,
+                basic_password_env: None,
                 mtls_ca_pem: None,
                 mtls_identity_pem: None,
             },
             refs: RefsPolicy { path: None },
             task: TaskPolicy {
+                default_workers: 1,
                 max_tasks: None,
                 max_workers: None,
                 max_queue: None,
@@ -389,6 +403,9 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
             max_run_bytes: None,
             auth_token: None,
             auth_token_env: None,
+            basic_username: None,
+            basic_password: None,
+            basic_password_env: None,
             mtls_ca_pem: None,
             mtls_identity_pem: None,
         });
@@ -410,6 +427,18 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         .map(|s| s.to_string());
     let auth_token_env = store_tbl
         .get("auth_token_env")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let basic_username = store_tbl
+        .get("basic_username")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let basic_password = store_tbl
+        .get("basic_password")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let basic_password_env = store_tbl
+        .get("basic_password_env")
         .and_then(|x| x.as_str())
         .map(|s| s.to_string());
     let mtls_ca_pem = store_tbl
@@ -467,6 +496,9 @@ fn parse_store_policy(tbl: &toml::value::Table) -> Result<StorePolicy, EffectsEr
         max_run_bytes,
         auth_token,
         auth_token_env,
+        basic_username,
+        basic_password,
+        basic_password_env,
         mtls_ca_pem,
         mtls_identity_pem,
     })
@@ -489,6 +521,7 @@ fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsErro
 fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsError> {
     let Some(v) = tbl.get("task") else {
         return Ok(TaskPolicy {
+            default_workers: 1,
             max_tasks: None,
             max_workers: None,
             max_queue: None,
@@ -520,7 +553,15 @@ fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsErro
         }
     }
 
+    let default_workers = parse_u64_opt(task_tbl, "default_workers")?.unwrap_or(1);
+    if default_workers == 0 {
+        return Err(EffectsError::Log(
+            "caps.toml: task.default_workers must be >= 1".to_string(),
+        ));
+    }
+
     Ok(TaskPolicy {
+        default_workers,
         max_tasks: parse_u64_opt(task_tbl, "max_tasks")?,
         max_workers: parse_u64_opt(task_tbl, "max_workers")?,
         max_queue: parse_u64_opt(task_tbl, "max_queue")?,
@@ -684,6 +725,9 @@ allow = ["core/store::get"]
 [store]
 auth_token = "token-value"
 auth_token_env = "GENESIS_TEST_TOKEN"
+basic_username = "robot"
+basic_password = "s3cr3t"
+basic_password_env = "GENESIS_BASIC_PASS"
 mtls_ca_pem = "./ca.pem"
 mtls_identity_pem = "./id.pem"
 "#,
@@ -693,6 +737,12 @@ mtls_identity_pem = "./id.pem"
         assert_eq!(
             p.store.auth_token_env.as_deref(),
             Some("GENESIS_TEST_TOKEN")
+        );
+        assert_eq!(p.store.basic_username.as_deref(), Some("robot"));
+        assert_eq!(p.store.basic_password.as_deref(), Some("s3cr3t"));
+        assert_eq!(
+            p.store.basic_password_env.as_deref(),
+            Some("GENESIS_BASIC_PASS")
         );
         assert_eq!(p.store.mtls_ca_pem.as_deref(), Some(Path::new("./ca.pem")));
         assert_eq!(
@@ -755,6 +805,7 @@ log_inline_max_bytes = 5
 allow = ["core/task::await"]
 
 [task]
+default_workers = 3
 max_tasks = 12
 max_workers = 4
 max_queue = 16
@@ -763,11 +814,37 @@ max_time_ms_per_task = 50
 "#,
         )
         .unwrap();
+        assert_eq!(p.task.default_workers, 3);
         assert_eq!(p.task.max_tasks, Some(12));
         assert_eq!(p.task.max_workers, Some(4));
         assert_eq!(p.task.max_queue, Some(16));
         assert_eq!(p.task.max_steps_per_task, Some(20));
         assert_eq!(p.task.max_time_ms_per_task, Some(50));
+    }
+
+    #[test]
+    fn defaults_task_worker_budget_to_one_when_unspecified() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::await"]
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.task.default_workers, 1);
+    }
+
+    #[test]
+    fn rejects_zero_default_workers() {
+        let err = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/task::await"]
+
+[task]
+default_workers = 0
+"#,
+        )
+        .expect_err("must reject zero default workers");
+        assert!(format!("{err}").contains("task.default_workers"));
     }
 
     #[test]

@@ -162,7 +162,7 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             Ok(CmdOut {
                 exit_code: EX_OK,
                 stdout,
-                json: serde_json::to_value(env).expect("json"),
+                json: json_envelope_value(env)?,
             })
         }
         PolicyCmd::Show {
@@ -220,7 +220,7 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             Ok(CmdOut {
                 exit_code: EX_OK,
                 stdout,
-                json: serde_json::to_value(env).expect("json"),
+                json: json_envelope_value(env)?,
             })
         }
         PolicyCmd::SetDefault {
@@ -277,7 +277,7 @@ pub(super) fn cmd_policy(cli: &Cli, cmd: &PolicyCmd) -> Result<CmdOut, CliError>
             Ok(CmdOut {
                 exit_code: EX_OK,
                 stdout,
-                json: serde_json::to_value(env).expect("json"),
+                json: json_envelope_value(env)?,
             })
         }
     }

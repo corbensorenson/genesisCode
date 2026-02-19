@@ -130,12 +130,12 @@ pub fn hex_to_bytes32(s: &str) -> Result<[u8; 32], String> {
 
 pub fn bytes32_to_hex(b: &[u8; 32]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = [0u8; 64];
-    for (i, x) in b.iter().enumerate() {
-        out[2 * i] = HEX[(x >> 4) as usize];
-        out[2 * i + 1] = HEX[(x & 0xF) as usize];
+    let mut out = String::with_capacity(64);
+    for x in b {
+        out.push(HEX[(x >> 4) as usize] as char);
+        out.push(HEX[(x & 0xF) as usize] as char);
     }
-    String::from_utf8(out.to_vec()).expect("hex")
+    out
 }
 
 fn hex_val(b: u8) -> Option<u8> {

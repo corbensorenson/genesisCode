@@ -237,7 +237,7 @@ pub(super) fn cmd_sync(
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
-    enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "gc", &r.log)?;
+    enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "sync", &r.log)?;
 
     let log_path = log
         .map(PathBuf::from)
@@ -294,6 +294,6 @@ pub(super) fn cmd_sync(
     Ok(CmdOut {
         exit_code,
         stdout,
-        json: serde_json::to_value(env).expect("json"),
+        json: json_envelope_value(env)?,
     })
 }

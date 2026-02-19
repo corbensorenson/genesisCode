@@ -153,6 +153,29 @@ fn compiled_eval_matches_treewalk_eval_with_closure_calls() {
 }
 
 #[test]
+fn compiled_eval_can_call_legacy_treewalk_closure_from_env() {
+    let legacy_src = r#"
+      (def legacy/mk (fn (a) (fn (b) (prim int/add a b))))
+      nil
+    "#;
+    let call_src = r#"
+      (def plus9 (legacy/mk 9))
+      (plus9 33)
+    "#;
+
+    let legacy_forms = parse_module(legacy_src).unwrap();
+    let call_forms = parse_module(call_src).unwrap();
+
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+
+    let _ = eval_module(&mut ctx, &mut env, &legacy_forms).unwrap();
+    let out = eval_module_compiled(&mut ctx, &mut env, &call_forms).unwrap();
+
+    assert_eq!(out.as_data(), Some(&Term::Int(BigInt::from(42))));
+}
+
+#[test]
 fn compiled_module_blob_roundtrip_preserves_behavior() {
     let src = r#"
       (def mk (fn (x) (fn (y) (prim int/add x y))))

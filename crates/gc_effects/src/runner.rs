@@ -43,7 +43,10 @@ use crate::runner_refs_ops::{
     payload_refs_expected_old, payload_refs_hash, payload_refs_name, payload_refs_policy_hash,
     payload_refs_prefix,
 };
-use crate::runner_store_ops::{payload_store_artifact, payload_store_hash, store_get_term};
+use crate::runner_store_ops::{
+    is_hex64, payload_store_artifact, payload_store_hash, payload_store_optional_hash,
+    store_get_term, store_scan_hashes,
+};
 use crate::runner_sync_payload::{
     payload_sync_depth, payload_sync_force, payload_sync_refs, payload_sync_remote,
     payload_sync_roots, payload_sync_set_refs,
@@ -3303,6 +3306,107 @@ fn call_capability(
             m.insert(TermOrdKey(Term::Symbol(":artifact".to_string())), t);
             Ok(Value::Data(Term::Map(m)))
         }
+        "core/store::verify" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/store::verify".to_string())
+            })?;
+            let maybe_hash = match payload_store_optional_hash(payload) {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let mut checked: u64 = 0;
+            if let Some(h) = maybe_hash.clone() {
+                if !is_hex64(&h) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/bad-hash",
+                        format!("invalid store hash: {h}"),
+                        Some(op),
+                    ));
+                }
+                if !store.path_for(&h).exists() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/not-found",
+                        format!("artifact not found: {h}"),
+                        Some(op),
+                    ));
+                }
+                checked = 1;
+                if let Err(e) = store.verify_hex(&h) {
+                    let ctx = Term::Map(
+                        [
+                            (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+                            (
+                                TermOrdKey(Term::symbol(":checked")),
+                                Term::Int(BigInt::from(checked)),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    return Ok(mk_error_with_ctx(
+                        error_tok,
+                        "core/store/corruption",
+                        e.to_string(),
+                        Some(op),
+                        ctx,
+                    ));
+                }
+            } else {
+                let hashes = match store_scan_hashes(store) {
+                    Ok(hs) => hs,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                for h in hashes {
+                    checked = checked.saturating_add(1);
+                    if let Err(e) = store.verify_hex(&h) {
+                        let ctx = Term::Map(
+                            [
+                                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+                                (
+                                    TermOrdKey(Term::symbol(":checked")),
+                                    Term::Int(BigInt::from(checked)),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        );
+                        return Ok(mk_error_with_ctx(
+                            error_tok,
+                            "core/store/corruption",
+                            e.to_string(),
+                            Some(op),
+                            ctx,
+                        ));
+                    }
+                }
+            }
+            let mut out = BTreeMap::new();
+            out.insert(
+                TermOrdKey(Term::symbol(":checked")),
+                Term::Int(BigInt::from(checked)),
+            );
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            if let Some(h) = maybe_hash {
+                out.insert(TermOrdKey(Term::symbol(":hash")), Term::Str(h));
+            }
+            Ok(Value::Data(Term::Map(out)))
+        }
         "core/vcs-low::log" => {
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs-low::log".to_string())
@@ -4106,93 +4210,174 @@ fn call_capability(
                     Some(op),
                 ));
             };
-            let (conflict, base_t, left_t, right_t) =
-                if let (Some(conflict_t), Some(base_t), Some(left_t), Some(right_t)) = (
-                    m.get(&TermOrdKey(Term::symbol(":conflict-term"))),
-                    m.get(&TermOrdKey(Term::symbol(":base-term"))),
-                    m.get(&TermOrdKey(Term::symbol(":left-term"))),
-                    m.get(&TermOrdKey(Term::symbol(":right-term"))),
-                ) {
-                    let conflict = match gc_vcs::Conflict::from_term(conflict_t) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/bad-conflict",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    (conflict, base_t.clone(), left_t.clone(), right_t.clone())
-                } else if let Some(Term::Str(conflict_h)) =
-                    m.get(&TermOrdKey(Term::symbol(":conflict-hash")))
-                {
-                    let conflict_t = match store_get_term(store, conflict_h) {
-                        Ok(t) => t,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/store-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let conflict = match gc_vcs::Conflict::from_term(&conflict_t) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/bad-conflict",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let base_t = match store_get_term(store, &conflict.base) {
-                        Ok(t) => t,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/store-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let left_t = match store_get_term(store, &conflict.left) {
-                        Ok(t) => t,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/store-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let right_t = match store_get_term(store, &conflict.right) {
-                        Ok(t) => t,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/vcs/store-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    (conflict, base_t, left_t, right_t)
-                } else {
+            let out_s = match m.get(&TermOrdKey(Term::symbol(":out"))) {
+                None | Some(Term::Nil) => None,
+                Some(Term::Str(s)) => Some(s.clone()),
+                Some(other) => {
                     return Ok(mk_error(
+                        error_tok,
+                        "core/vcs/bad-payload",
+                        format!(":out must be string or nil, got {}", print_term(other)),
+                        Some(op),
+                    ));
+                }
+            };
+            let (conflict, base_t, left_t, right_t, legacy_output_mode) = if let (
+                Some(conflict_t),
+                Some(base_t),
+                Some(left_t),
+                Some(right_t),
+            ) = (
+                m.get(&TermOrdKey(Term::symbol(":conflict-term"))),
+                m.get(&TermOrdKey(Term::symbol(":base-term"))),
+                m.get(&TermOrdKey(Term::symbol(":left-term"))),
+                m.get(&TermOrdKey(Term::symbol(":right-term"))),
+            ) {
+                let conflict = match gc_vcs::Conflict::from_term(conflict_t) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/bad-conflict",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                (
+                    conflict,
+                    base_t.clone(),
+                    left_t.clone(),
+                    right_t.clone(),
+                    false,
+                )
+            } else if let Some(Term::Str(conflict_h)) =
+                m.get(&TermOrdKey(Term::symbol(":conflict-hash")))
+            {
+                let conflict_t = match store_get_term(store, conflict_h) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let conflict = match gc_vcs::Conflict::from_term(&conflict_t) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/bad-conflict",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let base_t = match store_get_term(store, &conflict.base) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let left_t = match store_get_term(store, &conflict.left) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let right_t = match store_get_term(store, &conflict.right) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                (conflict, base_t, left_t, right_t, false)
+            } else if let Some(Term::Str(conflict_h)) =
+                m.get(&TermOrdKey(Term::symbol(":conflict")))
+            {
+                let conflict_t = match store_get_term(store, conflict_h) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let conflict = match gc_vcs::Conflict::from_term(&conflict_t) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/bad-conflict",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let base_t = match store_get_term(store, &conflict.base) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let left_t = match store_get_term(store, &conflict.left) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let right_t = match store_get_term(store, &conflict.right) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/store-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                (conflict, base_t, left_t, right_t, true)
+            } else {
+                return Ok(mk_error(
                     error_tok,
                     "core/vcs/bad-payload",
-                    "missing :conflict-hash or (:conflict-term + :base-term/:left-term/:right-term)"
+                    "missing :conflict/:conflict-hash or (:conflict-term + :base-term/:left-term/:right-term)"
                         .to_string(),
                     Some(op),
                 ));
-                };
+            };
 
             let strategy = match m.get(&TermOrdKey(Term::symbol(":strategy"))) {
                 None | Some(Term::Nil) => None,
@@ -4419,6 +4604,42 @@ fn call_capability(
                     &conflict.right,
                     unresolved,
                 );
+                if legacy_output_mode {
+                    let conflict_bytes = print_term(&conflict_term);
+                    let conflict_h = match store_put_with_budget(
+                        store,
+                        conflict_bytes.as_bytes(),
+                        policy,
+                        budget,
+                        error_tok,
+                        op,
+                    ) {
+                        Ok(h) => h,
+                        Err(v) => return Ok(v),
+                    };
+                    if let Some(out_s) = &out_s {
+                        let base_dir = effective_base_dir(pol)?;
+                        let out_path = sandbox_path_write(
+                            &base_dir,
+                            out_s,
+                            pol.map(|p| p.create_dirs).unwrap_or(false),
+                        )?;
+                        if let Err(e) =
+                            atomic_write_text(&out_path, (conflict_bytes + "\n").as_bytes())
+                        {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/vcs/io-error",
+                                e.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    }
+                    let mut out = BTreeMap::new();
+                    out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
+                    out.insert(TermOrdKey(Term::symbol(":conflict")), Term::Str(conflict_h));
+                    return Ok(Value::Data(Term::Map(out)));
+                }
                 let mut out = BTreeMap::new();
                 out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
                 out.insert(TermOrdKey(Term::symbol(":conflict-term")), conflict_term);
@@ -4441,6 +4662,57 @@ fn call_capability(
                     ));
                 }
             };
+            if legacy_output_mode {
+                let merged_bytes = print_term(&merged_snapshot);
+                let merged_h = match store_put_with_budget(
+                    store,
+                    merged_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(h) => h,
+                    Err(v) => return Ok(v),
+                };
+                let patch_bytes = print_term(&patch_term);
+                let patch_h = match store_put_with_budget(
+                    store,
+                    patch_bytes.as_bytes(),
+                    policy,
+                    budget,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(h) => h,
+                    Err(v) => return Ok(v),
+                };
+                if let Some(out_s) = &out_s {
+                    let base_dir = effective_base_dir(pol)?;
+                    let out_path = sandbox_path_write(
+                        &base_dir,
+                        out_s,
+                        pol.map(|p| p.create_dirs).unwrap_or(false),
+                    )?;
+                    if let Err(e) = atomic_write_text(&out_path, (merged_bytes + "\n").as_bytes()) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                }
+                let mut out = BTreeMap::new();
+                out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+                out.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
+                out.insert(TermOrdKey(Term::symbol(":patch")), Term::Str(patch_h));
+                out.insert(
+                    TermOrdKey(Term::symbol(":values")),
+                    Term::Vector(values.into_iter().map(Term::Str).collect()),
+                );
+                return Ok(Value::Data(Term::Map(out)));
+            }
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             out.insert(TermOrdKey(Term::symbol(":snapshot-term")), merged_snapshot);
@@ -4685,12 +4957,7 @@ fn call_capability(
             let cur = match vcs_apply_patch_term(store, &base_t, &patch) {
                 Ok(t) => t,
                 Err(e) => {
-                    let code = if e.contains("patch op :rename is not supported yet") {
-                        "core/vcs/unsupported"
-                    } else {
-                        "core/vcs/apply-error"
-                    };
-                    return Ok(mk_error(error_tok, code, e, Some(op)));
+                    return Ok(mk_error(error_tok, "core/vcs/apply-error", e, Some(op)));
                 }
             };
 
@@ -5012,425 +5279,6 @@ fn call_capability(
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
-            Ok(Value::Data(Term::Map(m)))
-        }
-        "core/vcs-low::resolve-conflict-legacy" => {
-            let store = store.ok_or_else(|| {
-                EffectsError::Log(
-                    "missing artifact store for core/vcs-low::resolve-conflict".to_string(),
-                )
-            })?;
-
-            let conflict_h = match payload_vcs_hash(payload, ":conflict") {
-                Ok(h) => h,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/bad-payload",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
-            let out_s = match payload_vcs_out(payload) {
-                Ok(s) => s,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/bad-payload",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
-
-            // Parse strategy (optional) and per-op resolutions.
-            #[derive(Debug, Clone)]
-            enum Resolution {
-                Side(String),
-                Hash(String),
-                Delete,
-            }
-            let (strategy, resolutions) = {
-                let Term::Map(m) = payload else {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/bad-payload",
-                        "payload must be a map".to_string(),
-                        Some(op),
-                    ));
-                };
-                let strategy = match m.get(&TermOrdKey(Term::symbol(":strategy"))) {
-                    None | Some(Term::Nil) => None,
-                    Some(Term::Symbol(s)) => Some(s.clone()),
-                    Some(Term::Str(s)) => Some(s.clone()),
-                    Some(other) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/vcs/bad-payload",
-                            format!(
-                                ":strategy must be symbol/string or nil, got {}",
-                                print_term(other)
-                            ),
-                            Some(op),
-                        ));
-                    }
-                };
-                let strategy = strategy.map(|s| match s.as_str() {
-                    ":left" | "left" => ":left".to_string(),
-                    ":right" | "right" => ":right".to_string(),
-                    ":base" | "base" => ":base".to_string(),
-                    other => other.to_string(),
-                });
-                if let Some(s) = &strategy
-                    && s != ":left"
-                    && s != ":right"
-                    && s != ":base"
-                {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/bad-payload",
-                        format!("unsupported :strategy {s} (expected :left/:right/:base)"),
-                        Some(op),
-                    ));
-                }
-
-                let mut resolutions: BTreeMap<String, Resolution> = BTreeMap::new();
-                if let Some(t) = m.get(&TermOrdKey(Term::symbol(":resolutions"))) {
-                    let Term::Map(rm) = t else {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/vcs/bad-payload",
-                            format!(":resolutions must be map, got {}", print_term(t)),
-                            Some(op),
-                        ));
-                    };
-                    for (k, v) in rm {
-                        let opk = match &k.0 {
-                            Term::Symbol(s) => s.clone(),
-                            Term::Str(s) => s.clone(),
-                            other => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/vcs/bad-payload",
-                                    format!(
-                                        ":resolutions keys must be symbol/string, got {}",
-                                        print_term(other)
-                                    ),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        let res = match v {
-                            Term::Nil => Resolution::Delete,
-                            Term::Symbol(s) => match s.as_str() {
-                                ":left" | "left" => Resolution::Side(":left".to_string()),
-                                ":right" | "right" => Resolution::Side(":right".to_string()),
-                                ":base" | "base" => Resolution::Side(":base".to_string()),
-                                other => {
-                                    return Ok(mk_error(
-                                        error_tok,
-                                        "core/vcs/bad-payload",
-                                        format!(
-                                            ":resolutions/{opk} unsupported side {other} (expected :left/:right/:base)"
-                                        ),
-                                        Some(op),
-                                    ));
-                                }
-                            },
-                            Term::Str(s) => match s.as_str() {
-                                ":left" | "left" => Resolution::Side(":left".to_string()),
-                                ":right" | "right" => Resolution::Side(":right".to_string()),
-                                ":base" | "base" => Resolution::Side(":base".to_string()),
-                                _ => {
-                                    if let Err(e) = gc_vcs::validate_hex_hash(s) {
-                                        return Ok(mk_error(
-                                            error_tok,
-                                            "core/vcs/bad-payload",
-                                            format!(":resolutions/{opk}: {e}"),
-                                            Some(op),
-                                        ));
-                                    }
-                                    Resolution::Hash(s.clone())
-                                }
-                            },
-                            other => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/vcs/bad-payload",
-                                    format!(
-                                        ":resolutions/{opk} must be side symbol, hex string, or nil; got {}",
-                                        print_term(other)
-                                    ),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        resolutions.insert(opk, res);
-                    }
-                }
-
-                (strategy, resolutions)
-            };
-
-            let conflict_t = match store_get_term(store, &conflict_h) {
-                Ok(t) => t,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/store-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-            let conflict = match gc_vcs::Conflict::from_term(&conflict_t) {
-                Ok(c) => c,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/bad-conflict",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-
-            let base_t = match store_get_term(store, &conflict.base) {
-                Ok(t) => t,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/store-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-            let left_t = match store_get_term(store, &conflict.left) {
-                Ok(t) => t,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/store-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-            let right_t = match store_get_term(store, &conflict.right) {
-                Ok(t) => t,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/store-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-
-            let base = match as_contract_snapshot(&base_t) {
-                Ok(s) => s,
-                Err(msg) => {
-                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
-                }
-            };
-            let left = match as_contract_snapshot(&left_t) {
-                Ok(s) => s,
-                Err(msg) => {
-                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
-                }
-            };
-            let right = match as_contract_snapshot(&right_t) {
-                Ok(s) => s,
-                Err(msg) => {
-                    return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
-                }
-            };
-
-            if base.proto != left.proto || base.proto != right.proto {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/vcs/bad-conflict",
-                    "proto mismatch across base/left/right".to_string(),
-                    Some(op),
-                ));
-            }
-
-            // Merge + apply resolutions for divergent ops.
-            let mut keys: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-            keys.extend(base.overrides.keys().cloned());
-            keys.extend(left.overrides.keys().cloned());
-            keys.extend(right.overrides.keys().cloned());
-
-            let mut merged: BTreeMap<String, String> = BTreeMap::new();
-            let mut unresolved: Vec<Term> = Vec::new();
-
-            for k in keys {
-                let b = base.overrides.get(&k).cloned();
-                let l = left.overrides.get(&k).cloned();
-                let r = right.overrides.get(&k).cloned();
-
-                let conflict_here = l != r && l != b && r != b;
-                if !conflict_here {
-                    let pick = if l == r {
-                        l
-                    } else if l == b {
-                        r
-                    } else if r == b {
-                        l
-                    } else {
-                        None
-                    };
-                    if let Some(h) = pick {
-                        merged.insert(k, h);
-                    }
-                    continue;
-                }
-
-                let chosen = resolutions
-                    .get(&k)
-                    .cloned()
-                    .or_else(|| strategy.as_ref().map(|s| Resolution::Side(s.clone())));
-
-                let picked = match chosen {
-                    Some(Resolution::Side(s)) if s == ":left" => l,
-                    Some(Resolution::Side(s)) if s == ":right" => r,
-                    Some(Resolution::Side(s)) if s == ":base" => b,
-                    Some(Resolution::Hash(h)) => Some(h),
-                    Some(Resolution::Delete) => None,
-                    _ => {
-                        let mut m = BTreeMap::new();
-                        m.insert(TermOrdKey(Term::symbol(":op")), Term::Str(k.clone()));
-                        m.insert(
-                            TermOrdKey(Term::symbol(":base")),
-                            b.clone().map(Term::Str).unwrap_or(Term::Nil),
-                        );
-                        m.insert(
-                            TermOrdKey(Term::symbol(":left")),
-                            l.clone().map(Term::Str).unwrap_or(Term::Nil),
-                        );
-                        m.insert(
-                            TermOrdKey(Term::symbol(":right")),
-                            r.clone().map(Term::Str).unwrap_or(Term::Nil),
-                        );
-                        unresolved.push(Term::Map(m));
-                        continue;
-                    }
-                };
-
-                if let Some(h) = picked {
-                    if !store.path_for(&h).exists() {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/not-found",
-                            format!("missing referenced artifact: {h}"),
-                            Some(op),
-                        ));
-                    }
-                    merged.insert(k, h);
-                }
-            }
-
-            if !unresolved.is_empty() {
-                let conflict_term = mk_conflict_artifact(
-                    &conflict.kind,
-                    &conflict.base,
-                    &conflict.left,
-                    &conflict.right,
-                    unresolved,
-                );
-                let conflict_bytes = print_term(&conflict_term);
-                let conflict_hex = match store_put_with_budget(
-                    store,
-                    conflict_bytes.as_bytes(),
-                    policy,
-                    budget,
-                    error_tok,
-                    op,
-                ) {
-                    Ok(h) => h,
-                    Err(v) => return Ok(v),
-                };
-                let mut m = BTreeMap::new();
-                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(false));
-                m.insert(
-                    TermOrdKey(Term::symbol(":conflict")),
-                    Term::Str(conflict_hex),
-                );
-                return Ok(Value::Data(Term::Map(m)));
-            }
-
-            let merged_snapshot = gc_vcs::ContractSnapshot {
-                proto: base.proto,
-                overrides: merged,
-            }
-            .to_term();
-            let merged_bytes = print_term(&merged_snapshot);
-            let merged_h = match store_put_with_budget(
-                store,
-                merged_bytes.as_bytes(),
-                policy,
-                budget,
-                error_tok,
-                op,
-            ) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
-            };
-
-            let (patch_term, values) = match vcs_diff_patch_term(store, &base_t, &merged_snapshot) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/diff-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
-            let patch_bytes = print_term(&patch_term);
-            let patch_h = match store_put_with_budget(
-                store,
-                patch_bytes.as_bytes(),
-                policy,
-                budget,
-                error_tok,
-                op,
-            ) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
-            };
-
-            if let Some(out_s) = out_s {
-                let base_dir = effective_base_dir(pol)?;
-                let out_path = sandbox_path_write(
-                    &base_dir,
-                    &out_s,
-                    pol.map(|p| p.create_dirs).unwrap_or(false),
-                )?;
-                if let Err(e) =
-                    atomic_write_text(&out_path, (patch_bytes.clone() + "\n").as_bytes())
-                {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/vcs/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            }
-
-            let mut m = BTreeMap::new();
-            m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-            m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
-            m.insert(TermOrdKey(Term::symbol(":patch")), Term::Str(patch_h));
-            m.insert(
-                TermOrdKey(Term::symbol(":values")),
-                Term::Vector(values.into_iter().map(Term::Str).collect()),
-            );
             Ok(Value::Data(Term::Map(m)))
         }
         "core/gc-low::plan" => {
@@ -6967,6 +6815,55 @@ fn vcs_apply_patch_term(
     base_t: &Term,
     patch: &gc_vcs::Patch,
 ) -> Result<Term, String> {
+    fn rename_leaf(t: &Term, from: &str, to: &str) -> (Term, u64) {
+        match t {
+            Term::Symbol(s) if s == from => (Term::Symbol(to.to_string()), 1),
+            Term::Str(s) if s == from => (Term::Str(to.to_string()), 1),
+            _ => (t.clone(), 0),
+        }
+    }
+
+    fn rename_term(t: &Term, from: &str, to: &str) -> Result<(Term, u64), String> {
+        match t {
+            Term::Map(m) => {
+                let mut out: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
+                let mut renamed: u64 = 0;
+                for (k, v) in m {
+                    let (nk, kc) = rename_leaf(&k.0, from, to);
+                    let (nv, vc) = rename_term(v, from, to)?;
+                    let nk_ord = TermOrdKey(nk);
+                    if out.insert(nk_ord.clone(), nv).is_some() {
+                        return Err(format!(
+                            "patch rename collision for key {}",
+                            print_term(&nk_ord.0)
+                        ));
+                    }
+                    renamed = renamed.saturating_add(kc).saturating_add(vc);
+                }
+                Ok((Term::Map(out), renamed))
+            }
+            Term::Vector(xs) => {
+                let mut out: Vec<Term> = Vec::with_capacity(xs.len());
+                let mut renamed: u64 = 0;
+                for x in xs {
+                    let (nx, n) = rename_term(x, from, to)?;
+                    out.push(nx);
+                    renamed = renamed.saturating_add(n);
+                }
+                Ok((Term::Vector(out), renamed))
+            }
+            Term::Pair(a, d) => {
+                let (na, an) = rename_term(a, from, to)?;
+                let (nd, dn) = rename_term(d, from, to)?;
+                Ok((
+                    Term::Pair(Box::new(na), Box::new(nd)),
+                    an.saturating_add(dn),
+                ))
+            }
+            _ => Ok(rename_leaf(t, from, to)),
+        }
+    }
+
     fn update_at(
         t: &Term,
         path: &[gc_vcs::PathStep],
@@ -7098,8 +6995,15 @@ fn vcs_apply_patch_term(
             gc_vcs::PatchOp::Delete { path } => {
                 cur = delete_at(&cur, path)?;
             }
-            gc_vcs::PatchOp::Rename { .. } => {
-                return Err("patch op :rename is not supported yet".to_string());
+            gc_vcs::PatchOp::Rename { from, to } => {
+                if from == to {
+                    continue;
+                }
+                let (next, renamed) = rename_term(&cur, from, to)?;
+                if renamed == 0 {
+                    return Err(format!("patch rename target not found: {from}"));
+                }
+                cur = next;
             }
         }
     }
