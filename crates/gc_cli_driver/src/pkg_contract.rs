@@ -10,6 +10,7 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Update { .. } => "genesis/pkg-update-v0.1",
         PkgCmd::Run { .. } => "genesis/pkg-run-v0.1",
         PkgCmd::Test { .. } => "genesis/pkg-test-v0.1",
+        PkgCmd::SelfOptimize { .. } => "genesis/pkg-self-optimize-v0.1",
         PkgCmd::Install { .. } => "genesis/pkg-install-v0.1",
         PkgCmd::Verify { .. } => "genesis/pkg-verify-v0.1",
         PkgCmd::Doctor { .. } => "genesis/pkg-doctor-v0.1",
@@ -35,6 +36,7 @@ pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Update { .. } => "pkg-update",
         PkgCmd::Run { .. } => "pkg-run",
         PkgCmd::Test { .. } => "pkg-test",
+        PkgCmd::SelfOptimize { .. } => "pkg-self-optimize",
         PkgCmd::Install { .. } => "pkg-install",
         PkgCmd::Verify { .. } => "pkg-verify",
         PkgCmd::Doctor { .. } => "pkg-doctor",
@@ -101,6 +103,11 @@ mod tests {
             PkgCmd::Test {
                 pkg: PathBuf::from("package.toml"),
                 caps: None,
+            },
+            PkgCmd::SelfOptimize {
+                pkg: PathBuf::from("package.toml"),
+                caps: None,
+                dry_run: false,
             },
             PkgCmd::Install {
                 lock: PathBuf::from("genesis.lock"),

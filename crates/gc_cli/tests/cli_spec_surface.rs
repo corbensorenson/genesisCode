@@ -31,6 +31,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "typecheck",
         "optimize",
         "apply-patch",
+        "semantic-edit",
         "store",
         "refs",
         "pkg",
@@ -130,6 +131,10 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
     assert!(
         s.contains("abi"),
         "pkg --help output missing abi subcommand"
+    );
+    assert!(
+        s.contains("self-optimize"),
+        "pkg --help output missing self-optimize subcommand"
     );
 
     let s = stdout_str(&["pkg", "abi", "--help"]);

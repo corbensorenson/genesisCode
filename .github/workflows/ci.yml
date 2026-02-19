@@ -73,6 +73,9 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
 
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Format
@@ -112,10 +115,15 @@ jobs:
               --index "${GENESIS_TEST_SHARD_INDEX}" \
               --seed "${GITHUB_SHA}" \
               --out ".genesis/ci-shards" \
+              --runner nextest \
               --exclude-crate "gc_wasi_cli"
           else
             # gc_wasi_cli command invariants are exercised by dedicated WASI smoke/strict lanes.
-            cargo test --workspace --profile selfhost-strict --exclude gc_wasi_cli
+            cargo nextest run \
+              --workspace \
+              --cargo-profile selfhost-strict \
+              --profile ci \
+              --exclude gc_wasi_cli
           fi
 
       - name: Upload Test Shard Artifacts

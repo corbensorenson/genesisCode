@@ -7,7 +7,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--json`: emit exactly one JSON object on stdout for all subcommands.
   - In JSON mode, stderr is reserved for unexpected process-level failures (it should usually be empty).
 - `--step-limit <N>`: set the kernel evaluation step limit for commands that evaluate CoreForm.
-  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, `fmt --engine selfhost`, and `eval --engine selfhost`.
+  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, `semantic-edit index`, `fmt --engine selfhost`, and `eval --engine selfhost`.
   - The step limit also applies to prelude initialization for that command.
   - Exception: for `fmt --engine selfhost` and `eval --engine selfhost`, toolchain bootstrap load is not charged against the step limit.
   - The v0.2 toolchain default is `5_000_000` steps.
@@ -25,7 +25,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
-    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
     - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
@@ -98,6 +98,9 @@ CI strict selfhost gates:
 - `genesis transparency-verify --pkg <package.toml>`: verify the local transparency log chain (see `docs/spec/TRANSPARENCY_LOG.md`)
 - `genesis optimize <file> [--engine rust|selfhost] ...`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
+- `genesis semantic-edit index --pkg <package.toml> --module-path <path>`
+  - emits a deterministic canonical AST node index with stable semantic node IDs.
+  - output kind: `genesis/semantic-edit-index-v0.1`.
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
 - `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
@@ -111,6 +114,7 @@ CI strict selfhost gates:
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
   - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`.
+  - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
   - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.

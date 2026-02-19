@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::print_term;
+use gc_kernel::{MemLimits, StepLimit};
 
 fn write_pkg(dir: &Path) -> PathBuf {
     fs::create_dir_all(dir).unwrap();
@@ -59,6 +60,17 @@ fn patch_replace_form0(new_form_src: &str) -> String {
           }}
         "#
     )
+}
+
+fn semantic_node_index_for_mod(src: &str) -> Vec<gc_patches::SemanticNodeRecord> {
+    gc_patches::semantic_node_index_for_module_with_frontend(
+        "mod.gc",
+        src,
+        &gc_obligations::default_coreform_frontend(),
+        StepLimit::Default,
+        MemLimits::default(),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -124,4 +136,87 @@ fn patch_obligation_rerun_failure_is_reported_ok_false() {
     assert!(r.acceptance_artifact.is_some());
     assert!(r.package_artifact.is_some());
     assert!(!r.report_artifact.is_empty());
+}
+
+#[test]
+fn semantic_node_index_is_deterministic_for_same_module_source() {
+    let td = tempfile::tempdir().unwrap();
+    let _pkg = write_pkg(td.path());
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+
+    let a = semantic_node_index_for_mod(&src);
+    let b = semantic_node_index_for_mod(&src);
+
+    assert_eq!(a, b);
+    assert!(!a.is_empty(), "node index should not be empty");
+}
+
+#[test]
+fn patch_replace_node_id_applies_and_reports_semantic_edit() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let _ = gc_obligations::pack(&pkg).unwrap();
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    let nodes = semantic_node_index_for_mod(&src);
+    let expect_node = nodes
+        .iter()
+        .find(|n| n.term_tag == "int" && n.path_repr.contains(":expect"))
+        .expect("expected :expect int node");
+    let patch = write_patch(
+        td.path(),
+        &format!(
+            r#"
+          {{
+            :version 1
+            :intent "replace via node-id"
+            :provenance {{}}
+            :ops [
+              {{
+                :op :replace-node-id
+                :module-path "mod.gc"
+                :node-id "{node_id}"
+                :new 2
+              }}
+            ]
+          }}
+        "#,
+            node_id = expect_node.node_id
+        ),
+    );
+
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(!r.ok, "changing :expect should fail obligations");
+
+    let report_src = fs::read_to_string(td.path().join(".genesis/store").join(&r.report_artifact))
+        .expect("read report artifact");
+    assert!(
+        report_src.contains(":semantic-edits"),
+        "report should include semantic edit provenance"
+    );
+}
+
+#[test]
+fn patch_replace_node_id_rejects_unknown_node_id() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "bad node id"
+            :provenance {}
+            :ops [
+              {
+                :op :replace-node-id
+                :module-path "mod.gc"
+                :node-id "deadbeef"
+                :new 123
+              }
+            ]
+          }
+        "#,
+    );
+    let err = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
+    assert!(matches!(err, gc_patches::PatchError::Validate(_)));
 }

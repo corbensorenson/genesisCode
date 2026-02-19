@@ -1,8 +1,13 @@
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
 use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 
 use crate::policy::CapsPolicy;
 
@@ -26,18 +31,23 @@ struct TaskBudgetCounters {
     steps: u64,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct TaskRuntime {
     next_task_id: u64,
     tasks: BTreeMap<String, TaskRecord>,
     queue: Vec<String>,
+    completed: BTreeMap<String, TaskCompletion>,
+    pool: TaskWorkerPool,
 }
 
 #[derive(Debug, Clone)]
 struct TaskRecord {
     state: TaskState,
     payload: Term,
+    result: Option<Term>,
+    error: Option<Term>,
     parent_task: Option<String>,
+    cancel_flag: Option<Arc<AtomicBool>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +55,53 @@ enum TaskState {
     Queued,
     Running,
     Done,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug)]
+struct TaskWorkerPool {
+    tx: Option<mpsc::Sender<TaskJob>>,
+    rx: Option<mpsc::Receiver<TaskCompletion>>,
+    workers: Vec<JoinHandle<()>>,
+}
+
+impl Default for TaskWorkerPool {
+    fn default() -> Self {
+        Self {
+            tx: None,
+            rx: None,
+            workers: Vec::new(),
+        }
+    }
+}
+
+impl Drop for TaskWorkerPool {
+    fn drop(&mut self) {
+        self.tx.take();
+        for worker in self.workers.drain(..) {
+            let _ = worker.join();
+        }
+    }
+}
+
+#[derive(Debug)]
+struct TaskJob {
+    task_id: String,
+    payload: Term,
+    cancel_flag: Arc<AtomicBool>,
+}
+
+#[derive(Debug, Clone)]
+struct TaskCompletion {
+    task_id: String,
+    outcome: TaskOutcome,
+}
+
+#[derive(Debug, Clone)]
+enum TaskOutcome {
+    Done(Term),
+    Failed(Term),
     Cancelled,
 }
 
@@ -71,25 +128,27 @@ pub(crate) fn task_runtime_call(
             let parent_task = map_field_str_or_symbol(payload, ":parent-task")
                 .or_else(|| map_field_str_or_symbol(payload, ":scope"));
             let task_payload = map_field(payload, ":payload").cloned().unwrap_or(Term::Nil);
-            let running = runtime_running_count(runtime);
-            let worker_budget = policy.task.max_workers.unwrap_or(u64::MAX);
-            let state = if running < worker_budget {
-                TaskState::Running
-            } else {
-                runtime.queue.push(task_id.clone());
-                TaskState::Queued
-            };
             runtime.tasks.insert(
                 task_id.clone(),
                 TaskRecord {
-                    state: state.clone(),
+                    state: TaskState::Queued,
                     payload: task_payload,
+                    result: None,
+                    error: None,
                     parent_task,
+                    cancel_flag: None,
                 },
             );
+            runtime.queue.push(task_id.clone());
+            promote_queued_task(runtime, policy, op);
+            let state = runtime
+                .tasks
+                .get(&task_id)
+                .map(|t| task_state_term(&t.state))
+                .unwrap_or(Term::symbol(":failed"));
             Some(Value::Data(task_map([
                 (":task-id", Term::Str(task_id)),
-                (":state", task_state_term(&state)),
+                (":state", state),
             ])))
         }
         "core/task::status" => {
@@ -149,13 +208,23 @@ pub(crate) fn task_runtime_call(
             if state_before == TaskState::Queued {
                 runtime.queue.retain(|q| q != &task_id);
             }
+            if state_before == TaskState::Running
+                && let Some(flag) = runtime
+                    .tasks
+                    .get(&task_id)
+                    .and_then(|rec| rec.cancel_flag.clone())
+            {
+                flag.store(true, Ordering::Release);
+            }
             if (state_before == TaskState::Running || state_before == TaskState::Queued)
                 && let Some(rec) = runtime.tasks.get_mut(&task_id)
             {
                 rec.state = TaskState::Cancelled;
+                rec.result = None;
+                rec.error = None;
             }
-            if state_before == TaskState::Running {
-                promote_queued_task(runtime, policy);
+            if state_before == TaskState::Queued {
+                promote_queued_task(runtime, policy, op);
             }
             let rec = runtime.tasks.get(&task_id);
             let Some(rec) = rec else {
@@ -203,16 +272,38 @@ pub(crate) fn task_runtime_call(
                     ));
                 }
             };
-            if state_before == TaskState::Queued {
-                runtime.queue.retain(|q| q != &task_id);
-            }
-            if (state_before == TaskState::Running || state_before == TaskState::Queued)
-                && let Some(rec) = runtime.tasks.get_mut(&task_id)
-            {
-                rec.state = TaskState::Done;
-            }
-            if state_before == TaskState::Running {
-                promote_queued_task(runtime, policy);
+            match state_before {
+                TaskState::Queued => {
+                    runtime.queue.retain(|q| q != &task_id);
+                    let payload = runtime
+                        .tasks
+                        .get(&task_id)
+                        .map(|r| r.payload.clone())
+                        .unwrap_or(Term::Nil);
+                    let cancel_flag = AtomicBool::new(false);
+                    let completion = TaskCompletion {
+                        task_id: task_id.clone(),
+                        outcome: execute_task_payload(payload, &cancel_flag),
+                    };
+                    apply_completion(runtime, completion);
+                    promote_queued_task(runtime, policy, op);
+                }
+                TaskState::Running => {
+                    let completion = match runtime.wait_for_completion(&task_id) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            return Some(mk_error(
+                                error_tok,
+                                "core/task/internal-state",
+                                e,
+                                Some(op),
+                            ));
+                        }
+                    };
+                    apply_completion(runtime, completion);
+                    promote_queued_task(runtime, policy, op);
+                }
+                TaskState::Done | TaskState::Failed | TaskState::Cancelled => {}
             }
             let rec = runtime.tasks.get(&task_id);
             let Some(rec) = rec else {
@@ -224,7 +315,8 @@ pub(crate) fn task_runtime_call(
                 ));
             };
             let (result, error) = match rec.state {
-                TaskState::Done => (rec.payload.clone(), Term::Nil),
+                TaskState::Done => (rec.result.clone().unwrap_or(Term::Nil), Term::Nil),
+                TaskState::Failed => (Term::Nil, rec.error.clone().unwrap_or(Term::Nil)),
                 TaskState::Cancelled | TaskState::Running | TaskState::Queued => {
                     (Term::Nil, Term::Nil)
                 }
@@ -242,6 +334,163 @@ pub(crate) fn task_runtime_call(
         }
         _ => None,
     }
+}
+
+impl TaskRuntime {
+    fn wait_for_completion(&mut self, task_id: &str) -> Result<TaskCompletion, String> {
+        if let Some(c) = self.completed.remove(task_id) {
+            return Ok(c);
+        }
+        self.pool.wait_for_completion(task_id, &mut self.completed)
+    }
+}
+
+impl TaskWorkerPool {
+    fn ensure_started(&mut self, worker_count: usize) {
+        if self.tx.is_some() || worker_count == 0 {
+            return;
+        }
+        let (tx, rx) = mpsc::channel::<TaskJob>();
+        let (done_tx, done_rx) = mpsc::channel::<TaskCompletion>();
+        let (ready_tx, ready_rx) = mpsc::channel::<()>();
+        let shared_rx = Arc::new(Mutex::new(rx));
+        let mut started_workers = 0usize;
+        for idx in 0..worker_count {
+            let shared_rx = Arc::clone(&shared_rx);
+            let done_tx = done_tx.clone();
+            let ready_tx = ready_tx.clone();
+            let worker_result = thread::Builder::new()
+                .name(format!("genesis-task-{idx}"))
+                .spawn(move || worker_loop(shared_rx, done_tx, ready_tx));
+            match worker_result {
+                Ok(worker) => {
+                    self.workers.push(worker);
+                    started_workers = started_workers.saturating_add(1);
+                }
+                Err(_) => break,
+            }
+        }
+        if started_workers == 0 {
+            return;
+        }
+        for _ in 0..started_workers {
+            let _ = ready_rx.recv_timeout(Duration::from_secs(1));
+        }
+        self.tx = Some(tx);
+        self.rx = Some(done_rx);
+    }
+
+    fn dispatch(&self, job: TaskJob) -> Result<(), String> {
+        match &self.tx {
+            Some(tx) => tx
+                .send(job)
+                .map_err(|e| format!("task dispatch failed: {e}")),
+            None => Err("task worker pool not initialized".to_string()),
+        }
+    }
+
+    fn wait_for_completion(
+        &mut self,
+        task_id: &str,
+        completed: &mut BTreeMap<String, TaskCompletion>,
+    ) -> Result<TaskCompletion, String> {
+        if let Some(c) = completed.remove(task_id) {
+            return Ok(c);
+        }
+        let rx = self
+            .rx
+            .as_ref()
+            .ok_or_else(|| "task worker completion channel not initialized".to_string())?;
+        loop {
+            let completion = rx
+                .recv()
+                .map_err(|e| format!("task completion channel closed: {e}"))?;
+            if completion.task_id == task_id {
+                return Ok(completion);
+            }
+            completed.insert(completion.task_id.clone(), completion);
+        }
+    }
+}
+
+fn worker_loop(
+    shared_rx: Arc<Mutex<mpsc::Receiver<TaskJob>>>,
+    done_tx: mpsc::Sender<TaskCompletion>,
+    ready_tx: mpsc::Sender<()>,
+) {
+    let _ = ready_tx.send(());
+    loop {
+        let recv = match shared_rx.lock() {
+            Ok(rx) => rx.recv(),
+            Err(poisoned) => poisoned.into_inner().recv(),
+        };
+        let job = match recv {
+            Ok(job) => job,
+            Err(_) => break,
+        };
+        let outcome = execute_task_payload(job.payload, &job.cancel_flag);
+        let _ = done_tx.send(TaskCompletion {
+            task_id: job.task_id,
+            outcome,
+        });
+    }
+}
+
+fn execute_task_payload(payload: Term, cancel_flag: &AtomicBool) -> TaskOutcome {
+    if cancel_flag.load(Ordering::Acquire) {
+        return TaskOutcome::Cancelled;
+    }
+    if let Some(ms) = map_field_int_u64(&payload, ":task/sleep-ms")
+        .or_else(|| map_field_int_u64(&payload, ":sleep-ms"))
+    {
+        let mut remaining = ms;
+        while remaining > 0 {
+            if cancel_flag.load(Ordering::Acquire) {
+                return TaskOutcome::Cancelled;
+            }
+            let chunk = remaining.min(10);
+            thread::sleep(Duration::from_millis(chunk));
+            remaining = remaining.saturating_sub(chunk);
+        }
+    }
+    if cancel_flag.load(Ordering::Acquire) {
+        return TaskOutcome::Cancelled;
+    }
+    if let Some(err) = map_field(&payload, ":task/error") {
+        return TaskOutcome::Failed(err.clone());
+    }
+    if let Some(result) = map_field(&payload, ":task/result") {
+        return TaskOutcome::Done(result.clone());
+    }
+    TaskOutcome::Done(payload)
+}
+
+fn apply_completion(runtime: &mut TaskRuntime, completion: TaskCompletion) {
+    let Some(rec) = runtime.tasks.get_mut(&completion.task_id) else {
+        return;
+    };
+    if rec.state == TaskState::Cancelled {
+        rec.cancel_flag = None;
+        return;
+    }
+    match completion.outcome {
+        TaskOutcome::Done(result) => {
+            rec.state = TaskState::Done;
+            rec.result = Some(result);
+            rec.error = None;
+        }
+        TaskOutcome::Failed(error) => {
+            rec.state = TaskState::Failed;
+            rec.result = None;
+            rec.error = Some(error);
+        }
+        TaskOutcome::Cancelled => {
+            rec.state = TaskState::Cancelled;
+            rec.result = None;
+            rec.error = None;
+        }
+    }
+    rec.cancel_flag = None;
 }
 
 pub(crate) fn task_schedule_event_for(
@@ -379,6 +628,7 @@ fn task_state_term(state: &TaskState) -> Term {
         TaskState::Queued => Term::symbol(":queued"),
         TaskState::Running => Term::symbol(":running"),
         TaskState::Done => Term::symbol(":done"),
+        TaskState::Failed => Term::symbol(":failed"),
         TaskState::Cancelled => Term::symbol(":cancelled"),
     }
 }
@@ -395,20 +645,52 @@ fn runtime_queue_count(runtime: &TaskRuntime) -> u64 {
     runtime.queue.len() as u64
 }
 
-fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy) {
-    let worker_budget = policy.task.max_workers.unwrap_or(u64::MAX);
+fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str) {
+    let worker_budget = task_worker_budget(policy);
+    if worker_budget == 0 {
+        return;
+    }
+    runtime.pool.ensure_started(worker_budget as usize);
     while runtime_running_count(runtime) < worker_budget {
-        let Some(next_idx) = runtime.queue.iter().position(
-            |tid| matches!(runtime.tasks.get(tid), Some(rec) if rec.state == TaskState::Queued),
-        ) else {
+        let Some(task_id) = runtime.queue.first().cloned() else {
             break;
         };
-        let tid = runtime.queue.remove(next_idx);
-        if let Some(rec) = runtime.tasks.get_mut(&tid)
-            && rec.state == TaskState::Queued
-        {
-            rec.state = TaskState::Running;
+        runtime.queue.remove(0);
+        let Some(payload) = runtime.tasks.get(&task_id).map(|rec| rec.payload.clone()) else {
+            continue;
+        };
+        let cancel_flag = Arc::new(AtomicBool::new(false));
+        let job = TaskJob {
+            task_id: task_id.clone(),
+            payload,
+            cancel_flag: Arc::clone(&cancel_flag),
+        };
+        let dispatch_result = runtime.pool.dispatch(job);
+        if let Some(rec) = runtime.tasks.get_mut(&task_id) {
+            match dispatch_result {
+                Ok(()) => {
+                    rec.state = TaskState::Running;
+                    rec.result = None;
+                    rec.error = None;
+                    rec.cancel_flag = Some(cancel_flag);
+                }
+                Err(e) => {
+                    rec.state = TaskState::Failed;
+                    rec.result = None;
+                    rec.error = Some(Term::Str(format!("{op}: {e}")));
+                    rec.cancel_flag = None;
+                }
+            }
         }
+    }
+}
+
+fn task_worker_budget(policy: &CapsPolicy) -> u64 {
+    match policy.task.max_workers {
+        Some(v) => v,
+        None => thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1) as u64,
     }
 }
 
@@ -488,6 +770,13 @@ fn map_field_str_or_symbol(t: &Term, key: &str) -> Option<String> {
     match map_field(t, key) {
         Some(Term::Str(s)) => Some(s.clone()),
         Some(Term::Symbol(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn map_field_int_u64(t: &Term, key: &str) -> Option<u64> {
+    match map_field(t, key) {
+        Some(Term::Int(i)) if i.sign() != num_bigint::Sign::Minus => i.to_u64(),
         _ => None,
     }
 }

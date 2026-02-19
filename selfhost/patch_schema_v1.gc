@@ -101,6 +101,21 @@
                     (if (core/error::is? newv) newv true))))))
           (selfhost/patch_schema::err "replace-node :module-path must be string"))))))
 
+(def selfhost/patch_schema::validate-op-replace-node-id
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "replace-node-id missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((node-id (selfhost/patch_schema::require-key opm (quote :node-id) "replace-node-id missing :node-id")))
+            (if (core/error::is? node-id)
+              node-id
+              (if (selfhost/patch_schema::is-str? node-id)
+                (let ((newv (selfhost/patch_schema::require-key opm (quote :new) "replace-node-id missing :new")))
+                  (if (core/error::is? newv) newv true))
+                (selfhost/patch_schema::err "replace-node-id :node-id must be string"))))
+          (selfhost/patch_schema::err "replace-node-id :module-path must be string"))))))
+
 (def selfhost/patch_schema::validate-op-add-module
   (fn (opm)
     (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "add-module missing :module-path")))
@@ -145,13 +160,15 @@
           (if (selfhost/patch_schema::is-sym? op_sym)
             (if ((core/sym::eq? op_sym) (quote :replace-node))
               (selfhost/patch_schema::validate-op-replace-node op)
-              (if ((core/sym::eq? op_sym) (quote :add-module))
-                (selfhost/patch_schema::validate-op-add-module op)
-                (if ((core/sym::eq? op_sym) (quote :remove-module))
-                  (selfhost/patch_schema::validate-op-remove-module op)
-                  (if ((core/sym::eq? op_sym) (quote :update-manifest))
-                    (selfhost/patch_schema::validate-op-update-manifest op)
-                    (selfhost/patch_schema::err "unknown :op")))))
+              (if ((core/sym::eq? op_sym) (quote :replace-node-id))
+                (selfhost/patch_schema::validate-op-replace-node-id op)
+                (if ((core/sym::eq? op_sym) (quote :add-module))
+                  (selfhost/patch_schema::validate-op-add-module op)
+                  (if ((core/sym::eq? op_sym) (quote :remove-module))
+                    (selfhost/patch_schema::validate-op-remove-module op)
+                    (if ((core/sym::eq? op_sym) (quote :update-manifest))
+                      (selfhost/patch_schema::validate-op-update-manifest op)
+                      (selfhost/patch_schema::err "unknown :op"))))))
             (selfhost/patch_schema::err ":op must be a symbol"))))
       (selfhost/patch_schema::err "op must be a map"))))
 

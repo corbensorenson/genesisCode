@@ -20,6 +20,7 @@ Each op is a map and must include:
 
 - `:op` (symbol) one of:
   - `:replace-node`
+  - `:replace-node-id`
   - `:add-module`
   - `:remove-module`
   - `:update-manifest`
@@ -31,6 +32,19 @@ Required keys:
 - `:module-path` (string) path relative to the package directory (the directory containing `package.toml`)
 - `:path` (vector) path steps (see below)
 - `:new` (term) the replacement CoreForm term
+
+### `:replace-node-id`
+
+Required keys:
+
+- `:module-path` (string) path relative to the package directory (the directory containing `package.toml`)
+- `:node-id` (string) stable semantic node identifier for the target node
+- `:new` (term) the replacement CoreForm term
+
+Semantics:
+
+- `:replace-node-id` is resolved against the module's canonicalized CoreForm AST.
+- The runtime computes the node path deterministically from `:node-id`, applies the same structural replacement semantics as `:replace-node`, and re-canonicalizes before writing.
 
 ### `:add-module`
 
@@ -75,3 +89,16 @@ Supported keys:
 
 All patch application happens against the module’s canonicalized CoreForm, and the result is re-canonicalized before writing.
 
+## Stable Node IDs
+
+Node IDs are deterministic and path-derived:
+
+- Traverse canonical module forms in deterministic order:
+  - top-level forms by index
+  - pairs via `:pair-car` then `:pair-cdr`
+  - vectors by index
+  - maps by canonical key order
+- For each node path, compute:
+  - `node-id = blake3("GCv0.2\\0semantic-node-id\\0" || module-path || "\\0" || print(path-term))`
+
+This ensures agentic patch targeting is stable for unchanged structure and independent of source formatting.

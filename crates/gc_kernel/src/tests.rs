@@ -482,3 +482,71 @@ fn vec_set_replaces_elements() {
     let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
     assert_eq!(v.as_data(), Some(&Term::Int(9.into())));
 }
+
+#[test]
+fn fixed_decimal_primitives_are_deterministic() {
+    let forms = parse_module(
+        r#"
+      {
+        :sum (prim dec/to-str (prim dec/add (prim dec/parse "1.20") (prim dec/parse "2.345")))
+        :mul (prim dec/to-str (prim dec/mul (prim dec/from-int 3) (prim dec/parse "2.50")))
+        :lt (prim dec/lt? (prim dec/parse "-1.00") (prim dec/parse "0.00"))
+        :eq (prim dec/eq? (prim dec/parse "1.2300") (prim dec/parse "1.23"))
+      }
+    "#,
+    )
+    .unwrap();
+    let mut ctx = EvalCtx::new();
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let m = match v {
+        Value::Map(m) => m,
+        Value::Data(Term::Map(m)) => m
+            .into_iter()
+            .map(|(k, v)| (k, Value::Data(v)))
+            .collect::<std::collections::BTreeMap<_, _>>(),
+        _ => panic!("expected map, got {}", v.debug_repr()),
+    };
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":sum"))),
+        Some(Value::Data(Term::Str(s))) if s == "3.545"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":mul"))),
+        Some(Value::Data(Term::Str(s))) if s == "7.5"
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":lt"))),
+        Some(Value::Data(Term::Bool(true)))
+    ));
+    assert!(matches!(
+        m.get(&gc_coreform::TermOrdKey(Term::symbol(":eq"))),
+        Some(Value::Data(Term::Bool(true)))
+    ));
+}
+
+#[test]
+fn fixed_decimal_type_mismatch_is_sealed_error() {
+    let forms = parse_module(r#"(prim dec/add 1 2)"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    match v {
+        Value::Sealed { token, .. } => assert_eq!(token, p.error),
+        _ => panic!("expected sealed error, got {}", v.debug_repr()),
+    }
+}
+
+#[test]
+fn fixed_decimal_parse_failure_is_sealed_error() {
+    let forms = parse_module(r#"(prim dec/parse "1.")"#).unwrap();
+    let mut ctx = EvalCtx::new();
+    let p = ctx.protocol.expect("EvalCtx reserves protocol tokens");
+    let mut env = Env::empty();
+    let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    match v {
+        Value::Sealed { token, .. } => assert_eq!(token, p.error),
+        _ => panic!("expected sealed error, got {}", v.debug_repr()),
+    }
+}

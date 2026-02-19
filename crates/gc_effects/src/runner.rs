@@ -13,16 +13,19 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
+use crate::runner_editor_host::{EditorHostRuntime, editor_host_call};
 use crate::runner_gc_payload::{
     payload_gc_depth, payload_gc_include_lock, payload_gc_include_refs, payload_gc_lock,
     payload_gc_pins, payload_gc_quarantine, payload_gc_quarantine_dir, payload_gc_target,
     payload_gc_ttl_days,
 };
+use crate::runner_gfx_host::{GfxHostRuntime, gfx_host_call};
 use crate::runner_gpk_payload::{
     GpkIncludeDeps, GpkIncludeEvidence, GpkMode, payload_data, payload_gpk_depth, payload_gpk_in,
     payload_gpk_include_deps, payload_gpk_include_evidence, payload_gpk_mode, payload_gpk_out,
     payload_gpk_refs, payload_gpk_root, payload_gpk_set_refs,
 };
+use crate::runner_gpu_host::{GpuHostRuntime, gpu_host_call};
 use crate::runner_io_ops::{
     FsReadError, atomic_write_text, effective_base_dir, io_error_payload, path_to_slash,
     payload_path, payload_pkg_path, read_file_with_optional_limit, sandbox_path_allow_missing,
@@ -125,6 +128,9 @@ pub fn run(
     let mut cur = program;
     let mut task_budget_state = TaskBudgetState::default();
     let mut task_runtime = TaskRuntime::default();
+    let mut gfx_runtime = GfxHostRuntime::default();
+    let mut gpu_runtime = GpuHostRuntime::default();
+    let mut editor_runtime = EditorHostRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
 
     loop {
@@ -171,6 +177,22 @@ pub fn run(
                         proto.error,
                     ) {
                         task_resp
+                    } else if let Some(gfx_resp) =
+                        gfx_host_call(&mut gfx_runtime, &req.op, &req.payload, proto.error)
+                    {
+                        gfx_resp
+                    } else if let Some(gpu_resp) =
+                        gpu_host_call(&mut gpu_runtime, &req.op, &req.payload, proto.error)
+                    {
+                        gpu_resp
+                    } else if let Some(editor_resp) = editor_host_call(
+                        &mut editor_runtime,
+                        &req.op,
+                        &req.payload,
+                        pol,
+                        proto.error,
+                    ) {
+                        editor_resp
                     } else {
                         call_capability(
                             &req.op,

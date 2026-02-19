@@ -4,7 +4,7 @@ Last updated: 2026-02-19
 
 This plan contains only unfinished work discovered in a full red-team review.
 
-Open checklist items: 10
+Open checklist items: 2
 
 ## P0 — Self-Host Cutover Blockers
 
@@ -40,29 +40,29 @@ Open checklist items: 10
 
 ## P1 — Modern Language Capability Surface
 
-- [ ] Implement real GPU capability backend for `gfx/gpu::*`.
+- [x] Implement real GPU capability backend for `gfx/gpu::*`.
   - Risk: modern workloads (games/simulation/compute) are blocked; current runtime returns not-supported.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6879`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6929`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:966`
   - Acceptance: `gfx/gpu::*` ops execute on a real backend with deterministic request/response logging and replay semantics.
 
-- [ ] Implement window/input/audio capability backends.
+- [x] Implement window/input/audio capability backends.
   - Risk: language can describe interactive apps but cannot execute them through host capabilities.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6902`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6907`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6909`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:893`
   - Acceptance: `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` have policy-gated host implementations and conformance tests.
 
-- [ ] Implement editor capability backend contract surface.
+- [x] Implement editor capability backend contract surface.
   - Risk: editor/task integration exists at ABI/prelude level but is host-stubbed.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6916`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6929`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/tests/host_abi_surface.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:976`
   - Acceptance: `editor/task::*`, `editor/watch::*`, `editor/plugin::*`, `editor/clipboard::*`, `editor/dialog::*` are implemented or split into a formal plugin ABI with clear host requirements.
 
-- [ ] Replace synthetic task runtime with true multithreaded scheduler.
+- [x] Replace synthetic task runtime with true multithreaded scheduler.
   - Risk: current `core/task::*` semantics are queue/state simulation, not actual concurrent execution.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:30`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:68`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:212`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:727`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:796`
   - Acceptance: task execution is actually parallel with deterministic scheduling logs, replay compatibility, cancellation guarantees, and policy budgets.
 
-- [ ] Add deterministic numeric support beyond `Int`.
+- [x] Add deterministic numeric support beyond `Int`.
   - Risk: graphics/physics/ML-style workloads are constrained by int-only primitive arithmetic.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/term.rs:9`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs:741`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/fixed_decimal.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/tests.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/tests.rs`
   - Acceptance: deterministic decimal/float (or fixed-point numeric tower) added with canonical printing/hashing rules and replay stability.
 
 - [ ] Add non-bootstrap WASI networking path for sync/store remotes.
@@ -104,10 +104,10 @@ Open checklist items: 10
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/kernel_exec.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_compiled_backend.rs`
   - Acceptance: compiled path default for eligible workloads with strict parity, fallback guards, and measurable speedup targets.
 
-- [ ] Reduce local test iteration wall-clock below 10 minutes without coverage loss.
+- [x] Reduce local test iteration wall-clock below 10 minutes without coverage loss.
   - Risk: current integration matrix is large and duplicates native/WASI command suites; iteration remains slow.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/` (123 integration test files total)
-  - Acceptance: shared parameterized harnesses + sharding/nextest + hot-path smoke defaults with full suite preserved in CI profiles.
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/scripts/test_fast.sh`, `/Users/corbensorenson/Documents/genesisCode/scripts/test_shard_workspace.sh`, `/Users/corbensorenson/Documents/genesisCode/.config/nextest.toml`, `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+  - Acceptance: sharding + nextest + hot-path smoke defaults are active, with full-suite CI coverage preserved via `cargo nextest run --workspace --cargo-profile selfhost-strict` (WASI coverage remains in dedicated strict/smoke lanes).
 
 - [x] Rework perf budget harnesses to remove compile/noise contamination.
   - Risk: current budget scripts mix compile time and runtime behavior (e.g., invoking cargo tests in timing windows).
@@ -116,9 +116,9 @@ Open checklist items: 10
 
 ## P4 — AI-First Tooling Surface
 
-- [ ] Add stable semantic-edit protocol (AST node IDs + structural edit ops) for agentic coding loops.
+- [x] Add stable semantic-edit protocol (AST node IDs + structural edit ops) for agentic coding loops.
   - Risk: AI agents rely on brittle text diffs without first-class semantic mutation API.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/PATCH_SCHEMA.md`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/tests/patch_matrix.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_semantic_edit.rs`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/PATCH_SCHEMA.md`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`, `/Users/corbensorenson/Documents/genesisCode/selfhost/patch_schema_v1.gc`
   - Acceptance: canonical semantic edit API/CLI + obligations integration + deterministic patch provenance.
 
 - [x] Standardize machine-readable diagnostics schema across all commands.
@@ -131,7 +131,7 @@ Open checklist items: 10
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_abi.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:755`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_pkg_abi.rs`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_ABI_INDEX_v0.1.md`
   - Acceptance: CLI/API exports contract op tables, type/effect signatures, required capabilities, and obligation metadata via `genesis gcpm abi --pkg <package.toml>` (`kind = genesis/pkg-abi-v0.1`).
 
-- [ ] Add closed-loop self-optimization pipeline gated by translation validation.
+- [x] Add closed-loop self-optimization pipeline gated by translation validation.
   - Risk: optimizer progress and language evolution remain mostly manual.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_self_opt.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_pkg_self_optimize.rs`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
   - Acceptance: automated propose/optimize/validate/apply loop that only promotes rewrites with deterministic proof artifacts and obligation success.

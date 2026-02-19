@@ -29,6 +29,7 @@ pub(super) fn cmd_pkg(
                 | PkgCmd::Migrate { .. }
                 | PkgCmd::Run { .. }
                 | PkgCmd::Test { .. }
+                | PkgCmd::SelfOptimize { .. }
                 | PkgCmd::Abi { .. }
                 | PkgCmd::Env { .. } => {
                     unreachable!("local workspace ops are handled before frontend dispatch")
@@ -188,6 +189,7 @@ pub(super) fn cmd_pkg(
                 | PkgCmd::Migrate { .. }
                 | PkgCmd::Run { .. }
                 | PkgCmd::Test { .. }
+                | PkgCmd::SelfOptimize { .. }
                 | PkgCmd::Abi { .. }
                 | PkgCmd::Env { .. } => {
                     unreachable!("local workspace ops are handled before frontend dispatch")
@@ -1051,6 +1053,7 @@ pub(super) fn cmd_pkg(
             | PkgCmd::Migrate { .. }
             | PkgCmd::Run { .. }
             | PkgCmd::Test { .. }
+            | PkgCmd::SelfOptimize { .. }
             | PkgCmd::Env { .. } => extract_pkg_lock_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
@@ -1196,6 +1199,85 @@ fn cmd_pkg_local_workspace_ops(
         PkgCmd::Test { pkg, caps: pcaps } => {
             let out = cmd_test(cli, pkg, pcaps.as_deref().or(Some(caps)))?;
             return Ok(Some(out));
+        }
+        PkgCmd::SelfOptimize {
+            pkg,
+            caps: pcaps,
+            dry_run,
+        } => {
+            let local = pkg_self_opt::handle_self_optimize(
+                pkg,
+                pcaps.as_deref(),
+                frontend,
+                resolved_step_limit(cli),
+                resolved_mem_limits(cli),
+                *dry_run,
+            )
+            .map_err(|e| cli_err(EX_OBLIGATIONS, "pkg/self-optimize", e))?;
+
+            let log_path = log
+                .map(PathBuf::from)
+                .unwrap_or_else(|| default_log_path(local.log_op));
+            let log_obj = pkg_workspace_ops::empty_log(local.program_hash);
+            std::fs::write(&log_path, log_obj.to_string_canonical() + "\n")
+                .with_context(|| format!("write {}", log_path.display()))
+                .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+            let value_v = Value::Data(local.value.clone());
+            let ok = extract_pkg_ok_bool(&value_v).unwrap_or(true);
+            let exit_code = if ok { EX_OK } else { EX_OBLIGATIONS };
+            let value = gc_coreform::print_term(&local.value);
+            let mut data = serde_json::json!({
+                "coreform_frontend": frontend_info,
+                "caps": caps.display().to_string(),
+                "log": log_path.display().to_string(),
+                "value": value,
+                "value_format": "coreform",
+            });
+            if let Some(report) = pkg_reports::build_pkg_ai_report(cmd, &value_v, caps)
+                && let Some(obj) = data.as_object_mut()
+            {
+                obj.insert("report".to_string(), report);
+            }
+            if let Some(obj) = data.as_object_mut() {
+                obj.insert(
+                    "telemetry".to_string(),
+                    pkg_telemetry::build_pkg_telemetry(
+                        cmd,
+                        ok,
+                        exit_code,
+                        &log_obj,
+                        &value_v,
+                        obj.get("report"),
+                        None,
+                    ),
+                );
+            }
+
+            let stdout = if cli.json {
+                String::new()
+            } else {
+                format!("{value}\n")
+            };
+            let env = JsonEnvelope {
+                ok,
+                kind: local.kind,
+                data: Some(data),
+                error: if ok {
+                    None
+                } else {
+                    Some(JsonError {
+                        code: "pkg/self-optimize",
+                        message: "self-optimization promotion failed".to_string(),
+                        context: None,
+                    })
+                },
+            };
+            return Ok(Some(CmdOut {
+                exit_code,
+                stdout,
+                json: serde_json::to_value(env).expect("json"),
+            }));
         }
         _ => {}
     }

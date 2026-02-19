@@ -31,6 +31,7 @@ mod pkg_abi;
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
+mod pkg_self_opt;
 mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
@@ -347,6 +348,13 @@ enum Cmd {
         caps: Option<PathBuf>,
     },
 
+    /// Semantic edit tooling for agentic patch planning.
+    #[command(visible_alias = "semedit")]
+    SemanticEdit {
+        #[command(subcommand)]
+        cmd: SemanticEditCmd,
+    },
+
     /// Verify package hashes and evidence store integrity.
     Verify {
         /// Path to package.toml
@@ -469,6 +477,20 @@ enum Cmd {
 enum FmtEngine {
     Rust,
     Selfhost,
+}
+
+#[derive(Subcommand)]
+enum SemanticEditCmd {
+    /// Index canonical AST nodes with stable semantic node IDs.
+    Index {
+        /// Path to package.toml.
+        #[arg(long)]
+        pkg: PathBuf,
+
+        /// Module path relative to package directory.
+        #[arg(long)]
+        module_path: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -704,6 +726,21 @@ enum PkgCmd {
         /// Optional capability policy override for effectful tests.
         #[arg(long)]
         caps: Option<PathBuf>,
+    },
+
+    /// Closed-loop module self-optimization gated by translation validation + obligations.
+    SelfOptimize {
+        /// Path to package.toml.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Optional capability policy override for effectful validation tests.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+
+        /// Evaluate candidate rewrite, emit proof artifacts, but do not promote file changes.
+        #[arg(long)]
+        dry_run: bool,
     },
 
     /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
@@ -1327,6 +1364,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             *stage2_gate,
         ),
         Cmd::ApplyPatch { patch, pkg, caps } => cmd_apply_patch(cli, patch, pkg, caps.as_deref()),
+        Cmd::SemanticEdit { cmd } => cmd_semantic_edit(cli, cmd),
         Cmd::Verify {
             pkg,
             acceptance,
@@ -1713,6 +1751,7 @@ fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<(), CliError>
         Cmd::Typecheck { .. } => Ok(()),
         Cmd::Test { .. } => Ok(()),
         Cmd::ApplyPatch { .. } => Ok(()),
+        Cmd::SemanticEdit { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
@@ -3301,6 +3340,12 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
         default_selfhost: true,
     },
     SelfhostCutoverRow {
+        cmd: "semantic-edit",
+        fast_path_required: true,
+        selfhost_routed: true,
+        default_selfhost: true,
+    },
+    SelfhostCutoverRow {
         cmd: "verify",
         fast_path_required: false,
         selfhost_routed: true,
@@ -4485,6 +4530,80 @@ fn cmd_optimize(
             "egg_enodes": pipeline.stage1.optimize_report.stats.enodes,
             "egg_rewrites_applied": pipeline.stage1.optimize_report.stats.rewrites_applied,
             "optimized_coreform": out_s,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout,
+        json: serde_json::to_value(env).expect("json"),
+    })
+}
+
+fn cmd_semantic_edit(cli: &Cli, cmd: &SemanticEditCmd) -> Result<CmdOut, CliError> {
+    match cmd {
+        SemanticEditCmd::Index { pkg, module_path } => {
+            cmd_semantic_edit_index(cli, pkg, module_path)
+        }
+    }
+}
+
+fn cmd_semantic_edit_index(cli: &Cli, pkg: &Path, module_path: &str) -> Result<CmdOut, CliError> {
+    let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
+    let (_manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| cli_err(EX_PARSE, "package/invalid", format!("{e}")))?;
+    let module_abs = pkg_dir.join(module_path);
+    let src = std::fs::read_to_string(&module_abs)
+        .with_context(|| format!("read {}", module_abs.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let nodes = gc_patches::semantic_node_index_for_module_with_frontend(
+        module_path,
+        &src,
+        &frontend,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+    )
+    .map_err(|e| match e {
+        gc_patches::PatchError::Parse(_) | gc_patches::PatchError::Validate(_) => {
+            cli_err(EX_PARSE, "semantic-edit/invalid", format!("{e}"))
+        }
+        gc_patches::PatchError::Io(_) => cli_err(EX_IO, "io/error", format!("{e}")),
+        gc_patches::PatchError::Obligations(inner) => obligation_err(inner),
+    })?;
+    let nodes_json: Vec<serde_json::Value> = nodes
+        .iter()
+        .map(|node| {
+            serde_json::json!({
+                "module_path": node.module_path,
+                "node_id": node.node_id,
+                "path": print_term(&node.path),
+                "path_repr": node.path_repr,
+                "term_tag": node.term_tag,
+                "term_hash": node.term_hash,
+            })
+        })
+        .collect();
+
+    let mut stdout = String::new();
+    if !cli.json {
+        for node in &nodes {
+            stdout.push_str(&format!(
+                "{} {} {} {}\n",
+                node.node_id, node.path_repr, node.term_tag, node.term_hash
+            ));
+        }
+    }
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/semantic-edit-index-v0.1",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "module_path": module_path,
+            "module_abs": module_abs.display().to_string(),
+            "coreform_frontend": frontend_info,
+            "node_count": nodes.len(),
+            "nodes": nodes_json,
         })),
         error: None,
     };

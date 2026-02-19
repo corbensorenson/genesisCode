@@ -44,6 +44,20 @@ Apply a semantic patch:
 cargo run -p gc_cli -- apply-patch path/to/change.gcpatch --pkg path/to/package.toml --caps path/to/caps.toml
 ```
 
+## Test Iteration Loops
+
+Fast local loop (auto-uses `cargo nextest` when available, falls back to `cargo test`):
+```sh
+bash scripts/test_fast.sh
+```
+
+Deterministic sharded workspace tests (for parallel local/CI execution):
+```sh
+bash scripts/test_shard_workspace.sh --total 4 --index 0 --runner nextest --exclude-crate gc_wasi_cli
+```
+
+`scripts/test_shard_workspace.sh` supports `--runner auto|cargo|nextest` and writes shard reports to `.genesis/ci-shards/`.
+
 ## Normative Spec
 
 Normative “lock-in” behavior lives in:
@@ -55,6 +69,7 @@ Additional schemas:
 - `docs/spec/PACKAGE_TOML.md`
 - `docs/spec/GCLOG_SCHEMA.md`
 - `docs/spec/TEST_SCHEMA.md`
+- `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 
 ## License
 

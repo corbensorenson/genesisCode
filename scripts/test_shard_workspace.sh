@@ -10,6 +10,7 @@ SEED="${GENESIS_TEST_SHARD_SEED:-genesis-v1}"
 OUT_DIR="${GENESIS_TEST_SHARD_OUT_DIR:-.genesis/ci-shards}"
 DRY_RUN=0
 EXCLUDE_CRATES=()
+RUNNER="auto"
 
 usage() {
   cat <<'EOF'
@@ -21,6 +22,7 @@ Options:
   --seed S         deterministic seed for ordering (default: GENESIS_TEST_SHARD_SEED or genesis-v1)
   --out DIR        output directory for shard artifacts (default: .genesis/ci-shards)
   --exclude-crate  omit a workspace crate from shard execution (repeatable)
+  --runner NAME    test runner: auto|cargo|nextest (default: auto)
   --dry-run        print selected crates/commands without running tests
 EOF
 }
@@ -47,6 +49,10 @@ while [[ $# -gt 0 ]]; do
       EXCLUDE_CRATES+=("${2:-}")
       shift 2
       ;;
+    --runner)
+      RUNNER="${2:-}"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -69,6 +75,10 @@ done
 [[ "$INDEX" =~ ^[0-9]+$ ]] || { echo "test-shard-workspace: --index must be integer" >&2; exit 2; }
 (( TOTAL >= 1 )) || { echo "test-shard-workspace: --total must be >= 1" >&2; exit 2; }
 (( INDEX < TOTAL )) || { echo "test-shard-workspace: --index must be < --total" >&2; exit 2; }
+[[ "$RUNNER" == "auto" || "$RUNNER" == "cargo" || "$RUNNER" == "nextest" ]] || {
+  echo "test-shard-workspace: --runner must be one of auto|cargo|nextest" >&2
+  exit 2
+}
 
 now_ns() {
   python3 - <<'PY'
@@ -159,14 +169,44 @@ if [[ "${#EXCLUDE_CRATES[@]}" -gt 0 ]]; then
   echo "test-shard-workspace: excluded crates=${EXCLUDE_CRATES[*]}" | tee -a "$LOG_FILE"
 fi
 
+NEXTTEST_AVAILABLE=0
+if cargo nextest --version >/dev/null 2>&1; then
+  NEXTTEST_AVAILABLE=1
+fi
+
+if [[ "$RUNNER" == "auto" ]]; then
+  if (( NEXTTEST_AVAILABLE == 1 )); then
+    RESOLVED_RUNNER="nextest"
+  else
+    RESOLVED_RUNNER="cargo"
+  fi
+else
+  RESOLVED_RUNNER="$RUNNER"
+fi
+
+if [[ "$RESOLVED_RUNNER" == "nextest" && "$NEXTTEST_AVAILABLE" -ne 1 && "$DRY_RUN" -ne 1 ]]; then
+  echo "test-shard-workspace: nextest runner requested but cargo-nextest is not installed" >&2
+  exit 2
+fi
+
+echo "test-shard-workspace: runner=${RESOLVED_RUNNER}" | tee -a "$LOG_FILE"
+
 if (( DRY_RUN == 1 )); then
   for crate in "${SELECTED[@]}"; do
-    echo "DRY-RUN cargo test -p ${crate} --profile selfhost-strict" | tee -a "$LOG_FILE"
+    if [[ "$RESOLVED_RUNNER" == "nextest" ]]; then
+      echo "DRY-RUN cargo nextest run -p ${crate} --cargo-profile selfhost-strict --profile ci" | tee -a "$LOG_FILE"
+    else
+      echo "DRY-RUN cargo test -p ${crate} --profile selfhost-strict" | tee -a "$LOG_FILE"
+    fi
     printf "%s\t%s\t%s\t%s\n" "$crate" "0" "0" "dry-run" >>"$RESULTS_TSV"
   done
 else
   for crate in "${SELECTED[@]}"; do
-    cmd=(cargo test -p "$crate" --profile selfhost-strict)
+    if [[ "$RESOLVED_RUNNER" == "nextest" ]]; then
+      cmd=(cargo nextest run -p "$crate" --cargo-profile selfhost-strict --profile ci)
+    else
+      cmd=(cargo test -p "$crate" --profile selfhost-strict)
+    fi
     start_ns="$(now_ns)"
     status=0
     {
@@ -183,9 +223,9 @@ else
   done
 fi
 
-python3 - "$RESULTS_TSV" "$REPORT_JSON" "$INDEX" "$TOTAL" "$SEED" "$DRY_RUN" <<'PY'
+python3 - "$RESULTS_TSV" "$REPORT_JSON" "$INDEX" "$TOTAL" "$SEED" "$DRY_RUN" "$RESOLVED_RUNNER" <<'PY'
 import json, sys
-tsv_path, out_path, index, total, seed, dry_run = sys.argv[1:]
+tsv_path, out_path, index, total, seed, dry_run, runner = sys.argv[1:]
 rows = []
 failed = []
 total_ms = 0
@@ -213,6 +253,7 @@ report = {
     "shard_total": int(total),
     "seed": seed,
     "dry_run": dry_run == "1",
+    "runner": runner,
     "commands": rows,
     "summary": {
         "count": len(rows),

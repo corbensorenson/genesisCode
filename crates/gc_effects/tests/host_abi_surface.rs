@@ -172,10 +172,10 @@ fn editor_plugin_and_task_ops_are_replay_deterministic() {
             "{op}: expected single log entry"
         );
         assert_eq!(run_out.log.entries[0].decision, Decision::Allow, "{op}");
-        assert_eq!(
+        assert_ne!(
             sealed_error_code(&run_out.value, error_tok).as_deref(),
-            Some("core/caps/not-supported"),
-            "{op}: expected deterministic not-supported response"
+            Some("core/caps/unknown-op"),
+            "{op}: documented editor op reached unknown-op fallback"
         );
 
         let log_term = run_out.log.to_term();

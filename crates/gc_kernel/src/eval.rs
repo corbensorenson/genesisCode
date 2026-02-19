@@ -6,7 +6,7 @@ use bytes::{Bytes, BytesMut};
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{FixedDecimal, Term, TermOrdKey};
 use num_traits::ToPrimitive;
 
 /// Toolchain default evaluation step limit.
@@ -743,6 +743,17 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
         "int/mul" => prim_int_bin(ctx, &args, |a, b| a * b),
         "int/eq?" => prim_int_cmp(ctx, &args, |a, b| a == b),
         "int/lt?" => prim_int_cmp(ctx, &args, |a, b| a < b),
+        "dec/parse" => prim_dec_parse(ctx, &args),
+        "dec/to-str" => prim_dec_to_str(ctx, &args),
+        "dec/from-int" => prim_dec_from_int(ctx, &args),
+        "dec/add" => prim_dec_bin(ctx, &args, |a, b| Ok(a.add(&b))),
+        "dec/sub" => prim_dec_bin(ctx, &args, |a, b| Ok(a.sub(&b))),
+        "dec/mul" => prim_dec_bin(ctx, &args, |a, b| {
+            a.mul(&b)
+                .ok_or_else(|| "dec/mul scale overflow".to_string())
+        }),
+        "dec/eq?" => prim_dec_cmp(ctx, &args, |a, b| a.eq(&b)),
+        "dec/lt?" => prim_dec_cmp(ctx, &args, |a, b| a.lt(&b)),
         "core/eq?" => {
             if args.len() != 2 {
                 return type_err(ctx, "core/eq? expects 2 args");
@@ -1464,6 +1475,101 @@ where
         return type_err(ctx, "int cmp expects ints");
     };
     Ok(Value::Data(Term::Bool(f(a.clone(), b.clone()))))
+}
+
+fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
+    if args.len() != 1 {
+        return type_err(ctx, "dec/parse expects 1 arg");
+    }
+    let Some(Term::Str(s)) = args[0].as_data() else {
+        return type_err(ctx, "dec/parse expects string");
+    };
+    let d = match FixedDecimal::parse(s) {
+        Ok(x) => x,
+        Err(msg) => return type_err(ctx, &msg),
+    };
+    let t = d.to_term();
+    ctx.mem_observe_map_len(3)?;
+    Ok(Value::Data(t))
+}
+
+fn prim_dec_to_str(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
+    if args.len() != 1 {
+        return type_err(ctx, "dec/to-str expects 1 arg");
+    }
+    let d = match as_fixed_decimal(ctx, &args[0]) {
+        Ok(x) => x,
+        Err(e) => return e,
+    };
+    let s = d.to_canonical_string();
+    ctx.mem_observe_string_len(s.len())?;
+    Ok(Value::Data(Term::Str(s)))
+}
+
+fn prim_dec_from_int(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
+    if args.len() != 1 {
+        return type_err(ctx, "dec/from-int expects 1 arg");
+    }
+    let Some(Term::Int(i)) = args[0].as_data() else {
+        return type_err(ctx, "dec/from-int expects int");
+    };
+    let d = FixedDecimal::from_int(i.clone());
+    let t = d.to_term();
+    ctx.mem_observe_map_len(3)?;
+    Ok(Value::Data(t))
+}
+
+fn prim_dec_bin<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
+where
+    F: FnOnce(FixedDecimal, FixedDecimal) -> Result<FixedDecimal, String>,
+{
+    if args.len() != 2 {
+        return type_err(ctx, "decimal op expects 2 args");
+    }
+    let a = match as_fixed_decimal(ctx, &args[0]) {
+        Ok(x) => x,
+        Err(e) => return e,
+    };
+    let b = match as_fixed_decimal(ctx, &args[1]) {
+        Ok(x) => x,
+        Err(e) => return e,
+    };
+    let out = match f(a, b) {
+        Ok(x) => x,
+        Err(msg) => return type_err(ctx, &msg),
+    };
+    let t = out.to_term();
+    ctx.mem_observe_map_len(3)?;
+    Ok(Value::Data(t))
+}
+
+fn prim_dec_cmp<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
+where
+    F: FnOnce(FixedDecimal, FixedDecimal) -> bool,
+{
+    if args.len() != 2 {
+        return type_err(ctx, "decimal cmp expects 2 args");
+    }
+    let a = match as_fixed_decimal(ctx, &args[0]) {
+        Ok(x) => x,
+        Err(e) => return e,
+    };
+    let b = match as_fixed_decimal(ctx, &args[1]) {
+        Ok(x) => x,
+        Err(e) => return e,
+    };
+    Ok(Value::Data(Term::Bool(f(a, b))))
+}
+
+fn as_fixed_decimal(
+    ctx: &mut EvalCtx,
+    v: &Value,
+) -> Result<FixedDecimal, Result<Value, KernelError>> {
+    let Some(t) = v.as_data() else {
+        return Err(type_err(ctx, "decimal op expects decimal datum"));
+    };
+    FixedDecimal::from_term(t)
+        .ok_or_else(|| type_err(ctx, "decimal op expects fixed decimal datum"))
 }
 
 pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {

@@ -13,6 +13,9 @@ pub(crate) fn build_pkg_ai_report(
     match cmd {
         PkgCmd::Lock { lock, strict } => Some(build_lock_report(value, caps, lock, *strict)),
         PkgCmd::Update { lock } => Some(build_update_report(value, caps, lock)),
+        PkgCmd::SelfOptimize { pkg, dry_run, .. } => {
+            Some(build_self_optimize_report(value, caps, pkg, *dry_run))
+        }
         PkgCmd::Publish {
             remote,
             refname,
@@ -32,6 +35,55 @@ pub(crate) fn build_pkg_ai_report(
         )),
         _ => None,
     }
+}
+
+fn build_self_optimize_report(
+    value: &Value,
+    caps: &Path,
+    pkg: &Path,
+    dry_run: bool,
+) -> serde_json::Value {
+    let promoted = map_get_bool(value, ":promoted").unwrap_or(false);
+    let promotable = map_get_bool(value, ":promotable").unwrap_or(false);
+    let proposed_count = map_get_int(value, ":proposed-count").unwrap_or(0);
+    let acceptance_artifact = map_get_str(value, ":acceptance-artifact");
+    let translation_artifact = map_get_str(value, ":translation-artifact");
+    let report_artifact = map_get_str(value, ":report-artifact");
+
+    serde_json::json!({
+        "schema": "genesis/pkg-self-optimize-report-v0.1",
+        "workflow": "self-optimize",
+        "pkg": pkg.display().to_string(),
+        "dry_run": dry_run,
+        "proposed_count": proposed_count,
+        "promotable": promotable,
+        "promoted": promoted,
+        "acceptance_artifact": acceptance_artifact,
+        "translation_artifact": translation_artifact,
+        "report_artifact": report_artifact,
+        "why": if promoted {
+            "promoted optimized module rewrites after translation-validation and obligation success"
+        } else if promotable {
+            "candidate rewrites are promotable but were not applied (dry-run)"
+        } else {
+            "candidate rewrites failed obligation gate and were rolled back"
+        },
+        "fix_options": [
+            {
+                "id": "show-report",
+                "command": report_artifact
+                    .as_ref()
+                    .map(|h| format!("genesis store --caps {} get {} --out self-optimize-report.gc", caps.display(), h))
+                    .unwrap_or_else(|| "genesis gcpm self-optimize --pkg package.toml".to_string()),
+                "why": "inspect deterministic self-optimization evidence/proof payload"
+            },
+            {
+                "id": "rerun",
+                "command": format!("genesis gcpm --caps {} self-optimize --pkg {}", caps.display(), pkg.display()),
+                "why": "retry optimization promotion with current package state"
+            }
+        ]
+    })
 }
 
 fn build_lock_report(value: &Value, caps: &Path, lock: &Path, strict: bool) -> serde_json::Value {
@@ -154,6 +206,17 @@ fn map_get_int(value: &Value, key: &str) -> Option<i64> {
     };
     m.get(&TermOrdKey(Term::symbol(key))).and_then(|t| match t {
         Term::Int(i) => i.to_string().parse::<i64>().ok(),
+        _ => None,
+    })
+}
+
+fn map_get_bool(value: &Value, key: &str) -> Option<bool> {
+    let term = value.to_term_for_log(None);
+    let Term::Map(m) = term else {
+        return None;
+    };
+    m.get(&TermOrdKey(Term::symbol(key))).and_then(|t| match t {
+        Term::Bool(b) => Some(*b),
         _ => None,
     })
 }

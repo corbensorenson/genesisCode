@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use gc_coreform::{
-    Term, TermOrdKey, canonicalize_module, parse_module, parse_term, print_module, print_term,
+    Term, TermOrdKey, canonicalize_module, hash_term, parse_module, parse_term, print_module,
+    print_term,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value};
 use gc_obligations::{
@@ -54,6 +55,11 @@ enum PatchOp {
         path: Vec<PathStep>,
         new_term: Term,
     },
+    ReplaceNodeId {
+        module_path: String,
+        node_id: String,
+        new_term: Term,
+    },
     AddModule {
         module_path: String,
         content: ModuleContent,
@@ -86,6 +92,25 @@ enum PathStep {
     Map(Term),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SemanticNodeRecord {
+    pub module_path: String,
+    pub node_id: String,
+    pub path: Term,
+    pub path_repr: String,
+    pub term_tag: String,
+    pub term_hash: String,
+}
+
+#[derive(Debug, Clone)]
+struct AppliedSemanticEdit {
+    op: &'static str,
+    module_path: String,
+    node_id: String,
+    path: Vec<PathStep>,
+    new_term_hash: String,
+}
+
 fn usize_to_int_term(x: usize) -> Result<Term, PatchError> {
     let i = i64::try_from(x).map_err(|_| PatchError::Validate("index out of range".to_string()))?;
     Ok(Term::Int(i.into()))
@@ -104,6 +129,132 @@ fn path_steps_to_term(path: &[PathStep]) -> Result<Term, PatchError> {
         steps.push(t);
     }
     Ok(Term::Vector(steps))
+}
+
+fn hash32_hex(h: [u8; 32]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(64);
+    for b in h {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn semantic_node_id(module_path: &str, path: &[PathStep]) -> Result<String, PatchError> {
+    let path_term = path_steps_to_term(path)?;
+    let path_repr = print_term(&path_term);
+    let mut h = blake3::Hasher::new();
+    h.update(b"GCv0.2\0semantic-node-id\0");
+    h.update(module_path.as_bytes());
+    h.update(b"\0");
+    h.update(path_repr.as_bytes());
+    Ok(h.finalize().to_hex().to_string())
+}
+
+fn term_tag(t: &Term) -> &'static str {
+    match t {
+        Term::Nil => "nil",
+        Term::Bool(_) => "bool",
+        Term::Int(_) => "int",
+        Term::Str(_) => "str",
+        Term::Bytes(_) => "bytes",
+        Term::Symbol(_) => "sym",
+        Term::Pair(_, _) => "pair",
+        Term::Vector(_) => "vec",
+        Term::Map(_) => "map",
+    }
+}
+
+fn collect_term_nodes(
+    module_path: &str,
+    path: &mut Vec<PathStep>,
+    t: &Term,
+    out: &mut Vec<SemanticNodeRecord>,
+) -> Result<(), PatchError> {
+    let node_id = semantic_node_id(module_path, path)?;
+    let path_term = path_steps_to_term(path)?;
+    let path_repr = print_term(&path_term);
+    out.push(SemanticNodeRecord {
+        module_path: module_path.to_string(),
+        node_id,
+        path: path_term,
+        path_repr,
+        term_tag: term_tag(t).to_string(),
+        term_hash: hash32_hex(hash_term(t)),
+    });
+    match t {
+        Term::Pair(a, d) => {
+            path.push(PathStep::PairCar);
+            collect_term_nodes(module_path, path, a, out)?;
+            path.pop();
+            path.push(PathStep::PairCdr);
+            collect_term_nodes(module_path, path, d, out)?;
+            path.pop();
+        }
+        Term::Vector(xs) => {
+            for (i, child) in xs.iter().enumerate() {
+                path.push(PathStep::Vec(i));
+                collect_term_nodes(module_path, path, child, out)?;
+                path.pop();
+            }
+        }
+        Term::Map(m) => {
+            for (k, child) in m {
+                path.push(PathStep::Map(k.0.clone()));
+                collect_term_nodes(module_path, path, child, out)?;
+                path.pop();
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn semantic_node_index_for_forms(
+    module_path: &str,
+    forms: &[Term],
+) -> Result<Vec<SemanticNodeRecord>, PatchError> {
+    let mut out = Vec::new();
+    for (i, form) in forms.iter().enumerate() {
+        let mut path = vec![PathStep::Form(i)];
+        collect_term_nodes(module_path, &mut path, form, &mut out)?;
+    }
+    Ok(out)
+}
+
+fn resolve_node_id_path(
+    module_path: &str,
+    forms: &[Term],
+    node_id: &str,
+) -> Result<Vec<PathStep>, PatchError> {
+    let nodes = semantic_node_index_for_forms(module_path, forms)?;
+    let mut matches = nodes
+        .into_iter()
+        .filter(|n| n.node_id == node_id)
+        .collect::<Vec<_>>();
+    if matches.is_empty() {
+        return Err(PatchError::Validate(format!(
+            "replace-node-id unknown :node-id {node_id} in module {module_path}"
+        )));
+    }
+    if matches.len() > 1 {
+        return Err(PatchError::Validate(format!(
+            "replace-node-id ambiguous :node-id {node_id} in module {module_path}"
+        )));
+    }
+    parse_path(&matches.remove(0).path)
+}
+
+pub fn semantic_node_index_for_module_with_frontend(
+    module_path: &str,
+    src: &str,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<Vec<SemanticNodeRecord>, PatchError> {
+    let forms = parse_canonicalize_module_src(src, frontend, step_limit, mem_limits)?;
+    semantic_node_index_for_forms(module_path, &forms)
 }
 
 struct SelfhostPatchToolchain {
@@ -187,8 +338,9 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let patch_artifact = store.put_term(&patch_term)?;
 
     // Apply ops.
+    let mut semantic_edits = Vec::new();
     for op in &patch.ops {
-        apply_one_op(
+        if let Some(edit) = apply_one_op(
             &pkg_dir,
             pkg_toml,
             op,
@@ -196,7 +348,9 @@ pub fn apply_patch_with_step_limit_and_frontend(
             step_limit,
             mem_limits,
             selfhost.as_mut(),
-        )?;
+        )? {
+            semantic_edits.push(edit);
+        }
     }
 
     // Re-pack to compute updated package artifact record and module hashes.
@@ -213,7 +367,13 @@ pub fn apply_patch_with_step_limit_and_frontend(
 
     let ok = acceptance.as_ref().is_some_and(|r| r.ok);
 
-    let report = report_term(&patch, ok, &package_artifact, acceptance.as_ref());
+    let report = report_term(
+        &patch,
+        ok,
+        &package_artifact,
+        acceptance.as_ref(),
+        &semantic_edits,
+    );
     let report_artifact = store.put_term(&report)?;
 
     Ok(PatchApplyResult {
@@ -553,6 +713,7 @@ fn report_term(
     ok: bool,
     package_artifact: &Option<String>,
     acceptance: Option<&PackageTestResult>,
+    semantic_edits: &[AppliedSemanticEdit],
 ) -> Term {
     let mut m = BTreeMap::new();
     m.insert(
@@ -584,6 +745,37 @@ fn report_term(
             Term::Str(a.acceptance_artifact.clone()),
         );
     }
+    if !semantic_edits.is_empty() {
+        let mut edits = Vec::with_capacity(semantic_edits.len());
+        for edit in semantic_edits {
+            let mut em = BTreeMap::new();
+            em.insert(
+                TermOrdKey(Term::symbol(":op")),
+                Term::Symbol(edit.op.to_string()),
+            );
+            em.insert(
+                TermOrdKey(Term::symbol(":module-path")),
+                Term::Str(edit.module_path.clone()),
+            );
+            em.insert(
+                TermOrdKey(Term::symbol(":node-id")),
+                Term::Str(edit.node_id.clone()),
+            );
+            em.insert(
+                TermOrdKey(Term::symbol(":path")),
+                path_steps_to_term(&edit.path).unwrap_or(Term::Vector(Vec::new())),
+            );
+            em.insert(
+                TermOrdKey(Term::symbol(":new-term-h")),
+                Term::Str(edit.new_term_hash.clone()),
+            );
+            edits.push(Term::Map(em));
+        }
+        m.insert(
+            TermOrdKey(Term::symbol(":semantic-edits")),
+            Term::Vector(edits),
+        );
+    }
     Term::Map(m)
 }
 
@@ -595,7 +787,7 @@ fn apply_one_op(
     step_limit: StepLimit,
     mem_limits: MemLimits,
     mut selfhost: Option<&mut SelfhostPatchToolchain>,
-) -> Result<(), PatchError> {
+) -> Result<Option<AppliedSemanticEdit>, PatchError> {
     match op {
         PatchOp::ReplaceNode {
             module_path,
@@ -620,7 +812,45 @@ fn apply_one_op(
                 let out = print_module(&forms);
                 std::fs::write(&abs, out)?;
             }
-            Ok(())
+            Ok(Some(AppliedSemanticEdit {
+                op: ":replace-node",
+                module_path: module_path.clone(),
+                node_id: semantic_node_id(module_path, path)?,
+                path: path.clone(),
+                new_term_hash: hash32_hex(hash_term(new_term)),
+            }))
+        }
+        PatchOp::ReplaceNodeId {
+            module_path,
+            node_id,
+            new_term,
+        } => {
+            let abs = pkg_dir.join(module_path);
+            let src = std::fs::read_to_string(&abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let path = resolve_node_id_path(module_path, &forms, node_id)?;
+
+            if let Some(sh) = selfhost.as_deref_mut() {
+                let path_term = path_steps_to_term(&path)?;
+                let next_forms =
+                    sh.apply_replace_node_term(&forms, &path_term, new_term, step_limit)?;
+                let out = sh.print_module_forms_term(&next_forms, step_limit)?;
+                std::fs::write(&abs, out)?;
+            } else {
+                let mut forms = forms;
+                apply_replace(&mut forms, &path, new_term.clone())?;
+                let forms =
+                    canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))?;
+                let out = print_module(&forms);
+                std::fs::write(&abs, out)?;
+            }
+            Ok(Some(AppliedSemanticEdit {
+                op: ":replace-node-id",
+                module_path: module_path.clone(),
+                node_id: node_id.clone(),
+                path,
+                new_term_hash: hash32_hex(hash_term(new_term)),
+            }))
         }
         PatchOp::AddModule {
             module_path,
@@ -683,7 +913,7 @@ fn apply_one_op(
             };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
-            Ok(())
+            Ok(None)
         }
         PatchOp::RemoveModule { module_path } => {
             let abs = pkg_dir.join(module_path);
@@ -714,7 +944,7 @@ fn apply_one_op(
             };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
-            Ok(())
+            Ok(None)
         }
         PatchOp::UpdateManifest {
             set,
@@ -770,7 +1000,7 @@ fn apply_one_op(
             };
             s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
             std::fs::write(pkg_toml, s)?;
-            Ok(())
+            Ok(None)
         }
     }
 }
@@ -1107,6 +1337,28 @@ fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
             Ok(PatchOp::ReplaceNode {
                 module_path,
                 path,
+                new_term,
+            })
+        }
+        ":replace-node-id" => {
+            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
+                PatchError::Validate("replace-node-id missing :module-path".to_string())
+            })?;
+            let node_id = get_str(m, ":node-id")?.ok_or_else(|| {
+                PatchError::Validate("replace-node-id missing :node-id".to_string())
+            })?;
+            if node_id.trim().is_empty() {
+                return Err(PatchError::Validate(
+                    "replace-node-id :node-id must be non-empty".to_string(),
+                ));
+            }
+            let new_term = m
+                .get(&TermOrdKey(Term::Symbol(":new".to_string())))
+                .ok_or_else(|| PatchError::Validate("replace-node-id missing :new".to_string()))?
+                .clone();
+            Ok(PatchOp::ReplaceNodeId {
+                module_path,
+                node_id,
                 new_term,
             })
         }

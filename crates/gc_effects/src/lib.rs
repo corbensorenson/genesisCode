@@ -4,8 +4,11 @@ mod log;
 mod policy;
 mod refs;
 mod runner;
+mod runner_editor_host;
 mod runner_gc_payload;
+mod runner_gfx_host;
 mod runner_gpk_payload;
+mod runner_gpu_host;
 mod runner_io_ops;
 mod runner_pkg_payload;
 mod runner_refs_ops;
@@ -735,29 +738,371 @@ base_dir = "./sandbox"
     }
 
     #[test]
-    fn known_editor_capability_returns_not_supported_error() {
-        let (forms, h) = mk_prog_for("editor/clipboard::get", "{}");
+    fn task_runtime_executes_parallel_work_with_worker_pool() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (((core/task::spawn "scope/main") "t1")
+                                   {:task/sleep-ms 200 :task/result {:ok "t1"}}))
+                (fn (spawn-1)
+                  (let ((tid-1 ((core/map::get spawn-1) ':task-id)))
+                    ((core/effect::bind (((core/task::spawn "scope/main") "t2")
+                                         {:task/sleep-ms 200 :task/result {:ok "t2"}}))
+                      (fn (spawn-2)
+                        (let ((tid-2 ((core/map::get spawn-2) ':task-id)))
+                          ((core/effect::bind (core/task::await tid-1))
+                            (fn (r1)
+                              ((core/effect::bind (core/task::await tid-2))
+                                (fn (r2)
+                                  (core/effect::pure {:r1 r1 :r2 r2}))))))))))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let run_elapsed_ms = |max_workers: u64| {
+            let mut ctx = EvalCtx::new();
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+            let policy = format!(
+                r#"
+allow = ["core/task::spawn", "core/task::await"]
+
+[task]
+max_workers = {max_workers}
+"#
+            );
+            let pol = CapsPolicy::from_toml_str(&policy).unwrap();
+
+            let started = std::time::Instant::now();
+            let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+            assert_eq!(r.log.entries.len(), 4);
+            assert_eq!(r.log.entries[0].op, "core/task::spawn");
+            assert_eq!(r.log.entries[1].op, "core/task::spawn");
+            assert_eq!(r.log.entries[2].op, "core/task::await");
+            assert_eq!(r.log.entries[3].op, "core/task::await");
+            started.elapsed().as_millis()
+        };
+
+        let elapsed_parallel_ms = run_elapsed_ms(2);
+        let elapsed_serial_ms = run_elapsed_ms(1);
+        assert!(
+            elapsed_parallel_ms + 120 < elapsed_serial_ms,
+            "expected max_workers=2 runtime to be materially faster; parallel={elapsed_parallel_ms}ms serial={elapsed_serial_ms}ms"
+        );
+        assert!(
+            elapsed_parallel_ms >= 160,
+            "parallel runtime should still reflect real task work, got {elapsed_parallel_ms}ms"
+        );
+    }
+
+    #[test]
+    fn task_runtime_await_surfaces_failed_state_and_error_payload() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (((core/task::spawn "scope/main") "t1")
+                                   {:task/error {:reason "boom"}}))
+                (fn (spawn-1)
+                  (let ((tid ((core/map::get spawn-1) ':task-id)))
+                    (core/task::await tid)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
 
         let mut ctx = EvalCtx::new();
         let prelude = build_prelude(&mut ctx);
         let mut env = prelude.env;
         let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
 
-        let pol = CapsPolicy::from_toml_str(r#"allow = ["editor/clipboard::get"]"#).unwrap();
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
         let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
 
-        match r.value {
-            Value::Sealed { token, payload } => {
-                assert_eq!(token, ctx.protocol.expect("protocol").error);
-                let Value::Data(Term::Map(m)) = payload.as_ref() else {
-                    panic!("expected error payload map");
-                };
+        let Value::Data(Term::Map(m)) = r.value else {
+            panic!("expected task await map result");
+        };
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":state"))),
+            Some(&Term::symbol(":failed"))
+        );
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":result"))),
+            Some(&Term::Nil)
+        );
+        let Some(Term::Map(err)) = m.get(&TermOrdKey(Term::symbol(":error"))) else {
+            panic!("expected :error map for failed task");
+        };
+        assert_eq!(
+            err.get(&TermOrdKey(Term::symbol(":reason"))),
+            Some(&Term::Str("boom".to_string()))
+        );
+    }
+
+    #[test]
+    fn editor_clipboard_capability_roundtrip_is_supported_and_replayable() {
+        let (forms, h) = mk_prog_for("editor/clipboard::get", "{}");
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["editor/clipboard::get"]"#).unwrap();
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        match &r1.value {
+            Value::Data(Term::Map(m)) => {
                 assert_eq!(
-                    m.get(&TermOrdKey(Term::symbol(":error/code"))),
-                    Some(&Term::Str("core/caps/not-supported".to_string()))
+                    m.get(&TermOrdKey(Term::symbol(":ok"))),
+                    Some(&Term::Bool(true))
+                );
+                assert_eq!(
+                    m.get(&TermOrdKey(Term::symbol(":mime"))),
+                    Some(&Term::Str("text/plain".to_string()))
                 );
             }
-            other => panic!("expected sealed error, got {}", other.debug_repr()),
+            other => panic!(
+                "expected clipboard map response, got {}",
+                other.debug_repr()
+            ),
         }
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+        assert_eq!(value_hash(&r1.value), value_hash(&v2));
+    }
+
+    #[test]
+    fn gfx_window_input_audio_backends_are_supported_and_replayable() {
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["gfx/window::create-surface", "gfx/window::request-redraw", "gfx/window::surface-info", "gfx/input::poll-events", "gfx/input::set-cursor-mode", "gfx/audio::set-master", "gfx/audio::enqueue"]"#,
+        )
+        .unwrap();
+        let cases = [
+            r#"
+            (def prog
+              (core/effect::perform
+                'gfx/window::create-surface
+                {:opts {:height 600 :title "main" :width 800}}
+                (fn (x) (core/effect::pure x))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/window::create-surface
+                                    {:opts {:height 600 :title "main" :width 800}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (surface-resp)
+                  (let ((sid ((core/map::get surface-resp) ':surface)))
+                    ((core/effect::bind (core/effect::perform
+                                          'gfx/window::request-redraw
+                                          {:surface sid}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (_)
+                        (core/effect::perform
+                          'gfx/input::poll-events
+                          {:surface sid}
+                          (fn (x) (core/effect::pure x)))))))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/window::create-surface
+                                    {:opts {:height 600 :title "main" :width 800}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (surface-resp)
+                  (let ((sid ((core/map::get surface-resp) ':surface)))
+                    ((core/effect::bind (core/effect::perform
+                                          'gfx/input::set-cursor-mode
+                                          {:mode "hidden" :surface sid}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (_)
+                        (core/effect::perform
+                          'gfx/window::surface-info
+                          {:surface sid}
+                          (fn (x) (core/effect::pure x)))))))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/audio::set-master
+                                    {:gain 1}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (_)
+                  (core/effect::perform
+                    'gfx/audio::enqueue
+                    {:event {:kind "beep"}}
+                    (fn (x) (core/effect::pure x))))))
+            prog
+            "#,
+        ];
+
+        for src in cases {
+            let forms = parse_module(src).expect("parse module");
+            let h = hash_module(&forms);
+            let mut ctx1 = EvalCtx::new();
+            let prelude1 = build_prelude(&mut ctx1);
+            let mut env1 = prelude1.env;
+            let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+            let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+            let mut ctx2 = EvalCtx::new();
+            let prelude2 = build_prelude(&mut ctx2);
+            let mut env2 = prelude2.env;
+            let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+            let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+            assert_eq!(value_hash(&r1.value), value_hash(&v2));
+        }
+    }
+
+    #[test]
+    fn gfx_gpu_backend_is_supported_and_replayable() {
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["gfx/gpu::create-buffer", "gfx/gpu::write-buffer", "gfx/gpu::read-buffer", "gfx/gpu::create-texture", "gfx/gpu::write-texture", "gfx/gpu::read-texture", "gfx/gpu::submit-frame-graph", "gfx/gpu::submit-compute-graph", "gfx/gpu::limits", "gfx/gpu::features"]"#,
+        )
+        .unwrap();
+        let cases = [
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/gpu::create-buffer
+                                    {:desc {:size 8}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (create-resp)
+                  (let ((id ((core/map::get create-resp) ':id)))
+                    ((core/effect::bind (core/effect::perform
+                                          'gfx/gpu::write-buffer
+                                          {:data b"\x01\x02\x03" :id id :offset 2}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (_)
+                        (core/effect::perform
+                          'gfx/gpu::read-buffer
+                          {:id id :offset 0 :size 8}
+                          (fn (x) (core/effect::pure x)))))))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/gpu::create-texture
+                                    {:desc {:byte-size 6}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (create-resp)
+                  (let ((id ((core/map::get create-resp) ':id)))
+                    ((core/effect::bind (core/effect::perform
+                                          'gfx/gpu::write-texture
+                                          {:data b"\xAA\xBB\xCC\xDD\xEE\xFF" :id id :layout {}}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (_)
+                        (core/effect::perform
+                          'gfx/gpu::read-texture
+                          {:id id :region {:offset 1 :size 3}}
+                          (fn (x) (core/effect::pure x)))))))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gfx/gpu::submit-frame-graph
+                                    {:graph {:compute-passes [] :render-passes []}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (_)
+                  ((core/effect::bind (core/effect::perform
+                                        'gfx/gpu::submit-compute-graph
+                                        {:graph {:passes []}}
+                                        (fn (x) (core/effect::pure x))))
+                    (fn (_)
+                      ((core/effect::bind (core/effect::perform
+                                            'gfx/gpu::limits
+                                            {}
+                                            (fn (x) (core/effect::pure x))))
+                        (fn (_)
+                          (core/effect::perform
+                            'gfx/gpu::features
+                            {}
+                            (fn (x) (core/effect::pure x))))))))))
+            prog
+            "#,
+        ];
+
+        for src in cases {
+            let forms = parse_module(src).expect("parse module");
+            let h = hash_module(&forms);
+            let mut ctx1 = EvalCtx::new();
+            let prelude1 = build_prelude(&mut ctx1);
+            let mut env1 = prelude1.env;
+            let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+            let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+            assert!(
+                !matches!(r1.value, Value::Sealed { .. }),
+                "gpu backend should return structured responses, got {}",
+                r1.value.debug_repr()
+            );
+
+            let mut ctx2 = EvalCtx::new();
+            let prelude2 = build_prelude(&mut ctx2);
+            let mut env2 = prelude2.env;
+            let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+            let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+            assert_eq!(value_hash(&r1.value), value_hash(&v2));
+        }
+    }
+
+    #[test]
+    fn editor_task_and_watch_backends_are_supported_and_replayable() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'editor/watch::subscribe
+                                    {:globs ["*.gc"] :root "workspace"}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (watch-resp)
+                  (let ((watch-id ((core/map::get watch-resp) ':watch-id)))
+                    ((core/effect::bind (core/effect::perform
+                                          'editor/task::spawn
+                                          {:budget-ms nil
+                                           :input {:source "(def x 1)"}
+                                           :task-kind 'editor/task::parse-module}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (spawn-resp)
+                        (let ((task-id ((core/map::get spawn-resp) ':task-id)))
+                          ((core/effect::bind (core/effect::perform
+                                                'editor/task::poll
+                                                {:task-id task-id}
+                                                (fn (x) (core/effect::pure x))))
+                            (fn (task-poll)
+                              ((core/effect::bind (core/effect::perform
+                                                    'editor/watch::poll
+                                                    {:watch-id watch-id}
+                                                    (fn (x) (core/effect::pure x))))
+                                (fn (watch-poll)
+                                  (core/effect::pure {:task task-poll :watch watch-poll}))))))))))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["editor/watch::subscribe", "editor/watch::poll", "editor/task::spawn", "editor/task::poll"]"#,
+        )
+        .unwrap();
+        let r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        assert_eq!(r1.log.entries.len(), 4);
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
+        assert_eq!(value_hash(&r1.value), value_hash(&v2));
     }
 }

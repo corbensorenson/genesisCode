@@ -1,4 +1,7 @@
-use crate::{Term, canonicalize_module, parse_module, parse_term, print_module, print_term};
+use crate::{
+    FixedDecimal, Term, canonicalize_module, hash_term, parse_module, parse_term, print_module,
+    print_term,
+};
 use std::path::PathBuf;
 
 #[test]
@@ -82,6 +85,14 @@ fn singleton_list_is_just_grouping_in_canonical_form() {
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
     let out = print_module(&forms);
     assert_eq!(out, "y\n");
+}
+
+#[test]
+fn fixed_decimal_term_hash_is_normalized() {
+    let a = FixedDecimal::parse("1.2300").expect("a").to_term();
+    let b = FixedDecimal::parse("1.23").expect("b").to_term();
+    assert_eq!(print_term(&a), print_term(&b));
+    assert_eq!(hash_term(&a), hash_term(&b));
 }
 
 fn normalize(s: &str) -> String {
