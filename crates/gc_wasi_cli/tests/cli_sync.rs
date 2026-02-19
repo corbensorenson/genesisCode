@@ -24,9 +24,11 @@ path = "./.genesis/refs.gc"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
+wasi_network_profile = "local"
 
 [op."core/sync::pull"]
 remote_allow = ["{remote_allow}"]
+wasi_network_profile = "local"
 "#
         ),
     )
@@ -400,4 +402,98 @@ fn wasi_sync_pull_ref_conflict_requires_force() {
         .success();
     let dst_refs = gc_effects::RefsDb::open(&dst_refs_path).unwrap();
     assert_eq!(dst_refs.get("refs/heads/main").unwrap(), Some(commit_h));
+}
+
+#[test]
+fn wasi_sync_rejects_missing_wasi_network_profile() {
+    let td = tempfile::tempdir().unwrap();
+    let root = td.path();
+    let src = root.join("src");
+    let remote_dir = root.join("remote-registry");
+    fs::create_dir_all(&src).unwrap();
+    fs::create_dir_all(&remote_dir).unwrap();
+
+    let caps = src.join("caps.toml");
+    fs::write(
+        &caps,
+        format!(
+            r#"
+allow = ["core/sync::pull"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/sync::pull"]
+remote_allow = ["file://{}/v1/"]
+"#,
+            remote_dir.display()
+        ),
+    )
+    .unwrap();
+
+    cmd()
+        .current_dir(&src)
+        .args(["sync", "--caps"])
+        .arg(&caps)
+        .args([
+            "pull",
+            "--remote",
+            &format!("file://{}/", remote_dir.display()),
+            "--ref",
+            "refs/heads/main",
+        ])
+        .assert()
+        .failure()
+        .code(20)
+        .stdout(predicates::str::contains(
+            "WASI remote sync access is disabled",
+        ));
+}
+
+#[test]
+fn wasi_sync_local_profile_rejects_https_remote() {
+    let td = tempfile::tempdir().unwrap();
+    let root = td.path();
+    let src = root.join("src");
+    fs::create_dir_all(&src).unwrap();
+
+    let caps = src.join("caps.toml");
+    fs::write(
+        &caps,
+        r#"
+allow = ["core/sync::pull"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/sync::pull"]
+remote_allow = ["https://registry.example/v1/"]
+wasi_network_profile = "local"
+"#,
+    )
+    .unwrap();
+
+    cmd()
+        .current_dir(&src)
+        .args(["sync", "--caps"])
+        .arg(&caps)
+        .args([
+            "pull",
+            "--remote",
+            "https://registry.example/",
+            "--ref",
+            "refs/heads/main",
+        ])
+        .assert()
+        .failure()
+        .code(20)
+        .stdout(predicates::str::contains(
+            "wasi_network_profile=local only allows file:// or inproc:// remotes",
+        ));
 }

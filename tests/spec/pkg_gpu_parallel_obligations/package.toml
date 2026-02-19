@@ -1,0 +1,15 @@
+caps_policy = "caps.toml"
+dependencies = []
+name = "pkg_gpu_parallel_obligations"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+    "core/obligation::concurrency-replay",
+]
+tests = ["pkg/gpu_parallel::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "c2a449daf321976b097707c59f9b45d858804d0a110ed226df3301be7f118d65"
+path = "gpu_parallel.gc"

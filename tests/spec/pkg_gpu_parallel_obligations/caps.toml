@@ -1,0 +1,15 @@
+allow = [
+  "core/task::spawn",
+  "core/task::await",
+  "core/task::status",
+  "gfx/gpu::create-buffer",
+  "gfx/gpu::write-buffer",
+  "gfx/gpu::read-buffer",
+  "gfx/gpu::destroy-resource",
+]
+
+[task]
+default_workers = 2
+max_workers = 4
+max_tasks = 16
+max_queue = 32

@@ -52,6 +52,14 @@ CI must keep `GENESIS_ALLOW_RUST_ENGINE=0` by default, and only set it to `1` in
 explicit parity/golden harnesses (e.g. `scripts/selfhost_strict_smoke.sh` /
 `scripts/selfhost_strict_golden.sh`).
 
+Dedicated compatibility harness entrypoints:
+- debug parity harness binaries:
+  - `target/debug/genesis`
+  - `target/debug/genesis_wasi`
+- release-profile rejection gate:
+  - `scripts/selfhost_release_profile_guard.sh`
+  - This script must pass with `GENESIS_ALLOW_RUST_ENGINE=1` still producing release-profile rejection.
+
 ## Subcommands (Signing + Policy)
 
 - `genesis fmt <file> [--check] [--engine rust|selfhost]`

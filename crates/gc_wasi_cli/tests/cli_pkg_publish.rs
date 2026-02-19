@@ -21,6 +21,7 @@ fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> Path
             r#"
 [op."core/pkg-low::publish"]
 remote_allow = ["{remote_allow}"]
+wasi_network_profile = "local"
 "#
         )
     } else {
@@ -47,6 +48,7 @@ path = "./.genesis/refs.gc"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
+wasi_network_profile = "local"
 {publish_op}
 "#
         ),

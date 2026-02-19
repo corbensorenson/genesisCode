@@ -10,6 +10,7 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::policy::CapsPolicy;
+use crate::runner_task_exec::execute_task_payload;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct TaskScheduleEvent {
@@ -34,7 +35,9 @@ struct TaskBudgetCounters {
 #[derive(Debug, Default)]
 pub(crate) struct TaskRuntime {
     next_task_id: u64,
+    next_channel_id: u64,
     tasks: BTreeMap<String, TaskRecord>,
+    channels: BTreeMap<String, ChannelRecord>,
     queue: VecDeque<String>,
     running_count: u64,
     queued_count: u64,
@@ -50,6 +53,13 @@ struct TaskRecord {
     error: Option<Term>,
     parent_task: Option<String>,
     cancel_flag: Option<Arc<AtomicBool>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct ChannelRecord {
+    capacity: Option<usize>,
+    queue: VecDeque<Term>,
+    closed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,7 +111,7 @@ struct TaskCompletion {
 }
 
 #[derive(Debug, Clone)]
-enum TaskOutcome {
+pub(crate) enum TaskOutcome {
     Done(Term),
     Failed(Term),
     Cancelled,
@@ -122,6 +132,190 @@ pub(crate) fn task_runtime_call(
             Some(Value::Data(task_map([
                 (":scope", scope),
                 (":state", Term::symbol(":entered")),
+            ])))
+        }
+        "core/task::channel-open" => {
+            let capacity = map_field_int_u64(payload, ":capacity")
+                .and_then(|n| usize::try_from(n).ok())
+                .filter(|n| *n > 0);
+            let channel_id = format!("chan-{:016x}", runtime.next_channel_id);
+            runtime.next_channel_id = runtime.next_channel_id.saturating_add(1);
+            runtime.channels.insert(
+                channel_id.clone(),
+                ChannelRecord {
+                    capacity,
+                    queue: VecDeque::new(),
+                    closed: false,
+                },
+            );
+            Some(Value::Data(task_map([
+                (":channel-id", Term::Str(channel_id)),
+                (
+                    ":capacity",
+                    capacity
+                        .map(|n| Term::Int(BigInt::from(n)))
+                        .unwrap_or(Term::Nil),
+                ),
+                (":size", Term::Int(BigInt::from(0))),
+                (":state", Term::symbol(":open")),
+            ])))
+        }
+        "core/task::channel-send" => {
+            let Some(channel_id) = map_field_str_or_symbol(payload, ":channel-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::channel-send payload must include :channel-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(value) = map_field(payload, ":value").cloned() else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::channel-send payload must include :value".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(channel) = runtime.channels.get_mut(&channel_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown channel-id: {channel_id}"),
+                    Some(op),
+                ));
+            };
+            if channel.closed {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/channel-closed",
+                    format!("channel is closed: {channel_id}"),
+                    Some(op),
+                ));
+            }
+            if let Some(limit) = channel.capacity
+                && channel.queue.len() >= limit
+            {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/channel-full",
+                    format!("channel capacity exceeded: {channel_id}"),
+                    Some(op),
+                ));
+            }
+            channel.queue.push_back(value);
+            Some(Value::Data(task_map([
+                (":channel-id", Term::Str(channel_id)),
+                (":size", Term::Int(BigInt::from(channel.queue.len()))),
+                (":state", Term::symbol(":open")),
+            ])))
+        }
+        "core/task::channel-recv" => {
+            let Some(channel_id) = map_field_str_or_symbol(payload, ":channel-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::channel-recv payload must include :channel-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(channel) = runtime.channels.get_mut(&channel_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown channel-id: {channel_id}"),
+                    Some(op),
+                ));
+            };
+            if let Some(value) = channel.queue.pop_front() {
+                let state = if channel.closed {
+                    Term::symbol(":closed")
+                } else {
+                    Term::symbol(":open")
+                };
+                Some(Value::Data(task_map([
+                    (":channel-id", Term::Str(channel_id)),
+                    (":has-value", Term::Bool(true)),
+                    (":value", value),
+                    (":size", Term::Int(BigInt::from(channel.queue.len()))),
+                    (":state", state),
+                ])))
+            } else {
+                Some(Value::Data(task_map([
+                    (":channel-id", Term::Str(channel_id)),
+                    (":has-value", Term::Bool(false)),
+                    (":value", Term::Nil),
+                    (":size", Term::Int(BigInt::from(0))),
+                    (
+                        ":state",
+                        if channel.closed {
+                            Term::symbol(":closed")
+                        } else {
+                            Term::symbol(":open")
+                        },
+                    ),
+                ])))
+            }
+        }
+        "core/task::channel-close" => {
+            let Some(channel_id) = map_field_str_or_symbol(payload, ":channel-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::channel-close payload must include :channel-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(channel) = runtime.channels.get_mut(&channel_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown channel-id: {channel_id}"),
+                    Some(op),
+                ));
+            };
+            channel.closed = true;
+            Some(Value::Data(task_map([
+                (":channel-id", Term::Str(channel_id)),
+                (":size", Term::Int(BigInt::from(channel.queue.len()))),
+                (":state", Term::symbol(":closed")),
+            ])))
+        }
+        "core/task::channel-status" => {
+            let Some(channel_id) = map_field_str_or_symbol(payload, ":channel-id") else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/bad-payload",
+                    "core/task::channel-status payload must include :channel-id".to_string(),
+                    Some(op),
+                ));
+            };
+            let Some(channel) = runtime.channels.get(&channel_id) else {
+                return Some(mk_error(
+                    error_tok,
+                    "core/task/not-found",
+                    format!("unknown channel-id: {channel_id}"),
+                    Some(op),
+                ));
+            };
+            Some(Value::Data(task_map([
+                (":channel-id", Term::Str(channel_id)),
+                (":size", Term::Int(BigInt::from(channel.queue.len()))),
+                (
+                    ":capacity",
+                    channel
+                        .capacity
+                        .map(|n| Term::Int(BigInt::from(n)))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    ":state",
+                    if channel.closed {
+                        Term::symbol(":closed")
+                    } else {
+                        Term::symbol(":open")
+                    },
+                ),
             ])))
         }
         "core/task::spawn" => {
@@ -442,35 +636,6 @@ fn worker_loop(
     }
 }
 
-fn execute_task_payload(payload: Term, cancel_flag: &AtomicBool) -> TaskOutcome {
-    if cancel_flag.load(Ordering::Acquire) {
-        return TaskOutcome::Cancelled;
-    }
-    if let Some(ms) = map_field_int_u64(&payload, ":task/sleep-ms")
-        .or_else(|| map_field_int_u64(&payload, ":sleep-ms"))
-    {
-        let mut remaining = ms;
-        while remaining > 0 {
-            if cancel_flag.load(Ordering::Acquire) {
-                return TaskOutcome::Cancelled;
-            }
-            let chunk = remaining.min(10);
-            thread::sleep(Duration::from_millis(chunk));
-            remaining = remaining.saturating_sub(chunk);
-        }
-    }
-    if cancel_flag.load(Ordering::Acquire) {
-        return TaskOutcome::Cancelled;
-    }
-    if let Some(err) = map_field(&payload, ":task/error") {
-        return TaskOutcome::Failed(err.clone());
-    }
-    if let Some(result) = map_field(&payload, ":task/result") {
-        return TaskOutcome::Done(result.clone());
-    }
-    TaskOutcome::Done(payload)
-}
-
 fn apply_completion(runtime: &mut TaskRuntime, completion: TaskCompletion) {
     let Some(rec) = runtime.tasks.get_mut(&completion.task_id) else {
         return;
@@ -517,6 +682,15 @@ pub(crate) fn task_schedule_event_for(
             out.parent_task = map_field_str_or_symbol(payload, ":parent-task")
                 .or_else(|| map_field_str_or_symbol(payload, ":scope"));
             out.task_id = value_data_map_field(resp_val, ":task-id");
+        }
+        "core/task::channel-open" => {
+            out.task_id = value_data_map_field(resp_val, ":channel-id");
+        }
+        "core/task::channel-send"
+        | "core/task::channel-recv"
+        | "core/task::channel-close"
+        | "core/task::channel-status" => {
+            out.task_id = map_field_str_or_symbol(payload, ":channel-id");
         }
         "core/task::await" => {
             let tid = map_field_str_or_symbol(payload, ":task-id");
@@ -717,6 +891,11 @@ fn task_map<const N: usize>(pairs: [(&str, Term); N]) -> Term {
 fn task_target_id(op: &str, payload: &Term, resp_val: &Value) -> Option<String> {
     match op {
         "core/task::spawn" | "editor/task::spawn" => value_data_map_field(resp_val, ":task-id"),
+        "core/task::channel-open" => value_data_map_field(resp_val, ":channel-id"),
+        "core/task::channel-send"
+        | "core/task::channel-recv"
+        | "core/task::channel-close"
+        | "core/task::channel-status" => map_field_str_or_symbol(payload, ":channel-id"),
         "core/task::await"
         | "core/task::cancel"
         | "core/task::status"

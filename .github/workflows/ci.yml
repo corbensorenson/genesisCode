@@ -84,8 +84,14 @@ jobs:
       - name: Selfhost Boundary Guard
         run: bash scripts/check_selfhost_boundary.sh
 
-      - name: Old Bootstrap Retirement Guard
-        run: bash scripts/check_old_bootstrap_retirement.sh
+      - name: Rust Bootstrap Retirement Gate
+        run: |
+          STRICT_RELEASE=1
+          if [[ "${GENESIS_CI_PROFILE}" == "fast" ]]; then
+            STRICT_RELEASE=0
+          fi
+          GENESIS_BOOTSTRAP_RETIREMENT_STRICT_RELEASE="$STRICT_RELEASE" \
+            bash scripts/check_bootstrap_retirement_gate.sh
 
       - name: Host ABI Conformance Guard
         run: bash scripts/check_host_abi_conformance.sh
@@ -95,12 +101,6 @@ jobs:
 
       - name: Prelude Capability Coverage Guard
         run: bash scripts/check_prelude_capability_coverage.sh
-
-      - name: Rust Engine Compat Guard
-        run: bash scripts/check_rust_engine_compat.sh
-
-      - name: Selfhost Default Profile Guard
-        run: bash scripts/selfhost_default_profile_guard.sh
 
       - name: User-Path Panic Guard
         run: bash scripts/check_no_user_panics.sh

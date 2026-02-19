@@ -1,0 +1,42 @@
+(def ::meta
+  (quote
+    {
+      :caps [
+        core/task::spawn
+        core/task::await
+        core/task::status
+        gfx/gpu::create-buffer
+        gfx/gpu::write-buffer
+        gfx/gpu::read-buffer
+        gfx/gpu::destroy-resource
+      ]
+      :exports [pkg/gpu_parallel::tests]
+      :types {pkg/gpu_parallel::tests ?}
+    }))
+
+(def pkg/gpu_parallel::task-program
+  ((core/effect::bind (((core/task::spawn "scope/main") "build") {:job "compile"}))
+    (fn (spawn-resp)
+      (let ((tid ((core/map::get spawn-resp) (quote :task-id))))
+        ((core/effect::bind (core/task::status tid))
+          (fn (_status)
+            (core/task::await tid)))))))
+
+(def pkg/gpu_parallel::gpu-program
+  ((core/effect::bind (core/gfx/gpu::create-buffer {:size 8}))
+    (fn (created)
+      (let ((rid ((core/map::get created) (quote :id))))
+        ((core/effect::bind (((core/gfx/gpu::write-buffer rid) 0) b"ABCDEFGH"))
+          (fn (_w)
+            ((core/effect::bind (((core/gfx/gpu::read-buffer rid) 0) 8))
+              (fn (read)
+                ((core/effect::bind (core/gfx/gpu::destroy-resource rid))
+                  (fn (_d) (core/effect::pure read)))))))))))
+
+(def pkg/gpu_parallel::tests
+  {
+    "task-roundtrip" {:body (fn (_) pkg/gpu_parallel::task-program)}
+    "gpu-buffer-roundtrip" {:body (fn (_) pkg/gpu_parallel::gpu-program)}
+  })
+
+pkg/gpu_parallel::tests

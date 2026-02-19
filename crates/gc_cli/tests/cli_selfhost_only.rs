@@ -834,9 +834,9 @@ fn selfhost_only_rejects_legacy_pkg_semantic_fallback_in_run_logs() {
     std::fs::write(
         &caps,
         r#"
-allow = ["core/pkg::init"]
+allow = ["core/pkg-low::init"]
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 "#,
@@ -886,7 +886,7 @@ fn selfhost_only_rejects_legacy_gc_semantic_fallback_in_run_logs() {
     std::fs::write(
         &caps,
         r#"
-allow = ["core/gc::pin"]
+allow = ["core/gc-low::pin"]
 
 [store]
 dir = "./.genesis/store"
@@ -894,7 +894,7 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/gc::pin"]
+[op."core/gc-low::pin"]
 base_dir = "."
 create_dirs = true
 "#,
@@ -944,7 +944,7 @@ fn selfhost_only_rejects_legacy_gpk_semantic_fallback_in_run_logs() {
     std::fs::write(
         &caps,
         r#"
-allow = ["core/gpk::import"]
+allow = ["core/gpk-low::import"]
 
 [store]
 dir = "./.genesis/store"
@@ -952,7 +952,7 @@ dir = "./.genesis/store"
 [refs]
 path = "./.genesis/refs.gc"
 
-[op."core/gpk::import"]
+[op."core/gpk-low::import"]
 base_dir = "."
 "#,
     )
@@ -1333,4 +1333,33 @@ fn selfhost_only_full_production_workflow_runs_without_rust_fallbacks() {
         .args(["pack", "--pkg", pkg.to_str().unwrap()])
         .assert()
         .success();
+}
+
+#[test]
+fn legacy_high_level_caps_ops_are_rejected_in_default_profile() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("prog.gc");
+    std::fs::write(&file, "(def prog (core/effect::pure 1))\nprog\n").unwrap();
+    let caps = dir.path().join("caps_legacy.toml");
+    std::fs::write(
+        &caps,
+        r#"
+allow = ["core/pkg::init"]
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "run",
+            file.to_str().unwrap(),
+            "--engine",
+            "selfhost",
+            "--caps",
+            caps.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(10);
 }

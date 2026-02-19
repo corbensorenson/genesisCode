@@ -92,8 +92,8 @@ Supported keys:
 - `max_bytes` (int): optional per-op byte budget for payload-heavy operations.
   - `core/store::put`: maximum artifact byte size accepted for each put request.
   - `core/store::get` and `io/fs::read`: maximum bytes allowed in the fetched/read payload.
-- `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg::publish` (see below).
-- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg::publish` (default is false).
+- `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg-low::publish` (see below).
+- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg-low::publish` (default is false).
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -114,9 +114,9 @@ base_dir = "./sandbox"
 create_dirs = true
 ```
 
-## Sync/Publish Remotes (`core/sync::*`, `core/pkg::publish`)
+## Sync/Publish Remotes (`core/sync::*`, `core/pkg-low::publish`)
 
-`core/sync::pull`, `core/sync::push`, and `core/pkg::publish` are **secure-by-default**:
+`core/sync::pull`, `core/sync::push`, and `core/pkg-low::publish` are **secure-by-default**:
 - They require a per-op `remote_allow` allowlist (deny otherwise).
 - `http://` is rejected unless `allow_http = true`.
 
@@ -127,7 +127,7 @@ Remote normalization:
 
 Example:
 ```toml
-allow = ["core/sync::pull", "core/sync::push", "core/pkg::publish"]
+allow = ["core/sync::pull", "core/sync::push", "core/pkg-low::publish"]
 
 [op."core/sync::pull"]
 remote_allow = ["https://registry.example.com/v1/"]
@@ -141,7 +141,7 @@ auth_token_env = "GENESIS_REGISTRY_TOKEN"
 mtls_ca_pem = "./certs/registry-ca.pem"
 mtls_identity_pem = "./certs/client-identity.pem"
 
-[op."core/pkg::publish"]
+[op."core/pkg-low::publish"]
 remote_allow = ["https://registry.example.com/v1/"]
 auth_token_env = "GENESIS_REGISTRY_TOKEN"
 ```
@@ -150,22 +150,22 @@ auth_token_env = "GENESIS_REGISTRY_TOKEN"
 
 The runner also uses `base_dir` to sandbox filesystem paths carried in payloads for some non-`io/fs::*` ops:
 
-- `core/pkg::snapshot`: payload key `:pkg` (package.toml path)
-- `core/pkg::init`: payload key `:lock` (lockfile path)
-- `core/pkg::add`: payload key `:lock` (lockfile path)
-- `core/pkg::lock`: payload key `:lock` (lockfile path)
-- `core/pkg::update`: payload key `:lock` (lockfile path)
-- `core/pkg::install`: payload key `:lock` (lockfile path)
-- `core/pkg::verify`: payload key `:lock` (lockfile path)
-- `core/pkg::list`: payload key `:lock` (lockfile path)
-- `core/pkg::info`: payload key `:lock` (lockfile path)
-- `core/gpk::export`: payload key `:out` (output `.gpk` path)
-- `core/gpk::import`: payload key `:in` (input `.gpk` path), and optional `:set-refs` entries (`:name`, `:hash|nil`, `:policy`, optional `:expected-old`) applied through the local refs policy gate
-- `core/gc::*`: payload keys `:lock`, `:pins`, and (optionally) `:quarantine-dir`
+- `core/pkg-low::snapshot`: payload key `:pkg` (package.toml path)
+- `core/pkg-low::init`: payload key `:lock` (lockfile path)
+- `core/pkg-low::add`: payload key `:lock` (lockfile path)
+- `core/pkg-low::lock`: payload key `:lock` (lockfile path)
+- `core/pkg-low::update`: payload key `:lock` (lockfile path)
+- `core/pkg-low::install`: payload key `:lock` (lockfile path)
+- `core/pkg-low::verify`: payload key `:lock` (lockfile path)
+- `core/pkg-low::list`: payload key `:lock` (lockfile path)
+- `core/pkg-low::info`: payload key `:lock` (lockfile path)
+- `core/gpk-low::export`: payload key `:out` (output `.gpk` path)
+- `core/gpk-low::import`: payload key `:in` (input `.gpk` path), and optional `:set-refs` entries (`:name`, `:hash|nil`, `:policy`, optional `:expected-old`) applied through the local refs policy gate
+- `core/gc-low::*`: payload keys `:lock`, `:pins`, and (optionally) `:quarantine-dir`
 
 These payload paths must remain under `base_dir` after canonicalization, using the same rules as `io/fs::*`.
 
-For `core/gc::*`, paths may refer to files/directories that do not exist yet (e.g. `.genesis/pins.toml` or `.genesis/quarantine/`). The runner validates the longest existing ancestor is within `base_dir`, rejects `..`, and then uses the resulting under-base path.
+For `core/gc-low::*`, paths may refer to files/directories that do not exist yet (e.g. `.genesis/pins.toml` or `.genesis/quarantine/`). The runner validates the longest existing ancestor is within `base_dir`, rejects `..`, and then uses the resulting under-base path.
 
 Notes on `timeout_ms`:
 - Timeouts are enforced by running the capability in a background thread and waiting for a result.

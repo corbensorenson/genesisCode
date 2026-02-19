@@ -74,6 +74,10 @@ type GcStoreLock = ExclusiveLock;
 const HARD_REMOTE_ARTIFACT_MAX_BYTES: usize = 32 * 1024 * 1024;
 const HARD_SYNC_PULL_BATCH_MAX_BYTES: usize = 64 * 1024 * 1024;
 
+pub(crate) fn set_force_wasi_remote_profile(enabled: bool) {
+    runner_remote_ops::set_force_wasi_remote_profile(enabled);
+}
+
 #[derive(Debug, Clone, Default)]
 struct ArtifactBudgetState {
     store_written_bytes: usize,
@@ -718,33 +722,7 @@ fn mk_resource_limit_error(
 }
 
 fn dispatch_op_alias(op: &str) -> &str {
-    match op {
-        "core/pkg::init" => "core/pkg-low::init",
-        "core/pkg::add" => "core/pkg-low::add",
-        "core/pkg::list" => "core/pkg-low::list",
-        "core/pkg::info" => "core/pkg-low::info",
-        "core/pkg::lock" => "core/pkg-low::lock",
-        "core/pkg::update" => "core/pkg-low::update",
-        "core/pkg::install" => "core/pkg-low::install",
-        "core/pkg::verify" => "core/pkg-low::verify",
-        "core/pkg::snapshot" => "core/pkg-low::snapshot",
-        "core/pkg::publish" => "core/pkg-low::publish",
-        "core/gpk::export" => "core/gpk-low::export",
-        "core/gpk::import" => "core/gpk-low::import",
-        "core/gc::plan" => "core/gc-low::plan",
-        "core/gc::run" => "core/gc-low::run",
-        "core/gc::pin" => "core/gc-low::pin",
-        "core/gc::unpin" => "core/gc-low::unpin",
-        "core/gc::purge" => "core/gc-low::purge",
-        "core/vcs::log" => "core/vcs-low::log",
-        "core/vcs::blame" => "core/vcs-low::blame",
-        "core/vcs::why" => "core/vcs-low::why",
-        "core/vcs::diff" => "core/vcs-low::diff",
-        "core/vcs::apply" => "core/vcs-low::apply",
-        "core/vcs::merge3" => "core/vcs-low::merge3",
-        "core/vcs::resolve-conflict" => "core/vcs-low::resolve-conflict",
-        other => other,
-    }
+    op
 }
 
 fn consume_budget(used: &mut usize, incoming: usize) {
@@ -6497,6 +6475,11 @@ fn call_capability(
             }
         }
         "gfx/gpu::create-buffer"
+        | "core/task::channel-close"
+        | "core/task::channel-open"
+        | "core/task::channel-recv"
+        | "core/task::channel-send"
+        | "core/task::channel-status"
         | "core/task::spawn"
         | "core/task::await"
         | "core/task::cancel"
@@ -6510,15 +6493,28 @@ fn call_capability(
         | "gfx/gpu::create-pipeline-layout"
         | "gfx/gpu::create-render-pipeline"
         | "gfx/gpu::create-compute-pipeline"
+        | "gpu/compute::create-buffer"
+        | "gpu/compute::create-shader-module"
+        | "gpu/compute::create-bind-group-layout"
+        | "gpu/compute::create-bind-group"
+        | "gpu/compute::create-pipeline-layout"
+        | "gpu/compute::create-compute-pipeline"
+        | "gpu/compute::create-kernel"
         | "gfx/gpu::destroy-resource"
+        | "gpu/compute::destroy-resource"
         | "gfx/gpu::write-buffer"
+        | "gpu/compute::write-buffer"
         | "gfx/gpu::write-texture"
         | "gfx/gpu::read-buffer"
+        | "gpu/compute::read-buffer"
         | "gfx/gpu::read-texture"
         | "gfx/gpu::submit-frame-graph"
         | "gfx/gpu::submit-compute-graph"
+        | "gpu/compute::submit"
         | "gfx/gpu::limits"
+        | "gpu/compute::limits"
         | "gfx/gpu::features"
+        | "gpu/compute::features"
         | "gfx/window::create-surface"
         | "gfx/window::resize-surface"
         | "gfx/window::set-title"

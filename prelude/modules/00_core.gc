@@ -262,6 +262,33 @@
     (((core/effect::perform (quote core/task::scope)) {:scope scope})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/task::channel-open
+  (fn (capacity)
+    (((core/effect::perform (quote core/task::channel-open)) {:capacity capacity})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-send
+  (fn (channel-id)
+    (fn (value)
+      (((core/effect::perform (quote core/task::channel-send))
+        {:channel-id channel-id :value value})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/task::channel-recv
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-recv)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-close
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-close)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-status
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-status)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/task::await-all
   (fn (task-ids) (((core/task::await-all-loop task-ids) 0) [])))
 
@@ -365,6 +392,72 @@
 )
 
 (def core/task::parallel-map-bounded core/task::map-bounded)
+
+(def core/task::task-group
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (mk-payload)
+          ((((((core/task::spawn-batch scope) label) items) 0) (core/vec::len items)) mk-payload))))))
+
+(def core/task::task-group-await
+  (fn (task-ids) (core/task::await-all task-ids)))
+
+(def core/task::reduce-seq
+  (fn (items)
+    (fn (i)
+      (fn (acc)
+        (fn (reducer)
+          (if ((core/int::eq? i) (core/vec::len items))
+            (core/effect::pure acc)
+            ((core/effect::bind ((reducer acc) ((core/vec::get items) i)))
+              (fn (next)
+                ((((core/task::reduce-seq items) ((core/int::add i) 1)) next) reducer)))))))))
+
+(def core/task::parallel-reduce-bounded
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (limit)
+          (fn (mk-payload)
+            (fn (seed)
+              (fn (reducer)
+                ((core/effect::bind (((((core/task::map-bounded scope) label) items) limit) mk-payload))
+                  (fn (results)
+                    ((((core/task::reduce-seq results) 0) seed) reducer)))))))))))
+
+(def core/task::parallel-reduce core/task::parallel-reduce-bounded)
+
+(def core/task::program
+  (fn (steps) {:kind (quote :core/task-program-v1) :steps steps}))
+
+(def core/task::program-with-initial
+  (fn (initial) (fn (steps) {:initial initial :kind (quote :core/task-program-v1) :steps steps})))
+
+(def core/task::step/sleep-ms (fn (ms) {:ms ms :op (quote :sleep-ms)}))
+
+(def core/task::step/set (fn (value) {:op (quote :set) :value value}))
+
+(def core/task::step/int-add (fn (value) {:op (quote :int-add) :value value}))
+
+(def core/task::step/int-mul (fn (value) {:op (quote :int-mul) :value value}))
+
+(def core/task::step/str-append (fn (value) {:op (quote :str-append) :value value}))
+
+(def core/task::step/vec-push (fn (value) {:op (quote :vec-push) :value value}))
+
+(def core/task::step/map-put (fn (key) (fn (value) {:key key :op (quote :map-put) :value value})))
+
+(def core/task::step/fail (fn (error-term) {:error error-term :op (quote :fail)}))
+
+(def core/task::step/return (fn (value) {:op (quote :return) :value value}))
+
+(def core/task::spawn-program
+  (fn (scope)
+    (fn (label)
+      (fn (program)
+        (((core/task::spawn scope) label)
+          {:task/program program})))))
 
 (def core/contract::call
   (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))

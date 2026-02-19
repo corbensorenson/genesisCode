@@ -12,31 +12,31 @@ Rules:
 - Any ABI surface change requires updating this file and passing the host ABI conformance guard in CI.
 
 Compatibility notes:
-- `core/sync::*` is part of the ABI surface but currently returns deterministic not-supported errors on WASI bootstrap hosts.
+- `core/sync::*` is part of the ABI surface and is enforced by explicit WASI remote profiles (`none|local|preview2`), deny-by-default.
 - Adding or removing an op is a versioned ABI change and must be reflected in release notes.
 
 ## Stable Operation Surface (v0.2)
 
 <!-- HOST_ABI_OPS_BEGIN -->
-- `core/gc::pin`
-- `core/gc::plan`
-- `core/gc::purge`
-- `core/gc::run`
-- `core/gc::unpin`
-- `core/gpk::export`
-- `core/gpk::import`
+- `core/gc-low::pin`
+- `core/gc-low::plan`
+- `core/gc-low::purge`
+- `core/gc-low::run`
+- `core/gc-low::unpin`
+- `core/gpk-low::export`
+- `core/gpk-low::import`
+- `core/pkg-low::add`
+- `core/pkg-low::info`
+- `core/pkg-low::init`
+- `core/pkg-low::install`
+- `core/pkg-low::list`
 - `core/pkg-low::load-lock`
+- `core/pkg-low::lock`
+- `core/pkg-low::publish`
 - `core/pkg-low::save-lock`
-- `core/pkg::add`
-- `core/pkg::info`
-- `core/pkg::init`
-- `core/pkg::install`
-- `core/pkg::list`
-- `core/pkg::lock`
-- `core/pkg::publish`
-- `core/pkg::snapshot`
-- `core/pkg::update`
-- `core/pkg::verify`
+- `core/pkg-low::snapshot`
+- `core/pkg-low::update`
+- `core/pkg-low::verify`
 - `core/refs::delete`
 - `core/refs::get`
 - `core/refs::list`
@@ -48,20 +48,24 @@ Compatibility notes:
 - `core/sync::push`
 - `core/task::await`
 - `core/task::cancel`
+- `core/task::channel-close`
+- `core/task::channel-open`
+- `core/task::channel-recv`
+- `core/task::channel-send`
+- `core/task::channel-status`
 - `core/task::scope`
 - `core/task::spawn`
 - `core/task::status`
+- `core/vcs-low::apply`
 - `core/vcs-low::apply-patch`
+- `core/vcs-low::blame`
+- `core/vcs-low::diff`
 - `core/vcs-low::diff-terms`
+- `core/vcs-low::log`
+- `core/vcs-low::merge3`
 - `core/vcs-low::merge3-contract-snapshots`
 - `core/vcs-low::resolve-conflict`
-- `core/vcs::apply`
-- `core/vcs::blame`
-- `core/vcs::diff`
-- `core/vcs::log`
-- `core/vcs::merge3`
-- `core/vcs::resolve-conflict`
-- `core/vcs::why`
+- `core/vcs-low::why`
 - `editor/clipboard::get`
 - `editor/clipboard::set`
 - `editor/dialog::open`
@@ -107,6 +111,19 @@ Compatibility notes:
 - `gfx/window::resize-surface`
 - `gfx/window::set-title`
 - `gfx/window::surface-info`
+- `gpu/compute::create-bind-group`
+- `gpu/compute::create-bind-group-layout`
+- `gpu/compute::create-buffer`
+- `gpu/compute::create-compute-pipeline`
+- `gpu/compute::create-kernel`
+- `gpu/compute::create-pipeline-layout`
+- `gpu/compute::create-shader-module`
+- `gpu/compute::destroy-resource`
+- `gpu/compute::features`
+- `gpu/compute::limits`
+- `gpu/compute::read-buffer`
+- `gpu/compute::submit`
+- `gpu/compute::write-buffer`
 - `io/fs::read`
 - `io/fs::write`
 - `sys/time::now`

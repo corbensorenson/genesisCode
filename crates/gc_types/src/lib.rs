@@ -255,6 +255,11 @@ fn direct_effect_ops(head: &str, arity: usize) -> Option<&'static [&'static str]
         "core/task::cancel" if arity >= 1 => Some(&["core/task::cancel"]),
         "core/task::status" if arity >= 1 => Some(&["core/task::status"]),
         "core/task::scope" if arity >= 1 => Some(&["core/task::scope"]),
+        "core/task::channel-open" if arity >= 1 => Some(&["core/task::channel-open"]),
+        "core/task::channel-send" if arity >= 2 => Some(&["core/task::channel-send"]),
+        "core/task::channel-recv" if arity >= 1 => Some(&["core/task::channel-recv"]),
+        "core/task::channel-close" if arity >= 1 => Some(&["core/task::channel-close"]),
+        "core/task::channel-status" if arity >= 1 => Some(&["core/task::channel-status"]),
 
         // AI-facing task combinators in prelude, mapped to base ABI effects.
         "core/task::await-all" if arity >= 1 => Some(&["core/task::await"]),
@@ -269,6 +274,14 @@ fn direct_effect_ops(head: &str, arity: usize) -> Option<&'static [&'static str]
             Some(&["core/task::spawn", "core/task::await"])
         }
         "core/task::parallel-map-bounded" if arity >= 5 => {
+            Some(&["core/task::spawn", "core/task::await"])
+        }
+        "core/task::task-group" if arity >= 4 => Some(&["core/task::spawn"]),
+        "core/task::task-group-await" if arity >= 1 => Some(&["core/task::await"]),
+        "core/task::parallel-reduce-bounded" if arity >= 7 => {
+            Some(&["core/task::spawn", "core/task::await"])
+        }
+        "core/task::parallel-reduce" if arity >= 7 => {
             Some(&["core/task::spawn", "core/task::await"])
         }
 
@@ -717,6 +730,11 @@ fn is_core_task_effect_op(op: &str) -> bool {
             | "core/task::cancel"
             | "core/task::status"
             | "core/task::scope"
+            | "core/task::channel-open"
+            | "core/task::channel-send"
+            | "core/task::channel-recv"
+            | "core/task::channel-close"
+            | "core/task::channel-status"
     )
 }
 

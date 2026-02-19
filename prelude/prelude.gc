@@ -262,6 +262,33 @@
     (((core/effect::perform (quote core/task::scope)) {:scope scope})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/task::channel-open
+  (fn (capacity)
+    (((core/effect::perform (quote core/task::channel-open)) {:capacity capacity})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-send
+  (fn (channel-id)
+    (fn (value)
+      (((core/effect::perform (quote core/task::channel-send))
+        {:channel-id channel-id :value value})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/task::channel-recv
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-recv)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-close
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-close)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/task::channel-status
+  (fn (channel-id)
+    (((core/effect::perform (quote core/task::channel-status)) {:channel-id channel-id})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/task::await-all
   (fn (task-ids) (((core/task::await-all-loop task-ids) 0) [])))
 
@@ -366,6 +393,72 @@
 
 (def core/task::parallel-map-bounded core/task::map-bounded)
 
+(def core/task::task-group
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (mk-payload)
+          ((((((core/task::spawn-batch scope) label) items) 0) (core/vec::len items)) mk-payload))))))
+
+(def core/task::task-group-await
+  (fn (task-ids) (core/task::await-all task-ids)))
+
+(def core/task::reduce-seq
+  (fn (items)
+    (fn (i)
+      (fn (acc)
+        (fn (reducer)
+          (if ((core/int::eq? i) (core/vec::len items))
+            (core/effect::pure acc)
+            ((core/effect::bind ((reducer acc) ((core/vec::get items) i)))
+              (fn (next)
+                ((((core/task::reduce-seq items) ((core/int::add i) 1)) next) reducer)))))))))
+
+(def core/task::parallel-reduce-bounded
+  (fn (scope)
+    (fn (label)
+      (fn (items)
+        (fn (limit)
+          (fn (mk-payload)
+            (fn (seed)
+              (fn (reducer)
+                ((core/effect::bind (((((core/task::map-bounded scope) label) items) limit) mk-payload))
+                  (fn (results)
+                    ((((core/task::reduce-seq results) 0) seed) reducer)))))))))))
+
+(def core/task::parallel-reduce core/task::parallel-reduce-bounded)
+
+(def core/task::program
+  (fn (steps) {:kind (quote :core/task-program-v1) :steps steps}))
+
+(def core/task::program-with-initial
+  (fn (initial) (fn (steps) {:initial initial :kind (quote :core/task-program-v1) :steps steps})))
+
+(def core/task::step/sleep-ms (fn (ms) {:ms ms :op (quote :sleep-ms)}))
+
+(def core/task::step/set (fn (value) {:op (quote :set) :value value}))
+
+(def core/task::step/int-add (fn (value) {:op (quote :int-add) :value value}))
+
+(def core/task::step/int-mul (fn (value) {:op (quote :int-mul) :value value}))
+
+(def core/task::step/str-append (fn (value) {:op (quote :str-append) :value value}))
+
+(def core/task::step/vec-push (fn (value) {:op (quote :vec-push) :value value}))
+
+(def core/task::step/map-put (fn (key) (fn (value) {:key key :op (quote :map-put) :value value})))
+
+(def core/task::step/fail (fn (error-term) {:error error-term :op (quote :fail)}))
+
+(def core/task::step/return (fn (value) {:op (quote :return) :value value}))
+
+(def core/task::spawn-program
+  (fn (scope)
+    (fn (label)
+      (fn (program)
+        (((core/task::spawn scope) label)
+          {:task/program program})))))
+
 (def core/contract::call
   (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))
 
@@ -382,11 +475,6 @@
 (def core/store::has
   (fn (hash)
     (((core/effect::perform (quote core/store::has)) {:hash hash})
-      (fn (resp) (core/effect::pure resp)))))
-
-(def core/store::verify
-  (fn (hash-or-nil)
-    (((core/effect::perform (quote core/store::verify)) {:hash hash-or-nil})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/refs::get
@@ -1338,6 +1426,58 @@
 
 (def core/gfx/gpu::submit-compute-graph
   (fn (graph) ((core/caps::perform (quote gfx/gpu::submit-compute-graph)) {:graph graph})))
+
+(def core/gpu/compute::create-buffer
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-buffer)) {:desc desc})))
+
+(def core/gpu/compute::create-shader-module
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-shader-module)) {:desc desc})))
+
+(def core/gpu/compute::create-bind-group-layout
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-bind-group-layout)) {:desc desc})))
+
+(def core/gpu/compute::create-bind-group
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-bind-group)) {:desc desc})))
+
+(def core/gpu/compute::create-pipeline-layout
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-pipeline-layout)) {:desc desc})))
+
+(def core/gpu/compute::create-compute-pipeline
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
+
+(def core/gpu/compute::create-kernel core/gpu/compute::create-compute-pipeline)
+
+(def core/gpu/compute::destroy-resource
+  (fn (id) ((core/caps::perform (quote gpu/compute::destroy-resource)) {:id id})))
+
+(def core/gpu/compute::write-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (data)
+        ((core/caps::perform (quote gpu/compute::write-buffer))
+          {
+            :data data
+            :id id
+            :offset offset})))))
+
+(def core/gpu/compute::read-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (size)
+        ((core/caps::perform (quote gpu/compute::read-buffer))
+          {
+            :id id
+            :offset offset
+            :size size})))))
+
+(def core/gpu/compute::submit
+  (fn (graph) ((core/caps::perform (quote gpu/compute::submit)) {:graph graph})))
+
+(def core/gpu/compute::limits
+  (fn (_) ((core/caps::perform (quote gpu/compute::limits)) {})))
+
+(def core/gpu/compute::features
+  (fn (_) ((core/caps::perform (quote gpu/compute::features)) {})))
 
 (def core/gfx/frame::empty
   {:type (quote :gfx/frame-graph) :render-passes [] :compute-passes []})
@@ -4485,3 +4625,4 @@
         (fn (depth)
           ((core/effect::map ((((core/sync::push remote) refs) roots) depth))
             (core/editor/pkg::status-panel-from-response (quote :editor/sync-push-panel))))))))
+

@@ -186,6 +186,11 @@ impl CapsPolicy {
                 let op = op.as_str().ok_or_else(|| {
                     EffectsError::Log("caps.toml: allow entries must be strings".to_string())
                 })?;
+                if let Some(replacement) = retired_high_level_op_replacement(op) {
+                    return Err(EffectsError::Log(format!(
+                        "caps.toml: legacy high-level op `{op}` is retired; use `{replacement}`"
+                    )));
+                }
                 ops.insert(
                     op.to_string(),
                     OpPolicy {
@@ -302,32 +307,37 @@ fn low_level_aliases(op: &str) -> &'static [&'static str] {
     match op {
         // Internal low-level alias: `pkg snapshot` checks call `load-package`.
         "core/pkg-low::load-package" => &["core/pkg-low::snapshot"],
-        // High-level host ABI aliases routed through low-level capability implementations.
-        "core/pkg::init" => &["core/pkg-low::init"],
-        "core/pkg::add" => &["core/pkg-low::add"],
-        "core/pkg::list" => &["core/pkg-low::list"],
-        "core/pkg::info" => &["core/pkg-low::info"],
-        "core/pkg::lock" => &["core/pkg-low::lock"],
-        "core/pkg::update" => &["core/pkg-low::update"],
-        "core/pkg::install" => &["core/pkg-low::install"],
-        "core/pkg::verify" => &["core/pkg-low::verify"],
-        "core/pkg::snapshot" => &["core/pkg-low::snapshot"],
-        "core/pkg::publish" => &["core/pkg-low::publish"],
-        "core/gpk::export" => &["core/gpk-low::export"],
-        "core/gpk::import" => &["core/gpk-low::import"],
-        "core/gc::plan" => &["core/gc-low::plan"],
-        "core/gc::run" => &["core/gc-low::run"],
-        "core/gc::pin" => &["core/gc-low::pin"],
-        "core/gc::unpin" => &["core/gc-low::unpin"],
-        "core/gc::purge" => &["core/gc-low::purge"],
-        "core/vcs::log" => &["core/vcs-low::log"],
-        "core/vcs::blame" => &["core/vcs-low::blame"],
-        "core/vcs::why" => &["core/vcs-low::why"],
-        "core/vcs::diff" => &["core/vcs-low::diff"],
-        "core/vcs::apply" => &["core/vcs-low::apply"],
-        "core/vcs::merge3" => &["core/vcs-low::merge3"],
-        "core/vcs::resolve-conflict" => &["core/vcs-low::resolve-conflict"],
         _ => &[],
+    }
+}
+
+fn retired_high_level_op_replacement(op: &str) -> Option<&'static str> {
+    match op {
+        "core/pkg::init" => Some("core/pkg-low::init"),
+        "core/pkg::add" => Some("core/pkg-low::add"),
+        "core/pkg::list" => Some("core/pkg-low::list"),
+        "core/pkg::info" => Some("core/pkg-low::info"),
+        "core/pkg::lock" => Some("core/pkg-low::lock"),
+        "core/pkg::update" => Some("core/pkg-low::update"),
+        "core/pkg::install" => Some("core/pkg-low::install"),
+        "core/pkg::verify" => Some("core/pkg-low::verify"),
+        "core/pkg::snapshot" => Some("core/pkg-low::snapshot"),
+        "core/pkg::publish" => Some("core/pkg-low::publish"),
+        "core/gpk::export" => Some("core/gpk-low::export"),
+        "core/gpk::import" => Some("core/gpk-low::import"),
+        "core/gc::plan" => Some("core/gc-low::plan"),
+        "core/gc::run" => Some("core/gc-low::run"),
+        "core/gc::pin" => Some("core/gc-low::pin"),
+        "core/gc::unpin" => Some("core/gc-low::unpin"),
+        "core/gc::purge" => Some("core/gc-low::purge"),
+        "core/vcs::log" => Some("core/vcs-low::log"),
+        "core/vcs::blame" => Some("core/vcs-low::blame"),
+        "core/vcs::why" => Some("core/vcs-low::why"),
+        "core/vcs::diff" => Some("core/vcs-low::diff"),
+        "core/vcs::apply" => Some("core/vcs-low::apply"),
+        "core/vcs::merge3" => Some("core/vcs-low::merge3"),
+        "core/vcs::resolve-conflict" => Some("core/vcs-low::resolve-conflict"),
+        _ => None,
     }
 }
 
@@ -575,6 +585,11 @@ fn apply_op_cfg(
     op: &str,
     cfg: &toml::Value,
 ) -> Result<(), EffectsError> {
+    if let Some(replacement) = retired_high_level_op_replacement(op) {
+        return Err(EffectsError::Log(format!(
+            "caps.toml: legacy high-level op `{op}` is retired; use `{replacement}`"
+        )));
+    }
     let tbl = cfg
         .as_table()
         .ok_or_else(|| EffectsError::Log(format!("caps.toml: op {op} config must be a table")))?;
@@ -863,7 +878,7 @@ base_dir = "."
     }
 
     #[test]
-    fn low_level_allow_authorizes_high_level_alias() {
+    fn low_level_allow_does_not_authorize_high_level_alias() {
         let p = CapsPolicy::from_toml_str(
             r#"
 allow = ["core/gc-low::pin"]
@@ -873,25 +888,29 @@ timeout_ms = 10
 "#,
         )
         .unwrap();
-        assert!(p.is_allowed("core/gc::pin"));
-        assert_eq!(
-            p.op_policy("core/gc::pin").and_then(|op| op.timeout_ms),
-            Some(10)
-        );
+        assert!(!p.is_allowed("core/gc::pin"));
+        assert!(p.op_policy("core/gc::pin").is_none());
     }
 
     #[test]
-    fn legacy_high_level_ops_do_not_authorize_low_level_ops() {
-        let p = CapsPolicy::from_toml_str(
+    fn rejects_legacy_high_level_ops_in_allow_and_op_tables() {
+        let err = CapsPolicy::from_toml_str(
             r#"
 allow = ["core/pkg::lock"]
+"#,
+        )
+        .expect_err("must reject retired high-level op in allow list");
+        assert!(format!("{err}").contains("legacy high-level op `core/pkg::lock`"));
+
+        let err = CapsPolicy::from_toml_str(
+            r#"
+allow = ["core/pkg-low::lock"]
 
 [op."core/pkg::lock"]
 base_dir = "."
 "#,
         )
-        .unwrap();
-        assert!(!p.is_allowed("core/pkg-low::lock"));
-        assert!(p.op_policy("core/pkg-low::lock").is_none());
+        .expect_err("must reject retired high-level op in op table");
+        assert!(format!("{err}").contains("legacy high-level op `core/pkg::lock`"));
     }
 }

@@ -40,7 +40,13 @@ The interface mirrors the native `genesis` CLI for these commands:
     - workspace fallback `selfhost/toolchain.gc`
 
 Notes:
-- Networking is denied in the WASI bootstrap. `core/sync::*` is not supported under WASI.
+- WASI transport profile is explicit and deny-by-default:
+  - `http(s)` registry remotes are rejected in `wasm32-wasip1` builds.
+  - `file://` and `inproc://` remotes are supported for `store/refs/sync` workflows when capability policy allowlists them.
+  - op-level `wasi_network_profile` policy must explicitly permit the selected remote profile.
+  - `genesis_wasi` enforces this profile in parity test runs as well (even when executed on non-WASI hosts), so CI/runtime behavior matches `wasm32-wasip1` policy semantics.
+- Policy gates for `refs`, `pkg publish`, and `pkg install --strict` are shared across native/WASI CLI surfaces.
+  - Signature-required tag refs and obligation/evidence verification behavior must remain parity-tested in both suites.
 
 ## Build
 

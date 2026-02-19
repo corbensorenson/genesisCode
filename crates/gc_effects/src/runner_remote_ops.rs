@@ -1,4 +1,11 @@
 use super::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static FORCE_WASI_REMOTE_PROFILE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn set_force_wasi_remote_profile(enabled: bool) {
+    FORCE_WASI_REMOTE_PROFILE.store(enabled, Ordering::Relaxed);
+}
 
 pub(super) struct SyncPolicy {
     pub(super) remote_allow: Vec<String>,
@@ -34,12 +41,15 @@ fn parse_wasi_network_profile(pol: Option<&OpPolicy>) -> Result<Option<String>, 
     Ok(Some(s))
 }
 
-#[cfg(target_os = "wasi")]
 fn validate_wasi_remote_profile(
     profile: Option<&str>,
     scheme: &str,
     capability_scope: &str,
 ) -> Result<(), String> {
+    let enforce = cfg!(target_os = "wasi") || FORCE_WASI_REMOTE_PROFILE.load(Ordering::Relaxed);
+    if !enforce {
+        return Ok(());
+    }
     let profile = profile.unwrap_or("none");
     match profile {
         "none" => Err(format!(
@@ -59,15 +69,6 @@ fn validate_wasi_remote_profile(
             "invalid wasi_network_profile `{other}`; expected `none`, `local`, or `preview2`"
         )),
     }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn validate_wasi_remote_profile(
-    _profile: Option<&str>,
-    _scheme: &str,
-    _capability_scope: &str,
-) -> Result<(), String> {
-    Ok(())
 }
 
 pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {

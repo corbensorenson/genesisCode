@@ -15,6 +15,7 @@ mod runner_refs_ops;
 mod runner_store_ops;
 mod runner_sync_payload;
 mod runner_task;
+mod runner_task_exec;
 mod runner_timeout;
 mod runner_vcs_payload;
 mod store;
@@ -25,6 +26,10 @@ pub use crate::policy::{CapsPolicy, OpPolicy};
 pub use crate::refs::{RefEntry, RefsDb, SetResult};
 pub use crate::runner::{RunResult, replay, replay_with_store, run};
 pub use crate::store::ArtifactStore;
+
+pub fn set_force_wasi_remote_profile(enabled: bool) {
+    runner::set_force_wasi_remote_profile(enabled);
+}
 
 #[cfg(test)]
 mod tests {
@@ -549,6 +554,101 @@ max_workers = 1
     }
 
     #[test]
+    fn task_program_executes_arithmetic_work_unit_and_replays() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind
+                 (((core/task::spawn-program "scope/main") "arith")
+                   ((core/task::program-with-initial 1)
+                     [
+                       {:op :int-add :value 2}
+                       {:op :int-mul :value 5}
+                     ])))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    (core/task::await tid)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+        let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+        assert_eq!(run_out.log.entries.len(), 2);
+        assert_eq!(run_out.log.entries[0].op, "core/task::spawn");
+        assert_eq!(run_out.log.entries[1].op, "core/task::await");
+        let Value::Data(Term::Map(m)) = &run_out.value else {
+            panic!(
+                "expected await response map, got {}",
+                run_out.value.debug_repr()
+            );
+        };
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":state"))),
+            Some(&Term::symbol(":done")),
+            "unexpected await map: {:?}",
+            m
+        );
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":result"))),
+            Some(&Term::Int(15.into()))
+        );
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+        assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+    }
+
+    #[test]
+    fn task_program_type_mismatch_returns_failed_state_with_program_error() {
+        let src = r#"
+            (def prog
+              ((core/effect::bind
+                 (((core/task::spawn-program "scope/main") "bad-program")
+                   ((core/task::program-with-initial "oops")
+                     [
+                       {:op :int-add :value 1}
+                     ])))
+                (fn (spawn-resp)
+                  (let ((tid ((core/map::get spawn-resp) ':task-id)))
+                    (core/task::await tid)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
+
+        let mut ctx = EvalCtx::new();
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+        let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+        let Value::Data(Term::Map(m)) = out.value else {
+            panic!("expected await response map");
+        };
+        assert_eq!(
+            m.get(&TermOrdKey(Term::symbol(":state"))),
+            Some(&Term::symbol(":failed"))
+        );
+        let Some(Term::Map(err)) = m.get(&TermOrdKey(Term::symbol(":error"))) else {
+            panic!("expected program error payload");
+        };
+        assert_eq!(
+            err.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(&Term::Str("core/task/program-error".to_string()))
+        );
+    }
+
+    #[test]
     fn task_policy_max_queue_limit_denies_spawn_and_returns_budget_error() {
         let (forms, h) = mk_prog_for(
             "core/task::spawn",
@@ -841,6 +941,170 @@ max_workers = {max_workers}
     }
 
     #[test]
+    fn task_channels_are_fifo_and_replay_deterministic() {
+        let src = r#"
+            (def channel-demo::finish
+              (fn (cid)
+                ((core/effect::bind (core/task::channel-recv cid))
+                  (fn (r1)
+                    ((core/effect::bind (core/task::channel-recv cid))
+                      (fn (r2)
+                        ((core/effect::bind (core/task::channel-recv cid))
+                          (fn (r3)
+                            (core/effect::pure {:r1 r1 :r2 r2 :r3 r3})))))))))
+
+            (def channel-demo::prepare
+              (fn (cid)
+                ((core/effect::bind ((core/task::channel-send cid) 10))
+                  (fn (_s1)
+                    ((core/effect::bind ((core/task::channel-send cid) 20))
+                      (fn (_s2)
+                        ((core/effect::bind (core/task::channel-close cid))
+                          (fn (_closed)
+                            (channel-demo::finish cid)))))))))
+
+            (def prog
+              ((core/effect::bind (core/task::channel-open 2))
+                (fn (opened)
+                  (channel-demo::prepare ((core/map::get opened) ':channel-id)))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+
+        let mut ctx1 = EvalCtx::new();
+        let prelude1 = build_prelude(&mut ctx1);
+        let mut env1 = prelude1.env;
+        let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["core/task::channel-open", "core/task::channel-send", "core/task::channel-recv", "core/task::channel-close"]"#,
+        )
+        .unwrap();
+        let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+        assert_eq!(run_out.log.entries.len(), 7);
+        assert_eq!(run_out.log.entries[0].op, "core/task::channel-open");
+        assert_eq!(run_out.log.entries[1].op, "core/task::channel-send");
+        assert_eq!(run_out.log.entries[2].op, "core/task::channel-send");
+        assert_eq!(run_out.log.entries[3].op, "core/task::channel-close");
+        assert_eq!(run_out.log.entries[4].op, "core/task::channel-recv");
+        assert_eq!(run_out.log.entries[5].op, "core/task::channel-recv");
+        assert_eq!(run_out.log.entries[6].op, "core/task::channel-recv");
+
+        let read_entry_map = |k: &str| -> Option<&std::collections::BTreeMap<TermOrdKey, Term>> {
+            match &run_out.value {
+                Value::Data(Term::Map(root)) => match root.get(&TermOrdKey(Term::symbol(k))) {
+                    Some(Term::Map(entry)) => Some(entry),
+                    _ => None,
+                },
+                Value::Map(root) => match root.get(&TermOrdKey(Term::symbol(k))) {
+                    Some(Value::Data(Term::Map(entry))) => Some(entry),
+                    _ => None,
+                },
+                _ => None,
+            }
+        };
+        let read_value = |k: &str| -> Option<Term> {
+            let inner = read_entry_map(k)?;
+            inner.get(&TermOrdKey(Term::symbol(":value"))).cloned()
+        };
+        let read_has = |k: &str| -> Option<bool> {
+            let inner = read_entry_map(k)?;
+            match inner.get(&TermOrdKey(Term::symbol(":has-value"))) {
+                Some(Term::Bool(v)) => Some(*v),
+                _ => None,
+            }
+        };
+
+        assert_eq!(read_value(":r1"), Some(Term::Int(10.into())));
+        assert_eq!(read_value(":r2"), Some(Term::Int(20.into())));
+        assert_eq!(read_has(":r1"), Some(true));
+        assert_eq!(read_has(":r2"), Some(true));
+        assert_eq!(read_has(":r3"), Some(false));
+
+        let mut ctx2 = EvalCtx::new();
+        let prelude2 = build_prelude(&mut ctx2);
+        let mut env2 = prelude2.env;
+        let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+        let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+        assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+    }
+
+    #[test]
+    fn parallel_reduce_bounded_is_deterministic_and_parallel() {
+        let src = r#"
+            (def mk-payload
+              (fn (x)
+                {:task/sleep-ms 120 :task/result (prim int/mul x 2)}))
+
+            (def reducer
+              (fn (acc)
+                (fn (resp)
+                  (core/effect::pure (prim int/add acc ((core/map::get resp) ':result))))))
+
+            (def prog
+              (((((((core/task::parallel-reduce-bounded "scope/main") "reduce") [1 2 3 4]) 2) mk-payload) 0) reducer))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        let pol = CapsPolicy::from_toml_str(r#"allow = ["core/task::spawn", "core/task::await"]"#)
+            .unwrap();
+
+        let run_once = |max_workers: u64| {
+            let mut ctx = EvalCtx::new();
+            let prelude = build_prelude(&mut ctx);
+            let mut env = prelude.env;
+            let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+            let started = std::time::Instant::now();
+            let r = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+            let elapsed = started.elapsed().as_millis();
+            let Value::Data(Term::Int(v)) = r.value else {
+                panic!("parallel reduce must return int");
+            };
+            assert_eq!(v, 20.into());
+            for e in &r.log.entries {
+                assert!(
+                    matches!(e.op.as_str(), "core/task::spawn" | "core/task::await"),
+                    "unexpected op in parallel-reduce trace: {}",
+                    e.op
+                );
+            }
+            // Re-run with explicit worker budget to compare runtimes.
+            let mut ctx2 = EvalCtx::new();
+            let prelude2 = build_prelude(&mut ctx2);
+            let mut env2 = prelude2.env;
+            let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+            let policy_text = format!(
+                r#"
+allow = ["core/task::spawn", "core/task::await"]
+
+[task]
+max_workers = {max_workers}
+"#
+            );
+            let pol2 = CapsPolicy::from_toml_str(&policy_text).unwrap();
+            let started2 = std::time::Instant::now();
+            let r2 = run(&mut ctx2, &pol2, prog2, h, "gc_effects-test".to_string()).expect("run2");
+            let elapsed2 = started2.elapsed().as_millis();
+            let mut ctx3 = EvalCtx::new();
+            let prelude3 = build_prelude(&mut ctx3);
+            let mut env3 = prelude3.env;
+            let prog3 = eval_module(&mut ctx3, &mut env3, &forms).expect("eval3");
+            let replay_v = replay(&mut ctx3, prog3, &r2.log).expect("replay");
+            assert_eq!(value_hash(&r2.value), value_hash(&replay_v));
+            (elapsed, elapsed2)
+        };
+
+        let (_base_elapsed, parallel_elapsed) = run_once(2);
+        let (_base_elapsed2, serial_elapsed) = run_once(1);
+        assert!(
+            parallel_elapsed + 120 < serial_elapsed,
+            "expected parallel reduce with 2 workers to be faster; parallel={parallel_elapsed}ms serial={serial_elapsed}ms"
+        );
+    }
+
+    #[test]
     fn editor_clipboard_capability_roundtrip_is_supported_and_replayable() {
         let (forms, h) = mk_prog_for("editor/clipboard::get", "{}");
 
@@ -1052,6 +1316,100 @@ max_workers = {max_workers}
             let v2 = replay(&mut ctx2, prog2, &r1.log).expect("replay");
             assert_eq!(value_hash(&r1.value), value_hash(&v2));
         }
+    }
+
+    #[test]
+    fn gpu_compute_namespace_is_supported_and_policy_isolated() {
+        let pol = CapsPolicy::from_toml_str(
+            r#"allow = ["gpu/compute::create-buffer", "gpu/compute::write-buffer", "gpu/compute::read-buffer", "gpu/compute::submit", "gpu/compute::limits", "gpu/compute::features"]"#,
+        )
+        .unwrap();
+        let cases = [
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gpu/compute::create-buffer
+                                    {:desc {:size 8}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (create-resp)
+                  (let ((id ((core/map::get create-resp) ':id)))
+                    ((core/effect::bind (core/effect::perform
+                                          'gpu/compute::write-buffer
+                                          {:data b"\x01\x02\x03" :id id :offset 2}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (_)
+                        (core/effect::perform
+                          'gpu/compute::read-buffer
+                          {:id id :offset 0 :size 8}
+                          (fn (x) (core/effect::pure x)))))))))
+            prog
+            "#,
+            r#"
+            (def prog
+              ((core/effect::bind (core/effect::perform
+                                    'gpu/compute::submit
+                                    {:graph {:passes []}}
+                                    (fn (x) (core/effect::pure x))))
+                (fn (_)
+                  ((core/effect::bind (core/effect::perform
+                                        'gpu/compute::limits
+                                        {}
+                                        (fn (x) (core/effect::pure x))))
+                    (fn (_)
+                      (core/effect::perform
+                        'gpu/compute::features
+                        {}
+                        (fn (x) (core/effect::pure x))))))))
+            prog
+            "#,
+        ];
+        for src in cases {
+            let forms = parse_module(src).expect("parse module");
+            let h = hash_module(&forms);
+            let mut ctx1 = EvalCtx::new();
+            let prelude1 = build_prelude(&mut ctx1);
+            let mut env1 = prelude1.env;
+            let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+            let run_out =
+                run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+            assert!(
+                !matches!(run_out.value, Value::Sealed { .. }),
+                "gpu compute namespace should return structured responses, got {}",
+                run_out.value.debug_repr()
+            );
+            let mut ctx2 = EvalCtx::new();
+            let prelude2 = build_prelude(&mut ctx2);
+            let mut env2 = prelude2.env;
+            let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+            let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+            assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+        }
+
+        let (deny_forms, deny_h) = mk_prog_for("gfx/gpu::limits", "{}");
+        let mut ctx3 = EvalCtx::new();
+        let prelude3 = build_prelude(&mut ctx3);
+        let mut env3 = prelude3.env;
+        let deny_prog = eval_module(&mut ctx3, &mut env3, &deny_forms).expect("eval3");
+        let deny_out = run(
+            &mut ctx3,
+            &pol,
+            deny_prog,
+            deny_h,
+            "gc_effects-test".to_string(),
+        )
+        .expect("run3");
+        match deny_out.value {
+            Value::Sealed { token, .. } => {
+                assert_eq!(token, ctx3.protocol.unwrap().error);
+            }
+            other => panic!(
+                "expected denied gfx/gpu op under compute-only policy, got {}",
+                other.debug_repr()
+            ),
+        }
+        assert_eq!(deny_out.log.entries.len(), 1);
+        assert_eq!(deny_out.log.entries[0].decision, Decision::Deny);
+        assert_eq!(deny_out.log.entries[0].op, "gfx/gpu::limits");
     }
 
     #[test]

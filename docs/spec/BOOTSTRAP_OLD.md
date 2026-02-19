@@ -16,9 +16,11 @@ ones remain required for reproducible host/runtime verification.
 - `old_bootstrap/scripts/host_abi_conformance.sh`
   - reason: heavy manual parity harness, superseded by focused CI guards
   - replacement:
+    - `scripts/check_bootstrap_retirement_gate.sh` (single retirement gate)
     - `scripts/check_host_abi_conformance.sh`
     - `scripts/check_prelude_capability_coverage.sh`
     - `scripts/selfhost_default_profile_guard.sh`
+    - `scripts/selfhost_release_profile_guard.sh`
 
 - `old_bootstrap/rust_semantics/`
   - reason: isolate bootstrap-only Rust semantic program builders from production CLI wiring
@@ -60,4 +62,5 @@ Approver: genesis-core-maintainers
 
 - [x] Active crates have zero runtime imports of `old_bootstrap/rust_semantics`.
 - [x] CI enforces zero archived bootstrap semantic references via `scripts/check_old_bootstrap_retirement.sh`.
+- [x] CI enforces a single consolidated bootstrap retirement gate via `scripts/check_bootstrap_retirement_gate.sh`.
 - [x] Archive intent and replacement surfaces are documented in this spec.

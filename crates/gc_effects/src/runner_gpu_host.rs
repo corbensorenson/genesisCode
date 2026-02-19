@@ -46,7 +46,9 @@ pub(crate) fn gpu_host_call(
     error_tok: SealId,
 ) -> Option<Value> {
     match op {
-        "gfx/gpu::create-buffer" => Some(create_buffer(runtime, payload, error_tok, op)),
+        "gfx/gpu::create-buffer" | "gpu/compute::create-buffer" => {
+            Some(create_buffer(runtime, payload, error_tok, op))
+        }
         "gfx/gpu::create-texture" => Some(create_texture(runtime, payload, error_tok, op)),
         "gfx/gpu::create-sampler" => Some(create_simple_resource(
             runtime,
@@ -54,55 +56,56 @@ pub(crate) fn gpu_host_call(
             GpuKind::Sampler,
             "sampler",
         )),
-        "gfx/gpu::create-shader-module" => Some(create_simple_resource(
-            runtime,
-            payload,
-            GpuKind::ShaderModule,
-            "shader-module",
-        )),
-        "gfx/gpu::create-bind-group-layout" => Some(create_simple_resource(
-            runtime,
-            payload,
-            GpuKind::BindGroupLayout,
-            "bind-group-layout",
-        )),
-        "gfx/gpu::create-bind-group" => Some(create_simple_resource(
-            runtime,
-            payload,
-            GpuKind::BindGroup,
-            "bind-group",
-        )),
-        "gfx/gpu::create-pipeline-layout" => Some(create_simple_resource(
-            runtime,
-            payload,
-            GpuKind::PipelineLayout,
-            "pipeline-layout",
-        )),
+        "gfx/gpu::create-shader-module" | "gpu/compute::create-shader-module" => Some(
+            create_simple_resource(runtime, payload, GpuKind::ShaderModule, "shader-module"),
+        ),
+        "gfx/gpu::create-bind-group-layout" | "gpu/compute::create-bind-group-layout" => {
+            Some(create_simple_resource(
+                runtime,
+                payload,
+                GpuKind::BindGroupLayout,
+                "bind-group-layout",
+            ))
+        }
+        "gfx/gpu::create-bind-group" | "gpu/compute::create-bind-group" => Some(
+            create_simple_resource(runtime, payload, GpuKind::BindGroup, "bind-group"),
+        ),
+        "gfx/gpu::create-pipeline-layout" | "gpu/compute::create-pipeline-layout" => Some(
+            create_simple_resource(runtime, payload, GpuKind::PipelineLayout, "pipeline-layout"),
+        ),
         "gfx/gpu::create-render-pipeline" => Some(create_simple_resource(
             runtime,
             payload,
             GpuKind::RenderPipeline,
             "render-pipeline",
         )),
-        "gfx/gpu::create-compute-pipeline" => Some(create_simple_resource(
+        "gfx/gpu::create-compute-pipeline"
+        | "gpu/compute::create-compute-pipeline"
+        | "gpu/compute::create-kernel" => Some(create_simple_resource(
             runtime,
             payload,
             GpuKind::ComputePipeline,
             "compute-pipeline",
         )),
-        "gfx/gpu::destroy-resource" => Some(destroy_resource(runtime, payload, error_tok, op)),
-        "gfx/gpu::write-buffer" => Some(write_buffer(runtime, payload, error_tok, op)),
+        "gfx/gpu::destroy-resource" | "gpu/compute::destroy-resource" => {
+            Some(destroy_resource(runtime, payload, error_tok, op))
+        }
+        "gfx/gpu::write-buffer" | "gpu/compute::write-buffer" => {
+            Some(write_buffer(runtime, payload, error_tok, op))
+        }
         "gfx/gpu::write-texture" => Some(write_texture(runtime, payload, error_tok, op)),
-        "gfx/gpu::read-buffer" => Some(read_buffer(runtime, payload, error_tok, op)),
+        "gfx/gpu::read-buffer" | "gpu/compute::read-buffer" => {
+            Some(read_buffer(runtime, payload, error_tok, op))
+        }
         "gfx/gpu::read-texture" => Some(read_texture(runtime, payload, error_tok, op)),
         "gfx/gpu::submit-frame-graph" => {
             Some(submit_graph(runtime, payload, "frame", error_tok, op))
         }
-        "gfx/gpu::submit-compute-graph" => {
+        "gfx/gpu::submit-compute-graph" | "gpu/compute::submit" => {
             Some(submit_graph(runtime, payload, "compute", error_tok, op))
         }
-        "gfx/gpu::limits" => Some(gpu_limits()),
-        "gfx/gpu::features" => Some(gpu_features()),
+        "gfx/gpu::limits" | "gpu/compute::limits" => Some(gpu_limits()),
+        "gfx/gpu::features" | "gpu/compute::features" => Some(gpu_features()),
         _ => None,
     }
 }

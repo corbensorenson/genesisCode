@@ -28,6 +28,7 @@ mod cmd_sync;
 mod cmd_vcs;
 mod diagnostics;
 mod kernel_exec;
+mod policy_config;
 mod pkg_abi;
 mod pkg_contract;
 mod pkg_doctor;
@@ -37,6 +38,7 @@ mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
 mod program_builders;
+mod selfhost_bridge;
 mod selfhost_frontend;
 
 use cmd_gc::cmd_gc;
@@ -55,7 +57,9 @@ use cmd_vcs::{
 };
 use diagnostics::annotate_envelope;
 use kernel_exec::eval_module_default;
+use policy_config::*;
 use program_builders::*;
+use selfhost_bridge::*;
 use selfhost_frontend::*;
 
 const EX_OK: u8 = 0;
@@ -1193,6 +1197,7 @@ pub enum Flavor {
 }
 
 pub fn run(flavor: Flavor) -> std::process::ExitCode {
+    gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {
         Ok(out) => {

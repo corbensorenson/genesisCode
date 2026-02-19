@@ -5,7 +5,7 @@ Last updated: 2026-02-19
 This file contains only unfinished work from a fresh full-project red-team pass.
 Completed items were intentionally removed.
 
-Open checklist items: 15
+Open checklist items: 5
 
 ## P0 — Self-Host and Correctness Blockers
 
@@ -24,9 +24,9 @@ Open checklist items: 15
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs:121`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs:416`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs:745`
   - Acceptance: default `fmt/hash/eval` wasm exports route through selfhost frontend; Rust path remains parity-only (explicitly named/debug gated).
 
-- [ ] Remove release-profile dependence on Rust-engine compatibility toggles.
+- [x] Remove release-profile dependence on Rust-engine compatibility toggles.
   - Risk: fallback semantics remain available via environment/profile drift.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:12`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:32`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md:47`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:12`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:32`, `/Users/corbensorenson/Documents/genesisCode/scripts/selfhost_release_profile_guard.sh:1`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md:40`
   - Acceptance: release binaries reject Rust engine/frontend execution paths unconditionally; compat paths move to dedicated parity harness binaries.
 
 - [x] Fix command-name wiring bugs in selfhost fallback guard calls.
@@ -49,9 +49,9 @@ Open checklist items: 15
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/compiled.rs:846`
   - Acceptance: compiled execution handles closure application without term-eval fallback (or fallback is impossible by construction) with parity tests.
 
-- [ ] Implement WASI remote transport for registry/sync workflows.
+- [x] Implement WASI remote transport for registry/sync workflows.
   - Risk: WASI builds cannot participate in distributed package/ref workflows.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:279`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:323`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md:43`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_remote_ops.rs:1`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:1195`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_sync.rs:378`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_pkg_publish.rs:13`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md:44`
   - Acceptance: WASI supports policy-gated remote `store/refs/sync` transport (or ships an explicit alternative transport profile) with replayable logs.
 
 ## P1 — Capability Completeness (Modern Language Surface)
@@ -61,9 +61,9 @@ Open checklist items: 15
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:11`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/Cargo.toml:1`
   - Acceptance: production GPU backend (e.g., `wgpu`) with deterministic request/response logging and replay strategy.
 
-- [ ] Split GPU compute from graphics in capability model.
+- [x] Split GPU compute from graphics in capability model.
   - Risk: compute workloads are forced into gfx namespace semantics.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:42`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:49`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6496`, `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc:80`, `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc:1399`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:1226`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md:116`
   - Acceptance: separate compute-oriented ops/contracts (queue, buffers, kernels, reductions) with graphics-independent policy controls.
 
 - [ ] Replace in-memory window/input/audio simulation with real host integrations.
@@ -76,14 +76,14 @@ Open checklist items: 15
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:107`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:135`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:209`
   - Acceptance: concrete editor bridge spec + host implementation + integration tests (no synthetic heartbeat/plugin echo behavior in production profile).
 
-- [ ] Upgrade `core/task::*` from payload simulation to executable concurrent work units.
+- [x] Upgrade `core/task::*` from payload simulation to executable concurrent work units.
   - Risk: task system currently models queue/jobs structurally instead of running general closures/effect programs as tasks.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:663`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:706`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task_exec.rs:12`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task_exec.rs:38`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:486`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:631`, `/Users/corbensorenson/Documents/genesisCode/prelude/modules/00_core.gc:434`, `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc:434`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:557`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:611`
   - Acceptance: task spawn/await/cancel/status operates on real executable units with deterministic scheduling trace and replay checks.
 
-- [ ] Add first-class deterministic parallel primitives for AI-first large program generation.
+- [x] Add first-class deterministic parallel primitives for AI-first large program generation.
   - Risk: no high-level structured-concurrency surface for generated programs.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:758`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:136`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:6478`, `/Users/corbensorenson/Documents/genesisCode/prelude/modules/00_core.gc:265`, `/Users/corbensorenson/Documents/genesisCode/prelude/modules/00_core.gc:417`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_types/src/lib.rs:258`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:848`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/lib.rs:932`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md:51`
   - Acceptance: contract-level `task-group`, bounded parallel map/reduce, channel primitives, and cancellation scopes with policy budgets.
 
 ## P2 — Performance and Scale
@@ -130,9 +130,9 @@ Open checklist items: 15
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/store.rs:18`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:3319`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_store.rs:189`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_store.rs:253`
   - Acceptance: periodic integrity scan command, per-artifact verification metadata, and deterministic failure codes for corrupted blobs.
 
-- [ ] Enforce policy parity for publish/install/refs across native and WASI profiles.
+- [x] Enforce policy parity for publish/install/refs across native and WASI profiles.
   - Risk: cross-host behavior can diverge for obligation/auth/signature gates.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md:22`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:279`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md:22`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_pkg_publish.rs:285`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_pkg_publish.rs:307`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_pkg_engine.rs:615`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_pkg_engine.rs:615`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_refs_engine.rs:370`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_refs_engine.rs:362`
   - Acceptance: policy-required checks (obligations/evidence/signatures) are identical across supported host profiles or explicitly profiled with hard fail.
 
 - [x] Add end-to-end transport auth profile tests for registry operations.
@@ -142,22 +142,22 @@ Open checklist items: 15
 
 ## P4 — Self-Host Cutover Execution
 
-- [ ] Define and run a single “Rust bootstrap retirement” gate.
+- [x] Define and run a single “Rust bootstrap retirement” gate.
   - Risk: partial cutover leaves hidden runtime dependencies.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/old_bootstrap`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/BOOTSTRAP_OLD.md`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:39`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/scripts/check_bootstrap_retirement_gate.sh:1`, `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:87`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/BOOTSTRAP_OLD.md:17`
   - Acceptance: CI gate proves production runtime executes only selfhost toolchain paths; rust bootstrap moved to archival-only tooling.
 
-- [ ] Remove production fallback routing after selfhost parity proof.
+- [x] Remove production fallback routing after selfhost parity proof.
   - Risk: dead/legacy branches accumulate and create future correctness/security risk.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:304`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_selfhost_only.rs:863`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:724`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/policy.rs:301`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_selfhost_only.rs:1260`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_selfhost_only.rs:1148`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/CAPS_TOML.md:117`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md:21`
   - Acceptance: fallback branches removed in production profile, parity harness retained separately, and docs/spec updated to single execution model.
 
-- [ ] Ship selfhost-native project manager (`gcpm`) as the canonical workflow path.
+- [x] Ship selfhost-native project manager (`gcpm`) as the canonical workflow path.
   - Risk: mixed legacy command surfaces fragment package/workspace workflows.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_CLI_CONTRACT_v0.1.md`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_gcpm_selfhost_acceptance.rs:108`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_CLI_CONTRACT_v0.1.md`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_gcpm_selfhost_acceptance.rs:108`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_gcpm_selfhost_alias.rs:1`
   - Acceptance: `gcpm` covers init/add/lock/install/update/export/import/publish/verify workflows in selfhost-only mode with stable machine-readable outputs.
 
-- [ ] Add selfhost-only GPU/parallel reference programs and obligations.
+- [x] Add selfhost-only GPU/parallel reference programs and obligations.
   - Risk: selfhost claim is incomplete without proving advanced workloads run through GC stack.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:42`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_task.rs:648`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/tests/spec/pkg_gpu_parallel_obligations/package.toml:1`, `/Users/corbensorenson/Documents/genesisCode/tests/spec/pkg_gpu_parallel_obligations/gpu_parallel.gc:1`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_selfhost_gpu_parallel.rs:1`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_selfhost_gpu_parallel.rs:1`
   - Acceptance: reference suites (compute + rendering + parallel tasks) pass under selfhost-only execution with replay/evidence artifacts.
