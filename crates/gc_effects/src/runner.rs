@@ -44,7 +44,6 @@ use crate::runner_refs_ops::{
     payload_refs_prefix,
 };
 use crate::runner_store_ops::{payload_store_artifact, payload_store_hash, store_get_term};
-#[cfg(not(target_os = "wasi"))]
 use crate::runner_sync_payload::{
     payload_sync_depth, payload_sync_force, payload_sync_refs, payload_sync_remote,
     payload_sync_roots, payload_sync_set_refs,
@@ -59,6 +58,13 @@ use crate::runner_vcs_payload::{
     payload_vcs_out, payload_vcs_patch, payload_vcs_root, payload_vcs_store, payload_vcs_sym,
 };
 use crate::store::ArtifactStore;
+
+#[path = "runner_gc_ops.rs"]
+mod runner_gc_ops;
+#[path = "runner_remote_ops.rs"]
+mod runner_remote_ops;
+use runner_gc_ops::*;
+use runner_remote_ops::*;
 
 type GcStoreLock = ExclusiveLock;
 
@@ -871,404 +877,11 @@ fn call_capability(
         ));
     }
     match op_eff {
-        "core/sync::pull" => {
-            #[cfg(target_os = "wasi")]
-            {
-                let _ = payload;
-                let _ = pol;
-                let _ = policy;
-                let _ = store;
-                let _ = refs;
-                return Ok(mk_error(
-                    error_tok,
-                    "core/sync/not-supported",
-                    "core/sync is not supported on WASI (no networking in the bootstrap)"
-                        .to_string(),
-                    Some(op),
-                ));
-            }
-            #[cfg(not(target_os = "wasi"))]
-            {
-                let store = store.ok_or_else(|| {
-                    EffectsError::Log("missing artifact store for core/sync::pull".to_string())
-                })?;
-                let refs = refs.ok_or_else(|| {
-                    EffectsError::Log("missing refs db for core/sync::pull".to_string())
-                })?;
+        "core/sync::pull" => capability_sync_pull(
+            payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+        ),
 
-                let remote_s = match payload_sync_remote(payload) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                let depth = payload_sync_depth(payload).unwrap_or(0);
-                let force = payload_sync_force(payload).unwrap_or(false);
-                let refnames = match payload_sync_refs(payload) {
-                    Ok(rs) => rs,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                let roots = match payload_sync_roots(payload) {
-                    Ok(rs) => rs,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                if refnames.is_empty() && roots.is_empty() {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/sync/bad-payload",
-                        "pull requires :refs and/or :roots".to_string(),
-                        Some(op),
-                    ));
-                }
-
-                let sp = match sync_policy_from_op(pol) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                    }
-                };
-                let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
-                    Ok(b) => b,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
-                    }
-                };
-                let auth = match sync_registry_auth(&sp) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                    }
-                };
-                let client = match gc_registry::RegistryClient::new_with_auth(
-                    &base,
-                    timeout_ms.map(std::time::Duration::from_millis),
-                    auth,
-                ) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        let code = registry_error_code(&e, "core/sync/remote-auth");
-                        return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
-                    }
-                };
-
-                let mut pulled: u64 = 0;
-                let mut already: u64 = 0;
-                let mut heads: Vec<Term> = Vec::new();
-
-                // Pull by roots (hashes) first.
-                for h in &roots {
-                    let mut stats = SyncPullStats {
-                        pulled: &mut pulled,
-                        already: &mut already,
-                        store_written_bytes: &mut budget.store_written_bytes,
-                        store_max_run_bytes: policy.store.max_run_bytes,
-                        error_tok,
-                        op,
-                        transfer_workers: sp.transfer_workers,
-                        max_artifact_bytes: sp.max_artifact_bytes,
-                        max_batch_bytes: sp.max_batch_bytes,
-                    };
-                    match sync_pull_closure(&client, store, h, depth, &mut stats) {
-                        Ok(()) => {}
-                        Err(v) => return Ok(v),
-                    }
-                }
-
-                // Pull and update refs.
-                for rname in &refnames {
-                    let h = match client.refs_get(rname) {
-                        Ok(Some(h)) => h,
-                        Ok(None) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/sync/ref-not-found",
-                                format!("remote ref not found: {rname}"),
-                                Some(op),
-                            ));
-                        }
-                        Err(e) => {
-                            let code = registry_error_code(&e, "core/sync/remote-auth");
-                            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
-                        }
-                    };
-                    let mut stats = SyncPullStats {
-                        pulled: &mut pulled,
-                        already: &mut already,
-                        store_written_bytes: &mut budget.store_written_bytes,
-                        store_max_run_bytes: policy.store.max_run_bytes,
-                        error_tok,
-                        op,
-                        transfer_workers: sp.transfer_workers,
-                        max_artifact_bytes: sp.max_artifact_bytes,
-                        max_batch_bytes: sp.max_batch_bytes,
-                    };
-                    match sync_pull_closure(&client, store, &h, depth, &mut stats) {
-                        Ok(()) => {}
-                        Err(v) => return Ok(v),
-                    }
-
-                    // Update local refs unless it would clobber a different value.
-                    let cur = refs.get(rname)?;
-                    if !force
-                        && let Some(curh) = &cur
-                        && curh != &h
-                    {
-                        return Ok(mk_error_with_ctx(
-                            error_tok,
-                            "core/refs/conflict",
-                            "local ref differs; use force to overwrite".to_string(),
-                            Some(op),
-                            Term::Map(
-                                [
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/name")),
-                                        Term::Str(rname.clone()),
-                                    ),
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/current")),
-                                        cur.clone().map(Term::Str).unwrap_or(Term::Nil),
-                                    ),
-                                    (
-                                        TermOrdKey(Term::symbol(":refs/remote")),
-                                        Term::Str(h.clone()),
-                                    ),
-                                ]
-                                .into_iter()
-                                .collect(),
-                            ),
-                        ));
-                    }
-                    let _ = refs.set(rname, Some(&h), None)?;
-
-                    heads.push(Term::Map(
-                        [
-                            (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
-                            (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    ));
-                }
-
-                heads.sort_by_cached_key(print_term);
-
-                let mut m = BTreeMap::new();
-                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-                m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
-                m.insert(
-                    TermOrdKey(Term::symbol(":pulled")),
-                    Term::Int((pulled as i64).into()),
-                );
-                m.insert(
-                    TermOrdKey(Term::symbol(":present")),
-                    Term::Int((already as i64).into()),
-                );
-                m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
-                Ok(Value::Data(Term::Map(m)))
-            }
-        }
-
-        "core/sync::push" => {
-            #[cfg(target_os = "wasi")]
-            {
-                let _ = payload;
-                let _ = pol;
-                let _ = policy;
-                let _ = store;
-                let _ = refs;
-                return Ok(mk_error(
-                    error_tok,
-                    "core/sync/not-supported",
-                    "core/sync is not supported on WASI (no networking in the bootstrap)"
-                        .to_string(),
-                    Some(op),
-                ));
-            }
-            #[cfg(not(target_os = "wasi"))]
-            {
-                let store = store.ok_or_else(|| {
-                    EffectsError::Log("missing artifact store for core/sync::push".to_string())
-                })?;
-
-                let remote_s = match payload_sync_remote(payload) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                let depth = payload_sync_depth(payload).unwrap_or(0);
-                let roots = match payload_sync_roots(payload) {
-                    Ok(rs) => rs,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                if roots.is_empty() {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/sync/bad-payload",
-                        "push requires :roots".to_string(),
-                        Some(op),
-                    ));
-                }
-                let set_refs = match payload_sync_set_refs(payload) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
-                    }
-                };
-                for sr in &set_refs {
-                    if let Err(v) = local_refs_validate_policy_gate(
-                        store,
-                        &sr.name,
-                        Some(&sr.hash),
-                        &sr.policy,
-                        error_tok,
-                        op,
-                    ) {
-                        return Ok(v);
-                    }
-                }
-
-                let sp = match sync_policy_from_op(pol) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                    }
-                };
-                let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
-                    Ok(b) => b,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
-                    }
-                };
-                let auth = match sync_registry_auth(&sp) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-                    }
-                };
-                let client = match gc_registry::RegistryClient::new_with_auth(
-                    &base,
-                    timeout_ms.map(std::time::Duration::from_millis),
-                    auth,
-                ) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        let code = registry_error_code(&e, "core/sync/remote-auth");
-                        return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
-                    }
-                };
-
-                let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-                for h in &roots {
-                    match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
-                        Ok(()) => {}
-                        Err(v) => return Ok(v),
-                    }
-                }
-                let hashes: Vec<String> = all.into_iter().collect();
-
-                let mut missing: Vec<String> = Vec::new();
-                let mut present: u64 = 0;
-                let has_chunks: Vec<Vec<String>> =
-                    hashes.chunks(512).map(|chunk| chunk.to_vec()).collect();
-                let has_results =
-                    sync_parallel_store_has_chunks(&client, &has_chunks, sp.transfer_workers);
-                for (chunk_i, chunk) in hashes.chunks(512).enumerate() {
-                    let mp = match &has_results[chunk_i] {
-                        Ok(m) => m,
-                        Err(e) => {
-                            let code = registry_error_code(e, "core/sync/remote-auth");
-                            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
-                        }
-                    };
-                    for h in chunk {
-                        match mp.get(h) {
-                            Some(true) => present = present.saturating_add(1),
-                            _ => missing.push(h.clone()),
-                        }
-                    }
-                }
-                missing.sort();
-                missing.dedup();
-
-                let upload_results =
-                    sync_parallel_upload_missing(&client, store, &missing, sp.transfer_workers);
-                let mut uploaded: u64 = 0;
-                for r in upload_results {
-                    match r {
-                        Ok(()) => uploaded = uploaded.saturating_add(1),
-                        Err(e) => {
-                            let (code, msg) = if e.starts_with("store-read:") {
-                                ("core/store/not-found", e)
-                            } else if e.starts_with("auth error:") {
-                                ("core/sync/remote-auth", e)
-                            } else {
-                                ("core/sync/remote-error", e)
-                            };
-                            return Ok(mk_error(error_tok, code, msg, Some(op)));
-                        }
-                    }
-                }
-
-                let mut refs_updated: u64 = 0;
-                if !set_refs.is_empty() {
-                    let mut set_refs_sorted = set_refs;
-                    set_refs_sorted.sort_by(|a, b| a.name.cmp(&b.name));
-                    for sr in &set_refs_sorted {
-                        let req = gc_registry::RefsSetReq {
-                            name: &sr.name,
-                            hash: &sr.hash,
-                            policy: &sr.policy,
-                            expected_old: sr.expected_old.as_deref(),
-                        };
-                        match client.refs_set(&req) {
-                            Ok(r) => {
-                                if !r.ok {
-                                    return Ok(mk_error(
-                                        error_tok,
-                                        "core/sync/refs-set-failed",
-                                        "remote refs/set returned ok=false".to_string(),
-                                        Some(op),
-                                    ));
-                                }
-                                refs_updated = refs_updated.saturating_add(1);
-                            }
-                            Err(e) => {
-                                let code = registry_error_code(&e, "core/sync/remote-auth");
-                                return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
-                            }
-                        }
-                    }
-                }
-
-                let mut m = BTreeMap::new();
-                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-                m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
-                m.insert(
-                    TermOrdKey(Term::symbol(":total")),
-                    Term::Int((hashes.len() as i64).into()),
-                );
-                m.insert(
-                    TermOrdKey(Term::symbol(":present")),
-                    Term::Int((present as i64).into()),
-                );
-                m.insert(
-                    TermOrdKey(Term::symbol(":uploaded")),
-                    Term::Int((uploaded as i64).into()),
-                );
-                m.insert(
-                    TermOrdKey(Term::symbol(":refs-updated")),
-                    Term::Int((refs_updated as i64).into()),
-                );
-                Ok(Value::Data(Term::Map(m)))
-            }
-        }
+        "core/sync::push" => capability_sync_push(payload, pol, store, error_tok, op, timeout_ms),
 
         "core/pkg-low::init" => {
             let lock_s = match payload_pkg_lock(payload) {
@@ -3119,186 +2732,239 @@ fn call_capability(
         }
 
         "core/pkg-low::publish" => {
-            #[cfg(target_os = "wasi")]
-            {
-                let _ = payload;
-                let _ = pol;
-                let _ = policy;
-                let _ = store;
-                let _ = refs;
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg-low::publish".to_string())
+            })?;
+            let refs = refs.ok_or_else(|| {
+                EffectsError::Log("missing refs db for core/pkg-low::publish".to_string())
+            })?;
+
+            let remote_s = match payload_pkg_publish_remote(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let refname = match payload_pkg_publish_ref(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let policy_h = match payload_pkg_publish_policy(payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let expected_old = match payload_pkg_publish_expected_old(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let depth = payload_pkg_publish_depth(payload).unwrap_or(0);
+            let commit_override = match payload_pkg_publish_commit(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let commit_hex = if let Some(h) = commit_override {
+                h
+            } else {
+                let h = match refs.get(&refname) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/refs/io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                let Some(h) = h else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/ref-not-found",
+                        format!("local ref is unset: {refname}"),
+                        Some(op),
+                    ));
+                };
+                h
+            };
+
+            if gc_vcs::validate_hex_hash(&commit_hex).is_err() {
                 return Ok(mk_error(
                     error_tok,
-                    "core/pkg/not-supported",
-                    "core/pkg-low::publish is not supported on WASI (no networking in the bootstrap)"
-                        .to_string(),
+                    "core/pkg/bad-payload",
+                    "commit must be 64-hex".to_string(),
                     Some(op),
                 ));
             }
-            #[cfg(not(target_os = "wasi"))]
-            {
-                let store = store.ok_or_else(|| {
-                    EffectsError::Log(
-                        "missing artifact store for core/pkg-low::publish".to_string(),
-                    )
-                })?;
-                let refs = refs.ok_or_else(|| {
-                    EffectsError::Log("missing refs db for core/pkg-low::publish".to_string())
-                })?;
+            if gc_vcs::validate_hex_hash(&policy_h).is_err() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-payload",
+                    "policy must be 64-hex".to_string(),
+                    Some(op),
+                ));
+            }
 
-                let remote_s = match payload_pkg_publish_remote(payload) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-payload",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let refname = match payload_pkg_publish_ref(payload) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-payload",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let policy_h = match payload_pkg_publish_policy(payload) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-payload",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let expected_old = match payload_pkg_publish_expected_old(payload) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-payload",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let depth = payload_pkg_publish_depth(payload).unwrap_or(0);
-                let commit_override = match payload_pkg_publish_commit(payload) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-payload",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-
-                let commit_hex = if let Some(h) = commit_override {
-                    h
-                } else {
-                    let h = match refs.get(&refname) {
-                        Ok(h) => h,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/refs/io-error",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let Some(h) = h else {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/ref-not-found",
-                            format!("local ref is unset: {refname}"),
-                            Some(op),
-                        ));
-                    };
-                    h
-                };
-
-                if gc_vcs::validate_hex_hash(&commit_hex).is_err() {
+            let pol_term = match store_get_term(store, &policy_h) {
+                Ok(t) => t,
+                Err(_) => {
                     return Ok(mk_error(
                         error_tok,
-                        "core/pkg/bad-payload",
-                        "commit must be 64-hex".to_string(),
+                        "core/store/not-found",
+                        format!("artifact not found: {policy_h}"),
                         Some(op),
                     ));
                 }
-                if gc_vcs::validate_hex_hash(&policy_h).is_err() {
+            };
+            let pol_art = match gc_vcs::Policy::from_term(&pol_term) {
+                Ok(p) => p,
+                Err(e) => {
                     return Ok(mk_error(
                         error_tok,
-                        "core/pkg/bad-payload",
-                        "policy must be 64-hex".to_string(),
+                        "core/pkg/bad-policy",
+                        e.to_string(),
                         Some(op),
                     ));
                 }
+            };
+            if pol_art.is_frozen_ref(&refname) {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/ref-frozen",
+                    format!("ref is frozen by policy: {refname}"),
+                    Some(op),
+                ));
+            }
+            let class = match pol_art.class_for_ref(&refname) {
+                Some(c) => c,
+                None => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/no-policy-class",
+                        format!("policy has no matching class for ref: {refname}"),
+                        Some(op),
+                    ));
+                }
+            };
 
-                let pol_term = match store_get_term(store, &policy_h) {
+            let commit_term = match store_get_term(store, &commit_hex) {
+                Ok(t) => t,
+                Err(_) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/store/not-found",
+                        format!("artifact not found: {commit_hex}"),
+                        Some(op),
+                    ));
+                }
+            };
+            let commit = match gc_vcs::Commit::from_term(&commit_term) {
+                Ok(c) => c,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-commit",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+
+            for req in &class.required_obligations {
+                if !commit.obligations.iter().any(|o| o == req) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-obligation",
+                        format!("commit missing required obligation: {req}"),
+                        Some(op),
+                    ));
+                }
+            }
+            if !class.required_obligations.is_empty() && commit.evidence.is_empty() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/missing-evidence",
+                    "commit has required obligations but no evidence".to_string(),
+                    Some(op),
+                ));
+            }
+            let mut evidence_kinds: std::collections::BTreeSet<String> =
+                std::collections::BTreeSet::new();
+            for ev_h in &commit.evidence {
+                let ev_term = match store_get_term(store, ev_h) {
                     Ok(t) => t,
                     Err(_) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/store/not-found",
-                            format!("artifact not found: {policy_h}"),
+                            format!("artifact not found: {ev_h}"),
                             Some(op),
                         ));
                     }
                 };
-                let pol_art = match gc_vcs::Policy::from_term(&pol_term) {
-                    Ok(p) => p,
+                let ev = match gc_vcs::Evidence::from_term(&ev_term) {
+                    Ok(ev) => ev,
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
-                            "core/pkg/bad-policy",
+                            "core/pkg/bad-evidence",
                             e.to_string(),
                             Some(op),
                         ));
                     }
                 };
-                if pol_art.is_frozen_ref(&refname) {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/ref-frozen",
-                        format!("ref is frozen by policy: {refname}"),
-                        Some(op),
-                    ));
-                }
-                let class = match pol_art.class_for_ref(&refname) {
-                    Some(c) => c,
-                    None => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/no-policy-class",
-                            format!("policy has no matching class for ref: {refname}"),
-                            Some(op),
-                        ));
-                    }
-                };
+                evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+            }
+            let missing_kinds =
+                class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
+            if !missing_kinds.is_empty() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/missing-evidence-kind",
+                    format!(
+                        "commit evidence missing required kinds: {}",
+                        missing_kinds.join(", ")
+                    ),
+                    Some(op),
+                ));
+            }
 
-                let commit_term = match store_get_term(store, &commit_hex) {
-                    Ok(t) => t,
-                    Err(_) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/not-found",
-                            format!("artifact not found: {commit_hex}"),
-                            Some(op),
-                        ));
-                    }
-                };
-                let commit = match gc_vcs::Commit::from_term(&commit_term) {
-                    Ok(c) => c,
+            if class.require_signatures {
+                let signing_h = match gc_vcs::commit_signing_hash(&commit_term) {
+                    Ok(h) => h,
                     Err(e) => {
                         return Ok(mk_error(
                             error_tok,
@@ -3308,199 +2974,126 @@ fn call_capability(
                         ));
                     }
                 };
-
-                for req in &class.required_obligations {
-                    if !commit.obligations.iter().any(|o| o == req) {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/missing-obligation",
-                            format!("commit missing required obligation: {req}"),
-                            Some(op),
-                        ));
-                    }
-                }
-                if !class.required_obligations.is_empty() && commit.evidence.is_empty() {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/missing-evidence",
-                        "commit has required obligations but no evidence".to_string(),
-                        Some(op),
-                    ));
-                }
-                let mut evidence_kinds: std::collections::BTreeSet<String> =
+                let mut valid: u64 = 0;
+                let mut seen_pks: std::collections::BTreeSet<Vec<u8>> =
                     std::collections::BTreeSet::new();
-                for ev_h in &commit.evidence {
-                    let ev_term = match store_get_term(store, ev_h) {
+                for at_h in &commit.attestations {
+                    let at_term = match store_get_term(store, at_h) {
                         Ok(t) => t,
                         Err(_) => {
                             return Ok(mk_error(
                                 error_tok,
                                 "core/store/not-found",
-                                format!("artifact not found: {ev_h}"),
+                                format!("artifact not found: {at_h}"),
                                 Some(op),
                             ));
                         }
                     };
-                    let ev = match gc_vcs::Evidence::from_term(&ev_term) {
-                        Ok(ev) => ev,
+                    let at = match gc_vcs::Attestation::from_term(&at_term) {
+                        Ok(a) => a,
                         Err(e) => {
                             return Ok(mk_error(
                                 error_tok,
-                                "core/pkg/bad-evidence",
+                                "core/pkg/bad-attestation",
                                 e.to_string(),
                                 Some(op),
                             ));
                         }
                     };
-                    evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+                    let pk_vec = at.pk.to_vec();
+                    if seen_pks.contains(&pk_vec) {
+                        continue;
+                    }
+                    if gc_vcs::verify_commit_attestation(
+                        &at,
+                        &signing_h,
+                        &class.allowed_public_keys,
+                    )
+                    .is_ok()
+                    {
+                        seen_pks.insert(pk_vec);
+                        valid = valid.saturating_add(1);
+                    }
                 }
-                let missing_kinds =
-                    class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
-                if !missing_kinds.is_empty() {
+                if valid < class.min_signatures {
                     return Ok(mk_error(
                         error_tok,
-                        "core/pkg/missing-evidence-kind",
+                        "core/pkg/missing-signatures",
                         format!(
-                            "commit evidence missing required kinds: {}",
-                            missing_kinds.join(", ")
+                            "need {} valid signatures, got {valid}",
+                            class.min_signatures
                         ),
                         Some(op),
                     ));
                 }
-
-                if class.require_signatures {
-                    let signing_h = match gc_vcs::commit_signing_hash(&commit_term) {
-                        Ok(h) => h,
-                        Err(e) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/pkg/bad-commit",
-                                e.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
-                    let mut valid: u64 = 0;
-                    let mut seen_pks: std::collections::BTreeSet<Vec<u8>> =
-                        std::collections::BTreeSet::new();
-                    for at_h in &commit.attestations {
-                        let at_term = match store_get_term(store, at_h) {
-                            Ok(t) => t,
-                            Err(_) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/store/not-found",
-                                    format!("artifact not found: {at_h}"),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        let at = match gc_vcs::Attestation::from_term(&at_term) {
-                            Ok(a) => a,
-                            Err(e) => {
-                                return Ok(mk_error(
-                                    error_tok,
-                                    "core/pkg/bad-attestation",
-                                    e.to_string(),
-                                    Some(op),
-                                ));
-                            }
-                        };
-                        let pk_vec = at.pk.to_vec();
-                        if seen_pks.contains(&pk_vec) {
-                            continue;
-                        }
-                        if gc_vcs::verify_commit_attestation(
-                            &at,
-                            &signing_h,
-                            &class.allowed_public_keys,
-                        )
-                        .is_ok()
-                        {
-                            seen_pks.insert(pk_vec);
-                            valid = valid.saturating_add(1);
-                        }
-                    }
-                    if valid < class.min_signatures {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/missing-signatures",
-                            format!(
-                                "need {} valid signatures, got {valid}",
-                                class.min_signatures
-                            ),
-                            Some(op),
-                        ));
-                    }
-                }
-
-                let mut set_ref_mm = BTreeMap::new();
-                set_ref_mm.insert(
-                    TermOrdKey(Term::symbol(":name")),
-                    Term::Str(refname.clone()),
-                );
-                set_ref_mm.insert(
-                    TermOrdKey(Term::symbol(":hash")),
-                    Term::Str(commit_hex.clone()),
-                );
-                set_ref_mm.insert(
-                    TermOrdKey(Term::symbol(":policy")),
-                    Term::Str(policy_h.clone()),
-                );
-                if let Some(eo) = &expected_old {
-                    set_ref_mm.insert(
-                        TermOrdKey(Term::symbol(":expected-old")),
-                        Term::Str(eo.clone()),
-                    );
-                }
-
-                let mut sync_payload_m = BTreeMap::new();
-                sync_payload_m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(remote_s));
-                sync_payload_m.insert(
-                    TermOrdKey(Term::symbol(":roots")),
-                    Term::Vector(vec![
-                        Term::Str(commit_hex.clone()),
-                        Term::Str(policy_h.clone()),
-                    ]),
-                );
-                if depth > 0 {
-                    sync_payload_m.insert(
-                        TermOrdKey(Term::symbol(":depth")),
-                        Term::Int((depth as i64).into()),
-                    );
-                }
-                sync_payload_m.insert(
-                    TermOrdKey(Term::symbol(":set-refs")),
-                    Term::Vector(vec![Term::Map(set_ref_mm)]),
-                );
-
-                let sync_payload = Term::Map(sync_payload_m);
-                let sync_pol = pol.or_else(|| policy.op_policy("core/sync::push"));
-                let sync_out = call_capability(
-                    "core/sync::push",
-                    &sync_payload,
-                    sync_pol,
-                    policy,
-                    Some(store),
-                    Some(refs),
-                    budget,
-                    error_tok,
-                )?;
-
-                let out = match sync_out {
-                    Value::Data(Term::Map(mut m)) => {
-                        m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(commit_hex));
-                        m.insert(TermOrdKey(Term::symbol(":ref")), Term::Str(refname));
-                        m.insert(
-                            TermOrdKey(Term::symbol(":provenance")),
-                            commit_provenance_term(&commit),
-                        );
-                        Value::Data(Term::Map(m))
-                    }
-                    other => other,
-                };
-                Ok(out)
             }
+
+            let mut set_ref_mm = BTreeMap::new();
+            set_ref_mm.insert(
+                TermOrdKey(Term::symbol(":name")),
+                Term::Str(refname.clone()),
+            );
+            set_ref_mm.insert(
+                TermOrdKey(Term::symbol(":hash")),
+                Term::Str(commit_hex.clone()),
+            );
+            set_ref_mm.insert(
+                TermOrdKey(Term::symbol(":policy")),
+                Term::Str(policy_h.clone()),
+            );
+            if let Some(eo) = &expected_old {
+                set_ref_mm.insert(
+                    TermOrdKey(Term::symbol(":expected-old")),
+                    Term::Str(eo.clone()),
+                );
+            }
+
+            let mut sync_payload_m = BTreeMap::new();
+            sync_payload_m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(remote_s));
+            sync_payload_m.insert(
+                TermOrdKey(Term::symbol(":roots")),
+                Term::Vector(vec![
+                    Term::Str(commit_hex.clone()),
+                    Term::Str(policy_h.clone()),
+                ]),
+            );
+            if depth > 0 {
+                sync_payload_m.insert(
+                    TermOrdKey(Term::symbol(":depth")),
+                    Term::Int((depth as i64).into()),
+                );
+            }
+            sync_payload_m.insert(
+                TermOrdKey(Term::symbol(":set-refs")),
+                Term::Vector(vec![Term::Map(set_ref_mm)]),
+            );
+
+            let sync_payload = Term::Map(sync_payload_m);
+            let sync_pol = pol.or_else(|| policy.op_policy("core/sync::push"));
+            let sync_out = call_capability(
+                "core/sync::push",
+                &sync_payload,
+                sync_pol,
+                policy,
+                Some(store),
+                Some(refs),
+                budget,
+                error_tok,
+            )?;
+
+            let out = match sync_out {
+                Value::Data(Term::Map(mut m)) => {
+                    m.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(commit_hex));
+                    m.insert(TermOrdKey(Term::symbol(":ref")), Term::Str(refname));
+                    m.insert(
+                        TermOrdKey(Term::symbol(":provenance")),
+                        commit_provenance_term(&commit),
+                    );
+                    Value::Data(Term::Map(m))
+                }
+                other => other,
+            };
+            Ok(out)
         }
         "core/store::put" => {
             let store = store.ok_or_else(|| {
@@ -3552,19 +3145,7 @@ fn call_capability(
                 }
                 present = true;
             } else {
-                #[cfg(target_os = "wasi")]
-                {
-                    if policy.store.remote.is_some() {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/not-supported",
-                            "remote store is not supported on WASI bootstrap".to_string(),
-                            Some(op),
-                        ));
-                    }
-                }
-                #[cfg(not(target_os = "wasi"))]
-                match store_remote_client(policy, timeout_ms, error_tok, op) {
+                match store_remote_client(policy, pol, timeout_ms, error_tok, op) {
                     Ok(Some((client, _base))) => {
                         let mp = match client.store_has(std::slice::from_ref(&h)) {
                             Ok(m) => m,
@@ -3603,19 +3184,7 @@ fn call_capability(
             let h = payload_store_hash(payload)?;
             let p = store.path_for(&h);
             if !p.exists() {
-                #[cfg(target_os = "wasi")]
-                {
-                    if policy.store.remote.is_some() {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/store/not-supported",
-                            "remote store is not supported on WASI bootstrap".to_string(),
-                            Some(op),
-                        ));
-                    }
-                }
-                #[cfg(not(target_os = "wasi"))]
-                match store_remote_client(policy, timeout_ms, error_tok, op) {
+                match store_remote_client(policy, pol, timeout_ms, error_tok, op) {
                     Ok(Some((client, _base))) => {
                         let bytes = match client.store_get_opt_bounded(&h, Some(max_bytes)) {
                             Ok(Some(b)) => b,
@@ -8255,1441 +7824,3 @@ fn resolve_requirement(
         }
     }
 }
-
-struct SyncPolicy {
-    remote_allow: Vec<String>,
-    allow_http: bool,
-    auth_token: Option<String>,
-    auth_token_env: Option<String>,
-    mtls_ca_pem: Option<std::path::PathBuf>,
-    mtls_identity_pem: Option<std::path::PathBuf>,
-    transfer_workers: usize,
-    max_artifact_bytes: usize,
-    max_batch_bytes: usize,
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
-    let mut remote_allow: Vec<String> = Vec::new();
-    let mut allow_http = false;
-    let mut auth_token: Option<String> = None;
-    let mut auth_token_env: Option<String> = None;
-    let mut mtls_ca_pem: Option<std::path::PathBuf> = None;
-    let mut mtls_identity_pem: Option<std::path::PathBuf> = None;
-    let mut transfer_workers: usize = 4;
-    let mut max_artifact_bytes: usize = HARD_REMOTE_ARTIFACT_MAX_BYTES;
-    let mut max_batch_bytes: usize = HARD_SYNC_PULL_BATCH_MAX_BYTES;
-    if let Some(pol) = pol {
-        if let Some(v) = pol.extra.get("remote_allow")
-            && let Some(arr) = v.as_array()
-        {
-            for x in arr {
-                let s = x
-                    .as_str()
-                    .ok_or_else(|| "remote_allow entries must be strings".to_string())?;
-                let t = s.trim();
-                if !t.is_empty() {
-                    remote_allow.push(t.to_string());
-                }
-            }
-        }
-        if let Some(v) = pol.extra.get("allow_http")
-            && let Some(b) = v.as_bool()
-        {
-            allow_http = b;
-        }
-        if let Some(v) = pol.extra.get("auth_token")
-            && let Some(s) = v.as_str()
-        {
-            auth_token = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("auth_token_env")
-            && let Some(s) = v.as_str()
-        {
-            auth_token_env = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("mtls_ca_pem")
-            && let Some(s) = v.as_str()
-        {
-            mtls_ca_pem = Some(std::path::PathBuf::from(s));
-        }
-        if let Some(v) = pol.extra.get("mtls_identity_pem")
-            && let Some(s) = v.as_str()
-        {
-            mtls_identity_pem = Some(std::path::PathBuf::from(s));
-        }
-        if let Some(v) = pol.extra.get("transfer_workers")
-            && let Some(n) = v.as_integer()
-            && n > 0
-        {
-            if let Ok(nn) = usize::try_from(n) {
-                transfer_workers = nn.clamp(1, 64);
-            }
-        }
-        if let Some(v) = pol.extra.get("max_artifact_bytes") {
-            let n = v
-                .as_integer()
-                .ok_or_else(|| "max_artifact_bytes must be a positive integer".to_string())?;
-            if n <= 0 {
-                return Err("max_artifact_bytes must be > 0".to_string());
-            }
-            let nn = usize::try_from(n)
-                .map_err(|_| "max_artifact_bytes is too large for this platform".to_string())?;
-            max_artifact_bytes = nn.min(HARD_REMOTE_ARTIFACT_MAX_BYTES);
-        }
-        if let Some(v) = pol.extra.get("max_batch_bytes") {
-            let n = v
-                .as_integer()
-                .ok_or_else(|| "max_batch_bytes must be a positive integer".to_string())?;
-            if n <= 0 {
-                return Err("max_batch_bytes must be > 0".to_string());
-            }
-            let nn = usize::try_from(n)
-                .map_err(|_| "max_batch_bytes is too large for this platform".to_string())?;
-            max_batch_bytes = nn.min(HARD_SYNC_PULL_BATCH_MAX_BYTES);
-        }
-    }
-    if remote_allow.is_empty() {
-        return Err("sync requires per-op remote_allow allowlist in caps.toml".to_string());
-    }
-    if max_batch_bytes < max_artifact_bytes {
-        max_batch_bytes = max_artifact_bytes;
-    }
-    Ok(SyncPolicy {
-        remote_allow,
-        allow_http,
-        auth_token,
-        auth_token_env,
-        mtls_ca_pem,
-        mtls_identity_pem,
-        transfer_workers,
-        max_artifact_bytes,
-        max_batch_bytes,
-    })
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<String, String> {
-    let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
-    let base_s = base.as_str().to_string();
-    if base.scheme() == "http" && !sp.allow_http {
-        return Err("http remotes are disabled by policy (set allow_http=true)".to_string());
-    }
-    for p in &sp.remote_allow {
-        let t = p.trim();
-        if t.ends_with("://") {
-            if base.scheme() == t.trim_end_matches("://") {
-                return Ok(base_s.clone());
-            }
-            continue;
-        }
-        if remote_allow_matches(&base_s, t).map_err(|e| format!("bad remote_allow: {e}"))? {
-            return Ok(base_s.clone());
-        }
-    }
-    Err("remote is not in policy remote_allow allowlist".to_string())
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result<String, String> {
-    let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
-    let base_s = base.as_str().to_string();
-    if base.scheme() == "http" && !policy.store.allow_http {
-        return Err("http remotes are disabled by policy (set store.allow_http=true)".to_string());
-    }
-    if policy.store.remote_allow.is_empty() {
-        return Err("store remote requires store.remote_allow allowlist in caps.toml".to_string());
-    }
-    for p in &policy.store.remote_allow {
-        let t = p.trim();
-        if t.ends_with("://") {
-            if base.scheme() == t.trim_end_matches("://") {
-                return Ok(base_s.clone());
-            }
-            continue;
-        }
-        if remote_allow_matches(&base_s, t).map_err(|e| format!("bad remote_allow: {e}"))? {
-            return Ok(base_s.clone());
-        }
-    }
-    Err("store remote is not in policy store.remote_allow allowlist".to_string())
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn remote_allow_matches(base: &str, allow: &str) -> Result<bool, gc_registry::RegistryError> {
-    let base = gc_registry::normalize_remote_base(base)?;
-    let allow = gc_registry::normalize_remote_base(allow)?;
-    if base.scheme() != allow.scheme() {
-        return Ok(false);
-    }
-    if base.host_str() != allow.host_str() {
-        return Ok(false);
-    }
-    if base.port_or_known_default() != allow.port_or_known_default() {
-        return Ok(false);
-    }
-    let base_path = ensure_trailing_slash(base.path());
-    let allow_path = ensure_trailing_slash(allow.path());
-    Ok(base_path.starts_with(&allow_path))
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn ensure_trailing_slash(path: &str) -> String {
-    if path.ends_with('/') {
-        path.to_string()
-    } else {
-        format!("{path}/")
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn registry_error_code(err: &gc_registry::RegistryError, auth_code: &'static str) -> &'static str {
-    match err {
-        gc_registry::RegistryError::Auth(_) => auth_code,
-        _ => "core/sync/remote-error",
-    }
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn resolve_auth_token(
-    inline: Option<&str>,
-    env_name: Option<&str>,
-) -> Result<Option<String>, String> {
-    if inline.is_some() && env_name.is_some() {
-        return Err("auth_token and auth_token_env are mutually exclusive".to_string());
-    }
-    if let Some(token) = inline {
-        return Ok(Some(token.to_string()));
-    }
-    if let Some(name) = env_name {
-        let v = std::env::var(name)
-            .map_err(|_| format!("auth_token_env `{name}` is not set in environment"))?;
-        if v.trim().is_empty() {
-            return Err(format!(
-                "auth_token_env `{name}` resolved to an empty token"
-            ));
-        }
-        return Ok(Some(v));
-    }
-    Ok(None)
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
-    std::fs::read(path).map_err(|e| format!("failed reading PEM `{}`: {e}", path.display()))
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn store_registry_auth(policy: &CapsPolicy) -> Result<gc_registry::RegistryAuth, String> {
-    let bearer_token = resolve_auth_token(
-        policy.store.auth_token.as_deref(),
-        policy.store.auth_token_env.as_deref(),
-    )?;
-    let mtls_ca_pem = match policy.store.mtls_ca_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    let mtls_identity_pem = match policy.store.mtls_identity_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    Ok(gc_registry::RegistryAuth {
-        bearer_token,
-        mtls_ca_pem,
-        mtls_identity_pem,
-    })
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
-    let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
-    let mtls_ca_pem = match sp.mtls_ca_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    let mtls_identity_pem = match sp.mtls_identity_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    Ok(gc_registry::RegistryAuth {
-        bearer_token,
-        mtls_ca_pem,
-        mtls_identity_pem,
-    })
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn store_remote_client(
-    policy: &CapsPolicy,
-    timeout_ms: Option<u64>,
-    error_tok: SealId,
-    op: &str,
-) -> Result<Option<(gc_registry::RegistryClient, String)>, Value> {
-    let Some(remote) = &policy.store.remote else {
-        return Ok(None);
-    };
-    let base = match store_normalize_and_check_remote(policy, remote) {
-        Ok(b) => b,
-        Err(e) => {
-            return Err(mk_error(error_tok, "core/store/remote-denied", e, Some(op)));
-        }
-    };
-    let auth = match store_registry_auth(policy) {
-        Ok(a) => a,
-        Err(e) => {
-            return Err(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
-        }
-    };
-    let client = match gc_registry::RegistryClient::new_with_auth(
-        &base,
-        timeout_ms.map(std::time::Duration::from_millis),
-        auth,
-    ) {
-        Ok(c) => c,
-        Err(e) => {
-            let code = match &e {
-                gc_registry::RegistryError::Auth(_) => "core/store/remote-auth",
-                _ => "core/store/remote-error",
-            };
-            return Err(mk_error(error_tok, code, format!("{e}"), Some(op)));
-        }
-    };
-    Ok(Some((client, base)))
-}
-
-#[cfg(not(target_os = "wasi"))]
-struct SyncPullStats<'a> {
-    pulled: &'a mut u64,
-    already: &'a mut u64,
-    store_written_bytes: &'a mut usize,
-    store_max_run_bytes: Option<usize>,
-    error_tok: SealId,
-    op: &'a str,
-    transfer_workers: usize,
-    max_artifact_bytes: usize,
-    max_batch_bytes: usize,
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_pull_closure(
-    client: &gc_registry::RegistryClient,
-    store: &ArtifactStore,
-    root: &str,
-    depth: u64,
-    stats: &mut SyncPullStats<'_>,
-) -> Result<(), Value> {
-    use std::collections::{HashSet, VecDeque};
-
-    let mut q: VecDeque<(String, u64)> = VecDeque::new();
-    q.push_back((root.to_string(), depth));
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut obj_count: u64 = 0;
-    let base_batch_cap = (stats.transfer_workers.max(1) * 8).max(8);
-    let by_budget = (stats.max_batch_bytes / stats.max_artifact_bytes.max(1)).max(1);
-    let batch_cap = base_batch_cap.min(by_budget);
-
-    while !q.is_empty() {
-        let mut batch: Vec<(String, u64)> = Vec::new();
-        while batch.len() < batch_cap {
-            let Some((h, dleft)) = q.pop_front() else {
-                break;
-            };
-            if !seen.insert(h.clone()) {
-                continue;
-            }
-            obj_count = obj_count.saturating_add(1);
-            if obj_count > 50_000 {
-                return Err(mk_error(
-                    stats.error_tok,
-                    "core/sync/too-many-objects",
-                    "closure exceeded 50k objects".to_string(),
-                    Some(stats.op),
-                ));
-            }
-            batch.push((h, dleft));
-        }
-        if batch.is_empty() {
-            continue;
-        }
-
-        let mut missing_hashes: Vec<String> = Vec::new();
-        for (h, _) in &batch {
-            if store.path_for(h).exists() {
-                if store.verify_hex(h).is_err() {
-                    return Err(mk_error(
-                        stats.error_tok,
-                        "core/store/corruption",
-                        format!("artifact store corruption: {h}"),
-                        Some(stats.op),
-                    ));
-                }
-                *stats.already = stats.already.saturating_add(1);
-            } else {
-                missing_hashes.push(h.clone());
-            }
-        }
-
-        if !missing_hashes.is_empty() {
-            let dl_results = sync_parallel_store_get_bytes(
-                client,
-                &missing_hashes,
-                stats.transfer_workers,
-                stats.max_artifact_bytes,
-                stats.max_batch_bytes,
-            );
-            for (i, h) in missing_hashes.iter().enumerate() {
-                let bytes = match &dl_results[i] {
-                    Ok(b) => b,
-                    Err(e) => {
-                        if let gc_registry::RegistryError::Protocol(msg) = e
-                            && msg.contains("resource-limit:")
-                        {
-                            return Err(mk_error(
-                                stats.error_tok,
-                                "core/caps/resource-limit",
-                                msg.split("resource-limit:")
-                                    .nth(1)
-                                    .unwrap_or(msg)
-                                    .trim()
-                                    .to_string(),
-                                Some(stats.op),
-                            ));
-                        }
-                        let code = registry_error_code(e, "core/sync/remote-auth");
-                        return Err(mk_error(
-                            stats.error_tok,
-                            code,
-                            format!("{e}"),
-                            Some(stats.op),
-                        ));
-                    }
-                };
-                if let Some(limit) = stats.store_max_run_bytes {
-                    let observed = (*stats.store_written_bytes).saturating_add(bytes.len());
-                    if observed > limit {
-                        return Err(mk_resource_limit_error(
-                            stats.error_tok,
-                            stats.op,
-                            "store artifact bytes",
-                            observed,
-                            limit,
-                        ));
-                    }
-                }
-                let got = store.put_bytes(bytes).map_err(|e| {
-                    mk_error(
-                        stats.error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
-                        Some(stats.op),
-                    )
-                })?;
-                if got != *h {
-                    return Err(mk_error(
-                        stats.error_tok,
-                        "core/sync/hash-mismatch",
-                        "remote bytes hash mismatch".to_string(),
-                        Some(stats.op),
-                    ));
-                }
-                *stats.store_written_bytes =
-                    (*stats.store_written_bytes).saturating_add(bytes.len());
-                *stats.pulled = stats.pulled.saturating_add(1);
-            }
-        }
-
-        for (h, dleft) in batch {
-            let t = match store_get_term(store, &h) {
-                Ok(t) => t,
-                Err(_) => continue,
-            };
-
-            // Commit closure: commit, base, patch, result snapshot, evidence, attestations, parents.
-            if let Ok(c) = gc_vcs::Commit::from_term(&t) {
-                if let Some(b) = c.base {
-                    q.push_back((b, dleft));
-                }
-                q.push_back((c.patch, dleft));
-                q.push_back((c.result, dleft));
-                for x in c.evidence {
-                    q.push_back((x, dleft));
-                }
-                for x in c.attestations {
-                    q.push_back((x, dleft));
-                }
-                if dleft > 0 {
-                    for p in c.parents {
-                        q.push_back((p, dleft - 1));
-                    }
-                }
-                continue;
-            }
-
-            // Patch closure: follow referenced values.
-            if let Ok(p) = gc_vcs::Patch::from_term(&t) {
-                for x in p.refs() {
-                    q.push_back((x, dleft));
-                }
-                continue;
-            }
-
-            // Evidence closure: follow any referenced inputs/outputs/data.
-            if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
-                for x in e.refs() {
-                    q.push_back((x, dleft));
-                }
-                continue;
-            }
-
-            // Conflict closure: follow referenced snapshots and referenced handler/value hashes.
-            if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
-                for x in c.refs() {
-                    q.push_back((x, dleft));
-                }
-                continue;
-            }
-
-            // Snapshot closure: shallow refs.
-            if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
-                for x in s.shallow_refs() {
-                    q.push_back((x, dleft));
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_store_get_bytes(
-    client: &gc_registry::RegistryClient,
-    hashes: &[String],
-    workers: usize,
-    max_artifact_bytes: usize,
-    max_batch_bytes: usize,
-) -> Vec<Result<Vec<u8>, gc_registry::RegistryError>> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{Arc, Mutex};
-
-    if hashes.is_empty() {
-        return Vec::new();
-    }
-    let workers = workers.clamp(1, 64).min(hashes.len());
-    if workers <= 1 {
-        let mut total: usize = 0;
-        return hashes
-            .iter()
-            .map(|h| {
-                client
-                    .store_get_bounded(h, Some(max_artifact_bytes))
-                    .map_err(|e| e)
-                    .and_then(|b| {
-                        total = total.saturating_add(b.len());
-                        if total > max_batch_bytes {
-                            return Err(gc_registry::RegistryError::Protocol(format!(
-                                "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
-                            )));
-                        }
-                        Ok(b)
-                    })
-            })
-            .collect();
-    }
-
-    let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<Vec<u8>, gc_registry::RegistryError>>>>> =
-        Arc::new(Mutex::new((0..hashes.len()).map(|_| None).collect()));
-    std::thread::scope(|scope| {
-        for _ in 0..workers {
-            let out = Arc::clone(&out);
-            let next = Arc::clone(&next);
-            let c = client.clone();
-            scope.spawn(move || {
-                loop {
-                    let i = next.fetch_add(1, Ordering::Relaxed);
-                    if i >= hashes.len() {
-                        break;
-                    }
-                    let res = c
-                        .store_get_bounded(&hashes[i], Some(max_artifact_bytes))
-                        .map_err(|e| e);
-                    if let Ok(mut g) = out.lock() {
-                        g[i] = Some(res);
-                    } else {
-                        return;
-                    }
-                }
-            });
-        }
-    });
-    let mut g = match out.lock() {
-        Ok(g) => g,
-        Err(_) => {
-            return (0..hashes.len())
-                .map(|_| {
-                    Err(gc_registry::RegistryError::Protocol(
-                        "sync get results lock poisoned".to_string(),
-                    ))
-                })
-                .collect();
-        }
-    };
-    let mut total: usize = 0;
-    g.drain(..)
-        .map(|x| {
-            x.unwrap_or_else(|| {
-                Err(gc_registry::RegistryError::Protocol(
-                    "sync get worker produced no result".to_string(),
-                ))
-            })
-                .and_then(|b| {
-                    total = total.saturating_add(b.len());
-                    if total > max_batch_bytes {
-                        return Err(gc_registry::RegistryError::Protocol(format!(
-                            "resource-limit: sync pull batch exceeded limit ({total} > {max_batch_bytes} bytes)"
-                        )));
-                    }
-                    Ok(b)
-                })
-        })
-        .collect()
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_store_has_chunks(
-    client: &gc_registry::RegistryClient,
-    chunks: &[Vec<String>],
-    workers: usize,
-) -> Vec<Result<BTreeMap<String, bool>, gc_registry::RegistryError>> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{Arc, Mutex};
-
-    if chunks.is_empty() {
-        return Vec::new();
-    }
-    let workers = workers.clamp(1, 64).min(chunks.len());
-    if workers <= 1 {
-        return chunks.iter().map(|chunk| client.store_has(chunk)).collect();
-    }
-
-    let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<BTreeMap<String, bool>, gc_registry::RegistryError>>>>> =
-        Arc::new(Mutex::new((0..chunks.len()).map(|_| None).collect()));
-    std::thread::scope(|scope| {
-        for _ in 0..workers {
-            let out = Arc::clone(&out);
-            let next = Arc::clone(&next);
-            let c = client.clone();
-            scope.spawn(move || {
-                loop {
-                    let i = next.fetch_add(1, Ordering::Relaxed);
-                    if i >= chunks.len() {
-                        break;
-                    }
-                    let res = c.store_has(&chunks[i]);
-                    if let Ok(mut g) = out.lock() {
-                        g[i] = Some(res);
-                    } else {
-                        return;
-                    }
-                }
-            });
-        }
-    });
-    let mut g = match out.lock() {
-        Ok(g) => g,
-        Err(_) => {
-            return (0..chunks.len())
-                .map(|_| {
-                    Err(gc_registry::RegistryError::Protocol(
-                        "sync has results lock poisoned".to_string(),
-                    ))
-                })
-                .collect();
-        }
-    };
-    g.drain(..)
-        .map(|x| {
-            x.unwrap_or_else(|| {
-                Err(gc_registry::RegistryError::Protocol(
-                    "sync has worker produced no result".to_string(),
-                ))
-            })
-        })
-        .collect()
-}
-
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_upload_missing(
-    client: &gc_registry::RegistryClient,
-    store: &ArtifactStore,
-    missing: &[String],
-    workers: usize,
-) -> Vec<Result<(), String>> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{Arc, Mutex};
-
-    if missing.is_empty() {
-        return Vec::new();
-    }
-    let workers = workers.clamp(1, 64).min(missing.len());
-    if workers <= 1 {
-        return missing
-            .iter()
-            .map(|h| {
-                let bytes = store.get_bytes(h).map_err(|e| format!("store-read:{e}"))?;
-                client.store_put(h, &bytes).map_err(|e| format!("{e}"))
-            })
-            .collect();
-    }
-
-    let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<(), String>>>>> =
-        Arc::new(Mutex::new((0..missing.len()).map(|_| None).collect()));
-    std::thread::scope(|scope| {
-        for _ in 0..workers {
-            let out = Arc::clone(&out);
-            let next = Arc::clone(&next);
-            let c = client.clone();
-            let s = store.clone();
-            scope.spawn(move || {
-                loop {
-                    let i = next.fetch_add(1, Ordering::Relaxed);
-                    if i >= missing.len() {
-                        break;
-                    }
-                    let h = &missing[i];
-                    let res = s
-                        .get_bytes(h)
-                        .map_err(|e| format!("store-read:{e}"))
-                        .and_then(|bytes| c.store_put(h, &bytes).map_err(|e| format!("{e}")));
-                    if let Ok(mut g) = out.lock() {
-                        g[i] = Some(res);
-                    } else {
-                        return;
-                    }
-                }
-            });
-        }
-    });
-    let mut g = match out.lock() {
-        Ok(g) => g,
-        Err(_) => {
-            return (0..missing.len())
-                .map(|_| Err("sync put results lock poisoned".to_string()))
-                .collect();
-        }
-    };
-    g.drain(..)
-        .map(|x| x.unwrap_or_else(|| Err("sync put worker produced no result".to_string())))
-        .collect()
-}
-
-fn sync_closure_local(
-    store: &ArtifactStore,
-    root: &str,
-    depth: u64,
-    out: &mut std::collections::BTreeSet<String>,
-    error_tok: SealId,
-    op: &str,
-) -> Result<(), Value> {
-    use std::collections::{HashSet, VecDeque};
-    let mut q: VecDeque<(String, u64)> = VecDeque::new();
-    q.push_back((root.to_string(), depth));
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut obj_count: u64 = 0;
-
-    while let Some((h, dleft)) = q.pop_front() {
-        if !seen.insert(h.clone()) {
-            continue;
-        }
-        obj_count = obj_count.saturating_add(1);
-        if obj_count > 50_000 {
-            return Err(mk_error(
-                error_tok,
-                "core/sync/too-many-objects",
-                "closure exceeded 50k objects".to_string(),
-                Some(op),
-            ));
-        }
-        if !store.path_for(&h).exists() {
-            return Err(mk_error(
-                error_tok,
-                "core/store/not-found",
-                format!("artifact not found: {h}"),
-                Some(op),
-            ));
-        }
-        if store.verify_hex(&h).is_err() {
-            return Err(mk_error(
-                error_tok,
-                "core/store/corruption",
-                format!("artifact store corruption: {h}"),
-                Some(op),
-            ));
-        }
-        out.insert(h.clone());
-
-        let t = match store_get_term(store, &h) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
-            if let Some(b) = c.base {
-                q.push_back((b, dleft));
-            }
-            q.push_back((c.patch, dleft));
-            q.push_back((c.result, dleft));
-            for x in c.evidence {
-                q.push_back((x, dleft));
-            }
-            for x in c.attestations {
-                q.push_back((x, dleft));
-            }
-            if dleft > 0 {
-                for p in c.parents {
-                    q.push_back((p, dleft - 1));
-                }
-            }
-            continue;
-        }
-        if let Ok(p) = gc_vcs::Patch::from_term(&t) {
-            for x in p.refs() {
-                q.push_back((x, dleft));
-            }
-            continue;
-        }
-        if let Ok(e) = gc_vcs::Evidence::from_term(&t) {
-            for x in e.refs() {
-                q.push_back((x, dleft));
-            }
-            continue;
-        }
-        if let Ok(c) = gc_vcs::Conflict::from_term(&t) {
-            for x in c.refs() {
-                q.push_back((x, dleft));
-            }
-            continue;
-        }
-        if let Ok(s) = gc_vcs::Snapshot::from_term(&t) {
-            for x in s.shallow_refs() {
-                q.push_back((x, dleft));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn resolve_gpk_root_for_export(
-    store: &ArtifactStore,
-    refs: Option<&RefsDb>,
-    root_spec: &str,
-    mode: GpkMode,
-    error_tok: SealId,
-    op: &str,
-) -> Result<String, Value> {
-    let mut root = root_spec.trim().to_string();
-    if let Some(s) = root.strip_prefix("h:") {
-        root = s.to_string();
-    }
-    if gc_vcs::validate_hex_hash(&root).is_ok() {
-        return Ok(root.to_ascii_lowercase());
-    }
-    if let Some(s) = root.strip_prefix("ref:") {
-        root = s.to_string();
-    }
-    if !root.starts_with("refs/") {
-        return Err(mk_error(
-            error_tok,
-            "core/gpk/bad-root",
-            "root must be a hash or refs/...".to_string(),
-            Some(op),
-        ));
-    }
-    let refs = refs.ok_or_else(|| {
-        mk_error(
-            error_tok,
-            "core/gpk/missing-refs-db",
-            "refs db required when root is a ref".to_string(),
-            Some(op),
-        )
-    })?;
-    let resolved = refs
-        .get(&root)
-        .map_err(|e| mk_error(error_tok, "core/gpk/refs-io-error", e.to_string(), Some(op)))?;
-    let Some(hash) = resolved else {
-        return Err(mk_error(
-            error_tok,
-            "core/gpk/ref-not-found",
-            format!("ref not found: {root}"),
-            Some(op),
-        ));
-    };
-    let hash = hash.to_ascii_lowercase();
-    let root_term = match store_get_term(store, &hash) {
-        Ok(t) => t,
-        Err(_) => {
-            return Err(mk_error(
-                error_tok,
-                "core/store/not-found",
-                format!("artifact not found: {hash}"),
-                Some(op),
-            ));
-        }
-    };
-    if mode == GpkMode::Shallow && gc_vcs::Snapshot::from_term(&root_term).is_err() {
-        return Err(mk_error(
-            error_tok,
-            "core/gpk/bad-root",
-            "shallow export root must resolve to a :vcs/snapshot".to_string(),
-            Some(op),
-        ));
-    }
-    Ok(hash)
-}
-
-#[derive(Copy, Clone, Debug)]
-struct GpkClosureOptions<'a> {
-    depth: u64,
-    mode: GpkMode,
-    include_evidence: GpkIncludeEvidence,
-    include_deps: GpkIncludeDeps,
-    root_snapshot_for_locked_deps: Option<&'a str>,
-}
-
-fn gpk_export_closure_local(
-    store: &ArtifactStore,
-    root: &str,
-    opts: GpkClosureOptions<'_>,
-    out: &mut std::collections::BTreeSet<String>,
-    error_tok: SealId,
-    op: &str,
-) -> Result<(), Value> {
-    use std::collections::{HashSet, VecDeque};
-
-    let mut helper_ctx = EvalCtx::new();
-    let helper_prelude = build_prelude(&mut helper_ctx);
-    let helper_ref_plan_fn = helper_prelude
-        .env
-        .get("core/vcs/reach::artifact-ref-plan")
-        .ok_or_else(|| {
-            mk_error(
-                error_tok,
-                "core/gpk/planner-missing",
-                "missing prelude binding core/vcs/reach::artifact-ref-plan".to_string(),
-                Some(op),
-            )
-        })?;
-
-    let mut q: VecDeque<(String, u64, bool)> = VecDeque::new();
-    q.push_back((root.to_string(), opts.depth, true));
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut obj_count: u64 = 0;
-
-    while let Some((h, dleft, is_root)) = q.pop_front() {
-        if !seen.insert(h.clone()) {
-            continue;
-        }
-        obj_count = obj_count.saturating_add(1);
-        if obj_count > 50_000 {
-            return Err(mk_error(
-                error_tok,
-                "core/sync/too-many-objects",
-                "closure exceeded 50k objects".to_string(),
-                Some(op),
-            ));
-        }
-        if !store.path_for(&h).exists() {
-            return Err(mk_error(
-                error_tok,
-                "core/store/not-found",
-                format!("artifact not found: {h}"),
-                Some(op),
-            ));
-        }
-        if store.verify_hex(&h).is_err() {
-            return Err(mk_error(
-                error_tok,
-                "core/store/corruption",
-                format!("artifact store corruption: {h}"),
-                Some(op),
-            ));
-        }
-        out.insert(h.clone());
-
-        let t = match store_get_term(store, &h) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        let is_evidence_artifact = gc_vcs::Evidence::from_term(&t).is_ok();
-        let include_commit_evidence = match opts.include_evidence {
-            GpkIncludeEvidence::None => false,
-            // Required mode includes evidence directly referenced by the root object, and once an
-            // evidence artifact is traversed we continue following its internal evidence refs.
-            GpkIncludeEvidence::Required => is_root || is_evidence_artifact,
-            GpkIncludeEvidence::All => true,
-        };
-        let follow_deps = match opts.include_deps {
-            GpkIncludeDeps::None => false,
-            GpkIncludeDeps::Locked => opts
-                .root_snapshot_for_locked_deps
-                .map(|hh| hh.eq_ignore_ascii_case(&h))
-                .unwrap_or(false),
-            GpkIncludeDeps::All => true,
-        };
-
-        let mut opts_map = BTreeMap::new();
-        opts_map.insert(
-            TermOrdKey(Term::symbol(":include-evidence")),
-            Term::Bool(include_commit_evidence),
-        );
-        opts_map.insert(
-            TermOrdKey(Term::symbol(":include-deps")),
-            Term::Bool(follow_deps),
-        );
-        opts_map.insert(
-            TermOrdKey(Term::symbol(":include-parents")),
-            Term::Bool(opts.mode == GpkMode::Full && dleft > 0),
-        );
-        let opts_term = Term::Map(opts_map);
-
-        let plan_term = helper_ref_plan_fn
-            .clone()
-            .apply(&mut helper_ctx, Value::Data(t.clone()))
-            .and_then(|f| f.apply(&mut helper_ctx, Value::Data(opts_term)))
-            .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
-            .map_err(|e| {
-                mk_error(
-                    error_tok,
-                    "core/gpk/planner-error",
-                    format!("core/vcs/reach::artifact-ref-plan failed: {e}"),
-                    Some(op),
-                )
-            })?;
-        let (refs_to_follow, parent_refs) = gpk_ref_plan_from_term(&plan_term);
-        for x in refs_to_follow {
-            q.push_back((x, dleft, false));
-        }
-
-        if dleft > 0 {
-            for p in parent_refs {
-                q.push_back((p, dleft - 1, false));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn gpk_ref_hashes_from_term(t: &Term) -> Vec<String> {
-    let Term::Vector(xs) = t else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for x in xs {
-        let s = match x {
-            Term::Str(s) | Term::Symbol(s) => s,
-            _ => continue,
-        };
-        if gc_vcs::validate_hex_hash(s).is_ok() {
-            out.push(s.to_ascii_lowercase());
-        }
-    }
-    out
-}
-
-fn gpk_ref_plan_from_term(t: &Term) -> (Vec<String>, Vec<String>) {
-    let Term::Map(m) = t else {
-        return (Vec::new(), Vec::new());
-    };
-    let refs = m
-        .get(&TermOrdKey(Term::symbol(":refs")))
-        .map(gpk_ref_hashes_from_term)
-        .unwrap_or_default();
-    let parents = m
-        .get(&TermOrdKey(Term::symbol(":parents")))
-        .map(gpk_ref_hashes_from_term)
-        .unwrap_or_default();
-    (refs, parents)
-}
-
-fn gc_build_sources(
-    refs: Option<&RefsDb>,
-    base_dir: &Path,
-    lock_s: &str,
-    pins_s: &str,
-    include_lock: bool,
-    include_refs: bool,
-    error_tok: SealId,
-    op: &str,
-) -> Result<(Vec<Term>, Term, Term), Value> {
-    let mut ref_entries: Vec<Term> = Vec::new();
-    if include_refs && let Some(rdb) = refs {
-        match rdb.list(None) {
-            Ok(list) => {
-                for r in list {
-                    let mut m = BTreeMap::new();
-                    m.insert(TermOrdKey(Term::symbol(":name")), Term::Str(r.name));
-                    m.insert(
-                        TermOrdKey(Term::symbol(":hash")),
-                        r.hash.map(Term::Str).unwrap_or(Term::Nil),
-                    );
-                    ref_entries.push(Term::Map(m));
-                }
-            }
-            Err(e) => {
-                return Err(mk_error(
-                    error_tok,
-                    "core/gc/refs-io-error",
-                    e.to_string(),
-                    Some(op),
-                ));
-            }
-        }
-    }
-
-    let mut lock_entries_term: Vec<Term> = Vec::new();
-    let mut lock_artifacts_term: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-    if include_lock
-        && let Ok(lock_path) = sandbox_path_read(base_dir, lock_s)
-        && lock_path.exists()
-    {
-        match gc_pkg::GenesisLock::load(&lock_path) {
-            Ok(lk) => {
-                for (_, le) in lk.locked {
-                    let mut m = BTreeMap::new();
-                    m.insert(
-                        TermOrdKey(Term::symbol(":commit")),
-                        le.commit.map(Term::Str).unwrap_or(Term::Nil),
-                    );
-                    m.insert(
-                        TermOrdKey(Term::symbol(":snapshot")),
-                        Term::Str(le.snapshot),
-                    );
-                    lock_entries_term.push(Term::Map(m));
-                }
-                for (k, v) in lk.artifacts {
-                    lock_artifacts_term.insert(TermOrdKey(Term::Str(k)), Term::Str(v));
-                }
-            }
-            Err(e) => {
-                return Err(mk_error(
-                    error_tok,
-                    "core/gc/bad-lock",
-                    format!("{e}"),
-                    Some(op),
-                ));
-            }
-        }
-    }
-    let lock_info = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":lock")),
-                Term::Str(lock_s.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":locked")),
-                Term::Vector(lock_entries_term),
-            ),
-            (
-                TermOrdKey(Term::symbol(":artifacts")),
-                Term::Map(lock_artifacts_term),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-
-    let pins = match gc_pins_load(base_dir, pins_s) {
-        Ok(p) => p,
-        Err(e) => return Err(mk_error(error_tok, "core/gc/bad-pins", e, Some(op))),
-    };
-    let mut keep_refs_term: Vec<Term> = Vec::new();
-    for rname in &pins.keep_refs {
-        let Some(rdb) = refs else {
-            return Err(mk_error(
-                error_tok,
-                "core/gc/missing-refs-db",
-                "pins.keep_refs requires refs db".to_string(),
-                Some(op),
-            ));
-        };
-        let cur = match rdb.get(rname) {
-            Ok(h) => h,
-            Err(e) => {
-                return Err(mk_error(
-                    error_tok,
-                    "core/gc/refs-io-error",
-                    e.to_string(),
-                    Some(op),
-                ));
-            }
-        };
-        let Some(h) = cur else {
-            return Err(mk_error(
-                error_tok,
-                "core/gc/ref-not-found",
-                format!("pinned ref not found: {rname}"),
-                Some(op),
-            ));
-        };
-        keep_refs_term.push(Term::Map(
-            [
-                (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
-                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-            ]
-            .into_iter()
-            .collect(),
-        ));
-    }
-    let pins_info = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":keep")),
-                Term::Vector(pins.keep.into_iter().map(Term::Str).collect()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":keep-refs")),
-                Term::Vector(keep_refs_term),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-
-    Ok((ref_entries, lock_info, pins_info))
-}
-
-fn gc_roots_plan_from_sources(
-    refs_entries: &[Term],
-    lock_info: &Term,
-    pins_info: &Term,
-    include_lock: bool,
-    include_refs: bool,
-    error_tok: SealId,
-    op: &str,
-) -> Result<(Vec<String>, Vec<Term>), Value> {
-    let mut helper_ctx = EvalCtx::new();
-    let helper_prelude = build_prelude(&mut helper_ctx);
-    let roots_plan_fn = helper_prelude
-        .env
-        .get("core/gc/reach::roots-plan")
-        .ok_or_else(|| {
-            mk_error(
-                error_tok,
-                "core/gc/planner-missing",
-                "missing prelude binding core/gc/reach::roots-plan".to_string(),
-                Some(op),
-            )
-        })?;
-
-    let plan_term = roots_plan_fn
-        .apply(
-            &mut helper_ctx,
-            Value::Data(Term::Vector(refs_entries.to_vec())),
-        )
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(lock_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(pins_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_lock))))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::Data(Term::Bool(include_refs))))
-        .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
-        .map_err(|e| {
-            mk_error(
-                error_tok,
-                "core/gc/planner-error",
-                format!("core/gc/reach::roots-plan failed: {e}"),
-                Some(op),
-            )
-        })?;
-
-    let Term::Map(m) = plan_term else {
-        return Err(mk_error(
-            error_tok,
-            "core/gc/planner-error",
-            "gc roots planner must return a map".to_string(),
-            Some(op),
-        ));
-    };
-    let roots = m
-        .get(&TermOrdKey(Term::symbol(":roots")))
-        .map(gpk_ref_hashes_from_term)
-        .unwrap_or_default();
-    let roots_meta = m
-        .get(&TermOrdKey(Term::symbol(":roots-meta")))
-        .and_then(|t| match t {
-            Term::Vector(v) => Some(v.clone()),
-            _ => None,
-        })
-        .unwrap_or_default();
-
-    Ok((roots, roots_meta))
-}
-
-// -----------------------------------------------------------------------------
-// GC helpers (pins + store lock + store scan)
-// -----------------------------------------------------------------------------
-
-#[derive(Debug, Clone)]
-struct GcPins {
-    keep: Vec<String>,
-    keep_refs: Vec<String>,
-}
-
-impl GcPins {
-    fn empty() -> Self {
-        Self {
-            keep: Vec::new(),
-            keep_refs: Vec::new(),
-        }
-    }
-}
-
-fn gc_normalize_hash(s: &str) -> Option<String> {
-    let ss = s.strip_prefix("h:").unwrap_or(s).trim();
-    if gc_vcs::validate_hex_hash(ss).is_err() {
-        return None;
-    }
-    Some(ss.to_ascii_lowercase())
-}
-
-fn gc_pins_load(base_dir: &Path, pins_path: &str) -> Result<GcPins, String> {
-    let p = sandbox_path_allow_missing(base_dir, pins_path, false).map_err(|e| format!("{e}"))?;
-    if !p.exists() {
-        return Ok(GcPins::empty());
-    }
-    let bytes = std::fs::read(&p).map_err(|e| format!("pins read failed: {e}"))?;
-    let s = String::from_utf8(bytes).map_err(|_| "pins file is not utf-8".to_string())?;
-    let v: toml::Value = toml::from_str(&s).map_err(|e| format!("pins toml parse: {e}"))?;
-
-    let version = v.get("version").and_then(|x| x.as_integer()).unwrap_or(1);
-    if version != 1 {
-        return Err(format!("unsupported pins version: {version}"));
-    }
-
-    let pins_tbl = v
-        .get("pins")
-        .and_then(|x| x.as_table())
-        .ok_or_else(|| "pins.toml missing [pins] table".to_string())?;
-
-    let mut keep: Vec<String> = Vec::new();
-    if let Some(arr) = pins_tbl.get("keep").and_then(|x| x.as_array()) {
-        for x in arr {
-            let Some(s) = x.as_str() else {
-                return Err("pins.keep entries must be strings".to_string());
-            };
-            let Some(h) = gc_normalize_hash(s) else {
-                return Err(format!("pins.keep contains invalid hash: {s}"));
-            };
-            keep.push(h);
-        }
-    }
-
-    let mut keep_refs: Vec<String> = Vec::new();
-    if let Some(arr) = pins_tbl.get("keep_refs").and_then(|x| x.as_array()) {
-        for x in arr {
-            let Some(s) = x.as_str() else {
-                return Err("pins.keep_refs entries must be strings".to_string());
-            };
-            if !s.starts_with("refs/") {
-                return Err(format!("pins.keep_refs must start with refs/: {s}"));
-            }
-            keep_refs.push(s.to_string());
-        }
-    }
-
-    keep.sort();
-    keep.dedup();
-    keep_refs.sort();
-    keep_refs.dedup();
-
-    Ok(GcPins { keep, keep_refs })
-}
-
-fn gc_pins_write(path: &Path, pins: &GcPins) -> Result<(), EffectsError> {
-    // Stable writer: fixed key order, single-line arrays.
-    fn write_arr(buf: &mut String, xs: &[String]) {
-        buf.push('[');
-        for (i, x) in xs.iter().enumerate() {
-            if i != 0 {
-                buf.push_str(", ");
-            }
-            buf.push('"');
-            for c in x.chars() {
-                match c {
-                    '\\' => buf.push_str("\\\\"),
-                    '"' => buf.push_str("\\\""),
-                    '\n' => buf.push_str("\\n"),
-                    '\r' => buf.push_str("\\r"),
-                    '\t' => buf.push_str("\\t"),
-                    other => buf.push(other),
-                }
-            }
-            buf.push('"');
-        }
-        buf.push(']');
-    }
-
-    let mut keep = pins.keep.clone();
-    keep.sort();
-    keep.dedup();
-    let mut keep_refs = pins.keep_refs.clone();
-    keep_refs.sort();
-    keep_refs.dedup();
-
-    let mut out = String::new();
-    out.push_str("version = 1\n\n[pins]\nkeep = ");
-    write_arr(&mut out, &keep);
-    out.push('\n');
-    out.push_str("keep_refs = ");
-    write_arr(&mut out, &keep_refs);
-    out.push('\n');
-
-    atomic_write_text(path, out.as_bytes()).map_err(EffectsError::Io)
-}
-
-fn gc_store_lock(store_dir: &Path) -> Result<GcStoreLock, EffectsError> {
-    std::fs::create_dir_all(store_dir)?;
-    let lock_path = store_dir.join(".gc.lock");
-    ExclusiveLock::acquire(&lock_path)
-}
-
-type GcDeadSet = (Vec<String>, u64, Vec<(String, u64)>);
-
-fn gc_store_dead_set(
-    store_dir: &Path,
-    live: &std::collections::BTreeSet<String>,
-) -> Result<GcDeadSet, EffectsError> {
-    let mut dead: Vec<String> = Vec::new();
-    let mut dead_bytes: u64 = 0;
-    let mut largest: Vec<(String, u64)> = Vec::new();
-
-    for ent in std::fs::read_dir(store_dir)? {
-        let ent = ent?;
-        let ft = ent.file_type()?;
-        if !ft.is_file() {
-            continue;
-        }
-        let name = ent.file_name().to_string_lossy().to_string();
-        if gc_vcs::validate_hex_hash(&name).is_err() {
-            continue;
-        }
-        if live.contains(&name) {
-            continue;
-        }
-        let len = ent.metadata()?.len();
-        dead_bytes = dead_bytes.saturating_add(len);
-        dead.push(name.clone());
-        largest.push((name, len));
-    }
-
-    dead.sort();
-    // Largest list is deterministic: sort by size desc then hash asc.
-    largest.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    if largest.len() > 25 {
-        largest.truncate(25);
-    }
-    Ok((dead, dead_bytes, largest))
-}
-
-// -----------------------------------------------------------------------------

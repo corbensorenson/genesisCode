@@ -1,21 +1,76 @@
 use super::*;
 
-struct SyncPolicy {
-    remote_allow: Vec<String>,
-    allow_http: bool,
-    auth_token: Option<String>,
-    auth_token_env: Option<String>,
-    mtls_ca_pem: Option<std::path::PathBuf>,
-    mtls_identity_pem: Option<std::path::PathBuf>,
-    transfer_workers: usize,
-    max_artifact_bytes: usize,
-    max_batch_bytes: usize,
+pub(super) struct SyncPolicy {
+    pub(super) remote_allow: Vec<String>,
+    pub(super) allow_http: bool,
+    pub(super) wasi_network_profile: Option<String>,
+    pub(super) auth_token: Option<String>,
+    pub(super) auth_token_env: Option<String>,
+    pub(super) mtls_ca_pem: Option<std::path::PathBuf>,
+    pub(super) mtls_identity_pem: Option<std::path::PathBuf>,
+    pub(super) transfer_workers: usize,
+    pub(super) max_artifact_bytes: usize,
+    pub(super) max_batch_bytes: usize,
+}
+
+fn parse_wasi_network_profile(pol: Option<&OpPolicy>) -> Result<Option<String>, String> {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    let Some(v) = pol.extra.get("wasi_network_profile") else {
+        return Ok(None);
+    };
+    let s = v
+        .as_str()
+        .ok_or_else(|| "wasi_network_profile must be a string".to_string())?
+        .trim()
+        .to_string();
+    if s.is_empty() {
+        return Err("wasi_network_profile must not be empty".to_string());
+    }
+    Ok(Some(s))
+}
+
+#[cfg(target_os = "wasi")]
+fn validate_wasi_remote_profile(
+    profile: Option<&str>,
+    scheme: &str,
+    capability_scope: &str,
+) -> Result<(), String> {
+    let profile = profile.unwrap_or("none");
+    match profile {
+        "none" => Err(format!(
+            "WASI remote {capability_scope} access is disabled; set wasi_network_profile to `local` or `preview2` in caps.toml op policy"
+        )),
+        "local" => {
+            if matches!(scheme, "file" | "inproc") {
+                Ok(())
+            } else {
+                Err(format!(
+                    "wasi_network_profile=local only allows file:// or inproc:// remotes (got scheme `{scheme}`)"
+                ))
+            }
+        }
+        "preview2" => Ok(()),
+        other => Err(format!(
+            "invalid wasi_network_profile `{other}`; expected `none`, `local`, or `preview2`"
+        )),
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]
-fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
+fn validate_wasi_remote_profile(
+    _profile: Option<&str>,
+    _scheme: &str,
+    _capability_scope: &str,
+) -> Result<(), String> {
+    Ok(())
+}
+
+pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
+    let wasi_network_profile: Option<String> = parse_wasi_network_profile(pol)?;
     let mut auth_token: Option<String> = None;
     let mut auth_token_env: Option<String> = None;
     let mut mtls_ca_pem: Option<std::path::PathBuf> = None;
@@ -102,6 +157,7 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     Ok(SyncPolicy {
         remote_allow,
         allow_http,
+        wasi_network_profile,
         auth_token,
         auth_token_env,
         mtls_ca_pem,
@@ -112,10 +168,13 @@ fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, String> {
     })
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<String, String> {
+pub(super) fn sync_normalize_and_check_remote(
+    sp: &SyncPolicy,
+    remote: &str,
+) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
     let base_s = base.as_str().to_string();
+    validate_wasi_remote_profile(sp.wasi_network_profile.as_deref(), base.scheme(), "sync")?;
     if base.scheme() == "http" && !sp.allow_http {
         return Err("http remotes are disabled by policy (set allow_http=true)".to_string());
     }
@@ -134,9 +193,14 @@ fn sync_normalize_and_check_remote(sp: &SyncPolicy, remote: &str) -> Result<Stri
     Err("remote is not in policy remote_allow allowlist".to_string())
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result<String, String> {
+pub(super) fn store_normalize_and_check_remote(
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    remote: &str,
+) -> Result<String, String> {
     let base = gc_registry::normalize_remote_base(remote).map_err(|e| format!("{e}"))?;
+    let wasi_profile = parse_wasi_network_profile(op_pol)?;
+    validate_wasi_remote_profile(wasi_profile.as_deref(), base.scheme(), "store")?;
     let base_s = base.as_str().to_string();
     if base.scheme() == "http" && !policy.store.allow_http {
         return Err("http remotes are disabled by policy (set store.allow_http=true)".to_string());
@@ -159,8 +223,10 @@ fn store_normalize_and_check_remote(policy: &CapsPolicy, remote: &str) -> Result
     Err("store remote is not in policy store.remote_allow allowlist".to_string())
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn remote_allow_matches(base: &str, allow: &str) -> Result<bool, gc_registry::RegistryError> {
+pub(super) fn remote_allow_matches(
+    base: &str,
+    allow: &str,
+) -> Result<bool, gc_registry::RegistryError> {
     let base = gc_registry::normalize_remote_base(base)?;
     let allow = gc_registry::normalize_remote_base(allow)?;
     if base.scheme() != allow.scheme() {
@@ -177,7 +243,6 @@ fn remote_allow_matches(base: &str, allow: &str) -> Result<bool, gc_registry::Re
     Ok(base_path.starts_with(&allow_path))
 }
 
-#[cfg(not(target_os = "wasi"))]
 fn ensure_trailing_slash(path: &str) -> String {
     if path.ends_with('/') {
         path.to_string()
@@ -186,15 +251,16 @@ fn ensure_trailing_slash(path: &str) -> String {
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn registry_error_code(err: &gc_registry::RegistryError, auth_code: &'static str) -> &'static str {
+pub(super) fn registry_error_code(
+    err: &gc_registry::RegistryError,
+    auth_code: &'static str,
+) -> &'static str {
     match err {
         gc_registry::RegistryError::Auth(_) => auth_code,
         _ => "core/sync/remote-error",
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
 fn resolve_auth_token(
     inline: Option<&str>,
     env_name: Option<&str>,
@@ -218,13 +284,13 @@ fn resolve_auth_token(
     Ok(None)
 }
 
-#[cfg(not(target_os = "wasi"))]
 fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("failed reading PEM `{}`: {e}", path.display()))
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn store_registry_auth(policy: &CapsPolicy) -> Result<gc_registry::RegistryAuth, String> {
+pub(super) fn store_registry_auth(
+    policy: &CapsPolicy,
+) -> Result<gc_registry::RegistryAuth, String> {
     let bearer_token = resolve_auth_token(
         policy.store.auth_token.as_deref(),
         policy.store.auth_token_env.as_deref(),
@@ -244,8 +310,7 @@ fn store_registry_auth(policy: &CapsPolicy) -> Result<gc_registry::RegistryAuth,
     })
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
+pub(super) fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
     let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
     let mtls_ca_pem = match sp.mtls_ca_pem.as_deref() {
         Some(path) => Some(read_pem_path(path)?),
@@ -262,9 +327,9 @@ fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, Stri
     })
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn store_remote_client(
+pub(super) fn store_remote_client(
     policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
     timeout_ms: Option<u64>,
     error_tok: SealId,
     op: &str,
@@ -272,7 +337,7 @@ fn store_remote_client(
     let Some(remote) = &policy.store.remote else {
         return Ok(None);
     };
-    let base = match store_normalize_and_check_remote(policy, remote) {
+    let base = match store_normalize_and_check_remote(policy, op_pol, remote) {
         Ok(b) => b,
         Err(e) => {
             return Err(mk_error(error_tok, "core/store/remote-denied", e, Some(op)));
@@ -301,21 +366,19 @@ fn store_remote_client(
     Ok(Some((client, base)))
 }
 
-#[cfg(not(target_os = "wasi"))]
-struct SyncPullStats<'a> {
-    pulled: &'a mut u64,
-    already: &'a mut u64,
-    store_written_bytes: &'a mut usize,
-    store_max_run_bytes: Option<usize>,
-    error_tok: SealId,
-    op: &'a str,
-    transfer_workers: usize,
-    max_artifact_bytes: usize,
-    max_batch_bytes: usize,
+pub(super) struct SyncPullStats<'a> {
+    pub(super) pulled: &'a mut u64,
+    pub(super) already: &'a mut u64,
+    pub(super) store_written_bytes: &'a mut usize,
+    pub(super) store_max_run_bytes: Option<usize>,
+    pub(super) error_tok: SealId,
+    pub(super) op: &'a str,
+    pub(super) transfer_workers: usize,
+    pub(super) max_artifact_bytes: usize,
+    pub(super) max_batch_bytes: usize,
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_pull_closure(
+pub(super) fn sync_pull_closure(
     client: &gc_registry::RegistryClient,
     store: &ArtifactStore,
     root: &str,
@@ -505,8 +568,7 @@ fn sync_pull_closure(
     Ok(())
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_store_get_bytes(
+pub(super) fn sync_parallel_store_get_bytes(
     client: &gc_registry::RegistryClient,
     hashes: &[String],
     workers: usize,
@@ -600,8 +662,7 @@ fn sync_parallel_store_get_bytes(
         .collect()
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_store_has_chunks(
+pub(super) fn sync_parallel_store_has_chunks(
     client: &gc_registry::RegistryClient,
     chunks: &[Vec<String>],
     workers: usize,
@@ -664,8 +725,7 @@ fn sync_parallel_store_has_chunks(
         .collect()
 }
 
-#[cfg(not(target_os = "wasi"))]
-fn sync_parallel_upload_missing(
+pub(super) fn sync_parallel_upload_missing(
     client: &gc_registry::RegistryClient,
     store: &ArtifactStore,
     missing: &[String],
@@ -730,7 +790,381 @@ fn sync_parallel_upload_missing(
         .collect()
 }
 
-fn sync_closure_local(
+pub(super) fn capability_sync_pull(
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
+    store: Option<&ArtifactStore>,
+    refs: Option<&RefsDb>,
+    budget: &mut ArtifactBudgetState,
+    error_tok: SealId,
+    op: &str,
+    timeout_ms: Option<u64>,
+) -> Result<Value, EffectsError> {
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/sync::pull".to_string())
+    })?;
+    let refs =
+        refs.ok_or_else(|| EffectsError::Log("missing refs db for core/sync::pull".to_string()))?;
+
+    let remote_s = match payload_sync_remote(payload) {
+        Ok(s) => s,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    let depth = payload_sync_depth(payload).unwrap_or(0);
+    let force = payload_sync_force(payload).unwrap_or(false);
+    let refnames = match payload_sync_refs(payload) {
+        Ok(rs) => rs,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    let roots = match payload_sync_roots(payload) {
+        Ok(rs) => rs,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    if refnames.is_empty() && roots.is_empty() {
+        return Ok(mk_error(
+            error_tok,
+            "core/sync/bad-payload",
+            "pull requires :refs and/or :roots".to_string(),
+            Some(op),
+        ));
+    }
+
+    let sp = match sync_policy_from_op(pol) {
+        Ok(p) => p,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
+        Ok(b) => b,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
+        }
+    };
+    let auth = match sync_registry_auth(&sp) {
+        Ok(a) => a,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let client = match gc_registry::RegistryClient::new_with_auth(
+        &base,
+        timeout_ms.map(std::time::Duration::from_millis),
+        auth,
+    ) {
+        Ok(c) => c,
+        Err(e) => {
+            let code = registry_error_code(&e, "core/sync/remote-auth");
+            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
+        }
+    };
+
+    let mut pulled: u64 = 0;
+    let mut already: u64 = 0;
+    let mut heads: Vec<Term> = Vec::new();
+
+    for h in &roots {
+        let mut stats = SyncPullStats {
+            pulled: &mut pulled,
+            already: &mut already,
+            store_written_bytes: &mut budget.store_written_bytes,
+            store_max_run_bytes: policy.store.max_run_bytes,
+            error_tok,
+            op,
+            transfer_workers: sp.transfer_workers,
+            max_artifact_bytes: sp.max_artifact_bytes,
+            max_batch_bytes: sp.max_batch_bytes,
+        };
+        match sync_pull_closure(&client, store, h, depth, &mut stats) {
+            Ok(()) => {}
+            Err(v) => return Ok(v),
+        }
+    }
+
+    for rname in &refnames {
+        let h = match client.refs_get(rname) {
+            Ok(Some(h)) => h,
+            Ok(None) => {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/sync/ref-not-found",
+                    format!("remote ref not found: {rname}"),
+                    Some(op),
+                ));
+            }
+            Err(e) => {
+                let code = registry_error_code(&e, "core/sync/remote-auth");
+                return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
+            }
+        };
+        let mut stats = SyncPullStats {
+            pulled: &mut pulled,
+            already: &mut already,
+            store_written_bytes: &mut budget.store_written_bytes,
+            store_max_run_bytes: policy.store.max_run_bytes,
+            error_tok,
+            op,
+            transfer_workers: sp.transfer_workers,
+            max_artifact_bytes: sp.max_artifact_bytes,
+            max_batch_bytes: sp.max_batch_bytes,
+        };
+        match sync_pull_closure(&client, store, &h, depth, &mut stats) {
+            Ok(()) => {}
+            Err(v) => return Ok(v),
+        }
+
+        let cur = refs.get(rname)?;
+        if !force
+            && let Some(curh) = &cur
+            && curh != &h
+        {
+            return Ok(mk_error_with_ctx(
+                error_tok,
+                "core/refs/conflict",
+                "local ref differs; use force to overwrite".to_string(),
+                Some(op),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":refs/name")),
+                            Term::Str(rname.clone()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs/current")),
+                            cur.clone().map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs/remote")),
+                            Term::Str(h.clone()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ));
+        }
+        let _ = refs.set(rname, Some(&h), None)?;
+
+        heads.push(Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
+                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    heads.sort_by_cached_key(print_term);
+
+    let mut m = BTreeMap::new();
+    m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+    m.insert(
+        TermOrdKey(Term::symbol(":pulled")),
+        Term::Int((pulled as i64).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":present")),
+        Term::Int((already as i64).into()),
+    );
+    m.insert(TermOrdKey(Term::symbol(":heads")), Term::Vector(heads));
+    Ok(Value::Data(Term::Map(m)))
+}
+
+pub(super) fn capability_sync_push(
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    store: Option<&ArtifactStore>,
+    error_tok: SealId,
+    op: &str,
+    timeout_ms: Option<u64>,
+) -> Result<Value, EffectsError> {
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/sync::push".to_string())
+    })?;
+
+    let remote_s = match payload_sync_remote(payload) {
+        Ok(s) => s,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    let depth = payload_sync_depth(payload).unwrap_or(0);
+    let roots = match payload_sync_roots(payload) {
+        Ok(rs) => rs,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    if roots.is_empty() {
+        return Ok(mk_error(
+            error_tok,
+            "core/sync/bad-payload",
+            "push requires :roots".to_string(),
+            Some(op),
+        ));
+    }
+    let set_refs = match payload_sync_set_refs(payload) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
+        }
+    };
+    for sr in &set_refs {
+        if let Err(v) = local_refs_validate_policy_gate(
+            store,
+            &sr.name,
+            Some(&sr.hash),
+            &sr.policy,
+            error_tok,
+            op,
+        ) {
+            return Ok(v);
+        }
+    }
+
+    let sp = match sync_policy_from_op(pol) {
+        Ok(p) => p,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let base = match sync_normalize_and_check_remote(&sp, &remote_s) {
+        Ok(b) => b,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/sync/remote-denied", e, Some(op)));
+        }
+    };
+    let auth = match sync_registry_auth(&sp) {
+        Ok(a) => a,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let client = match gc_registry::RegistryClient::new_with_auth(
+        &base,
+        timeout_ms.map(std::time::Duration::from_millis),
+        auth,
+    ) {
+        Ok(c) => c,
+        Err(e) => {
+            let code = registry_error_code(&e, "core/sync/remote-auth");
+            return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
+        }
+    };
+
+    let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for h in &roots {
+        match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
+            Ok(()) => {}
+            Err(v) => return Ok(v),
+        }
+    }
+    let hashes: Vec<String> = all.into_iter().collect();
+
+    let mut missing: Vec<String> = Vec::new();
+    let mut present: u64 = 0;
+    let has_chunks: Vec<Vec<String>> = hashes.chunks(512).map(|chunk| chunk.to_vec()).collect();
+    let has_results = sync_parallel_store_has_chunks(&client, &has_chunks, sp.transfer_workers);
+    for (chunk_i, chunk) in hashes.chunks(512).enumerate() {
+        let mp = match &has_results[chunk_i] {
+            Ok(m) => m,
+            Err(e) => {
+                let code = registry_error_code(e, "core/sync/remote-auth");
+                return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
+            }
+        };
+        for h in chunk {
+            match mp.get(h) {
+                Some(true) => present = present.saturating_add(1),
+                _ => missing.push(h.clone()),
+            }
+        }
+    }
+    missing.sort();
+    missing.dedup();
+
+    let upload_results =
+        sync_parallel_upload_missing(&client, store, &missing, sp.transfer_workers);
+    let mut uploaded: u64 = 0;
+    for r in upload_results {
+        match r {
+            Ok(()) => uploaded = uploaded.saturating_add(1),
+            Err(e) => {
+                let (code, msg) = if e.starts_with("store-read:") {
+                    ("core/store/not-found", e)
+                } else if e.starts_with("auth error:") {
+                    ("core/sync/remote-auth", e)
+                } else {
+                    ("core/sync/remote-error", e)
+                };
+                return Ok(mk_error(error_tok, code, msg, Some(op)));
+            }
+        }
+    }
+
+    let mut refs_updated: u64 = 0;
+    if !set_refs.is_empty() {
+        let mut set_refs_sorted = set_refs;
+        set_refs_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+        for sr in &set_refs_sorted {
+            let req = gc_registry::RefsSetReq {
+                name: &sr.name,
+                hash: &sr.hash,
+                policy: &sr.policy,
+                expected_old: sr.expected_old.as_deref(),
+            };
+            match client.refs_set(&req) {
+                Ok(r) => {
+                    if !r.ok {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/sync/refs-set-failed",
+                            "remote refs/set returned ok=false".to_string(),
+                            Some(op),
+                        ));
+                    }
+                    refs_updated = refs_updated.saturating_add(1);
+                }
+                Err(e) => {
+                    let code = registry_error_code(&e, "core/sync/remote-auth");
+                    return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
+                }
+            }
+        }
+    }
+
+    let mut m = BTreeMap::new();
+    m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    m.insert(TermOrdKey(Term::symbol(":remote")), Term::Str(base));
+    m.insert(
+        TermOrdKey(Term::symbol(":total")),
+        Term::Int((hashes.len() as i64).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":present")),
+        Term::Int((present as i64).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":uploaded")),
+        Term::Int((uploaded as i64).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":refs-updated")),
+        Term::Int((refs_updated as i64).into()),
+    );
+    Ok(Value::Data(Term::Map(m)))
+}
+
+pub(super) fn sync_closure_local(
     store: &ArtifactStore,
     root: &str,
     depth: u64,
@@ -825,7 +1259,7 @@ fn sync_closure_local(
     Ok(())
 }
 
-fn resolve_gpk_root_for_export(
+pub(super) fn resolve_gpk_root_for_export(
     store: &ArtifactStore,
     refs: Option<&RefsDb>,
     root_spec: &str,
@@ -894,11 +1328,10 @@ fn resolve_gpk_root_for_export(
 }
 
 #[derive(Copy, Clone, Debug)]
-struct GpkClosureOptions<'a> {
-    depth: u64,
-    mode: GpkMode,
-    include_evidence: GpkIncludeEvidence,
-    include_deps: GpkIncludeDeps,
-    root_snapshot_for_locked_deps: Option<&'a str>,
+pub(super) struct GpkClosureOptions<'a> {
+    pub(super) depth: u64,
+    pub(super) mode: GpkMode,
+    pub(super) include_evidence: GpkIncludeEvidence,
+    pub(super) include_deps: GpkIncludeDeps,
+    pub(super) root_snapshot_for_locked_deps: Option<&'a str>,
 }
-

@@ -19,10 +19,10 @@ gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_vcs = { path = "../gc_vcs" }
 gc_pkg = { path = "../gc_pkg" }
+gc_registry = { path = "../gc_registry" }
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
 fs2 = "0.4"
-gc_registry = { path = "../gc_registry" }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -6,7 +6,6 @@ license.workspace = true
 
 [dependencies]
 blake3.workspace = true
-fs2 = "0.4"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde.workspace = true
 serde_json.workspace = true
@@ -15,3 +14,6 @@ thiserror.workspace = true
 # local (used for file:// registry policy gating)
 gc_coreform = { path = "../gc_coreform" }
 gc_vcs = { path = "../gc_vcs" }
+
+[target.'cfg(not(target_os = "wasi"))'.dependencies]
+fs2 = "0.4"

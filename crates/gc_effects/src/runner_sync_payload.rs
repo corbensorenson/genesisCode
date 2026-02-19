@@ -3,7 +3,6 @@ use std::collections::BTreeSet;
 use gc_coreform::{Term, TermOrdKey, print_term};
 use num_traits::ToPrimitive;
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_remote(payload: &Term) -> Result<String, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -14,7 +13,6 @@ pub(crate) fn payload_sync_remote(payload: &Term) -> Result<String, String> {
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_refs(payload: &Term) -> Result<Vec<String>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -40,7 +38,6 @@ pub(crate) fn payload_sync_refs(payload: &Term) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_roots(payload: &Term) -> Result<Vec<String>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -66,7 +63,6 @@ pub(crate) fn payload_sync_roots(payload: &Term) -> Result<Vec<String>, String> 
     Ok(out)
 }
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_depth(payload: &Term) -> Option<u64> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":depth"))) {
@@ -75,7 +71,6 @@ pub(crate) fn payload_sync_depth(payload: &Term) -> Option<u64> {
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_force(payload: &Term) -> Option<bool> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":force"))) {
@@ -84,7 +79,6 @@ pub(crate) fn payload_sync_force(payload: &Term) -> Option<bool> {
     }
 }
 
-#[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone)]
 pub(crate) struct SyncSetRef {
     pub(crate) name: String,
@@ -93,7 +87,6 @@ pub(crate) struct SyncSetRef {
     pub(crate) expected_old: Option<String>,
 }
 
-#[cfg(not(target_os = "wasi"))]
 pub(crate) fn payload_sync_set_refs(payload: &Term) -> Result<Vec<SyncSetRef>, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());

@@ -4,7 +4,7 @@ Last updated: 2026-02-19
 
 This plan contains only unfinished work discovered in a full red-team review.
 
-Open checklist items: 2
+Open checklist items: 0
 
 ## P0 — Self-Host Cutover Blockers
 
@@ -65,9 +65,9 @@ Open checklist items: 2
   - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/fixed_decimal.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/lib.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/tests.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_coreform/src/tests.rs`
   - Acceptance: deterministic decimal/float (or fixed-point numeric tower) added with canonical printing/hashing rules and replay stability.
 
-- [ ] Add non-bootstrap WASI networking path for sync/store remotes.
+- [x] Add non-bootstrap WASI networking path for sync/store remotes.
   - Risk: WASI runtime cannot participate in remote sync/store workflows.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:700`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:3363`
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:877`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs:3484`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_remote_ops.rs:16`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:713`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/Cargo.toml:24`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/Cargo.toml:18`
   - Acceptance: configurable WASI networking/profile support for `core/sync::*` and remote `core/store::*`, with strict policy gating.
 
 ## P2 — Security and Robustness Hardening
@@ -94,9 +94,10 @@ Open checklist items: 2
 
 ## P3 — Performance and Scale
 
-- [ ] Finish decomposition of remaining mega-files.
+- [x] Finish decomposition of remaining mega-files.
   - Risk: very large files slow review, increase defect rate, and block parallel development.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` (~9.3k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` (~8.4k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` (~6.2k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (~4.6k)
+  - Evidence: `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs` (~7.8k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_remote_ops.rs` (~1.3k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gc_ops.rs` (~0.5k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` (~4.3k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_gfx.rs` (~0.9k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_lint.rs` (~0.5k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_stage.rs` (~0.5k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` (~6.3k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/collections_lowering.rs` (~1.1k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/strings_bytes_lowering.rs` (~1.1k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` (~3.9k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs` (~0.4k), `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_security_ops.rs` (~0.6k)
+  - Progress this pass: moved stage2 string/bytes lowering and collection lowering into dedicated modules; moved obligation lint/ai-style and stage validation blocks into dedicated modules; moved CLI selfhost frontend resolution and security command handlers into dedicated modules.
   - Acceptance: domain-split modules with unchanged behavior and focused ownership boundaries.
 
 - [x] Route default CLI eval/run/test flows through compiled evaluator path.

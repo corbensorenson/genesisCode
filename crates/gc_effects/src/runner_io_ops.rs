@@ -1,4 +1,6 @@
-use std::io::{Read, Write};
+use std::io::Read;
+#[cfg(unix)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey};

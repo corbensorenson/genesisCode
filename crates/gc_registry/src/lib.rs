@@ -1,14 +1,19 @@
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
-use std::io::{Read, Write};
+#[cfg(not(target_os = "wasi"))]
+use std::io::Read;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
+#[cfg(not(target_os = "wasi"))]
 use fs2::FileExt;
 use gc_coreform::{Term, TermOrdKey};
+#[cfg(not(target_os = "wasi"))]
 use reqwest::StatusCode;
 use reqwest::Url;
+#[cfg(not(target_os = "wasi"))]
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -75,9 +80,18 @@ pub struct RegistryClient {
 
 #[derive(Debug, Clone)]
 enum RegistryKind {
-    Http { http: Client },
-    InProc { id: String },
-    File { root: PathBuf },
+    #[cfg(not(target_os = "wasi"))]
+    Http {
+        http: Client,
+    },
+    #[cfg(target_os = "wasi")]
+    Http,
+    InProc {
+        id: String,
+    },
+    File {
+        root: PathBuf,
+    },
 }
 
 #[derive(Clone, Default)]
@@ -120,11 +134,13 @@ pub struct PingResp {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg(not(target_os = "wasi"))]
 struct StoreHasReq<'a> {
     hashes: &'a [String],
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[cfg(not(target_os = "wasi"))]
 struct StoreHasResp {
     present: BTreeMap<String, bool>,
 }
@@ -142,6 +158,7 @@ pub struct RefsListEntry {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[cfg(not(target_os = "wasi"))]
 struct RefsListResp {
     refs: Vec<RefsListEntry>,
 }
@@ -172,28 +189,43 @@ impl RegistryClient {
         timeout: Option<Duration>,
         auth: RegistryAuth,
     ) -> Result<Self, RegistryError> {
+        #[cfg(target_os = "wasi")]
+        let _ = timeout;
         let base = normalize_remote_base(remote)?;
         let kind = match base.scheme() {
             "https" | "http" => {
-                let mut b = Client::builder();
-                if let Some(t) = timeout {
-                    b = b.timeout(t);
+                #[cfg(target_os = "wasi")]
+                {
+                    if auth.has_any() {
+                        return Err(RegistryError::Auth(
+                            "http(s) registry auth is not supported on WASI builds".to_string(),
+                        ));
+                    }
+                    RegistryKind::Http
                 }
-                if let Some(ca_pem) = auth.mtls_ca_pem.as_ref() {
-                    let cert = reqwest::Certificate::from_pem(ca_pem)
-                        .map_err(|e| RegistryError::Auth(format!("invalid mTLS CA PEM: {e}")))?;
-                    b = b.add_root_certificate(cert);
+                #[cfg(not(target_os = "wasi"))]
+                {
+                    let mut b = Client::builder();
+                    if let Some(t) = timeout {
+                        b = b.timeout(t);
+                    }
+                    if let Some(ca_pem) = auth.mtls_ca_pem.as_ref() {
+                        let cert = reqwest::Certificate::from_pem(ca_pem).map_err(|e| {
+                            RegistryError::Auth(format!("invalid mTLS CA PEM: {e}"))
+                        })?;
+                        b = b.add_root_certificate(cert);
+                    }
+                    if let Some(identity_pem) = auth.mtls_identity_pem.as_ref() {
+                        let identity = reqwest::Identity::from_pem(identity_pem).map_err(|e| {
+                            RegistryError::Auth(format!("invalid mTLS identity PEM: {e}"))
+                        })?;
+                        b = b.identity(identity);
+                    }
+                    let http = b
+                        .build()
+                        .map_err(|e| RegistryError::Http(format!("build client: {e}")))?;
+                    RegistryKind::Http { http }
                 }
-                if let Some(identity_pem) = auth.mtls_identity_pem.as_ref() {
-                    let identity = reqwest::Identity::from_pem(identity_pem).map_err(|e| {
-                        RegistryError::Auth(format!("invalid mTLS identity PEM: {e}"))
-                    })?;
-                    b = b.identity(identity);
-                }
-                let http = b
-                    .build()
-                    .map_err(|e| RegistryError::Http(format!("build client: {e}")))?;
-                RegistryKind::Http { http }
             }
             "inproc" => {
                 let id = base.host_str().ok_or_else(|| {
@@ -242,19 +274,26 @@ impl RegistryClient {
                 max_chunk_bytes: None,
             });
         }
-        let u = self
-            .base
-            .join("ping")
-            .map_err(|e| RegistryError::RemoteSpec(format!("join ping: {e}")))?;
-        let r = self
-            .apply_auth(self.http().get(u))
-            .send()
-            .map_err(|e| RegistryError::Http(format!("ping: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("ping", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("ping"));
         }
-        r.json::<PingResp>()
-            .map_err(|e| RegistryError::Protocol(format!("ping json: {e}")))
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join("ping")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join ping: {e}")))?;
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("ping: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("ping", r.status()));
+            }
+            r.json::<PingResp>()
+                .map_err(|e| RegistryError::Protocol(format!("ping json: {e}")))
+        }
     }
 
     pub fn store_has(&self, hashes: &[String]) -> Result<BTreeMap<String, bool>, RegistryError> {
@@ -279,22 +318,29 @@ impl RegistryClient {
             }
             return Ok(out);
         }
-        let u = self
-            .base
-            .join("store/has")
-            .map_err(|e| RegistryError::RemoteSpec(format!("join store/has: {e}")))?;
-        let r = self
-            .apply_auth(self.http().post(u))
-            .json(&StoreHasReq { hashes })
-            .send()
-            .map_err(|e| RegistryError::Http(format!("store/has: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("store/has", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/has"));
         }
-        let resp = r
-            .json::<StoreHasResp>()
-            .map_err(|e| RegistryError::Protocol(format!("store/has json: {e}")))?;
-        Ok(resp.present)
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join("store/has")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/has: {e}")))?;
+            let r = self
+                .apply_auth(self.http().post(u))
+                .json(&StoreHasReq { hashes })
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/has: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/has", r.status()));
+            }
+            let resp = r
+                .json::<StoreHasResp>()
+                .map_err(|e| RegistryError::Protocol(format!("store/has json: {e}")))?;
+            Ok(resp.present)
+        }
     }
 
     pub fn store_get(&self, hash: &str) -> Result<Vec<u8>, RegistryError> {
@@ -337,18 +383,25 @@ impl RegistryClient {
             }
             return Ok(bytes);
         }
-        let u = self
-            .base
-            .join(&format!("store/get/{hash}"))
-            .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
-        let r = self
-            .apply_auth(self.http().get(u))
-            .send()
-            .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("store/get", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/get"));
         }
-        read_response_bytes_limited("store/get", r, max_bytes)
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join(&format!("store/get/{hash}"))
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/get", r.status()));
+            }
+            read_response_bytes_limited("store/get", r, max_bytes)
+        }
     }
 
     pub fn store_get_opt(&self, hash: &str) -> Result<Option<Vec<u8>>, RegistryError> {
@@ -396,21 +449,28 @@ impl RegistryClient {
             }
             return Ok(Some(bytes));
         }
-        let u = self
-            .base
-            .join(&format!("store/get/{hash}"))
-            .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
-        let r = self
-            .apply_auth(self.http().get(u))
-            .send()
-            .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
-        if r.status() == StatusCode::NOT_FOUND {
-            return Ok(None);
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/get"));
         }
-        if !r.status().is_success() {
-            return Err(status_error("store/get", r.status()));
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join(&format!("store/get/{hash}"))
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
+            if r.status() == StatusCode::NOT_FOUND {
+                return Ok(None);
+            }
+            if !r.status().is_success() {
+                return Err(status_error("store/get", r.status()));
+            }
+            read_response_bytes_limited("store/get", r, max_bytes).map(Some)
         }
-        read_response_bytes_limited("store/get", r, max_bytes).map(Some)
     }
 
     pub fn store_put(&self, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
@@ -447,19 +507,26 @@ impl RegistryClient {
             file_atomic_write(&p, bytes)?;
             return Ok(());
         }
-        let u = self
-            .base
-            .join(&format!("store/put/{hash}"))
-            .map_err(|e| RegistryError::RemoteSpec(format!("join store/put: {e}")))?;
-        let r = self
-            .apply_auth(self.http().put(u))
-            .body(bytes.to_vec())
-            .send()
-            .map_err(|e| RegistryError::Http(format!("store/put: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("store/put", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/put"));
         }
-        Ok(())
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join(&format!("store/put/{hash}"))
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/put: {e}")))?;
+            let r = self
+                .apply_auth(self.http().put(u))
+                .body(bytes.to_vec())
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/put: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/put", r.status()));
+            }
+            Ok(())
+        }
     }
 
     pub fn refs_get(&self, name: &str) -> Result<Option<String>, RegistryError> {
@@ -482,22 +549,29 @@ impl RegistryClient {
             let refs = file_load_refs_locked(root)?;
             return Ok(refs.get(name).cloned());
         }
-        let mut u = self
-            .base
-            .join("refs/get")
-            .map_err(|e| RegistryError::RemoteSpec(format!("join refs/get: {e}")))?;
-        u.query_pairs_mut().append_pair("name", name);
-        let r = self
-            .apply_auth(self.http().get(u))
-            .send()
-            .map_err(|e| RegistryError::Http(format!("refs/get: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("refs/get", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("refs/get"));
         }
-        let resp = r
-            .json::<RefsGetResp>()
-            .map_err(|e| RegistryError::Protocol(format!("refs/get json: {e}")))?;
-        Ok(resp.hash)
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let mut u = self
+                .base
+                .join("refs/get")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join refs/get: {e}")))?;
+            u.query_pairs_mut().append_pair("name", name);
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("refs/get: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("refs/get", r.status()));
+            }
+            let resp = r
+                .json::<RefsGetResp>()
+                .map_err(|e| RegistryError::Protocol(format!("refs/get json: {e}")))?;
+            Ok(resp.hash)
+        }
     }
 
     pub fn refs_list(&self, prefix: Option<&str>) -> Result<Vec<RefsListEntry>, RegistryError> {
@@ -533,24 +607,31 @@ impl RegistryClient {
             out.sort_by(|a, b| a.name.cmp(&b.name));
             return Ok(out);
         }
-        let mut u = self
-            .base
-            .join("refs/list")
-            .map_err(|e| RegistryError::RemoteSpec(format!("join refs/list: {e}")))?;
-        if let Some(p) = prefix {
-            u.query_pairs_mut().append_pair("prefix", p);
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("refs/list"));
         }
-        let r = self
-            .apply_auth(self.http().get(u))
-            .send()
-            .map_err(|e| RegistryError::Http(format!("refs/list: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("refs/list", r.status()));
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let mut u = self
+                .base
+                .join("refs/list")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join refs/list: {e}")))?;
+            if let Some(p) = prefix {
+                u.query_pairs_mut().append_pair("prefix", p);
+            }
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("refs/list: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("refs/list", r.status()));
+            }
+            let resp = r
+                .json::<RefsListResp>()
+                .map_err(|e| RegistryError::Protocol(format!("refs/list json: {e}")))?;
+            Ok(resp.refs)
         }
-        let resp = r
-            .json::<RefsListResp>()
-            .map_err(|e| RegistryError::Protocol(format!("refs/list json: {e}")))?;
-        Ok(resp.refs)
     }
 
     pub fn refs_set(&self, req: &RefsSetReq<'_>) -> Result<RefsSetResp, RegistryError> {
@@ -589,22 +670,30 @@ impl RegistryClient {
                 hash: req.hash.to_string(),
             });
         }
-        let u = self
-            .base
-            .join("refs/set")
-            .map_err(|e| RegistryError::RemoteSpec(format!("join refs/set: {e}")))?;
-        let r = self
-            .apply_auth(self.http().post(u))
-            .json(req)
-            .send()
-            .map_err(|e| RegistryError::Http(format!("refs/set: {e}")))?;
-        if !r.status().is_success() {
-            return Err(status_error("refs/set", r.status()));
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("refs/set"));
         }
-        r.json::<RefsSetResp>()
-            .map_err(|e| RegistryError::Protocol(format!("refs/set json: {e}")))
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join("refs/set")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join refs/set: {e}")))?;
+            let r = self
+                .apply_auth(self.http().post(u))
+                .json(req)
+                .send()
+                .map_err(|e| RegistryError::Http(format!("refs/set: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("refs/set", r.status()));
+            }
+            r.json::<RefsSetResp>()
+                .map_err(|e| RegistryError::Protocol(format!("refs/set json: {e}")))
+        }
     }
 
+    #[cfg(not(target_os = "wasi"))]
     fn http(&self) -> &Client {
         match &self.kind {
             RegistryKind::Http { http } => http,
@@ -614,6 +703,7 @@ impl RegistryClient {
         }
     }
 
+    #[cfg(not(target_os = "wasi"))]
     fn apply_auth(
         &self,
         req: reqwest::blocking::RequestBuilder,
@@ -626,6 +716,14 @@ impl RegistryClient {
     }
 }
 
+#[cfg(target_os = "wasi")]
+fn wasi_http_unsupported(op: &str) -> RegistryError {
+    RegistryError::Http(format!(
+        "{op}: http(s) registry remotes are not supported in WASI builds; use file:// or inproc://"
+    ))
+}
+
+#[cfg(not(target_os = "wasi"))]
 fn status_error(op: &str, status: StatusCode) -> RegistryError {
     if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
         RegistryError::Auth(format!("{op}: status {status}"))
@@ -650,6 +748,7 @@ fn enforce_body_limit(
     Ok(())
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn read_response_bytes_limited(
     op: &str,
     mut r: reqwest::blocking::Response,
@@ -780,8 +879,11 @@ fn file_refs_lock(root: &Path) -> Result<std::fs::File, RegistryError> {
         .truncate(false)
         .open(&p)
         .map_err(|e| RegistryError::Http(format!("open refs lock: {e}")))?;
-    f.lock_exclusive()
-        .map_err(|e| RegistryError::Http(format!("lock refs: {e}")))?;
+    #[cfg(not(target_os = "wasi"))]
+    {
+        f.lock_exclusive()
+            .map_err(|e| RegistryError::Http(format!("lock refs: {e}")))?;
+    }
     Ok(f)
 }
 
