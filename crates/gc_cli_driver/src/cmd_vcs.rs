@@ -167,7 +167,13 @@ pub(super) fn cmd_vcs(
     let log_op = vcs_contract::log_op(cmd);
     let (prog, program_hash) = if frontend_is_rust(&frontend) {
         let forms = match cmd {
-            VcsCmd::Hash { .. } => unreachable!("handled above"),
+            VcsCmd::Hash { .. } => {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "vcs/dispatch-drift",
+                    "vcs hash must be handled before effectful VCS dispatch",
+                ));
+            }
             VcsCmd::Diff {
                 base,
                 to,
@@ -218,7 +224,13 @@ pub(super) fn cmd_vcs(
         load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
         let (prog, desc) = match cmd {
-            VcsCmd::Hash { .. } => unreachable!("handled above"),
+            VcsCmd::Hash { .. } => {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "vcs/dispatch-drift",
+                    "vcs hash must be handled before effectful VCS dispatch",
+                ));
+            }
             VcsCmd::Log { root, max } => {
                 let f = env.get("core/cli::vcs-log-program").ok_or_else(|| {
                     cli_err(

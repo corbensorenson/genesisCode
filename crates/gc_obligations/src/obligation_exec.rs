@@ -326,14 +326,36 @@ pub(super) fn obligation_coverage(
     let report = if errors.is_empty() {
         report
     } else {
-        let Term::Map(mut m) = report else {
-            unreachable!()
-        };
-        m.insert(
-            TermOrdKey(Term::symbol(":errors")),
-            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-        );
-        Term::Map(m)
+        match report {
+            Term::Map(mut m) => {
+                m.insert(
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+                );
+                Term::Map(m)
+            }
+            other => Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":kind")),
+                        Term::Str("genesis/coverage-v0.2".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":errors")),
+                        Term::Vector(
+                            std::iter::once(Term::Str(format!(
+                                "internal coverage report shape drift: {}",
+                                print_term(&other)
+                            )))
+                            .chain(errors.iter().cloned().map(Term::Str))
+                            .collect(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        }
     };
 
     let artifact = store.put_term(&report)?;
@@ -599,14 +621,36 @@ pub(super) fn obligation_property_tests(
     let report = if errors.is_empty() {
         report
     } else {
-        let Term::Map(mut m) = report else {
-            unreachable!()
-        };
-        m.insert(
-            TermOrdKey(Term::symbol(":errors")),
-            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-        );
-        Term::Map(m)
+        match report {
+            Term::Map(mut m) => {
+                m.insert(
+                    TermOrdKey(Term::symbol(":errors")),
+                    Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+                );
+                Term::Map(m)
+            }
+            other => Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":kind")),
+                        Term::Str("genesis/property-tests-v0.2".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":errors")),
+                        Term::Vector(
+                            std::iter::once(Term::Str(format!(
+                                "internal property-tests report shape drift: {}",
+                                print_term(&other)
+                            )))
+                            .chain(errors.iter().cloned().map(Term::Str))
+                            .collect(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        }
     };
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {

@@ -290,15 +290,12 @@ pub(super) fn resolved_coreform_frontend(
 pub(super) fn coreform_frontend_json(
     frontend: &gc_obligations::CoreformFrontend,
 ) -> serde_json::Value {
-    if frontend_is_rust(frontend) {
-        serde_json::json!({
+    match frontend {
+        #[cfg(feature = "parity-harness")]
+        gc_obligations::CoreformFrontend::Rust => serde_json::json!({
             "name": "rust"
-        })
-    } else {
-        let gc_obligations::CoreformFrontend::Selfhost(cfg) = frontend else {
-            unreachable!("frontend dispatch drift: expected selfhost variant");
-        };
-        serde_json::json!({
+        }),
+        gc_obligations::CoreformFrontend::Selfhost(cfg) => serde_json::json!({
             "name": "selfhost",
             "bootstrap_mode": match cfg.bootstrap_mode {
                 SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
@@ -306,7 +303,7 @@ pub(super) fn coreform_frontend_json(
                 SelfhostBootstrapMode::Embedded => "embedded",
             },
             "artifact": cfg.artifact.as_ref().map(|p| p.display().to_string()),
-        })
+        }),
     }
 }
 
@@ -553,6 +550,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Verify { .. } => Ok(()),
         Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Warm { .. } => Ok(()),
+        Cmd::CliSchema => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
             ..

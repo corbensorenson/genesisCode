@@ -77,8 +77,31 @@ pub(super) fn mk_error_with_ctx(
     op: Option<&str>,
     extra_ctx: Term,
 ) -> Value {
-    let Value::Sealed { token, payload } = mk_error(error_tok, code, msg, op) else {
-        unreachable!("mk_error must return sealed");
+    let base = mk_error(error_tok, code, msg, op);
+    let (token, payload) = match base {
+        Value::Sealed { token, payload } => (token, payload),
+        other => {
+            return Value::Sealed {
+                token: error_tok,
+                payload: Box::new(Value::Data(Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::Symbol(":error/code".to_string())),
+                            Term::Str("core/error/non-sealed".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::Symbol(":error/message".to_string())),
+                            Term::Str(format!(
+                                "mk_error returned non-sealed payload type: {}",
+                                other.debug_repr()
+                            )),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ))),
+            };
+        }
     };
     let Value::Data(Term::Map(mut m)) = *payload else {
         return Value::Sealed {

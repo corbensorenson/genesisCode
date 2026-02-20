@@ -397,7 +397,7 @@ impl RegistryClient {
                 .join("ping")
                 .map_err(|e| RegistryError::RemoteSpec(format!("join ping: {e}")))?;
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("ping: {e}")))?;
             if !r.status().is_success() {
@@ -441,7 +441,7 @@ impl RegistryClient {
                 .join("store/has")
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/has: {e}")))?;
             let r = self
-                .apply_auth(self.http().post(u))
+                .apply_auth(self.http()?.post(u))
                 .json(&StoreHasReq { hashes })
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/has: {e}")))?;
@@ -506,7 +506,7 @@ impl RegistryClient {
                 .join(&format!("store/get/{hash}"))
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
             if !r.status().is_success() {
@@ -572,7 +572,7 @@ impl RegistryClient {
                 .join(&format!("store/get/{hash}"))
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
             if r.status() == StatusCode::NOT_FOUND {
@@ -630,7 +630,7 @@ impl RegistryClient {
                 .join(&format!("store/put/{hash}"))
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/put: {e}")))?;
             let r = self
-                .apply_auth(self.http().put(u))
+                .apply_auth(self.http()?.put(u))
                 .body(bytes.to_vec())
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/put: {e}")))?;
@@ -717,7 +717,7 @@ impl RegistryClient {
                 .join("store/upload/start")
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/start: {e}")))?;
             let r = self
-                .apply_auth(self.http().post(u))
+                .apply_auth(self.http()?.post(u))
                 .json(&StoreUploadStartReq { hash, size_bytes })
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/upload/start: {e}")))?;
@@ -759,7 +759,7 @@ impl RegistryClient {
                 .join(&format!("store/upload/chunk/{upload_id}/{index}"))
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/chunk: {e}")))?;
             let r = self
-                .apply_auth(self.http().put(u))
+                .apply_auth(self.http()?.put(u))
                 .body(bytes.to_vec())
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/upload/chunk: {e}")))?;
@@ -799,7 +799,7 @@ impl RegistryClient {
                 .join("store/upload/finish")
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/finish: {e}")))?;
             let r = self
-                .apply_auth(self.http().post(u))
+                .apply_auth(self.http()?.post(u))
                 .json(&StoreUploadFinishReq { upload_id })
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/upload/finish: {e}")))?;
@@ -839,7 +839,7 @@ impl RegistryClient {
                 .join(&format!("store/upload/status/{upload_id}"))
                 .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/status: {e}")))?;
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("store/upload/status: {e}")))?;
             if !r.status().is_success() {
@@ -882,7 +882,7 @@ impl RegistryClient {
                 .map_err(|e| RegistryError::RemoteSpec(format!("join refs/get: {e}")))?;
             u.query_pairs_mut().append_pair("name", name);
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("refs/get: {e}")))?;
             if !r.status().is_success() {
@@ -942,7 +942,7 @@ impl RegistryClient {
                 u.query_pairs_mut().append_pair("prefix", p);
             }
             let r = self
-                .apply_auth(self.http().get(u))
+                .apply_auth(self.http()?.get(u))
                 .send()
                 .map_err(|e| RegistryError::Http(format!("refs/list: {e}")))?;
             if !r.status().is_success() {
@@ -1002,7 +1002,7 @@ impl RegistryClient {
                 .join("refs/set")
                 .map_err(|e| RegistryError::RemoteSpec(format!("join refs/set: {e}")))?;
             let r = self
-                .apply_auth(self.http().post(u))
+                .apply_auth(self.http()?.post(u))
                 .json(req)
                 .send()
                 .map_err(|e| RegistryError::Http(format!("refs/set: {e}")))?;
@@ -1015,11 +1015,14 @@ impl RegistryClient {
     }
 
     #[cfg(not(target_os = "wasi"))]
-    fn http(&self) -> &Client {
+    fn http(&self) -> Result<&Client, RegistryError> {
         match &self.kind {
-            RegistryKind::Http { http } => http,
+            RegistryKind::Http { http } => Ok(http),
             RegistryKind::InProc { .. } | RegistryKind::File { .. } => {
-                unreachable!("http client requested for non-http registry")
+                Err(RegistryError::Protocol(
+                    "internal registry dispatch drift: HTTP client requested for non-HTTP registry"
+                        .to_string(),
+                ))
             }
         }
     }

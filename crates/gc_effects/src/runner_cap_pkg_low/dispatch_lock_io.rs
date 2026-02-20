@@ -778,6 +778,11 @@ pub(super) fn dispatch_lock_io(
             Ok(Value::Data(Term::Map(out)))
         }
 
-        _ => unreachable!("dispatch_lock_io called with unsupported op: {op_eff}"),
+        _ => Ok(mk_error(
+            error_tok,
+            "core/caps/unknown-op-eff",
+            format!("core/pkg-low dispatch received unsupported op_eff: {op_eff}"),
+            Some(op),
+        )),
     }
 }

@@ -708,6 +708,49 @@ pub(super) fn dispatch_resolution(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        _ => unreachable!("dispatch_resolution called with unsupported op: {op_eff}"),
+        _ => Ok(mk_error(
+            error_tok,
+            "core/caps/unknown-op-eff",
+            format!("core/pkg-low dispatch received unsupported op_eff: {op_eff}"),
+            Some(op),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unsupported_pkg_low_op_eff_returns_sealed_error_instead_of_panicking() {
+        let mut budget = ArtifactBudgetState::default();
+        let out = dispatch_resolution(
+            "core/pkg-low::unsupported-op",
+            &Term::Nil,
+            None,
+            &CapsPolicy::empty(),
+            None,
+            None,
+            &mut budget,
+            SealId(777),
+            "core/pkg-low::lock",
+            None,
+        )
+        .expect("dispatch should return value");
+
+        match out {
+            Value::Sealed { token, payload } => {
+                assert_eq!(token, SealId(777));
+                let Value::Data(Term::Map(mm)) = *payload else {
+                    panic!("expected sealed error map payload");
+                };
+                let code = match mm.get(&TermOrdKey(Term::symbol(":error/code"))) {
+                    Some(Term::Str(s)) => s.as_str(),
+                    _ => "",
+                };
+                assert_eq!(code, "core/caps/unknown-op-eff");
+            }
+            other => panic!("expected sealed error value, got {}", other.debug_repr()),
+        }
     }
 }

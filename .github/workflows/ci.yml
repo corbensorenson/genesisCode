@@ -114,6 +114,9 @@ jobs:
       - name: Production CLI Parse Surface Guard
         run: bash scripts/check_production_cli_parse_surface.sh
 
+      - name: Production CLI Help Surface Guard
+        run: bash scripts/check_production_cli_help_surface.sh
+
       - name: Source Size Budget Guard
         run: bash scripts/check_source_size_budget.sh
 

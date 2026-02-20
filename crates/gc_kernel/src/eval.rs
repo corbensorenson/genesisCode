@@ -661,7 +661,10 @@ fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, Ke
     let mut out = body_term;
     for p in ps.into_iter().rev() {
         let Term::Symbol(name) = p else {
-            unreachable!()
+            return Err(KernelError::new(
+                KernelErrorKind::Internal,
+                "internal fn desugaring expected symbol parameter",
+            ));
         };
         out = Term::list(vec![
             Term::Symbol("fn".to_string()),

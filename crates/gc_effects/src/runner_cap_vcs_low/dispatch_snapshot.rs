@@ -576,6 +576,11 @@ pub(super) fn dispatch_snapshot(
             m.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(merged_h));
             Ok(Value::Data(Term::Map(m)))
         }
-        _ => unreachable!("dispatch_snapshot called with unsupported op: {op_eff}"),
+        _ => Ok(mk_error(
+            error_tok,
+            "core/caps/unknown-op-eff",
+            format!("core/vcs-low dispatch received unsupported op_eff: {op_eff}"),
+            Some(op),
+        )),
     }
 }

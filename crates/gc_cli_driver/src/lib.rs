@@ -20,6 +20,7 @@ use gc_prelude::{
 };
 
 mod cli_json;
+mod cli_schema;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_gc;
@@ -53,6 +54,7 @@ mod sync_contract;
 mod vcs_contract;
 
 use cli_json::*;
+use cli_schema::cmd_cli_schema;
 use cmd_commit::cmd_commit;
 use cmd_core::*;
 use cmd_gc::cmd_gc;
@@ -245,6 +247,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             cmd_selfhost_dashboard(cli, markdown.as_deref(), store.as_deref())
         }
         Cmd::Warm { prime_selfhost } => cmd_warm(cli, flavor, *prime_selfhost),
+        Cmd::CliSchema => cmd_cli_schema(cli),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,

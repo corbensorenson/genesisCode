@@ -31,7 +31,11 @@ pub(super) fn cmd_pkg(
             | PkgCmd::SelfOptimize { .. }
             | PkgCmd::Abi { .. }
             | PkgCmd::Env { .. } => {
-                unreachable!("local workspace ops are handled before frontend dispatch")
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "pkg/dispatch-drift",
+                    "local workspace pkg ops must be handled before frontend dispatch",
+                ));
             }
             PkgCmd::Init {
                 workspace,
@@ -190,7 +194,11 @@ pub(super) fn cmd_pkg(
             | PkgCmd::SelfOptimize { .. }
             | PkgCmd::Abi { .. }
             | PkgCmd::Env { .. } => {
-                unreachable!("local workspace ops are handled before frontend dispatch")
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "pkg/dispatch-drift",
+                    "local workspace pkg ops must be handled before frontend dispatch",
+                ));
             }
             PkgCmd::Init {
                 workspace,

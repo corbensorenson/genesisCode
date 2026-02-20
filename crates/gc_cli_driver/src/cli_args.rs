@@ -53,7 +53,7 @@ struct Cli {
 
     /// CoreForm frontend for command groups that do not expose `--engine`.
     /// Defaults to `selfhost` in the fast-path profile.
-    #[arg(long, global = true)]
+    #[arg(long, global = true, help = coreform_frontend_help())]
     coreform_frontend: Option<CoreformFrontendArg>,
 
     #[command(subcommand)]
@@ -72,6 +72,14 @@ enum CoreformFrontendArg {
     #[cfg(feature = "parity-harness")]
     Rust,
     Selfhost,
+}
+
+const fn coreform_frontend_help() -> &'static str {
+    if cfg!(feature = "parity-harness") {
+        "CoreForm frontend. Accepted values: selfhost, rust."
+    } else {
+        "CoreForm frontend. Accepted value: selfhost."
+    }
 }
 
 fn coreform_frontend_expected_values() -> &'static str {
@@ -115,7 +123,7 @@ enum Cmd {
         #[arg(long)]
         check: bool,
         /// Formatting engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
     },
 
@@ -123,7 +131,7 @@ enum Cmd {
     Eval {
         file: PathBuf,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
         /// Run the Stage-1 compiler pipeline (CoreForm -> CoreForm validated transforms)
         /// before evaluation.
@@ -143,7 +151,7 @@ enum Cmd {
     Explain {
         file: PathBuf,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
         /// Contract expression or symbol (CoreForm).
         #[arg(long)]
@@ -157,7 +165,7 @@ enum Cmd {
     Run {
         file: PathBuf,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
         /// Capability policy TOML (deny-by-default allowlist).
         #[arg(long)]
@@ -171,7 +179,7 @@ enum Cmd {
     Replay {
         file: PathBuf,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
         /// Input effect log path (.gclog).
         #[arg(long)]
@@ -235,6 +243,9 @@ enum Cmd {
         prime_selfhost: bool,
     },
 
+    /// Emit machine-readable CLI command/option schema for agent planning.
+    CliSchema,
+
     /// Generate a new Ed25519 signing key.
     Keygen {
         /// Output key TOML path.
@@ -285,7 +296,7 @@ enum Cmd {
         #[arg(long)]
         emit_wasm: Option<PathBuf>,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
         /// Require `core/obligation::stage1-validation` to pass.
         #[arg(long)]
@@ -463,6 +474,14 @@ fn fmt_engine_expected_values() -> &'static str {
         "`selfhost` or `rust`"
     } else {
         "`selfhost`"
+    }
+}
+
+const fn fmt_engine_help() -> &'static str {
+    if cfg!(feature = "parity-harness") {
+        "Frontend engine. Accepted values: selfhost, rust."
+    } else {
+        "Frontend engine. Accepted value: selfhost."
     }
 }
 
@@ -1154,7 +1173,7 @@ enum VcsCmd {
         #[arg(long = "in", alias = "input")]
         input: PathBuf,
         /// Frontend engine (selfhost by default in production profile).
-        #[arg(long)]
+        #[arg(long, help = fmt_engine_help())]
         engine: Option<FmtEngine>,
     },
 

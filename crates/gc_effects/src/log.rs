@@ -290,7 +290,9 @@ fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
             match kind {
                 ":ok" => Ok(LoggedResp::Ok(value)),
                 ":error" => Ok(LoggedResp::Error(value)),
-                _ => unreachable!(),
+                _ => Err(EffectsError::Log(format!(
+                    "unsupported inline resp kind {kind}"
+                ))),
             }
         }
         ":ok-artifact" | ":error-artifact" | ":ok-bytes-artifact" | ":error-bytes-artifact" => {
@@ -315,7 +317,9 @@ fn parse_resp(t: &Term) -> Result<LoggedResp, EffectsError> {
                 ":error-bytes-artifact" => Ok(LoggedResp::ErrorBytesArtifact {
                     artifact: hex.clone(),
                 }),
-                _ => unreachable!(),
+                _ => Err(EffectsError::Log(format!(
+                    "unsupported artifact resp kind {kind}"
+                ))),
             }
         }
         _ => Err(EffectsError::Log(format!("unknown resp kind {kind}"))),

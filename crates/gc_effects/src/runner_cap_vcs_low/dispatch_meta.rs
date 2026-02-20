@@ -534,6 +534,49 @@ pub(super) fn dispatch_meta(
             m.insert(TermOrdKey(Term::symbol(":why")), why);
             Ok(Value::Data(Term::Map(m)))
         }
-        _ => unreachable!("dispatch_meta called with unsupported op: {op_eff}"),
+        _ => Ok(mk_error(
+            error_tok,
+            "core/caps/unknown-op-eff",
+            format!("core/vcs-low dispatch received unsupported op_eff: {op_eff}"),
+            Some(op),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unsupported_vcs_low_op_eff_returns_sealed_error_instead_of_panicking() {
+        let mut budget = ArtifactBudgetState::default();
+        let out = dispatch_meta(
+            "core/vcs-low::unsupported-op",
+            &Term::Nil,
+            None,
+            &CapsPolicy::empty(),
+            None,
+            None,
+            &mut budget,
+            SealId(991),
+            "core/vcs-low::log",
+            None,
+        )
+        .expect("dispatch should return value");
+
+        match out {
+            Value::Sealed { token, payload } => {
+                assert_eq!(token, SealId(991));
+                let Value::Data(Term::Map(mm)) = *payload else {
+                    panic!("expected sealed error map payload");
+                };
+                let code = match mm.get(&TermOrdKey(Term::symbol(":error/code"))) {
+                    Some(Term::Str(s)) => s.as_str(),
+                    _ => "",
+                };
+                assert_eq!(code, "core/caps/unknown-op-eff");
+            }
+            other => panic!("expected sealed error value, got {}", other.debug_repr()),
+        }
     }
 }

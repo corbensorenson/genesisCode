@@ -161,7 +161,13 @@ pub(super) fn cmd_store(
                     );
                     (prog, "genesis/store-has-v0.2", "store-has", desc)
                 }
-                StoreCmd::Verify { .. } => unreachable!("handled above"),
+                StoreCmd::Verify { .. } => {
+                    return Err(cli_err(
+                        EX_INTERNAL,
+                        "store/dispatch-drift",
+                        "store verify must be handled before selfhost effectful dispatch",
+                    ));
+                }
             };
             let program_hash = gc_coreform::hash_term(&desc);
             Ok((prog, kind, log_op, program_hash))

@@ -53,42 +53,41 @@ pub(super) fn mem_limits_term(mem: MemLimits) -> Term {
 }
 
 pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Term {
-    if frontend_is_rust(frontend) {
-        Term::Map(
+    match frontend {
+        #[cfg(feature = "parity-harness")]
+        CoreformFrontend::Rust => Term::Map(
             [(
                 TermOrdKey(Term::symbol(":kind")),
                 Term::symbol(":frontend/rust"),
             )]
             .into_iter()
             .collect(),
-        )
-    } else {
-        let CoreformFrontend::Selfhost(cfg) = frontend else {
-            unreachable!("frontend dispatch drift: expected selfhost variant");
-        };
-        let mode = match cfg.bootstrap_mode {
-            SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
-            SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
-            SelfhostBootstrapMode::Embedded => ":embedded",
-        };
-        Term::Map(
-            [
-                (
-                    TermOrdKey(Term::symbol(":kind")),
-                    Term::symbol(":frontend/selfhost"),
-                ),
-                (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
-                (
-                    TermOrdKey(Term::symbol(":artifact")),
-                    cfg.artifact
-                        .as_ref()
-                        .map(|p| Term::Str(p.display().to_string()))
-                        .unwrap_or(Term::Nil),
-                ),
-            ]
-            .into_iter()
-            .collect(),
-        )
+        ),
+        CoreformFrontend::Selfhost(cfg) => {
+            let mode = match cfg.bootstrap_mode {
+                SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
+                SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
+                SelfhostBootstrapMode::Embedded => ":embedded",
+            };
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":kind")),
+                        Term::symbol(":frontend/selfhost"),
+                    ),
+                    (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
+                    (
+                        TermOrdKey(Term::symbol(":artifact")),
+                        cfg.artifact
+                            .as_ref()
+                            .map(|p| Term::Str(p.display().to_string()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            )
+        }
     }
 }
 

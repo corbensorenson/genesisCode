@@ -374,7 +374,11 @@ pub(super) fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2C
                     "int/add" => PrimOp::Add,
                     "int/sub" => PrimOp::Sub,
                     "int/mul" => PrimOp::Mul,
-                    _ => unreachable!(),
+                    _ => {
+                        return Err(Stage2CompileError::Unsupported(format!(
+                            "unsupported primitive op: {op}"
+                        )))
+                    }
                 };
                 Ok((prim, Ty::I64))
             } else {
@@ -388,7 +392,11 @@ pub(super) fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2C
                 let prim = match op {
                     "int/eq?" => PrimOp::EqI64,
                     "int/lt?" => PrimOp::Lt,
-                    _ => unreachable!(),
+                    _ => {
+                        return Err(Stage2CompileError::Unsupported(format!(
+                            "unsupported primitive op: {op}"
+                        )))
+                    }
                 };
                 Ok((prim, Ty::BoolI32))
             } else {

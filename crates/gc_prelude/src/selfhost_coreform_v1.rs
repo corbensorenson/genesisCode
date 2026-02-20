@@ -1069,7 +1069,9 @@ pub fn load_selfhost_coreform_toolchain_v1_with_mode(
                             )
                         })
                     }
-                    SelfhostBootstrapMode::Embedded => unreachable!(),
+                    SelfhostBootstrapMode::Embedded => Err(anyhow::anyhow!(
+                        "internal bootstrap mode drift while handling artifact fallback"
+                    )),
                 },
             }
         }

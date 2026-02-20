@@ -96,6 +96,7 @@ COMMON_GATES=(
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
+  "bash scripts/check_production_cli_help_surface.sh"
   "bash scripts/check_source_size_budget.sh"
   "bash scripts/check_test_size_budget.sh"
 )

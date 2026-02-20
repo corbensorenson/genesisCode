@@ -665,7 +665,10 @@ fn desugar_fn_to_unary(items: &[&Term]) -> Result<(String, Term), KernelError> {
     let mut out = body_term;
     for p in ps.into_iter().rev() {
         let Term::Symbol(name) = p else {
-            unreachable!()
+            return Err(KernelError::new(
+                KernelErrorKind::Internal,
+                "internal fn desugaring expected symbol parameter",
+            ));
         };
         out = Term::list(vec![
             Term::Symbol("fn".to_string()),

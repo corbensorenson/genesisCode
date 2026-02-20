@@ -107,6 +107,10 @@ Dedicated compatibility harness entrypoints:
 - `genesis selfhost-dashboard [--markdown <file>] [--store <dir>]`
   - emits a cutover dashboard artifact (`genesis/selfhost-cutover-dashboard-v0.2`) into a content-addressed store path.
   - writes a markdown mirror (default: `docs/status/SELFHOST_CUTOVER.md`) with routed/default selfhost coverage.
+- `genesis cli-schema`
+  - emits machine-readable command/option schema for agent planning.
+  - output kind: `genesis/cli-schema-v0.1`.
+  - schema contract: `docs/spec/CLI_SCHEMA_v0.1.md`.
 
 CI strict selfhost gates:
 - `scripts/selfhost_strict_smoke.sh`: fast strict routing health check.
