@@ -1,213 +1,140 @@
-# GenesisCode Upgrade Plan - Open Red-Team Backlog (Self-Hosted v1)
+# GenesisCode Upgrade Plan - Open Red-Team Backlog (Self-Hosted + AI-First v1)
 
 Last updated: 2026-02-20
 
 This plan contains only unresolved findings from the latest fine-tooth-comb red-team pass.
 
-Open checklist items: 0
+Open checklist items: 6
 
-## P0 - Broken Trust Signals and Guardrails
+## P0 - Trust and Self-Host Correctness
 
-- [x] P0.1 Fix `check_ai_iteration_slo.sh` false-green behavior when `test_changed_fast.sh` fails.
+- [ ] P0.1 Remove Rust frontend execution paths from production binaries (parity-harness only).
   Evidence:
-  - `scripts/check_ai_iteration_slo.sh:107`-`109` captures `run_changed_fast_loop` inside command substitution.
-  - Repro: `GENESIS_MIN_FREE_KB=999999999 bash scripts/check_ai_iteration_slo.sh` currently prints a disk-headroom failure from `test_changed_fast.sh` and still exits `0` with `ai-iteration-slo: ok`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/frontend.rs:19`-`22` keeps `CoreformFrontend::Rust` in the primary frontend enum.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs:129`-`153` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs:878`-`929` still execute Rust parser/canonical/hash paths.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:24`-`182` and peers (`cmd_gc.rs`, `cmd_refs.rs`, `cmd_sync.rs`, `cmd_vcs.rs`) still branch on `CoreformFrontend::Rust`.
   Acceptance:
-  - Any failure in `run_changed_fast_loop` fails `check_ai_iteration_slo.sh`.
-  - Add a regression check so this cannot silently regress.
-  Status (2026-02-20): complete.
-  - Updated `scripts/check_ai_iteration_slo.sh` to avoid command-substitution masking and fail closed on failed measurements.
-  - Added regression test:
-    `crates/gc_cli/tests/ai_iteration_slo_regression.rs`.
-  - Validation:
-    `GENESIS_MIN_FREE_KB=999999999 bash scripts/check_ai_iteration_slo.sh` -> exits non-zero.
-    `cargo test -p gc_cli --test ai_iteration_slo_regression --quiet` passes.
+  - Production CLI/WASI binaries compile and route only selfhost frontend/tool semantics.
+  - Rust frontend code is compiled only in dedicated parity binaries/harness crates.
+  - Add an enforceable guard script that fails if production `crates/*/src` references `CoreformFrontend::Rust`.
 
-- [x] P0.2 Make self-host boundary enforcement fail on full-tree violations, not only added diff lines.
+- [ ] P0.2 Remove non-artifact bootstrap fallback from production runtime paths.
   Evidence:
-  - `scripts/check_selfhost_boundary.sh:58` and `scripts/check_selfhost_boundary.sh:75`-`77` only inspect changed files and added lines.
-  - `bash scripts/check_selfhost_boundary.sh` currently reports `selfhost-boundary: ok` despite existing semantic calls in non-approved files.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:35`-`37` allows non-artifact bootstrap by `debug_assertions`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:423`-`427` still derives `Embedded` bootstrap mode.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs:831` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs:850` still preserve embedded fallback logic.
   Acceptance:
-  - Add full-tree strict mode and run it in zero-open health checks.
-  - Keep diff-only mode for fast local loops.
-  Status (2026-02-20): complete.
-  - Added explicit `--diff|--strict` mode handling in:
-    `scripts/check_selfhost_boundary.sh`.
-  - Wired zero-open hard gate to strict mode in:
-    `scripts/check_upgrade_plan_health.sh`.
-  - Validation:
-    `bash scripts/check_selfhost_boundary.sh` -> `ok (mode=diff)`.
-    `bash scripts/check_selfhost_boundary.sh --strict` executes full-tree production scan and now passes with aligned approved boundaries.
+  - `genesis` and `genesis_wasi` enforce `artifact-only` in all non-parity profiles.
+  - `artifact-preferred` and `embedded` are parity-harness-only code paths.
+  - CLI/docs/spec behavior are unified with no debug-profile loophole in production binaries.
 
-- [x] P0.3 Remove or isolate existing semantic API usage from non-approved host files.
+- [x] P0.3 Fix false-green behavior in `check_hot_path_budgets.sh`.
   Evidence:
-  - `docs/spec/SELF_HOST_BOUNDARY.md:40`-`57` approved host-side modules do not include `crates/gc_cli_driver/src/*`.
-  - Semantic calls currently exist in:
-    - `crates/gc_cli_driver/src/cmd_core.rs:16`
-    - `crates/gc_cli_driver/src/cmd_pkg.rs:176`
-    - `crates/gc_cli_driver/src/cmd_vcs.rs:112`
-    - `crates/gc_cli_driver/src/cmd_sync.rs:49`
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh:162`-`166` captures `measure_ms` in command substitution; failures in measured commands are not fail-closed.
+  - Repro from this pass:
+    - Direct command with the script’s own caps policy fails:
+      `genesis ... gcpm --caps ... lock --strict` -> `core/caps/denied` on `core/pkg-low::load-lock`.
+    - `bash /Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh` still exits `0` and reports `hot-path-budgets: ok`.
   Acceptance:
-  - Move semantics into approved boundary modules or selfhost `.gc` paths.
-  - Full-tree boundary check passes without undocumented exceptions.
-  Status (2026-02-20): complete.
-  - Isolated remaining host-side semantic usage into explicit approved boundary modules by aligning boundary policy and normative spec:
-    - `scripts/check_selfhost_boundary.sh` now allows approved host tooling paths (`gc_cli_driver/src/*`, `gc_effects/src/lib.rs`).
-    - strict mode now scans production `crates/*/src/**/*.rs`, excluding benchmark-only crate `crates/gc_runtime_bench/*`.
-    - `docs/spec/SELF_HOST_BOUNDARY.md` updated to include `gc_cli_driver/src/*.rs` in approved host-side modules and strict-mode scan semantics.
-  - Validation:
-    `bash scripts/check_selfhost_boundary.sh --strict` passes.
+  - Any failed measured command aborts the script with non-zero exit.
+  - Add a regression test that injects a known failing subcommand and verifies hard failure.
+  Status (2026-02-20):
+  - Done via shared fail-closed measurement helper (`/Users/corbensorenson/Documents/genesisCode/scripts/lib/measure.sh`) and call-site migration in `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh`.
+  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`measure_helper_fails_closed_on_command_error`, script wiring assertions).
 
-- [x] P0.4 Make AI stress verification fields derived from test outcomes, not hardcoded true.
+- [x] P0.4 Fix the same measurement false-green pattern in `check_perf_budgets.sh`.
   Evidence:
-  - `scripts/check_ai_stress_suite.sh:84`-`88` sets verification booleans to `True` unconditionally.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:68` and `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:72`-`86` use command substitution around `measure_ms` without explicit fail-closed status handling.
   Acceptance:
-  - Compute verification fields from actual checks and observed outcomes.
-  - Fault-injection run flips relevant fields and fails the gate.
-  Status (2026-02-20): complete.
-  - Reworked `scripts/check_ai_stress_suite.sh` so each check emits status and report booleans are derived from observed pass/fail.
-  - Added `GENESIS_STRESS_FAULT_INJECT=<comma-list>` to support deterministic failure-injection validation.
-  - Added regression test:
-    `crates/gc_cli/tests/ai_stress_suite_fault_inject.rs`.
-  - Validation:
-    fault-injected run exits non-zero and sets `bridge_budget_verified=false`, `gpu_compute_verified=false`, `replay_integrity_verified=false`.
-    `cargo test -p gc_cli --test ai_stress_suite_fault_inject --quiet` passes.
+  - Switch to explicit status-checked measurement flow (same hardening pattern used in `check_ai_iteration_slo.sh`).
+  - Add a regression check that forces one measured command to fail and verifies script exit is non-zero.
+  Status (2026-02-20):
+  - Done by migrating `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh` to shared fail-closed measurement primitives.
+  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs`.
 
-## P1 - Self-Host and Reliability Blockers
-
-- [x] P1.1 Enforce selfhost artifact freshness in the zero-open hard gate.
+- [x] P0.5 Eliminate hard-gate bypass when `upgrade_plan.md` has open items.
   Evidence:
-  - `scripts/check_selfhost_artifact_fresh.sh` exists but is not called by `scripts/check_upgrade_plan_health.sh:35`-`50`.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh:65`-`68` returns success and skips all hard gates whenever open checklist items > 0.
   Acceptance:
-  - `check_upgrade_plan_health.sh` runs artifact freshness before downstream command/test gates.
-  - Stale `selfhost/toolchain.gc` fails fast with actionable remediation.
-  Status (2026-02-20): complete.
-  - Added `bash scripts/check_selfhost_artifact_fresh.sh` to zero-open hard gate sequence in:
-    `scripts/check_upgrade_plan_health.sh`.
+  - Core hard gates always run in CI (regardless of backlog count).
+  - Optional mode can keep local “defer heavy gates” behavior, but CI must never short-circuit.
+  - Health script output clearly separates “plan backlog status” from “code health status”.
+  Status (2026-02-20):
+  - Done in `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh` by separating backlog status from code-health gating and enforcing gates whenever CI (or `GENESIS_HEALTH_ENFORCE_GATES=1`) is active.
+  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open`).
 
-- [x] P1.2 Enforce warnings-as-errors locally when upgrade plan reaches zero-open.
+- [x] P0.6 Normalize gcpm low-level capability fixtures across perf/SLO scripts.
   Evidence:
-  - `scripts/check_upgrade_plan_health.sh:35`-`50` does not run `cargo clippy --workspace --all-targets -- -D warnings`.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh:90`-`113` omits `core/pkg-low::load-lock`/`save-lock`/`env` from caps policy even though lock/env flows require them.
+  - This drift already caused one real failure in `check_ai_iteration_slo.sh` this pass before fixing that script.
   Acceptance:
-  - Add clippy warnings-as-errors to zero-open hard gate.
-  - Keep local and CI warning policy aligned/documented.
-  Status (2026-02-20): complete.
-  - Added `cargo clippy --workspace --all-targets -- -D warnings` to zero-open hard gate sequence in:
-    `scripts/check_upgrade_plan_health.sh`.
+  - Single shared caps fixture generator is used by all gcpm perf/SLO scripts.
+  - Fixture includes the full required low-level op closure for each measured command.
+  - Any missing-op denial fails the owning script and corresponding test.
+  Status (2026-02-20):
+  - Done via `/Users/corbensorenson/Documents/genesisCode/scripts/lib/gcpm_caps_fixture.sh`.
+  - Wired into `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh` and `/Users/corbensorenson/Documents/genesisCode/scripts/check_ai_iteration_slo.sh`.
 
-- [x] P1.3 Close remaining gap between project objective ("fully self-hosted") and current boundary non-goal.
+## P1 - CI, Performance, and Hardware Coverage
+
+- [ ] P1.1 Close CI profile coverage gap for full selfhost/parity checks on PRs.
   Evidence:
-  - `docs/spec/SELF_HOST_BOUNDARY.md:7`-`10` states kernel replacement is a non-goal in v0.2.
+  - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:35` maps PRs to `standard` profile; `full` runs only schedule/manual.
+  - Full-only checks are currently deferred from most PRs:
+    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:191`-`192` (`selfhost_strict_golden.sh`)
+    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:215`-`218` (WASM cross-host determinism)
+    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:229`-`232` (web wasm smoke)
   Acceptance:
-  - Define explicit staged path to no-Rust-semantic-fallback production release.
-  - Add measurable criteria for moving bootstrap Rust code to `/old_bootstrap`.
-  Status (2026-02-20): complete.
-  - Added explicit self-host v1 exit criteria and measurable bootstrap retirement gates in:
-    `docs/spec/SELF_HOST_BOUNDARY.md` (`Self-Host v1 Exit Path` section).
-  - Criteria now tie cutover to concrete checks:
-    `scripts/check_rust_engine_compat.sh`,
-    `scripts/check_selfhost_artifact_fresh.sh`,
-    `scripts/check_bootstrap_retirement_gate.sh`,
-    `scripts/check_old_bootstrap_retirement.sh`,
-    `scripts/check_selfhost_boundary.sh --strict`.
+  - Add a required PR lane that exercises full-profile selfhost golden + wasm determinism (can be sharded/targeted).
+  - Keep nightly full sweep, but prevent PR merge without at least one strict full-equivalence gate.
 
-- [x] P1.4 Add AI-first size budgets for `.gc` sources and split oversized toolchain files.
+- [ ] P1.2 Add device-backed GPU compute benchmark enforcement in CI.
   Evidence:
-  - `policies/source_size_budget.toml:5` budgets only Rust source lines.
-  - Large `.gc` sources currently include:
-    - `selfhost/toolchain.gc` (6509 lines)
-    - `prelude/prelude.gc` (4655 lines)
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_runtime_bench/src/bench_gpu_compute.rs:57`-`91` defaults to deterministic fallback bridge unless `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD` is set.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh:57` records backend but does not require `device-bridge`.
   Acceptance:
-  - Add `.gc` size-budget policy + enforcement script.
-  - Split large `.gc` files into modular, stable interfaces for agent editing.
-  Status (2026-02-20): complete.
-  - Added `.gc` budget policy keys in:
-    `policies/source_size_budget.toml`
-    - `gc_max_lines`
-    - `gc_exclude_paths` (generated artifact carve-outs).
-  - Extended enforcement script:
-    `scripts/check_source_size_budget.sh`
-    to validate:
-    - Rust production sources
-    - `.gc` authoring sources (`prelude/modules/*.gc`, `selfhost/*.gc`) with generated artifacts excluded.
-  - Updated normative policy doc:
-    `docs/spec/SOURCE_SIZE_BUDGET_v0.1.md`.
-  - Validation:
-    `bash scripts/check_source_size_budget.sh` passes.
-  - Modularization posture:
-    - `prelude/prelude.gc` remains assembled artifact from `prelude/modules/*.gc`.
-    - `selfhost/toolchain.gc` remains generated artifact; authoring sources are split across `selfhost/*.gc`.
+  - Add dedicated GPU lane with `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD` configured.
+  - Enforce `gpu_compute_backend == "device-bridge"` in that lane.
+  - Maintain separate budgets for fallback and real-device backends.
 
-## P2 - Throughput and Performance Hardening
-
-- [x] P2.1 Reduce local iteration wall time by separating fast-dev from heavy stress/perf suites.
+- [x] P1.3 Harden disk-headroom handling to avoid avoidable SLO/perf flakiness.
   Evidence:
-  - `scripts/check_upgrade_plan_health.sh:46`-`50` runs multiple heavy gates in one pass at zero-open.
-  - `scripts/check_ai_stress_suite.sh:7` uses a 900000ms total budget.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:8` hard-codes 1 GiB default minimum and `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:65`-`68` hard-fails immediately.
+  - During this pass, health/profile runs failed repeatedly near the threshold until manual `scripts/reclaim_build_space.sh --safe`.
   Acceptance:
-  - Define `dev-fast`, `prepush-standard`, and `release-full` gate profiles.
-  - Default local loop target: under 5 minutes on warm cache.
-  Status (2026-02-20): complete.
-  - Added profile-aware zero-open health gating in:
-    `scripts/check_upgrade_plan_health.sh`
-    with:
-    - `dev-fast`
-    - `prepush-standard`
-    - `release-full`
-  - Default profile behavior:
-    - local default: `dev-fast`
-    - CI default (`CI=true`): `release-full`
-  - Added CLI override:
-    `scripts/check_upgrade_plan_health.sh --profile <dev-fast|prepush-standard|release-full>`.
-  - Validation:
-    `bash scripts/check_upgrade_plan_health.sh --profile dev-fast` succeeds.
+  - Auto-attempt `reclaim_build_space.sh --safe` once before hard failure.
+  - Emit pre/post free-space telemetry.
+  - Keep strict fail for CI only after auto-reclaim retry fails.
+  Status (2026-02-20):
+  - Done in `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh` with one-pass safe reclaim retry, pre/post telemetry, and strict-mode controls (`--strict` / `GENESIS_DISK_STRICT_MODE`).
+  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`disk_headroom_strict_and_non_strict_modes_behave_as_expected`).
 
-- [x] P2.2 Move wall-clock-sensitive parallel speed assertions out of correctness unit tests.
+- [ ] P1.4 Tighten source-size budgets and split oversized production modules for AI-first editing.
   Evidence:
-  - `crates/gc_effects/src/lib.rs:1056` and `crates/gc_effects/src/lib.rs:1267` assert strict runtime deltas (`parallel + N < serial`).
+  - `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:5` sets `rust_max_lines = 4700`.
+  - Current production file sizes from this pass:
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` = 4599 lines
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` = 2538 lines
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` = 2041 lines
   Acceptance:
-  - Keep unit tests deterministic/correctness-focused.
-  - Enforce performance deltas in dedicated benchmark gates with controlled assumptions.
-  Status (2026-02-20): complete.
-  - Removed wall-clock delta assertions from correctness tests in:
-    `crates/gc_effects/src/lib.rs`
-    (`task_runtime_executes_parallel_work_with_worker_pool`,
-    `parallel_reduce_bounded_is_deterministic_and_parallel`).
-  - Kept determinism/replay/correctness assertions in place; performance SLO enforcement remains in benchmark gates (`check_runtime_microbench_budgets.sh`).
-  - Validation:
-    `cargo test -p gc_effects --lib task_runtime_executes_parallel_work_with_worker_pool --quiet` passes.
-    `cargo test -p gc_effects --lib parallel_reduce_bounded_is_deterministic_and_parallel --quiet` passes.
+  - Reduce Rust budget target to AI-editable limits (e.g., <=2200, then <=1600).
+  - Split top offenders into focused modules with stable interfaces.
+  - Add per-file ownership/comments and contract tests to keep decomposition safe.
 
-- [x] P2.3 Add real GPU compute performance evidence path (separate from bridge stub overhead).
+## P2 - AI-First Architecture and Drift Control
+
+- [ ] P2.1 Remove duplicated Rust/selfhost command program builders to prevent semantic drift.
   Evidence:
-  - `crates/gc_runtime_bench/src/bench_bridge_task.rs:19`-`30` uses a shell bridge stub that returns static response.
-  - `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md:9`-`13` maps GPU SLO to bridge metric only.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:24`-`182` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:183`+ duplicate large command construction logic across Rust and selfhost branches.
+  - Similar frontend branching exists in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_gc.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_refs.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_sync.rs`, and `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_vcs.rs`.
   Acceptance:
-  - Add device-backed GPU compute benchmark capability path with deterministic fallback mode.
-  - SLO output separates bridge overhead from actual compute execution metrics.
-  Status (2026-02-20): complete.
-  - Added dedicated GPU compute benchmark module:
-    `crates/gc_runtime_bench/src/bench_gpu_compute.rs`
-    with:
-    - deterministic fallback bridge mode
-    - device-backed bridge mode via `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD`.
-  - Extended runtime microbench schema and budgets:
-    - `crates/gc_runtime_bench/src/config.rs`
-    - `crates/gc_runtime_bench/src/report.rs`
-    - `crates/gc_runtime_bench/src/main.rs`
-    new metric: `gpu_compute_submit_ms`
-    new metadata: `gpu_compute_backend`.
-  - Extended SLO checker/artifact:
-    `scripts/check_runtime_microbench_budgets.sh`
-    now emits distinct `gpu_compute_bridge` and `gpu_compute_submit` checks.
-  - Updated normative SLO doc:
-    `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`.
-  - Validation:
-    `bash scripts/check_runtime_microbench_budgets.sh` passes and produces
-    `.genesis/perf/concurrency_gpu_slo_report.json` with separate bridge/submit metrics.
+  - Define one command-contract descriptor layer used by both parity and selfhost execution paths.
+  - Program hash/kind/log-op derivation comes from shared descriptors, not duplicated branches.
+  - Add drift tests asserting descriptor parity between execution backends.
 
 ## Execution Order (Recommended)
 
-1. P0.1 -> P0.2 -> P0.3 -> P0.4
-2. P1.1 -> P1.2 -> P1.4 -> P1.3
-3. P2.1 -> P2.2 -> P2.3
+1. P0.3 -> P0.4 -> P0.6
+2. P0.5 -> P1.3
+3. P0.1 -> P0.2 -> P2.1
+4. P1.1 -> P1.2 -> P1.4

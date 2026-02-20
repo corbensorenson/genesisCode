@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/measure.sh"
+
 # Default budgets are intentionally conservative for shared CI runners.
 # Override with env vars to tighten over time.
 BUDGET_TEST_WALL_MS="${GENESIS_BUDGET_TEST_WALL_MS:-120000}"
@@ -11,36 +13,6 @@ BUDGET_SELFHOST_BOOTSTRAP_MS="${GENESIS_BUDGET_SELFHOST_BOOTSTRAP_MS:-15000}"
 BUDGET_OBLIGATION_RUNTIME_MS="${GENESIS_BUDGET_OBLIGATION_RUNTIME_MS:-30000}"
 MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
-
-now_ns() {
-  python3 - <<'PY'
-import time
-print(time.time_ns())
-PY
-}
-
-measure_ms() {
-  local label="$1"
-  shift
-  local i start_ns end_ns elapsed_ms best_ms
-
-  for ((i = 0; i < MEASURE_WARMUPS; i++)); do
-    "$@" >/dev/null
-  done
-
-  best_ms=""
-  for ((i = 0; i < MEASURE_REPEATS; i++)); do
-    start_ns="$(now_ns)"
-    "$@" >/dev/null
-    end_ns="$(now_ns)"
-    elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
-    if [[ -z "$best_ms" || "$elapsed_ms" -lt "$best_ms" ]]; then
-      best_ms="$elapsed_ms"
-    fi
-  done
-
-  echo "$label=$best_ms"
-}
 
 fail() {
   echo "perf-budgets: $*" >&2
@@ -65,26 +37,28 @@ cleanup() {
 trap cleanup EXIT
 
 echo "perf-budgets: measuring wall-time budget via prebuilt cli_smoke runtime"
-TEST_WALL_LINE="$(measure_ms test_wall_ms "$CLI_SMOKE_BIN" --quiet)"
-TEST_WALL_MS="${TEST_WALL_LINE#*=}"
+genesis_measure_best_of_ms test_wall_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" "$CLI_SMOKE_BIN" --quiet
+TEST_WALL_MS="$MEASURE_LAST_MS"
 
 echo "perf-budgets: measuring selfhost bootstrap artifact build time"
-BOOTSTRAP_LINE="$(
-  measure_ms selfhost_bootstrap_ms \
-    target/debug/genesis selfhost-artifact --out "$TMP_DIR/toolchain.gc"
-)"
-SELFHOST_BOOTSTRAP_MS="${BOOTSTRAP_LINE#*=}"
+genesis_measure_best_of_ms \
+  selfhost_bootstrap_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  target/debug/genesis selfhost-artifact --out "$TMP_DIR/toolchain.gc"
+SELFHOST_BOOTSTRAP_MS="$MEASURE_LAST_MS"
 
 echo "perf-budgets: measuring obligation runtime on hello_pkg"
-OBLIGATION_LINE="$(
-  measure_ms obligation_runtime_ms \
-    target/debug/genesis \
-    --selfhost-only \
-    --coreform-frontend selfhost \
-    --selfhost-artifact "$TMP_DIR/toolchain.gc" \
-    test --pkg examples/hello_pkg/package.toml
-)"
-OBLIGATION_RUNTIME_MS="${OBLIGATION_LINE#*=}"
+genesis_measure_best_of_ms \
+  obligation_runtime_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  target/debug/genesis \
+  --selfhost-only \
+  --coreform-frontend selfhost \
+  --selfhost-artifact "$TMP_DIR/toolchain.gc" \
+  test --pkg examples/hello_pkg/package.toml
+OBLIGATION_RUNTIME_MS="$MEASURE_LAST_MS"
 
 echo "perf-budgets: metrics"
 echo "  test_wall_ms=$TEST_WALL_MS (budget=$BUDGET_TEST_WALL_MS)"

@@ -13,6 +13,13 @@ if [[ "${CI:-}" == "true" ]]; then
 fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-300000}"
+TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
+if [[ "${CI:-}" == "true" ]]; then
+  ENFORCE_GATES_DEFAULT="1"
+else
+  ENFORCE_GATES_DEFAULT="0"
+fi
+ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
 
 usage() {
   cat <<'EOF'
@@ -42,6 +49,10 @@ if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "prepush-standard" && "$PROFILE"
   echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|prepush-standard|release-full)" >&2
   exit 2
 fi
+if [[ "$ENFORCE_GATES" != "0" && "$ENFORCE_GATES" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_ENFORCE_GATES must be 0 or 1" >&2
+  exit 2
+fi
 
 if [[ ! -f "$PLAN_FILE" ]]; then
   echo "upgrade-plan-health: missing file: $PLAN_FILE"
@@ -63,12 +74,17 @@ if [[ "$declared_open" != "$actual_open" ]]; then
 fi
 
 if [[ "$declared_open" -gt 0 ]]; then
-  echo "upgrade-plan-health: open checklist items = $declared_open (hard-gate sweep deferred until zero; profile=$PROFILE)"
-  echo "upgrade-plan-health: ok"
-  exit 0
+  echo "upgrade-plan-health: backlog status: open checklist items = $declared_open"
+  if [[ "$ENFORCE_GATES" != "1" ]]; then
+    echo "upgrade-plan-health: code health gates deferred for local iteration (set GENESIS_HEALTH_ENFORCE_GATES=1 to enforce locally)."
+    echo "upgrade-plan-health: ok"
+    exit 0
+  fi
+  echo "upgrade-plan-health: code health gates enforced despite backlog (profile=$PROFILE)"
+else
+  echo "upgrade-plan-health: backlog status: open checklist items = 0"
+  echo "upgrade-plan-health: code health gates enforced (profile=$PROFILE)"
 fi
-
-echo "upgrade-plan-health: open checklist items = 0; enforcing hard gates (profile=$PROFILE)"
 
 COMMON_GATES=(
   "bash scripts/check_selfhost_boundary.sh --strict"
@@ -109,14 +125,23 @@ case "$PROFILE" in
     ;;
 esac
 
-for cmd in "${COMMON_GATES[@]}"; do
-  echo "upgrade-plan-health: >> $cmd"
-  bash -lc "$cmd"
-done
+if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
+  COMMON_GATES=("$TEST_GATE_OVERRIDE")
+  PROFILE_GATES=()
+fi
 
-for cmd in "${PROFILE_GATES[@]}"; do
-  echo "upgrade-plan-health: >> $cmd"
-  bash -lc "$cmd"
-done
+if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
+  for cmd in "${COMMON_GATES[@]}"; do
+    echo "upgrade-plan-health: >> $cmd"
+    bash -lc "$cmd"
+  done
+fi
+
+if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
+  for cmd in "${PROFILE_GATES[@]}"; do
+    echo "upgrade-plan-health: >> $cmd"
+    bash -lc "$cmd"
+  done
+fi
 
 echo "upgrade-plan-health: ok"

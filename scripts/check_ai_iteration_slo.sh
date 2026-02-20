@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
+
 BUDGET_INCREMENTAL_WARM_MS="${GENESIS_BUDGET_INCREMENTAL_WARM_MS:-60000}"
 BUDGET_CORE_SUITE_MS="${GENESIS_BUDGET_CORE_SUITE_MS:-300000}"
 BUDGET_CHANGED_FAST_MS="${GENESIS_BUDGET_CHANGED_FAST_MS:-300000}"
@@ -72,35 +74,7 @@ run_incremental_loop() {
     test --pkg "$TMP_DIR/package.toml"
 }
 
-cat > "$TMP_DIR/gcpm_caps.toml" <<'EOF'
-allow = [
-  "core/pkg-low::init",
-  "core/pkg-low::lock",
-  "core/pkg-low::load-lock",
-  "core/pkg-low::save-lock",
-  "core/pkg-low::env",
-]
-
-[op."core/pkg-low::init"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::lock"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::load-lock"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::save-lock"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::env"]
-base_dir = "."
-create_dirs = true
-EOF
+write_gcpm_low_caps_fixture "$TMP_DIR/gcpm_caps.toml"
 
 run_gcpm_tmp() {
   (

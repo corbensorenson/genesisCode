@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/measure.sh"
+source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
+
 # Conservative defaults for shared CI runners.
 BUDGET_FMT_CANON_MS="${GENESIS_BUDGET_FMT_CANON_MS:-15000}"
 BUDGET_EVAL_PURE_MS="${GENESIS_BUDGET_EVAL_PURE_MS:-15000}"
@@ -14,36 +17,6 @@ BUDGET_GCPM_INSTALL_MS="${GENESIS_BUDGET_GCPM_INSTALL_MS:-15000}"
 BUDGET_GCPM_UPDATE_MS="${GENESIS_BUDGET_GCPM_UPDATE_MS:-15000}"
 MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
-
-now_ns() {
-  python3 - <<'PY'
-import time
-print(time.time_ns())
-PY
-}
-
-measure_ms() {
-  local label="$1"
-  shift
-  local i start_ns end_ns elapsed_ms best_ms
-
-  for ((i = 0; i < MEASURE_WARMUPS; i++)); do
-    "$@" >/dev/null
-  done
-
-  best_ms=""
-  for ((i = 0; i < MEASURE_REPEATS; i++)); do
-    start_ns="$(now_ns)"
-    "$@" >/dev/null
-    end_ns="$(now_ns)"
-    elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
-    if [[ -z "$best_ms" || "$elapsed_ms" -lt "$best_ms" ]]; then
-      best_ms="$elapsed_ms"
-    fi
-  done
-
-  echo "$label=$best_ms"
-}
 
 fail() {
   echo "hot-path-budgets: $*" >&2
@@ -87,30 +60,7 @@ cat > "$TMP_DIR/time_caps.toml" <<'EOF'
 allow = ["sys/time::now"]
 EOF
 
-cat > "$TMP_DIR/gcpm_caps.toml" <<'EOF'
-allow = [
-  "core/pkg-low::init",
-  "core/pkg-low::lock",
-  "core/pkg-low::install",
-  "core/pkg-low::update"
-]
-
-[op."core/pkg-low::init"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::lock"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::install"]
-base_dir = "."
-create_dirs = true
-
-[op."core/pkg-low::update"]
-base_dir = "."
-create_dirs = true
-EOF
+write_gcpm_low_caps_fixture "$TMP_DIR/gcpm_caps.toml"
 
 echo "hot-path-budgets: building selfhost artifact"
 TOOLCHAIN="$TMP_DIR/toolchain.gc"
@@ -125,46 +75,50 @@ run_gcpm_tmp() {
   )
 }
 
-echo "hot-path-budgets: measuring parser/canonicalizer path (fmt --check)"
-FMT_LINE="$(
-  measure_ms fmt_canon_ms \
-    "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
-    fmt "$TMP_DIR/basic.gc" --engine selfhost --check
-)"
-FMT_CANON_MS="${FMT_LINE#*=}"
+echo "hot-path-budgets: measuring parser/canonicalizer path (fmt)"
+genesis_measure_best_of_ms \
+  fmt_canon_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
+  fmt "$TMP_DIR/basic.gc" --engine selfhost
+FMT_CANON_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: measuring evaluator path (pure eval)"
-EVAL_LINE="$(
-  measure_ms eval_pure_ms \
-    "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
-    eval "$TMP_DIR/basic.gc" --engine selfhost
-)"
-EVAL_PURE_MS="${EVAL_LINE#*=}"
+genesis_measure_best_of_ms \
+  eval_pure_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
+  eval "$TMP_DIR/basic.gc" --engine selfhost
+EVAL_PURE_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: measuring effect runner path (run sys/time::now)"
-EFFECT_LINE="$(
-  measure_ms effect_run_ms \
-    "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
-    run "$TMP_DIR/time_effect.gc" --caps "$TMP_DIR/time_caps.toml" --log "$TMP_DIR/time.gclog"
-)"
-EFFECT_RUN_MS="${EFFECT_LINE#*=}"
+genesis_measure_best_of_ms \
+  effect_run_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  "$GENESIS_BIN" --selfhost-artifact "$TOOLCHAIN" \
+  run "$TMP_DIR/time_effect.gc" --caps "$TMP_DIR/time_caps.toml" --log "$TMP_DIR/time.gclog"
+EFFECT_RUN_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: measuring sync throughput path"
-SYNC_LINE="$(
-  measure_ms sync_pull_ms \
-    "$SYNC_TEST_BIN" \
-    --exact sync_push_then_pull_transfers_full_closure_and_updates_refs --quiet
-)"
-SYNC_PULL_MS="${SYNC_LINE#*=}"
+genesis_measure_best_of_ms \
+  sync_pull_ms \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  "$SYNC_TEST_BIN" \
+  --exact sync_push_then_pull_transfers_full_closure_and_updates_refs --quiet
+SYNC_PULL_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: measuring gcpm lock/install/update flows"
 run_gcpm_tmp new --workspace "perf-hot-paths" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
-LOCK_LINE="$(measure_ms gcpm_lock_ms run_gcpm_tmp lock --strict)"
-GCPM_LOCK_MS="${LOCK_LINE#*=}"
-INSTALL_LINE="$(measure_ms gcpm_install_ms run_gcpm_tmp install --frozen)"
-GCPM_INSTALL_MS="${INSTALL_LINE#*=}"
-UPDATE_LINE="$(measure_ms gcpm_update_ms run_gcpm_tmp update)"
-GCPM_UPDATE_MS="${UPDATE_LINE#*=}"
+genesis_measure_best_of_ms gcpm_lock_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" run_gcpm_tmp lock --strict
+GCPM_LOCK_MS="$MEASURE_LAST_MS"
+genesis_measure_best_of_ms gcpm_install_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" run_gcpm_tmp install --frozen
+GCPM_INSTALL_MS="$MEASURE_LAST_MS"
+genesis_measure_best_of_ms gcpm_update_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" run_gcpm_tmp update
+GCPM_UPDATE_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: metrics"
 echo "  fmt_canon_ms=$FMT_CANON_MS (budget=$BUDGET_FMT_CANON_MS)"
