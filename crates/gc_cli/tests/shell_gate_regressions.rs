@@ -37,6 +37,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read check_perf_budgets.sh");
     let slo = fs::read_to_string(root.join("scripts/check_ai_iteration_slo.sh"))
         .expect("read check_ai_iteration_slo.sh");
+    let micro = fs::read_to_string(root.join("scripts/check_runtime_microbench_budgets.sh"))
+        .expect("read check_runtime_microbench_budgets.sh");
 
     assert!(
         hot.contains("source \"$ROOT_DIR/scripts/lib/measure.sh\""),
@@ -61,6 +63,80 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         slo.contains("write_gcpm_low_caps_fixture \"$TMP_DIR/gcpm_caps.toml\""),
         "ai-iteration slo script must use shared gcpm caps fixture generator"
+    );
+    assert!(
+        perf.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
+        "perf script must default to release-equivalent cargo profile"
+    );
+    assert!(
+        hot.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
+        "hot-path script must default to release-equivalent cargo profile"
+    );
+    assert!(
+        slo.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
+        "ai-iteration slo script must default to release-equivalent cargo profile"
+    );
+    assert!(
+        micro.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
+        "runtime microbench script must default to release-equivalent cargo profile"
+    );
+    assert!(
+        perf.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"perf-budgets\" --strict \"$DISK_STRICT_MODE\""),
+        "perf script must force strict disk mode"
+    );
+    assert!(
+        hot.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"hot-path-budgets\" --strict \"$DISK_STRICT_MODE\""),
+        "hot-path script must force strict disk mode"
+    );
+    assert!(
+        slo.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"ai-iteration-slo\" --strict \"$DISK_STRICT_MODE\""),
+        "ai-iteration slo script must force strict disk mode"
+    );
+    assert!(
+        micro.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"runtime-microbench\" --strict \"$DISK_STRICT_MODE\""),
+        "runtime microbench script must force strict disk mode"
+    );
+    assert!(
+        perf.contains("\"build_profile\": \"$CARGO_PROFILE\""),
+        "perf script report must include build profile metadata"
+    );
+    assert!(
+        hot.contains("\"build_profile\": \"$CARGO_PROFILE\""),
+        "hot-path report must include build profile metadata"
+    );
+    assert!(
+        slo.contains("\"build_profile\": \"$CARGO_PROFILE\""),
+        "ai-iteration report must include build profile metadata"
+    );
+    assert!(
+        micro.contains("GENESIS_RUNTIME_MICROBENCH_PROFILE=\"$CARGO_PROFILE\""),
+        "runtime microbench runner must stamp profile metadata into report"
+    );
+}
+
+#[test]
+fn changed_fast_supports_explicit_strict_disk_mode() {
+    let root = repo_root();
+    let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
+        .expect("read test_changed_fast.sh");
+    let slo = fs::read_to_string(root.join("scripts/check_ai_iteration_slo.sh"))
+        .expect("read check_ai_iteration_slo.sh");
+
+    assert!(
+        changed_fast.contains("--strict-disk <mode>"),
+        "test-changed-fast help must expose strict disk mode override"
+    );
+    assert!(
+        changed_fast.contains("STRICT_DISK_MODE=\"${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}\""),
+        "test-changed-fast must support env-configured strict disk mode"
+    );
+    assert!(
+        changed_fast.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"test-changed-fast\" --strict \"$STRICT_DISK_MODE\""),
+        "test-changed-fast must pass strict mode through to disk check"
+    );
+    assert!(
+        slo.contains("--strict-disk \"$DISK_STRICT_MODE\""),
+        "ai-iteration slo must call changed-fast in strict disk mode"
     );
 }
 

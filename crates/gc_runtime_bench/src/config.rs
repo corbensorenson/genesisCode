@@ -20,6 +20,8 @@ pub struct BenchConfig {
     pub repeats: usize,
     pub budgets: Budgets,
     pub out: PathBuf,
+    pub build_profile: String,
+    pub build_mode: String,
 }
 
 fn env_usize(name: &str, default: usize) -> usize {
@@ -36,6 +38,14 @@ fn env_u128(name: &str, default: u128) -> u128 {
         .and_then(|v| v.trim().parse::<u128>().ok())
         .filter(|n| *n > 0)
         .unwrap_or(default)
+}
+
+fn env_string(name: &str, default: &str) -> String {
+    std::env::var(name)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| default.to_string())
 }
 
 pub fn parse() -> Result<BenchConfig> {
@@ -65,11 +75,15 @@ pub fn parse() -> Result<BenchConfig> {
         store_cycle_ms: env_u128("GENESIS_BUDGET_MICRO_STORE_CYCLE_MS", 1_000),
         sync_pull_ms: env_u128("GENESIS_BUDGET_MICRO_SYNC_PULL_MS", 4_000),
     };
+    let build_profile = env_string("GENESIS_RUNTIME_MICROBENCH_PROFILE", "unknown");
+    let build_mode = env_string("GENESIS_RUNTIME_MICROBENCH_BUILD_MODE", "unknown");
 
     Ok(BenchConfig {
         warmups,
         repeats,
         budgets,
         out,
+        build_profile,
+        build_mode,
     })
 }

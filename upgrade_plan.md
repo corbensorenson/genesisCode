@@ -4,7 +4,7 @@ Last updated: 2026-02-20
 
 This plan contains only unresolved findings from the latest fine-tooth-comb red-team pass.
 
-Open checklist items: 7
+Open checklist items: 5
 
 ## P0 - Self-Host Correctness and Missing Core Surface
 
@@ -41,25 +41,25 @@ Open checklist items: 7
 
 ## P1 - Performance and Reliability Hardening
 
-- [ ] P1.1 Make perf/SLO measurements fail-closed on low disk in all budget-enforced paths (including local runs).
+- [x] P1.1 Make perf/SLO measurements fail-closed on low disk in all budget-enforced paths (including local runs).
   Evidence:
   - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:89`-`94` defaults to non-strict mode outside CI.
   - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:107`-`114` exits success on low disk in non-strict mode.
   - `/Users/corbensorenson/Documents/genesisCode/scripts/test_changed_fast.sh:7` always invokes disk-headroom check with default strict mode.
   - Release-profile run in this pass logged: `test-changed-fast: insufficient disk headroom ... continuing in non-strict mode ...`.
   Acceptance:
-  - Perf/SLO entrypoints (`check_perf_budgets.sh`, `check_ai_iteration_slo.sh`, `check_hot_path_budgets.sh`, `check_runtime_microbench_budgets.sh`) force strict disk mode.
-  - `test_changed_fast.sh` supports explicit strict mode and is called strictly when used for SLO/perf gating.
-  - Low-disk conditions fail budget checks instead of producing potentially noisy false-green measurements.
+  - Perf/SLO entrypoints (`check_perf_budgets.sh`, `check_ai_iteration_slo.sh`, `check_hot_path_budgets.sh`, `check_runtime_microbench_budgets.sh`) now force strict disk mode via `GENESIS_PERF_DISK_STRICT_MODE` (default `1`).
+  - `test_changed_fast.sh` now supports explicit strict mode (`--strict-disk`, `GENESIS_TEST_CHANGED_STRICT_DISK`) and `check_ai_iteration_slo.sh` calls it in strict mode.
+  - Low-disk conditions now fail budget checks in these gates instead of producing false-green measurements.
 
-- [ ] P1.2 Run performance budgets on release-equivalent artifacts and record profile metadata in reports.
+- [x] P1.2 Run performance budgets on release-equivalent artifacts and record profile metadata in reports.
   Evidence:
   - `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:21` builds debug (`cargo build -p gc_cli`) and measures `target/debug/genesis`.
   - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh:23` uses `cargo run -p gc_runtime_bench` (debug by default).
   Acceptance:
-  - Standardize perf scripts on a release-equivalent profile (`--profile selfhost-strict` or `--release`) and avoid mixing debug/release budgets.
-  - Include profile/build-mode metadata in emitted perf artifacts for auditability.
-  - Rebaseline budgets with deterministic runner settings and document migration.
+  - Perf scripts now default to `GENESIS_PERF_CARGO_PROFILE=selfhost-strict` and consistently build/run `target/<profile>/...` artifacts.
+  - Profile/build metadata is now emitted in perf artifacts (`perf_budget_metrics.json`, `hot_path_metrics.json`, `ai_iteration_slo_metrics.json`, runtime microbench + concurrency SLO outputs).
+  - Runtime microbench report schema now includes `build_profile` and `build_mode` for auditability.
 
 ## P2 - AI-First Authoring and Agent Ergonomics
 

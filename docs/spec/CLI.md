@@ -25,8 +25,8 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
-    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
-    - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Runtime commands that resolve `--engine selfhost` must use an explicit pinned artifact identity
   (`--selfhost-artifact`, `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`, or workspace
   `genesis.workspace.toml` -> `[defaults].toolchain`), and
@@ -126,6 +126,9 @@ CI strict selfhost gates:
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
   - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
+- `genesis commit new --target-kind <package|module|contract|workspace> --target-id <string> --base <snapshot-hash-or-ref> --patch <patch-hash-or-file> --message <string> [--why <string>] [--obligation <sym> ...] [--evidence <hash> ...] [--author <string>] [--sign <key-id>] [--store]`
+- `genesis commit show <commit-hash>`
+- Non-gcpm command schema IDs are enumerated in `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`.
 - `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
   - See `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`.
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.

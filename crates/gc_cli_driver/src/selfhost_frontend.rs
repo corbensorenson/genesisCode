@@ -524,6 +524,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Pack { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),
         Cmd::Refs { .. } => Ok(()),
+        Cmd::Commit { .. } => Ok(()),
         Cmd::Pkg { .. } => Ok(()),
         Cmd::Policy { .. } => Ok(()),
         Cmd::Sync { .. } => Ok(()),

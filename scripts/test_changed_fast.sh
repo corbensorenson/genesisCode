@@ -4,8 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast"
-
 BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH="${GENESIS_TEST_CHANGED_REPORT:-.genesis/perf/test_changed_fast_metrics.json}"
@@ -13,6 +11,7 @@ HISTORY_PATH="${GENESIS_TEST_CHANGED_HISTORY:-.genesis/perf/test_changed_fast_hi
 BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-300000}" # 5 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
+STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
 DRY_RUN=0
 
 usage() {
@@ -26,6 +25,7 @@ Options:
   --history <path>     metrics history jsonl (default: .genesis/perf/test_changed_fast_history.jsonl)
   --budget-ms <N>      max allowed elapsed ms for this run (default: 300000)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
+  --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
   --dry-run            print selected commands without executing
   -h, --help           show this help
 EOF
@@ -57,6 +57,10 @@ while [[ $# -gt 0 ]]; do
       MIN_HISTORY="${2:-}"
       shift 2
       ;;
+    --strict-disk)
+      STRICT_DISK_MODE="${2:-}"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -77,9 +81,15 @@ done
   echo "test-changed-fast: --runner must be one of auto|cargo|nextest" >&2
   exit 2
 }
+[[ "$STRICT_DISK_MODE" == "auto" || "$STRICT_DISK_MODE" == "0" || "$STRICT_DISK_MODE" == "1" ]] || {
+  echo "test-changed-fast: --strict-disk must be auto, 0, or 1" >&2
+  exit 2
+}
 [[ "$BUDGET_MS" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: --budget-ms must be numeric" >&2; exit 2; }
 [[ "$MIN_HISTORY" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: --min-history must be numeric" >&2; exit 2; }
 [[ "$FULL_MODE_THRESHOLD" =~ ^[0-9]+$ ]] || { echo "test-changed-fast: GENESIS_TEST_CHANGED_FULL_THRESHOLD must be numeric" >&2; exit 2; }
+
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast" --strict "$STRICT_DISK_MODE"
 
 resolve_base_ref() {
   if [[ -n "$BASE_REF" ]]; then
@@ -315,9 +325,9 @@ PY
 )"
 ELAPSED_MS="$(( (END_NS - START_NS) / 1000000 ))"
 
-python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" <<'PY'
+python3 - "$REPORT_PATH" "$HISTORY_PATH" "$BASE" "$MODE" "$RUNNER" "$CHANGED_COUNT" "$ELAPSED_MS" "$BUDGET_MS" "$MIN_HISTORY" "$STRICT_DISK_MODE" <<'PY'
 import json, os, statistics, sys, time
-report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s = sys.argv[1:]
+report_path, history_path, base, mode, runner, changed_count_s, elapsed_ms_s, budget_ms_s, min_hist_s, strict_disk_mode = sys.argv[1:]
 changed_count = int(changed_count_s)
 elapsed_ms = int(elapsed_ms_s)
 budget_ms = int(budget_ms_s)
@@ -332,6 +342,7 @@ entry = {
     "changed_file_count": changed_count,
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
+    "disk_strict_mode": strict_disk_mode,
 }
 
 history = []

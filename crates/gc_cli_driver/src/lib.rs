@@ -20,6 +20,7 @@ use gc_prelude::{
 };
 
 mod cli_json;
+mod cmd_commit;
 mod cmd_core;
 mod cmd_gc;
 mod cmd_pkg;
@@ -30,6 +31,7 @@ mod cmd_selfhost;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
+mod commit_contract;
 mod diagnostics;
 mod gc_contract;
 mod kernel_exec;
@@ -50,6 +52,7 @@ mod sync_contract;
 mod vcs_contract;
 
 use cli_json::*;
+use cmd_commit::cmd_commit;
 use cmd_core::*;
 use cmd_gc::cmd_gc;
 use cmd_pkg::cmd_pkg;
@@ -424,6 +427,20 @@ enum Cmd {
         cmd: RefsCmd,
     },
 
+    /// Create and inspect GenesisGraph commit artifacts.
+    Commit {
+        /// Capability policy TOML (deny-by-default allowlist).
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Output effect log path (.gclog). Defaults to ./.genesis/logs/<op>-<stamp>.gclog
+        #[arg(long)]
+        log: Option<PathBuf>,
+
+        #[command(subcommand)]
+        cmd: CommitCmd,
+    },
+
     /// GenesisPkg/GCPM operations (snapshot + bundle export/import).
     #[command(visible_alias = "gcpm")]
     Pkg {
@@ -576,6 +593,70 @@ enum RefsCmd {
         /// to require the ref to be unset.
         #[arg(long)]
         expected_old: Option<String>,
+    },
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum CommitTargetKind {
+    Package,
+    Module,
+    Contract,
+    Workspace,
+}
+
+#[derive(Subcommand)]
+enum CommitCmd {
+    /// Create a `:vcs/commit` artifact from base+patch and optionally store it.
+    New {
+        /// Target entity kind.
+        #[arg(long, value_enum)]
+        target_kind: CommitTargetKind,
+
+        /// Target identifier (name/path/symbol).
+        #[arg(long)]
+        target_id: String,
+
+        /// Base snapshot hash (64-hex) or ref name (`refs/...`).
+        #[arg(long)]
+        base: String,
+
+        /// Patch hash (64-hex) or patch artifact file path.
+        #[arg(long)]
+        patch: String,
+
+        /// Commit message.
+        #[arg(long)]
+        message: String,
+
+        /// Optional rationale.
+        #[arg(long)]
+        why: Option<String>,
+
+        /// Required obligation symbol (repeatable).
+        #[arg(long = "obligation")]
+        obligations: Vec<String>,
+
+        /// Evidence artifact hash (64-hex, repeatable).
+        #[arg(long = "evidence")]
+        evidence: Vec<String>,
+
+        /// Optional author display name.
+        #[arg(long)]
+        author: Option<String>,
+
+        /// Optional signer key id hint (stored as author id metadata).
+        #[arg(long)]
+        sign: Option<String>,
+
+        /// Store the commit artifact in the content-addressed store.
+        #[arg(long)]
+        store: bool,
+    },
+
+    /// Load and validate a `:vcs/commit` artifact by hash.
+    Show {
+        /// Commit hash (64-hex).
+        hash: String,
     },
 }
 
@@ -1397,6 +1478,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         ),
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps, log.as_deref(), cmd),
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps, log.as_deref(), cmd),
+        Cmd::Commit { caps, log, cmd } => cmd_commit(cli, caps, log.as_deref(), cmd),
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
         Cmd::Policy { cmd } => cmd_policy(cli, cmd),
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),

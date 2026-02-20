@@ -41,6 +41,8 @@ fn main() -> Result<()> {
         sync_pull_ms,
     };
     let report = Report::new(
+        cfg.build_profile.clone(),
+        cfg.build_mode.clone(),
         cfg.warmups,
         cfg.repeats,
         gpu_compute_backend.clone(),

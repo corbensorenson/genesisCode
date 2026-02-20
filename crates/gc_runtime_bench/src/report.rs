@@ -19,6 +19,8 @@ pub struct Metrics {
 #[derive(Debug, serde::Serialize)]
 pub struct Report {
     kind: &'static str,
+    build_profile: String,
+    build_mode: String,
     warmups: usize,
     repeats: usize,
     gpu_compute_backend: String,
@@ -28,6 +30,8 @@ pub struct Report {
 
 impl Report {
     pub fn new(
+        build_profile: String,
+        build_mode: String,
         warmups: usize,
         repeats: usize,
         gpu_compute_backend: String,
@@ -36,6 +40,8 @@ impl Report {
     ) -> Self {
         Self {
             kind: "genesis/runtime-microbench-v0.1",
+            build_profile,
+            build_mode,
             warmups,
             repeats,
             gpu_compute_backend,

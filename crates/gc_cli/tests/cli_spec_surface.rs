@@ -34,6 +34,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "semantic-edit",
         "store",
         "refs",
+        "commit",
         "pkg",
         "policy",
         "sync",
@@ -158,6 +159,31 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("merge3"),
         "vcs --help output missing merge3 subcommand"
     );
+
+    let s = stdout_str(&["commit", "--help"]);
+    assert!(
+        s.contains("new"),
+        "commit --help output missing new subcommand"
+    );
+    assert!(
+        s.contains("show"),
+        "commit --help output missing show subcommand"
+    );
+
+    let s = stdout_str(&["commit", "new", "--help"]);
+    for needle in [
+        "--target-kind",
+        "--target-id",
+        "--base",
+        "--patch",
+        "--message",
+        "--store",
+    ] {
+        assert!(
+            s.contains(needle),
+            "commit new --help output missing {needle}"
+        );
+    }
 
     let s = stdout_str(&["vcs", "merge3", "--help"]);
     assert!(

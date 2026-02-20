@@ -11,6 +11,9 @@ BUDGET_CORE_SUITE_MS="${GENESIS_BUDGET_CORE_SUITE_MS:-300000}"
 BUDGET_CHANGED_FAST_MS="${GENESIS_BUDGET_CHANGED_FAST_MS:-300000}"
 BUDGET_GCPM_LOCK_MS="${GENESIS_BUDGET_GCPM_LOCK_MS:-20000}"
 BUDGET_GCPM_ENV_MS="${GENESIS_BUDGET_GCPM_ENV_MS:-15000}"
+CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
+DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
+REPORT_OUT="${GENESIS_AI_ITERATION_SLO_OUT:-.genesis/perf/ai_iteration_slo_metrics.json}"
 
 now_ns() {
   python3 - <<'PY'
@@ -39,6 +42,18 @@ fail() {
   exit 1
 }
 
+profile_target_dir() {
+  case "$1" in
+    release) echo "release" ;;
+    dev|test) echo "debug" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
+
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "ai-iteration-slo" --strict "$DISK_STRICT_MODE"
+
 TMP_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -46,8 +61,9 @@ cleanup() {
 trap cleanup EXIT
 
 echo "ai-iteration-slo: preparing genesis binary"
-cargo build -p gc_cli >/dev/null
-GENESIS_BIN="$ROOT_DIR/target/debug/genesis"
+cargo build -p gc_cli --profile "$CARGO_PROFILE" >/dev/null
+GENESIS_BIN="$ROOT_DIR/target/$TARGET_PROFILE_DIR/genesis"
+[[ -x "$GENESIS_BIN" ]] || fail "unable to locate genesis binary at $GENESIS_BIN"
 
 for name in basic.gc caps.toml package.toml pure.gcpatch; do
   cp "tests/spec/pkg_basic/$name" "$TMP_DIR/$name"
@@ -89,6 +105,7 @@ run_changed_fast_loop() {
     --runner cargo \
     --budget-ms "$BUDGET_CHANGED_FAST_MS" \
     --min-history 1 \
+    --strict-disk "$DISK_STRICT_MODE" \
     --report "$TMP_DIR/test_changed_fast_metrics.json" \
     --history "$TMP_DIR/test_changed_fast_history.jsonl"
 }
@@ -105,7 +122,7 @@ measure_ms changed_fast_ms run_changed_fast_loop
 CHANGED_FAST_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: measuring core suite wall-time"
-measure_ms core_suite_ms cargo test -p gc_coreform -p gc_kernel -p gc_prelude -p gc_cli --test cli_smoke --quiet
+measure_ms core_suite_ms cargo test -p gc_coreform -p gc_kernel -p gc_prelude -p gc_cli --test cli_smoke --quiet --profile "$CARGO_PROFILE"
 CORE_SUITE_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: measuring gcpm lock/env iteration path"
@@ -121,6 +138,32 @@ echo "  changed_fast_ms=$CHANGED_FAST_MS (budget=$BUDGET_CHANGED_FAST_MS)"
 echo "  core_suite_ms=$CORE_SUITE_MS (budget=$BUDGET_CORE_SUITE_MS)"
 echo "  gcpm_lock_ms=$GCPM_LOCK_MS (budget=$BUDGET_GCPM_LOCK_MS)"
 echo "  gcpm_env_ms=$GCPM_ENV_MS (budget=$BUDGET_GCPM_ENV_MS)"
+
+mkdir -p "$(dirname "$REPORT_OUT")"
+cat > "$REPORT_OUT" <<EOF
+{
+  "kind": "genesis/ai-iteration-slo-v0.1",
+  "build_profile": "$CARGO_PROFILE",
+  "build_mode": "release-equivalent",
+  "build_target_dir": "$TARGET_PROFILE_DIR",
+  "disk_strict_mode": "$DISK_STRICT_MODE",
+  "metrics": {
+    "incremental_warm_ms": $INCREMENTAL_WARM_MS,
+    "changed_fast_ms": $CHANGED_FAST_MS,
+    "core_suite_ms": $CORE_SUITE_MS,
+    "gcpm_lock_ms": $GCPM_LOCK_MS,
+    "gcpm_env_ms": $GCPM_ENV_MS
+  },
+  "budgets": {
+    "incremental_warm_ms": $BUDGET_INCREMENTAL_WARM_MS,
+    "changed_fast_ms": $BUDGET_CHANGED_FAST_MS,
+    "core_suite_ms": $BUDGET_CORE_SUITE_MS,
+    "gcpm_lock_ms": $BUDGET_GCPM_LOCK_MS,
+    "gcpm_env_ms": $BUDGET_GCPM_ENV_MS
+  }
+}
+EOF
+echo "ai-iteration-slo: wrote report $REPORT_OUT"
 
 [[ "$INCREMENTAL_WARM_MS" -le "$BUDGET_INCREMENTAL_WARM_MS" ]] || fail "warm incremental loop regression: $INCREMENTAL_WARM_MS > $BUDGET_INCREMENTAL_WARM_MS"
 [[ "$CHANGED_FAST_MS" -le "$BUDGET_CHANGED_FAST_MS" ]] || fail "changed fast loop regression: $CHANGED_FAST_MS > $BUDGET_CHANGED_FAST_MS"

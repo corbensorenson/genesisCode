@@ -17,21 +17,36 @@ BUDGET_GCPM_INSTALL_MS="${GENESIS_BUDGET_GCPM_INSTALL_MS:-15000}"
 BUDGET_GCPM_UPDATE_MS="${GENESIS_BUDGET_GCPM_UPDATE_MS:-15000}"
 MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
+CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
+DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
 
 fail() {
   echo "hot-path-budgets: $*" >&2
   exit 1
 }
 
+profile_target_dir() {
+  case "$1" in
+    release) echo "release" ;;
+    dev|test) echo "debug" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
+GENESIS_BIN="$ROOT_DIR/target/$TARGET_PROFILE_DIR/genesis"
+
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "hot-path-budgets" --strict "$DISK_STRICT_MODE"
+
 echo "hot-path-budgets: preparing genesis binary"
-cargo build -p gc_cli >/dev/null
-cargo test -p gc_effects --test sync_registry --no-run --quiet >/dev/null
-GENESIS_BIN="$ROOT_DIR/target/debug/genesis"
+cargo build -p gc_cli --profile "$CARGO_PROFILE" >/dev/null
+cargo test -p gc_effects --test sync_registry --no-run --quiet --profile "$CARGO_PROFILE" >/dev/null
 SYNC_TEST_BIN="$(
-  find "$ROOT_DIR/target/debug/deps" -maxdepth 1 -type f -name 'sync_registry-*' -perm -u+x \
+  find "$ROOT_DIR/target/$TARGET_PROFILE_DIR/deps" -maxdepth 1 -type f -name 'sync_registry-*' -perm -u+x \
     | sort \
     | tail -n 1
 )"
+[[ -x "$GENESIS_BIN" ]] || fail "unable to locate genesis binary at $GENESIS_BIN"
 [[ -x "${SYNC_TEST_BIN:-}" ]] || fail "unable to locate compiled sync_registry test binary"
 
 TMP_DIR="$(mktemp -d)"
@@ -134,6 +149,10 @@ echo "  repeats=$MEASURE_REPEATS"
 cat > "$ARTIFACT_JSON" <<EOF
 {
   "kind": "genesis/hot-path-budgets-v0.1",
+  "build_profile": "$CARGO_PROFILE",
+  "build_mode": "release-equivalent",
+  "build_target_dir": "$TARGET_PROFILE_DIR",
+  "disk_strict_mode": "$DISK_STRICT_MODE",
   "fmt_canon_ms": $FMT_CANON_MS,
   "eval_pure_ms": $EVAL_PURE_MS,
   "effect_run_ms": $EFFECT_RUN_MS,
