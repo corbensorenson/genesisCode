@@ -443,4 +443,3 @@ pub(super) fn write_last_acceptance(pkg_dir: &Path, hex: &str) -> Result<(), Obl
     }
     Ok(())
 }
-

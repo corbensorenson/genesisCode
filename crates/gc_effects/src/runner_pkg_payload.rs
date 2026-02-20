@@ -100,9 +100,7 @@ pub(crate) fn payload_pkg_strategy(
             let raw = s.trim_start_matches(':');
             raw.parse::<gc_pkg::ResolutionStrategy>()
                 .map(Some)
-                .map_err(|_| {
-                    format!(":strategy must be :pinned|:track-ref|:tag-policy, got {s}")
-                })
+                .map_err(|_| format!(":strategy must be :pinned|:track-ref|:tag-policy, got {s}"))
         }
         Some(Term::Str(s)) => s
             .parse::<gc_pkg::ResolutionStrategy>()

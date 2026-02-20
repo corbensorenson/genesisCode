@@ -211,3 +211,35 @@ fn selfhost_artifact_wasi_includes_cli_core_module_with_passing_stage1_gate() {
         Some(Term::Vector(v)) if v.is_empty()
     ));
 }
+
+#[test]
+fn production_wasi_typecheck_accepts_workspace_pinned_selfhost_artifact() {
+    let td = tempdir().unwrap();
+    let pkg = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/spec/pkg_basic/package.toml")
+        .canonicalize()
+        .unwrap();
+
+    let out = cargo_bin_cmd!("genesis_wasi")
+        .current_dir(td.path())
+        .env_remove("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
+        .args(["--json", "typecheck", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        v["data"]["coreform_frontend"]["name"].as_str(),
+        Some("selfhost")
+    );
+    let artifact = v["data"]["coreform_frontend"]["artifact"]
+        .as_str()
+        .expect("coreform frontend artifact");
+    assert!(
+        artifact.ends_with("/selfhost/toolchain.gc"),
+        "expected workspace-pinned toolchain artifact, got {artifact}"
+    );
+}

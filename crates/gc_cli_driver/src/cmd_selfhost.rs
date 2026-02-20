@@ -749,4 +749,3 @@ pub(super) fn cmd_selfhost_artifact(
         json: json_envelope_value(env)?,
     })
 }
-

@@ -8,6 +8,43 @@ Non-goals (v0.2):
 - Refinement proofs (extension points only).
 - Replacing the kernel evaluator (Gλ) in the short term. The kernel remains the trusted “execution engine”.
 
+## Self-Host v1 Exit Path (No Rust Semantic Fallback)
+
+To close the transition from v0.2 bootstrap to a self-hosted v1 release posture, the project uses
+the following measurable cutover gates.
+
+### Stage A - Semantic Surface Lockdown
+
+- Production binaries (`genesis`, `genesis_wasi`) run selfhost frontend/tooling paths only.
+- Rust-engine parity paths are restricted to explicit parity harness binaries and not used by default workflows.
+- Gate:
+  - `scripts/check_rust_engine_compat.sh` passes in CI and zero-open health mode.
+
+### Stage B - Reproducible Selfhost Artifact Authority
+
+- `selfhost/toolchain.gc` remains the canonical artifact generated from modular selfhost sources.
+- Release/runtime profiles enforce `artifact-only` bootstrap mode.
+- Gate:
+  - `scripts/check_selfhost_artifact_fresh.sh` passes.
+  - strict selfhost suites pass:
+    - `scripts/selfhost_strict_smoke.sh`
+    - `scripts/selfhost_strict_golden.sh` (full profile).
+
+### Stage C - Bootstrap Archive Retirement (`/old_bootstrap`)
+
+When Stage A+B hold continuously, bootstrap-only Rust compatibility surfaces move to `old_bootstrap/`
+and are no longer referenced by production code paths.
+
+Measurable retirement criteria:
+
+1. `scripts/check_bootstrap_retirement_gate.sh` passes with strict release checks enabled.
+2. `docs/spec/BOOTSTRAP_OLD.md` keeps retirement checklist fully checked and explicitly approved.
+3. `scripts/check_old_bootstrap_retirement.sh` reports zero production references to archived bootstrap semantics.
+4. `scripts/check_selfhost_boundary.sh --strict` passes after retirement move.
+
+Only after these criteria are satisfied should bootstrap-era Rust semantic helpers be considered
+fully retired from active production usage.
+
 ## Trust Boundaries
 
 ### TCB-A: Pure Kernel (must stay tiny)
@@ -51,6 +88,7 @@ Approved Rust host-side modules (v0.2):
 - `crates/gc_effects/src/log.rs`
 - `crates/gc_effects/src/lock.rs`
 - `crates/gc_obligations/src/store.rs`
+- `crates/gc_cli_driver/src/*.rs`
 - `crates/gc_cli/src/main.rs`
 - `crates/gc_wasi_cli/src/main.rs`
 - `crates/gc_wasm/src/lib.rs`
@@ -73,11 +111,9 @@ Guardrail rule:
   modules and routed through selfhost execution paths; Rust host modules may only marshal inputs,
   call the kernel/runtime, and materialize capability effects.
 
-Temporary package semantic bridge (2026-02-20, approved for v0.2 cutover):
-- `core/pkg-low::{load-package,snapshot}` may use `gc_pkg::parse_canonical_module_source` as a
-  narrow bridge while package tooling continues moving to selfhost `.gc`.
-- `crates/gc_effects/src/runner_cap_pkg_low.rs` must not call
-  `parse_module`, `canonicalize_module`, or `hash_module` directly.
+Package low-level semantic bridge status:
+- The temporary `gc_pkg::parse_canonical_module_source` bridge is retired.
+- `core/pkg-low::{load-package,snapshot}` must not depend on `gc_pkg` semantic helper APIs.
 - Enforcement:
   `scripts/check_pkg_low_semantic_boundary.sh` and
   `crates/gc_cli/tests/pkg_low_semantic_boundary.rs`.
@@ -88,6 +124,8 @@ CI enforcement:
   in non-approved Rust files.
   - Rust test files under `crates/*/tests/*` are excluded from this guard so conformance and
     adversarial fixtures can exercise semantic APIs without widening the production runtime TCB.
+  - Strict mode (`--strict`) scans production `crates/*/src/**/*.rs` and excludes benchmark-only
+    crate `crates/gc_runtime_bench/*`; default diff mode (`--diff`) remains optimized for local iteration.
 - `scripts/check_prelude_capability_coverage.sh` fails when a shipped
   `prelude/modules/10_gfx.gc`, `prelude/modules/11_gpu_compute.gc`, or
   `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by

@@ -1,0 +1,11 @@
+version = 1
+workspace = "genesisCode"
+
+[[members]]
+name = "genesisCode"
+path = "."
+role = "root"
+
+[defaults]
+policy = "policy:default-v0.1"
+toolchain = "selfhost/toolchain.gc"

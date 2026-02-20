@@ -311,11 +311,12 @@ impl GenesisLock {
     }
 
     pub fn to_toml_canonical(&self) -> String {
-        let version = if self.version == 0 || (self.version < 2 && has_v2_requirements(&self.requirements)) {
-            2
-        } else {
-            self.version
-        };
+        let version =
+            if self.version == 0 || (self.version < 2 && has_v2_requirements(&self.requirements)) {
+                2
+            } else {
+                self.version
+            };
         let mut out = String::new();
         out.push_str(&format!("version = {version}\n"));
         out.push_str(&format!("workspace = {}\n", toml_str(&self.workspace)));

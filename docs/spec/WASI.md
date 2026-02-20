@@ -47,11 +47,12 @@ The interface mirrors the native `genesis` CLI for these commands:
   - for `fmt`/`eval` (and `vcs hash`), when `--engine` is omitted the engine defaults to `selfhost`
   - `--engine rust` remains available only in development/debug parity workflows through `genesis_wasi_parity`
   - release builds reject `--engine rust` unconditionally
-  - artifact resolution for selfhost bootstrap remains:
+  - production WASI runs require explicit selfhost artifact pinning:
     - `--selfhost-artifact`
     - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`
-    - `./.genesis/selfhost/toolchain.gc`
-    - workspace fallback `selfhost/toolchain.gc`
+    - `genesis.workspace.toml` -> `[defaults].toolchain`
+  - implicit filesystem discovery (`./.genesis/selfhost/toolchain.gc`,
+    `selfhost/toolchain.gc`) is parity-harness-only and excluded from production workflows.
 
 Notes:
 - WASI transport profile is explicit and deny-by-default:

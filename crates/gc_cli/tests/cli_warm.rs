@@ -16,7 +16,10 @@ fn repo_toolchain_artifact() -> PathBuf {
 
 fn cmd() -> assert_cmd::Command {
     let mut cmd = cargo_bin_cmd!("genesis");
-    cmd.env("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT", repo_toolchain_artifact());
+    cmd.env(
+        "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
+        repo_toolchain_artifact(),
+    );
     cmd
 }
 

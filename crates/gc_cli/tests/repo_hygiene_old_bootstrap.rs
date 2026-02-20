@@ -71,14 +71,8 @@ fn bootstrap_archive_is_not_referenced_by_active_code() {
         .ok()
         .map(|p| p.to_string_lossy().to_string());
 
-    let archive_checker_path = [
-        "scripts/check_",
-        "old",
-        "_",
-        "bootstrap",
-        "_retirement.sh",
-    ]
-    .join("");
+    let archive_checker_path =
+        ["scripts/check_", "old", "_", "bootstrap", "_retirement.sh"].join("");
     let allow_paths: BTreeSet<String> = [
         "docs/spec/BOOTSTRAP_OLD.md".to_string(),
         "docs/spec/WASI.md".to_string(),

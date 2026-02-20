@@ -158,7 +158,7 @@ pub(super) fn cmd_vcs(
 
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
-        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+        .map_err(caps_parse_cli_err)?;
 
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);
@@ -945,15 +945,13 @@ pub(crate) fn normalize_pkg_add_strategy(
     tag_policy: Option<&str>,
 ) -> Result<(Option<String>, Option<String>), CliError> {
     let strategy = match strategy {
-        Some(raw) => raw
-            .parse::<gc_pkg::ResolutionStrategy>()
-            .map_err(|_| {
-                cli_err(
-                    EX_PARSE,
-                    "pkg/spec",
-                    format!("invalid --strategy `{raw}` (expected pinned|track-ref|tag-policy)"),
-                )
-            })?,
+        Some(raw) => raw.parse::<gc_pkg::ResolutionStrategy>().map_err(|_| {
+            cli_err(
+                EX_PARSE,
+                "pkg/spec",
+                format!("invalid --strategy `{raw}` (expected pinned|track-ref|tag-policy)"),
+            )
+        })?,
         None => gc_pkg::infer_strategy(selector),
     };
 

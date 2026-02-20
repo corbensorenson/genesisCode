@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-changed-fast"
+
 BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH="${GENESIS_TEST_CHANGED_REPORT:-.genesis/perf/test_changed_fast_metrics.json}"
@@ -218,7 +220,7 @@ else
   INCLUDE_WASI=0
   if contains "gc_wasi_cli" "${TARGET_CRATES[@]-}"; then
     INCLUDE_WASI=1
-  elif printf '%s\n' "${CHANGED_FILES[@]-}" | rg -q '^docs/spec/WASI\.md$'; then
+  elif printf '%s\n' "${CHANGED_FILES[@]-}" | grep -q '^docs/spec/WASI\.md$'; then
     INCLUDE_WASI=1
   fi
   if (( INCLUDE_WASI == 0 )); then

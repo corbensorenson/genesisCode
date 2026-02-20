@@ -36,6 +36,11 @@ pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
     cfg!(debug_assertions)
 }
 
+pub(super) fn implicit_selfhost_artifact_discovery_allowed() -> bool {
+    // Implicit artifact discovery is reserved for explicit parity harness workflows.
+    matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+}
+
 pub(super) fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {
     match mode {
         SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
@@ -104,6 +109,59 @@ pub(super) fn resolved_explicit_selfhost_artifact(cli: &Cli) -> Option<PathBuf> 
         let trimmed = raw.trim();
         if !trimmed.is_empty() {
             return Some(PathBuf::from(trimmed));
+        }
+    }
+    if let Some(p) = resolved_workspace_pinned_selfhost_artifact() {
+        return Some(p);
+    }
+    None
+}
+
+fn workspace_descriptor_candidates() -> Vec<PathBuf> {
+    vec![
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("genesis.workspace.toml"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("genesis.workspace.toml"),
+    ]
+}
+
+fn resolve_workspace_toolchain_path(workspace_file: &Path, toolchain: &str) -> Option<PathBuf> {
+    let trimmed = toolchain.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let candidate = PathBuf::from(trimmed);
+    let path = if candidate.is_absolute() {
+        candidate
+    } else {
+        workspace_file
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(candidate)
+    };
+    canonicalize_if_exists(&path)
+}
+
+fn resolved_workspace_pinned_selfhost_artifact() -> Option<PathBuf> {
+    let mut seen: BTreeSet<PathBuf> = BTreeSet::new();
+    for ws in workspace_descriptor_candidates() {
+        let ws = ws.canonicalize().unwrap_or(ws);
+        if !seen.insert(ws.clone()) {
+            continue;
+        }
+        if !ws.is_file() {
+            continue;
+        }
+        let Ok(cfg) = gc_pkg::WorkspaceConfig::load(&ws) else {
+            continue;
+        };
+        if let Some(toolchain) = cfg.defaults.toolchain
+            && let Some(path) = resolve_workspace_toolchain_path(&ws, &toolchain)
+        {
+            return Some(path);
         }
     }
     None
@@ -204,7 +262,14 @@ pub(super) fn resolved_coreform_frontend(
                     "selfhost-only mode requires --selfhost-bootstrap artifact-only",
                 ));
             }
-            let artifact = resolved_selfhost_artifact_for_frontend(cli);
+            let artifact = if implicit_selfhost_artifact_discovery_allowed() {
+                resolved_selfhost_artifact_for_frontend(cli)
+            } else {
+                Some(require_explicit_selfhost_artifact(
+                    cli,
+                    "coreform frontend",
+                )?)
+            };
             Ok(gc_obligations::CoreformFrontend::Selfhost(
                 gc_obligations::SelfhostFrontendConfig {
                     bootstrap_mode: mode,
@@ -328,7 +393,11 @@ pub(super) fn load_selfhost_toolchain(
             "selfhost-only mode requires --selfhost-bootstrap artifact-only",
         ));
     }
-    let artifact = resolved_selfhost_artifact_for_frontend(cli);
+    let artifact = if implicit_selfhost_artifact_discovery_allowed() {
+        resolved_selfhost_artifact_for_frontend(cli)
+    } else {
+        Some(require_explicit_selfhost_artifact(cli, "selfhost runtime")?)
+    };
     load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
         .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
 }

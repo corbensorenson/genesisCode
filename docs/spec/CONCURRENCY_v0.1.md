@@ -119,3 +119,8 @@ Capability policy should support:
 - per-op timeout and cancellation controls
 
 Absent policy entries default to deny.
+
+## Production SLO Contract
+
+Throughput/latency SLO enforcement for task scheduler and GPU/compute bridge paths is defined in:
+- `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`.

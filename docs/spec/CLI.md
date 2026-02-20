@@ -25,19 +25,22 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
-    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
     - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Runtime commands that resolve `--engine selfhost` must use an explicit pinned artifact identity
-  (`--selfhost-artifact` or `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`), and
+  (`--selfhost-artifact`, `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`, or workspace
+  `genesis.workspace.toml` -> `[defaults].toolchain`), and
   `--selfhost-bootstrap artifact-only`; implicit filesystem fallback discovery is rejected.
   - Applies to: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, and `vcs hash`.
 - Package/frontend commands without an explicit engine (`typecheck`, `test`, `apply-patch`, `pack`)
   default to the selfhost frontend.
-  - Toolchain artifact resolution still follows:
+  - Production binaries require an explicit toolchain artifact pin:
     - `--selfhost-artifact <path>`, or
     - `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT=<path>`, or
-    - `./.genesis/selfhost/toolchain.gc` if present, or
-    - workspace fallback `selfhost/toolchain.gc` if present.
+    - `genesis.workspace.toml` -> `[defaults].toolchain = "<path>"`.
+  - Implicit filesystem discovery (`./.genesis/selfhost/toolchain.gc`,
+    `selfhost/toolchain.gc`) is parity-harness-only behavior and must not be relied on in
+    production workflows.
 - Kernel module evaluation uses the compiled evaluator by default and fails closed on compilation errors.
 - Tree-walk evaluation is reserved for explicit parity harnesses and is not a mainline CLI execution mode.
 
@@ -45,6 +48,9 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 
 `--engine rust` and `--coreform-frontend rust` exist solely to support deterministic parity checks
 against prior Rust semantics during the selfhost cutover.
+
+Normative boundary and enforcement details are defined in:
+- `docs/spec/PARITY_HARNESS.md`.
 
 They are disabled by default and require explicit opt-in in development/debug profiles:
 - use dedicated parity binaries:

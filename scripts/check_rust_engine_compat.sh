@@ -5,26 +5,42 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 find_candidates() {
-  rg --files \
-    crates/gc_cli/tests \
-    crates/gc_wasi_cli/tests \
-    scripts \
-    .github/workflows \
-    | sort
+  if command -v rg >/dev/null 2>&1; then
+    rg --files \
+      crates/gc_cli/tests \
+      crates/gc_wasi_cli/tests \
+      scripts \
+      .github/workflows \
+      | sort
+  else
+    find \
+      crates/gc_cli/tests \
+      crates/gc_wasi_cli/tests \
+      scripts \
+      .github/workflows \
+      -type f \
+      | sort
+  fi
+}
+
+file_contains_pattern() {
+  local pattern="$1"
+  local file="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q -- "$pattern" "$file"
+  else
+    grep -Eq -- "$pattern" "$file"
+  fi
 }
 
 has_rust_engine_usage() {
   local file="$1"
-  rg -q \
-    -e "--engine rust" \
-    -e "coreform-frontend rust" \
-    -e "engine\\\", \\\"rust\\\"" \
-    "$file"
+  file_contains_pattern "--engine rust|coreform-frontend rust|engine\\\", \\\"rust\\\"" "$file"
 }
 
 has_parity_harness_usage() {
   local file="$1"
-  rg -q "genesis_parity|genesis_wasi_parity" "$file"
+  file_contains_pattern "genesis_parity|genesis_wasi_parity" "$file"
 }
 
 violations=0
@@ -37,7 +53,7 @@ while IFS= read -r file; do
     continue
   fi
 
-  if rg -q "RUST_ENGINE_COMPAT_EXCEPTION" "$file"; then
+  if file_contains_pattern "RUST_ENGINE_COMPAT_EXCEPTION" "$file"; then
     continue
   fi
   if has_parity_harness_usage "$file"; then

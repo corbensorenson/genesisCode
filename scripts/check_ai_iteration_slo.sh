@@ -22,10 +22,14 @@ measure_ms() {
   shift
   local start_ns end_ns elapsed_ms
   start_ns="$(now_ns)"
-  "$@" >/dev/null
+  if ! "$@" >/dev/null; then
+    echo "ai-iteration-slo: measurement command failed for ${label}: $*" >&2
+    return 1
+  fi
   end_ns="$(now_ns)"
   elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
-  echo "$label=$elapsed_ms"
+  MEASURE_LAST_LABEL="$label"
+  MEASURE_LAST_MS="$elapsed_ms"
 }
 
 fail() {
@@ -69,13 +73,31 @@ run_incremental_loop() {
 }
 
 cat > "$TMP_DIR/gcpm_caps.toml" <<'EOF'
-allow = ["core/pkg-low::init", "core/pkg-low::lock"]
+allow = [
+  "core/pkg-low::init",
+  "core/pkg-low::lock",
+  "core/pkg-low::load-lock",
+  "core/pkg-low::save-lock",
+  "core/pkg-low::env",
+]
 
 [op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
 [op."core/pkg-low::lock"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg-low::load-lock"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg-low::save-lock"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg-low::env"]
 base_dir = "."
 create_dirs = true
 EOF
@@ -101,23 +123,23 @@ run_changed_fast_loop() {
 run_incremental_loop >/dev/null
 
 echo "ai-iteration-slo: measuring warm incremental loop"
-INC_LINE="$(measure_ms incremental_warm_ms run_incremental_loop)"
-INCREMENTAL_WARM_MS="${INC_LINE#*=}"
+measure_ms incremental_warm_ms run_incremental_loop
+INCREMENTAL_WARM_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: measuring default changed-file fast loop"
-CHANGED_FAST_LINE="$(measure_ms changed_fast_ms run_changed_fast_loop)"
-CHANGED_FAST_MS="${CHANGED_FAST_LINE#*=}"
+measure_ms changed_fast_ms run_changed_fast_loop
+CHANGED_FAST_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: measuring core suite wall-time"
-CORE_LINE="$(measure_ms core_suite_ms cargo test -p gc_coreform -p gc_kernel -p gc_prelude -p gc_cli --test cli_smoke --quiet)"
-CORE_SUITE_MS="${CORE_LINE#*=}"
+measure_ms core_suite_ms cargo test -p gc_coreform -p gc_kernel -p gc_prelude -p gc_cli --test cli_smoke --quiet
+CORE_SUITE_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: measuring gcpm lock/env iteration path"
 run_gcpm_tmp new --workspace "slo" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
-LOCK_LINE="$(measure_ms gcpm_lock_ms run_gcpm_tmp lock --strict)"
-GCPM_LOCK_MS="${LOCK_LINE#*=}"
-ENV_LINE="$(measure_ms gcpm_env_ms run_gcpm_tmp env --profile dev)"
-GCPM_ENV_MS="${ENV_LINE#*=}"
+measure_ms gcpm_lock_ms run_gcpm_tmp lock --strict
+GCPM_LOCK_MS="$MEASURE_LAST_MS"
+measure_ms gcpm_env_ms run_gcpm_tmp env --profile dev
+GCPM_ENV_MS="$MEASURE_LAST_MS"
 
 echo "ai-iteration-slo: metrics"
 echo "  incremental_warm_ms=$INCREMENTAL_WARM_MS (budget=$BUDGET_INCREMENTAL_WARM_MS)"

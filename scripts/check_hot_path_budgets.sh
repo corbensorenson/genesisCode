@@ -89,25 +89,25 @@ EOF
 
 cat > "$TMP_DIR/gcpm_caps.toml" <<'EOF'
 allow = [
-  "core/pkg::new",
-  "core/pkg::lock",
-  "core/pkg::install",
-  "core/pkg::update"
+  "core/pkg-low::init",
+  "core/pkg-low::lock",
+  "core/pkg-low::install",
+  "core/pkg-low::update"
 ]
 
-[op."core/pkg::new"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::install"]
+[op."core/pkg-low::install"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::update"]
+[op."core/pkg-low::update"]
 base_dir = "."
 create_dirs = true
 EOF

@@ -52,7 +52,9 @@ pub(super) struct JsonEnvelope<T> {
     pub(super) error: Option<JsonError>,
 }
 
-pub(super) fn json_envelope_value<T: Serialize>(env: JsonEnvelope<T>) -> Result<serde_json::Value, CliError> {
+pub(super) fn json_envelope_value<T: Serialize>(
+    env: JsonEnvelope<T>,
+) -> Result<serde_json::Value, CliError> {
     serde_json::to_value(env).map_err(|e| {
         cli_err(
             EX_INTERNAL,

@@ -11,7 +11,7 @@ pub(super) fn cmd_refs(
 
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
-        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+        .map_err(caps_parse_cli_err)?;
 
     let mut ctx = mk_ctx(cli);
     let prelude = build_prelude(&mut ctx);

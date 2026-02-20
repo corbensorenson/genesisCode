@@ -32,8 +32,15 @@ IMPL_SORTED="$TMP_DIR/impl_sorted.txt"
 DOC_RAW="$TMP_DIR/doc_raw.txt"
 DOC_SORTED="$TMP_DIR/doc_sorted.txt"
 
-rg -o --no-filename --pcre2 '"([[:alnum:]_/-]+::[[:alnum:]_/:.-]+)"' \
-  "${RUNNER_FILES[@]}" \
+extract_impl_ops() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -o --no-filename --pcre2 '"([[:alnum:]_/-]+::[[:alnum:]_/:.-]+)"' "${RUNNER_FILES[@]}"
+  else
+    grep -Eho '"[[:alnum:]_/-]+::[[:alnum:]_/:.-]+"' "${RUNNER_FILES[@]}"
+  fi
+}
+
+extract_impl_ops \
   | tr -d '"' \
   | sort -u >"$IMPL_SORTED"
 

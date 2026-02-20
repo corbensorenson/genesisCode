@@ -31,9 +31,7 @@ use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
 pub use crate::frontend::{CoreformFrontend, SelfhostFrontendConfig, default_coreform_frontend};
-use crate::frontend::{
-    enforce_frontend_allowed, env_truthy,
-};
+use crate::frontend::{enforce_frontend_allowed, env_truthy};
 use crate::obligation_cache::*;
 use crate::obligation_exec::*;
 use crate::obligation_lint::{obligation_ai_style, obligation_lint};
@@ -2211,10 +2209,9 @@ mod tests {
             bootstrap_mode: SelfhostBootstrapMode::Embedded,
             artifact: None,
         });
-        let err = crate::frontend::enforce_frontend_bootstrap_mode_with_flag(
-            &frontend, "test", false,
-        )
-        .expect_err("embedded bootstrap should be blocked outside development mode");
+        let err =
+            crate::frontend::enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", false)
+                .expect_err("embedded bootstrap should be blocked outside development mode");
         assert!(format!("{err}").contains("development-only"));
         crate::frontend::enforce_frontend_bootstrap_mode_with_flag(&frontend, "test", true)
             .expect("embedded bootstrap should be allowed in development mode");

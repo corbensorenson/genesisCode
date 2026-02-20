@@ -19,14 +19,14 @@ use gc_prelude::{
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 
-mod cmd_gc;
-mod cmd_core;
-mod cmd_selfhost;
 mod cli_json;
+mod cmd_core;
+mod cmd_gc;
 mod cmd_pkg;
 mod cmd_policy;
 mod cmd_refs;
 mod cmd_security_ops;
+mod cmd_selfhost;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
@@ -45,14 +45,14 @@ mod program_builders;
 mod selfhost_bridge;
 mod selfhost_frontend;
 
-use cmd_gc::cmd_gc;
-use cmd_core::*;
 use cli_json::*;
-use cmd_selfhost::*;
+use cmd_core::*;
+use cmd_gc::cmd_gc;
 use cmd_pkg::cmd_pkg;
 use cmd_policy::cmd_policy;
 use cmd_refs::cmd_refs;
 use cmd_security_ops::*;
+use cmd_selfhost::*;
 use cmd_store::cmd_store;
 use cmd_sync::cmd_sync;
 pub(crate) use cmd_vcs::SetRefSpec;
@@ -1435,6 +1435,15 @@ fn cli_err(exit_code: u8, code: &'static str, message: impl Into<String>) -> Cli
             context: None,
         },
     }
+}
+
+fn cli_err_anyhow(exit_code: u8, code: &'static str, err: anyhow::Error) -> CliError {
+    // Preserve the full anyhow chain so JSON diagnostics show the real root cause.
+    cli_err(exit_code, code, format!("{err:#}"))
+}
+
+fn caps_parse_cli_err(err: anyhow::Error) -> CliError {
+    cli_err_anyhow(EX_PARSE, "caps/parse", err)
 }
 
 fn inherited_global_args(cli: &Cli) -> Vec<String> {

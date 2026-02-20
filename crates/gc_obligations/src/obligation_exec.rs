@@ -624,7 +624,10 @@ pub(super) fn is_callable_value(v: &Value) -> bool {
     )
 }
 
-pub(super) fn parse_property_entry(v: &Value, default_cases: u64) -> Result<(Value, u64), ObligationError> {
+pub(super) fn parse_property_entry(
+    v: &Value,
+    default_cases: u64,
+) -> Result<(Value, u64), ObligationError> {
     if is_callable_value(v) {
         return Ok((v.clone(), default_cases));
     }
@@ -1226,4 +1229,3 @@ pub(super) fn verify_selfhost_infer_effects_parity(
     }
     Ok(())
 }
-

@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
-      GENESIS_CI_PROFILE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || 'fast' }}
+      GENESIS_CI_PROFILE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'workflow_dispatch' && github.event.inputs.profile || github.event_name == 'pull_request' && 'standard' || 'fast' }}
       GENESIS_TEST_SHARDS_TOTAL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shards_total || '1' }}
       GENESIS_TEST_SHARD_INDEX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_shard_index || '0' }}
     steps:
@@ -104,6 +104,12 @@ jobs:
 
       - name: User-Path Panic Guard
         run: bash scripts/check_no_user_panics.sh
+
+      - name: Rust Engine Compatibility Guard
+        run: bash scripts/check_rust_engine_compat.sh
+
+      - name: Source Size Budget Guard
+        run: bash scripts/check_source_size_budget.sh
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings

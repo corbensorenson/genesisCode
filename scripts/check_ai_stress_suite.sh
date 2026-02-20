@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 TOTAL_BUDGET_MS="${GENESIS_STRESS_BUDGET_MS:-900000}"
 REPORT_PATH="${GENESIS_STRESS_REPORT:-.genesis/perf/ai_stress_suite_metrics.json}"
 HISTORY_PATH="${GENESIS_STRESS_HISTORY:-.genesis/perf/ai_stress_suite_history.jsonl}"
+FAULT_INJECT="${GENESIS_STRESS_FAULT_INJECT:-}"
 
 now_ns() {
   python3 - <<'PY'
@@ -27,13 +28,26 @@ trap cleanup EXIT
 run_case() {
   local label="$1"
   shift
-  local start_ns end_ns elapsed_ms
+  local start_ns end_ns elapsed_ms status
+  status=0
   start_ns="$(now_ns)"
-  "$@"
+  if [[ ",$FAULT_INJECT," == *",$label,"* ]]; then
+    status=86
+  else
+    if "$@"; then
+      status=0
+    else
+      status=$?
+    fi
+  fi
   end_ns="$(now_ns)"
   elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
-  printf "%s\t%s\n" "$label" "$elapsed_ms" >>"$TMP_TSV"
-  echo "ai-stress-suite: ${label}=${elapsed_ms}ms"
+  printf "%s\t%s\t%s\n" "$label" "$elapsed_ms" "$status" >>"$TMP_TSV"
+  if [[ "$status" -eq 0 ]]; then
+    echo "ai-stress-suite: ${label}=${elapsed_ms}ms status=ok"
+  else
+    echo "ai-stress-suite: ${label}=${elapsed_ms}ms status=fail($status)" >&2
+  fi
 }
 
 echo "ai-stress-suite: running deterministic stress checks"
@@ -55,14 +69,23 @@ budget_ms = int(budget_ms_s)
 
 checks = []
 total_elapsed = 0
+status_by_name = {}
 with open(tsv_path, "r", encoding="utf-8") as f:
     for line in f:
         line = line.strip()
         if not line:
             continue
-        label, elapsed_s = line.split("\t", 1)
+        parts = line.split("\t")
+        if len(parts) != 3:
+            raise SystemExit(f"ai-stress-suite: malformed record: {line}")
+        label, elapsed_s, status_s = parts
         elapsed = int(elapsed_s)
-        checks.append({"name": label, "elapsed_ms": elapsed})
+        status = int(status_s)
+        passed = status == 0
+        checks.append(
+            {"name": label, "elapsed_ms": elapsed, "status": status, "passed": passed}
+        )
+        status_by_name[label] = passed
         total_elapsed += elapsed
 
 required = {
@@ -75,16 +98,25 @@ missing = sorted(required - have)
 if missing:
     raise SystemExit(f"ai-stress-suite: missing required checks: {missing}")
 
+failed = sorted(name for name in required if not status_by_name.get(name, False))
+bridge_verified = status_by_name.get("bridge_gpu_compute_replay", False)
+task_verified = (
+    status_by_name.get("editor_task_replay", False)
+    and status_by_name.get("selfhost_parallel_obligations", False)
+)
+replay_verified = len(failed) == 0
+
 report = {
     "kind": "genesis/ai-stress-suite-v0.1",
     "timestamp_unix_s": int(time.time()),
     "budget_total_ms": budget_ms,
     "total_elapsed_ms": total_elapsed,
     "checks": checks,
-    "task_scheduling_verified": True,
-    "bridge_budget_verified": True,
-    "gpu_compute_verified": True,
-    "replay_integrity_verified": True,
+    "failed_checks": failed,
+    "task_scheduling_verified": task_verified,
+    "bridge_budget_verified": bridge_verified,
+    "gpu_compute_verified": bridge_verified,
+    "replay_integrity_verified": replay_verified,
 }
 
 history = []
@@ -113,6 +145,12 @@ with open(report_path, "w", encoding="utf-8") as f:
     f.write("\n")
 
 print(json.dumps(report, sort_keys=True))
+
+if failed:
+    raise SystemExit(
+        "ai-stress-suite: one or more required checks failed: "
+        + ", ".join(failed)
+    )
 
 if total_elapsed > budget_ms:
     raise SystemExit(

@@ -4,6 +4,11 @@ set -euo pipefail
 # Fast, high-signal test loop for local iteration.
 # Full parity/cutover suites remain enforced separately (CI + strict scripts).
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "test-fast"
+
 SECONDS=0
 if cargo nextest --version >/dev/null 2>&1; then
   RUNNER="nextest"

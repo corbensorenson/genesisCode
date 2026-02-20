@@ -13,7 +13,7 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
 - `[defaults]`:
   - optional `registry`
   - optional `policy`
-  - optional `toolchain`
+  - optional `toolchain` (selfhost toolchain artifact pin; relative to workspace file unless absolute)
 - `[profiles.<name>]`:
   - optional `caps_policy`
   - optional `registry`
@@ -29,6 +29,8 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
 
 - Canonical writer must produce stable output ordering.
 - Member names and paths must be unique.
+- Production frontend flows may resolve `defaults.toolchain` as the workspace-pinned selfhost
+  artifact identity when `--selfhost-artifact`/`GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT` are not set.
 
 ## Commands
 

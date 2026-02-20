@@ -9,6 +9,7 @@ pub struct Metrics {
     pub eval_ms: u128,
     pub runner_ms: u128,
     pub bridge_runner_ms: u128,
+    pub gpu_compute_submit_ms: u128,
     pub task_runner_ms: u128,
     pub patch_apply_ms: u128,
     pub store_cycle_ms: u128,
@@ -20,16 +21,24 @@ pub struct Report {
     kind: &'static str,
     warmups: usize,
     repeats: usize,
+    gpu_compute_backend: String,
     budgets: Budgets,
     metrics: Metrics,
 }
 
 impl Report {
-    pub fn new(warmups: usize, repeats: usize, budgets: Budgets, metrics: Metrics) -> Self {
+    pub fn new(
+        warmups: usize,
+        repeats: usize,
+        gpu_compute_backend: String,
+        budgets: Budgets,
+        metrics: Metrics,
+    ) -> Self {
         Self {
             kind: "genesis/runtime-microbench-v0.1",
             warmups,
             repeats,
+            gpu_compute_backend,
             budgets,
             metrics,
         }
@@ -63,6 +72,12 @@ impl Report {
             violations.push(format!(
                 "bridge_runner_ms={} > {}",
                 self.metrics.bridge_runner_ms, self.budgets.bridge_runner_ms
+            ));
+        }
+        if self.metrics.gpu_compute_submit_ms > self.budgets.gpu_compute_submit_ms {
+            violations.push(format!(
+                "gpu_compute_submit_ms={} > {}",
+                self.metrics.gpu_compute_submit_ms, self.budgets.gpu_compute_submit_ms
             ));
         }
         if self.metrics.task_runner_ms > self.budgets.task_runner_ms {

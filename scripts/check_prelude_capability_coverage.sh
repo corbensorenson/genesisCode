@@ -31,8 +31,23 @@ WRAPPER_OPS="$TMP_DIR/wrapper_ops.txt"
 RUNNER_OPS="$TMP_DIR/runner_ops.txt"
 MISSING="$TMP_DIR/missing.txt"
 
-rg -o --no-filename --pcre2 '\(quote\s+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' \
-  "${PRELUDE_FILES[@]}" \
+extract_wrapper_ops() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -o --no-filename --pcre2 '\(quote\s+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
+  else
+    grep -Eho '\(quote[[:space:]]+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
+  fi
+}
+
+extract_runner_ops() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "$RUNNER_FILE"
+  else
+    grep -Eho '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "$RUNNER_FILE"
+  fi
+}
+
+extract_wrapper_ops \
   | sed -E 's/^\(quote[[:space:]]+//; s/\)$//' \
   | sort -u >"$WRAPPER_OPS"
 
@@ -41,8 +56,7 @@ if [[ ! -s "$WRAPPER_OPS" ]]; then
   exit 1
 fi
 
-rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' \
-  "$RUNNER_FILE" \
+extract_runner_ops \
   | tr -d '"' \
   | sort -u >"$RUNNER_OPS"
 

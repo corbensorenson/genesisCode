@@ -11,7 +11,7 @@ pub(super) fn cmd_pkg(
 
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
-        .map_err(|e| cli_err(EX_PARSE, "caps/parse", format!("{e}")))?;
+        .map_err(caps_parse_cli_err)?;
     if let Some(out) =
         cmd_pkg_local_workspace_ops(cli, cmd, caps, log, &frontend, frontend_info.clone())?
     {
