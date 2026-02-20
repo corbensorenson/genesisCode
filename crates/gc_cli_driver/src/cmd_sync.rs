@@ -17,221 +17,212 @@ pub(super) fn cmd_sync(
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let (prog, kind, log_op, program_hash) = match frontend {
-        gc_obligations::CoreformFrontend::Rust => {
-            let (forms, kind, log_op) = match cmd {
-                SyncCmd::Pull {
-                    remote,
-                    refs,
-                    roots,
-                    depth,
-                    force,
-                } => (
-                    mk_sync_pull_program(remote, refs, roots, *depth, *force),
-                    "genesis/sync-pull-v0.1",
-                    "sync-pull",
-                ),
-                SyncCmd::Push {
-                    remote,
-                    roots,
-                    depth,
-                    set_refs,
-                } => {
-                    let parsed = parse_sync_set_refs(set_refs)?;
-                    (
-                        mk_sync_push_program(remote, roots, *depth, &parsed),
-                        "genesis/sync-push-v0.1",
-                        "sync-push",
+    let kind = sync_contract::kind(cmd);
+    let log_op = sync_contract::log_op(cmd);
+    let (prog, program_hash) = if frontend_is_rust(&frontend) {
+        let forms = match cmd {
+            SyncCmd::Pull {
+                remote,
+                refs,
+                roots,
+                depth,
+                force,
+            } => mk_sync_pull_program(remote, refs, roots, *depth, *force),
+            SyncCmd::Push {
+                remote,
+                roots,
+                depth,
+                set_refs,
+            } => {
+                let parsed = parse_sync_set_refs(set_refs)?;
+                mk_sync_push_program(remote, roots, *depth, &parsed)
+            }
+        };
+
+        let forms = canonicalize_module(forms)
+            .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+        let program_hash = hash_module(&forms);
+        let prog = eval_module(&mut ctx, &mut env, &forms)
+            .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+        (prog, program_hash)
+    } else {
+        load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+
+        let (prog, desc) = match cmd {
+            SyncCmd::Pull {
+                remote,
+                refs,
+                roots,
+                depth,
+                force,
+            } => {
+                let f = env.get("core/cli::sync-pull-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::sync-pull-program",
                     )
-                }
-            };
+                })?;
+                let req = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":remote")),
+                            Term::Str(remote.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs")),
+                            Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":roots")),
+                            Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":depth")),
+                            Term::Int((*depth as i64).into()),
+                        ),
+                        (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                    cli_err(
+                        EX_EVAL,
+                        "eval/error",
+                        format!("core/cli sync-pull-program failed: {e}"),
+                    )
+                })?;
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("sync/pull".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":remote")),
+                            Term::Str(remote.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs")),
+                            Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":roots")),
+                            Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":depth")),
+                            Term::Int((*depth as i64).into()),
+                        ),
+                        (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+            SyncCmd::Push {
+                remote,
+                roots,
+                depth,
+                set_refs,
+            } => {
+                let f = env.get("core/cli::sync-push-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::sync-push-program",
+                    )
+                })?;
+                let parsed = parse_sync_set_refs(set_refs)?;
 
-            let forms = canonicalize_module(forms)
-                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            let program_hash = hash_module(&forms);
-            let prog = eval_module(&mut ctx, &mut env, &forms)
-                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
-            (prog, kind, log_op, program_hash)
-        }
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-
-            let (prog, kind, log_op, desc) = match cmd {
-                SyncCmd::Pull {
-                    remote,
-                    refs,
-                    roots,
-                    depth,
-                    force,
-                } => {
-                    let f = env.get("core/cli::sync-pull-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::sync-pull-program",
-                        )
-                    })?;
-                    let req = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":remote")),
-                                Term::Str(remote.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":refs")),
-                                Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":roots")),
-                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":depth")),
-                                Term::Int((*depth as i64).into()),
-                            ),
-                            (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
-                        ]
-                        .into_iter()
-                        .collect(),
+                let mut set_refs_term: Vec<Term> = Vec::new();
+                for sr in &parsed {
+                    let mut mm = std::collections::BTreeMap::new();
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":name")),
+                        Term::Str(sr.name.clone()),
                     );
-                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
-                        cli_err(
-                            EX_EVAL,
-                            "eval/error",
-                            format!("core/cli sync-pull-program failed: {e}"),
-                        )
-                    })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("sync/pull".to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":remote")),
-                                Term::Str(remote.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":refs")),
-                                Term::Vector(refs.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":roots")),
-                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":depth")),
-                                Term::Int((*depth as i64).into()),
-                            ),
-                            (TermOrdKey(Term::symbol(":force")), Term::Bool(*force)),
-                        ]
-                        .into_iter()
-                        .collect(),
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":hash")),
+                        Term::Str(sr.hash.clone()),
                     );
-                    (prog, "genesis/sync-pull-v0.1", "sync-pull", desc)
-                }
-                SyncCmd::Push {
-                    remote,
-                    roots,
-                    depth,
-                    set_refs,
-                } => {
-                    let f = env.get("core/cli::sync-push-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::sync-push-program",
-                        )
-                    })?;
-                    let parsed = parse_sync_set_refs(set_refs)?;
-
-                    let mut set_refs_term: Vec<Term> = Vec::new();
-                    for sr in &parsed {
-                        let mut mm = std::collections::BTreeMap::new();
-                        mm.insert(
-                            TermOrdKey(Term::symbol(":name")),
-                            Term::Str(sr.name.clone()),
-                        );
-                        mm.insert(
-                            TermOrdKey(Term::symbol(":hash")),
-                            Term::Str(sr.hash.clone()),
-                        );
-                        mm.insert(
-                            TermOrdKey(Term::symbol(":policy")),
-                            Term::Str(sr.policy.clone()),
-                        );
-                        if let Some(e) = &sr.expected_old {
-                            let v = if e == "nil" {
-                                Term::Nil
-                            } else {
-                                Term::Str(e.clone())
-                            };
-                            mm.insert(TermOrdKey(Term::symbol(":expected-old")), v);
-                        }
-                        set_refs_term.push(Term::Map(mm));
+                    mm.insert(
+                        TermOrdKey(Term::symbol(":policy")),
+                        Term::Str(sr.policy.clone()),
+                    );
+                    if let Some(e) = &sr.expected_old {
+                        let v = if e == "nil" {
+                            Term::Nil
+                        } else {
+                            Term::Str(e.clone())
+                        };
+                        mm.insert(TermOrdKey(Term::symbol(":expected-old")), v);
                     }
-
-                    let req = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":remote")),
-                                Term::Str(remote.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":roots")),
-                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":depth")),
-                                Term::Int((*depth as i64).into()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":set-refs")),
-                                Term::Vector(set_refs_term),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
-                        cli_err(
-                            EX_EVAL,
-                            "eval/error",
-                            format!("core/cli sync-push-program failed: {e}"),
-                        )
-                    })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("sync/push".to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":remote")),
-                                Term::Str(remote.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":roots")),
-                                Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":depth")),
-                                Term::Int((*depth as i64).into()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":set-refs-len")),
-                                Term::Int((parsed.len() as i64).into()),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    (prog, "genesis/sync-push-v0.1", "sync-push", desc)
+                    set_refs_term.push(Term::Map(mm));
                 }
-            };
-            let program_hash = gc_coreform::hash_term(&desc);
-            (prog, kind, log_op, program_hash)
-        }
+
+                let req = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":remote")),
+                            Term::Str(remote.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":roots")),
+                            Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":depth")),
+                            Term::Int((*depth as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":set-refs")),
+                            Term::Vector(set_refs_term),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                    cli_err(
+                        EX_EVAL,
+                        "eval/error",
+                        format!("core/cli sync-push-program failed: {e}"),
+                    )
+                })?;
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("sync/push".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":remote")),
+                            Term::Str(remote.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":roots")),
+                            Term::Vector(roots.iter().cloned().map(Term::Str).collect()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":depth")),
+                            Term::Int((*depth as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":set-refs-len")),
+                            Term::Int((parsed.len() as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+        };
+        let program_hash = gc_coreform::hash_term(&desc);
+        (prog, program_hash)
     };
 
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));

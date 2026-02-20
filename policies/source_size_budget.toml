@@ -2,7 +2,7 @@ version = 1
 
 # AI-first maintainability budget:
 # Keep production Rust source files below this size so edits remain focused and reviewable.
-rust_max_lines = 4700
+rust_max_lines = 2200
 
 # AI-first GenesisCode authoring budget:
 # Applies to source-of-truth .gc authoring files.

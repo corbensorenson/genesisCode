@@ -102,3 +102,23 @@ fn compat_opt_in_allows_rust_coreform_frontend_for_refs_group() {
         .assert()
         .success();
 }
+
+#[test]
+fn production_profile_rejects_non_artifact_bootstrap_mode_for_semantic_groups() {
+    let td = tempdir().unwrap();
+    let caps = write_caps(td.path());
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-bootstrap",
+            "embedded",
+            "refs",
+            "--caps",
+            caps.to_str().unwrap(),
+            "list",
+        ])
+        .assert()
+        .failure()
+        .code(50)
+        .stderr(predicate::str::contains("development-only"));
+}

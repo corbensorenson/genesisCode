@@ -12,6 +12,7 @@ pub use selfhost_coreform_v1::{
     load_selfhost_coreform_toolchain_v1_from_artifact,
     load_selfhost_coreform_toolchain_v1_from_artifact_source,
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
+    set_bootstrap_runtime_profile_parity_harness,
 };
 
 #[cfg(test)]

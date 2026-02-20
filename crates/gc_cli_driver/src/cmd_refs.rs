@@ -17,275 +17,258 @@ pub(super) fn cmd_refs(
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let (prog, kind, log_op, program_hash) = match frontend {
-        gc_obligations::CoreformFrontend::Rust => {
-            let (forms, kind, log_op) = match cmd {
-                RefsCmd::Get { name } => (
-                    mk_refs_get_program(name),
-                    "genesis/refs-get-v0.1",
-                    "refs-get",
-                ),
-                RefsCmd::List { prefix } => (
-                    mk_refs_list_program(prefix.as_deref()),
-                    "genesis/refs-list-v0.1",
-                    "refs-list",
-                ),
-                RefsCmd::Set {
-                    name,
-                    hash,
-                    policy,
-                    expected_old,
-                } => (
-                    mk_refs_set_program(name, hash, policy, expected_old.as_deref()),
-                    "genesis/refs-set-v0.1",
-                    "refs-set",
-                ),
-                RefsCmd::Delete {
-                    name,
-                    policy,
-                    expected_old,
-                } => (
-                    mk_refs_delete_program(name, policy, expected_old.as_deref()),
-                    "genesis/refs-delete-v0.1",
-                    "refs-delete",
-                ),
-            };
+    let kind = refs_contract::kind(cmd);
+    let log_op = refs_contract::log_op(cmd);
+    let (prog, program_hash) = if frontend_is_rust(&frontend) {
+        let forms = match cmd {
+            RefsCmd::Get { name } => mk_refs_get_program(name),
+            RefsCmd::List { prefix } => mk_refs_list_program(prefix.as_deref()),
+            RefsCmd::Set {
+                name,
+                hash,
+                policy,
+                expected_old,
+            } => mk_refs_set_program(name, hash, policy, expected_old.as_deref()),
+            RefsCmd::Delete {
+                name,
+                policy,
+                expected_old,
+            } => mk_refs_delete_program(name, policy, expected_old.as_deref()),
+        };
 
-            let forms = canonicalize_module(forms)
-                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-            let program_hash = hash_module(&forms);
-            let prog = eval_module(&mut ctx, &mut env, &forms)
-                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
-            (prog, kind, log_op, program_hash)
-        }
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+        let forms = canonicalize_module(forms)
+            .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+        let program_hash = hash_module(&forms);
+        let prog = eval_module(&mut ctx, &mut env, &forms)
+            .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+        (prog, program_hash)
+    } else {
+        load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
 
-            let (prog, kind, log_op, desc) = match cmd {
-                RefsCmd::Get { name } => {
-                    let f = env.get("core/cli::refs-get-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::refs-get-program",
-                        )
-                    })?;
-                    let prog = f
-                        .apply(&mut ctx, Value::Data(Term::Str(name.to_string())))
-                        .map_err(|e| {
-                            cli_err(
-                                EX_EVAL,
-                                "eval/error",
-                                format!("core/cli refs-get-program failed: {e}"),
-                            )
-                        })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("refs/get".to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":name")),
-                                Term::Str(name.to_string()),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    (prog, "genesis/refs-get-v0.1", "refs-get", desc)
-                }
-                RefsCmd::List { prefix } => {
-                    let f = env.get("core/cli::refs-list-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::refs-list-program",
-                        )
-                    })?;
-                    let prefix_term = prefix
-                        .as_deref()
-                        .map(|s| Term::Str(s.to_string()))
-                        .unwrap_or(Term::Nil);
-                    let prog = f
-                        .apply(&mut ctx, Value::Data(prefix_term.clone()))
-                        .map_err(|e| {
-                            cli_err(
-                                EX_EVAL,
-                                "eval/error",
-                                format!("core/cli refs-list-program failed: {e}"),
-                            )
-                        })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("refs/list".to_string()),
-                            ),
-                            (TermOrdKey(Term::symbol(":prefix")), prefix_term),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    (prog, "genesis/refs-list-v0.1", "refs-list", desc)
-                }
-                RefsCmd::Set {
-                    name,
-                    hash,
-                    policy,
-                    expected_old,
-                } => {
-                    let f = env.get("core/cli::refs-set-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::refs-set-program",
-                        )
-                    })?;
-
-                    let (present, expected_old_term) = match expected_old.as_deref() {
-                        None => (false, Term::Nil),
-                        Some("nil") => (true, Term::Nil),
-                        Some(s) => (true, Term::Str(s.to_string())),
-                    };
-                    let req = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":name")),
-                                Term::Str(name.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":hash")),
-                                Term::Str(hash.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":policy")),
-                                Term::Str(policy.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":expected-old-present")),
-                                Term::Bool(present),
-                            ),
-                            (TermOrdKey(Term::symbol(":expected-old")), expected_old_term),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-
-                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+        let (prog, desc) = match cmd {
+            RefsCmd::Get { name } => {
+                let f = env.get("core/cli::refs-get-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::refs-get-program",
+                    )
+                })?;
+                let prog = f
+                    .apply(&mut ctx, Value::Data(Term::Str(name.to_string())))
+                    .map_err(|e| {
                         cli_err(
                             EX_EVAL,
                             "eval/error",
-                            format!("core/cli refs-set-program failed: {e}"),
+                            format!("core/cli refs-get-program failed: {e}"),
                         )
                     })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("refs/set".to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":name")),
-                                Term::Str(name.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":hash")),
-                                Term::Str(hash.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":policy")),
-                                Term::Str(policy.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":expected-old")),
-                                expected_old
-                                    .as_deref()
-                                    .map(|s| Term::Str(s.to_string()))
-                                    .unwrap_or(Term::Nil),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    (prog, "genesis/refs-set-v0.1", "refs-set", desc)
-                }
-                RefsCmd::Delete {
-                    name,
-                    policy,
-                    expected_old,
-                } => {
-                    let f = env.get("core/cli::refs-delete-program").ok_or_else(|| {
-                        cli_err(
-                            EX_INTERNAL,
-                            "selfhost/missing",
-                            "missing binding core/cli::refs-delete-program",
-                        )
-                    })?;
-
-                    let (present, expected_old_term) = match expected_old.as_deref() {
-                        None => (false, Term::Nil),
-                        Some("nil") => (true, Term::Nil),
-                        Some(s) => (true, Term::Str(s.to_string())),
-                    };
-                    let req = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":name")),
-                                Term::Str(name.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":policy")),
-                                Term::Str(policy.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":expected-old-present")),
-                                Term::Bool(present),
-                            ),
-                            (TermOrdKey(Term::symbol(":expected-old")), expected_old_term),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-
-                    let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("refs/get".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(name.to_string()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+            RefsCmd::List { prefix } => {
+                let f = env.get("core/cli::refs-list-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::refs-list-program",
+                    )
+                })?;
+                let prefix_term = prefix
+                    .as_deref()
+                    .map(|s| Term::Str(s.to_string()))
+                    .unwrap_or(Term::Nil);
+                let prog = f
+                    .apply(&mut ctx, Value::Data(prefix_term.clone()))
+                    .map_err(|e| {
                         cli_err(
                             EX_EVAL,
                             "eval/error",
-                            format!("core/cli refs-delete-program failed: {e}"),
+                            format!("core/cli refs-list-program failed: {e}"),
                         )
                     })?;
-                    let desc = Term::Map(
-                        [
-                            (
-                                TermOrdKey(Term::symbol(":cmd")),
-                                Term::Str("refs/delete".to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":name")),
-                                Term::Str(name.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":policy")),
-                                Term::Str(policy.to_string()),
-                            ),
-                            (
-                                TermOrdKey(Term::symbol(":expected-old")),
-                                expected_old
-                                    .as_deref()
-                                    .map(|s| Term::Str(s.to_string()))
-                                    .unwrap_or(Term::Nil),
-                            ),
-                        ]
-                        .into_iter()
-                        .collect(),
-                    );
-                    (prog, "genesis/refs-delete-v0.1", "refs-delete", desc)
-                }
-            };
-            let program_hash = gc_coreform::hash_term(&desc);
-            (prog, kind, log_op, program_hash)
-        }
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("refs/list".to_string()),
+                        ),
+                        (TermOrdKey(Term::symbol(":prefix")), prefix_term),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+            RefsCmd::Set {
+                name,
+                hash,
+                policy,
+                expected_old,
+            } => {
+                let f = env.get("core/cli::refs-set-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::refs-set-program",
+                    )
+                })?;
+
+                let (present, expected_old_term) = match expected_old.as_deref() {
+                    None => (false, Term::Nil),
+                    Some("nil") => (true, Term::Nil),
+                    Some(s) => (true, Term::Str(s.to_string())),
+                };
+                let req = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(name.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(hash.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":policy")),
+                            Term::Str(policy.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":expected-old-present")),
+                            Term::Bool(present),
+                        ),
+                        (TermOrdKey(Term::symbol(":expected-old")), expected_old_term),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+
+                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                    cli_err(
+                        EX_EVAL,
+                        "eval/error",
+                        format!("core/cli refs-set-program failed: {e}"),
+                    )
+                })?;
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("refs/set".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(name.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(hash.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":policy")),
+                            Term::Str(policy.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":expected-old")),
+                            expected_old
+                                .as_deref()
+                                .map(|s| Term::Str(s.to_string()))
+                                .unwrap_or(Term::Nil),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+            RefsCmd::Delete {
+                name,
+                policy,
+                expected_old,
+            } => {
+                let f = env.get("core/cli::refs-delete-program").ok_or_else(|| {
+                    cli_err(
+                        EX_INTERNAL,
+                        "selfhost/missing",
+                        "missing binding core/cli::refs-delete-program",
+                    )
+                })?;
+
+                let (present, expected_old_term) = match expected_old.as_deref() {
+                    None => (false, Term::Nil),
+                    Some("nil") => (true, Term::Nil),
+                    Some(s) => (true, Term::Str(s.to_string())),
+                };
+                let req = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(name.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":policy")),
+                            Term::Str(policy.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":expected-old-present")),
+                            Term::Bool(present),
+                        ),
+                        (TermOrdKey(Term::symbol(":expected-old")), expected_old_term),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+
+                let prog = f.apply(&mut ctx, Value::Data(req)).map_err(|e| {
+                    cli_err(
+                        EX_EVAL,
+                        "eval/error",
+                        format!("core/cli refs-delete-program failed: {e}"),
+                    )
+                })?;
+                let desc = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":cmd")),
+                            Term::Str("refs/delete".to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":name")),
+                            Term::Str(name.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":policy")),
+                            Term::Str(policy.to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":expected-old")),
+                            expected_old
+                                .as_deref()
+                                .map(|s| Term::Str(s.to_string()))
+                                .unwrap_or(Term::Nil),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                (prog, desc)
+            }
+        };
+        let program_hash = gc_coreform::hash_term(&desc);
+        (prog, program_hash)
     };
 
     let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));

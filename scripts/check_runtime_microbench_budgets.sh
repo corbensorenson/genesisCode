@@ -6,20 +6,35 @@ cd "$ROOT_DIR"
 
 OUT="${GENESIS_RUNTIME_MICROBENCH_OUT:-.genesis/perf/runtime_microbench_metrics.json}"
 SLO_OUT="${GENESIS_CONCURRENCY_GPU_SLO_OUT:-.genesis/perf/concurrency_gpu_slo_report.json}"
+SKIP_RUN="${GENESIS_RUNTIME_MICROBENCH_SKIP_RUN:-0}"
+REQUIRED_GPU_BACKEND="${GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND:-}"
+GPU_BUDGET_DEVICE_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE:-5000}"
+GPU_BUDGET_FALLBACK_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK:-8000}"
 
-echo "runtime-microbench: running benchmark suite"
-cargo run -p gc_runtime_bench -- --out "$OUT"
+if [[ "$SKIP_RUN" == "1" ]]; then
+  if [[ ! -f "$OUT" ]]; then
+    echo "runtime-microbench: GENESIS_RUNTIME_MICROBENCH_SKIP_RUN=1 requires existing report: $OUT" >&2
+    exit 2
+  fi
+  echo "runtime-microbench: skipping benchmark execution (GENESIS_RUNTIME_MICROBENCH_SKIP_RUN=1)"
+else
+  echo "runtime-microbench: running benchmark suite"
+  cargo run -p gc_runtime_bench -- --out "$OUT"
+fi
 
 echo "runtime-microbench: metrics"
 cat "$OUT"
 
-python3 - "$OUT" "$SLO_OUT" <<'PY'
+python3 - "$OUT" "$SLO_OUT" "$REQUIRED_GPU_BACKEND" "$GPU_BUDGET_DEVICE_MS" "$GPU_BUDGET_FALLBACK_MS" <<'PY'
 import json
 import pathlib
 import sys
 
 metrics_path = pathlib.Path(sys.argv[1])
 slo_path = pathlib.Path(sys.argv[2])
+required_backend = sys.argv[3].strip()
+device_budget = int(sys.argv[4])
+fallback_budget = int(sys.argv[5])
 
 doc = json.loads(metrics_path.read_text(encoding="utf-8"))
 metrics = doc.get("metrics")
@@ -42,19 +57,26 @@ for key in required:
 bridge_ms = int(metrics["bridge_runner_ms"])
 bridge_budget = int(budgets["bridge_runner_ms"])
 gpu_compute_submit_ms = int(metrics["gpu_compute_submit_ms"])
-gpu_compute_submit_budget = int(budgets["gpu_compute_submit_ms"])
 task_ms = int(metrics["task_runner_ms"])
 task_budget = int(budgets["task_runner_ms"])
+gpu_compute_backend = str(doc.get("gpu_compute_backend", "unknown"))
+
+if gpu_compute_backend == "device-bridge":
+    gpu_compute_submit_budget = device_budget
+else:
+    gpu_compute_submit_budget = fallback_budget
 
 bridge_ok = bridge_ms <= bridge_budget
 gpu_compute_submit_ok = gpu_compute_submit_ms <= gpu_compute_submit_budget
 task_ok = task_ms <= task_budget
-ok = bridge_ok and gpu_compute_submit_ok and task_ok
+backend_ok = (not required_backend) or gpu_compute_backend == required_backend
+ok = bridge_ok and gpu_compute_submit_ok and task_ok and backend_ok
 
 slo = {
     "kind": "genesis/concurrency-gpu-slo-v0.1",
     "source_report": str(metrics_path),
-    "gpu_compute_backend": doc.get("gpu_compute_backend", "unknown"),
+    "gpu_compute_backend": gpu_compute_backend,
+    "gpu_compute_required_backend": required_backend or None,
     "ci_enforced": True,
     "slo": {
         "gpu_compute_bridge": {
@@ -67,7 +89,16 @@ slo = {
             "metric": "gpu_compute_submit_ms",
             "observed_ms": gpu_compute_submit_ms,
             "budget_ms": gpu_compute_submit_budget,
+            "budget_by_backend_ms": {
+                "device-bridge": device_budget,
+                "deterministic-fallback": fallback_budget,
+            },
             "ok": gpu_compute_submit_ok,
+        },
+        "gpu_compute_backend_required": {
+            "required_backend": required_backend or None,
+            "observed_backend": gpu_compute_backend,
+            "ok": backend_ok,
         },
         "task_scheduler": {
             "metric": "task_runner_ms",
@@ -84,8 +115,11 @@ slo_path.write_text(json.dumps(slo, indent=2, sort_keys=True) + "\n", encoding="
 print(f"runtime-microbench: wrote concurrency/gpu slo report {slo_path}")
 
 if not ok:
+    backend_msg = ""
+    if required_backend and gpu_compute_backend != required_backend:
+        backend_msg = f", backend={gpu_compute_backend} (required={required_backend})"
     raise SystemExit(
         "runtime-microbench: concurrency/gpu slo failure "
-        f"(bridge={bridge_ms}/{bridge_budget}, gpu_compute_submit={gpu_compute_submit_ms}/{gpu_compute_submit_budget}, task={task_ms}/{task_budget})"
+        f"(bridge={bridge_ms}/{bridge_budget}, gpu_compute_submit={gpu_compute_submit_ms}/{gpu_compute_submit_budget}, task={task_ms}/{task_budget}{backend_msg})"
     )
 PY

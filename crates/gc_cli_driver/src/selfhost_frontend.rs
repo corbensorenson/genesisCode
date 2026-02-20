@@ -32,8 +32,12 @@ pub(super) fn rust_engine_compat_enabled() -> bool {
     matches!(runtime_profile(), RuntimeProfile::ParityHarness)
 }
 
+pub(super) fn frontend_is_rust(frontend: &gc_obligations::CoreformFrontend) -> bool {
+    matches!(frontend, gc_obligations::CoreformFrontend::Rust)
+}
+
 pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
-    cfg!(debug_assertions)
+    matches!(runtime_profile(), RuntimeProfile::ParityHarness)
 }
 
 pub(super) fn implicit_selfhost_artifact_discovery_allowed() -> bool {

@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use anyhow::Context;
@@ -261,8 +262,26 @@ pub enum SelfhostBootstrapMode {
     Embedded,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BootstrapRuntimeProfile {
+    Production = 0,
+    ParityHarness = 1,
+}
+
+static BOOTSTRAP_RUNTIME_PROFILE: AtomicU8 = AtomicU8::new(BootstrapRuntimeProfile::Production as u8);
+
+pub fn set_bootstrap_runtime_profile_parity_harness(enabled: bool) {
+    let value = if enabled {
+        BootstrapRuntimeProfile::ParityHarness as u8
+    } else {
+        BootstrapRuntimeProfile::Production as u8
+    };
+    BOOTSTRAP_RUNTIME_PROFILE.store(value, Ordering::Relaxed);
+}
+
 fn non_artifact_bootstrap_modes_allowed() -> bool {
-    cfg!(debug_assertions)
+    BOOTSTRAP_RUNTIME_PROFILE.load(Ordering::Relaxed)
+        == BootstrapRuntimeProfile::ParityHarness as u8
 }
 
 fn enforce_bootstrap_mode_allowed_with_flag(

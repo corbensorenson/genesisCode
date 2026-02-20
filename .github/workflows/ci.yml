@@ -241,3 +241,78 @@ jobs:
           rustup target add wasm32-wasip1
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release
           bash scripts/wasi_smoke.sh target/wasm32-wasip1/release/genesis_wasi.wasm
+
+  pr_strict_equivalence_gate:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Selfhost Strict Golden (PR Required)
+        run: bash scripts/selfhost_strict_golden.sh
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.108 --locked
+
+      - name: WASM Cross-Host Determinism (PR Required)
+        run: |
+          bash scripts/wasm_bindgen_node.sh >/dev/null
+          node scripts/wasm_cross_host_determinism.mjs
+
+  gpu_device_microbench:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, linux, x64, gpu]
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD: ${{ vars.GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD }}
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-bridge"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate Device Bridge Configuration
+        run: |
+          if [[ -z "${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD:-}" ]]; then
+            echo "GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD must be configured for gpu_device_microbench lane"
+            exit 1
+          fi
+          if [[ ! -x "${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD}" ]]; then
+            echo "GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD is not executable: ${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD}"
+            exit 1
+          fi
+
+      - name: Runtime Microbench Budgets (Device Bridge Required)
+        run: bash scripts/check_runtime_microbench_budgets.sh
+
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-microbench-artifacts
+          path: |
+            .genesis/perf/runtime_microbench_metrics.json
+            .genesis/perf/concurrency_gpu_slo_report.json
+          if-no-files-found: warn

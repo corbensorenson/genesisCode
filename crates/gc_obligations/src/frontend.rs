@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use gc_prelude::SelfhostBootstrapMode;
 
@@ -19,6 +20,23 @@ pub struct SelfhostFrontendConfig {
 pub enum CoreformFrontend {
     Rust,
     Selfhost(SelfhostFrontendConfig),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FrontendRuntimeProfile {
+    Production = 0,
+    ParityHarness = 1,
+}
+
+static FRONTEND_RUNTIME_PROFILE: AtomicU8 = AtomicU8::new(FrontendRuntimeProfile::Production as u8);
+
+pub fn set_frontend_runtime_profile_parity_harness(enabled: bool) {
+    let value = if enabled {
+        FrontendRuntimeProfile::ParityHarness as u8
+    } else {
+        FrontendRuntimeProfile::Production as u8
+    };
+    FRONTEND_RUNTIME_PROFILE.store(value, Ordering::Relaxed);
 }
 
 fn default_selfhost_artifact_path() -> PathBuf {
@@ -58,6 +76,10 @@ pub fn default_coreform_frontend() -> CoreformFrontend {
     })
 }
 
+pub(super) fn frontend_is_rust(frontend: &CoreformFrontend) -> bool {
+    matches!(frontend, CoreformFrontend::Rust)
+}
+
 pub(super) fn env_truthy(name: &str) -> bool {
     fn is_truthy(value: &str) -> bool {
         matches!(
@@ -72,11 +94,11 @@ pub(super) fn env_truthy(name: &str) -> bool {
 }
 
 pub(super) fn rust_frontend_compat_enabled() -> bool {
-    cfg!(debug_assertions)
+    FRONTEND_RUNTIME_PROFILE.load(Ordering::Relaxed) == FrontendRuntimeProfile::ParityHarness as u8
 }
 
 pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
-    cfg!(debug_assertions)
+    FRONTEND_RUNTIME_PROFILE.load(Ordering::Relaxed) == FrontendRuntimeProfile::ParityHarness as u8
 }
 
 fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {

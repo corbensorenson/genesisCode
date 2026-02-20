@@ -65,6 +65,49 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
 }
 
 #[test]
+fn production_rust_frontend_guard_is_wired_and_passes() {
+    let root = repo_root();
+    let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
+        .expect("read check_upgrade_plan_health.sh");
+    assert!(
+        health.contains("check_no_production_rust_frontend_refs.sh"),
+        "upgrade-plan health script must run production rust frontend guard"
+    );
+
+    let status = Command::new("bash")
+        .arg(root.join("scripts/check_no_production_rust_frontend_refs.sh"))
+        .current_dir(&root)
+        .status()
+        .expect("run production rust frontend guard");
+    assert!(
+        status.success(),
+        "production rust frontend guard unexpectedly failed"
+    );
+}
+
+#[test]
+fn command_groups_use_shared_contract_descriptors() {
+    let root = repo_root();
+    let cmd_gc =
+        fs::read_to_string(root.join("crates/gc_cli_driver/src/cmd_gc.rs")).expect("read cmd_gc");
+    let cmd_refs = fs::read_to_string(root.join("crates/gc_cli_driver/src/cmd_refs.rs"))
+        .expect("read cmd_refs");
+    let cmd_sync = fs::read_to_string(root.join("crates/gc_cli_driver/src/cmd_sync.rs"))
+        .expect("read cmd_sync");
+    let cmd_vcs =
+        fs::read_to_string(root.join("crates/gc_cli_driver/src/cmd_vcs.rs")).expect("read cmd_vcs");
+
+    assert!(cmd_gc.contains("gc_contract::kind(cmd)"));
+    assert!(cmd_gc.contains("gc_contract::log_op(cmd)"));
+    assert!(cmd_refs.contains("refs_contract::kind(cmd)"));
+    assert!(cmd_refs.contains("refs_contract::log_op(cmd)"));
+    assert!(cmd_sync.contains("sync_contract::kind(cmd)"));
+    assert!(cmd_sync.contains("sync_contract::log_op(cmd)"));
+    assert!(cmd_vcs.contains("vcs_contract::kind(cmd)"));
+    assert!(cmd_vcs.contains("vcs_contract::log_op(cmd)"));
+}
+
+#[test]
 fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
     let root = repo_root();
     let output = Command::new("bash")

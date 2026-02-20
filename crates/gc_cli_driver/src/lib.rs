@@ -31,6 +31,7 @@ mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
 mod diagnostics;
+mod gc_contract;
 mod kernel_exec;
 mod pkg_abi;
 mod pkg_contract;
@@ -42,8 +43,11 @@ mod pkg_telemetry;
 mod pkg_workspace_ops;
 mod policy_config;
 mod program_builders;
+mod refs_contract;
 mod selfhost_bridge;
 mod selfhost_frontend;
+mod sync_contract;
+mod vcs_contract;
 
 use cli_json::*;
 use cmd_core::*;
@@ -1232,6 +1236,9 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
 
 pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process::ExitCode {
     set_runtime_profile(profile);
+    let parity = matches!(profile, RuntimeProfile::ParityHarness);
+    gc_prelude::set_bootstrap_runtime_profile_parity_harness(parity);
+    gc_obligations::set_frontend_runtime_profile_parity_harness(parity);
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {

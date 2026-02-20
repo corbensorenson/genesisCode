@@ -94,6 +94,7 @@ COMMON_GATES=(
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
+  "bash scripts/check_no_production_rust_frontend_refs.sh"
   "bash scripts/check_source_size_budget.sh"
 )
 
