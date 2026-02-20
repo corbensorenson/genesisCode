@@ -54,7 +54,6 @@ pub(super) fn mem_limits_term(mem: MemLimits) -> Term {
 
 pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Term {
     match frontend {
-        #[cfg(feature = "parity-harness")]
         CoreformFrontend::Rust => Term::Map(
             [(
                 TermOrdKey(Term::symbol(":kind")),

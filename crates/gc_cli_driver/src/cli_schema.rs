@@ -80,12 +80,11 @@ fn command_schema(cmd: &Command, profile: RuntimeProfile, parent: &[String]) -> 
 fn arg_schema(arg: &Arg, profile: RuntimeProfile) -> serde_json::Value {
     let long = arg.get_long().map(str::to_string);
     let mut allowed_values = collect_possible_values(arg);
-    if allowed_values.is_empty() {
-        if let Some(long_name) = arg.get_long() {
-            if let Some(expected) = expected_values_by_profile(long_name, profile) {
-                allowed_values = expected;
-            }
-        }
+    if allowed_values.is_empty()
+        && let Some(long_name) = arg.get_long()
+        && let Some(expected) = expected_values_by_profile(long_name, profile)
+    {
+        allowed_values = expected;
     }
     let default_values = arg
         .get_default_values()

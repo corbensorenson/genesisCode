@@ -30,8 +30,7 @@ pub(super) fn selfhost_only_enabled(cli: &Cli) -> bool {
 
 #[cfg(feature = "parity-harness")]
 pub(super) fn rust_engine_compat_enabled() -> bool {
-    cfg!(feature = "parity-harness")
-        && matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+    cfg!(feature = "parity-harness") && matches!(runtime_profile(), RuntimeProfile::ParityHarness)
 }
 
 pub(super) fn frontend_is_rust(frontend: &gc_obligations::CoreformFrontend) -> bool {
@@ -291,7 +290,6 @@ pub(super) fn coreform_frontend_json(
     frontend: &gc_obligations::CoreformFrontend,
 ) -> serde_json::Value {
     match frontend {
-        #[cfg(feature = "parity-harness")]
         gc_obligations::CoreformFrontend::Rust => serde_json::json!({
             "name": "rust"
         }),

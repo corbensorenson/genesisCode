@@ -377,7 +377,7 @@ pub(super) fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2C
                     _ => {
                         return Err(Stage2CompileError::Unsupported(format!(
                             "unsupported primitive op: {op}"
-                        )))
+                        )));
                     }
                 };
                 Ok((prim, Ty::I64))
@@ -395,7 +395,7 @@ pub(super) fn infer_prim(op: &str, a: Ty, b: Ty) -> Result<(PrimOp, Ty), Stage2C
                     _ => {
                         return Err(Stage2CompileError::Unsupported(format!(
                             "unsupported primitive op: {op}"
-                        )))
+                        )));
                     }
                 };
                 Ok((prim, Ty::BoolI32))

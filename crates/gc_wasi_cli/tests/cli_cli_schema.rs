@@ -45,7 +45,8 @@ fn wasi_cli_schema_production_profile_emits_selfhost_only_values() {
         Some("genesis/cli-schema-v0.1")
     );
     assert_eq!(
-        json.pointer("/data/runtime_profile").and_then(Value::as_str),
+        json.pointer("/data/runtime_profile")
+            .and_then(Value::as_str),
         Some("production")
     );
 
@@ -71,7 +72,8 @@ fn wasi_cli_schema_parity_profile_emits_rust_compat_values() {
     let json: Value = serde_json::from_slice(&out).expect("parse json");
 
     assert_eq!(
-        json.pointer("/data/runtime_profile").and_then(Value::as_str),
+        json.pointer("/data/runtime_profile")
+            .and_then(Value::as_str),
         Some("parity-harness")
     );
 
