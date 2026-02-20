@@ -17,158 +17,155 @@ pub(super) fn cmd_store(
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
 
-    let (prog, kind, log_op, program_hash) = match &frontend {
-        gc_obligations::CoreformFrontend::Rust => {
-            let (forms, kind, log_op) = match cmd {
+    let (prog, kind, log_op, program_hash) = if frontend_is_rust(&frontend) {
+        let (forms, kind, log_op) = match cmd {
+            StoreCmd::Put { input } => {
+                let src = std::fs::read_to_string(input)
+                    .with_context(|| format!("read {}", input.display()))
+                    .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+                let art =
+                    parse_term(&src).map_err(|e| cli_err(EX_PARSE, "parse/term", e.to_string()))?;
+                (
+                    mk_store_put_program(&art),
+                    "genesis/store-put-v0.2",
+                    "store-put",
+                )
+            }
+            StoreCmd::Get { hash, .. } => (
+                mk_store_get_program(hash),
+                "genesis/store-get-v0.2",
+                "store-get",
+            ),
+            StoreCmd::Has { hash } => (
+                mk_store_has_program(hash),
+                "genesis/store-has-v0.2",
+                "store-has",
+            ),
+            StoreCmd::Verify { hash } => (
+                mk_store_verify_program(hash.as_deref()),
+                "genesis/store-verify-v0.2",
+                "store-verify",
+            ),
+        };
+        eval_store_program_forms(&mut ctx, &mut env, forms, kind, log_op)?
+    } else {
+        if let StoreCmd::Verify { hash } = cmd {
+            eval_store_program_forms(
+                &mut ctx,
+                &mut env,
+                mk_store_verify_program(hash.as_deref()),
+                "genesis/store-verify-v0.2",
+                "store-verify",
+            )
+        } else {
+            load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
+            let (prog, kind, log_op, desc) = match cmd {
                 StoreCmd::Put { input } => {
                     let src = std::fs::read_to_string(input)
                         .with_context(|| format!("read {}", input.display()))
                         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-                    let art = parse_term(&src)
-                        .map_err(|e| cli_err(EX_PARSE, "parse/term", e.to_string()))?;
-                    (
-                        mk_store_put_program(&art),
-                        "genesis/store-put-v0.2",
-                        "store-put",
-                    )
+                    let art = selfhost_parse_term(&mut ctx, &env, &src, "store put input")?;
+                    let f = env.get("core/cli::store-put-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::store-put-program",
+                        )
+                    })?;
+                    let prog = f.apply(&mut ctx, Value::Data(art.clone())).map_err(|e| {
+                        cli_err(
+                            EX_EVAL,
+                            "eval/error",
+                            format!("core/cli store-put-program failed: {e}"),
+                        )
+                    })?;
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("store/put".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":artifact-h")),
+                                Term::Bytes(gc_coreform::hash_term(&art).to_vec().into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/store-put-v0.2", "store-put", desc)
                 }
-                StoreCmd::Get { hash, .. } => (
-                    mk_store_get_program(hash),
-                    "genesis/store-get-v0.2",
-                    "store-get",
-                ),
-                StoreCmd::Has { hash } => (
-                    mk_store_has_program(hash),
-                    "genesis/store-has-v0.2",
-                    "store-has",
-                ),
-                StoreCmd::Verify { hash } => (
-                    mk_store_verify_program(hash.as_deref()),
-                    "genesis/store-verify-v0.2",
-                    "store-verify",
-                ),
-            };
-            eval_store_program_forms(&mut ctx, &mut env, forms, kind, log_op)?
-        }
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            if let StoreCmd::Verify { hash } = cmd {
-                eval_store_program_forms(
-                    &mut ctx,
-                    &mut env,
-                    mk_store_verify_program(hash.as_deref()),
-                    "genesis/store-verify-v0.2",
-                    "store-verify",
-                )
-            } else {
-                load_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-                let (prog, kind, log_op, desc) = match cmd {
-                    StoreCmd::Put { input } => {
-                        let src = std::fs::read_to_string(input)
-                            .with_context(|| format!("read {}", input.display()))
-                            .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-                        let art = selfhost_parse_term(&mut ctx, &env, &src, "store put input")?;
-                        let f = env.get("core/cli::store-put-program").ok_or_else(|| {
-                            cli_err(
-                                EX_INTERNAL,
-                                "selfhost/missing",
-                                "missing binding core/cli::store-put-program",
-                            )
-                        })?;
-                        let prog = f.apply(&mut ctx, Value::Data(art.clone())).map_err(|e| {
+                StoreCmd::Get { hash, .. } => {
+                    let f = env.get("core/cli::store-get-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::store-get-program",
+                        )
+                    })?;
+                    let prog = f
+                        .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
+                        .map_err(|e| {
                             cli_err(
                                 EX_EVAL,
                                 "eval/error",
-                                format!("core/cli store-put-program failed: {e}"),
+                                format!("core/cli store-get-program failed: {e}"),
                             )
                         })?;
-                        let desc = Term::Map(
-                            [
-                                (
-                                    TermOrdKey(Term::symbol(":cmd")),
-                                    Term::Str("store/put".to_string()),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":artifact-h")),
-                                    Term::Bytes(gc_coreform::hash_term(&art).to_vec().into()),
-                                ),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        );
-                        (prog, "genesis/store-put-v0.2", "store-put", desc)
-                    }
-                    StoreCmd::Get { hash, .. } => {
-                        let f = env.get("core/cli::store-get-program").ok_or_else(|| {
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("store/get".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":hash")),
+                                Term::Str(hash.to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/store-get-v0.2", "store-get", desc)
+                }
+                StoreCmd::Has { hash } => {
+                    let f = env.get("core/cli::store-has-program").ok_or_else(|| {
+                        cli_err(
+                            EX_INTERNAL,
+                            "selfhost/missing",
+                            "missing binding core/cli::store-has-program",
+                        )
+                    })?;
+                    let prog = f
+                        .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
+                        .map_err(|e| {
                             cli_err(
-                                EX_INTERNAL,
-                                "selfhost/missing",
-                                "missing binding core/cli::store-get-program",
+                                EX_EVAL,
+                                "eval/error",
+                                format!("core/cli store-has-program failed: {e}"),
                             )
                         })?;
-                        let prog = f
-                            .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
-                            .map_err(|e| {
-                                cli_err(
-                                    EX_EVAL,
-                                    "eval/error",
-                                    format!("core/cli store-get-program failed: {e}"),
-                                )
-                            })?;
-                        let desc = Term::Map(
-                            [
-                                (
-                                    TermOrdKey(Term::symbol(":cmd")),
-                                    Term::Str("store/get".to_string()),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":hash")),
-                                    Term::Str(hash.to_string()),
-                                ),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        );
-                        (prog, "genesis/store-get-v0.2", "store-get", desc)
-                    }
-                    StoreCmd::Has { hash } => {
-                        let f = env.get("core/cli::store-has-program").ok_or_else(|| {
-                            cli_err(
-                                EX_INTERNAL,
-                                "selfhost/missing",
-                                "missing binding core/cli::store-has-program",
-                            )
-                        })?;
-                        let prog = f
-                            .apply(&mut ctx, Value::Data(Term::Str(hash.to_string())))
-                            .map_err(|e| {
-                                cli_err(
-                                    EX_EVAL,
-                                    "eval/error",
-                                    format!("core/cli store-has-program failed: {e}"),
-                                )
-                            })?;
-                        let desc = Term::Map(
-                            [
-                                (
-                                    TermOrdKey(Term::symbol(":cmd")),
-                                    Term::Str("store/has".to_string()),
-                                ),
-                                (
-                                    TermOrdKey(Term::symbol(":hash")),
-                                    Term::Str(hash.to_string()),
-                                ),
-                            ]
-                            .into_iter()
-                            .collect(),
-                        );
-                        (prog, "genesis/store-has-v0.2", "store-has", desc)
-                    }
-                    StoreCmd::Verify { .. } => unreachable!("handled above"),
-                };
-                let program_hash = gc_coreform::hash_term(&desc);
-                Ok((prog, kind, log_op, program_hash))
-            }?
-        }
+                    let desc = Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":cmd")),
+                                Term::Str("store/has".to_string()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":hash")),
+                                Term::Str(hash.to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    );
+                    (prog, "genesis/store-has-v0.2", "store-has", desc)
+                }
+                StoreCmd::Verify { .. } => unreachable!("handled above"),
+            };
+            let program_hash = gc_coreform::hash_term(&desc);
+            Ok((prog, kind, log_op, program_hash))
+        }?
     };
 
     finish_store_command(

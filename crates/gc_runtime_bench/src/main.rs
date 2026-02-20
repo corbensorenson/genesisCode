@@ -1,6 +1,6 @@
 mod bench_bridge_task;
-mod bench_gpu_compute;
 mod bench_eval;
+mod bench_gpu_compute;
 mod bench_patch;
 mod bench_runner;
 mod bench_store_sync;
@@ -11,8 +11,8 @@ mod report;
 use anyhow::Result;
 
 use crate::bench_bridge_task::{run_bridge_runner, run_task_runner};
-use crate::bench_gpu_compute::run_gpu_compute_submit;
 use crate::bench_eval::run as bench_eval;
+use crate::bench_gpu_compute::run_gpu_compute_submit;
 use crate::bench_patch::run_patch_apply;
 use crate::bench_runner::run_effect_runner;
 use crate::bench_store_sync::run_store_sync;

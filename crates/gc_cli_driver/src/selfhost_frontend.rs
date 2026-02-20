@@ -33,7 +33,7 @@ pub(super) fn rust_engine_compat_enabled() -> bool {
 }
 
 pub(super) fn frontend_is_rust(frontend: &gc_obligations::CoreformFrontend) -> bool {
-    matches!(frontend, gc_obligations::CoreformFrontend::Rust)
+    gc_obligations::coreform_frontend_is_rust(frontend)
 }
 
 pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
@@ -254,7 +254,7 @@ pub(super) fn resolved_coreform_frontend(
                 };
                 return Err(cli_err(EX_VERIFY, "engine/rust-disabled", msg));
             }
-            Ok(gc_obligations::CoreformFrontend::Rust)
+            Ok(gc_obligations::rust_coreform_frontend())
         }
         CoreformFrontendArg::Selfhost => {
             let mode = resolved_selfhost_bootstrap_mode(cli);
@@ -287,11 +287,15 @@ pub(super) fn resolved_coreform_frontend(
 pub(super) fn coreform_frontend_json(
     frontend: &gc_obligations::CoreformFrontend,
 ) -> serde_json::Value {
-    match frontend {
-        gc_obligations::CoreformFrontend::Rust => serde_json::json!({
+    if frontend_is_rust(frontend) {
+        serde_json::json!({
             "name": "rust"
-        }),
-        gc_obligations::CoreformFrontend::Selfhost(cfg) => serde_json::json!({
+        })
+    } else {
+        let gc_obligations::CoreformFrontend::Selfhost(cfg) = frontend else {
+            unreachable!("frontend dispatch drift: expected selfhost variant");
+        };
+        serde_json::json!({
             "name": "selfhost",
             "bootstrap_mode": match cfg.bootstrap_mode {
                 SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
@@ -299,7 +303,7 @@ pub(super) fn coreform_frontend_json(
                 SelfhostBootstrapMode::Embedded => "embedded",
             },
             "artifact": cfg.artifact.as_ref().map(|p| p.display().to_string()),
-        }),
+        })
     }
 }
 
@@ -308,7 +312,7 @@ pub(super) fn coreform_frontend_for_engine(
     engine: FmtEngine,
 ) -> Result<gc_obligations::CoreformFrontend, CliError> {
     match engine {
-        FmtEngine::Rust => Ok(gc_obligations::CoreformFrontend::Rust),
+        FmtEngine::Rust => Ok(gc_obligations::rust_coreform_frontend()),
         FmtEngine::Selfhost => {
             let mode = resolved_selfhost_bootstrap_mode(cli);
             enforce_bootstrap_mode_allowed(mode, "engine frontend")?;

@@ -409,13 +409,14 @@ pub(super) fn cmd_selfhost_artifact(
     }
 
     let frontend = resolved_coreform_frontend(cli)?;
-    let (out_buf, min_stage2_supported_modules, min_stage2_validated_modules) = match frontend {
-        gc_obligations::CoreformFrontend::Rust => (
-            out.to_path_buf(),
-            min_stage2_supported_modules,
-            min_stage2_validated_modules,
-        ),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
+    let (out_buf, min_stage2_supported_modules, min_stage2_validated_modules) =
+        if frontend_is_rust(&frontend) {
+            (
+                out.to_path_buf(),
+                min_stage2_supported_modules,
+                min_stage2_validated_modules,
+            )
+        } else {
             let req = Term::Map(
                 [
                     (
@@ -453,8 +454,7 @@ pub(super) fn cmd_selfhost_artifact(
                     "selfhost-artifact",
                 )?,
             )
-        }
-    };
+        };
     let out = out_buf.as_path();
 
     // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.

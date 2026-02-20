@@ -21,7 +21,9 @@ struct BootstrapProfileGuard {
 
 impl BootstrapProfileGuard {
     fn parity_harness() -> Self {
-        let guard = bootstrap_profile_lock().lock().expect("lock bootstrap profile");
+        let guard = bootstrap_profile_lock()
+            .lock()
+            .expect("lock bootstrap profile");
         set_bootstrap_runtime_profile_parity_harness(true);
         Self { _guard: guard }
     }

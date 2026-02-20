@@ -1,29 +1,25 @@
 use super::*;
 
 fn planned_policy_list_args(cli: &Cli, policies: &Path) -> Result<PathBuf, CliError> {
-    match resolved_coreform_frontend(cli)? {
-        gc_obligations::CoreformFrontend::Rust => Ok(policies.to_path_buf()),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [(
-                    TermOrdKey(Term::symbol(":policies")),
-                    Term::Str(policies.display().to_string()),
-                )]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(
-                cli,
-                "core/cli::policy-list-request",
-                req,
-                "policy list",
-            )?;
-            Ok(PathBuf::from(planned_required_str(
-                &planned,
-                ":policies",
-                "policy list",
-            )?))
-        }
+    let frontend = resolved_coreform_frontend(cli)?;
+    if frontend_is_rust(&frontend) {
+        Ok(policies.to_path_buf())
+    } else {
+        let req = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":policies")),
+                Term::Str(policies.display().to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let planned =
+            selfhost_plan_request_map(cli, "core/cli::policy-list-request", req, "policy list")?;
+        Ok(PathBuf::from(planned_required_str(
+            &planned,
+            ":policies",
+            "policy list",
+        )?))
     }
 }
 
@@ -33,43 +29,39 @@ fn planned_policy_show_args(
     policies: &Path,
     store: &Path,
 ) -> Result<(String, PathBuf, PathBuf), CliError> {
-    match resolved_coreform_frontend(cli)? {
-        gc_obligations::CoreformFrontend::Rust => Ok((
+    let frontend = resolved_coreform_frontend(cli)?;
+    if frontend_is_rust(&frontend) {
+        Ok((
             name_or_hash.to_string(),
             policies.to_path_buf(),
             store.to_path_buf(),
-        )),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":name-or-hash")),
-                        Term::Str(name_or_hash.to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":policies")),
-                        Term::Str(policies.display().to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":store")),
-                        Term::Str(store.display().to_string()),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(
-                cli,
-                "core/cli::policy-show-request",
-                req,
-                "policy show",
-            )?;
-            Ok((
-                planned_required_str(&planned, ":name-or-hash", "policy show")?,
-                PathBuf::from(planned_required_str(&planned, ":policies", "policy show")?),
-                PathBuf::from(planned_required_str(&planned, ":store", "policy show")?),
-            ))
-        }
+        ))
+    } else {
+        let req = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":name-or-hash")),
+                    Term::Str(name_or_hash.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":policies")),
+                    Term::Str(policies.display().to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":store")),
+                    Term::Str(store.display().to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let planned =
+            selfhost_plan_request_map(cli, "core/cli::policy-show-request", req, "policy show")?;
+        Ok((
+            planned_required_str(&planned, ":name-or-hash", "policy show")?,
+            PathBuf::from(planned_required_str(&planned, ":policies", "policy show")?),
+            PathBuf::from(planned_required_str(&planned, ":store", "policy show")?),
+        ))
     }
 }
 
@@ -78,40 +70,38 @@ fn planned_policy_set_default_args(
     name_or_hash: &str,
     policies: &Path,
 ) -> Result<(String, PathBuf), CliError> {
-    match resolved_coreform_frontend(cli)? {
-        gc_obligations::CoreformFrontend::Rust => {
-            Ok((name_or_hash.to_string(), policies.to_path_buf()))
-        }
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":name-or-hash")),
-                        Term::Str(name_or_hash.to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":policies")),
-                        Term::Str(policies.display().to_string()),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(
-                cli,
-                "core/cli::policy-set-default-request",
-                req,
+    let frontend = resolved_coreform_frontend(cli)?;
+    if frontend_is_rust(&frontend) {
+        Ok((name_or_hash.to_string(), policies.to_path_buf()))
+    } else {
+        let req = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":name-or-hash")),
+                    Term::Str(name_or_hash.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":policies")),
+                    Term::Str(policies.display().to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let planned = selfhost_plan_request_map(
+            cli,
+            "core/cli::policy-set-default-request",
+            req,
+            "policy set-default",
+        )?;
+        Ok((
+            planned_required_str(&planned, ":name-or-hash", "policy set-default")?,
+            PathBuf::from(planned_required_str(
+                &planned,
+                ":policies",
                 "policy set-default",
-            )?;
-            Ok((
-                planned_required_str(&planned, ":name-or-hash", "policy set-default")?,
-                PathBuf::from(planned_required_str(
-                    &planned,
-                    ":policies",
-                    "policy set-default",
-                )?),
-            ))
-        }
+            )?),
+        ))
     }
 }
 

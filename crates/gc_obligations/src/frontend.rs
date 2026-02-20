@@ -22,6 +22,16 @@ pub enum CoreformFrontend {
     Selfhost(SelfhostFrontendConfig),
 }
 
+impl CoreformFrontend {
+    pub fn rust_compat() -> Self {
+        Self::Rust
+    }
+
+    pub fn is_rust(&self) -> bool {
+        matches!(self, Self::Rust)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FrontendRuntimeProfile {
     Production = 0,
@@ -76,8 +86,16 @@ pub fn default_coreform_frontend() -> CoreformFrontend {
     })
 }
 
-pub(super) fn frontend_is_rust(frontend: &CoreformFrontend) -> bool {
-    matches!(frontend, CoreformFrontend::Rust)
+pub fn rust_coreform_frontend() -> CoreformFrontend {
+    CoreformFrontend::rust_compat()
+}
+
+pub fn coreform_frontend_is_rust(frontend: &CoreformFrontend) -> bool {
+    frontend.is_rust()
+}
+
+pub(crate) fn frontend_is_rust(frontend: &CoreformFrontend) -> bool {
+    coreform_frontend_is_rust(frontend)
 }
 
 pub(super) fn env_truthy(name: &str) -> bool {
@@ -139,12 +157,12 @@ pub(super) fn enforce_frontend_allowed_with_flag(
         context,
         non_artifact_bootstrap_modes_allowed(),
     )?;
-    if selfhost_only && matches!(frontend, CoreformFrontend::Rust) {
+    if selfhost_only && frontend_is_rust(frontend) {
         return Err(ObligationError::Module(format!(
             "selfhost-only mode forbids Rust frontend in {context}; use CoreformFrontend::Selfhost"
         )));
     }
-    if !rust_compat_enabled && matches!(frontend, CoreformFrontend::Rust) {
+    if !rust_compat_enabled && frontend_is_rust(frontend) {
         return Err(ObligationError::Module(format!(
             "Rust frontend is disabled in this profile in {context}; use dedicated parity harness binaries for CLI compatibility workflows"
         )));

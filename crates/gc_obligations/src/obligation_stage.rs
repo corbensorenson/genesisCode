@@ -202,35 +202,34 @@ pub(super) fn obligation_translation_validation(
         let (rust_opt_raw, rust_opt_report) = gc_opt::optimize_module_with_report(&m.forms);
         let rust_opt_forms = canonicalize_module(rust_opt_raw)
             .map_err(|e| ObligationError::Opt(format!("stage1 canonicalize: {e}")))?;
-        let opt_forms = match frontend {
-            CoreformFrontend::Rust => rust_opt_forms.clone(),
-            CoreformFrontend::Selfhost(_) => {
-                let Some(ctx) = selfhost_ctx.as_mut() else {
-                    return Err(ObligationError::Opt(
-                        "selfhost optimizer context was not initialized".to_string(),
-                    ));
-                };
-                let Some(env) = selfhost_env.as_ref() else {
-                    return Err(ObligationError::Opt(
-                        "selfhost optimizer environment was not initialized".to_string(),
-                    ));
-                };
-                let selfhost_opt_raw = selfhost_optimize_module_forms(ctx, env, &m.forms)?;
-                let selfhost_opt = canonicalize_module(selfhost_opt_raw).map_err(|e| {
-                    ObligationError::Opt(format!("selfhost optimize canonicalize: {e}"))
-                })?;
-                if selfhost_opt != rust_opt_forms {
-                    let rust_h = hash_module(&rust_opt_forms);
-                    let selfhost_h = hash_module(&selfhost_opt);
-                    return Err(ObligationError::Opt(format!(
-                        "selfhost core/cli::optimize-module parity mismatch for {} (rust={} selfhost={})",
-                        m.entry.path,
-                        hex32(rust_h),
-                        hex32(selfhost_h),
-                    )));
-                }
-                selfhost_opt
+        let opt_forms = if coreform_frontend_is_rust(frontend) {
+            rust_opt_forms.clone()
+        } else {
+            let Some(ctx) = selfhost_ctx.as_mut() else {
+                return Err(ObligationError::Opt(
+                    "selfhost optimizer context was not initialized".to_string(),
+                ));
+            };
+            let Some(env) = selfhost_env.as_ref() else {
+                return Err(ObligationError::Opt(
+                    "selfhost optimizer environment was not initialized".to_string(),
+                ));
+            };
+            let selfhost_opt_raw = selfhost_optimize_module_forms(ctx, env, &m.forms)?;
+            let selfhost_opt = canonicalize_module(selfhost_opt_raw).map_err(|e| {
+                ObligationError::Opt(format!("selfhost optimize canonicalize: {e}"))
+            })?;
+            if selfhost_opt != rust_opt_forms {
+                let rust_h = hash_module(&rust_opt_forms);
+                let selfhost_h = hash_module(&selfhost_opt);
+                return Err(ObligationError::Opt(format!(
+                    "selfhost core/cli::optimize-module parity mismatch for {} (rust={} selfhost={})",
+                    m.entry.path,
+                    hex32(rust_h),
+                    hex32(selfhost_h),
+                )));
             }
+            selfhost_opt
         };
         opt_stats.egg_runs = opt_stats
             .egg_runs

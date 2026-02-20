@@ -31,8 +31,8 @@ use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
 pub use crate::frontend::{
-    CoreformFrontend, SelfhostFrontendConfig, default_coreform_frontend,
-    set_frontend_runtime_profile_parity_harness,
+    CoreformFrontend, SelfhostFrontendConfig, coreform_frontend_is_rust, default_coreform_frontend,
+    rust_coreform_frontend, set_frontend_runtime_profile_parity_harness,
 };
 use crate::frontend::{enforce_frontend_allowed, env_truthy, frontend_is_rust};
 use crate::obligation_cache::*;

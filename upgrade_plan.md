@@ -4,203 +4,90 @@ Last updated: 2026-02-20
 
 This plan contains only unresolved findings from the latest fine-tooth-comb red-team pass.
 
-Open checklist items: 1
+Open checklist items: 7
 
-## P0 - Trust and Self-Host Correctness
+## P0 - Self-Host Correctness and Missing Core Surface
 
-- [ ] P0.1 Remove Rust frontend execution paths from production binaries (parity-harness only).
+- [ ] P0.1 Implement `genesis commit` command surface (`new`, `show`) and align all CLI specs.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/frontend.rs:19`-`22` keeps `CoreformFrontend::Rust` in the primary frontend enum.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs:129`-`153` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs:878`-`929` still execute Rust parser/canonical/hash paths.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:24`-`182` and peers (`cmd_gc.rs`, `cmd_refs.rs`, `cmd_sync.rs`, `cmd_vcs.rs`) still branch on `CoreformFrontend::Rust`.
+  - `/Users/corbensorenson/Documents/genesisCode/docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md:70`-`73` declares required `genesis commit new` and `genesis commit show`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:163` defines top-level `Cmd` without a `Commit` variant.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:1070`-`1150` shows `VcsCmd` variants (hash/diff/apply/log/blame/why/merge/resolve) but no commit creation/show command.
   Acceptance:
-  - Production CLI/WASI binaries compile and route only selfhost frontend/tool semantics.
-  - Rust frontend code is compiled only in dedicated parity binaries/harness crates.
-  - Add an enforceable guard script that fails if production `crates/*/src` references `CoreformFrontend::Rust`.
-  Progress (2026-02-20):
-  - Added enforcement gate `/Users/corbensorenson/Documents/genesisCode/scripts/check_no_production_rust_frontend_refs.sh`.
-  - Wired gate into `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh`.
-  - Removed direct `CoreformFrontend::Rust` branch references from high-risk production command routers:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_gc.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_refs.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_sync.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_vcs.rs`
-  - Removed direct `CoreformFrontend::Rust` branch references from the main obligations library path:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
-  - Added regression coverage in:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs`
+  - Add top-level `genesis commit new` and `genesis commit show` (native + WASI).
+  - Route commit creation through the same deterministic contract/evidence path as other selfhost-routed command groups.
+  - Add parity/smoke tests for commit creation, artifact persistence, and JSON envelope kinds.
+  - Keep `docs/spec/CLI.md` and `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` consistent.
 
-- [x] P0.2 Remove non-artifact bootstrap fallback from production runtime paths.
+- [ ] P0.2 Implement registry chunked upload protocol (`upload/start|chunk|finish`) and client planner usage.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:35`-`37` allows non-artifact bootstrap by `debug_assertions`.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:423`-`427` still derives `Embedded` bootstrap mode.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs:831` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs:850` still preserve embedded fallback logic.
+  - `/Users/corbensorenson/Documents/genesisCode/docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md:43`-`48` defines required chunked upload endpoints.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:499`-`552` implements only monolithic `PUT /store/put/<hash>`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:146` exposes `max_chunk_bytes` in ping response, but chunked transport path is absent.
   Acceptance:
-  - `genesis` and `genesis_wasi` enforce `artifact-only` in all non-parity profiles.
-  - `artifact-preferred` and `embedded` are parity-harness-only code paths.
-  - CLI/docs/spec behavior are unified with no debug-profile loophole in production binaries.
-  Status (2026-02-20):
-  - Done by moving non-artifact bootstrap gating from `debug_assertions` to explicit runtime profile wiring (`Production` vs `ParityHarness`).
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` now propagates profile mode to frontend/bootstrap guards via:
-    - `gc_prelude::set_bootstrap_runtime_profile_parity_harness(...)`
-    - `gc_obligations::set_frontend_runtime_profile_parity_harness(...)`
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs` now treats non-artifact modes as parity-harness-only.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/src/selfhost_coreform_v1.rs` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/frontend.rs` now use runtime-profile state instead of debug-build checks.
-  - Regression coverage added/updated:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_coreform_frontend_profile.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_coreform_frontend_profile.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/tests/selfhost_bootstrap_modes.rs`
+  - Add registry client APIs for `upload/start`, `upload/chunk`, `upload/finish` (+ optional status).
+  - Update sync push planning to switch between direct put vs chunked upload based on payload size and `max_chunk_bytes`.
+  - Add resumability/integrity tests for interrupted uploads and hash mismatch fail-close behavior.
 
-- [x] P0.3 Fix false-green behavior in `check_hot_path_budgets.sh`.
+- [ ] P0.3 Remove Rust frontend/engine options from production CLI parser surface (parity binaries only).
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh:162`-`166` captures `measure_ms` in command substitution; failures in measured commands are not fail-closed.
-  - Repro from this pass:
-    - Direct command with the script’s own caps policy fails:
-      `genesis ... gcpm --caps ... lock --strict` -> `core/caps/denied` on `core/pkg-low::load-lock`.
-    - `bash /Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh` still exits `0` and reports `hot-path-budgets: ok`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:157`-`160` exposes `CoreformFrontendArg::{Rust,Selfhost}` in production parser.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:493`-`497` exposes `FmtEngine::{Rust,Selfhost}` in production parser.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:241`-`257` still carries runtime Rust-frontend branch logic.
   Acceptance:
-  - Any failed measured command aborts the script with non-zero exit.
-  - Add a regression test that injects a known failing subcommand and verifies hard failure.
-  Status (2026-02-20):
-  - Done via shared fail-closed measurement helper (`/Users/corbensorenson/Documents/genesisCode/scripts/lib/measure.sh`) and call-site migration in `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh`.
-  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`measure_helper_fails_closed_on_command_error`, script wiring assertions).
+  - Production binaries (`genesis`, `genesis_wasi`) accept only selfhost frontend/engine values.
+  - Rust frontend/engine parser values and execution branches compile only in parity binaries (`genesis_parity`, `genesis_wasi_parity`).
+  - Add guard/test that production `--help` output contains no Rust frontend/engine option values.
 
-- [x] P0.4 Fix the same measurement false-green pattern in `check_perf_budgets.sh`.
+## P1 - Performance and Reliability Hardening
+
+- [ ] P1.1 Make perf/SLO measurements fail-closed on low disk in all budget-enforced paths (including local runs).
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:68` and `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:72`-`86` use command substitution around `measure_ms` without explicit fail-closed status handling.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:89`-`94` defaults to non-strict mode outside CI.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:107`-`114` exits success on low disk in non-strict mode.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/test_changed_fast.sh:7` always invokes disk-headroom check with default strict mode.
+  - Release-profile run in this pass logged: `test-changed-fast: insufficient disk headroom ... continuing in non-strict mode ...`.
   Acceptance:
-  - Switch to explicit status-checked measurement flow (same hardening pattern used in `check_ai_iteration_slo.sh`).
-  - Add a regression check that forces one measured command to fail and verifies script exit is non-zero.
-  Status (2026-02-20):
-  - Done by migrating `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh` to shared fail-closed measurement primitives.
-  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs`.
+  - Perf/SLO entrypoints (`check_perf_budgets.sh`, `check_ai_iteration_slo.sh`, `check_hot_path_budgets.sh`, `check_runtime_microbench_budgets.sh`) force strict disk mode.
+  - `test_changed_fast.sh` supports explicit strict mode and is called strictly when used for SLO/perf gating.
+  - Low-disk conditions fail budget checks instead of producing potentially noisy false-green measurements.
 
-- [x] P0.5 Eliminate hard-gate bypass when `upgrade_plan.md` has open items.
+- [ ] P1.2 Run performance budgets on release-equivalent artifacts and record profile metadata in reports.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh:65`-`68` returns success and skips all hard gates whenever open checklist items > 0.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:21` builds debug (`cargo build -p gc_cli`) and measures `target/debug/genesis`.
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh:23` uses `cargo run -p gc_runtime_bench` (debug by default).
   Acceptance:
-  - Core hard gates always run in CI (regardless of backlog count).
-  - Optional mode can keep local “defer heavy gates” behavior, but CI must never short-circuit.
-  - Health script output clearly separates “plan backlog status” from “code health status”.
-  Status (2026-02-20):
-  - Done in `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh` by separating backlog status from code-health gating and enforcing gates whenever CI (or `GENESIS_HEALTH_ENFORCE_GATES=1`) is active.
-  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open`).
+  - Standardize perf scripts on a release-equivalent profile (`--profile selfhost-strict` or `--release`) and avoid mixing debug/release budgets.
+  - Include profile/build-mode metadata in emitted perf artifacts for auditability.
+  - Rebaseline budgets with deterministic runner settings and document migration.
 
-- [x] P0.6 Normalize gcpm low-level capability fixtures across perf/SLO scripts.
+## P2 - AI-First Authoring and Agent Ergonomics
+
+- [ ] P2.1 Tighten source-size budgets and split remaining oversized hot files/modules.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh:90`-`113` omits `core/pkg-low::load-lock`/`save-lock`/`env` from caps policy even though lock/env flows require them.
-  - This drift already caused one real failure in `check_ai_iteration_slo.sh` this pass before fixing that script.
-  Acceptance:
-  - Single shared caps fixture generator is used by all gcpm perf/SLO scripts.
-  - Fixture includes the full required low-level op closure for each measured command.
-  - Any missing-op denial fails the owning script and corresponding test.
-  Status (2026-02-20):
-  - Done via `/Users/corbensorenson/Documents/genesisCode/scripts/lib/gcpm_caps_fixture.sh`.
-  - Wired into `/Users/corbensorenson/Documents/genesisCode/scripts/check_hot_path_budgets.sh` and `/Users/corbensorenson/Documents/genesisCode/scripts/check_ai_iteration_slo.sh`.
-
-## P1 - CI, Performance, and Hardware Coverage
-
-- [x] P1.1 Close CI profile coverage gap for full selfhost/parity checks on PRs.
-  Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:35` maps PRs to `standard` profile; `full` runs only schedule/manual.
-  - Full-only checks are currently deferred from most PRs:
-    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:191`-`192` (`selfhost_strict_golden.sh`)
-    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:215`-`218` (WASM cross-host determinism)
-    - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:229`-`232` (web wasm smoke)
-  Acceptance:
-  - Add a required PR lane that exercises full-profile selfhost golden + wasm determinism (can be sharded/targeted).
-  - Keep nightly full sweep, but prevent PR merge without at least one strict full-equivalence gate.
-  Status (2026-02-20):
-  - Done by adding `pr_strict_equivalence_gate` in `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml`, executed on every `pull_request`.
-  - The lane now enforces both `bash scripts/selfhost_strict_golden.sh` and `node scripts/wasm_cross_host_determinism.mjs`.
-  - Coverage guard added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/ci_workflow_coverage.rs`.
-
-- [x] P1.2 Add device-backed GPU compute benchmark enforcement in CI.
-  Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_runtime_bench/src/bench_gpu_compute.rs:57`-`91` defaults to deterministic fallback bridge unless `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD` is set.
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh:57` records backend but does not require `device-bridge`.
-  Acceptance:
-  - Add dedicated GPU lane with `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD` configured.
-  - Enforce `gpu_compute_backend == "device-bridge"` in that lane.
-  - Maintain separate budgets for fallback and real-device backends.
-  Status (2026-02-20):
-  - Done by adding `gpu_device_microbench` in `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml` on dedicated `runs-on: [self-hosted, linux, x64, gpu]` with required `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD`.
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh` now supports backend requirement enforcement (`GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND`) and separate device/fallback budgets.
-  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/runtime_microbench_gpu_policy.rs` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/ci_workflow_coverage.rs`.
-
-- [x] P1.3 Harden disk-headroom handling to avoid avoidable SLO/perf flakiness.
-  Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:8` hard-codes 1 GiB default minimum and `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:65`-`68` hard-fails immediately.
-  - During this pass, health/profile runs failed repeatedly near the threshold until manual `scripts/reclaim_build_space.sh --safe`.
-  Acceptance:
-  - Auto-attempt `reclaim_build_space.sh --safe` once before hard failure.
-  - Emit pre/post free-space telemetry.
-  - Keep strict fail for CI only after auto-reclaim retry fails.
-  Status (2026-02-20):
-  - Done in `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh` with one-pass safe reclaim retry, pre/post telemetry, and strict-mode controls (`--strict` / `GENESIS_DISK_STRICT_MODE`).
-  - Regression coverage added in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs` (`disk_headroom_strict_and_non_strict_modes_behave_as_expected`).
-
-- [x] P1.4 Tighten source-size budgets and split oversized production modules for AI-first editing.
-  Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:5` sets `rust_max_lines = 4700`.
-  - Current production file sizes from this pass:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` = 4599 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` = 2538 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` = 2041 lines
-  Acceptance:
-  - Reduce Rust budget target to AI-editable limits (e.g., <=2200, then <=1600).
-  - Split top offenders into focused modules with stable interfaces.
-  - Add per-file ownership/comments and contract tests to keep decomposition safe.
-  Status (2026-02-20):
-  - Done by enforcing `rust_max_lines = 2200` in `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml`.
-  - Split `stage2_wasm` helpers/tests into focused modules:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/planner_helpers.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/tests/mod.rs`
-  - Split `gc_obligations` tests out of the production unit:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/tests/mod.rs`
-  - Added module-ownership comments at split boundaries in:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/planner_helpers.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs`
-  - Verified by:
-    - `cargo test -p gc_opt --quiet`
-    - `cargo test -p gc_obligations --quiet`
-    - `bash scripts/check_source_size_budget.sh`
-  - Resulting top production file sizes now:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` = 2044 lines
+  - `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:5` sets Rust max lines to 2200 and `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:10` sets `.gc` max lines to 1800.
+  - Current production sizes from this pass:
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` = 2048 lines
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` = 1991 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/lib.rs` = 1788 lines
-
-## P2 - AI-First Architecture and Drift Control
-
-- [x] P2.1 Remove duplicated Rust/selfhost command program builders to prevent semantic drift.
-  Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:24`-`182` and `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs:183`+ duplicate large command construction logic across Rust and selfhost branches.
-  - Similar frontend branching exists in `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_gc.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_refs.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_sync.rs`, and `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_vcs.rs`.
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_cap_vcs_low.rs` = 1902 lines
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_cap_pkg_low.rs` = 1852 lines
+    - `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc` = 1700 lines
   Acceptance:
-  - Define one command-contract descriptor layer used by both parity and selfhost execution paths.
-  - Program hash/kind/log-op derivation comes from shared descriptors, not duplicated branches.
-  - Add drift tests asserting descriptor parity between execution backends.
-  Status (2026-02-20):
-  - Added shared command-contract descriptor modules:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/gc_contract.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/refs_contract.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/sync_contract.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/vcs_contract.rs`
-  - Wired command groups to shared descriptors for kind/log-op derivation in:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_gc.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_refs.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_sync.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_vcs.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cmd_pkg.rs` (existing `pkg_contract` parity assertions preserved)
-  - Added descriptor drift regressions in:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/shell_gate_regressions.rs`
-  - Added unit contract uniqueness/stability tests in each contract module.
+  - Reduce budget targets to AI-editable levels (Rust <= 1600, `.gc` <= 1200) with staged rollout.
+  - Split listed large files into focused modules with stable interfaces and ownership boundaries.
+  - Add regression checks to prevent monolith regrowth.
+
+- [ ] P2.2 Publish a full CLI JSON schema registry for non-gcpm commands (agent-safe contracts).
+  Evidence:
+  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md:177`-`183` documents only a generic envelope (`genesis/<command>-v0.2`) without per-command field contracts.
+  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_JSON_SCHEMAS_v0.1.md` exists for gcpm, but no equivalent schema index exists for `store/*`, `refs/*`, `sync/*`, `gc/*`, `vcs/*`, `eval`, `run`, `replay`, etc.
+  Acceptance:
+  - Add `docs/spec/CLI_JSON_SCHEMAS_v0.1.md` (or equivalent split docs) covering every command kind and required/optional `data` fields.
+  - Add conformance tests that assert each command’s emitted JSON matches documented schema (including error envelope variants).
+  - Keep schema IDs stable and versioned to support autonomous agent planning.
 
 ## Execution Order (Recommended)
 
-1. P0.3 -> P0.4 -> P0.6
-2. P0.5 -> P1.3
-3. P0.1 -> P0.2 -> P2.1
-4. P1.1 -> P1.2 -> P1.4
+1. P0.1 -> P0.2 -> P0.3
+2. P1.1 -> P1.2
+3. P2.1 -> P2.2

@@ -2,21 +2,19 @@ use super::*;
 
 pub(super) fn cmd_keygen(cli: &Cli, out: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
-    let out_buf = match frontend {
-        gc_obligations::CoreformFrontend::Rust => out.to_path_buf(),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [(
-                    TermOrdKey(Term::symbol(":out")),
-                    Term::Str(out.display().to_string()),
-                )]
-                .into_iter()
-                .collect(),
-            );
-            let planned =
-                selfhost_plan_request_map(cli, "core/cli::keygen-request", req, "keygen")?;
-            PathBuf::from(planned_required_str(&planned, ":out", "keygen")?)
-        }
+    let out_buf = if frontend_is_rust(&frontend) {
+        out.to_path_buf()
+    } else {
+        let req = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":out")),
+                Term::Str(out.display().to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let planned = selfhost_plan_request_map(cli, "core/cli::keygen-request", req, "keygen")?;
+        PathBuf::from(planned_required_str(&planned, ":out", "keygen")?)
     };
     let out = out_buf.as_path();
 
@@ -53,48 +51,47 @@ pub(super) fn cmd_sign(
     signatures: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
-    let (pkg_buf, key_path_buf, acceptance_buf, signatures_buf) = match frontend {
-        gc_obligations::CoreformFrontend::Rust => (
+    let (pkg_buf, key_path_buf, acceptance_buf, signatures_buf) = if frontend_is_rust(&frontend) {
+        (
             pkg.to_path_buf(),
             key_path.to_path_buf(),
             acceptance.map(|s| s.to_string()),
             signatures.map(Path::to_path_buf),
-        ),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":pkg")),
-                        Term::Str(pkg.display().to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":key")),
-                        Term::Str(key_path.display().to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":acceptance")),
-                        acceptance
-                            .map(|s| Term::Str(s.to_string()))
-                            .unwrap_or(Term::Nil),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":signatures")),
-                        signatures
-                            .map(|p| Term::Str(p.display().to_string()))
-                            .unwrap_or(Term::Nil),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(cli, "core/cli::sign-request", req, "sign")?;
-            (
-                PathBuf::from(planned_required_str(&planned, ":pkg", "sign")?),
-                PathBuf::from(planned_required_str(&planned, ":key", "sign")?),
-                planned_optional_str(&planned, ":acceptance", "sign")?,
-                planned_optional_str(&planned, ":signatures", "sign")?.map(PathBuf::from),
-            )
-        }
+        )
+    } else {
+        let req = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":pkg")),
+                    Term::Str(pkg.display().to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":key")),
+                    Term::Str(key_path.display().to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":acceptance")),
+                    acceptance
+                        .map(|s| Term::Str(s.to_string()))
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":signatures")),
+                    signatures
+                        .map(|p| Term::Str(p.display().to_string()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let planned = selfhost_plan_request_map(cli, "core/cli::sign-request", req, "sign")?;
+        (
+            PathBuf::from(planned_required_str(&planned, ":pkg", "sign")?),
+            PathBuf::from(planned_required_str(&planned, ":key", "sign")?),
+            planned_optional_str(&planned, ":acceptance", "sign")?,
+            planned_optional_str(&planned, ":signatures", "sign")?.map(PathBuf::from),
+        )
     };
     let pkg = pkg_buf.as_path();
     let key_path = key_path_buf.as_path();
@@ -180,29 +177,28 @@ pub(super) fn cmd_sign(
 
 pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
-    let pkg_buf = match frontend {
-        gc_obligations::CoreformFrontend::Rust => pkg.to_path_buf(),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
-            let req = Term::Map(
-                [(
-                    TermOrdKey(Term::symbol(":pkg")),
-                    Term::Str(pkg.display().to_string()),
-                )]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(
-                cli,
-                "core/cli::transparency-verify-request",
-                req,
-                "transparency-verify",
-            )?;
-            PathBuf::from(planned_required_str(
-                &planned,
-                ":pkg",
-                "transparency-verify",
-            )?)
-        }
+    let pkg_buf = if frontend_is_rust(&frontend) {
+        pkg.to_path_buf()
+    } else {
+        let req = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":pkg")),
+                Term::Str(pkg.display().to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let planned = selfhost_plan_request_map(
+            cli,
+            "core/cli::transparency-verify-request",
+            req,
+            "transparency-verify",
+        )?;
+        PathBuf::from(planned_required_str(
+            &planned,
+            ":pkg",
+            "transparency-verify",
+        )?)
     };
     let pkg = pkg_buf.as_path();
 
@@ -535,15 +531,16 @@ pub(super) fn cmd_verify(
     scan_store: bool,
 ) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
-    let (pkg_buf, acceptance_buf, policy_buf, signatures_buf, scan_store) = match frontend {
-        gc_obligations::CoreformFrontend::Rust => (
-            pkg.to_path_buf(),
-            acceptance.map(|s| s.to_string()),
-            policy.map(Path::to_path_buf),
-            signatures.map(Path::to_path_buf),
-            scan_store,
-        ),
-        gc_obligations::CoreformFrontend::Selfhost(_) => {
+    let (pkg_buf, acceptance_buf, policy_buf, signatures_buf, scan_store) =
+        if frontend_is_rust(&frontend) {
+            (
+                pkg.to_path_buf(),
+                acceptance.map(|s| s.to_string()),
+                policy.map(Path::to_path_buf),
+                signatures.map(Path::to_path_buf),
+                scan_store,
+            )
+        } else {
             let req = Term::Map(
                 [
                     (
@@ -585,8 +582,7 @@ pub(super) fn cmd_verify(
                 planned_optional_str(&planned, ":signatures", "verify")?.map(PathBuf::from),
                 planned_required_bool(&planned, ":scan-store", "verify")?,
             )
-        }
-    };
+        };
     let pkg = pkg_buf.as_path();
     let acceptance = acceptance_buf.as_deref();
     let policy = policy_buf.as_deref();

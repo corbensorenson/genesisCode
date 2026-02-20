@@ -102,8 +102,9 @@ pub fn run_gpu_compute_submit(cfg: &BenchConfig) -> Result<(u128, String)> {
     (fn (x) (core/effect::pure x))))
 bench/prog
 "#;
-    let forms = canonicalize_module(parse_module(src).context("parse gpu compute benchmark module")?)
-        .context("canonicalize gpu compute benchmark module")?;
+    let forms =
+        canonicalize_module(parse_module(src).context("parse gpu compute benchmark module")?)
+            .context("canonicalize gpu compute benchmark module")?;
     let compiled = compile_module(&forms).context("compile gpu compute benchmark module")?;
     let program_hash = hash_module(&forms);
 

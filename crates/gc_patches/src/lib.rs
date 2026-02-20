@@ -7,8 +7,8 @@ use gc_coreform::{
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value};
 use gc_obligations::{
-    CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, default_coreform_frontend,
-    pack, parse_canonicalize_module_source_with_frontend,
+    CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, coreform_frontend_is_rust,
+    default_coreform_frontend, pack, parse_canonicalize_module_source_with_frontend,
     test_package_with_step_limit_and_frontend,
 };
 use gc_pkg::PackageManifest;
@@ -311,9 +311,15 @@ pub fn apply_patch_with_step_limit_and_frontend(
     let patch_src = std::fs::read_to_string(patch_path)?;
     let patch_term = parse_term(&patch_src).map_err(|e| PatchError::Parse(e.to_string()))?;
 
-    let mut selfhost = match &frontend {
-        CoreformFrontend::Selfhost(cfg) => Some(SelfhostPatchToolchain::init(cfg, mem_limits)?),
-        CoreformFrontend::Rust => None,
+    let mut selfhost = if coreform_frontend_is_rust(&frontend) {
+        None
+    } else {
+        let CoreformFrontend::Selfhost(cfg) = &frontend else {
+            return Err(PatchError::Validate(
+                "invalid frontend dispatch while initializing patch toolchain".to_string(),
+            ));
+        };
+        Some(SelfhostPatchToolchain::init(cfg, mem_limits)?)
     };
 
     // When running under the selfhost CoreForm frontend, validate patch schema via the
@@ -1011,15 +1017,12 @@ fn parse_canonicalize_module_src(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<Vec<Term>, PatchError> {
-    match frontend {
-        CoreformFrontend::Rust => {
-            let forms = parse_module(src).map_err(|e| PatchError::Parse(e.to_string()))?;
-            canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))
-        }
-        CoreformFrontend::Selfhost(_) => {
-            parse_canonicalize_module_source_with_frontend(src, frontend, step_limit, mem_limits)
-                .map_err(|e| PatchError::Parse(e.to_string()))
-        }
+    if coreform_frontend_is_rust(frontend) {
+        let forms = parse_module(src).map_err(|e| PatchError::Parse(e.to_string()))?;
+        canonicalize_module(forms).map_err(|e| PatchError::Validate(e.to_string()))
+    } else {
+        parse_canonicalize_module_source_with_frontend(src, frontend, step_limit, mem_limits)
+            .map_err(|e| PatchError::Parse(e.to_string()))
     }
 }
 

@@ -268,7 +268,8 @@ enum BootstrapRuntimeProfile {
     ParityHarness = 1,
 }
 
-static BOOTSTRAP_RUNTIME_PROFILE: AtomicU8 = AtomicU8::new(BootstrapRuntimeProfile::Production as u8);
+static BOOTSTRAP_RUNTIME_PROFILE: AtomicU8 =
+    AtomicU8::new(BootstrapRuntimeProfile::Production as u8);
 
 pub fn set_bootstrap_runtime_profile_parity_harness(enabled: bool) {
     let value = if enabled {
