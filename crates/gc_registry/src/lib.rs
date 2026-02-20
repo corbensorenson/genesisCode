@@ -46,14 +46,15 @@ pub enum RegistryError {
     Protocol(String),
 }
 
-fn inproc_map() -> &'static Mutex<BTreeMap<String, Arc<dyn InProcRegistry>>> {
-    static MAP: OnceLock<Mutex<BTreeMap<String, Arc<dyn InProcRegistry>>>> = OnceLock::new();
+type InProcRegistryMap = BTreeMap<String, Arc<dyn InProcRegistry>>;
+type InProcRegistryMapGuard = std::sync::MutexGuard<'static, InProcRegistryMap>;
+
+fn inproc_map() -> &'static Mutex<InProcRegistryMap> {
+    static MAP: OnceLock<Mutex<InProcRegistryMap>> = OnceLock::new();
     MAP.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-fn lock_inproc_map()
--> Result<std::sync::MutexGuard<'static, BTreeMap<String, Arc<dyn InProcRegistry>>>, RegistryError>
-{
+fn lock_inproc_map() -> Result<InProcRegistryMapGuard, RegistryError> {
     inproc_map()
         .lock()
         .map_err(|_| RegistryError::Protocol("inproc registry lock poisoned".to_string()))

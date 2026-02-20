@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "host capability dispatch wiring keeps explicit context parameters visible"
+)]
 pub(super) fn capability_gc_gpk_low(
     op_eff: &str,
     payload: &Term,

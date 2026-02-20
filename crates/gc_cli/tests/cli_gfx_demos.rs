@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 
+mod support;
+
 fn demo_file(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/gfx_demos")
@@ -11,7 +13,11 @@ fn demo_file(name: &str) -> PathBuf {
 
 #[test]
 fn eval_ui_app_demo_succeeds() {
+    let td = tempfile::tempdir().unwrap();
+    let artifact = support::copy_repo_toolchain_artifact(td.path());
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["eval"])
         .arg(demo_file("ui_app.gc"))
         .assert()
@@ -21,7 +27,11 @@ fn eval_ui_app_demo_succeeds() {
 
 #[test]
 fn eval_scene3d_demo_succeeds() {
+    let td = tempfile::tempdir().unwrap();
+    let artifact = support::copy_repo_toolchain_artifact(td.path());
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["eval"])
         .arg(demo_file("scene3d.gc"))
         .assert()
@@ -31,7 +41,11 @@ fn eval_scene3d_demo_succeeds() {
 
 #[test]
 fn eval_hybrid_web_demo_succeeds() {
+    let td = tempfile::tempdir().unwrap();
+    let artifact = support::copy_repo_toolchain_artifact(td.path());
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["eval"])
         .arg(demo_file("hybrid_web.gc"))
         .assert()

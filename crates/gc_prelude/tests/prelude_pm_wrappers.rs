@@ -55,7 +55,7 @@ fn pm_wrappers_route_to_pkg_caps_and_enforce_strict_defaults() {
             .expect("lock")
             .clone(),
     );
-    assert_eq!(lock.op, "core/pkg::lock");
+    assert_eq!(lock.op, "core/pkg-low::lock");
     assert_eq!(payload_flag(&lock, ":strict"), Some(true));
 
     let update = get_req(
@@ -63,7 +63,7 @@ fn pm_wrappers_route_to_pkg_caps_and_enforce_strict_defaults() {
             .expect("update")
             .clone(),
     );
-    assert_eq!(update.op, "core/pkg::update");
+    assert_eq!(update.op, "core/pkg-low::update");
     assert_eq!(payload_flag(&update, ":strict"), Some(true));
 
     let install = get_req(
@@ -71,7 +71,7 @@ fn pm_wrappers_route_to_pkg_caps_and_enforce_strict_defaults() {
             .expect("install")
             .clone(),
     );
-    assert_eq!(install.op, "core/pkg::install");
+    assert_eq!(install.op, "core/pkg-low::install");
     assert_eq!(payload_flag(&install, ":strict"), Some(true));
     assert_eq!(payload_flag(&install, ":frozen"), Some(true));
 
@@ -80,7 +80,7 @@ fn pm_wrappers_route_to_pkg_caps_and_enforce_strict_defaults() {
             .expect("verify")
             .clone(),
     );
-    assert_eq!(verify.op, "core/pkg::verify");
+    assert_eq!(verify.op, "core/pkg-low::verify");
     assert_eq!(payload_flag(&verify, ":strict"), Some(true));
 
     let publish = get_req(
@@ -88,7 +88,7 @@ fn pm_wrappers_route_to_pkg_caps_and_enforce_strict_defaults() {
             .expect("publish")
             .clone(),
     );
-    assert_eq!(publish.op, "core/pkg::publish");
+    assert_eq!(publish.op, "core/pkg-low::publish");
     let Term::Map(pm) = publish.payload else {
         panic!("expected publish payload map");
     };

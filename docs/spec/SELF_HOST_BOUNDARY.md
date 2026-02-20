@@ -40,6 +40,11 @@ expand in Rust beyond existing TCB-A crates during cutover.
 Approved Rust host-side modules (v0.2):
 - `crates/gc_effects/src/lib.rs`
 - `crates/gc_effects/src/runner.rs`
+- `crates/gc_effects/src/runner_capability_dispatch.rs`
+- `crates/gc_effects/src/runner_cap_*.rs`
+- `crates/gc_effects/src/runner_*_host.rs`
+- `crates/gc_effects/src/runner_remote_ops.rs`
+- `crates/gc_effects/src/runner_response_budget.rs`
 - `crates/gc_effects/src/store.rs`
 - `crates/gc_effects/src/refs.rs`
 - `crates/gc_effects/src/policy.rs`
@@ -75,7 +80,7 @@ CI enforcement:
 - `scripts/check_prelude_capability_coverage.sh` fails when a shipped
   `prelude/modules/10_gfx.gc`, `prelude/modules/11_gpu_compute.gc`, or
   `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by
-  `crates/gc_effects/src/runner.rs`.
+  `crates/gc_effects/src/runner_capability_dispatch.rs`.
 
 ## Self-Host Definition (v0.2)
 

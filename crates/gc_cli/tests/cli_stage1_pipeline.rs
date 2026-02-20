@@ -8,6 +8,15 @@ fn build_selfhost_artifact(dir: &std::path::Path) -> std::path::PathBuf {
     support::copy_repo_toolchain_artifact(dir)
 }
 
+fn genesis_cmd() -> assert_cmd::Command {
+    let mut cmd = cargo_bin_cmd!("genesis");
+    cmd.env(
+        "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
+        support::repo_toolchain_artifact(),
+    );
+    cmd
+}
+
 #[test]
 fn eval_stage1_pipeline_and_gate_match_baseline_for_pure_module() {
     let dir = tempdir().unwrap();
@@ -21,14 +30,14 @@ fn eval_stage1_pipeline_and_gate_match_baseline_for_pure_module() {
     )
     .unwrap();
 
-    let base = cargo_bin_cmd!("genesis")
+    let base = genesis_cmd()
         .args(["eval", file.to_str().unwrap()])
         .assert()
         .success()
         .get_output()
         .stdout
         .clone();
-    let stage1 = cargo_bin_cmd!("genesis")
+    let stage1 = genesis_cmd()
         .args([
             "eval",
             file.to_str().unwrap(),
@@ -61,7 +70,7 @@ fn eval_stage1_gate_fails_for_effect_program() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args(["eval", file.to_str().unwrap(), "--stage1-gate"])
         .assert()
         .failure()
@@ -83,7 +92,7 @@ fn optimize_stage1_gate_fails_for_effect_program() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args(["optimize", file.to_str().unwrap(), "--stage1-gate"])
         .assert()
         .failure()
@@ -111,7 +120,7 @@ fn optimize_selfhost_engine_matches_rust_stage1_output() {
         .get_output()
         .stdout
         .clone();
-    let selfhost = cargo_bin_cmd!("genesis")
+    let selfhost = genesis_cmd()
         .args([
             "--selfhost-artifact",
             artifact.to_str().unwrap(),
@@ -158,7 +167,7 @@ fn eval_selfhost_engine_stage1_gate_matches_rust() {
         .get_output()
         .stdout
         .clone();
-    let selfhost = cargo_bin_cmd!("genesis")
+    let selfhost = genesis_cmd()
         .args([
             "--selfhost-artifact",
             artifact.to_str().unwrap(),
@@ -193,7 +202,7 @@ fn optimize_stage2_gate_and_emit_wasm_succeeds_for_scalar_pure_module() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args([
             "optimize",
             file.to_str().unwrap(),
@@ -221,14 +230,14 @@ fn eval_stage2_gate_matches_baseline_for_scalar_pure_module() {
     )
     .unwrap();
 
-    let base = cargo_bin_cmd!("genesis")
+    let base = genesis_cmd()
         .args(["eval", file.to_str().unwrap()])
         .assert()
         .success()
         .get_output()
         .stdout
         .clone();
-    let gated = cargo_bin_cmd!("genesis")
+    let gated = genesis_cmd()
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -256,7 +265,7 @@ fn eval_stage2_gate_rejects_unsupported_module() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .failure()
@@ -280,7 +289,7 @@ fn eval_stage2_gate_uses_stage1_transformed_input_for_stage2_report() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -305,7 +314,7 @@ fn eval_stage2_gate_reports_string_value_kind_in_json() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -331,7 +340,7 @@ fn eval_stage2_gate_reports_bytes_value_kind_in_json() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -369,7 +378,7 @@ fn eval_stage2_gate_validates_string_bytes_concat_len_module() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -398,7 +407,7 @@ fn eval_stage2_gate_validates_branch_sensitive_string_bytes_len_prims() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -427,7 +436,7 @@ fn eval_stage2_gate_validates_branch_sensitive_string_bytes_len_wrappers() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -464,7 +473,7 @@ fn eval_stage2_gate_validates_nested_let_branch_sensitive_len_wrappers() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -497,7 +506,7 @@ fn eval_stage2_gate_validates_int_to_str_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -533,7 +542,7 @@ fn eval_stage2_gate_validates_sym_string_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -569,7 +578,7 @@ fn eval_stage2_gate_validates_utf8_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -605,7 +614,7 @@ fn eval_stage2_gate_validates_hex_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -642,7 +651,7 @@ fn eval_stage2_gate_validates_str_repeat_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -680,7 +689,7 @@ fn eval_stage2_gate_validates_join_wrappers_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -717,7 +726,7 @@ fn eval_stage2_gate_validates_join_let_bound_vector_aliases() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -754,7 +763,7 @@ fn eval_stage2_gate_validates_vec_get_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -790,7 +799,7 @@ fn eval_stage2_gate_validates_vec_len_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -839,7 +848,7 @@ fn eval_stage2_gate_validates_let_bound_vector_aliases() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -881,7 +890,7 @@ fn eval_stage2_gate_validates_map_wrappers_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -922,7 +931,7 @@ fn eval_stage2_gate_validates_map_put_merge_constant_composition() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -959,7 +968,7 @@ fn eval_stage2_gate_validates_collection_constant_composition_on_alias_sources()
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -990,7 +999,7 @@ fn eval_stage2_gate_validates_defs_only_collection_composition_module() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1019,7 +1028,7 @@ fn eval_stage2_gate_validates_defs_only_if_selected_collection_module() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1050,7 +1059,7 @@ fn eval_stage2_gate_validates_defs_only_if_selected_collection_module_via_prim_c
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1083,7 +1092,7 @@ fn eval_stage2_gate_validates_defs_only_if_selected_collection_module_via_def_co
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1130,7 +1139,7 @@ fn eval_stage2_gate_validates_map_let_bound_aliases() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1189,7 +1198,7 @@ fn eval_stage2_gate_validates_let_bound_collection_alias_chains() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1225,7 +1234,7 @@ fn eval_stage2_gate_validates_generic_let_collection_alias_flow() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1273,7 +1282,7 @@ fn eval_stage2_gate_validates_def_bound_collection_alias_chains() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1328,7 +1337,7 @@ fn eval_stage2_gate_validates_vec_push_constant_composition() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1365,7 +1374,7 @@ fn eval_stage2_gate_validates_bytes_get_wrapper_branch_sensitive_values() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1401,7 +1410,7 @@ fn eval_stage2_gate_validates_coreform_escape_wrapper_branch_sensitive_values() 
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1430,7 +1439,7 @@ fn eval_stage2_gate_validates_branch_sensitive_string_bytes_concat_prims() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1469,7 +1478,7 @@ fn eval_stage2_gate_validates_nested_let_branch_sensitive_concat_wrappers() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1507,7 +1516,7 @@ fn eval_stage2_gate_validates_branch_sensitive_concat_both_if_sides() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1545,7 +1554,7 @@ fn eval_stage2_gate_validates_branch_sensitive_concat_wrappers_both_if_sides() {
     )
     .unwrap();
 
-    let out = cargo_bin_cmd!("genesis")
+    let out = genesis_cmd()
         .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .success()
@@ -1574,7 +1583,7 @@ fn optimize_stage2_gate_rejects_unsupported_module() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args(["optimize", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
         .failure()
@@ -1600,7 +1609,7 @@ fn optimize_emit_wasm_fails_for_unsupported_module() {
     )
     .unwrap();
 
-    cargo_bin_cmd!("genesis")
+    genesis_cmd()
         .args([
             "optimize",
             file.to_str().unwrap(),

@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term};
 
+mod support;
+
 fn fixture(path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/spec")
@@ -82,6 +84,7 @@ fn test_json_output_is_valid_and_exit_code_is_stable() {
 fn optimize_json_includes_egg_stats() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
+    let artifact = support::copy_repo_toolchain_artifact(dir);
 
     let prog = dir.join("prog.gc");
     fs::write(
@@ -94,6 +97,8 @@ fn optimize_json_includes_egg_stats() {
     .unwrap();
 
     let out = cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["--json", "optimize"])
         .arg(&prog)
         .assert()
@@ -243,6 +248,7 @@ fn translation_validation_artifact_includes_optimizer_summary() {
 fn run_denied_capability_has_exit_code_41() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
+    let artifact = support::copy_repo_toolchain_artifact(dir);
 
     let prog = dir.join("prog.gc");
     fs::write(
@@ -265,6 +271,8 @@ fn run_denied_capability_has_exit_code_41() {
     let log = dir.join("out.gclog");
 
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["run"])
         .arg(&prog)
         .args(["--caps"])
@@ -281,6 +289,7 @@ fn run_denied_capability_has_exit_code_41() {
 #[test]
 fn fmt_check_failure_has_exit_code_11() {
     let td = tempfile::tempdir().unwrap();
+    let artifact = support::copy_repo_toolchain_artifact(td.path());
     let p = td.path().join("x.gc");
     fs::write(
         &p,
@@ -292,6 +301,8 @@ fn fmt_check_failure_has_exit_code_11() {
     .unwrap();
 
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["fmt", "--check"])
         .arg(&p)
         .assert()

@@ -5,6 +5,8 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey, parse_term};
 use predicates::prelude::*;
 
+mod support;
+
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
@@ -69,6 +71,7 @@ fn acceptance_obligation_artifact(acc: &Term, name: &str) -> Option<String> {
 #[test]
 fn fmt_check_is_idempotent_on_fixture() {
     let td = tempfile::tempdir().unwrap();
+    let artifact = support::copy_repo_toolchain_artifact(td.path());
     let inp = fixture("pkg_basic/basic.gc");
     let out = td.path().join("basic.gc");
     fs::copy(&inp, &out).unwrap();
@@ -76,12 +79,16 @@ fn fmt_check_is_idempotent_on_fixture() {
     // Fixture sources aren't required to be canonical; ensure `fmt` makes them canonical
     // and `fmt --check` is idempotent after that.
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["fmt"])
         .arg(&out)
         .assert()
         .success();
 
     cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["fmt", "--check"])
         .arg(&out)
         .assert()
@@ -285,6 +292,7 @@ fn pack_is_stable_independent_of_invocation_path() {
 fn run_and_replay_roundtrip_effect_program() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
+    let artifact = support::copy_repo_toolchain_artifact(dir);
 
     let prog = dir.join("prog.gc");
     fs::write(
@@ -307,6 +315,8 @@ fn run_and_replay_roundtrip_effect_program() {
     let log = dir.join("out.gclog");
 
     let run_out = cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["run"])
         .arg(&prog)
         .args(["--caps"])
@@ -320,6 +330,8 @@ fn run_and_replay_roundtrip_effect_program() {
         .clone();
 
     let replay_out = cargo_bin_cmd!("genesis")
+        .args(["--selfhost-artifact"])
+        .arg(&artifact)
         .args(["replay"])
         .arg(&prog)
         .args(["--log"])

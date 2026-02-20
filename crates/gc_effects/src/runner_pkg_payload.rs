@@ -98,13 +98,16 @@ pub(crate) fn payload_pkg_strategy(
         None | Some(Term::Nil) => Ok(None),
         Some(Term::Symbol(s)) => {
             let raw = s.trim_start_matches(':');
-            gc_pkg::ResolutionStrategy::from_str(raw)
+            raw.parse::<gc_pkg::ResolutionStrategy>()
                 .map(Some)
-                .ok_or_else(|| format!(":strategy must be :pinned|:track-ref|:tag-policy, got {s}"))
+                .map_err(|_| {
+                    format!(":strategy must be :pinned|:track-ref|:tag-policy, got {s}")
+                })
         }
-        Some(Term::Str(s)) => gc_pkg::ResolutionStrategy::from_str(s)
+        Some(Term::Str(s)) => s
+            .parse::<gc_pkg::ResolutionStrategy>()
             .map(Some)
-            .ok_or_else(|| format!(":strategy must be pinned|track-ref|tag-policy, got {s}")),
+            .map_err(|_| format!(":strategy must be pinned|track-ref|tag-policy, got {s}")),
         Some(other) => Err(format!(
             ":strategy must be symbol/string or nil, got {}",
             print_term(other)

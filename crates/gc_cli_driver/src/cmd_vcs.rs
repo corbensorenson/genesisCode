@@ -945,13 +945,15 @@ pub(crate) fn normalize_pkg_add_strategy(
     tag_policy: Option<&str>,
 ) -> Result<(Option<String>, Option<String>), CliError> {
     let strategy = match strategy {
-        Some(raw) => gc_pkg::ResolutionStrategy::from_str(raw).ok_or_else(|| {
-            cli_err(
-                EX_PARSE,
-                "pkg/spec",
-                format!("invalid --strategy `{raw}` (expected pinned|track-ref|tag-policy)"),
-            )
-        })?,
+        Some(raw) => raw
+            .parse::<gc_pkg::ResolutionStrategy>()
+            .map_err(|_| {
+                cli_err(
+                    EX_PARSE,
+                    "pkg/spec",
+                    format!("invalid --strategy `{raw}` (expected pinned|track-ref|tag-policy)"),
+                )
+            })?,
         None => gc_pkg::infer_strategy(selector),
     };
 

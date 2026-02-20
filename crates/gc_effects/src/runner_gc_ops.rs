@@ -155,6 +155,10 @@ fn gpk_ref_plan_from_term(t: &Term) -> (Vec<String>, Vec<String>) {
     (refs, parents)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "gc planning receives explicit inputs to keep deterministic source accounting visible"
+)]
 pub(super) fn gc_build_sources(
     refs: Option<&RefsDb>,
     base_dir: &Path,

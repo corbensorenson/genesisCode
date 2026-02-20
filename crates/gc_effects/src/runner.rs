@@ -165,9 +165,9 @@ pub fn run(
     let mut cur = program;
     let mut task_budget_state = TaskBudgetState::default();
     let mut task_runtime = TaskRuntime::default();
-    let mut gfx_runtime = GfxHostRuntime::default();
-    let mut gpu_runtime = GpuHostRuntime::default();
-    let mut editor_runtime = EditorHostRuntime::default();
+    let mut gfx_runtime = GfxHostRuntime;
+    let mut gpu_runtime = GpuHostRuntime;
+    let mut editor_runtime = EditorHostRuntime;
     let mut artifact_budget_state = ArtifactBudgetState::default();
 
     loop {

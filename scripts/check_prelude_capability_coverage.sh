@@ -11,7 +11,7 @@ PRELUDE_FILES=(
   "prelude/modules/11_gpu_compute.gc"
   "prelude/modules/20_editor.gc"
 )
-RUNNER_FILE="crates/gc_effects/src/runner.rs"
+RUNNER_FILE="crates/gc_effects/src/runner_capability_dispatch.rs"
 
 for f in "${PRELUDE_FILES[@]}"; do
   if [[ ! -f "$f" ]]; then
@@ -47,7 +47,7 @@ rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/comp
   | sort -u >"$RUNNER_OPS"
 
 if [[ ! -s "$RUNNER_OPS" ]]; then
-  echo "prelude-capability-coverage: no gfx/gpu-compute/editor ops found in runner dispatch"
+  echo "prelude-capability-coverage: no gfx/gpu-compute/editor ops found in capability dispatch"
   exit 1
 fi
 

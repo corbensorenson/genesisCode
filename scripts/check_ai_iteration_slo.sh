@@ -68,13 +68,13 @@ run_incremental_loop() {
 }
 
 cat > "$TMP_DIR/gcpm_caps.toml" <<'EOF'
-allow = ["core/pkg::init", "core/pkg::lock"]
+allow = ["core/pkg-low::init", "core/pkg-low::lock"]
 
-[op."core/pkg::init"]
+[op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
 
-[op."core/pkg::lock"]
+[op."core/pkg-low::lock"]
 base_dir = "."
 create_dirs = true
 EOF

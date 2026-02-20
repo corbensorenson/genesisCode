@@ -650,7 +650,7 @@
       (fn (policy)
         (fn (registry-default)
           (
-            ((core/effect::perform (quote core/pkg::init))
+            ((core/effect::perform (quote core/pkg-low::init))
               {
                 :lock lock
                 :policy policy
@@ -665,7 +665,7 @@
         (fn (update-policy)
           (fn (registry)
             (
-              ((core/effect::perform (quote core/pkg::add))
+              ((core/effect::perform (quote core/pkg-low::add))
                 {
                   :lock lock
                   :name name
@@ -676,23 +676,23 @@
 
 (def core/pkg::list
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::list)) {:lock lock})
+    (((core/effect::perform (quote core/pkg-low::list)) {:lock lock})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pkg::info
   (fn (lock)
     (fn (name)
-      (((core/effect::perform (quote core/pkg::info)) {:lock lock :name name})
+      (((core/effect::perform (quote core/pkg-low::info)) {:lock lock :name name})
         (fn (resp) (core/effect::pure resp))))))
 
 (def core/pkg::lock
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::lock)) {:lock lock})
+    (((core/effect::perform (quote core/pkg-low::lock)) {:lock lock})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pkg::update
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::update)) {:lock lock})
+    (((core/effect::perform (quote core/pkg-low::update)) {:lock lock})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pkg::install
@@ -700,7 +700,7 @@
     (fn (frozen)
       (fn (strict)
         (
-          ((core/effect::perform (quote core/pkg::install))
+          ((core/effect::perform (quote core/pkg-low::install))
             {
               :frozen frozen
               :lock lock
@@ -710,12 +710,12 @@
 (def core/pkg::verify
   (fn (lock)
     (fn (strict)
-      (((core/effect::perform (quote core/pkg::verify)) {:lock lock :strict strict})
+      (((core/effect::perform (quote core/pkg-low::verify)) {:lock lock :strict strict})
         (fn (resp) (core/effect::pure resp))))))
 
 (def core/pkg::snapshot
   (fn (pkg-path)
-    (((core/effect::perform (quote core/pkg::snapshot)) {:pkg pkg-path})
+    (((core/effect::perform (quote core/pkg-low::snapshot)) {:pkg pkg-path})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pm::init core/pkg::init)
@@ -730,19 +730,19 @@
 
 (def core/pm::lock
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::lock)) {:lock lock :strict true})
+    (((core/effect::perform (quote core/pkg-low::lock)) {:lock lock :strict true})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pm::update
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::update)) {:lock lock :strict true})
+    (((core/effect::perform (quote core/pkg-low::update)) {:lock lock :strict true})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pm::install
   (fn (lock)
     (fn (frozen)
       (
-        ((core/effect::perform (quote core/pkg::install))
+        ((core/effect::perform (quote core/pkg-low::install))
           {
             :frozen frozen
             :lock lock
@@ -751,7 +751,7 @@
 
 (def core/pm::verify
   (fn (lock)
-    (((core/effect::perform (quote core/pkg::verify)) {:lock lock :strict true})
+    (((core/effect::perform (quote core/pkg-low::verify)) {:lock lock :strict true})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/pm::publish
@@ -766,7 +766,7 @@
                   ((core/error::make2 "core/pm/missing-policy")
                     "core/pm::publish requires a non-nil policy hash"))
                 (
-                  ((core/effect::perform (quote core/pkg::publish))
+                  ((core/effect::perform (quote core/pkg-low::publish))
                     {
                       :commit commit
                       :depth depth

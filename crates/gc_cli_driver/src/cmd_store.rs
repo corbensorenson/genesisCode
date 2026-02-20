@@ -186,6 +186,10 @@ pub(super) fn cmd_store(
     )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "store command finishing keeps explicit runtime/log/front-end context visible"
+)]
 fn finish_store_command(
     cli: &Cli,
     caps: &Path,
@@ -241,7 +245,7 @@ fn finish_store_command(
     }
 
     // Extract a stable stdout payload.
-    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let (value, value_format) = render_value_for_cli(ctx, &r.value);
     let stdout = if cli.json {
         String::new()
     } else {

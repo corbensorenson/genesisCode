@@ -181,7 +181,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(pkg_init);
-    assert_eq!(req.op, "core/pkg::init");
+    assert_eq!(req.op, "core/pkg-low::init");
 
     let gc_plan = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -735,7 +735,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_list_panel);
-    assert_eq!(req.op, "core/pkg::list");
+    assert_eq!(req.op, "core/pkg-low::list");
 
     let editor_pkg_info_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -744,7 +744,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_info_panel);
-    assert_eq!(req.op, "core/pkg::info");
+    assert_eq!(req.op, "core/pkg-low::info");
 
     let editor_pkg_lock_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -753,7 +753,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_lock_panel);
-    assert_eq!(req.op, "core/pkg::lock");
+    assert_eq!(req.op, "core/pkg-low::lock");
 
     let editor_pkg_update_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -762,7 +762,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_update_panel);
-    assert_eq!(req.op, "core/pkg::update");
+    assert_eq!(req.op, "core/pkg-low::update");
 
     let editor_pkg_install_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -771,7 +771,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_install_panel);
-    assert_eq!(req.op, "core/pkg::install");
+    assert_eq!(req.op, "core/pkg-low::install");
 
     let editor_pkg_verify_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -780,7 +780,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_verify_panel);
-    assert_eq!(req.op, "core/pkg::verify");
+    assert_eq!(req.op, "core/pkg-low::verify");
 
     let editor_pkg_snapshot_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -789,7 +789,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_pkg_snapshot_panel);
-    assert_eq!(req.op, "core/pkg::snapshot");
+    assert_eq!(req.op, "core/pkg-low::snapshot");
 
     let editor_gpk_export_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

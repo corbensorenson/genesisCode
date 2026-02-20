@@ -162,20 +162,28 @@ impl FixedDecimal {
         ))
     }
 
-    pub fn eq(&self, rhs: &Self) -> bool {
-        self.cmp(rhs) == std::cmp::Ordering::Equal
-    }
-
     pub fn lt(&self, rhs: &Self) -> bool {
-        self.cmp(rhs) == std::cmp::Ordering::Less
+        self < rhs
     }
+}
 
-    pub fn cmp(&self, rhs: &Self) -> std::cmp::Ordering {
-        let scale = self.scale.max(rhs.scale);
-        let a = self.unscaled.clone() * ten_pow(scale.saturating_sub(self.scale));
-        let b = rhs.unscaled.clone() * ten_pow(scale.saturating_sub(rhs.scale));
-        a.cmp(&b)
+impl PartialOrd for FixedDecimal {
+    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(rhs))
     }
+}
+
+impl Ord for FixedDecimal {
+    fn cmp(&self, rhs: &Self) -> std::cmp::Ordering {
+        compare_scaled(self, rhs)
+    }
+}
+
+fn compare_scaled(lhs: &FixedDecimal, rhs: &FixedDecimal) -> std::cmp::Ordering {
+    let scale = lhs.scale.max(rhs.scale);
+    let a = lhs.unscaled.clone() * ten_pow(scale.saturating_sub(lhs.scale));
+    let b = rhs.unscaled.clone() * ten_pow(scale.saturating_sub(rhs.scale));
+    a.cmp(&b)
 }
 
 fn normalize(mut unscaled: BigInt, mut scale: u32) -> FixedDecimal {

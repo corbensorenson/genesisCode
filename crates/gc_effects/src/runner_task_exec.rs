@@ -34,10 +34,9 @@ pub(crate) fn execute_task_payload(
     }
     if let Some(ms) = map_field_int_u64(&payload, ":task/sleep-ms")
         .or_else(|| map_field_int_u64(&payload, ":sleep-ms"))
+        && sleep_cancelable(ms, cancel_flag)
     {
-        if sleep_cancelable(ms, cancel_flag) {
-            return TaskOutcome::Cancelled;
-        }
+        return TaskOutcome::Cancelled;
     }
     if cancel_flag.load(Ordering::Acquire) {
         return TaskOutcome::Cancelled;

@@ -91,6 +91,10 @@ pub(super) fn cap_store_has(
     Ok(Value::Data(Term::Map(m)))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "store get path receives shared runner context explicitly"
+)]
 pub(super) fn cap_store_get(
     op: &str,
     payload: &Term,

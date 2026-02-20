@@ -121,6 +121,10 @@ pub(super) fn obligation_stage1_validation(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "translation validation requires explicit package/test/frontend context"
+)]
 pub(super) fn obligation_translation_validation(
     store: &EvidenceStore,
     pkg_dir: &Path,

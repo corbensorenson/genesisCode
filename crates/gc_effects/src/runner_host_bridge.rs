@@ -241,6 +241,10 @@ fn run_wasi_bridge_profile(
 }
 
 #[cfg(not(target_os = "wasi"))]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "bridge process runner requires explicit io/time/resource limits for deterministic envelopes"
+)]
 fn run_bridge_process(
     family: &str,
     op: &str,

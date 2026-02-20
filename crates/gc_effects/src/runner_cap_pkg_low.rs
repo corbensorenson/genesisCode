@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "host capability dispatch wiring keeps explicit context parameters visible"
+)]
 pub(super) fn capability_pkg_low(
     op_eff: &str,
     payload: &Term,
@@ -702,9 +706,9 @@ pub(super) fn capability_pkg_low(
                     let strategy = match rm.get(&TermOrdKey(Term::symbol(":strategy"))) {
                         None | Some(Term::Nil) => None,
                         Some(Term::Symbol(s)) => {
-                            gc_pkg::ResolutionStrategy::from_str(s.trim_start_matches(':'))
+                            s.trim_start_matches(':').parse::<gc_pkg::ResolutionStrategy>().ok()
                         }
-                        Some(Term::Str(s)) => gc_pkg::ResolutionStrategy::from_str(s),
+                        Some(Term::Str(s)) => s.parse::<gc_pkg::ResolutionStrategy>().ok(),
                         _ => {
                             return Ok(mk_error(
                                 error_tok,

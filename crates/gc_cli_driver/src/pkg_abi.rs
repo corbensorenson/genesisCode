@@ -482,37 +482,37 @@ fn meta_optional_str(meta: &Term, key: &str) -> Option<String> {
 }
 
 fn collect_effect_summary_from_type_term(t: &Term, out: &mut TypeEffectSummary) {
-    if let Some(items) = t.as_proper_list() {
-        if !items.is_empty() {
-            if let Term::Symbol(head) = items[0]
-                && head == "Eff"
-                && items.len() == 3
-            {
-                match items[1] {
-                    Term::Vector(xs) => {
-                        for op in xs {
-                            match op {
-                                Term::Symbol(s) => {
-                                    out.ops.insert(s.clone());
-                                }
-                                _ => out.open = true,
+    if let Some(items) = t.as_proper_list()
+        && !items.is_empty()
+    {
+        if let Term::Symbol(head) = items[0]
+            && head == "Eff"
+            && items.len() == 3
+        {
+            match items[1] {
+                Term::Vector(xs) => {
+                    for op in xs {
+                        match op {
+                            Term::Symbol(s) => {
+                                out.ops.insert(s.clone());
                             }
+                            _ => out.open = true,
                         }
                     }
-                    _ => out.open = true,
                 }
-                match items[2] {
-                    Term::Nil => {}
-                    Term::Symbol(_) => out.open = true,
-                    _ => out.open = true,
-                }
-                return;
+                _ => out.open = true,
             }
-            for item in items {
-                collect_effect_summary_from_type_term(item, out);
+            match items[2] {
+                Term::Nil => {}
+                Term::Symbol(_) => out.open = true,
+                _ => out.open = true,
             }
             return;
         }
+        for item in items {
+            collect_effect_summary_from_type_term(item, out);
+        }
+        return;
     }
 
     match t {
@@ -522,7 +522,7 @@ fn collect_effect_summary_from_type_term(t: &Term, out: &mut TypeEffectSummary) 
             }
         }
         Term::Map(m) => {
-            for (_k, v) in m {
+            for v in m.values() {
                 collect_effect_summary_from_type_term(v, out);
             }
         }

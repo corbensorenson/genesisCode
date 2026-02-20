@@ -1,9 +1,23 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use serde_json::Value as JsonValue;
 use std::fs;
+use std::path::{Path, PathBuf};
+
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+}
+
+fn repo_toolchain_artifact() -> PathBuf {
+    repo_root().join("selfhost").join("toolchain.gc")
+}
 
 fn cmd() -> assert_cmd::Command {
-    cargo_bin_cmd!("genesis")
+    let mut cmd = cargo_bin_cmd!("genesis");
+    cmd.env("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT", repo_toolchain_artifact());
+    cmd
 }
 
 #[test]

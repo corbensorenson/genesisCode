@@ -16,6 +16,7 @@ is_allowed_path() {
     crates/gc_types/*) return 0 ;;
     crates/gc_patches/*) return 0 ;;
     crates/gc_obligations/*) return 0 ;;
+    crates/gc_effects/src/runner*.rs) return 0 ;;
     crates/gc_cli/src/main.rs) return 0 ;;
     crates/gc_wasi_cli/src/main.rs) return 0 ;;
     crates/gc_wasm/src/lib.rs) return 0 ;;

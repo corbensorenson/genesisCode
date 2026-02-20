@@ -47,20 +47,24 @@ pub enum ResolutionStrategy {
 }
 
 impl ResolutionStrategy {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "pinned" => Some(Self::Pinned),
-            "track-ref" => Some(Self::TrackRef),
-            "tag-policy" => Some(Self::TagPolicy),
-            _ => None,
-        }
-    }
-
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Pinned => "pinned",
             Self::TrackRef => "track-ref",
             Self::TagPolicy => "tag-policy",
+        }
+    }
+}
+
+impl std::str::FromStr for ResolutionStrategy {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "pinned" => Ok(Self::Pinned),
+            "track-ref" => Ok(Self::TrackRef),
+            "tag-policy" => Ok(Self::TagPolicy),
+            _ => Err(()),
         }
     }
 }
@@ -249,7 +253,11 @@ impl GenesisLock {
                 .as_deref()
                 .and_then(UpdatePolicy::from_str)
                 .unwrap_or(UpdatePolicy::Manual);
-            let strategy = match r.strategy.as_deref().and_then(ResolutionStrategy::from_str) {
+            let strategy = match r
+                .strategy
+                .as_deref()
+                .and_then(|s| s.parse::<ResolutionStrategy>().ok())
+            {
                 Some(s) => s,
                 None => infer_strategy(&r.selector),
             };
@@ -303,9 +311,7 @@ impl GenesisLock {
     }
 
     pub fn to_toml_canonical(&self) -> String {
-        let version = if self.version < 2 && has_v2_requirements(&self.requirements) {
-            2
-        } else if self.version == 0 {
+        let version = if self.version == 0 || (self.version < 2 && has_v2_requirements(&self.requirements)) {
             2
         } else {
             self.version

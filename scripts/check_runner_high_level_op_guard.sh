@@ -6,8 +6,9 @@ export LC_ALL=C
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-RUNNER_FILE="crates/gc_effects/src/runner.rs"
+RUNNER_FILE="crates/gc_effects/src/runner_capability_dispatch.rs"
 ALLOWLIST_FILE="docs/spec/RUNNER_HIGH_LEVEL_OPS_ALLOWLIST_v0.2.txt"
+HELPER_FILE="scripts/lib/capability_dispatch_ops.sh"
 
 if [[ ! -f "$RUNNER_FILE" ]]; then
   echo "runner-high-level-op-guard: missing runner file: $RUNNER_FILE"
@@ -17,6 +18,13 @@ if [[ ! -f "$ALLOWLIST_FILE" ]]; then
   echo "runner-high-level-op-guard: missing allowlist file: $ALLOWLIST_FILE"
   exit 1
 fi
+if [[ ! -f "$HELPER_FILE" ]]; then
+  echo "runner-high-level-op-guard: missing helper file: $HELPER_FILE"
+  exit 1
+fi
+
+# shellcheck source=scripts/lib/capability_dispatch_ops.sh
+source "$HELPER_FILE"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -26,25 +34,10 @@ IMPL_HIGH="$TMP_DIR/impl_high.txt"
 ALLOWLIST_SORTED="$TMP_DIR/allowlist_sorted.txt"
 UNEXPECTED="$TMP_DIR/unexpected.txt"
 
-awk '
-  /^fn call_capability\(/ { in_fn = 1; }
-  in_fn && /match op(_eff)? \{/ { in_match = 1; next; }
-  in_match {
-    if ($0 ~ /^        _[[:space:]]*=>/) {
-      in_match = 0;
-      in_fn = 0;
-    }
-    if ($0 ~ /^        "[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"[[:space:]]*=>/ || $0 ~ /^        "[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"[[:space:]]*$/ || $0 ~ /^        \|[[:space:]]*"[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"/) {
-      line = $0;
-      sub(/^[[:space:]]*\|?[[:space:]]*"/, "", line);
-      sub(/".*$/, "", line);
-      print line;
-    }
-  }
-' "$RUNNER_FILE" | sort -u >"$IMPL_ALL"
+extract_call_capability_ops "$RUNNER_FILE" >"$IMPL_ALL"
 
 if [[ ! -s "$IMPL_ALL" ]]; then
-  echo "runner-high-level-op-guard: no capability ops found in runner dispatch"
+  echo "runner-high-level-op-guard: no capability ops found in capability dispatch"
   exit 1
 fi
 

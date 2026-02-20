@@ -186,7 +186,7 @@ fn poison_patch_schema_apply_replace_node_contract(artifact: &std::path::Path) {
           (fn (op)
             ((core/error::make2 "core/poison") "manifest-apply-update-manifest-op poisoned"))))
     "#;
-    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
+    let poisoned_forms = canonicalize_module(parse_module(poisoned_src).unwrap()).unwrap();
     let poisoned_hash = hash_module(&poisoned_forms);
     patch_mod.insert(
         TermOrdKey(Term::symbol(":source")),

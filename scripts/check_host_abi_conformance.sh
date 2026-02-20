@@ -6,13 +6,20 @@ export LC_ALL=C
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-RUNNER_FILE="crates/gc_effects/src/runner.rs"
+RUNNER_FILES=(
+  "crates/gc_effects/src/runner_capability_dispatch.rs"
+  "crates/gc_effects/src/runner_cap_pkg_low.rs"
+  "crates/gc_effects/src/runner_cap_vcs_low.rs"
+  "crates/gc_effects/src/runner_cap_gc_gpk_low.rs"
+)
 DOC_FILE="docs/spec/HOST_ABI.md"
 
-if [[ ! -f "$RUNNER_FILE" ]]; then
-  echo "host-abi-conformance: missing runner file: $RUNNER_FILE"
-  exit 1
-fi
+for f in "${RUNNER_FILES[@]}"; do
+  if [[ ! -f "$f" ]]; then
+    echo "host-abi-conformance: missing dispatch file: $f"
+    exit 1
+  fi
+done
 if [[ ! -f "$DOC_FILE" ]]; then
   echo "host-abi-conformance: missing doc file: $DOC_FILE"
   exit 1
@@ -25,22 +32,10 @@ IMPL_SORTED="$TMP_DIR/impl_sorted.txt"
 DOC_RAW="$TMP_DIR/doc_raw.txt"
 DOC_SORTED="$TMP_DIR/doc_sorted.txt"
 
-awk '
-  /^fn call_capability\(/ { in_fn = 1; }
-  in_fn && /match op \{/ { in_match = 1; next; }
-  in_match {
-    if ($0 ~ /^        _[[:space:]]*=>/) {
-      in_match = 0;
-      in_fn = 0;
-    }
-    if ($0 ~ /^        "[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"[[:space:]]*=>/ || $0 ~ /^        "[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"[[:space:]]*$/ || $0 ~ /^        \|[[:space:]]*"[[:alnum:]\/:_-]+::[[:alnum:]\/:_-]+"/) {
-      line = $0;
-      sub(/^[[:space:]]*\|?[[:space:]]*"/, "", line);
-      sub(/".*$/, "", line);
-      print line;
-    }
-  }
-' "$RUNNER_FILE" | sort -u >"$IMPL_SORTED"
+rg -o --no-filename --pcre2 '"([[:alnum:]_/-]+::[[:alnum:]_/:.-]+)"' \
+  "${RUNNER_FILES[@]}" \
+  | tr -d '"' \
+  | sort -u >"$IMPL_SORTED"
 
 awk '
   /HOST_ABI_OPS_BEGIN/ { in_doc = 1; next; }
@@ -58,7 +53,7 @@ if [[ ! -s "$DOC_RAW" ]]; then
   exit 1
 fi
 if [[ ! -s "$IMPL_SORTED" ]]; then
-  echo "host-abi-conformance: no implementation ops detected in call_capability dispatch"
+  echo "host-abi-conformance: no implementation ops detected in capability dispatch"
   exit 1
 fi
 

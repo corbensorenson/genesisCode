@@ -71,21 +71,11 @@ enum TaskState {
     Cancelled,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct TaskWorkerPool {
     tx: Option<mpsc::Sender<TaskJob>>,
     rx: Option<mpsc::Receiver<TaskCompletion>>,
     workers: Vec<JoinHandle<()>>,
-}
-
-impl Default for TaskWorkerPool {
-    fn default() -> Self {
-        Self {
-            tx: None,
-            rx: None,
-            workers: Vec::new(),
-        }
-    }
 }
 
 impl Drop for TaskWorkerPool {
@@ -709,6 +699,10 @@ pub(crate) fn task_schedule_event_for(
     out
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "task policy limiter receives explicit runtime and protocol context"
+)]
 pub(crate) fn enforce_task_policy_limits(
     policy: &CapsPolicy,
     state: &mut TaskBudgetState,

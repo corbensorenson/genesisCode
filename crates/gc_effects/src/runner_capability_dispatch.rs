@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "central capability dispatcher forwards explicit runner context"
+)]
 pub(super) fn call_capability(
     op: &str,
     payload: &Term,

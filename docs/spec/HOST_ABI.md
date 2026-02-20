@@ -39,6 +39,7 @@ Compatibility notes:
 - `core/pkg-low::install`
 - `core/pkg-low::list`
 - `core/pkg-low::load-lock`
+- `core/pkg-low::load-package`
 - `core/pkg-low::lock`
 - `core/pkg-low::publish`
 - `core/pkg-low::save-lock`
@@ -52,6 +53,7 @@ Compatibility notes:
 - `core/store::get`
 - `core/store::has`
 - `core/store::put`
+- `core/store::verify`
 - `core/sync::pull`
 - `core/sync::push`
 - `core/task::await`
@@ -139,4 +141,4 @@ Compatibility notes:
 
 ## Conformance
 
-CI must run `scripts/check_host_abi_conformance.sh`, which diffs this op list against the dispatch surface in `crates/gc_effects/src/runner.rs`.
+CI must run `scripts/check_host_abi_conformance.sh`, which diffs this op list against the dispatch surface in `crates/gc_effects/src/runner_capability_dispatch.rs`.

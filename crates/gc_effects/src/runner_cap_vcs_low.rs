@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "host capability dispatch wiring keeps explicit context parameters visible"
+)]
 pub(super) fn capability_vcs_low(
     op_eff: &str,
     payload: &Term,
@@ -677,19 +681,19 @@ pub(super) fn capability_vcs_low(
                 _ => term_hash(right_t),
             };
 
-            let base = match as_contract_snapshot(&base_t) {
+            let base = match as_contract_snapshot(base_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
                 }
             };
-            let left = match as_contract_snapshot(&left_t) {
+            let left = match as_contract_snapshot(left_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));
                 }
             };
-            let right = match as_contract_snapshot(&right_t) {
+            let right = match as_contract_snapshot(right_t) {
                 Ok(s) => s,
                 Err(msg) => {
                     return Ok(mk_error(error_tok, "core/vcs/bad-snapshot", msg, Some(op)));

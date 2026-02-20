@@ -9,18 +9,32 @@ print results, but kernel evaluation remains pure.
 ## Crate
 
 - `crates/gc_wasi_cli` builds a WASI CLI binary: `genesis_wasi.wasm`.
-- Current command surface is intentionally minimal (WASI bootstrap):
+- Current command surface mirrors the native CLI for wasm-safe workflows:
   - `genesis fmt <file> [--check] [--engine rust|selfhost]`
   - `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
+  - `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
+  - `genesis optimize <file> [--engine rust|selfhost]`
+  - `genesis typecheck --pkg <package.toml>`
+  - `genesis apply-patch <patch.gcpatch> --pkg <package.toml>`
+  - `genesis semantic-edit ...`
   - `genesis pack --pkg <package.toml>`
   - `genesis test --pkg <package.toml> [--caps <caps.toml>]`
+  - `genesis verify --pkg <package.toml>`
+  - `genesis keygen --out <key.toml>`
+  - `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`
+  - `genesis transparency-verify --pkg <package.toml>`
   - `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
+  - `genesis selfhost-dashboard [--markdown <file>] [--store <dir>]`
+  - `genesis warm`
   - `genesis run <file> --caps <caps.toml> [--log <out.gclog>]` (local effects only)
   - `genesis replay <file> --log <log.gclog> [--store <dir>]`
-  - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has|verify} ...` (local store only)
+  - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has|verify} ...`
   - `genesis refs --caps <caps.toml> [--log <out.gclog>] {get|list|set|delete} ...` (local refs only)
-  - `genesis pkg --caps <caps.toml> [--log <out.gclog>] {init|add|lock|update|install|verify|list|info|snapshot|export|import} ...` (local-only; no sync)
-  - `genesis vcs hash --in <file> [--engine rust|selfhost]`
+  - `genesis pkg|gcpm --caps <caps.toml> [--log <out.gclog>] {...}` (init/add/remove/lock/update/install/verify/list/info/doctor/abi/snapshot/export/import/publish/env/migrate/new/run/test/self-optimize)
+  - `genesis policy ...`
+  - `genesis sync ...`
+  - `genesis gc ...`
+  - `genesis vcs ...` (hash/diff/apply/log/blame/why/merge3/resolve-conflict)
 
 The interface mirrors the native `genesis` CLI for these commands:
 - stable exit codes (see `docs/spec/CLI.md`)
@@ -29,7 +43,7 @@ The interface mirrors the native `genesis` CLI for these commands:
   - requires `--engine selfhost` on frontend commands
   - requires `--selfhost-bootstrap artifact-only`
   - rejects commands not yet selfhost-routed with exit code `50`
-  - current WASI routed set: `fmt`, `eval`, `test`, `pack`, `vcs hash`
+  - current WASI routed set: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`
   - for `fmt`/`eval` (and `vcs hash`), when `--engine` is omitted the engine defaults to `selfhost`
   - `--engine rust` remains available only in development/debug parity workflows through `genesis_wasi_parity`
   - release builds reject `--engine rust` unconditionally

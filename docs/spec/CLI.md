@@ -26,7 +26,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
     - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`, `selfhost-dashboard`.
-    - WASI: `fmt`, `eval`, `run`, `replay`, `test`, `pack`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Runtime commands that resolve `--engine selfhost` must use an explicit pinned artifact identity
   (`--selfhost-artifact` or `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`), and
   `--selfhost-bootstrap artifact-only`; implicit filesystem fallback discovery is rejected.

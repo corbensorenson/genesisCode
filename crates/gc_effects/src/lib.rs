@@ -115,9 +115,9 @@ printf '%s\n%s' "${#resp}" "$resp"
                 .expect("bridge filename"),
         );
         let mut toml = String::new();
-        let _ = write!(
+        let _ = writeln!(
             &mut toml,
-            "allow = [{}]\n",
+            "allow = [{}]",
             ops.iter()
                 .map(|op| format!("\"{op}\""))
                 .collect::<Vec<_>>()

@@ -3,6 +3,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 static FORCE_WASI_REMOTE_PROFILE: AtomicBool = AtomicBool::new(false);
 
+type SyncBytesResult = Result<Vec<u8>, gc_registry::RegistryError>;
+type SyncHasResult = Result<BTreeMap<String, bool>, gc_registry::RegistryError>;
+type SyncUploadResult = Result<(), String>;
+
 pub(crate) fn set_force_wasi_remote_profile(enabled: bool) {
     FORCE_WASI_REMOTE_PROFILE.store(enabled, Ordering::Relaxed);
 }
@@ -142,10 +146,9 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
         if let Some(v) = pol.extra.get("transfer_workers")
             && let Some(n) = v.as_integer()
             && n > 0
+            && let Ok(nn) = usize::try_from(n)
         {
-            if let Ok(nn) = usize::try_from(n) {
-                transfer_workers = nn.clamp(1, 64);
-            }
+            transfer_workers = nn.clamp(1, 64);
         }
         if let Some(v) = pol.extra.get("max_artifact_bytes") {
             let n = v
@@ -672,7 +675,6 @@ pub(super) fn sync_parallel_store_get_bytes(
             .map(|h| {
                 client
                     .store_get_bounded(h, Some(max_artifact_bytes))
-                    .map_err(|e| e)
                     .and_then(|b| {
                         total = total.saturating_add(b.len());
                         if total > max_batch_bytes {
@@ -687,7 +689,7 @@ pub(super) fn sync_parallel_store_get_bytes(
     }
 
     let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<Vec<u8>, gc_registry::RegistryError>>>>> =
+    let out: Arc<Mutex<Vec<Option<SyncBytesResult>>>> =
         Arc::new(Mutex::new((0..hashes.len()).map(|_| None).collect()));
     std::thread::scope(|scope| {
         for _ in 0..workers {
@@ -700,9 +702,7 @@ pub(super) fn sync_parallel_store_get_bytes(
                     if i >= hashes.len() {
                         break;
                     }
-                    let res = c
-                        .store_get_bounded(&hashes[i], Some(max_artifact_bytes))
-                        .map_err(|e| e);
+                    let res = c.store_get_bounded(&hashes[i], Some(max_artifact_bytes));
                     if let Ok(mut g) = out.lock() {
                         g[i] = Some(res);
                     } else {
@@ -762,7 +762,7 @@ pub(super) fn sync_parallel_store_has_chunks(
     }
 
     let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<BTreeMap<String, bool>, gc_registry::RegistryError>>>>> =
+    let out: Arc<Mutex<Vec<Option<SyncHasResult>>>> =
         Arc::new(Mutex::new((0..chunks.len()).map(|_| None).collect()));
     std::thread::scope(|scope| {
         for _ in 0..workers {
@@ -832,7 +832,7 @@ pub(super) fn sync_parallel_upload_missing(
     }
 
     let next = Arc::new(AtomicUsize::new(0));
-    let out: Arc<Mutex<Vec<Option<Result<(), String>>>>> =
+    let out: Arc<Mutex<Vec<Option<SyncUploadResult>>>> =
         Arc::new(Mutex::new((0..missing.len()).map(|_| None).collect()));
     std::thread::scope(|scope| {
         for _ in 0..workers {
@@ -873,6 +873,10 @@ pub(super) fn sync_parallel_upload_missing(
         .collect()
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "sync pull needs explicit policy/store/log context to keep effect behavior auditable"
+)]
 pub(super) fn capability_sync_pull(
     payload: &Term,
     pol: Option<&OpPolicy>,
