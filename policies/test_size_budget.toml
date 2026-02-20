@@ -11,7 +11,7 @@ test_target_lines = 1000
 # 2) Files above test_target_lines must be explicitly listed here.
 # 3) Stale entries (files now <= target) fail the guard and must be removed.
 # 4) New files above target fail immediately unless intentionally added.
-target_debt_allowlist = ["crates/gc_effects/tests/sync_registry.rs", "crates/gc_opt/src/stage2_wasm/tests/mod.rs", "crates/gc_wasi_cli/tests/cli_eval_gates.rs", "crates/gc_wasi_cli/tests/cli_selfhost_only.rs", "crates/gc_cli/tests/cli_selfhost_only.rs"]
+target_debt_allowlist = []
 
 # Optional substring excludes for generated fixtures/support glue.
 exclude_substrings = []

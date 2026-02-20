@@ -876,8 +876,8 @@ fn mk_remote(id: &str) -> (String, String) {
     (remote, allow)
 }
 
-#[path = "sync_registry_cases_a.rs"]
+#[path = "sync_registry/cases_a.rs"]
 mod sync_registry_cases_a;
 
-#[path = "sync_registry_cases_b.rs"]
+#[path = "sync_registry/cases_b.rs"]
 mod sync_registry_cases_b;

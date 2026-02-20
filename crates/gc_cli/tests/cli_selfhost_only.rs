@@ -868,5 +868,5 @@ fn selfhost_only_accepts_run_and_replay_with_selfhost_artifact() {
         .success();
 }
 
-#[path = "cli_selfhost_only_tail.rs"]
+#[path = "cli_selfhost_only/tail.rs"]
 mod cli_selfhost_only_tail;

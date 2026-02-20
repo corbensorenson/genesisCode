@@ -87,41 +87,42 @@ fn poison_cli_pkg_init_program(artifact: &Path) {
     let Term::Vector(entries) = modules else {
         panic!("artifact :modules must be vector");
     };
-    let cli_mod = entries
-        .iter_mut()
-        .find_map(|entry| match entry {
-            Term::Map(mm)
-                if matches!(
-                    mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/cli_coreform_v1.gc"
-                ) =>
-            {
-                Some(mm)
-            }
-            _ => None,
-        })
-        .expect("selfhost/cli_coreform_v1.gc entry");
-
-    let module_src = match cli_mod.get(&TermOrdKey(Term::symbol(":source"))) {
-        Some(Term::Str(src)) => src.clone(),
-        _ => panic!("cli module missing :source"),
-    };
-    let poisoned_src = format!("{module_src}\n(def core/cli::pkg-init-program \"shadowed\")\n");
-    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
-    let poisoned_hash = hash_module(&poisoned_forms);
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":source")),
-        Term::Str(poisoned_src.to_string()),
-    );
-    // Toolchain artifacts prefer `:forms` over `:source`. Keep them consistent so the loader
-    // accepts the poisoned module and the test can validate that the selfhost frontend is active.
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":forms")),
-        Term::Vector(poisoned_forms),
-    );
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":module-h")),
-        Term::Bytes(poisoned_hash.to_vec().into()),
+    let mut poisoned_any = false;
+    for entry in entries.iter_mut() {
+        let Term::Map(mm) = entry else {
+            continue;
+        };
+        let module_src = match mm.get(&TermOrdKey(Term::symbol(":source"))) {
+            Some(Term::Str(src)) => src.clone(),
+            _ => continue,
+        };
+        if !module_src.contains("core/cli::pkg-init-program") {
+            continue;
+        }
+        poisoned_any = true;
+        // Poison both ends so resolution-order changes (first-wins vs last-wins) can't mask the
+        // test. We rewrite source/forms/hash together so artifact integrity checks still pass.
+        let poisoned_src = format!(
+            "(def core/cli::pkg-init-program \"shadowed\")\n{module_src}\n(def core/cli::pkg-init-program \"shadowed\")\n"
+        );
+        let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
+        let poisoned_hash = hash_module(&poisoned_forms);
+        mm.insert(
+            TermOrdKey(Term::symbol(":source")),
+            Term::Str(poisoned_src.to_string()),
+        );
+        mm.insert(
+            TermOrdKey(Term::symbol(":forms")),
+            Term::Vector(poisoned_forms),
+        );
+        mm.insert(
+            TermOrdKey(Term::symbol(":module-h")),
+            Term::Bytes(poisoned_hash.to_vec().into()),
+        );
+    }
+    assert!(
+        poisoned_any,
+        "no module contained core/cli::pkg-init-program"
     );
     fs::write(artifact, print_term(&term)).unwrap();
 }

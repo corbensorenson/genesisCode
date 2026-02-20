@@ -222,7 +222,7 @@ base_dir = "."
 }
 
 #[test]
-fn fmt_default_selfhost_requires_explicit_artifact() {
+fn fmt_default_profile_allows_without_explicit_artifact() {
     let td = tempdir().unwrap();
     let file = td.path().join("m.gc");
     std::fs::write(&file, "(def x 1)\n").unwrap();
@@ -231,11 +231,7 @@ fn fmt_default_selfhost_requires_explicit_artifact() {
         .args(["fmt", file.to_str().unwrap()])
         .current_dir(td.path())
         .assert()
-        .failure()
-        .code(50)
-        .stderr(predicate::str::contains(
-            "explicit selfhost artifact required",
-        ));
+        .success();
 }
 
 #[test]

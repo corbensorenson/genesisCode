@@ -2,7 +2,6 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use serde_json::Value as JsonValue;
 use tempfile::tempdir;
-
 #[test]
 fn eval_help_exposes_stage_gating_flags() {
     cargo_bin_cmd!("genesis_wasi")
@@ -13,7 +12,6 @@ fn eval_help_exposes_stage_gating_flags() {
         .stdout(predicate::str::contains("--stage1-gate"))
         .stdout(predicate::str::contains("--stage2-gate"));
 }
-
 #[test]
 fn eval_stage2_gate_succeeds_for_scalar_pure_program() {
     let td = tempdir().unwrap();
@@ -26,7 +24,6 @@ fn eval_stage2_gate_succeeds_for_scalar_pure_program() {
         "#,
     )
     .unwrap();
-
     cargo_bin_cmd!("genesis_wasi")
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
@@ -35,7 +32,7 @@ fn eval_stage2_gate_succeeds_for_scalar_pure_program() {
 }
 
 #[test]
-fn eval_stage2_gate_allows_unsupported_non_scalar_module() {
+fn eval_stage2_gate_rejects_unsupported_non_scalar_module() {
     let td = tempdir().unwrap();
     let file = td.path().join("map.gc");
     std::fs::write(
@@ -45,12 +42,14 @@ fn eval_stage2_gate_allows_unsupported_non_scalar_module() {
         "#,
     )
     .unwrap();
-
     cargo_bin_cmd!("genesis_wasi")
         .args(["eval", file.to_str().unwrap(), "--stage2-gate"])
         .assert()
-        .success()
-        .stdout(predicate::str::contains("{a 1 b 2}"));
+        .failure()
+        .code(30)
+        .stderr(predicate::str::contains(
+            "core/obligation::translation-validation",
+        ));
 }
 
 #[test]
@@ -997,6 +996,5 @@ fn eval_stage2_gate_validates_let_bound_collection_alias_chains() {
     assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
     assert_eq!(stage2["value_kind"].as_str(), Some("bool"), "{v}");
 }
-
-#[path = "cli_eval_gates_tail.rs"]
+#[path = "cli_eval_gates/tail.rs"]
 mod cli_eval_gates_tail;

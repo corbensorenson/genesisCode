@@ -102,14 +102,15 @@ fn selfhost_only_rejects_rust_engine_for_eval() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "selfhost-only mode requires --engine selfhost",
-        ));
+            "invalid value 'rust' for '--engine <ENGINE>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 }
 
 #[test]
-fn selfhost_only_requires_explicit_artifact_for_runtime_commands() {
+fn selfhost_only_runtime_commands_resolve_workspace_pinned_artifact() {
     let td = tempdir().unwrap();
     let file = td.path().join("m.gc");
     std::fs::write(&file, "(def x 1)\nx\n").unwrap();
@@ -123,11 +124,7 @@ fn selfhost_only_requires_explicit_artifact_for_runtime_commands() {
             "selfhost",
         ])
         .assert()
-        .failure()
-        .code(50)
-        .stderr(predicate::str::contains(
-            "explicit selfhost artifact required",
-        ));
+        .success();
 }
 
 #[test]
@@ -512,10 +509,11 @@ fn selfhost_only_rejects_rust_engine_for_explain() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "selfhost-only mode requires --engine selfhost",
-        ));
+            "invalid value 'rust' for '--engine <ENGINE>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 }
 
 #[test]
@@ -851,10 +849,11 @@ fn selfhost_only_rejects_rust_engine_for_run() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "selfhost-only mode requires --engine selfhost",
-        ));
+            "invalid value 'rust' for '--engine <ENGINE>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 }
 
 #[test]
@@ -880,11 +879,12 @@ fn selfhost_only_rejects_rust_engine_for_optimize() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "selfhost-only mode requires --engine selfhost",
-        ));
+            "invalid value 'rust' for '--engine <ENGINE>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 }
 
-#[path = "cli_selfhost_only_tail.rs"]
+#[path = "cli_selfhost_only/tail.rs"]
 mod cli_selfhost_only_tail;
