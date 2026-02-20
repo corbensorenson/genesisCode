@@ -1,0 +1,15 @@
+name = "agent_compute_workflow"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+    "core/obligation::concurrency-replay",
+]
+tests = ["pkg/agent_compute::tests"]
+
+[[modules]]
+hash = "c56efcf2c93928b04bac0d27af69cf9e12463f8fd6d896e0239437dcd5a1f095"
+path = "gpu_parallel.gc"

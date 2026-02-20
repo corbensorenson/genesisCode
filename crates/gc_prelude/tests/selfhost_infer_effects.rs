@@ -20,6 +20,10 @@ fn build_selfhost_artifact_source() -> String {
                     (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
                     (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
                     (
+                        TermOrdKey(Term::symbol(":forms")),
+                        Term::Vector(forms.clone()),
+                    ),
+                    (
                         TermOrdKey(Term::symbol(":module-h")),
                         Term::Bytes(h.to_vec().into()),
                     ),

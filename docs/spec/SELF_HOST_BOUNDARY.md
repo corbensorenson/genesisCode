@@ -233,12 +233,19 @@ Current cutover mechanism (implemented):
 - Loader validation before activation:
   - artifact schema + kind/version checks
   - required selfhost module set present (parse/canon/printer/hash/tool)
-  - per-module source hash matches declared module hash
+  - per-module canonical `:forms` hash matches declared module hash
   - `:stage1-ok` must be true for every module
   - when `:stage2-supported` is true, `:stage2-ok` must be true
+  - production profile rejects source-only modules (no Rust source parse fallback)
 
 This makes artifact-based bootstrap testable today while retaining embedded fallback for explicit
 development builds.
+
+Artifact module contract:
+- production bootstrap requires `:forms` on each module entry and validates those canonical forms
+  against `:module-h`.
+- `:source` remains informational in production; it is not parsed during release bootstrap.
+- parity-harness/development profile may allow source-parse fallback for diagnostics and migration.
 
 Host tooling defaults:
 - native CLI (`genesis`) and WASI CLI now default to `artifact-only` bootstrap mode for selfhost paths.
@@ -246,10 +253,11 @@ Host tooling defaults:
   retained only for parity/comparison workflows.
 - runtime flags:
   - `--selfhost-artifact <file>` choose artifact explicitly
-  - `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
+  - production binaries: `--selfhost-bootstrap artifact-only` (only accepted value)
+  - parity-harness binaries: `--selfhost-bootstrap artifact-only|artifact-preferred|embedded`
   - `--selfhost-only` enforce hard selfhost mode (also `GENESIS_SELFHOST_ONLY=1`)
-- `embedded` mode remains available as a deliberate bootstrap/development fallback.
-- release profiles reject `artifact-preferred` and `embedded` at runtime; only `artifact-only` is accepted.
+- `embedded` mode remains available only in parity-harness/development workflows.
+- production parse surface does not accept `artifact-preferred` or `embedded`.
 
 Selfhost-only hard mode:
 - commands with `--engine` must use `--engine selfhost`

@@ -3,7 +3,9 @@ use super::*;
 pub(super) fn resolved_selfhost_bootstrap_mode(cli: &Cli) -> SelfhostBootstrapMode {
     match cli.selfhost_bootstrap {
         SelfhostBootstrapArg::ArtifactOnly => SelfhostBootstrapMode::ArtifactOnly,
+        #[cfg(feature = "parity-harness")]
         SelfhostBootstrapArg::ArtifactPreferred => SelfhostBootstrapMode::ArtifactPreferred,
+        #[cfg(feature = "parity-harness")]
         SelfhostBootstrapArg::Embedded => SelfhostBootstrapMode::Embedded,
     }
 }
@@ -549,6 +551,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::SelfhostDashboard { .. } => Ok(()),
         Cmd::Warm { .. } => Ok(()),
         Cmd::CliSchema => Ok(()),
+        Cmd::AgentIndex => Ok(()),
         Cmd::Vcs {
             cmd: VcsCmd::Hash { engine, .. },
             ..

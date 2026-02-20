@@ -13,7 +13,7 @@ This document is normative for bridge-backed host capabilities:
 
 ## Invocation Contract
 
-For a single capability request:
+For a single capability request (`bridge_transport = "spawn-per-op"`):
 
 1. Runner resolves and executes `bridge_cmd` under op `base_dir`.
 2. Runner appends the requested op symbol as the final CLI arg.
@@ -22,6 +22,17 @@ For a single capability request:
    - `GENESIS_HOST_BRIDGE_FAMILY`
 4. Runner writes one framed request payload to bridge stdin.
 5. Bridge writes one framed response payload to stdout.
+
+For persistent capability requests (`bridge_transport = "persistent-stdio"`):
+
+1. Runner resolves and executes `bridge_cmd` under op `base_dir` once per deterministic session key.
+2. Runner appends the requested op symbol as the final CLI arg.
+3. Runner sets env vars:
+   - `GENESIS_HOST_BRIDGE_OP`
+   - `GENESIS_HOST_BRIDGE_FAMILY`
+   - `GENESIS_HOST_BRIDGE_TRANSPORT=persistent-stdio`
+4. Runner reuses the live bridge process and writes one framed request payload per op invocation.
+5. Bridge writes one framed response payload per request and remains alive for the next frame.
 
 `stderr` is reserved for diagnostics and is included in deterministic error mapping when the bridge exits non-zero.
 
@@ -44,10 +55,19 @@ Example:
 ## Policy Enforcement
 
 - `bridge_cmd` is required per op.
+- `bridge_transport` is optional per op:
+  - `spawn-per-op` (default)
+  - `persistent-stdio` (session reuse)
+- Optional bridge identity constraints:
+  - `bridge_cmd_allowlist` (array<string>): explicit command identity allowlist.
+    - entries may match `bridge_cmd` token, resolved absolute path, or executable filename.
+  - `bridge_cmd_sha256` (string): expected executable digest (64 hex, optional `sha256:` prefix).
 - `timeout_ms` applies to bridge execution.
+  - for `persistent-stdio`, timeout applies to each framed request/response exchange.
 - `max_bytes` applies to both request payload size and response payload size.
 - Violations return deterministic sealed errors with family-scoped codes:
   - `<family>/bridge-required`
+  - `<family>/bridge-identity-denied`
   - `<family>/bridge-timeout`
   - `<family>/bridge-payload-too-large`
   - `<family>/bridge-response-too-large`

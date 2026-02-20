@@ -192,3 +192,65 @@ fn editor_plugin_and_task_ops_are_replay_deterministic() {
         assert_eq!(run_hash, replay_hash, "{op}: run/replay hash mismatch");
     }
 }
+
+#[test]
+fn net_and_process_ops_are_replay_deterministic_with_wasi_bridge_profile() {
+    let src = r#"
+        (def prog
+          (core/effect::bind
+            (core/effect::perform
+              'io/net::http-request
+              {:method "GET" :url "https://registry.example.com/api/ping"}
+              (fn (net-resp) (core/effect::pure net-resp)))
+            (fn (net-resp)
+              (core/effect::bind
+                (core/effect::perform
+                  'sys/process::exec
+                  {:program "gcpm" :args ["status"]}
+                  (fn (proc-resp) (core/effect::pure proc-resp)))
+                (fn (proc-resp)
+                  (core/effect::pure {:net net-resp :proc proc-resp}))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::http-request", "sys/process::exec"]
+
+[op."io/net::http-request"]
+url_allow = ["https://registry.example.com/api/"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 200 :body \"ok\"}"
+
+[op."sys/process::exec"]
+allow_programs = ["gcpm"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 0 :stdout \"done\"}"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 2);
+    assert_eq!(run_out.log.entries[0].op, "io/net::http-request");
+    assert_eq!(run_out.log.entries[1].op, "sys/process::exec");
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}

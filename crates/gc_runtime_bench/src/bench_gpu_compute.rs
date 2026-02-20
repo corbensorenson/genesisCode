@@ -1,16 +1,37 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use gc_coreform::{canonicalize_module, hash_module, parse_module};
 use gc_effects::{CapsPolicy, run};
 use gc_kernel::{EvalCtx, compile_module, eval_compiled_module};
 use gc_prelude::build_prelude;
 
 use crate::config::BenchConfig;
+use crate::device_bridge::inrepo_device_bridge_spec;
 use crate::measure::best_of;
 
 pub(crate) const GPU_COMPUTE_BACKEND_FALLBACK: &str = "deterministic-fallback";
 pub(crate) const GPU_COMPUTE_BACKEND_DEVICE: &str = "device-bridge";
+pub(crate) const GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK: &str = "dev-allow-fallback";
+pub(crate) const GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE: &str = "require-device";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GpuComputeBackendPolicy {
+    DevAllowFallback,
+    RequireDevice,
+}
+
+impl GpuComputeBackendPolicy {
+    fn from_env(raw: &str) -> Result<Self> {
+        match raw.trim() {
+            "" | GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK => Ok(Self::DevAllowFallback),
+            GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE => Ok(Self::RequireDevice),
+            other => bail!(
+                "invalid GENESIS_GPU_COMPUTE_BACKEND_POLICY `{other}` (expected {GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK}|{GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE})"
+            ),
+        }
+    }
+}
 
 fn toml_escape(input: &str) -> String {
     input
@@ -54,41 +75,85 @@ printf '%s\n%s' "$resp_len" "$resp"
     Ok(())
 }
 
-fn resolve_device_bridge_cmd() -> Option<PathBuf> {
-    let raw = std::env::var("GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD").ok()?;
-    let trimmed = raw.trim();
+fn resolve_device_bridge_cmd_from(raw: Option<&str>) -> Option<PathBuf> {
+    let trimmed = raw?.trim();
     if trimmed.is_empty() {
         return None;
     }
     Some(PathBuf::from(trimmed))
 }
 
-fn compute_bridge_policy(tmp_dir: &Path) -> Result<(CapsPolicy, String)> {
+fn resolve_device_bridge_cmd() -> Option<PathBuf> {
+    resolve_device_bridge_cmd_from(
+        std::env::var("GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD")
+            .ok()
+            .as_deref(),
+    )
+}
+
+fn encode_bridge_policy(
+    base_dir: &Path,
+    cmd_name: &str,
+    bridge_args: &[String],
+) -> Result<CapsPolicy> {
     let allow = "allow = [\"gpu/compute::submit\"]\n";
-    if let Some(device_cmd) = resolve_device_bridge_cmd() {
+    let bridge_args_toml = if bridge_args.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "bridge_args = [{}]\n",
+            bridge_args
+                .iter()
+                .map(|a| format!("\"{}\"", toml_escape(a)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    CapsPolicy::from_toml_str(&format!(
+        "{allow}\n[op.\"gpu/compute::submit\"]\nbase_dir = \"{}\"\nbridge_cmd = \"{}\"\n{bridge_args_toml}max_bytes = 65536\n",
+        toml_escape(&base_dir.display().to_string()),
+        toml_escape(cmd_name),
+    ))
+    .context("parse gpu compute bridge policy")
+}
+
+fn compute_bridge_policy_with_override(
+    tmp_dir: &Path,
+    device_cmd_override: Option<PathBuf>,
+    backend_policy: GpuComputeBackendPolicy,
+) -> Result<(CapsPolicy, String)> {
+    if let Some(device_cmd) = device_cmd_override.or_else(resolve_device_bridge_cmd) {
         let cmd_name = device_cmd
             .file_name()
             .and_then(|s| s.to_str())
             .ok_or_else(|| anyhow::anyhow!("invalid device bridge command path"))?;
         let base_dir = device_cmd.parent().unwrap_or(tmp_dir);
-        let policy = CapsPolicy::from_toml_str(&format!(
-            "{allow}\n[op.\"gpu/compute::submit\"]\nbase_dir = \"{}\"\nbridge_cmd = \"{}\"\nmax_bytes = 65536\n",
-            toml_escape(&base_dir.display().to_string()),
-            toml_escape(cmd_name),
-        ))
-        .context("parse gpu compute device bridge policy")?;
+        let policy = encode_bridge_policy(base_dir, cmd_name, &[])?;
         return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE.to_string()));
+    }
+
+    if let Some(spec) = inrepo_device_bridge_spec()? {
+        let policy = encode_bridge_policy(&spec.base_dir, &spec.cmd_name, &spec.args)?;
+        return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE.to_string()));
+    }
+
+    if backend_policy == GpuComputeBackendPolicy::RequireDevice {
+        bail!(
+            "device-grade gpu compute backend is required by GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device; configure GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD or build gc_runtime_bench with --features device-bridge"
+        );
     }
 
     let bridge_path = tmp_dir.join("compute_bridge.sh");
     write_compute_fallback_bridge(&bridge_path)?;
-    let policy = CapsPolicy::from_toml_str(&format!(
-        "{allow}\n[op.\"gpu/compute::submit\"]\nbase_dir = \"{}\"\nbridge_cmd = \"{}\"\nmax_bytes = 65536\n",
-        toml_escape(&tmp_dir.display().to_string()),
-        "compute_bridge.sh",
-    ))
-    .context("parse gpu compute fallback bridge policy")?;
+    let policy = encode_bridge_policy(tmp_dir, "compute_bridge.sh", &[])?;
     Ok((policy, GPU_COMPUTE_BACKEND_FALLBACK.to_string()))
+}
+
+fn compute_bridge_policy(
+    tmp_dir: &Path,
+    backend_policy: GpuComputeBackendPolicy,
+) -> Result<(CapsPolicy, String)> {
+    compute_bridge_policy_with_override(tmp_dir, None, backend_policy)
 }
 
 pub fn run_gpu_compute_submit(cfg: &BenchConfig) -> Result<(u128, String)> {
@@ -109,7 +174,8 @@ bench/prog
     let program_hash = hash_module(&forms);
 
     let tmp = tempfile::tempdir().context("create gpu compute benchmark tempdir")?;
-    let (policy, backend) = compute_bridge_policy(tmp.path())?;
+    let backend_policy = GpuComputeBackendPolicy::from_env(&cfg.gpu_compute_backend_policy)?;
+    let (policy, backend) = compute_bridge_policy(tmp.path(), backend_policy)?;
 
     let elapsed_ms = best_of(cfg.warmups, cfg.repeats, || {
         let mut ctx = EvalCtx::with_step_limit(None);
@@ -129,4 +195,96 @@ bench/prog
     })?;
 
     Ok((elapsed_ms, backend))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        GPU_COMPUTE_BACKEND_DEVICE, GPU_COMPUTE_BACKEND_FALLBACK,
+        GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK, GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE,
+        GpuComputeBackendPolicy, compute_bridge_policy_with_override,
+        resolve_device_bridge_cmd_from,
+    };
+
+    #[test]
+    fn gpu_compute_parses_explicit_device_bridge_env_override() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let fake_cmd = td.path().join("device_bridge_fake.sh");
+        let parsed = resolve_device_bridge_cmd_from(fake_cmd.to_str());
+        assert_eq!(parsed.as_deref(), Some(fake_cmd.as_path()));
+    }
+
+    #[cfg(not(feature = "device-bridge"))]
+    #[test]
+    fn gpu_compute_uses_fallback_backend_without_device_bridge_feature_or_env() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let (_, backend) = compute_bridge_policy_with_override(
+            td.path(),
+            None,
+            GpuComputeBackendPolicy::DevAllowFallback,
+        )
+        .expect("policy");
+        assert_eq!(backend, GPU_COMPUTE_BACKEND_FALLBACK);
+    }
+
+    #[test]
+    fn gpu_compute_prefers_explicit_device_bridge_override() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let fake_cmd = td.path().join("device_bridge_fake.sh");
+        let (_, backend) = compute_bridge_policy_with_override(
+            td.path(),
+            Some(fake_cmd),
+            GpuComputeBackendPolicy::DevAllowFallback,
+        )
+        .expect("policy");
+        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE);
+    }
+
+    #[cfg(feature = "device-bridge")]
+    #[test]
+    fn gpu_compute_uses_inrepo_device_bridge_when_feature_is_enabled() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let (_, backend) = compute_bridge_policy_with_override(
+            td.path(),
+            None,
+            GpuComputeBackendPolicy::RequireDevice,
+        )
+        .expect("policy");
+        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE);
+    }
+
+    #[cfg(not(feature = "device-bridge"))]
+    #[test]
+    fn gpu_compute_require_device_policy_rejects_fallback_path() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let err = compute_bridge_policy_with_override(
+            td.path(),
+            None,
+            GpuComputeBackendPolicy::RequireDevice,
+        )
+        .expect_err("require-device should fail without device backend");
+        assert!(
+            err.to_string()
+                .contains("device-grade gpu compute backend is required"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn gpu_compute_backend_policy_parser_accepts_supported_values() {
+        assert_eq!(
+            GpuComputeBackendPolicy::from_env(GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK)
+                .expect("parse dev policy"),
+            GpuComputeBackendPolicy::DevAllowFallback
+        );
+        assert_eq!(
+            GpuComputeBackendPolicy::from_env(GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE)
+                .expect("parse require policy"),
+            GpuComputeBackendPolicy::RequireDevice
+        );
+        assert!(
+            GpuComputeBackendPolicy::from_env("unknown-policy").is_err(),
+            "unknown policy should fail"
+        );
+    }
 }

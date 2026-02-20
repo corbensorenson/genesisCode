@@ -23,6 +23,7 @@ This document defines the deterministic profile environment realization used by:
 
 - the profile does not exist in `genesis.workspace.toml`
 - the resolved `caps_policy` file for the profile does not exist
+- any locked dependency artifact referenced by `genesis.lock` is missing from local `.genesis/store`
 
 Relative `caps_policy` paths are resolved against the workspace descriptor directory.
 
@@ -32,6 +33,13 @@ For environment hash `<env-h>`:
 
 - `.genesis/env/<env-h>/env.gcenv`
 - `.genesis/env/<env-h>/provenance.gc`
+- `.genesis/env/<env-h>/workspace.toml`
+- `.genesis/env/<env-h>/genesis.lock`
+- `.genesis/env/<env-h>/profile.gc`
+- `.genesis/env/<env-h>/members.gc`
+- `.genesis/env/<env-h>/deps.gc`
+- `.genesis/env/<env-h>/caps-policy.toml`
+- `.genesis/env/<env-h>/toolchain.gc` (when a profile/default toolchain is configured)
 
 `<env-h>` is BLAKE3 over canonical `env.gcenv` bytes.
 
@@ -43,4 +51,3 @@ For environment hash `<env-h>`:
 ## JSON Kind
 
 - `gcpm env` emits `kind = "genesis/pkg-env-v0.1"`.
-

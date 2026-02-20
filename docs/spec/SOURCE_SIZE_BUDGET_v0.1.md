@@ -21,7 +21,6 @@ edits, review diffs, and semantic patching remain tractable.
   - paths containing `/tests/`, `/benches/`, `/examples/`
   - generated `.gc` artifacts:
     - `prelude/prelude.gc`
-    - `selfhost/toolchain.gc`
 
 ## Enforcement
 

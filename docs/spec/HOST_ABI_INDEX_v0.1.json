@@ -148,6 +148,12 @@
       "io/fs::read",
       "io/fs::write"
     ],
+    "io/net": [
+      "io/net::http-request"
+    ],
+    "sys/process": [
+      "sys/process::exec"
+    ],
     "sys/time": [
       "sys/time::now"
     ]
@@ -269,6 +275,8 @@
     "gpu/compute::write-buffer",
     "io/fs::read",
     "io/fs::write",
+    "io/net::http-request",
+    "sys/process::exec",
     "sys/time::now"
   ]
 }

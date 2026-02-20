@@ -49,7 +49,66 @@ fn ci_has_gpu_device_microbench_lane() {
         "gpu lane must require device-bridge backend"
     );
     assert!(
+        ci.contains("GENESIS_RUNTIME_MICROBENCH_FEATURES: \"device-bridge\""),
+        "gpu lane must compile runtime microbench with first-party device bridge feature"
+    );
+    assert!(
         ci.contains("bash scripts/check_runtime_microbench_budgets.sh"),
         "gpu lane must run runtime microbench budget checks"
+    );
+    assert!(
+        ci.contains("Device Bridge Replay Determinism (Feature Gate)"),
+        "gpu lane must verify replay determinism for device bridge mode"
+    );
+}
+
+#[test]
+fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    assert!(
+        ci.contains("GC Source Size Budget Guard"),
+        "ci workflow must enforce dedicated .gc source size budget guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_gc_source_size_budget.sh"),
+        "ci workflow must run .gc source size budget guard script"
+    );
+    assert!(
+        ci.contains("Selfhost Refactor Guard"),
+        "ci workflow must enforce selfhost refactor guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_selfhost_refactor_guard.sh"),
+        "ci workflow must run selfhost refactor guard script"
+    );
+    assert!(
+        ci.contains("Test Execution Profile Matrix Guard"),
+        "ci workflow must enforce explicit test execution profile matrix guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_test_execution_profile_matrix.sh"),
+        "ci workflow must run test execution profile matrix guard script"
+    );
+    assert!(
+        ci.contains("Fuzz + Differential Hardening Guard"),
+        "ci workflow must enforce fuzz + differential hardening guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_fuzz_differential_hardening.sh"),
+        "ci workflow must run fuzz + differential hardening guard script"
+    );
+    assert!(
+        ci.contains("GPU Compute Runtime Profile (Compute-Only)"),
+        "ci workflow must enforce dedicated compute-only runtime profile gate"
+    );
+    assert!(
+        ci.contains("bash scripts/check_gpu_compute_runtime_profile.sh"),
+        "ci workflow must run compute-only runtime profile guard script"
+    );
+    assert!(
+        ci.contains("env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request'"),
+        "full-profile strict-equivalence checks in test job must skip pull_request to avoid duplication with pr_strict_equivalence_gate"
     );
 }

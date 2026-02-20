@@ -1,0 +1,27 @@
+# First-party device bridge profile for gpu/compute host ops.
+# Use this when running with `gc_runtime_bench --features device-bridge`.
+# `base_dir` and `bridge_cmd` should point to the built `gc_runtime_bench` binary directory/name.
+
+allow = [
+  "gpu/compute::submit",
+  "gpu/compute::limits",
+  "gpu/compute::features",
+]
+
+[op."gpu/compute::submit"]
+base_dir = "."
+bridge_cmd = "gc_runtime_bench"
+bridge_args = ["--gpu-compute-bridge"]
+max_bytes = 65536
+
+[op."gpu/compute::limits"]
+base_dir = "."
+bridge_cmd = "gc_runtime_bench"
+bridge_args = ["--gpu-compute-bridge"]
+max_bytes = 65536
+
+[op."gpu/compute::features"]
+base_dir = "."
+bridge_cmd = "gc_runtime_bench"
+bridge_args = ["--gpu-compute-bridge"]
+max_bytes = 65536

@@ -25,8 +25,8 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
     - `--selfhost-bootstrap` must be `artifact-only`
     - commands not yet routed through selfhost frontend return exit code `50`.
   - Current routed set:
-    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
-    - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - native: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `cli-schema`, `agent-index`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
+    - WASI: `fmt`, `eval`, `explain`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `cli-schema`, `agent-index`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/*` (alias: `gcpm/*`), `policy/*`, `sync/*`, `gc/*`, `vcs/*`.
 - Runtime commands that resolve `--engine selfhost` must use an explicit pinned artifact identity
   (`--selfhost-artifact`, `GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT`, or workspace
   `genesis.workspace.toml` -> `[defaults].toolchain`), and
@@ -111,6 +111,10 @@ Dedicated compatibility harness entrypoints:
   - emits machine-readable command/option schema for agent planning.
   - output kind: `genesis/cli-schema-v0.1`.
   - schema contract: `docs/spec/CLI_SCHEMA_v0.1.md`.
+- `genesis agent-index`
+  - emits AI-facing planning index that bundles CLI schema, capability indices, default obligations, and reference workflow pointers.
+  - output kind: `genesis/agent-index-v0.1`.
+  - schema contract: `docs/spec/AGENT_INDEX_v0.1.md`.
 
 CI strict selfhost gates:
 - `scripts/selfhost_strict_smoke.sh`: fast strict routing health check.
@@ -143,7 +147,9 @@ CI strict selfhost gates:
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
-  - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`.
+    Built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, `contract`, `eval`, `fmt`, `optimize`.
+  - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
+    including profile/workspace/lock/caps/dependency/member state required for reproducible workspace execution.
   - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
@@ -224,3 +230,9 @@ On failure:
 `diagnostics` is always present in JSON output:
 - success cases: `[]`
 - failure cases: at least one typed diagnostic entry with stable `code` and `exit_code`
+
+Conformance guard:
+- `crates/gc_cli/tests/cli_diagnostics_matrix.rs` enforces:
+  - machine-actionable failure diagnostics across top-level command families
+  - success envelopes with empty diagnostics for pure planning/report commands
+  - drift detection against `cli-schema` top-level command names

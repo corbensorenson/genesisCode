@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
@@ -275,10 +275,33 @@ pub(crate) fn handle_env(
         ));
     }
 
+    let toolchain_path = resolve_workspace_path(
+        workspace_file,
+        prof.toolchain
+            .as_deref()
+            .or(ws.defaults.toolchain.as_deref()),
+    );
+    if let Some(tp) = &toolchain_path
+        && !tp.is_file()
+    {
+        return Err(format!(
+            "profile `{profile}` toolchain file not found: {}",
+            tp.display()
+        ));
+    }
+
+    let members_term = build_env_members_term(workspace_file, &ws.members)?;
+    let members_body = gc_coreform::print_term(&members_term) + "\n";
+    let members_h = blake3::hash(members_body.as_bytes()).to_hex().to_string();
+
+    let deps_term = build_env_deps_term(workspace_file, &l)?;
+    let deps_body = gc_coreform::print_term(&deps_term) + "\n";
+    let deps_h = blake3::hash(deps_body.as_bytes()).to_hex().to_string();
+
     let env_term = Term::Map(
         [
             (TermOrdKey(Term::symbol(":type")), Term::symbol(":gcpm/env")),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
             (
                 TermOrdKey(Term::symbol(":workspace")),
                 Term::Str(ws.workspace.clone()),
@@ -320,6 +343,17 @@ pub(crate) fn handle_env(
                 TermOrdKey(Term::symbol(":caps-policy")),
                 Term::Str(caps_policy_path.display().to_string()),
             ),
+            (TermOrdKey(Term::symbol(":members-h")), Term::Str(members_h)),
+            (TermOrdKey(Term::symbol(":deps-h")), Term::Str(deps_h)),
+            (
+                TermOrdKey(Term::symbol(":toolchain-h")),
+                toolchain_path
+                    .as_ref()
+                    .map(|p| hash_file_hex(p))
+                    .transpose()?
+                    .map(Term::Str)
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -329,8 +363,33 @@ pub(crate) fn handle_env(
     let env_root = out_dir.join(&env_h);
     std::fs::create_dir_all(&env_root).map_err(|e| e.to_string())?;
 
-    let manifest = env_root.join("env.gcenv");
-    write_if_same_or_new(&manifest, env_body.as_bytes()).map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("env.gcenv"), env_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("members.gc"), members_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("deps.gc"), deps_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("workspace.toml"), ws_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("genesis.lock"), lock_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    let caps_policy_bytes = std::fs::read(&caps_policy_path).map_err(|e| e.to_string())?;
+    let caps_policy_h = blake3::hash(&caps_policy_bytes).to_hex().to_string();
+    write_if_same_or_new(&env_root.join("caps-policy.toml"), &caps_policy_bytes)
+        .map_err(|e| e.to_string())?;
+
+    if let Some(tp) = &toolchain_path {
+        let bytes = std::fs::read(tp).map_err(|e| e.to_string())?;
+        write_if_same_or_new(&env_root.join("toolchain.gc"), &bytes).map_err(|e| e.to_string())?;
+    }
+
+    let profile_term =
+        build_env_profile_term(profile, &ws, prof, &caps_policy_path, &toolchain_path);
+    let profile_body = gc_coreform::print_term(&profile_term) + "\n";
+    let profile_h = blake3::hash(profile_body.as_bytes()).to_hex().to_string();
+    write_if_same_or_new(&env_root.join("profile.gc"), profile_body.as_bytes())
+        .map_err(|e| e.to_string())?;
 
     let provenance_term = Term::Map(
         [
@@ -357,8 +416,8 @@ pub(crate) fn handle_env(
         .collect(),
     );
     let provenance_body = gc_coreform::print_term(&provenance_term) + "\n";
-    let provenance = env_root.join("provenance.gc");
-    write_if_same_or_new(&provenance, provenance_body.as_bytes()).map_err(|e| e.to_string())?;
+    write_if_same_or_new(&env_root.join("provenance.gc"), provenance_body.as_bytes())
+        .map_err(|e| e.to_string())?;
 
     let value = Term::Map(
         [
@@ -371,7 +430,12 @@ pub(crate) fn handle_env(
                 TermOrdKey(Term::symbol(":caps-policy")),
                 Term::Str(caps_policy_path.display().to_string()),
             ),
+            (
+                TermOrdKey(Term::symbol(":caps-policy-h")),
+                Term::Str(caps_policy_h),
+            ),
             (TermOrdKey(Term::symbol(":env-h")), Term::Str(env_h)),
+            (TermOrdKey(Term::symbol(":profile-h")), Term::Str(profile_h)),
             (
                 TermOrdKey(Term::symbol(":env-root")),
                 Term::Str(env_root.display().to_string()),
@@ -438,6 +502,267 @@ fn relative_to_cwd_or_literal(p: &Path) -> String {
     }
     let s = p.to_string_lossy().to_string();
     if s.is_empty() { ".".to_string() } else { s }
+}
+
+fn resolve_workspace_path(workspace_file: &Path, raw: Option<&str>) -> Option<PathBuf> {
+    let raw = raw?;
+    let p = PathBuf::from(raw);
+    if p.is_absolute() {
+        Some(p)
+    } else {
+        Some(
+            workspace_file
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(p),
+        )
+    }
+}
+
+fn hash_file_hex(path: &Path) -> Result<String, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    Ok(blake3::hash(&bytes).to_hex().to_string())
+}
+
+fn build_env_members_term(
+    workspace_file: &Path,
+    members: &[WorkspaceMember],
+) -> Result<Term, String> {
+    let workspace_dir = workspace_file.parent().unwrap_or_else(|| Path::new("."));
+    let mut out = Vec::new();
+    for member in members {
+        let member_root = workspace_dir.join(&member.path);
+        let pkg_file = member_root.join("package.toml");
+        let (pkg_path, pkg_hash) = if pkg_file.is_file() {
+            let bytes = std::fs::read(&pkg_file).map_err(|e| e.to_string())?;
+            (
+                Term::Str(pkg_file.display().to_string()),
+                Term::Str(blake3::hash(&bytes).to_hex().to_string()),
+            )
+        } else {
+            (Term::symbol(":none"), Term::symbol(":none"))
+        };
+        out.push(Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str(member.name.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":path")),
+                    Term::Str(member.path.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":role")),
+                    member
+                        .role
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (TermOrdKey(Term::symbol(":package-file")), pkg_path),
+                (TermOrdKey(Term::symbol(":package-h")), pkg_hash),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+    Ok(Term::Vector(out))
+}
+
+fn build_env_deps_term(workspace_file: &Path, lock: &gc_pkg::GenesisLock) -> Result<Term, String> {
+    let store_dir = workspace_file
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join(".genesis")
+        .join("store");
+
+    let mut reqs = Vec::new();
+    for (name, req) in &lock.requirements {
+        reqs.push(Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":name")), Term::Str(name.clone())),
+                (
+                    TermOrdKey(Term::symbol(":selector")),
+                    Term::Str(req.selector.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":update-policy")),
+                    Term::Str(match req.update_policy {
+                        UpdatePolicy::Manual => "manual".to_string(),
+                        UpdatePolicy::Auto => "auto".to_string(),
+                    }),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":strategy")),
+                    Term::Str(req.strategy.as_str().to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":registry")),
+                    req.registry
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":tag-policy")),
+                    req.tag_policy
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    let mut locked = Vec::new();
+    for (name, entry) in &lock.locked {
+        let snap_path = store_dir.join(&entry.snapshot);
+        if !snap_path.is_file() {
+            return Err(format!(
+                "locked snapshot for dependency `{name}` is missing from local store: {}",
+                snap_path.display()
+            ));
+        }
+        if let Some(commit) = &entry.commit {
+            let commit_path = store_dir.join(commit);
+            if !commit_path.is_file() {
+                return Err(format!(
+                    "locked commit for dependency `{name}` is missing from local store: {}",
+                    commit_path.display()
+                ));
+            }
+        }
+
+        locked.push(Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":name")), Term::Str(name.clone())),
+                (
+                    TermOrdKey(Term::symbol(":commit")),
+                    entry
+                        .commit
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":snapshot")),
+                    Term::Str(entry.snapshot.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":registry")),
+                    entry
+                        .registry
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":source-selector")),
+                    Term::Str(entry.source_selector.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":resolved-ref")),
+                    entry
+                        .resolved_ref
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":exports-h")),
+                    entry
+                        .exports_hash
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":environment-fingerprint")),
+                    entry
+                        .environment_fingerprint
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or_else(|| Term::symbol(":none")),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ));
+    }
+
+    Ok(Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":store")),
+                Term::Str(store_dir.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":requirements")),
+                Term::Vector(reqs),
+            ),
+            (TermOrdKey(Term::symbol(":locked")), Term::Vector(locked)),
+        ]
+        .into_iter()
+        .collect(),
+    ))
+}
+
+fn build_env_profile_term(
+    profile_name: &str,
+    ws: &WorkspaceConfig,
+    prof: &gc_pkg::WorkspaceProfile,
+    caps_policy_path: &Path,
+    toolchain_path: &Option<PathBuf>,
+) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":gcpm/profile"),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (
+                TermOrdKey(Term::symbol(":workspace")),
+                Term::Str(ws.workspace.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":profile")),
+                Term::Str(profile_name.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":policy")),
+                prof.policy
+                    .clone()
+                    .or(ws.defaults.policy.clone())
+                    .map(Term::Str)
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":registry")),
+                prof.registry
+                    .clone()
+                    .or(ws.defaults.registry.clone())
+                    .map(Term::Str)
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":caps-policy")),
+                Term::Str(caps_policy_path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":toolchain")),
+                toolchain_path
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
 }
 
 fn is_hash_hex_64(s: &str) -> bool {

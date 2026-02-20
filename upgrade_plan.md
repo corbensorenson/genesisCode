@@ -1,195 +1,139 @@
-# GenesisCode Upgrade Plan - Open Red-Team Backlog (Self-Hosted + AI-First v1)
+# GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
 Last updated: 2026-02-20
 
-This file contains only unresolved roadblocks from a fresh full-project red-team pass.
+This file contains only unresolved findings from the latest fine-tooth-comb red-team pass.
+Completed work is intentionally removed.
 
-Open checklist items: 2
+Open checklist items: 3
 
-## P0 - Self-Host Safety and Correctness Blockers
+## P0 - Self-Hosted v1 Blockers
 
-- [x] P0.1 Reconcile CLI help surface with parse surface, then gate it in CI.
+- [x] P0.1 Fix interactive gfx adapter output-channel contamination that breaks deterministic agent workflows.
   Evidence:
-  - CLI help is now explicit and agent-readable for accepted frontend/engine values in both production and parity profiles (`crates/gc_cli_driver/src/cli_args.rs`).
-  - Help-surface guard now validates canonical accepted-value text for top-level + `fmt --help` on native and WASI binaries (`scripts/check_production_cli_help_surface.sh`), and passes.
-  - CI now enforces help-surface guard (`.github/workflows/ci.yml`), and upgrade-plan health common gates include it (`scripts/check_upgrade_plan_health.sh`).
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host/terminal_adapter.rs:19` writes terminal title escape sequences to `stdout`.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host/terminal_adapter.rs:33` writes bell bytes to `stdout`.
+  - `bash /Users/corbensorenson/Documents/genesisCode/scripts/check_agent_reference_workflows.sh` currently fails in `agent-interactive-gfx-compute-workflow` with escape-sequence-contaminated output (`expected acceptance hash, got: \x1b]0;Genesis...`).
   Acceptance:
-  - Production/parity `--help` surface is explicitly agent-readable for engine/frontend accepted values.
-  - `scripts/check_production_cli_help_surface.sh` matches the canonical help contract and passes.
-  - CI + `scripts/check_upgrade_plan_health.sh` include help-surface guard.
+  - Interactive host control sequences never pollute command output used for hashes/logs.
+  - `scripts/check_agent_reference_workflows.sh` passes end-to-end in selfhost-only mode.
 
-- [x] P0.2 Remove panic-on-invariant paths (`unreachable!`) from user-path runtime/dispatch.
+- [ ] P0.2 Ship a production device-backed GPU runtime path in `gc_effects` (not only deterministic in-memory simulation).
   Evidence:
-  - Removed all non-test `unreachable!` macros from production crates (verified by `rg -n "unreachable!\\(" crates --glob '!**/tests/**' --glob '!**/benches/**'` returning no matches).
-  - Replaced dispatch fallthrough panics with deterministic sealed errors in package/VCS low-level dispatch modules:
-    - `crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs`
-    - `crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs`
-    - `crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs`
-    - `crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs`
-    - `crates/gc_effects/src/runner_cap_vcs_low/dispatch_snapshot.rs`
-    - `crates/gc_effects/src/runner_cap_vcs_low/dispatch_patch_contract.rs`
-  - Added negative no-panic regression tests for malformed routing:
-    - `unsupported_pkg_low_op_eff_returns_sealed_error_instead_of_panicking`
-    - `unsupported_vcs_low_op_eff_returns_sealed_error_instead_of_panicking`
-  - Extended panic guard to explicitly reject any production `unreachable!` macro reintroduction:
-    - `scripts/check_no_user_panics.sh` now fails on non-test `unreachable!` occurrences.
-  - Also removed internal dispatch-drift panics in CLI/effects/registry/kernel/optimizer paths and replaced them with deterministic internal errors:
-    - `crates/gc_cli_driver/src/cmd_pkg.rs`
-    - `crates/gc_cli_driver/src/cmd_store.rs`
-    - `crates/gc_cli_driver/src/cmd_vcs.rs`
-    - `crates/gc_cli_driver/src/selfhost_frontend.rs`
-    - `crates/gc_effects/src/log.rs`
-    - `crates/gc_effects/src/runner_response_budget.rs`
-    - `crates/gc_registry/src/lib.rs`
-    - `crates/gc_kernel/src/eval.rs`
-    - `crates/gc_kernel/src/compiled.rs`
-    - `crates/gc_opt/src/stage2_wasm/callable_emit.rs`
-    - `crates/gc_obligations/src/obligation_cache.rs`
-    - `crates/gc_obligations/src/obligation_exec.rs`
-    - `crates/gc_prelude/src/selfhost_coreform_v1.rs`
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:13`..`:34` models GPU resources as in-memory `Vec<u8>` state.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:75`..`:120` routes canonical GPU ops to first-party simulated handlers.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_runtime_bench/src/device_bridge.rs:46`..`:65` exposes optional in-repo device bridge only from benchmark crate feature (`device-bridge`), not integrated as production runtime backend.
   Acceptance:
-  - Replace user-path `unreachable!` with deterministic sealed/structured errors.
-  - Add negative tests that malformed op routing and unsupported states never panic.
-  - Extend panic guard policy to reject new `unreachable!` in production user paths.
+  - Canonical `gpu/compute::*` and `gfx/gpu::*` support a maintained in-repo device backend path in production runtime.
+  - Deterministic replay stays valid (log-driven response replay), with explicit policy-controlled fallback path.
 
-- [ ] P0.3 Ship a first-party device-backed GPU compute bridge, not fallback-only.
+- [ ] P0.3 Add a real non-terminal first-party window/audio backend for app/game-class workloads.
   Evidence:
-  - Current runtime microbench reports `gpu_compute_backend = "deterministic-fallback"` (`.genesis/perf/runtime_microbench_metrics.json:7`).
-  - GPU bench defaults to generated shell+python fallback unless external env var points at a custom bridge command (`crates/gc_runtime_bench/src/bench_gpu_compute.rs:22`-`42`, `:57`-`91`).
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host.rs:10` uses a `terminal_adapter` for interactive first-party profile.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host.rs:167`..`:220` routes interactive profile capabilities through terminal IO adapters.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host/terminal_adapter.rs` is terminal-event/terminal-control based (`crossterm`), not a windowing backend.
   Acceptance:
-  - In-repo device bridge implementation (not external ad-hoc command) for native GPU compute.
-  - Capability policy profiles for deterministic fallback vs device mode.
-  - End-to-end tests for both backends and replay/evidence behavior.
-  - Runtime bench can require `device-bridge` in configured environments.
+  - Provide a production window/input/audio backend path (desktop-class, not terminal-only).
+  - Keep deterministic headless CI profile and replay semantics intact.
 
-## P1 - Performance and Reliability
-
-- [x] P1.1 Tighten AI iteration SLO budgets and reduce core-suite latency.
+- [x] P0.4 Expand host capability ABI for network/process primitives required to build general services/tools.
   Evidence:
-  - Tightened default SLO budgets in `scripts/check_ai_iteration_slo.sh`:
-    - `incremental_warm_ms`: `60000 -> 5000`
-    - `changed_fast_ms`: `300000 -> 15000`
-    - `core_suite_ms`: `300000 -> 45000`
-    - `gcpm_lock_ms`: `20000 -> 5000`
-    - `gcpm_env_ms`: `15000 -> 1000`
-  - Added warm-build core-suite measurement path (`run_core_suite --no-run` before timing) to track iteration-time latency rather than cold compile cost.
-  - Added history + p95 regression gating in `scripts/check_ai_iteration_slo.sh`:
-    - persistent history file `.genesis/perf/ai_iteration_slo_history.jsonl`
-    - per-metric baseline p95 tracking
-    - percentage-based regression threshold (`GENESIS_AI_ITERATION_SLO_REGRESSION_PERCENT`, default `20%`) with minimum sample gate (`GENESIS_AI_ITERATION_SLO_MIN_HISTORY`, default `5`).
-  - Latest run after changes: `core_suite_ms = 2744`, `changed_fast_ms = 3346`, `incremental_warm_ms = 834` (`.genesis/perf/ai_iteration_slo_metrics.json`).
+  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md:146`..`:148` lists only `io/fs::*` and `sys/time::now` for core OS-like primitives.
+  - No canonical `io/net::*` or `sys/process::*` operations are present in host ABI operation list (`docs/spec/HOST_ABI.md:37`..`:149`).
   Acceptance:
-  - Set realistic, regression-sensitive SLO budgets for warm loop, changed-fast, and core suite.
-  - Reduce `core_suite_ms` materially (target <= 45000 on reference machine/profile).
-  - Add p95 history/regression checks (percentage-based guard, not just static max).
+  - Add capability-gated network primitives (minimum: HTTP client or socket domain) and process execution primitives.
+  - Ensure deny-by-default policy, deterministic effect logs, and replay behavior are specified and tested.
 
-- [x] P1.2 Burn down oversized test debt allowlist to zero.
+## P1 - Performance, Reliability, and Platform Gaps
+
+- [x] P1.1 Replace O(n) full-tree watch polling with incremental filesystem watch backend(s).
   Evidence:
-  - Split oversized suites into focused modules:
-    - `crates/gc_effects/tests/sync_registry.rs` + `sync_registry_cases_a.rs` + `sync_registry_cases_b.rs`
-    - `crates/gc_opt/src/stage2_wasm/tests/mod.rs` + `tail_cases.rs`
-    - `crates/gc_wasi_cli/tests/cli_eval_gates.rs` + `cli_eval_gates_tail.rs`
-    - `crates/gc_wasi_cli/tests/cli_selfhost_only.rs` + `cli_selfhost_only_tail.rs`
-    - `crates/gc_cli/tests/cli_selfhost_only.rs` + `cli_selfhost_only_tail.rs`
-  - Primary suites now meet target (<= 1000 lines), with highest at exactly `1000`:
-    - `crates/gc_wasi_cli/tests/cli_eval_gates.rs` (1000)
-    - `crates/gc_opt/src/stage2_wasm/tests/mod.rs` (984)
-    - `crates/gc_wasi_cli/tests/cli_selfhost_only.rs` (890)
-    - `crates/gc_effects/tests/sync_registry.rs` (883)
-    - `crates/gc_cli/tests/cli_selfhost_only.rs` (872)
-  - Cleared `target_debt_allowlist` in `policies/test_size_budget.toml`.
-  - Verified with `bash scripts/check_test_size_budget.sh` -> `test-size-budget: ok`.
-  - Targeted regressions pass for touched suites:
-    - `cargo test -p gc_effects --test sync_registry --quiet`
-    - `cargo test -p gc_wasi_cli --test cli_eval_gates --quiet`
-    - `cargo test -p gc_wasi_cli --test cli_selfhost_only --quiet`
-    - `cargo test -p gc_cli --test cli_selfhost_only --quiet`
-    - `cargo test -p gc_opt stage2_wasm::tests --quiet`
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:1010`..`:1067` rebuilds full snapshots on each poll.
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs:1069`..`:1081` recursively scans full directories each cycle.
   Acceptance:
-  - Split these suites into focused modules <= 1000 lines each.
-  - Remove all entries from the test-size debt allowlist while preserving coverage.
+  - Watch polling scales incrementally for large repos (event-driven or indexed delta approach).
+  - Replay semantics remain deterministic and stable across platforms.
 
-- [x] P1.3 Continue modular decomposition of high-churn production files for agent maintainability.
+- [x] P1.2 Keep local prepush health parity with CI by adding agent workflow gate to `prepush-standard`.
   Evidence:
-  - Completed prior passes:
-    - `crates/gc_registry/src/lib.rs` split into domain-focused units:
-      - `crates/gc_registry/src/registry/types_and_client.rs` (246)
-      - `crates/gc_registry/src/registry/client_impl.rs` (771)
-      - `crates/gc_registry/src/registry/remote_helpers.rs` (136)
-      - `crates/gc_registry/src/registry/file_backend.rs` (258)
-    - `crates/gc_effects/src/runner_remote_ops.rs` split into domain-focused units:
-      - `crates/gc_effects/src/runner_remote_ops/policy_auth.rs` (453)
-      - `crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs` (426)
-      - `crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs` (483)
-      - `crates/gc_effects/src/runner_remote_ops/gpk.rs` (76)
-    - `crates/gc_obligations/src/lib.rs` split into focused units:
-      - `crates/gc_obligations/src/obligations/types_api.rs` (438)
-      - `crates/gc_obligations/src/obligations/frontend_module_ops.rs` (341)
-      - `crates/gc_obligations/src/obligations/manifest_hashing.rs` (356)
-      - `crates/gc_obligations/src/obligations/test_exec.rs` (352)
-  - Completed this pass:
-    - `crates/gc_cli_driver/src/cmd_pkg.rs` reduced from 1421 -> 449 lines by extracting frontend dispatch modules:
-      - `crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch.rs` (19)
-      - `crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch/rust.rs` (169)
-      - `crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch/selfhost.rs` (822)
-    - Split test helper files moved under per-suite subdirectories to avoid accidental standalone integration-test crates:
-      - `crates/gc_effects/tests/sync_registry/cases_a.rs`
-      - `crates/gc_effects/tests/sync_registry/cases_b.rs`
-      - `crates/gc_wasi_cli/tests/cli_eval_gates/tail.rs`
-      - `crates/gc_wasi_cli/tests/cli_selfhost_only/tail.rs`
-      - `crates/gc_cli/tests/cli_selfhost_only/tail.rs`
-    - Poison-path selfhost parity fixture hardened to remain valid across module layout changes by symbol-driven mutation:
-      - `crates/gc_cli/tests/cli_pkg_engine.rs`
-      - `crates/gc_wasi_cli/tests/cli_pkg_engine.rs`
-  - Validation:
-    - `bash scripts/check_source_size_budget.sh` -> ok
-    - `bash scripts/check_test_size_budget.sh` -> ok
-    - `cargo test -p gc_cli_driver --quiet --no-run` -> ok
-    - `cargo test -p gc_cli --test cli_pkg_engine --quiet` -> ok
-    - `cargo test -p gc_wasi_cli --test cli_pkg_engine --quiet` -> ok
-    - `cargo test -p gc_effects --test sync_registry --quiet` -> ok
-    - `cargo test -p gc_registry --quiet` -> ok
-    - `cargo test -p gc_obligations --quiet` -> ok
-    - `cargo test -p gc_cli --test cli_selfhost_only --quiet` -> ok
-    - `cargo test -p gc_wasi_cli --test cli_eval_gates --quiet` -> ok
-    - `cargo test -p gc_wasi_cli --test cli_selfhost_only --quiet` -> ok
+  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh:272`..`:280` `prepush-standard` profile gates do not include `check_agent_reference_workflows.sh`.
+  - `/Users/corbensorenson/Documents/genesisCode/.github/workflows/ci.yml:230`..`:232` does include `check_agent_reference_workflows.sh`.
   Acceptance:
-  - Split by capability/domain boundaries into smaller modules (target <= 900 lines/module).
-  - Keep behavior/JSON envelopes stable; enforce with existing tests and schema checks.
+  - `prepush-standard` catches agent workflow regressions before CI.
+  - Local default health profile and CI standard profile gate surfaces are intentionally aligned.
 
-## P2 - AI-First Authoring Surface
-
-- [x] P2.1 Add machine-readable CLI introspection for agents (not help-text scraping).
+- [x] P1.3 Restore selfhost cutover dashboard freshness contract.
   Evidence:
-  - Added `genesis cli-schema` command with stable output kind `genesis/cli-schema-v0.1` and versioned schema payload (`schema = genesis/cli-schema-v0.1`) via `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_schema.rs`.
-  - Schema output includes recursive command/options/defaults plus profile-specific allowed values for `engine` and `coreform-frontend` (`production` => `selfhost`, `parity-harness` => `selfhost|rust`).
-  - Wired command into CLI dispatch and selfhost-only enforcement surface:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs`
-  - Added schema contract docs + registry updates:
-    - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI_SCHEMA_v0.1.md`
-    - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
-    - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
-  - Added CI-covered integration tests:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_cli_schema.rs`
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasi_cli/tests/cli_cli_schema.rs`
-    - updated `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_json_schema_registry.rs`
+  - `bash /Users/corbensorenson/Documents/genesisCode/scripts/check_selfhost_dashboard_fresh.sh` currently fails:
+    - `docs/status/SELFHOST_CUTOVER.md` is stale relative to generated dashboard.
   Acceptance:
-  - Add a stable command (e.g. `genesis cli-schema --json`) that emits commands/options/defaults/profile-specific allowed values.
-  - Version the schema and validate in CI.
+  - `check_selfhost_dashboard_fresh.sh` passes on clean tree.
+  - Dashboard freshness is regenerated deterministically as part of normal update flow.
 
-- [ ] P2.2 Add end-to-end agent reference workflows that combine package, VCS, effects, and GPU/task features.
+- [x] P1.4 Return to lint-clean `-D warnings` status in production crates and keep it enforced.
   Evidence:
-  - Current `examples/` are useful but mostly isolated demos (`effects_demo`, `gfx_demos`, `hello_pkg`, `selfhost_tools`) with no full-stack workflow fixture tying gcpm + vcs + task + gpu together.
+  - `cargo clippy -p gc_effects --lib -- -D warnings` currently fails with:
+    - `clippy::collapsible_if` at `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gfx_host.rs:298`
+    - `clippy::question_mark` at `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs:508`
   Acceptance:
-  - Add at least 2 agent-grade reference projects with deterministic scripts:
-    - compute-heavy workflow (gpu/task + package + evidence)
-    - app/service workflow (effects + package + publish/install + replay)
-  - Add CI smoke runs for these references under selfhost-only mode.
+  - Current clippy failures are fixed.
+  - Health profiles that enforce clippy complete successfully on clean tree.
 
-## Recommended Execution Order
+- [x] P1.5 Add a constrained WASI networking profile that supports package/registry HTTP workflows.
+  Evidence:
+  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md:59` explicitly rejects `http(s)` registry remotes on `wasm32-wasip1`.
+  Acceptance:
+  - Define and implement a policy-gated WASI network profile that supports secure remote registry workflows.
+  - Maintain deny-by-default and explicit allowlist semantics.
 
-1. P0.1 -> P0.2 -> P0.3
-2. P1.1 -> P1.2 -> P1.3
-3. P2.1 -> P2.2
+- [x] P1.6 Strengthen deterministic runtime resource model beyond current conservative limits.
+  Evidence:
+  - Added deterministic runtime budgets in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/policy.rs` (`[runtime]` parser + policy fields):
+    - `max_effect_ops`
+    - `max_payload_bytes_per_op`
+    - `max_payload_bytes_per_run`
+    - `max_response_bytes_per_op`
+    - `max_response_bytes_per_run`
+  - Enforced fail-closed runtime budgets in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_runtime_budget.rs` and integrated into `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner.rs`.
+  - Added runtime budget tests in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/tests.rs`:
+    - `runtime_policy_max_effect_ops_fail_closes_second_request`
+    - `runtime_policy_max_payload_bytes_per_op_fail_closes_oversized_request`
+    - `runtime_policy_max_payload_bytes_per_run_fail_closes_on_cumulative_budget`
+    - `runtime_policy_max_response_bytes_per_op_fail_closes_oversized_response`
+  - Documented runtime budgets in:
+    - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CAPS_TOML.md`
+    - `/Users/corbensorenson/Documents/genesisCode/docs/spec/LIMITS.md`
+  Acceptance:
+  - Introduce stronger deterministic resource controls for adversarial AI-generated workloads.
+  - Document and test fail-closed behavior under constrained resource budgets.
+
+## P2 - AI-First Authoring and Project Ergonomics
+
+- [x] P2.1 Upgrade `gcpm env` from metadata emitter to full deterministic environment realization.
+  Evidence:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_workspace_ops.rs:241`..`:388` writes `env.gcenv` + `provenance.gc` metadata only.
+  - Current implementation does not install dependencies, realize toolchain state, or materialize runnable workspace assets.
+  Acceptance:
+  - `gcpm env` materializes deterministic, runnable environment state (toolchain/deps/profile artifacts), not only descriptors.
+  - Outputs are content-addressed and replay-auditable.
+
+- [x] P2.2 Expand `gcpm run` task model beyond `test|pack|typecheck`.
+  Evidence:
+  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_task_runner.rs:23`..`:36` supports only `test`, `pack`, and `typecheck`.
+  Acceptance:
+  - Add richer deterministic task graph support suitable for agent-authored project workflows (build/run/bench/lint/custom task contracts).
+  - Preserve deterministic task resolution and policy boundaries.
+
+- [ ] P2.3 Reduce high-churn large-file hotspots to improve agent editability and reviewability.
+  Evidence:
+  - `wc -l` current hotspots:
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` = 1587
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` = 1549
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` = 1518
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/expr_lowering.rs` = 1346
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` = 1330
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` = 1275
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` = 1100
+  Acceptance:
+  - Decompose these modules along stable domain boundaries with no behavior drift.
+  - Preserve/expand tests while reducing per-file cognitive load for agent-driven edits.

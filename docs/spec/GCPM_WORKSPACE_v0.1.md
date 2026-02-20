@@ -37,5 +37,5 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
 - `genesis gcpm new` creates `genesis.workspace.toml` + `genesis.lock`.
 - `genesis gcpm migrate` creates workspace + lock from `package.toml`.
 - `genesis gcpm remove <name>` deterministically removes requirement + locked entry from lock.
-- `genesis gcpm run <task>` resolves and executes workspace task command data (built-ins: `test`, `pack`, `typecheck`).
+- `genesis gcpm run <task>` resolves and executes workspace task command data (built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, `contract`, `eval`, `fmt`, `optimize`).
 - `genesis gcpm env --profile <name>` materializes deterministic profile environment artifacts (see `docs/spec/GCPM_ENV_v0.1.md`).

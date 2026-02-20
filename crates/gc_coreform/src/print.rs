@@ -9,6 +9,16 @@ pub fn print_term(term: &Term) -> String {
     fmt_term(term, 0).join("\n")
 }
 
+pub fn print_term_compact(term: &Term) -> String {
+    // Compact serializer is used for large generated artifacts where readability is secondary
+    // to deterministic byte stability and line-budget compliance.
+    stacker::maybe_grow(32 * 1024, 8 * 1024 * 1024, || {
+        let mut out = String::new();
+        write_term_compact(term, &mut out);
+        out
+    })
+}
+
 pub fn print_module(forms: &[Term]) -> String {
     let mut out = String::new();
     for (i, f) in forms.iter().enumerate() {
@@ -134,6 +144,53 @@ fn fmt_term_impl(t: &Term, indent: usize) -> Vec<String> {
             spaces(indent),
             atom_repr(t).unwrap_or_else(|| "<unknown>".to_string())
         )],
+    }
+}
+
+fn write_term_compact(t: &Term, out: &mut String) {
+    if let Some(a) = atom_repr(t) {
+        out.push_str(&a);
+        return;
+    }
+
+    match t {
+        Term::Vector(xs) => {
+            out.push('[');
+            for (i, x) in xs.iter().enumerate() {
+                if i != 0 {
+                    out.push(' ');
+                }
+                write_term_compact(x, out);
+            }
+            out.push(']');
+        }
+        Term::Map(m) => {
+            out.push('{');
+            for (i, (k, v)) in m.iter().enumerate() {
+                if i != 0 {
+                    out.push(' ');
+                }
+                write_term_compact(&k.0, out);
+                out.push(' ');
+                write_term_compact(v, out);
+            }
+            out.push('}');
+        }
+        Term::Pair(_, _) => {
+            if let Some(items) = t.as_proper_list() {
+                out.push('(');
+                for (i, x) in items.iter().enumerate() {
+                    if i != 0 {
+                        out.push(' ');
+                    }
+                    write_term_compact(x, out);
+                }
+                out.push(')');
+            } else {
+                out.push_str("(pair <improper>)");
+            }
+        }
+        _ => out.push_str("<unknown>"),
     }
 }
 

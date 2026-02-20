@@ -713,7 +713,7 @@ pub(super) fn cmd_selfhost_artifact(
         .into_iter()
         .collect(),
     );
-    let artifact_s = print_term(&artifact);
+    let artifact_s = print_term_compact(&artifact);
     std::fs::write(out, artifact_s.as_bytes())
         .with_context(|| format!("write {}", out.display()))
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;

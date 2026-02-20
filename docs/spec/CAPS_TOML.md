@@ -8,6 +8,8 @@ This file defines the *deny-by-default* capability policy used by `genesis run` 
 - `log` (optional): table controlling effect log behavior (see below).
 - `store` (optional): table controlling the artifact store used by `core/store::*` capabilities (see below).
 - `refs` (optional): table controlling the local refs database used by `core/refs::*` capabilities (see below).
+- `task` (optional): table controlling task scheduler defaults and limits for `core/task::*` (see below).
+- `runtime` (optional): deterministic runtime budgets for effect programs (see below).
 
 Example:
 ```toml
@@ -62,6 +64,53 @@ Example:
 path = "./.genesis/refs.gc"
 ```
 
+## Task Policy (`[task]`)
+
+Supported keys:
+- `default_workers` (int >= 1, optional): default worker budget used when `task.max_workers` is unset.
+  - default when omitted: host parallelism (`available_parallelism`) with minimum `1`.
+- `max_workers` (int >= 0, optional): hard worker ceiling.
+- `max_tasks` (int >= 0, optional): maximum concurrently tracked tasks.
+- `max_queue` (int >= 0, optional): maximum queued (not yet running) tasks.
+- `max_steps_per_task` (int >= 0, optional): logical-step ceiling per task.
+- `max_time_ms_per_task` (int >= 0, optional): logical elapsed-step budget per task.
+
+Example:
+```toml
+[task]
+default_workers = 8
+max_workers = 16
+max_tasks = 128
+max_queue = 256
+max_steps_per_task = 100000
+max_time_ms_per_task = 10000
+```
+
+## Runtime Policy (`[runtime]`)
+
+Supported keys:
+- `max_effect_ops` (int >= 0, optional): maximum number of effect requests processed in a single run.
+  - Exceeding the limit returns sealed ERROR `core/caps/resource-limit`.
+- `max_payload_bytes_per_op` (int >= 0, optional): maximum canonical payload size (bytes) for a single effect request.
+- `max_payload_bytes_per_run` (int >= 0, optional): cumulative canonical payload-byte budget for the full run.
+- `max_response_bytes_per_op` (int >= 0, optional): maximum canonical response size (bytes) for a single effect response.
+- `max_response_bytes_per_run` (int >= 0, optional): cumulative canonical response-byte budget for the full run.
+
+Behavior:
+- Payload/response sizes are computed from canonical CoreForm serialization, not host RSS/process memory.
+- Limits are fail-closed and deterministic: the runner returns a sealed `core/caps/resource-limit` error and records a denied decision for that entry.
+- Runtime limit errors include `:runtime/budget`, `:runtime/unit`, `:runtime/observed`, and `:runtime/limit` in `:error/context`.
+
+Example:
+```toml
+[runtime]
+max_effect_ops = 20000
+max_payload_bytes_per_op = 65536
+max_payload_bytes_per_run = 8388608
+max_response_bytes_per_op = 1048576
+max_response_bytes_per_run = 16777216
+```
+
 ## Log Policy (`[log]`)
 
 Supported keys:
@@ -92,8 +141,26 @@ Supported keys:
 - `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
   - used by host-integrated ops such as `editor/plugin::command`,
     `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`, `gfx/gpu::*`,
-    and `gpu/compute::*`.
+    `gpu/compute::*`, `io/net::http-request`, and `sys/process::exec`.
+  - first-party runtime domains (canonical `gpu/compute::*`,
+    `gfx/gpu::*`, `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`,
+    `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`,
+    `editor/task::*`) do not require `bridge_cmd`; bridge remains an explicit override.
 - `bridge_args` (array<string>): optional fixed args passed to `bridge_cmd` before the op symbol.
+- `bridge_transport` (string): optional transport mode for bridge-backed ops.
+  - supported values:
+    - `spawn-per-op` (default): spawn a new bridge process for each op request.
+    - `persistent-stdio`: keep a per-op bridge process/session alive and exchange framed request/response payloads over persistent stdio.
+  - `persistent-stdio` requires the bridge executable to support repeated framed request processing in a single process lifetime.
+- `first_party_profile` (string): optional profile selector for first-party host backends.
+  - currently used by `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`.
+  - supported values:
+    - `headless` (default): deterministic no-event CI/runtime profile.
+    - `interactive`: host-integrated terminal adapter profile (`terminal-host`) for local window/input/audio interactivity.
+- `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
+  - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
+- `bridge_cmd_sha256` (string): optional executable digest pin (64 hex; optional `sha256:` prefix).
+  - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
 - `wasi_bridge_profile` (bool): when true, enables deterministic WASI bridge response mode for this op (also always enabled on actual WASI targets).
 - `wasi_bridge_response` (string): optional CoreForm term used as deterministic host response for bridge-backed ops under WASI bridge profile.
 - `wasi_bridge_response_file` (string): optional path (under `base_dir`) to a CoreForm term or op->response map used under WASI bridge profile.
@@ -103,7 +170,10 @@ Supported keys:
   - bridge-backed ops (`editor/*`, `gfx/*`, `gpu/compute::*`): maximum bytes for both framed
     request payload and framed response payload.
 - `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg-low::publish` (see below).
-- `allow_http` (bool): if true, `http://` remotes are permitted for `core/sync::*` and `core/pkg-low::publish` (default is false).
+- `url_allow` (array of strings): URL prefix allowlist for `io/net::http-request`.
+- `allow_http` (bool): if true, `http://` URLs are permitted for `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request` (default is false).
+- `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request`.
+- `allow_programs` (array<string>): required allowlist for `sys/process::exec` program names.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -134,6 +204,15 @@ bridge_cmd = "./tools/host_bridge.sh"
 
 [op."gfx/window::create-surface"]
 base_dir = "./workspace"
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::http-request"]
+url_allow = ["https://registry.example.com/api/"]
+wasi_network_profile = "preview2"
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."sys/process::exec"]
+allow_programs = ["gcpm", "genesis-lsp"]
 bridge_cmd = "./tools/host_bridge.sh"
 ```
 

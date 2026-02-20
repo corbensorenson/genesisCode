@@ -1,0 +1,16 @@
+allow = [
+  "core/task::spawn",
+  "core/task::await",
+  "core/task::status",
+  "gpu/compute::submit",
+]
+
+[task]
+default_workers = 2
+max_workers = 4
+max_tasks = 16
+max_queue = 32
+
+[op."gpu/compute::submit"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"

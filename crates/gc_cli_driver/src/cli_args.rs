@@ -39,8 +39,13 @@ struct Cli {
     selfhost_artifact: Option<PathBuf>,
 
     /// Selfhost bootstrap mode for `--engine selfhost`.
-    /// `artifact-only` is production mode; `embedded` is for local bootstrap/development.
-    #[arg(long, global = true, value_enum, default_value_t = SelfhostBootstrapArg::ArtifactOnly)]
+    #[arg(
+        long,
+        global = true,
+        value_enum,
+        default_value_t = SelfhostBootstrapArg::ArtifactOnly,
+        help = selfhost_bootstrap_help()
+    )]
     selfhost_bootstrap: SelfhostBootstrapArg,
 
     /// Enforce selfhost-only execution for frontend paths.
@@ -63,8 +68,30 @@ struct Cli {
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum SelfhostBootstrapArg {
     ArtifactOnly,
+    #[cfg(feature = "parity-harness")]
     ArtifactPreferred,
+    #[cfg(feature = "parity-harness")]
     Embedded,
+}
+
+impl SelfhostBootstrapArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::ArtifactOnly => "artifact-only",
+            #[cfg(feature = "parity-harness")]
+            Self::ArtifactPreferred => "artifact-preferred",
+            #[cfg(feature = "parity-harness")]
+            Self::Embedded => "embedded",
+        }
+    }
+}
+
+const fn selfhost_bootstrap_help() -> &'static str {
+    if cfg!(feature = "parity-harness") {
+        "Selfhost bootstrap mode. Production mode is `artifact-only`; parity harness may opt into development bootstrap modes."
+    } else {
+        "Selfhost bootstrap mode. Accepted value: artifact-only."
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,6 +272,9 @@ enum Cmd {
 
     /// Emit machine-readable CLI command/option schema for agent planning.
     CliSchema,
+
+    /// Emit AI-facing planning index (CLI schema + capability indices + workflow pointers).
+    AgentIndex,
 
     /// Generate a new Ed25519 signing key.
     Keygen {

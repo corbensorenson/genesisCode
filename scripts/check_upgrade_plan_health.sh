@@ -14,12 +14,153 @@ fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-300000}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
+HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
+PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
 else
   ENFORCE_GATES_DEFAULT="0"
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
+
+now_ms() {
+  python3 - <<'PY'
+import time
+print(int(time.time() * 1000))
+PY
+}
+
+detect_parallelism() {
+  python3 - <<'PY'
+import os
+count = os.cpu_count() or 1
+if count < 1:
+    count = 1
+print(count)
+PY
+}
+
+default_health_shards_for_profile() {
+  local profile="$1"
+  local cpu_count
+  cpu_count="$(detect_parallelism)"
+  case "$profile" in
+    prepush-standard)
+      if (( cpu_count >= 4 )); then
+        echo "4"
+      elif (( cpu_count >= 2 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
+    *)
+      echo "1"
+      ;;
+  esac
+}
+
+write_health_profile_report() {
+  local profile="$1"
+  local configured_shards="$2"
+  local gate_count="$3"
+  local elapsed_ms="$4"
+  local budget_ms="$5"
+  local ok="$6"
+  local report_path="$7"
+
+  python3 - "$profile" "$configured_shards" "$gate_count" "$elapsed_ms" "$budget_ms" "$ok" "$report_path" <<'PY'
+import json
+import pathlib
+import sys
+
+profile = sys.argv[1]
+configured_shards = int(sys.argv[2])
+gate_count = int(sys.argv[3])
+elapsed_ms = int(sys.argv[4])
+budget_ms_raw = sys.argv[5].strip()
+ok = sys.argv[6].strip() == "1"
+report_path = pathlib.Path(sys.argv[7])
+budget_ms = int(budget_ms_raw) if budget_ms_raw else None
+
+doc = {
+    "kind": "genesis/upgrade-plan-health-profile-v0.1",
+    "profile": profile,
+    "configured_shards": configured_shards,
+    "gate_count": gate_count,
+    "elapsed_ms": elapsed_ms,
+    "budget_ms": budget_ms,
+    "ok": ok,
+}
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(f"upgrade-plan-health: wrote profile report {report_path}")
+PY
+}
+
+run_gate_commands() {
+  local group_label="$1"
+  local shard_count="$2"
+  shift 2
+  local -a gate_cmds_ref=("$@")
+
+  if (( ${#gate_cmds_ref[@]} == 0 )); then
+    return 0
+  fi
+
+  if (( shard_count <= 1 || ${#gate_cmds_ref[@]} <= 1 )); then
+    for cmd in "${gate_cmds_ref[@]}"; do
+      echo "upgrade-plan-health: [${group_label}] >> $cmd"
+      bash -lc "$cmd"
+    done
+    return 0
+  fi
+
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local -a shard_files=()
+  local -a pids=()
+  local launched=0
+  local idx
+  for ((idx = 0; idx < shard_count; idx += 1)); do
+    shard_files[$idx]="$tmp_dir/shard_${idx}.txt"
+    : > "${shard_files[$idx]}"
+  done
+
+  for ((idx = 0; idx < ${#gate_cmds_ref[@]}; idx += 1)); do
+    local shard=$((idx % shard_count))
+    printf '%s\n' "${gate_cmds_ref[$idx]}" >> "${shard_files[$shard]}"
+  done
+
+  for ((idx = 0; idx < shard_count; idx += 1)); do
+    local file="${shard_files[$idx]}"
+    if [[ ! -s "$file" ]]; then
+      continue
+    fi
+    launched=$((launched + 1))
+    (
+      while IFS= read -r cmd || [[ -n "$cmd" ]]; do
+        [[ -z "$cmd" ]] && continue
+        echo "upgrade-plan-health: [${group_label} shard $((idx + 1))/${shard_count}] >> $cmd"
+        bash -lc "$cmd"
+      done < "$file"
+    ) &
+    pids+=("$!")
+  done
+
+  local failed=0
+  for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+      failed=1
+    fi
+  done
+  rm -rf "$tmp_dir"
+  if (( failed != 0 )); then
+    return 1
+  fi
+  echo "upgrade-plan-health: completed ${group_label} gates with deterministic sharding (${launched}/${shard_count} shards active)"
+  return 0
+}
 
 usage() {
   cat <<'EOF'
@@ -51,6 +192,17 @@ if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "prepush-standard" && "$PROFILE"
 fi
 if [[ "$ENFORCE_GATES" != "0" && "$ENFORCE_GATES" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_ENFORCE_GATES must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
+
+DEFAULT_HEALTH_SHARDS="$(default_health_shards_for_profile "$PROFILE")"
+HEALTH_SHARDS="${GENESIS_HEALTH_SHARDS:-$DEFAULT_HEALTH_SHARDS}"
+if [[ ! "$HEALTH_SHARDS" =~ ^[0-9]+$ || "$HEALTH_SHARDS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_SHARDS must be a positive integer" >&2
   exit 2
 fi
 
@@ -91,12 +243,20 @@ COMMON_GATES=(
   "bash scripts/check_host_abi_conformance.sh"
   "bash scripts/check_runner_high_level_op_guard.sh"
   "bash scripts/check_prelude_capability_coverage.sh"
+  "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_selfhost_refactor_guard.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
+  "bash scripts/check_selfhost_dashboard_fresh.sh"
+  "bash scripts/check_redteam_report.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
   "bash scripts/check_production_cli_help_surface.sh"
+  "bash scripts/check_cli_diagnostics_contract.sh"
+  "bash scripts/check_fuzz_differential_hardening.sh"
+  "bash scripts/check_test_execution_profile_matrix.sh"
+  "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
   "bash scripts/check_test_size_budget.sh"
 )
@@ -113,9 +273,11 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
+    PROFILE_GATES+=("bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
+    PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     ;;
   release-full)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
@@ -126,6 +288,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")
     PROFILE_GATES+=("bash scripts/check_hot_path_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
+    PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     ;;
 esac
 
@@ -135,17 +298,46 @@ if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
 fi
 
 if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
-  for cmd in "${COMMON_GATES[@]}"; do
-    echo "upgrade-plan-health: >> $cmd"
-    bash -lc "$cmd"
-  done
+  echo "upgrade-plan-health: running ${#COMMON_GATES[@]} common gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
 fi
 
 if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
-  for cmd in "${PROFILE_GATES[@]}"; do
-    echo "upgrade-plan-health: >> $cmd"
-    bash -lc "$cmd"
-  done
+  echo "upgrade-plan-health: running ${#PROFILE_GATES[@]} profile gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
 fi
 
+start_ms="$(now_ms)"
+if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "common" "$HEALTH_SHARDS" "${COMMON_GATES[@]}"
+fi
+if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "profile:${PROFILE}" "$HEALTH_SHARDS" "${PROFILE_GATES[@]}"
+fi
+end_ms="$(now_ms)"
+elapsed_ms=$((end_ms - start_ms))
+gate_count=$(( ${#COMMON_GATES[@]} + ${#PROFILE_GATES[@]} ))
+
+prepush_budget=""
+prepush_ok=1
+if [[ "$PROFILE" == "prepush-standard" ]]; then
+  prepush_budget="$PREPUSH_WALL_BUDGET_MS"
+  if (( elapsed_ms > PREPUSH_WALL_BUDGET_MS )); then
+    prepush_ok=0
+  fi
+fi
+
+write_health_profile_report \
+  "$PROFILE" \
+  "$HEALTH_SHARDS" \
+  "$gate_count" \
+  "$elapsed_ms" \
+  "$prepush_budget" \
+  "$prepush_ok" \
+  "$HEALTH_PROFILE_REPORT"
+
+if (( prepush_ok == 0 )); then
+  echo "upgrade-plan-health: prepush wall-time exceeded budget (${elapsed_ms}ms > ${PREPUSH_WALL_BUDGET_MS}ms)" >&2
+  exit 1
+fi
+
+echo "upgrade-plan-health: elapsed_ms=${elapsed_ms} gate_count=${gate_count} shards=${HEALTH_SHARDS}"
 echo "upgrade-plan-health: ok"

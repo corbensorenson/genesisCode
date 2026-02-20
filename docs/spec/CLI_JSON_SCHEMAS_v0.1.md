@@ -31,6 +31,7 @@ Failure envelopes always use:
 - `test` -> `genesis/test-v0.2`
 - `pack` -> `genesis/pack-v0.2`
 - `cli-schema` -> `genesis/cli-schema-v0.1`
+- `agent-index` -> `genesis/agent-index-v0.1`
 - `warm` -> `genesis/warm-session-v0.1`
 
 ### Security / optimization / semantic tooling

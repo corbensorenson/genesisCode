@@ -27,6 +27,7 @@ Required fields:
 - `budgets.gpu_compute_submit_ms`
 - `budgets.task_runner_ms`
 - `gpu_compute_backend` (`"deterministic-fallback"` or `"device-bridge"`)
+- `gpu_compute_backend_policy` (`"dev-allow-fallback"` or `"require-device"`)
 
 ## Output Artifact
 
@@ -41,6 +42,7 @@ Schema:
   "kind": "genesis/concurrency-gpu-slo-v0.1",
   "source_report": ".genesis/perf/runtime_microbench_metrics.json",
   "gpu_compute_backend": "deterministic-fallback",
+  "gpu_compute_backend_policy": "dev-allow-fallback",
   "ci_enforced": true,
   "slo": {
     "gpu_compute_bridge": {
@@ -91,3 +93,9 @@ Failure behavior:
 
 This keeps the bridge-overhead metric (`bridge_runner_ms`) and compute-submit metric
 (`gpu_compute_submit_ms`) independently visible in SLO reports.
+
+Perf-critical lanes must set `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`
+so fallback is never accepted implicitly.
+
+For compute-only runtime profile gating that explicitly excludes non-compute lanes,
+see `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`.

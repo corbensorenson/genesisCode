@@ -15,7 +15,7 @@ gc_target_lines = 1200
 exclude_substrings = ["/tests/", "/benches/", "/examples/"]
 
 # Explicit generated artifact carve-outs for .gc budget enforcement.
-gc_exclude_paths = ["prelude/prelude.gc", "selfhost/toolchain.gc"]
+gc_exclude_paths = ["prelude/prelude.gc"]
 
 # Stage-rollout debt allowlists:
 # Files listed here are legacy over target and are tracked separately as debt.

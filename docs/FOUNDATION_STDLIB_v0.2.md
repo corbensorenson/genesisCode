@@ -1,7 +1,7 @@
 # Foundation Standard Library (Level 1) v0.2
 
-Status: partially implemented (v0.2). This doc is normative for the intended stable surface, and is
-kept in sync with the current prelude as it lands.
+Status: fully implemented (v0.2). This doc is normative for the stable Foundation surface and is
+locked by conformance tests + CI guards.
 
 This document defines the *Level 1 (Foundation)* standard library surface. The point is not to be
 "big", but to be **canonical** and **uniform** so higher-level stacks do not re-invent basics and
@@ -129,3 +129,15 @@ Foundation should provide:
 - stable schemas (docs)
 - convenience wrappers in GenesisCode that construct these effect programs uniformly (implemented in `prelude/prelude.gc`)
 - obligation profiles and policy defaults
+
+## 6) Conformance lock (CI-gated)
+
+The Foundation surface is locked by:
+
+- `crates/gc_prelude/tests/prelude_foundation_stdlib_conformance.rs`
+- `scripts/check_foundation_stdlib_conformance.sh`
+
+CI and health gates execute this conformance suite via:
+
+- `.github/workflows/ci.yml` (`Foundation Stdlib Conformance Guard`)
+- `scripts/check_upgrade_plan_health.sh` (`COMMON_GATES`)

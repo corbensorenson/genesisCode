@@ -1,0 +1,10 @@
+name = "agent_service_workflow"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+hash = "c5da244fd88fa93ae5464ef589784778b6d11ef83c9b8708de1430006caf1b78"
+path = "service.gc"

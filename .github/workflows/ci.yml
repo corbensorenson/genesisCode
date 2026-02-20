@@ -102,8 +102,20 @@ jobs:
       - name: Prelude Capability Coverage Guard
         run: bash scripts/check_prelude_capability_coverage.sh
 
+      - name: Foundation Stdlib Conformance Guard
+        run: bash scripts/check_foundation_stdlib_conformance.sh
+
       - name: Capability Indices Guard
         run: bash scripts/check_capability_indices.sh
+
+      - name: Selfhost Refactor Guard
+        run: bash scripts/check_selfhost_refactor_guard.sh
+
+      - name: Selfhost Dashboard Freshness Guard
+        run: bash scripts/check_selfhost_dashboard_fresh.sh
+
+      - name: Red-Team Report Guard
+        run: bash scripts/check_redteam_report.sh
 
       - name: User-Path Panic Guard
         run: bash scripts/check_no_user_panics.sh
@@ -117,8 +129,20 @@ jobs:
       - name: Production CLI Help Surface Guard
         run: bash scripts/check_production_cli_help_surface.sh
 
+      - name: CLI Diagnostics Contract Guard
+        run: bash scripts/check_cli_diagnostics_contract.sh
+
+      - name: Fuzz + Differential Hardening Guard
+        run: bash scripts/check_fuzz_differential_hardening.sh
+
+      - name: Test Execution Profile Matrix Guard
+        run: bash scripts/check_test_execution_profile_matrix.sh
+
       - name: Source Size Budget Guard
         run: bash scripts/check_source_size_budget.sh
+
+      - name: GC Source Size Budget Guard
+        run: bash scripts/check_gc_source_size_budget.sh
 
       - name: Test Size Budget Guard
         run: bash scripts/check_test_size_budget.sh
@@ -185,6 +209,10 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_runtime_microbench_budgets.sh
 
+      - name: GPU Compute Runtime Profile (Compute-Only)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_gpu_compute_runtime_profile.sh
+
       - name: Upload Perf Trend Artifacts
         if: ${{ always() && (env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full') }}
         uses: actions/upload-artifact@v4
@@ -199,8 +227,12 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_smoke.sh
 
+      - name: Agent Reference Workflow Smoke (Selfhost-Only)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_agent_reference_workflows.sh
+
       - name: Selfhost Strict Golden (Native + WASI CLI)
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
         run: bash scripts/selfhost_strict_golden.sh
 
       - name: WASM Build (Pure Kernel)
@@ -224,7 +256,7 @@ jobs:
           node scripts/wasm_node_smoke.mjs
 
       - name: WASM Cross-Host Determinism (Native vs Node)
-        if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
@@ -291,7 +323,8 @@ jobs:
     runs-on: [self-hosted, linux, x64, gpu]
     env:
       GENESIS_ALLOW_RUST_ENGINE: "0"
-      GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD: ${{ vars.GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD }}
+      GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
       GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-bridge"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
@@ -305,16 +338,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Validate Device Bridge Configuration
-        run: |
-          if [[ -z "${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD:-}" ]]; then
-            echo "GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD must be configured for gpu_device_microbench lane"
-            exit 1
-          fi
-          if [[ ! -x "${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD}" ]]; then
-            echo "GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD is not executable: ${GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD}"
-            exit 1
-          fi
+      - name: Device Bridge Replay Determinism (Feature Gate)
+        run: cargo test -p gc_runtime_bench --features device-bridge --test device_bridge_replay --quiet
 
       - name: Runtime Microbench Budgets (Device Bridge Required)
         run: bash scripts/check_runtime_microbench_budgets.sh

@@ -19,3 +19,6 @@ serde_json.workspace = true
 gc_coreform = { path = "../gc_coreform" }
 gc_kernel = { path = "../gc_kernel" }
 gc_prelude = { path = "../gc_prelude", default-features = false }
+
+[dev-dependencies]
+proptest = "1"

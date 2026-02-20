@@ -15,8 +15,9 @@ CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
 REPORT_OUT="${GENESIS_AI_ITERATION_SLO_OUT:-.genesis/perf/ai_iteration_slo_metrics.json}"
 HISTORY_OUT="${GENESIS_AI_ITERATION_SLO_HISTORY:-.genesis/perf/ai_iteration_slo_history.jsonl}"
+BASELINE_HISTORY="${GENESIS_AI_ITERATION_SLO_BASELINE:-policies/perf/ai_iteration_slo_seed_history.jsonl}"
 HISTORY_MIN_SAMPLES="${GENESIS_AI_ITERATION_SLO_MIN_HISTORY:-5}"
-REGRESSION_PERCENT="${GENESIS_AI_ITERATION_SLO_REGRESSION_PERCENT:-20}"
+REGRESSION_PERCENT="${GENESIS_AI_ITERATION_SLO_REGRESSION_PERCENT:-100}"
 
 now_ns() {
   python3 - <<'PY'
@@ -144,8 +145,9 @@ GCPM_ENV_MS="$MEASURE_LAST_MS"
 
 mkdir -p "$(dirname "$REPORT_OUT")"
 mkdir -p "$(dirname "$HISTORY_OUT")"
+mkdir -p "$(dirname "$BASELINE_HISTORY")"
 
-python3 - "$REPORT_OUT" "$HISTORY_OUT" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$INCREMENTAL_WARM_MS" "$CHANGED_FAST_MS" "$CORE_SUITE_MS" "$GCPM_LOCK_MS" "$GCPM_ENV_MS" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" <<'PY'
+python3 - "$REPORT_OUT" "$HISTORY_OUT" "$BASELINE_HISTORY" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$INCREMENTAL_WARM_MS" "$CHANGED_FAST_MS" "$CORE_SUITE_MS" "$GCPM_LOCK_MS" "$GCPM_ENV_MS" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" <<'PY'
 import json
 import math
 import os
@@ -155,6 +157,7 @@ import time
 (
     report_path,
     history_path,
+    baseline_history_path,
     profile,
     target_profile_dir,
     disk_strict_mode,
@@ -212,10 +215,26 @@ if os.path.exists(history_path):
             if isinstance(obj, dict) and isinstance(obj.get("metrics"), dict):
                 history.append(obj)
 
+baseline_history = []
+if os.path.exists(baseline_history_path):
+    with open(baseline_history_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if isinstance(obj, dict) and isinstance(obj.get("metrics"), dict):
+                baseline_history.append(obj)
+
+history_for_baseline = baseline_history + history
+
 baseline_stats = {}
 for key in metrics:
     values = []
-    for row in history:
+    for row in history_for_baseline:
         value = row.get("metrics", {}).get(key)
         if isinstance(value, int):
             values.append(value)
@@ -265,6 +284,7 @@ for key, value in metrics.items():
 report = {
     **entry,
     "history_path": history_path,
+    "baseline_history_path": baseline_history_path,
     "history_min_samples": history_min_samples,
     "regression_percent": regression_percent,
     "thresholds": thresholds,

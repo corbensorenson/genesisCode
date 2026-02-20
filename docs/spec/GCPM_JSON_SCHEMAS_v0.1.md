@@ -32,7 +32,14 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm remove` -> `genesis/pkg-remove-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-v0.1`
 - `gcpm update` -> `genesis/pkg-update-v0.1`
-- `gcpm run <task>` -> forwards to task-target command `kind` (for built-ins: `test -> genesis/test-v0.2`, `pack -> genesis/pack-v0.2`, `typecheck -> genesis/typecheck-v0.2`)
+- `gcpm run <task>` -> forwards to task-target command `kind`:
+  - `test` -> `genesis/test-v0.2`
+  - `pack|build` -> `genesis/pack-v0.2`
+  - `typecheck|lint` -> `genesis/typecheck-v0.2`
+  - `run|bench|contract` -> `genesis/run-v0.2`
+  - `eval` -> `genesis/eval-v0.2`
+  - `fmt` -> `genesis/fmt-v0.2`
+  - `optimize` -> `genesis/optimize-v0.2`
 - `gcpm test` -> `genesis/test-v0.2`
 - `gcpm install` -> `genesis/pkg-install-v0.1`
 - `gcpm verify` -> `genesis/pkg-verify-v0.1`

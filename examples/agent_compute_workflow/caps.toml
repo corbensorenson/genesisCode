@@ -1,0 +1,31 @@
+allow = [
+  "core/task::spawn",
+  "core/task::await",
+  "core/task::status",
+  "gfx/gpu::create-buffer",
+  "gfx/gpu::write-buffer",
+  "gfx/gpu::read-buffer",
+  "gfx/gpu::destroy-resource",
+]
+
+[task]
+default_workers = 2
+max_workers = 4
+max_tasks = 16
+max_queue = 32
+
+[op."gfx/gpu::create-buffer"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+
+[op."gfx/gpu::write-buffer"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+
+[op."gfx/gpu::read-buffer"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+
+[op."gfx/gpu::destroy-resource"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"

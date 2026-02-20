@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_module,
-    print_term,
+    print_term, print_term_compact,
 };
 use gc_effects::{CapsPolicy, Decision, EffectLog};
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value, eval_module, eval_term};
@@ -21,6 +21,7 @@ use gc_prelude::{
 
 mod cli_json;
 mod cli_schema;
+mod cmd_agent_index;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_gc;
@@ -55,6 +56,7 @@ mod vcs_contract;
 
 use cli_json::*;
 use cli_schema::cmd_cli_schema;
+use cmd_agent_index::cmd_agent_index;
 use cmd_commit::cmd_commit;
 use cmd_core::*;
 use cmd_gc::cmd_gc;
@@ -248,6 +250,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         }
         Cmd::Warm { prime_selfhost } => cmd_warm(cli, flavor, *prime_selfhost),
         Cmd::CliSchema => cmd_cli_schema(cli),
+        Cmd::AgentIndex => cmd_agent_index(cli),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,
@@ -292,7 +295,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::Store { caps, log, cmd } => cmd_store(cli, caps, log.as_deref(), cmd),
         Cmd::Refs { caps, log, cmd } => cmd_refs(cli, caps, log.as_deref(), cmd),
         Cmd::Commit { caps, log, cmd } => cmd_commit(cli, caps, log.as_deref(), cmd),
-        Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
+        Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, flavor, caps, log.as_deref(), cmd),
         Cmd::Policy { cmd } => cmd_policy(cli, cmd),
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),
         Cmd::Registry { cmd } => cmd_registry(cli, flavor, cmd),
@@ -386,14 +389,7 @@ fn inherited_global_args(cli: &Cli) -> Vec<String> {
         out.push(p.display().to_string());
     }
     out.push("--selfhost-bootstrap".to_string());
-    out.push(
-        match cli.selfhost_bootstrap {
-            SelfhostBootstrapArg::ArtifactOnly => "artifact-only",
-            SelfhostBootstrapArg::ArtifactPreferred => "artifact-preferred",
-            SelfhostBootstrapArg::Embedded => "embedded",
-        }
-        .to_string(),
-    );
+    out.push(cli.selfhost_bootstrap.as_str().to_string());
     if cli.selfhost_only {
         out.push("--selfhost-only".to_string());
     }
@@ -435,11 +431,7 @@ fn warm_session_cache_key(
         "flavor": flavor_token(flavor),
         "prime_selfhost": prime_selfhost,
         "selfhost_only": cli.selfhost_only,
-            "selfhost_bootstrap": match cli.selfhost_bootstrap {
-            SelfhostBootstrapArg::ArtifactOnly => "artifact-only",
-            SelfhostBootstrapArg::ArtifactPreferred => "artifact-preferred",
-            SelfhostBootstrapArg::Embedded => "embedded",
-        },
+        "selfhost_bootstrap": cli.selfhost_bootstrap.as_str(),
         "coreform_frontend": cli.coreform_frontend.map(|v| v.as_str()),
         "selfhost_artifact": cli.selfhost_artifact.as_ref().map(|p| p.display().to_string()),
         "cwd": cwd,
@@ -723,6 +715,12 @@ const SELFHOST_CUTOVER_ROWS: &[SelfhostCutoverRow] = &[
     },
     SelfhostCutoverRow {
         cmd: "selfhost-dashboard",
+        fast_path_required: false,
+        selfhost_routed: true,
+        default_selfhost: true,
+    },
+    SelfhostCutoverRow {
+        cmd: "agent-index",
         fast_path_required: false,
         selfhost_routed: true,
         default_selfhost: true,

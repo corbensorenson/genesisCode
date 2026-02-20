@@ -1,0 +1,8 @@
+(def service/main::status
+  {
+    :kind :service-status
+    :name "agent-service"
+    :ok true
+  })
+
+service/main::status

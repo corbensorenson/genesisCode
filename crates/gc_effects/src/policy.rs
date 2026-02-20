@@ -10,6 +10,7 @@ pub struct CapsPolicy {
     pub store: StorePolicy,
     pub refs: RefsPolicy,
     pub task: TaskPolicy,
+    pub runtime: RuntimePolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +88,22 @@ pub struct TaskPolicy {
 }
 
 #[derive(Debug, Clone)]
+pub struct RuntimePolicy {
+    pub max_effect_ops: Option<u64>,
+    pub max_payload_bytes_per_op: Option<usize>,
+    pub max_payload_bytes_per_run: Option<usize>,
+    pub max_response_bytes_per_op: Option<usize>,
+    pub max_response_bytes_per_run: Option<usize>,
+}
+
+fn adaptive_default_task_workers() -> u64 {
+    std::thread::available_parallelism()
+        .map(|n| n.get() as u64)
+        .unwrap_or(1)
+        .max(1)
+}
+
+#[derive(Debug, Clone)]
 pub struct OpPolicy {
     pub base_dir: Option<PathBuf>,
     pub create_dirs: bool,
@@ -120,12 +137,19 @@ impl CapsPolicy {
             },
             refs: RefsPolicy { path: None },
             task: TaskPolicy {
-                default_workers: 1,
+                default_workers: adaptive_default_task_workers(),
                 max_tasks: None,
                 max_workers: None,
                 max_queue: None,
                 max_steps_per_task: None,
                 max_time_ms_per_task: None,
+            },
+            runtime: RuntimePolicy {
+                max_effect_ops: None,
+                max_payload_bytes_per_op: None,
+                max_payload_bytes_per_run: None,
+                max_response_bytes_per_op: None,
+                max_response_bytes_per_run: None,
             },
         }
     }
@@ -179,6 +203,7 @@ impl CapsPolicy {
         let store = parse_store_policy(tbl)?;
         let refs = parse_refs_policy(tbl)?;
         let task = parse_task_policy(tbl)?;
+        let runtime = parse_runtime_policy(tbl)?;
 
         // Baseline allowlist.
         if let Some(arr) = tbl.get("allow").and_then(|v| v.as_array()) {
@@ -223,6 +248,7 @@ impl CapsPolicy {
                 || k == "store"
                 || k == "refs"
                 || k == "task"
+                || k == "runtime"
             {
                 continue;
             }
@@ -237,6 +263,7 @@ impl CapsPolicy {
             store,
             refs,
             task,
+            runtime,
         })
     }
 
@@ -531,7 +558,7 @@ fn parse_refs_policy(tbl: &toml::value::Table) -> Result<RefsPolicy, EffectsErro
 fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsError> {
     let Some(v) = tbl.get("task") else {
         return Ok(TaskPolicy {
-            default_workers: 1,
+            default_workers: adaptive_default_task_workers(),
             max_tasks: None,
             max_workers: None,
             max_queue: None,
@@ -563,7 +590,8 @@ fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsErro
         }
     }
 
-    let default_workers = parse_u64_opt(task_tbl, "default_workers")?.unwrap_or(1);
+    let default_workers =
+        parse_u64_opt(task_tbl, "default_workers")?.unwrap_or_else(adaptive_default_task_workers);
     if default_workers == 0 {
         return Err(EffectsError::Log(
             "caps.toml: task.default_workers must be >= 1".to_string(),
@@ -577,6 +605,63 @@ fn parse_task_policy(tbl: &toml::value::Table) -> Result<TaskPolicy, EffectsErro
         max_queue: parse_u64_opt(task_tbl, "max_queue")?,
         max_steps_per_task: parse_u64_opt(task_tbl, "max_steps_per_task")?,
         max_time_ms_per_task: parse_u64_opt(task_tbl, "max_time_ms_per_task")?,
+    })
+}
+
+fn parse_runtime_policy(tbl: &toml::value::Table) -> Result<RuntimePolicy, EffectsError> {
+    let Some(v) = tbl.get("runtime") else {
+        return Ok(RuntimePolicy {
+            max_effect_ops: None,
+            max_payload_bytes_per_op: None,
+            max_payload_bytes_per_run: None,
+            max_response_bytes_per_op: None,
+            max_response_bytes_per_run: None,
+        });
+    };
+    let runtime_tbl = v
+        .as_table()
+        .ok_or_else(|| EffectsError::Log("caps.toml: runtime must be a table".to_string()))?;
+
+    fn parse_u64_opt(
+        runtime_tbl: &toml::value::Table,
+        key: &str,
+    ) -> Result<Option<u64>, EffectsError> {
+        match runtime_tbl.get(key) {
+            None => Ok(None),
+            Some(v) => {
+                let n = v.as_integer().ok_or_else(|| {
+                    EffectsError::Log(format!("caps.toml: runtime.{key} must be an integer"))
+                })?;
+                if n < 0 {
+                    return Err(EffectsError::Log(format!(
+                        "caps.toml: runtime.{key} must be >= 0"
+                    )));
+                }
+                Ok(Some(n as u64))
+            }
+        }
+    }
+
+    fn parse_usize_opt(
+        runtime_tbl: &toml::value::Table,
+        key: &str,
+    ) -> Result<Option<usize>, EffectsError> {
+        let Some(raw) = parse_u64_opt(runtime_tbl, key)? else {
+            return Ok(None);
+        };
+        Ok(Some(usize::try_from(raw).map_err(|_| {
+            EffectsError::Log(format!(
+                "caps.toml: runtime.{key} is too large for this platform"
+            ))
+        })?))
+    }
+
+    Ok(RuntimePolicy {
+        max_effect_ops: parse_u64_opt(runtime_tbl, "max_effect_ops")?,
+        max_payload_bytes_per_op: parse_usize_opt(runtime_tbl, "max_payload_bytes_per_op")?,
+        max_payload_bytes_per_run: parse_usize_opt(runtime_tbl, "max_payload_bytes_per_run")?,
+        max_response_bytes_per_op: parse_usize_opt(runtime_tbl, "max_response_bytes_per_op")?,
+        max_response_bytes_per_run: parse_usize_opt(runtime_tbl, "max_response_bytes_per_run")?,
     })
 }
 
@@ -838,14 +923,76 @@ max_time_ms_per_task = 50
     }
 
     #[test]
-    fn defaults_task_worker_budget_to_one_when_unspecified() {
+    fn parses_runtime_policy_limits() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_effect_ops = 12
+max_payload_bytes_per_op = 4096
+max_payload_bytes_per_run = 8192
+max_response_bytes_per_op = 2048
+max_response_bytes_per_run = 4096
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.runtime.max_effect_ops, Some(12));
+        assert_eq!(p.runtime.max_payload_bytes_per_op, Some(4096));
+        assert_eq!(p.runtime.max_payload_bytes_per_run, Some(8192));
+        assert_eq!(p.runtime.max_response_bytes_per_op, Some(2048));
+        assert_eq!(p.runtime.max_response_bytes_per_run, Some(4096));
+    }
+
+    #[test]
+    fn runtime_policy_allows_zero_limits_for_fail_closed_mode() {
+        let p = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_effect_ops = 0
+max_payload_bytes_per_op = 0
+max_payload_bytes_per_run = 0
+max_response_bytes_per_op = 0
+max_response_bytes_per_run = 0
+"#,
+        )
+        .unwrap();
+        assert_eq!(p.runtime.max_effect_ops, Some(0));
+        assert_eq!(p.runtime.max_payload_bytes_per_op, Some(0));
+        assert_eq!(p.runtime.max_payload_bytes_per_run, Some(0));
+        assert_eq!(p.runtime.max_response_bytes_per_op, Some(0));
+        assert_eq!(p.runtime.max_response_bytes_per_run, Some(0));
+    }
+
+    #[test]
+    fn rejects_negative_runtime_policy_limits() {
+        let err = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_effect_ops = -1
+"#,
+        )
+        .expect_err("must reject negative runtime policy limits");
+        assert!(format!("{err}").contains("runtime.max_effect_ops"));
+    }
+
+    #[test]
+    fn defaults_task_worker_budget_to_adaptive_host_parallelism_when_unspecified() {
         let p = CapsPolicy::from_toml_str(
             r#"
 allow = ["core/task::await"]
 "#,
         )
         .unwrap();
-        assert_eq!(p.task.default_workers, 1);
+        let expected = std::thread::available_parallelism()
+            .map(|n| n.get() as u64)
+            .unwrap_or(1)
+            .max(1);
+        assert_eq!(p.task.default_workers, expected);
     }
 
     #[test]

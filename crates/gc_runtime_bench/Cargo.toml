@@ -3,9 +3,14 @@ name = "gc_runtime_bench"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+device-bridge = ["dep:bytemuck", "dep:pollster", "dep:wgpu"]
+
 [dependencies]
 anyhow = { workspace = true }
 blake3 = { workspace = true }
+bytemuck = { version = "1", optional = true }
 gc_coreform = { path = "../gc_coreform" }
 gc_effects = { path = "../gc_effects" }
 gc_kernel = { path = "../gc_kernel" }
@@ -13,6 +18,8 @@ gc_obligations = { path = "../gc_obligations" }
 gc_patches = { path = "../gc_patches" }
 gc_prelude = { path = "../gc_prelude" }
 gc_registry = { path = "../gc_registry" }
+pollster = { version = "0.3", optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tempfile = "3"
+wgpu = { version = "0.20", optional = true }

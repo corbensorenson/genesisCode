@@ -199,9 +199,15 @@ if [[ ${#BIN_TARGETS[@]} -gt 0 ]]; then
 fi
 
 echo "panic-guard: checking production source paths for unreachable! macros"
-UNREACHABLE_HITS="$(
-  rg -n "unreachable!\\(" crates --glob '!**/tests/**' --glob '!**/benches/**' || true
-)"
+if command -v rg >/dev/null 2>&1; then
+  UNREACHABLE_HITS="$(
+    rg -n "unreachable!\\(" crates --glob '!**/tests/**' --glob '!**/benches/**' || true
+  )"
+else
+  UNREACHABLE_HITS="$(
+    grep -R -n --exclude-dir=tests --exclude-dir=benches "unreachable!(" crates 2>/dev/null || true
+  )"
+fi
 if [[ -n "$UNREACHABLE_HITS" ]]; then
   echo "panic-guard: unreachable! is not allowed in production user paths" >&2
   echo "$UNREACHABLE_HITS" >&2

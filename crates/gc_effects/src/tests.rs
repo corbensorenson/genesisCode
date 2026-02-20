@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use gc_coreform::TermOrdKey;
@@ -25,6 +26,17 @@ fn mk_prog_for(op: &str, payload_src: &str) -> (Vec<Term>, [u8; 32]) {
 
 fn mk_prog() -> (Vec<Term>, [u8; 32]) {
     mk_prog_for("sys/time::now", "nil")
+}
+
+fn sealed_error_payload_map<'a>(value: &'a Value, ctx: &EvalCtx) -> &'a BTreeMap<TermOrdKey, Term> {
+    let Value::Sealed { token, payload } = value else {
+        panic!("expected sealed error, got {}", value.debug_repr());
+    };
+    assert_eq!(*token, ctx.protocol.expect("protocol").error);
+    let Value::Data(Term::Map(m)) = payload.as_ref() else {
+        panic!("expected sealed error payload map");
+    };
+    m
 }
 
 struct HostBridgePolicyFixture {
@@ -821,6 +833,193 @@ max_queue = 0
         }
         other => panic!("expected sealed budget error, got {}", other.debug_repr()),
     }
+}
+
+#[test]
+fn runtime_policy_max_effect_ops_fail_closes_second_request() {
+    let src = r#"
+            (def prog
+              ((core/effect::bind
+                 (core/effect::perform
+                   'sys/time::now
+                   nil
+                   (fn (t1) (core/effect::pure t1))))
+                (fn (_t1)
+                  (core/effect::perform
+                    'sys/time::now
+                    nil
+                    (fn (t2) (core/effect::pure t2))))))
+            prog
+        "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_effect_ops = 1
+"#,
+    )
+    .unwrap();
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+    assert_eq!(out.log.entries.len(), 2);
+    assert_eq!(out.log.entries[0].decision, Decision::Allow);
+    assert_eq!(out.log.entries[1].decision, Decision::Deny);
+
+    let err = sealed_error_payload_map(&out.value, &ctx);
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("core/caps/resource-limit".to_string()))
+    );
+    let Some(Term::Map(error_ctx)) = err.get(&TermOrdKey(Term::symbol(":error/context"))) else {
+        panic!("expected :error/context map");
+    };
+    assert_eq!(
+        error_ctx.get(&TermOrdKey(Term::symbol(":runtime/budget"))),
+        Some(&Term::Str("max_effect_ops".to_string()))
+    );
+}
+
+#[test]
+fn runtime_policy_max_payload_bytes_per_op_fail_closes_oversized_request() {
+    let (forms, h) = mk_prog_for("sys/time::now", "{:blob \"payload-too-large\"}");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_payload_bytes_per_op = 8
+"#,
+    )
+    .unwrap();
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+    assert_eq!(out.log.entries.len(), 1);
+    assert_eq!(out.log.entries[0].decision, Decision::Deny);
+
+    let err = sealed_error_payload_map(&out.value, &ctx);
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("core/caps/resource-limit".to_string()))
+    );
+    let Some(Term::Map(error_ctx)) = err.get(&TermOrdKey(Term::symbol(":error/context"))) else {
+        panic!("expected :error/context map");
+    };
+    assert_eq!(
+        error_ctx.get(&TermOrdKey(Term::symbol(":runtime/budget"))),
+        Some(&Term::Str("max_payload_bytes_per_op".to_string()))
+    );
+}
+
+#[test]
+fn runtime_policy_max_payload_bytes_per_run_fail_closes_on_cumulative_budget() {
+    let src = r#"
+            (def demo::request
+              (fn (_)
+                (core/effect::perform
+                  'sys/time::now
+                  {:blob "1234567890"}
+                  (fn (resp) (core/effect::pure resp)))))
+
+            (def prog
+              ((core/effect::bind (demo::request nil))
+                (fn (_r1) (demo::request nil))))
+            prog
+        "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["sys/time::now"]
+
+[runtime]
+max_payload_bytes_per_run = 30
+"#,
+    )
+    .unwrap();
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+    assert_eq!(out.log.entries.len(), 2);
+    assert_eq!(out.log.entries[0].decision, Decision::Allow);
+    assert_eq!(out.log.entries[1].decision, Decision::Deny);
+
+    let err = sealed_error_payload_map(&out.value, &ctx);
+    let Some(Term::Map(error_ctx)) = err.get(&TermOrdKey(Term::symbol(":error/context"))) else {
+        panic!("expected :error/context map");
+    };
+    assert_eq!(
+        error_ctx.get(&TermOrdKey(Term::symbol(":runtime/budget"))),
+        Some(&Term::Str("max_payload_bytes_per_run".to_string()))
+    );
+}
+
+#[test]
+fn runtime_policy_max_response_bytes_per_op_fail_closes_oversized_response() {
+    let td = tempfile::tempdir().unwrap();
+    let base = td.path().join("sandbox");
+    std::fs::create_dir_all(&base).unwrap();
+    std::fs::write(base.join("payload.bin"), vec![7u8; 64]).unwrap();
+
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["io/fs::read"]
+
+[runtime]
+max_response_bytes_per_op = 8
+
+[op."io/fs::read"]
+base_dir = "./sandbox"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let src = r#"
+            (def prog
+              (core/effect::perform
+                'io/fs::read
+                {:path "payload.bin"}
+                (fn (b) (core/effect::pure b))))
+            prog
+        "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+    assert_eq!(out.log.entries.len(), 1);
+    assert_eq!(out.log.entries[0].decision, Decision::Deny);
+
+    let err = sealed_error_payload_map(&out.value, &ctx);
+    let Some(Term::Map(error_ctx)) = err.get(&TermOrdKey(Term::symbol(":error/context"))) else {
+        panic!("expected :error/context map");
+    };
+    assert_eq!(
+        error_ctx.get(&TermOrdKey(Term::symbol(":runtime/budget"))),
+        Some(&Term::Str("max_response_bytes_per_op".to_string()))
+    );
 }
 
 #[test]

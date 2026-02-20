@@ -1,0 +1,10 @@
+name = "lib_core"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+hash = "a4b0fd502a6737f69cb51b9850d4658647b2bec80a63b27107cc0893f2626f29"
+path = "lib.gc"

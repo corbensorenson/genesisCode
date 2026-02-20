@@ -109,7 +109,8 @@ Result payload:
 
 ## Replay Contract
 - `spawn`/`await`/`cancel`/`status`/`scope` responses are replayed from log, never recomputed from wall-clock scheduling.
-- Any host runtime that cannot satisfy deterministic replay for these ops must return sealed `core/caps/not-supported`.
+- Any host runtime that cannot satisfy deterministic replay for these ops must return
+  sealed `core/caps/backend-unavailable` with actionable configuration guidance.
 
 ## Policy Hooks
 Capability policy should support:
@@ -118,7 +119,11 @@ Capability policy should support:
 - `max_queue`
 - per-op timeout and cancellation controls
 
-Absent policy entries default to deny.
+Task worker defaults:
+- `task.default_workers` defaults to host parallelism (`available_parallelism`, minimum `1`) when unspecified.
+- explicit `task.default_workers` remains authoritative when set.
+
+Absent non-task policy entries default to deny.
 
 ## Production SLO Contract
 

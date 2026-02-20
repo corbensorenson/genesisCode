@@ -1,0 +1,10 @@
+name = "app_main"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = []
+tests = []
+
+[[modules]]
+hash = "6ede86ea5bba85529778b01f10ae461e1fd410620abd15f3c0dca89607a03c2c"
+path = "app.gc"

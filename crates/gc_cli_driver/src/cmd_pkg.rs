@@ -3,6 +3,7 @@ mod frontend_dispatch;
 
 pub(super) fn cmd_pkg(
     cli: &Cli,
+    flavor: Flavor,
     caps: &Path,
     log: Option<&Path>,
     cmd: &PkgCmd,
@@ -13,9 +14,15 @@ pub(super) fn cmd_pkg(
     let policy = CapsPolicy::load(caps)
         .with_context(|| format!("read {}", caps.display()))
         .map_err(caps_parse_cli_err)?;
-    if let Some(out) =
-        cmd_pkg_local_workspace_ops(cli, cmd, caps, log, &frontend, frontend_info.clone())?
-    {
+    if let Some(out) = cmd_pkg_local_workspace_ops(
+        cli,
+        flavor,
+        cmd,
+        caps,
+        log,
+        &frontend,
+        frontend_info.clone(),
+    )? {
         return Ok(out);
     }
 
@@ -205,6 +212,7 @@ pub(super) fn cmd_pkg(
 
 fn cmd_pkg_local_workspace_ops(
     cli: &Cli,
+    flavor: Flavor,
     cmd: &PkgCmd,
     caps: &Path,
     log: Option<&Path>,
@@ -219,12 +227,72 @@ fn cmd_pkg_local_workspace_ops(
             let action = pkg_task_runner::resolve_workspace_task(workspace_file, task)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
             let out = match action {
-                pkg_task_runner::WorkspaceTaskAction::Test { pkg } => {
-                    cmd_test(cli, &pkg, Some(caps))?
+                pkg_task_runner::WorkspaceTaskAction::Test { pkg, caps: tcaps } => {
+                    cmd_test(cli, &pkg, tcaps.as_deref().or(Some(caps)))?
                 }
                 pkg_task_runner::WorkspaceTaskAction::Pack { pkg } => cmd_pack(cli, &pkg)?,
                 pkg_task_runner::WorkspaceTaskAction::Typecheck { pkg } => {
                     cmd_typecheck(cli, &pkg)?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Run {
+                    file,
+                    caps: rcaps,
+                    log: rlog,
+                    engine,
+                } => {
+                    let parsed_engine = parse_task_engine(engine)?;
+                    cmd_run(
+                        cli,
+                        flavor,
+                        &file,
+                        parsed_engine,
+                        rcaps.as_deref().unwrap_or(caps),
+                        rlog.as_deref(),
+                    )?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Eval {
+                    file,
+                    engine,
+                    stage1_pipeline,
+                    stage1_gate,
+                    stage2_gate,
+                } => {
+                    let parsed_engine = parse_task_engine(engine)?;
+                    cmd_eval(
+                        cli,
+                        &file,
+                        parsed_engine,
+                        stage1_pipeline,
+                        stage1_gate,
+                        stage2_gate,
+                    )?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Fmt {
+                    file,
+                    check,
+                    engine,
+                } => {
+                    let parsed_engine = parse_task_engine(engine)?;
+                    cmd_fmt(cli, &file, check, parsed_engine)?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Optimize {
+                    file,
+                    out,
+                    emit_wasm,
+                    engine,
+                    stage1_gate,
+                    stage2_gate,
+                } => {
+                    let parsed_engine = parse_task_engine(engine)?;
+                    cmd_optimize(
+                        cli,
+                        &file,
+                        out.as_ref(),
+                        emit_wasm.as_ref(),
+                        parsed_engine,
+                        stage1_gate,
+                        stage2_gate,
+                    )?
                 }
             };
             return Ok(Some(out));
@@ -446,4 +514,14 @@ fn cmd_pkg_local_workspace_ops(
         stdout,
         json: json_envelope_value(env)?,
     }))
+}
+
+fn parse_task_engine(engine: Option<String>) -> Result<Option<FmtEngine>, CliError> {
+    match engine {
+        None => Ok(None),
+        Some(raw) => raw
+            .parse::<FmtEngine>()
+            .map(Some)
+            .map_err(|e| cli_err(EX_PARSE, "pkg/run", e)),
+    }
 }

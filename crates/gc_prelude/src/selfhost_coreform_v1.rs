@@ -759,7 +759,7 @@ fn write_compiled_cache(
 ///     {
 ///       :path "selfhost/parse.gc"
 ///       :source "<module source>"
-///       :forms [<TopForm> ...]          ; optional (preferred): canonical module forms
+///       :forms [<TopForm> ...]          ; canonical module forms (required in production profile)
 ///       :module-h b"...32 bytes..."
 ///       :stage1-ok true
 ///       :stage2-supported bool
@@ -767,6 +767,9 @@ fn write_compiled_cache(
 ///     }
 ///   ]
 /// }
+///
+/// Production bootstrap requires `:forms` for every module and does not parse `:source`.
+/// Source-parse fallback is development-only (parity harness profile).
 pub fn load_selfhost_coreform_toolchain_v1_from_artifact(
     ctx: &mut EvalCtx,
     env: &mut Env,
@@ -930,6 +933,11 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         let forms = if let Some(v) = &forms_from_artifact {
             v.clone()
         } else {
+            if !non_artifact_bootstrap_modes_allowed() {
+                return Err(anyhow::anyhow!(
+                    "artifact module {path} missing :forms vector; production bootstrap forbids Rust source parse fallback"
+                ));
+            }
             let src = src.ok_or_else(|| {
                 anyhow::anyhow!("artifact module {path} missing :source string or :forms vector")
             })?;

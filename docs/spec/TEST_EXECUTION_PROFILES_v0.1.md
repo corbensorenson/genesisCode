@@ -4,9 +4,20 @@ Deterministic test execution policy for local iteration and CI.
 
 ## Goals
 
-- Keep local feedback loops fast (`<10m` target for default developer loop).
+- Keep local high-signal feedback loops fast (`<=5m` default target).
 - Preserve full suite coverage in CI profiles.
 - Keep shard assignment deterministic across runs.
+
+## Tiered Matrix (Normative Budgets)
+
+| Profile | Primary command(s) | Runtime budget |
+|---|---|---|
+| `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
+| `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 300000` | `<= 5m` |
+| `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 15m` |
+| `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` | `<= 20m` |
+
+The local default high-signal workflow is `changed-fast` with a hard 300000ms budget.
 
 ## Runners
 
@@ -19,12 +30,20 @@ Deterministic test execution policy for local iteration and CI.
   - changed-file aware selection (or clean-tree fallback)
   - warms selfhost artifact cache when relevant paths change
   - emits deterministic metrics report `kind = genesis/test-changed-fast-metrics-v0.1`
+  - default hard budget: 300000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
 - Full fast fallback: `scripts/test_fast.sh`
   - auto-detects nextest
   - runs high-signal core libs + selected CLI integration tests
 - Full/sharded loop: `scripts/test_shard_workspace.sh --total N --index I --runner auto|nextest|cargo`
   - deterministic shard assignment by `(seed, crate)` hash
   - emits report `kind = genesis/test-shard-report-v0.1`
+- Prepush strict loop: `scripts/check_upgrade_plan_health.sh --profile prepush-standard`
+  - defaults to deterministic gate sharding (`GENESIS_HEALTH_SHARDS`) derived from host parallelism
+    for non-release loops (2-way on small hosts, 4-way on larger hosts)
+  - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
+    `.genesis/perf/upgrade_plan_health_profile_report.json`
+  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `720000`)
+    whenever health gates are enforced
 
 ## CI Profiles
 
@@ -39,6 +58,20 @@ Deterministic test execution policy for local iteration and CI.
 - Iteration conformance check:
   - `scripts/check_default_iteration_workflow.sh` validates measurable fast-path execution and
     deterministic shard selection.
+  - default budget for changed-fast in this check is 300000ms (`GENESIS_BUDGET_CHANGED_FAST_MS`).
+
+## Drift Guard
+
+Profile/budget drift is blocked by:
+- `scripts/check_test_execution_profile_matrix.sh`
+
+This guard enforces:
+- matrix rows for `smoke`, `changed-fast`, `strict-golden`, `full-cross-host`
+- explicit budget strings in this spec
+- CI step presence for each matrix lane
+- 300000ms default budget pin for local high-signal workflows
+- prepush strict loop budget/shard defaults (`GENESIS_HEALTH_PREPUSH_BUDGET_MS`,
+  `GENESIS_HEALTH_SHARDS`) and profile report kind
 
 ## Determinism
 

@@ -12,6 +12,7 @@ num-traits.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
+sha2.workspace = true
 
 # local
 gc_coreform = { path = "../gc_coreform" }
@@ -20,9 +21,12 @@ gc_prelude = { path = "../gc_prelude", default-features = false }
 gc_vcs = { path = "../gc_vcs" }
 gc_pkg = { path = "../gc_pkg" }
 gc_registry = { path = "../gc_registry" }
+gc_opt = { path = "../gc_opt" }
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
 fs2 = "0.4"
+crossterm = "0.28"
+notify = "6"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

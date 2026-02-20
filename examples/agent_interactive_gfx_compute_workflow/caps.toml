@@ -1,0 +1,19 @@
+allow = [
+  "gfx/window::create-surface",
+  "gfx/window::request-redraw",
+  "gfx/input::poll-events",
+  "gfx/audio::set-master",
+  "gpu/compute::submit",
+]
+
+[op."gfx/window::create-surface"]
+first_party_profile = "interactive"
+
+[op."gfx/window::request-redraw"]
+first_party_profile = "interactive"
+
+[op."gfx/input::poll-events"]
+first_party_profile = "interactive"
+
+[op."gfx/audio::set-master"]
+first_party_profile = "interactive"

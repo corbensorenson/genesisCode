@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/selfhost_artifact_cache.sh"
+
 cargo build -p gc_cli -p gc_wasi_cli >/dev/null
 
 GEN="$ROOT_DIR/target/debug/genesis"
@@ -20,20 +22,8 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 ART="$TMP_DIR/selfhost_toolchain.gc"
-REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"
-NEED_REBUILD=0
-if [[ "${GENESIS_REBUILD_SELFHOST_ARTIFACT:-0}" == "1" ]]; then
-  NEED_REBUILD=1
-elif [[ ! -f "$REPO_ART" ]]; then
-  NEED_REBUILD=1
-elif [[ -n "$(find "$ROOT_DIR/selfhost" -maxdepth 1 -name '*.gc' -newer "$REPO_ART" -print -quit)" ]]; then
-  NEED_REBUILD=1
-fi
-if [[ "$NEED_REBUILD" == "1" ]]; then
-  native selfhost-artifact --out "$ART" >/dev/null
-else
-  cp "$REPO_ART" "$ART"
-fi
+CACHED_ART="$(resolve_cached_selfhost_artifact "$ROOT_DIR" "$GEN")"
+cp "$CACHED_ART" "$ART"
 
 # fmt/eval/optimize strict selfhost smoke (native CLI)
 cat >"$TMP_DIR/mod.gc" <<'GC'

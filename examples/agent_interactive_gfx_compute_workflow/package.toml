@@ -1,0 +1,14 @@
+name = "agent_interactive_gfx_compute_workflow"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+]
+tests = ["pkg/agent_interactive::tests"]
+
+[[modules]]
+hash = "0b93b2d4da0ae27b1de82cd2fe09ff663069a212e82800a9c03b8299ca83c383"
+path = "interactive.gc"

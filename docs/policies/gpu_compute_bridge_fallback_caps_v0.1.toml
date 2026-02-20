@@ -1,0 +1,23 @@
+# Deterministic fallback bridge policy profile for gpu/compute host ops.
+# This profile is suitable for non-GPU environments and deterministic CI smoke paths.
+
+allow = [
+  "gpu/compute::submit",
+  "gpu/compute::limits",
+  "gpu/compute::features",
+]
+
+[op."gpu/compute::submit"]
+base_dir = "."
+bridge_cmd = "compute_bridge.sh"
+max_bytes = 65536
+
+[op."gpu/compute::limits"]
+base_dir = "."
+bridge_cmd = "compute_bridge.sh"
+max_bytes = 65536
+
+[op."gpu/compute::features"]
+base_dir = "."
+bridge_cmd = "compute_bridge.sh"
+max_bytes = 65536

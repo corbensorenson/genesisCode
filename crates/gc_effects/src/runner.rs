@@ -80,6 +80,8 @@ mod runner_gc_ops;
 mod runner_remote_ops;
 #[path = "runner_response_budget.rs"]
 mod runner_response_budget;
+#[path = "runner_runtime_budget.rs"]
+mod runner_runtime_budget;
 #[path = "runner_vcs_pkg_helpers.rs"]
 mod runner_vcs_pkg_helpers;
 use runner_cap_gc_gpk_low::*;
@@ -91,6 +93,7 @@ use runner_capability_dispatch::*;
 use runner_gc_ops::*;
 use runner_remote_ops::*;
 use runner_response_budget::*;
+use runner_runtime_budget::*;
 use runner_vcs_pkg_helpers::*;
 
 type GcStoreLock = ExclusiveLock;
@@ -165,10 +168,11 @@ pub fn run(
     let mut cur = program;
     let mut task_budget_state = TaskBudgetState::default();
     let mut task_runtime = TaskRuntime::default();
-    let mut gfx_runtime = GfxHostRuntime;
-    let mut gpu_runtime = GpuHostRuntime;
-    let mut editor_runtime = EditorHostRuntime;
+    let mut gfx_runtime = GfxHostRuntime::default();
+    let mut gpu_runtime = GpuHostRuntime::default();
+    let mut editor_runtime = EditorHostRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
+    let mut runtime_budget_state = RuntimeBudgetState::default();
 
     loop {
         let Value::EffectProgram(p) = cur else {
@@ -197,7 +201,18 @@ pub fn run(
                 let cont_h = value_hash(&req.k);
                 let req_h = hash_request(&req.op, payload_h, cont_h);
 
-                let (mut decision, mut cap_term, mut resp_val) = if !policy.is_allowed(&req.op) {
+                let pre_limit = enforce_request_runtime_limits(
+                    policy,
+                    &mut runtime_budget_state,
+                    &req.op,
+                    &req.payload,
+                    proto.error,
+                );
+
+                let (mut decision, mut cap_term, mut resp_val) = if let Some(limit_err) = pre_limit
+                {
+                    (Decision::Deny, Term::Nil, limit_err)
+                } else if !policy.is_allowed(&req.op) {
                     (
                         Decision::Deny,
                         Term::Nil,
@@ -270,6 +285,17 @@ pub fn run(
                         proto.error,
                     )?
                 {
+                    resp_val = limit_err;
+                }
+                if let Some(limit_err) = enforce_response_runtime_limits(
+                    policy,
+                    &mut runtime_budget_state,
+                    &req.op,
+                    &resp_val,
+                    proto.error,
+                )? {
+                    decision = Decision::Deny;
+                    cap_term = Term::Nil;
                     resp_val = limit_err;
                 }
                 let resp_logged = logged_resp(policy, &req.op, &store, &resp_val, proto.error)?;

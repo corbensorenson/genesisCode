@@ -19,9 +19,8 @@ CoreForm parsing, canonical printing, term ordering (for map keys), and kernel e
 To mitigate stack overflows on deep inputs, the v0.2 toolchain uses stack growth via the `stacker` crate at the recursive entrypoints. This keeps behavior deterministic while preventing process aborts from typical deep-but-finite structures.
 
 Notes:
-- This is a mitigation, not a full resource model.
 - Extremely deep terms can still consume large amounts of memory and time (both for evaluation and for canonical printing/hashing).
-- For CI and untrusted inputs, prefer enabling a conservative `--step-limit` and running under OS-level memory limits.
+- For CI and untrusted inputs, prefer enabling conservative kernel and runtime budgets and running under OS-level memory limits.
 
 ## Deterministic Memory Limits (Kernel)
 
@@ -40,3 +39,15 @@ When a limit is exceeded, evaluation fails with a kernel error of kind `memory l
 Limits can be set:
 - via CLI global flags (see `docs/spec/CLI.md`), or
 - via `package.toml` `[limits]` keys (see `docs/spec/PACKAGE_TOML.md`), where package policy is always enforced as an upper bound.
+
+## Deterministic Runtime Budgets (Effects Runner)
+
+In addition to kernel limits, `caps.toml` supports deterministic runtime budgets for effect programs (`[runtime]`, see `docs/spec/CAPS_TOML.md`):
+
+- `max_effect_ops`
+- `max_payload_bytes_per_op`
+- `max_payload_bytes_per_run`
+- `max_response_bytes_per_op`
+- `max_response_bytes_per_run`
+
+These budgets are measured from canonical CoreForm payload/response serialization and are therefore deterministic across equivalent runs. When exceeded, the runner fails closed with sealed ERROR `core/caps/resource-limit` and includes structured runtime context (`:runtime/budget`, `:runtime/observed`, `:runtime/limit`, `:runtime/unit`).

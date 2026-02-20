@@ -14,6 +14,21 @@ pub struct Budgets {
     pub sync_pull_ms: u128,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum BenchMode {
+    Full,
+    ComputeOnly,
+}
+
+impl BenchMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::ComputeOnly => "compute-only",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BenchConfig {
     pub warmups: usize,
@@ -22,6 +37,8 @@ pub struct BenchConfig {
     pub out: PathBuf,
     pub build_profile: String,
     pub build_mode: String,
+    pub gpu_compute_backend_policy: String,
+    pub bench_mode: BenchMode,
 }
 
 fn env_usize(name: &str, default: usize) -> usize {
@@ -51,6 +68,7 @@ fn env_string(name: &str, default: &str) -> String {
 pub fn parse() -> Result<BenchConfig> {
     let mut args = std::env::args().skip(1);
     let mut out = PathBuf::from(".genesis/perf/runtime_microbench_metrics.json");
+    let mut bench_mode = BenchMode::Full;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--out" => {
@@ -58,6 +76,16 @@ pub fn parse() -> Result<BenchConfig> {
                     bail!("--out requires a file path");
                 };
                 out = PathBuf::from(p);
+            }
+            "--mode" => {
+                let Some(mode) = args.next() else {
+                    bail!("--mode requires a value (full|compute-only)");
+                };
+                bench_mode = match mode.trim() {
+                    "full" => BenchMode::Full,
+                    "compute-only" => BenchMode::ComputeOnly,
+                    other => bail!("unknown --mode value: {other} (expected full|compute-only)"),
+                };
             }
             other => bail!("unknown argument: {other}"),
         }
@@ -77,6 +105,8 @@ pub fn parse() -> Result<BenchConfig> {
     };
     let build_profile = env_string("GENESIS_RUNTIME_MICROBENCH_PROFILE", "unknown");
     let build_mode = env_string("GENESIS_RUNTIME_MICROBENCH_BUILD_MODE", "unknown");
+    let gpu_compute_backend_policy =
+        env_string("GENESIS_GPU_COMPUTE_BACKEND_POLICY", "dev-allow-fallback");
 
     Ok(BenchConfig {
         warmups,
@@ -85,5 +115,7 @@ pub fn parse() -> Result<BenchConfig> {
         out,
         build_profile,
         build_mode,
+        gpu_compute_backend_policy,
+        bench_mode,
     })
 }

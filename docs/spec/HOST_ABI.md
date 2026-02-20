@@ -8,15 +8,26 @@ Scope:
 
 Rules:
 - The operation surface is deny-by-default and policy-gated (`caps.toml`).
-- Unknown operations must return deterministic sealed `core/caps/not-supported` errors.
+- Unknown operations must return deterministic sealed `core/caps/unknown-op` errors.
+- Stable host-integrated ops without an available backend path must return deterministic
+  sealed `core/caps/backend-unavailable` errors with actionable bridge/runtime guidance.
 - Any ABI surface change requires updating this file and passing the host ABI conformance guard in CI.
 
 Compatibility notes:
 - `core/sync::*` is part of the ABI surface and is enforced by explicit WASI remote profiles (`none|local|preview2`), deny-by-default.
 - Adding or removing an op is a versioned ABI change and must be reflected in release notes.
-- Host-integrated domains (`editor/*`, `gfx/*`, `gpu/compute::*`) execute through
-  per-op bridge policy (`bridge_cmd`, `bridge_args`) and return deterministic
-  sealed errors when bridge policy is missing.
+- Host-integrated runtime domains now support first-party backends by default:
+  - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
+  - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
+  - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile)
+  - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
+- Bridge-mediated runtime domains:
+  - `io/net::http-request` (policy-gated remote allowlist + bridge-backed execution)
+  - `sys/process::exec` (policy-gated program allowlist + bridge-backed execution)
+- Explicit per-op bridge policy (`bridge_cmd`, `bridge_args`, or WASI bridge response
+  profile) overrides first-party backends and uses bridge transport.
+- Bridge-mediated domains without first-party runtime (`editor/plugin::command`)
+  return deterministic sealed bridge errors when bridge policy is missing.
 - Canonical compute ABI lives under `gpu/compute::*`.
   Legacy `gfx/gpu::create-compute-pipeline` and `gfx/gpu::submit-compute-graph`
   are compatibility aliases that normalize to canonical compute ops before dispatch.
@@ -137,6 +148,8 @@ Compatibility notes:
 - `gpu/compute::write-buffer`
 - `io/fs::read`
 - `io/fs::write`
+- `io/net::http-request`
+- `sys/process::exec`
 - `sys/time::now`
 <!-- HOST_ABI_OPS_END -->
 
@@ -152,3 +165,18 @@ Machine-readable indices for agent planning:
 CI drift check:
 
 - `scripts/check_capability_indices.sh`
+
+## Network/Process Capability Contracts
+
+- `io/net::http-request`
+  - Required payload field: `:url` (string).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::exec`
+  - Required payload field: `:program` (string).
+  - Policy-gated by per-op `allow_programs` allowlist.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+
+Determinism:
+- Run-time responses for these ops are effect-logged as normal capability outcomes.
+- Replay uses logged responses and does not re-invoke host network/process side effects.

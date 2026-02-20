@@ -117,10 +117,9 @@ fn selfhost_only_rejects_non_artifact_bootstrap_mode() {
         ])
         .assert()
         .failure()
-        .code(50)
-        .stderr(predicate::str::contains(
-            "selfhost-only mode requires --selfhost-bootstrap artifact-only",
-        ));
+        .code(2)
+        .stderr(predicate::str::contains("invalid value 'embedded'"))
+        .stderr(predicate::str::contains("artifact-only"));
 }
 
 #[test]

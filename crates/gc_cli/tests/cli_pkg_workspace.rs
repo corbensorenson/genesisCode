@@ -234,6 +234,20 @@ path = "lib.gc"
         .assert()
         .success();
 
+    let mut ws_src = fs::read_to_string(dir.join("genesis.workspace.toml")).unwrap();
+    ws_src.push_str(
+        r#"
+[tasks."build-local"]
+cmd = "build"
+pkg = "package.toml"
+
+[tasks."lint-local"]
+cmd = "lint"
+pkg = "package.toml"
+"#,
+    );
+    fs::write(dir.join("genesis.workspace.toml"), ws_src).unwrap();
+
     let out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
         .args(["--json", "gcpm", "--caps"])
@@ -251,6 +265,38 @@ path = "lib.gc"
         Some("genesis/test-v0.2")
     );
     assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(true));
+
+    let out_build = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "build-local"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let vb: serde_json::Value = serde_json::from_slice(&out_build).unwrap();
+    assert_eq!(
+        vb.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/pack-v0.2")
+    );
+
+    let out_lint = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "lint-local"])
+        .assert()
+        .code(30)
+        .get_output()
+        .stdout
+        .clone();
+    let vl: serde_json::Value = serde_json::from_slice(&out_lint).unwrap();
+    assert_eq!(
+        vl.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/typecheck-v0.2")
+    );
 }
 
 #[test]
@@ -301,4 +347,10 @@ fn gcpm_env_materializes_deterministic_profile_record() {
     assert_eq!(entries.len(), 1);
     assert!(entries[0].join("env.gcenv").is_file());
     assert!(entries[0].join("provenance.gc").is_file());
+    assert!(entries[0].join("workspace.toml").is_file());
+    assert!(entries[0].join("genesis.lock").is_file());
+    assert!(entries[0].join("profile.gc").is_file());
+    assert!(entries[0].join("members.gc").is_file());
+    assert!(entries[0].join("deps.gc").is_file());
+    assert!(entries[0].join("caps-policy.toml").is_file());
 }

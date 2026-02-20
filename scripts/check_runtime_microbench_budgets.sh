@@ -12,6 +12,8 @@ GPU_BUDGET_DEVICE_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE:-5000}
 GPU_BUDGET_FALLBACK_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK:-8000}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
+MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
+GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-dev-allow-fallback}"
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "runtime-microbench" --strict "$DISK_STRICT_MODE"
 
@@ -23,9 +25,17 @@ if [[ "$SKIP_RUN" == "1" ]]; then
   echo "runtime-microbench: skipping benchmark execution (GENESIS_RUNTIME_MICROBENCH_SKIP_RUN=1)"
 else
   echo "runtime-microbench: running benchmark suite"
-  GENESIS_RUNTIME_MICROBENCH_PROFILE="$CARGO_PROFILE" \
-    GENESIS_RUNTIME_MICROBENCH_BUILD_MODE="release-equivalent" \
-    cargo run --profile "$CARGO_PROFILE" -p gc_runtime_bench -- --out "$OUT"
+  if [[ -n "$MICROBENCH_FEATURES" ]]; then
+    GENESIS_RUNTIME_MICROBENCH_PROFILE="$CARGO_PROFILE" \
+      GENESIS_RUNTIME_MICROBENCH_BUILD_MODE="release-equivalent" \
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY="$GPU_BACKEND_POLICY" \
+      cargo run --profile "$CARGO_PROFILE" -p gc_runtime_bench --features "$MICROBENCH_FEATURES" -- --out "$OUT"
+  else
+    GENESIS_RUNTIME_MICROBENCH_PROFILE="$CARGO_PROFILE" \
+      GENESIS_RUNTIME_MICROBENCH_BUILD_MODE="release-equivalent" \
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY="$GPU_BACKEND_POLICY" \
+      cargo run --profile "$CARGO_PROFILE" -p gc_runtime_bench -- --out "$OUT"
+  fi
 fi
 
 echo "runtime-microbench: metrics"
@@ -68,6 +78,11 @@ gpu_compute_submit_ms = int(metrics["gpu_compute_submit_ms"])
 task_ms = int(metrics["task_runner_ms"])
 task_budget = int(budgets["task_runner_ms"])
 gpu_compute_backend = str(doc.get("gpu_compute_backend", "unknown"))
+gpu_compute_backend_policy = str(doc.get("gpu_compute_backend_policy", "unknown"))
+if gpu_compute_backend_policy not in {"dev-allow-fallback", "require-device"}:
+    raise SystemExit(
+        f"runtime-microbench: unexpected gpu_compute_backend_policy {gpu_compute_backend_policy!r}"
+    )
 
 if gpu_compute_backend == "device-bridge":
     gpu_compute_submit_budget = device_budget
@@ -87,6 +102,7 @@ slo = {
     "build_mode": str(doc.get("build_mode", "release-equivalent")),
     "disk_strict_mode": disk_strict_mode,
     "gpu_compute_backend": gpu_compute_backend,
+    "gpu_compute_backend_policy": gpu_compute_backend_policy,
     "gpu_compute_required_backend": required_backend or None,
     "ci_enforced": True,
     "slo": {

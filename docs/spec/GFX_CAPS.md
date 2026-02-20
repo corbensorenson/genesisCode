@@ -50,6 +50,11 @@ Introspection:
 
 ## `gpu/compute::*` ops (canonical compute surface)
 
+Runtime productization and perf gating for compute is tracked independently from
+graphics lanes in:
+
+- `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
+
 Resource lifecycle:
 - `gpu/compute::create-buffer`
 - `gpu/compute::create-shader-module`
@@ -80,10 +85,29 @@ Compatibility layer:
 - `gfx/window::request-redraw`
 - `gfx/window::surface-info`
 
+First-party runtime profiles:
+- `headless` (default): deterministic no-event input lane for CI/automation.
+- `interactive`: real host-integrated terminal adapter lane (`terminal-host`)
+  for local interactive workflows (`title`, `cursor`, `input`, `audio bell`),
+  with deterministic replay guaranteed by effect logs.
+
+Profile selection:
+- Set per-op `first_party_profile = "interactive"` in `caps.toml`.
+- If explicit bridge config is present (`bridge_cmd` or WASI bridge response keys),
+  bridge execution takes precedence.
+
 ## `gfx/input::*` ops
 
 - `gfx/input::poll-events`
 - `gfx/input::set-cursor-mode`
+
+## `gfx/audio::*` ops
+
+- `gfx/audio::set-master`
+- `gfx/audio::enqueue`
+
+GPU/window/input/audio families run on first-party runtime by default and remain
+replay-deterministic through effect logs.
 
 ## `gfx/time::*` ops
 

@@ -1,6 +1,6 @@
 use crate::{
     FixedDecimal, Term, canonicalize_module, hash_term, parse_module, parse_term, print_module,
-    print_term,
+    print_term, print_term_compact,
 };
 use std::path::PathBuf;
 
@@ -93,6 +93,30 @@ fn fixed_decimal_term_hash_is_normalized() {
     let b = FixedDecimal::parse("1.23").expect("b").to_term();
     assert_eq!(print_term(&a), print_term(&b));
     assert_eq!(hash_term(&a), hash_term(&b));
+}
+
+#[test]
+fn compact_term_printer_roundtrips_equivalently() {
+    let t = parse_term(
+        r#"{:kind "artifact" :modules [{:path "selfhost/parse.gc" :forms [(def a 1) (def b [1 2 3])]}]}"#,
+    )
+    .expect("parse");
+    let compact = print_term_compact(&t);
+    let roundtrip = parse_term(&compact).expect("parse compact");
+    assert_eq!(roundtrip, t);
+}
+
+#[test]
+fn compact_term_printer_avoids_multiline_output_for_nested_forms() {
+    let t = parse_term(
+        r#"(def nested (fn (x) (fn (y) (if true {:a [1 2 3] :b (quote (alpha beta gamma))} nil))))"#,
+    )
+    .expect("parse");
+    let compact = print_term_compact(&t);
+    assert!(
+        !compact.contains('\n'),
+        "compact printer should avoid newlines, got:\n{compact}"
+    );
 }
 
 fn normalize(s: &str) -> String {

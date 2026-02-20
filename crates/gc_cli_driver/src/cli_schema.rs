@@ -2,9 +2,8 @@ use super::*;
 use clap::{Arg, Command, CommandFactory};
 
 pub(super) fn cmd_cli_schema(cli: &Cli) -> Result<CmdOut, CliError> {
-    let root = Cli::command();
     let profile = runtime_profile();
-    let command = command_schema(&root, profile, &[]);
+    let command = build_cli_schema(profile);
     let env = JsonEnvelope {
         ok: true,
         kind: "genesis/cli-schema-v0.1",
@@ -27,7 +26,12 @@ pub(super) fn cmd_cli_schema(cli: &Cli) -> Result<CmdOut, CliError> {
     })
 }
 
-fn runtime_profile_token(profile: RuntimeProfile) -> &'static str {
+pub(super) fn build_cli_schema(profile: RuntimeProfile) -> serde_json::Value {
+    let root = Cli::command();
+    command_schema(&root, profile, &[])
+}
+
+pub(super) fn runtime_profile_token(profile: RuntimeProfile) -> &'static str {
     match profile {
         RuntimeProfile::Production => "production",
         RuntimeProfile::ParityHarness => "parity-harness",

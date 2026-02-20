@@ -1,4 +1,314 @@
 use super::*;
+use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+
+fn backend_unavailable_message(op: &str) -> String {
+    if op.starts_with("gpu/compute::") || op.starts_with("gfx/gpu::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256) or enable a first-party runtime backend"
+        );
+    }
+    if op.starts_with("gfx/window::")
+        || op.starts_with("gfx/input::")
+        || op.starts_with("gfx/audio::")
+    {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256) for gfx host integration"
+        );
+    }
+    if op.starts_with("editor/") {
+        return format!(
+            "capability backend unavailable for {op}; editor host integration is bridge-backed \
+and requires explicit per-op bridge policy"
+        );
+    }
+    if op.starts_with("io/net::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and remote allowlist policy"
+        );
+    }
+    if op.starts_with("sys/process::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and explicit allow_programs"
+        );
+    }
+    format!("capability backend unavailable for {op}")
+}
+
+fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {
+    let Some(pol) = pol else {
+        return false;
+    };
+    let has_nonempty_str = |key: &str| {
+        pol.extra
+            .get(key)
+            .and_then(|v| v.as_str())
+            .is_some_and(|s| !s.trim().is_empty())
+    };
+    has_nonempty_str("bridge_cmd")
+        || has_nonempty_str("wasi_bridge_response")
+        || has_nonempty_str("wasi_bridge_response_file")
+        || pol
+            .extra
+            .get("wasi_bridge_profile")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+}
+
+fn mk_bridge_error(error_tok: SealId, err: &BridgeError, op: Option<&str>) -> Value {
+    mk_error(error_tok, &err.code, err.message.clone(), op)
+}
+
+fn payload_required_string_field(
+    payload: &Term,
+    op: &str,
+    key: &str,
+) -> Result<String, EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    let Some(Term::Str(raw)) = mm.get(&TermOrdKey(Term::symbol(key))) else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must contain string field `{key}`"
+        )));
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload field `{key}` must not be empty"
+        )));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn net_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, String> {
+    let Some(pol) = pol else {
+        return Err(
+            "io/net::http-request requires per-op url_allow allowlist in caps.toml".to_string(),
+        );
+    };
+    let allow_key = if pol.extra.contains_key("url_allow") {
+        "url_allow"
+    } else {
+        "remote_allow"
+    };
+    let Some(v) = pol.extra.get(allow_key) else {
+        return Err(
+            "io/net::http-request requires per-op url_allow allowlist in caps.toml".to_string(),
+        );
+    };
+    let Some(arr) = v.as_array() else {
+        return Err(format!("{allow_key} must be an array of strings"));
+    };
+    let mut out = Vec::with_capacity(arr.len());
+    for x in arr {
+        let Some(raw) = x.as_str() else {
+            return Err(format!("{allow_key} entries must be strings"));
+        };
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            out.push(trimmed.to_string());
+        }
+    }
+    if out.is_empty() {
+        return Err("url_allow must contain at least one URL prefix".to_string());
+    }
+    Ok(out)
+}
+
+fn net_allow_http_from_policy(pol: Option<&OpPolicy>) -> Result<bool, String> {
+    let Some(pol) = pol else {
+        return Ok(false);
+    };
+    let Some(v) = pol.extra.get("allow_http") else {
+        return Ok(false);
+    };
+    let Some(allow_http) = v.as_bool() else {
+        return Err("allow_http must be a boolean".to_string());
+    };
+    Ok(allow_http)
+}
+
+fn net_wasi_network_profile_from_policy(pol: Option<&OpPolicy>) -> Result<Option<String>, String> {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    let Some(v) = pol.extra.get("wasi_network_profile") else {
+        return Ok(None);
+    };
+    let Some(raw) = v.as_str() else {
+        return Err("wasi_network_profile must be a string".to_string());
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("wasi_network_profile must not be empty".to_string());
+    }
+    Ok(Some(trimmed.to_string()))
+}
+
+fn parse_url_scheme(url: &str) -> Result<&str, String> {
+    let Some((scheme, _rest)) = url.split_once("://") else {
+        return Err(format!(
+            "io/net::http-request url must include scheme:// (got `{url}`)"
+        ));
+    };
+    if scheme.trim().is_empty() {
+        return Err("io/net::http-request url scheme must not be empty".to_string());
+    }
+    Ok(scheme)
+}
+
+fn validate_net_wasi_profile(profile: Option<&str>, scheme: &str) -> Result<(), String> {
+    if !cfg!(target_os = "wasi") {
+        return Ok(());
+    }
+    let profile = profile.unwrap_or("none");
+    match profile {
+        "none" => Err("WASI network access is disabled; set wasi_network_profile to `local` or `preview2` in caps.toml op policy".to_string()),
+        "local" => {
+            if matches!(scheme, "file" | "inproc")
+                || (matches!(scheme, "http" | "https") && gc_registry::wasi_http_bridge_configured())
+            {
+                Ok(())
+            } else {
+                Err(format!(
+                    "wasi_network_profile=local only allows file:// or inproc:// URLs (got scheme `{scheme}`)"
+                ))
+            }
+        }
+        "preview2" => Ok(()),
+        other => Err(format!(
+            "invalid wasi_network_profile `{other}`; expected `none`, `local`, or `preview2`"
+        )),
+    }
+}
+
+fn url_matches_allowlist(url: &str, allow: &str, scheme: &str) -> bool {
+    let rule = allow.trim();
+    if rule.ends_with("://") {
+        return scheme == rule.trim_end_matches("://");
+    }
+    url.starts_with(rule)
+}
+
+fn validate_net_request_policy(pol: Option<&OpPolicy>, url: &str) -> Result<(), String> {
+    let scheme = parse_url_scheme(url)?;
+    let allow_http = net_allow_http_from_policy(pol)?;
+    if scheme == "http" && !allow_http {
+        return Err("http URLs are disabled by policy (set allow_http=true)".to_string());
+    }
+    let wasi_profile = net_wasi_network_profile_from_policy(pol)?;
+    validate_net_wasi_profile(wasi_profile.as_deref(), scheme)?;
+    let allowlist = net_allowlist_from_policy(pol)?;
+    if allowlist
+        .iter()
+        .any(|rule| url_matches_allowlist(url, rule, scheme))
+    {
+        return Ok(());
+    }
+    Err("url is not in policy url_allow allowlist".to_string())
+}
+
+fn capability_io_net_http_request(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let url = payload_required_string_field(payload, op, ":url")?;
+    if let Err(e) = validate_net_request_policy(pol, &url) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("io/net::http-request remote denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn process_allow_programs_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, String> {
+    let Some(pol) = pol else {
+        return Err(
+            "sys/process::exec requires per-op allow_programs allowlist in caps.toml".to_string(),
+        );
+    };
+    let Some(v) = pol.extra.get("allow_programs") else {
+        return Err(
+            "sys/process::exec requires per-op allow_programs allowlist in caps.toml".to_string(),
+        );
+    };
+    let Some(arr) = v.as_array() else {
+        return Err("allow_programs must be an array of strings".to_string());
+    };
+    let mut out = Vec::with_capacity(arr.len());
+    for x in arr {
+        let Some(raw) = x.as_str() else {
+            return Err("allow_programs entries must be strings".to_string());
+        };
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            out.push(trimmed.to_string());
+        }
+    }
+    if out.is_empty() {
+        return Err("allow_programs must contain at least one program name".to_string());
+    }
+    Ok(out)
+}
+
+fn capability_sys_process_exec(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let program = payload_required_string_field(payload, op, ":program")?;
+    let allow_programs = match process_allow_programs_from_policy(pol) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    if !allow_programs.iter().any(|allowed| allowed == &program) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!(
+                "sys/process::exec denied for program `{program}`; configure allow_programs in caps.toml op policy"
+            ),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("process", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
 
 #[expect(
     clippy::too_many_arguments,
@@ -52,6 +362,8 @@ pub(super) fn call_capability(
         "core/refs::list" => cap_refs_list(payload, refs),
         "core/refs::set" => cap_refs_set(op, payload, store, refs, error_tok),
         "core/refs::delete" => cap_refs_delete(op, payload, store, refs, error_tok),
+        "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
+        "sys/process::exec" => capability_sys_process_exec(op, payload, pol, error_tok),
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
                 let r = with_timeout(ms, || {
@@ -284,8 +596,8 @@ pub(super) fn call_capability(
         | "editor/watch::poll"
         | "editor/watch::unsubscribe" => Ok(mk_error(
             error_tok,
-            "core/caps/not-supported",
-            format!("capability not supported in this host runtime: {op}"),
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
             Some(op),
         )),
         _ => Ok(mk_error(
@@ -294,5 +606,231 @@ pub(super) fn call_capability(
             format!("unknown capability op: {op}"),
             Some(op),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ArtifactBudgetState, backend_unavailable_message, call_capability};
+    use crate::CapsPolicy;
+    use gc_coreform::{Term, TermOrdKey};
+    use gc_kernel::{SealId, Value};
+
+    fn code_from_error(v: Value) -> String {
+        let Value::Sealed { payload, .. } = v else {
+            panic!("expected sealed error value");
+        };
+        let Value::Data(Term::Map(mm)) = *payload else {
+            panic!("expected sealed payload map");
+        };
+        let Some(Term::Str(code)) = mm.get(&TermOrdKey(Term::symbol(":error/code"))) else {
+            panic!("expected :error/code in payload map");
+        };
+        code.clone()
+    }
+
+    fn msg_from_error(v: Value) -> String {
+        let Value::Sealed { payload, .. } = v else {
+            panic!("expected sealed error value");
+        };
+        let Value::Data(Term::Map(mm)) = *payload else {
+            panic!("expected sealed payload map");
+        };
+        let Some(Term::Str(msg)) = mm.get(&TermOrdKey(Term::symbol(":error/message"))) else {
+            panic!("expected :error/message in payload map");
+        };
+        msg.clone()
+    }
+
+    #[test]
+    fn stable_host_integrated_ops_report_backend_unavailable_actionably() {
+        let policy =
+            CapsPolicy::from_toml_str(r#"allow = ["editor/task::typecheck-pkg"]"#).expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let out = call_capability(
+            "editor/task::typecheck-pkg",
+            &Term::Nil,
+            policy.op_policy("editor/task::typecheck-pkg"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(1),
+        )
+        .expect("call capability");
+        assert_eq!(
+            code_from_error(out.clone()),
+            "core/caps/backend-unavailable"
+        );
+        let msg = msg_from_error(out);
+        assert!(
+            msg.contains("editor host integration is bridge-backed"),
+            "message must be actionable for editor ops: {msg}"
+        );
+    }
+
+    #[test]
+    fn backend_unavailable_message_guides_gpu_compute_configuration() {
+        let msg = backend_unavailable_message("gpu/compute::submit");
+        assert!(msg.contains("bridge_cmd/bridge_args/bridge_cmd_sha256"));
+        assert!(msg.contains("first-party runtime backend"));
+    }
+
+    #[test]
+    fn io_net_http_request_policy_gate_enforces_remote_allowlist() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::http-request"]
+
+[op."io/net::http-request"]
+url_allow = ["https://registry.example.com/api/"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 200 :body \"ok\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":url")),
+                Term::Str("https://evil.example.com/api/ping".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::http-request",
+            &payload,
+            policy.op_policy("io/net::http-request"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(7),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn io_net_http_request_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::http-request"]
+
+[op."io/net::http-request"]
+url_allow = ["https://registry.example.com/api/"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 200 :body \"ok\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":url")),
+                Term::Str("https://registry.example.com/api/ping".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::http-request",
+            &payload,
+            policy.op_policy("io/net::http-request"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(9),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(mm)) = out else {
+            panic!("expected data map");
+        };
+        assert_eq!(
+            mm.get(&TermOrdKey(Term::symbol(":status"))),
+            Some(&Term::Int(200_i64.into()))
+        );
+    }
+
+    #[test]
+    fn sys_process_exec_policy_gate_requires_allowlisted_program() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/process::exec"]
+
+[op."sys/process::exec"]
+allow_programs = ["gcpm"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 0}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":program")),
+                Term::Str("bash".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "sys/process::exec",
+            &payload,
+            policy.op_policy("sys/process::exec"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(11),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn sys_process_exec_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["sys/process::exec"]
+
+[op."sys/process::exec"]
+allow_programs = ["gcpm"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status 0 :stdout \"ready\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":program")),
+                Term::Str("gcpm".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "sys/process::exec",
+            &payload,
+            policy.op_policy("sys/process::exec"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(13),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(mm)) = out else {
+            panic!("expected data map");
+        };
+        assert_eq!(
+            mm.get(&TermOrdKey(Term::symbol(":status"))),
+            Some(&Term::Int(0_i64.into()))
+        );
     }
 }

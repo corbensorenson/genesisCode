@@ -1,0 +1,21 @@
+(def prog
+  ((core/effect::bind (core/gfx/window::create-surface {:title "Genesis" :w 960 :h 540}))
+    (fn (_surface)
+      ((core/effect::bind (core/gfx/input::poll-events "main"))
+        (fn (_events)
+          ((core/effect::bind (core/gfx/audio::set-master 1))
+            (fn (_audio)
+              ((core/effect::bind (core/gpu/compute::submit
+                                     {
+                                       :passes [{
+                                         :dispatch {:x 64 :y 1 :z 1}
+                                         :kernel "bench/interactive"
+                                         :bindings [{:buffer "state"} {:buffer "frame"}]
+                                       }]
+                                     }))
+                (fn (_compute)
+                  ((core/effect::bind (core/gfx/window::request-redraw "main"))
+                    (fn (_redraw)
+                      (core/effect::pure {:ok true :kind "interactive-step"}))))))))))))
+
+prog
