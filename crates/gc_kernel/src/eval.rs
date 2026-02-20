@@ -6,8 +6,18 @@ use bytes::{Bytes, BytesMut};
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
-use gc_coreform::{FixedDecimal, Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey};
 use num_traits::ToPrimitive;
+
+#[path = "eval_decimal_ops.rs"]
+mod eval_decimal_ops;
+#[path = "eval_value_ops.rs"]
+mod eval_value_ops;
+
+use eval_decimal_ops::{
+    prim_dec_bin, prim_dec_cmp, prim_dec_from_int, prim_dec_parse, prim_dec_to_str,
+};
+use eval_value_ops::{eq_value, escape_bytes, escape_str};
 
 /// Toolchain default evaluation step limit.
 ///
@@ -970,7 +980,7 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "vec/get expects int index");
             };
-            let idx: usize = match ToUsize::to_usize(i) {
+            let idx: usize = match i.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "vec/get index out of range"),
             };
@@ -1001,7 +1011,7 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "vec/set expects int index");
             };
-            let idx: usize = match ToUsize::to_usize(i) {
+            let idx: usize = match i.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "vec/set index out of range"),
             };
@@ -1153,7 +1163,7 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
             let Some(Term::Int(n)) = args[1].as_data() else {
                 return type_err(ctx, "str/repeat expects int count");
             };
-            let n: usize = match ToUsize::to_usize(n) {
+            let n: usize = match n.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "str/repeat count out of range"),
             };
@@ -1237,7 +1247,7 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
             let Some(Term::Int(i)) = args[1].as_data() else {
                 return type_err(ctx, "bytes/get expects int index");
             };
-            let idx: usize = match ToUsize::to_usize(i) {
+            let idx: usize = match i.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/get index out of range"),
             };
@@ -1259,11 +1269,11 @@ pub(crate) fn prim(ctx: &mut EvalCtx, op: &str, args: Vec<Value>) -> Result<Valu
             let Some(Term::Int(len_i)) = args[2].as_data() else {
                 return type_err(ctx, "bytes/slice expects int len");
             };
-            let start: usize = match ToUsize::to_usize(start_i) {
+            let start: usize = match start_i.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/slice start out of range"),
             };
-            let len: usize = match ToUsize::to_usize(len_i) {
+            let len: usize = match len_i.to_usize() {
                 Some(x) => x,
                 None => return type_err(ctx, "bytes/slice len out of range"),
             };
@@ -1477,101 +1487,6 @@ where
     Ok(Value::Data(Term::Bool(f(a.clone(), b.clone()))))
 }
 
-fn prim_dec_parse(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
-    if args.len() != 1 {
-        return type_err(ctx, "dec/parse expects 1 arg");
-    }
-    let Some(Term::Str(s)) = args[0].as_data() else {
-        return type_err(ctx, "dec/parse expects string");
-    };
-    let d = match FixedDecimal::parse(s) {
-        Ok(x) => x,
-        Err(msg) => return type_err(ctx, &msg),
-    };
-    let t = d.to_term();
-    ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
-}
-
-fn prim_dec_to_str(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
-    if args.len() != 1 {
-        return type_err(ctx, "dec/to-str expects 1 arg");
-    }
-    let d = match as_fixed_decimal(ctx, &args[0]) {
-        Ok(x) => x,
-        Err(e) => return e,
-    };
-    let s = d.to_canonical_string();
-    ctx.mem_observe_string_len(s.len())?;
-    Ok(Value::Data(Term::Str(s)))
-}
-
-fn prim_dec_from_int(ctx: &mut EvalCtx, args: &[Value]) -> Result<Value, KernelError> {
-    if args.len() != 1 {
-        return type_err(ctx, "dec/from-int expects 1 arg");
-    }
-    let Some(Term::Int(i)) = args[0].as_data() else {
-        return type_err(ctx, "dec/from-int expects int");
-    };
-    let d = FixedDecimal::from_int(i.clone());
-    let t = d.to_term();
-    ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
-}
-
-fn prim_dec_bin<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
-where
-    F: FnOnce(FixedDecimal, FixedDecimal) -> Result<FixedDecimal, String>,
-{
-    if args.len() != 2 {
-        return type_err(ctx, "decimal op expects 2 args");
-    }
-    let a = match as_fixed_decimal(ctx, &args[0]) {
-        Ok(x) => x,
-        Err(e) => return e,
-    };
-    let b = match as_fixed_decimal(ctx, &args[1]) {
-        Ok(x) => x,
-        Err(e) => return e,
-    };
-    let out = match f(a, b) {
-        Ok(x) => x,
-        Err(msg) => return type_err(ctx, &msg),
-    };
-    let t = out.to_term();
-    ctx.mem_observe_map_len(3)?;
-    Ok(Value::Data(t))
-}
-
-fn prim_dec_cmp<F>(ctx: &mut EvalCtx, args: &[Value], f: F) -> Result<Value, KernelError>
-where
-    F: FnOnce(FixedDecimal, FixedDecimal) -> bool,
-{
-    if args.len() != 2 {
-        return type_err(ctx, "decimal cmp expects 2 args");
-    }
-    let a = match as_fixed_decimal(ctx, &args[0]) {
-        Ok(x) => x,
-        Err(e) => return e,
-    };
-    let b = match as_fixed_decimal(ctx, &args[1]) {
-        Ok(x) => x,
-        Err(e) => return e,
-    };
-    Ok(Value::Data(Term::Bool(f(a, b))))
-}
-
-fn as_fixed_decimal(
-    ctx: &mut EvalCtx,
-    v: &Value,
-) -> Result<FixedDecimal, Result<Value, KernelError>> {
-    let Some(t) = v.as_data() else {
-        return Err(type_err(ctx, "decimal op expects decimal datum"));
-    };
-    FixedDecimal::from_term(t)
-        .ok_or_else(|| type_err(ctx, "decimal op expects fixed decimal datum"))
-}
-
 pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelError> {
     if let Some(p) = ctx.protocol {
         let mut m = BTreeMap::new();
@@ -1600,83 +1515,4 @@ pub(crate) fn type_err(ctx: &mut EvalCtx, msg: &str) -> Result<Value, KernelErro
         });
     }
     Err(KernelError::new(KernelErrorKind::Type, msg))
-}
-
-fn eq_value(a: &Value, b: &Value) -> bool {
-    match (a, b) {
-        (Value::Data(x), Value::Data(y)) => x == y,
-        (Value::Vector(x), Value::Vector(y)) => {
-            x.len() == y.len() && x.iter().zip(y.iter()).all(|(a, b)| eq_value(a, b))
-        }
-        (Value::Map(x), Value::Map(y)) => {
-            x.len() == y.len()
-                && x.iter()
-                    .zip(y.iter())
-                    .all(|((ak, av), (bk, bv))| ak == bk && eq_value(av, bv))
-        }
-        (Value::SealToken(x), Value::SealToken(y)) => x == y,
-        (
-            Value::Sealed {
-                token: xt,
-                payload: xp,
-            },
-            Value::Sealed {
-                token: yt,
-                payload: yp,
-            },
-        ) => xt == yt && eq_value(xp, yp),
-        (Value::NativeFn(x), Value::NativeFn(y)) => {
-            x.name == y.name
-                && x.arity == y.arity
-                && x.collected.len() == y.collected.len()
-                && x.collected
-                    .iter()
-                    .zip(y.collected.iter())
-                    .all(|(a, b)| eq_value(a, b))
-        }
-        (Value::Contract(x), Value::Contract(y)) => x.contract_id == y.contract_id,
-        _ => false,
-    }
-}
-
-trait ToUsize {
-    fn to_usize(&self) -> Option<usize>;
-}
-
-impl ToUsize for num_bigint::BigInt {
-    fn to_usize(&self) -> Option<usize> {
-        num_traits::ToPrimitive::to_usize(self)
-    }
-}
-
-fn escape_str(s: &str) -> String {
-    let mut out = String::new();
-    for ch in s.chars() {
-        match ch {
-            '\\' => out.push_str("\\\\"),
-            '"' => out.push_str("\\\""),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
-            c => out.push(c),
-        }
-    }
-    out
-}
-
-fn escape_bytes(b: &[u8]) -> String {
-    let mut out = String::new();
-    for &x in b {
-        match x {
-            b'\\' => out.push_str("\\\\"),
-            b'"' => out.push_str("\\\""),
-            b'\n' => out.push_str("\\n"),
-            b'\r' => out.push_str("\\r"),
-            b'\t' => out.push_str("\\t"),
-            0x20..=0x7E => out.push(x as char),
-            _ => out.push_str(&format!("\\x{:02X}", x)),
-        }
-    }
-    out
 }

@@ -26,6 +26,41 @@ pub trait InProcRegistry: Send + Sync {
     fn store_has(&self, hashes: &[String]) -> Result<BTreeMap<String, bool>, RegistryError>;
     fn store_get(&self, hash: &str) -> Result<Vec<u8>, RegistryError>;
     fn store_put(&self, hash: &str, bytes: &[u8]) -> Result<(), RegistryError>;
+    fn store_upload_start(
+        &self,
+        _hash: &str,
+        _size_bytes: u64,
+    ) -> Result<StoreUploadStartResp, RegistryError> {
+        Err(RegistryError::Protocol(
+            "store/upload/start: not supported".to_string(),
+        ))
+    }
+    fn store_upload_chunk(
+        &self,
+        _upload_id: &str,
+        _index: u64,
+        _bytes: &[u8],
+    ) -> Result<StoreUploadChunkResp, RegistryError> {
+        Err(RegistryError::Protocol(
+            "store/upload/chunk: not supported".to_string(),
+        ))
+    }
+    fn store_upload_finish(
+        &self,
+        _upload_id: &str,
+    ) -> Result<StoreUploadFinishResp, RegistryError> {
+        Err(RegistryError::Protocol(
+            "store/upload/finish: not supported".to_string(),
+        ))
+    }
+    fn store_upload_status(
+        &self,
+        _upload_id: &str,
+    ) -> Result<StoreUploadStatusResp, RegistryError> {
+        Err(RegistryError::Protocol(
+            "store/upload/status: not supported".to_string(),
+        ))
+    }
     fn refs_get(&self, name: &str) -> Result<Option<String>, RegistryError>;
     fn refs_list(&self, prefix: Option<&str>) -> Result<Vec<RefsListEntry>, RegistryError>;
     fn refs_set(&self, req: &RefsSetReq<'_>) -> Result<RefsSetResp, RegistryError>;
@@ -146,10 +181,45 @@ pub struct PingResp {
     pub max_chunk_bytes: Option<u64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreUploadStartResp {
+    pub upload_id: String,
+    pub chunk_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreUploadChunkResp {
+    pub ok: bool,
+    pub received: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreUploadFinishResp {
+    pub ok: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreUploadStatusResp {
+    pub received_chunks: Vec<u64>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[cfg(not(target_os = "wasi"))]
 struct StoreHasReq<'a> {
     hashes: &'a [String],
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg(not(target_os = "wasi"))]
+struct StoreUploadStartReq<'a> {
+    hash: &'a str,
+    size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg(not(target_os = "wasi"))]
+struct StoreUploadFinishReq<'a> {
+    upload_id: &'a str,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -552,6 +622,215 @@ impl RegistryClient {
         }
     }
 
+    pub fn store_put_auto(
+        &self,
+        hash: &str,
+        bytes: &[u8],
+        max_chunk_bytes: Option<usize>,
+    ) -> Result<(), RegistryError> {
+        let Some(chunk_bytes) = max_chunk_bytes.filter(|n| *n > 0) else {
+            return self.store_put(hash, bytes);
+        };
+        if bytes.len() <= chunk_bytes {
+            return self.store_put(hash, bytes);
+        }
+        match self.store_put_chunked(hash, bytes, chunk_bytes) {
+            Ok(()) => Ok(()),
+            Err(e) if chunk_upload_not_supported(&e) => self.store_put(hash, bytes),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn store_put_chunked(
+        &self,
+        hash: &str,
+        bytes: &[u8],
+        chunk_bytes: usize,
+    ) -> Result<(), RegistryError> {
+        if chunk_bytes == 0 {
+            return Err(RegistryError::Protocol(
+                "store/upload: chunk size must be > 0".to_string(),
+            ));
+        }
+        let start = self.store_upload_start(hash, bytes.len() as u64)?;
+        let chunk_size = usize::try_from(start.chunk_bytes)
+            .ok()
+            .filter(|n| *n > 0)
+            .unwrap_or(chunk_bytes);
+        for (idx, chunk) in bytes.chunks(chunk_size).enumerate() {
+            self.store_upload_chunk(&start.upload_id, idx as u64, chunk)?;
+        }
+        let finish = self.store_upload_finish(&start.upload_id)?;
+        if !finish.ok {
+            return Err(RegistryError::Protocol(
+                "store/upload/finish returned ok=false".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn store_upload_start(
+        &self,
+        hash: &str,
+        size_bytes: u64,
+    ) -> Result<StoreUploadStartResp, RegistryError> {
+        if let RegistryKind::InProc { id } = &self.kind {
+            let g = lock_inproc_map()?;
+            let reg = g.get(id).ok_or_else(|| {
+                RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
+            })?;
+            reg.authorize(&self.auth)?;
+            return reg.store_upload_start(hash, size_bytes);
+        }
+        if let RegistryKind::File { .. } = &self.kind {
+            return Err(RegistryError::Protocol(
+                "store/upload/start: not supported for file:// remotes".to_string(),
+            ));
+        }
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/upload/start"));
+        }
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join("store/upload/start")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/start: {e}")))?;
+            let r = self
+                .apply_auth(self.http().post(u))
+                .json(&StoreUploadStartReq { hash, size_bytes })
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/upload/start: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/upload/start", r.status()));
+            }
+            r.json::<StoreUploadStartResp>()
+                .map_err(|e| RegistryError::Protocol(format!("store/upload/start json: {e}")))
+        }
+    }
+
+    pub fn store_upload_chunk(
+        &self,
+        upload_id: &str,
+        index: u64,
+        bytes: &[u8],
+    ) -> Result<StoreUploadChunkResp, RegistryError> {
+        if let RegistryKind::InProc { id } = &self.kind {
+            let g = lock_inproc_map()?;
+            let reg = g.get(id).ok_or_else(|| {
+                RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
+            })?;
+            reg.authorize(&self.auth)?;
+            return reg.store_upload_chunk(upload_id, index, bytes);
+        }
+        if let RegistryKind::File { .. } = &self.kind {
+            return Err(RegistryError::Protocol(
+                "store/upload/chunk: not supported for file:// remotes".to_string(),
+            ));
+        }
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/upload/chunk"));
+        }
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join(&format!("store/upload/chunk/{upload_id}/{index}"))
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/chunk: {e}")))?;
+            let r = self
+                .apply_auth(self.http().put(u))
+                .body(bytes.to_vec())
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/upload/chunk: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/upload/chunk", r.status()));
+            }
+            r.json::<StoreUploadChunkResp>()
+                .map_err(|e| RegistryError::Protocol(format!("store/upload/chunk json: {e}")))
+        }
+    }
+
+    pub fn store_upload_finish(
+        &self,
+        upload_id: &str,
+    ) -> Result<StoreUploadFinishResp, RegistryError> {
+        if let RegistryKind::InProc { id } = &self.kind {
+            let g = lock_inproc_map()?;
+            let reg = g.get(id).ok_or_else(|| {
+                RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
+            })?;
+            reg.authorize(&self.auth)?;
+            return reg.store_upload_finish(upload_id);
+        }
+        if let RegistryKind::File { .. } = &self.kind {
+            return Err(RegistryError::Protocol(
+                "store/upload/finish: not supported for file:// remotes".to_string(),
+            ));
+        }
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/upload/finish"));
+        }
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join("store/upload/finish")
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/finish: {e}")))?;
+            let r = self
+                .apply_auth(self.http().post(u))
+                .json(&StoreUploadFinishReq { upload_id })
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/upload/finish: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/upload/finish", r.status()));
+            }
+            r.json::<StoreUploadFinishResp>()
+                .map_err(|e| RegistryError::Protocol(format!("store/upload/finish json: {e}")))
+        }
+    }
+
+    pub fn store_upload_status(
+        &self,
+        upload_id: &str,
+    ) -> Result<StoreUploadStatusResp, RegistryError> {
+        if let RegistryKind::InProc { id } = &self.kind {
+            let g = lock_inproc_map()?;
+            let reg = g.get(id).ok_or_else(|| {
+                RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
+            })?;
+            reg.authorize(&self.auth)?;
+            return reg.store_upload_status(upload_id);
+        }
+        if let RegistryKind::File { .. } = &self.kind {
+            return Err(RegistryError::Protocol(
+                "store/upload/status: not supported for file:// remotes".to_string(),
+            ));
+        }
+        #[cfg(target_os = "wasi")]
+        {
+            return Err(wasi_http_unsupported("store/upload/status"));
+        }
+        #[cfg(not(target_os = "wasi"))]
+        {
+            let u = self
+                .base
+                .join(&format!("store/upload/status/{upload_id}"))
+                .map_err(|e| RegistryError::RemoteSpec(format!("join store/upload/status: {e}")))?;
+            let r = self
+                .apply_auth(self.http().get(u))
+                .send()
+                .map_err(|e| RegistryError::Http(format!("store/upload/status: {e}")))?;
+            if !r.status().is_success() {
+                return Err(status_error("store/upload/status", r.status()));
+            }
+            r.json::<StoreUploadStatusResp>()
+                .map_err(|e| RegistryError::Protocol(format!("store/upload/status json: {e}")))
+        }
+    }
+
     pub fn refs_get(&self, name: &str) -> Result<Option<String>, RegistryError> {
         if let RegistryKind::InProc { id } = &self.kind {
             let g = lock_inproc_map()?;
@@ -771,6 +1050,14 @@ fn enforce_body_limit(
         )));
     }
     Ok(())
+}
+
+fn chunk_upload_not_supported(err: &RegistryError) -> bool {
+    match err {
+        RegistryError::Protocol(s) => s.contains("not supported"),
+        RegistryError::Http(s) => s.contains("status 404") || s.contains("status 405"),
+        _ => false,
+    }
 }
 
 #[cfg(not(target_os = "wasi"))]

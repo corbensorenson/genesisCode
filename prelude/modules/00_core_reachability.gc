@@ -1,0 +1,486 @@
+; -----------------------------------------------------------------------------
+; VCS/GPK reachability helpers (pure planning helpers for host-bridge ops)
+; -----------------------------------------------------------------------------
+
+(def core/vcs/reach::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/vcs/reach::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/vcs/reach::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/vcs/reach::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/vcs/reach::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
+
+(def core/vcs/reach::hash-hex?
+  (fn (x) (if (core/vcs/reach::str? x) ((core/int::eq? (core/str::len x)) 64) false)))
+
+(def core/vcs/reach::opt-bool
+  (fn (opts)
+    (fn (k)
+      (fn (fallback)
+        (if (core/vcs/reach::map? opts)
+          (let ((v ((core/map::get opts) k)))
+            (if (core/vcs/reach::bool? v) v fallback))
+          fallback)))))
+
+(def core/vcs/reach::vec-append
+  (fn (a)
+    (fn (b)
+      (if (core/vcs/reach::vec? b)
+        ((((core/vcs/reach::vec-append2 b) (core/vec::len b)) 0) a)
+        a))))
+
+(def core/vcs/reach::vec-append2
+  (fn (b)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/vcs/reach::vec-append2 b) n) ((core/int::add i) 1))
+              ((core/vec::push out) ((core/vec::get b) i)))))))))
+
+(def core/vcs/reach::push-if-hash
+  (fn (out)
+    (fn (x)
+      (if (core/vcs/reach::hash-hex? x) ((core/vec::push out) x) out))))
+
+(def core/vcs/reach::push-hashes-from-vec
+  (fn (out)
+    (fn (xs)
+      (if (core/vcs/reach::vec? xs)
+        ((((core/vcs/reach::push-hashes-from-vec2 xs) (core/vec::len xs)) 0) out)
+        out))))
+
+(def core/vcs/reach::push-hashes-from-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            ((((core/vcs/reach::push-hashes-from-vec2 xs) n) ((core/int::add i) 1))
+              (((core/vcs/reach::push-if-hash out) ((core/vec::get xs) i))))))))))
+
+(def core/vcs/reach::map-entries-vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/vcs/reach::vec? entries)
+        entries
+        (let ((as-list (core/pair::as-proper-list entries)))
+          (if (core/vcs/reach::vec? as-list) as-list []))))))
+
+(def core/vcs/reach::push-hash-values-from-map
+  (fn (out)
+    (fn (m)
+      (if (core/vcs/reach::map? m)
+        (let ((entries (core/vcs/reach::map-entries-vec m)))
+          ((((core/vcs/reach::push-hash-values-from-map2 entries) (core/vec::len entries)) 0) out))
+        out))))
+
+(def core/vcs/reach::push-hash-values-from-map2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (let ((pair (if (core/vcs/reach::vec? e) e (core/pair::as-proper-list e))))
+                (if (core/vcs/reach::vec? pair)
+                  (if ((core/int::eq? (core/vec::len pair)) 2)
+                    ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1))
+                      (((core/vcs/reach::push-if-hash out) ((core/vec::get pair) 1))))
+                    ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))
+                  ((((core/vcs/reach::push-hash-values-from-map2 entries) n) ((core/int::add i) 1)) out))))))))))
+
+(def core/vcs/reach::patch-refs
+  (fn (patch)
+    (let ((ops ((core/map::get patch) (quote :ops))))
+      (if (core/vcs/reach::vec? ops)
+        ((((core/vcs/reach::patch-refs2 ops) (core/vec::len ops)) 0) [])
+        []))))
+
+(def core/vcs/reach::patch-refs2
+  (fn (ops)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((op ((core/vec::get ops) i)))
+              (if (core/vcs/reach::map? op)
+                (let ((out1 (((core/vcs/reach::push-if-hash out) ((core/map::get op) (quote :value))))))
+                  (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get op) (quote :base))))))
+                    (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get op) (quote :left))))))
+                      ((((core/vcs/reach::patch-refs2 ops) n) ((core/int::add i) 1))
+                        (((core/vcs/reach::push-if-hash out3) ((core/map::get op) (quote :right))))))))
+                ((((core/vcs/reach::patch-refs2 ops) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/vcs/reach::evidence-refs
+  (fn (evidence)
+    (let ((out1 (((core/vcs/reach::push-hashes-from-vec []) ((core/map::get evidence) (quote :inputs))))))
+      (let ((out2 (((core/vcs/reach::push-hashes-from-vec out1) ((core/map::get evidence) (quote :outputs))))))
+        (((core/vcs/reach::push-if-hash out2) ((core/map::get evidence) (quote :data))))))))
+
+(def core/vcs/reach::snapshot-dep-refs
+  (fn (snapshot)
+    (let ((deps ((core/map::get snapshot) (quote :deps))))
+      (if (core/vcs/reach::vec? deps)
+        ((((core/vcs/reach::snapshot-dep-refs2 deps) (core/vec::len deps)) 0) [])
+        []))))
+
+(def core/vcs/reach::snapshot-dep-refs2
+  (fn (deps)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((dep ((core/vec::get deps) i)))
+              (if (core/vcs/reach::map? dep)
+                (let ((out1 (((core/vcs/reach::push-if-hash out) ((core/map::get dep) (quote :dep/commit))))))
+                  (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get dep) (quote :dep/snapshot))))))
+                    (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get dep) (quote :commit))))))
+                      ((((core/vcs/reach::snapshot-dep-refs2 deps) n) ((core/int::add i) 1))
+                        (((core/vcs/reach::push-if-hash out3) ((core/map::get dep) (quote :snapshot))))))))
+                ((((core/vcs/reach::snapshot-dep-refs2 deps) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/vcs/reach::snapshot-module-refs
+  (fn (modules)
+    (if (core/vcs/reach::vec? modules)
+      ((((core/vcs/reach::snapshot-module-refs2 modules) (core/vec::len modules)) 0) [])
+      (((core/vcs/reach::push-hash-values-from-map []) modules)))))
+
+(def core/vcs/reach::snapshot-module-refs2
+  (fn (modules)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((m ((core/vec::get modules) i)))
+              (if (core/vcs/reach::map? m)
+                ((((core/vcs/reach::snapshot-module-refs2 modules) n) ((core/int::add i) 1))
+                  (((core/vcs/reach::push-if-hash out) ((core/map::get m) (quote :hash)))))
+                ((((core/vcs/reach::snapshot-module-refs2 modules) n) ((core/int::add i) 1))
+                  out)))))))))
+
+(def core/vcs/reach::snapshot-refs
+  (fn (snapshot)
+    (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get snapshot) (quote :proto))))))
+      (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get snapshot) (quote :exports_hash))))))
+        (let ((out3 (((core/vcs/reach::push-hash-values-from-map out2) ((core/map::get snapshot) (quote :members))))))
+          (let ((out4 (((core/vcs/reach::push-hash-values-from-map out3) ((core/map::get snapshot) (quote :defs))))))
+            (let
+              (
+                (out5
+                  ((core/vcs/reach::vec-append out4)
+                    (core/vcs/reach::snapshot-module-refs ((core/map::get snapshot) (quote :modules)))))
+                (out6 (((core/vcs/reach::push-hash-values-from-map out5) ((core/map::get snapshot) (quote :modules))))))
+              (((core/vcs/reach::push-hash-values-from-map out6) ((core/map::get snapshot) (quote :overrides)))))))))))
+
+(def core/vcs/reach::conflict-refs
+  (fn (conflict)
+    (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get conflict) (quote :base))))))
+      (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get conflict) (quote :left))))))
+        (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get conflict) (quote :right))))))
+          (let ((conflicts ((core/map::get conflict) (quote :conflicts))))
+            (if (core/vcs/reach::vec? conflicts)
+              ((((core/vcs/reach::conflict-refs2 conflicts) (core/vec::len conflicts)) 0) out3)
+              out3)))))))
+
+(def core/vcs/reach::conflict-refs2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((c ((core/vec::get entries) i)))
+              (let
+                ((out1
+                   (if (core/vcs/reach::map? c)
+                     (((core/vcs/reach::push-if-hash out) ((core/map::get c) (quote :base))))
+                     out)))
+                (let
+                  ((out2
+                     (if (core/vcs/reach::map? c)
+                       (((core/vcs/reach::push-if-hash out1) ((core/map::get c) (quote :left))))
+                       out1)))
+                  (let
+                    ((out3
+                       (if (core/vcs/reach::map? c)
+                         (((core/vcs/reach::push-if-hash out2) ((core/map::get c) (quote :right))))
+                         out2)))
+                    ((((core/vcs/reach::conflict-refs2 entries) n) ((core/int::add i) 1))
+                      out3)))))))))))
+
+(def core/vcs/reach::artifact-refs
+  (fn (artifact)
+    (fn (opts)
+      (if (core/vcs/reach::map? artifact)
+        (let ((ty ((core/map::get artifact) (quote :type))))
+          (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+            (let ((out1 (((core/vcs/reach::push-if-hash []) ((core/map::get artifact) (quote :base))))))
+              (let ((out2 (((core/vcs/reach::push-if-hash out1) ((core/map::get artifact) (quote :patch))))))
+                (let ((out3 (((core/vcs/reach::push-if-hash out2) ((core/map::get artifact) (quote :result))))))
+                  (let
+                    ((out4
+                       (if (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+                         (((core/vcs/reach::push-hashes-from-vec out3) ((core/map::get artifact) (quote :evidence))))
+                         out3)))
+                    (let ((out5 (((core/vcs/reach::push-hashes-from-vec out4) ((core/map::get artifact) (quote :attestations))))))
+                      (if (((core/vcs/reach::opt-bool opts) (quote :include-parents)) true)
+                        (((core/vcs/reach::push-hashes-from-vec out5) ((core/map::get artifact) (quote :parents))))
+                        out5))))))
+            (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/patch)) false)
+              (core/vcs/reach::patch-refs artifact)
+              (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
+                (if (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+                  (core/vcs/reach::evidence-refs artifact)
+                  [])
+                (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/conflict)) false)
+                  (core/vcs/reach::conflict-refs artifact)
+                  (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
+                    (let ((refs0 (core/vcs/reach::snapshot-refs artifact)))
+                      (if (((core/vcs/reach::opt-bool opts) (quote :include-deps)) false)
+                        ((core/vcs/reach::vec-append refs0) (core/vcs/reach::snapshot-dep-refs artifact))
+                        refs0))
+                    []))))))
+        []))))
+
+(def core/vcs/reach::commit-parents
+  (fn (artifact)
+    (if (core/vcs/reach::map? artifact)
+      (let ((ty ((core/map::get artifact) (quote :type))))
+        (if (if (core/vcs/reach::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+          (let ((parents ((core/map::get artifact) (quote :parents))))
+            (((core/vcs/reach::push-hashes-from-vec []) parents)))
+          []))
+      [])))
+
+(def core/vcs/reach::artifact-ref-plan
+  (fn (artifact)
+    (fn (opts)
+      (let
+        ((opts2
+           {
+             :include-deps (((core/vcs/reach::opt-bool opts) (quote :include-deps)) false)
+             :include-evidence (((core/vcs/reach::opt-bool opts) (quote :include-evidence)) true)
+             :include-parents false})
+          (want-parents (((core/vcs/reach::opt-bool opts) (quote :include-parents)) false)))
+        {
+          :parents (if want-parents (core/vcs/reach::commit-parents artifact) [])
+          :refs ((core/vcs/reach::artifact-refs artifact) opts2)}))))
+
+; -----------------------------------------------------------------------------
+; GC root planning helpers (pure planners consumed by host capability bridge)
+; -----------------------------------------------------------------------------
+
+(def core/gc/reach::state-empty {:roots [] :meta []})
+
+(def core/gc/reach::state-merge
+  (fn (a)
+    (fn (b)
+      {
+        :roots
+          ((core/vcs/reach::vec-append ((core/map::get a) (quote :roots)))
+            ((core/map::get b) (quote :roots)))
+        :meta
+          ((core/vcs/reach::vec-append ((core/map::get a) (quote :meta)))
+            ((core/map::get b) (quote :meta)))})))
+
+(def core/gc/reach::state-add
+  (fn (st)
+    (fn (hash)
+      (fn (meta)
+        (if (core/vcs/reach::hash-hex? hash)
+          {
+            :roots ((core/vec::push ((core/map::get st) (quote :roots))) hash)
+            :meta ((core/vec::push ((core/map::get st) (quote :meta))) meta)}
+          st)))))
+
+(def core/gc/reach::refs-state
+  (fn (refs)
+    (if (core/vcs/reach::vec? refs)
+      ((((core/gc/reach::refs-state2 refs) (core/vec::len refs)) 0) core/gc/reach::state-empty)
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::refs-state2
+  (fn (refs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((entry ((core/vec::get refs) i)))
+              (let
+                ((next
+                   (if (core/vcs/reach::map? entry)
+                     (((core/gc/reach::state-add st) ((core/map::get entry) (quote :hash)))
+                       {
+                         :hash ((core/map::get entry) (quote :hash))
+                         :kind (quote :ref)
+                         :name ((core/map::get entry) (quote :name))})
+                     st)))
+                ((((core/gc/reach::refs-state2 refs) n) ((core/int::add i) 1)) next)))))))))
+
+(def core/gc/reach::lock-state
+  (fn (lock-info)
+    (if (core/vcs/reach::map? lock-info)
+      (let
+        (
+          (lock-name ((core/map::get lock-info) (quote :lock)))
+          (locked ((core/map::get lock-info) (quote :locked)))
+          (artifacts ((core/map::get lock-info) (quote :artifacts))))
+        (let
+          ((st1
+             (if (core/vcs/reach::vec? locked)
+               (((((core/gc/reach::lock-locked-state2 locked) lock-name) (core/vec::len locked))
+                  0)
+                 core/gc/reach::state-empty)
+               core/gc/reach::state-empty)))
+          (if (core/vcs/reach::map? artifacts)
+            ((core/gc/reach::state-merge st1)
+              (((core/gc/reach::lock-artifacts-state artifacts) lock-name)))
+            st1)))
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::lock-locked-state2
+  (fn (locked)
+    (fn (lock-name)
+      (fn (n)
+        (fn (i)
+          (fn (st)
+            (if ((core/int::eq? i) n)
+              st
+              (let ((entry ((core/vec::get locked) i)))
+                (if (core/vcs/reach::map? entry)
+                  (let
+                    ((st1
+                       (((core/gc/reach::state-add st) ((core/map::get entry) (quote :commit)))
+                         {
+                           :hash ((core/map::get entry) (quote :commit))
+                           :kind (quote :lock-commit)
+                           :lock lock-name})))
+                    (let
+                      ((next
+                         (((core/gc/reach::state-add st1) ((core/map::get entry) (quote :snapshot)))
+                           {
+                             :hash ((core/map::get entry) (quote :snapshot))
+                             :kind (quote :lock-snapshot)
+                             :lock lock-name})))
+                      (((((core/gc/reach::lock-locked-state2 locked) lock-name) n)
+                        ((core/int::add i) 1))
+                        next)))
+                  (((((core/gc/reach::lock-locked-state2 locked) lock-name) n)
+                    ((core/int::add i) 1))
+                    st))))))))))
+
+(def core/gc/reach::lock-artifacts-state
+  (fn (artifacts)
+    (fn (lock-name)
+      (let ((entries (core/vcs/reach::map-entries-vec artifacts)))
+        (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) (core/vec::len entries)) 0)
+          core/gc/reach::state-empty)))))
+
+(def core/gc/reach::lock-artifacts-state2
+  (fn (entries)
+    (fn (lock-name)
+      (fn (n)
+        (fn (i)
+          (fn (st)
+            (if ((core/int::eq? i) n)
+              st
+                (let ((entry0 ((core/vec::get entries) i)))
+                  (let ((entry (if (core/vcs/reach::vec? entry0) entry0 (core/pair::as-proper-list entry0))))
+                    (if (core/vcs/reach::vec? entry)
+                      (if ((core/int::eq? (core/vec::len entry)) 2)
+                        (let ((k ((core/vec::get entry) 0)) (h ((core/vec::get entry) 1)))
+                          (let
+                            ((next
+                               (((core/gc/reach::state-add st) h)
+                                 {
+                                   :hash h
+                                   :key k
+                                   :kind (quote :lock-artifact)
+                                   :lock lock-name})))
+                            (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                              ((core/int::add i) 1))
+                              next)))
+                        (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                          ((core/int::add i) 1))
+                          st))
+                      (((((core/gc/reach::lock-artifacts-state2 entries) lock-name) n)
+                        ((core/int::add i) 1))
+                        st)))))))))))
+
+(def core/gc/reach::pins-state
+  (fn (pins-info)
+    (if (core/vcs/reach::map? pins-info)
+      (let
+        (
+          (keep ((core/map::get pins-info) (quote :keep)))
+          (keep-refs ((core/map::get pins-info) (quote :keep-refs))))
+        (let
+          ((st1
+             (if (core/vcs/reach::vec? keep)
+               ((((core/gc/reach::pins-keep-state2 keep) (core/vec::len keep)) 0) core/gc/reach::state-empty)
+               core/gc/reach::state-empty)))
+          (if (core/vcs/reach::vec? keep-refs)
+            ((((core/gc/reach::pins-keep-refs-state2 keep-refs) (core/vec::len keep-refs)) 0) st1)
+            st1)))
+      core/gc/reach::state-empty)))
+
+(def core/gc/reach::pins-keep-state2
+  (fn (keep)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            ((((core/gc/reach::pins-keep-state2 keep) n) ((core/int::add i) 1))
+              (((core/gc/reach::state-add st) ((core/vec::get keep) i))
+                {:hash ((core/vec::get keep) i) :kind (quote :pin)}))))))))
+
+(def core/gc/reach::pins-keep-refs-state2
+  (fn (keep-refs)
+    (fn (n)
+      (fn (i)
+        (fn (st)
+          (if ((core/int::eq? i) n)
+            st
+            (let ((entry ((core/vec::get keep-refs) i)))
+              (let
+                ((next
+                   (if (core/vcs/reach::map? entry)
+                     (((core/gc/reach::state-add st) ((core/map::get entry) (quote :hash)))
+                       {
+                         :hash ((core/map::get entry) (quote :hash))
+                         :kind (quote :pin-ref)
+                         :name ((core/map::get entry) (quote :name))})
+                     st)))
+                ((((core/gc/reach::pins-keep-refs-state2 keep-refs) n) ((core/int::add i) 1))
+                  next)))))))))
+
+(def core/gc/reach::roots-plan
+  (fn (refs)
+    (fn (lock-info)
+      (fn (pins-info)
+        (fn (include-lock)
+          (fn (include-refs)
+            (let
+              ((ref-st
+                 (if include-refs (core/gc/reach::refs-state refs) core/gc/reach::state-empty))
+                (lock-st
+                  (if include-lock
+                    (core/gc/reach::lock-state lock-info)
+                    core/gc/reach::state-empty))
+                (pins-st (core/gc/reach::pins-state pins-info)))
+              (let ((st1 ((core/gc/reach::state-merge ref-st) lock-st)))
+                (let ((st2 ((core/gc/reach::state-merge st1) pins-st)))
+                  {
+                    :roots ((core/map::get st2) (quote :roots))
+                    :roots-meta ((core/map::get st2) (quote :meta))})))))))))

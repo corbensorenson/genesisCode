@@ -2,92 +2,141 @@
 
 Last updated: 2026-02-20
 
-This plan contains only unresolved findings from the latest fine-tooth-comb red-team pass.
+This file contains only unresolved roadblocks from a fresh full-project red-team pass.
 
-Open checklist items: 5
+Open checklist items: 13
 
-## P0 - Self-Host Correctness and Missing Core Surface
+## P0 - Self-Host Cutover Blockers
 
-- [ ] P0.1 Implement `genesis commit` command surface (`new`, `show`) and align all CLI specs.
+- [ ] P0.1 Remove Rust frontend/engine values from production CLI parse surface (fail-closed, not runtime-rejected).
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md:70`-`73` declares required `genesis commit new` and `genesis commit show`.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:163` defines top-level `Cmd` without a `Commit` variant.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:1070`-`1150` shows `VcsCmd` variants (hash/diff/apply/log/blame/why/merge/resolve) but no commit creation/show command.
+  - `crates/gc_cli_driver/src/cli_args.rs:71` keeps `CoreformFrontendArg::{Rust,Selfhost}` and accepts `"rust"` in parser.
+  - `crates/gc_cli_driver/src/cli_args.rs:430` keeps `FmtEngine::{Rust,Selfhost}` and accepts `"rust"` in parser.
+  - `crates/gc_cli_driver/src/selfhost_frontend.rs:241` and `crates/gc_cli_driver/src/selfhost_frontend.rs:315` still carry Rust-frontend/engine branches.
   Acceptance:
-  - Add top-level `genesis commit new` and `genesis commit show` (native + WASI).
-  - Route commit creation through the same deterministic contract/evidence path as other selfhost-routed command groups.
-  - Add parity/smoke tests for commit creation, artifact persistence, and JSON envelope kinds.
-  - Keep `docs/spec/CLI.md` and `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` consistent.
+  - `genesis` and `genesis_wasi` reject Rust engine/frontend at parse level.
+  - Rust engine/frontend code paths compile only in explicit parity harness binaries.
+  - Production help/spec output contains no Rust engine/frontend value paths.
 
-- [ ] P0.2 Implement registry chunked upload protocol (`upload/start|chunk|finish`) and client planner usage.
+- [ ] P0.2 Make selfhost-boundary enforcement strict and fail-closed in CI.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md:43`-`48` defines required chunked upload endpoints.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:499`-`552` implements only monolithic `PUT /store/put/<hash>`.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/lib.rs:146` exposes `max_chunk_bytes` in ping response, but chunked transport path is absent.
+  - `.github/workflows/ci.yml:85` runs `scripts/check_selfhost_boundary.sh` without `--strict`.
+  - `scripts/check_selfhost_boundary.sh:20` allowlists all of `crates/gc_cli_driver/src/*`.
+  - `scripts/check_selfhost_boundary.sh:140` exits success when no diff base is detected.
   Acceptance:
-  - Add registry client APIs for `upload/start`, `upload/chunk`, `upload/finish` (+ optional status).
-  - Update sync push planning to switch between direct put vs chunked upload based on payload size and `max_chunk_bytes`.
-  - Add resumability/integrity tests for interrupted uploads and hash mismatch fail-close behavior.
+  - CI runs strict mode (`--strict`) on all production Rust files.
+  - No-success-on-skip behavior when base detection fails.
+  - Allowlist reduced to concrete files/functions instead of broad directory patterns.
 
-- [ ] P0.3 Remove Rust frontend/engine options from production CLI parser surface (parity binaries only).
+- [ ] P0.3 Replace implicit filename-order Prelude assembly with explicit manifest ordering and dependency validation.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:157`-`160` exposes `CoreformFrontendArg::{Rust,Selfhost}` in production parser.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs:493`-`497` exposes `FmtEngine::{Rust,Selfhost}` in production parser.
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/selfhost_frontend.rs:241`-`257` still carries runtime Rust-frontend branch logic.
+  - `scripts/assemble_prelude.sh:13` uses `find ... | sort` for module order.
+  - `prelude/modules/README.md:17` points to the same script (no explicit module dependency manifest).
   Acceptance:
-  - Production binaries (`genesis`, `genesis_wasi`) accept only selfhost frontend/engine values.
-  - Rust frontend/engine parser values and execution branches compile only in parity binaries (`genesis_parity`, `genesis_wasi_parity`).
-  - Add guard/test that production `--help` output contains no Rust frontend/engine option values.
+  - Add `prelude/modules/manifest` with explicit load order and dependency edges.
+  - Assembly fails on missing/extra modules or dependency cycles.
+  - Artifact freshness checks verify manifest hash in addition to concatenated output bytes.
 
-## P1 - Performance and Reliability Hardening
-
-- [x] P1.1 Make perf/SLO measurements fail-closed on low disk in all budget-enforced paths (including local runs).
+- [ ] P0.4 Remove unbounded trusted bootstrap resource bypass.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:89`-`94` defaults to non-strict mode outside CI.
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh:107`-`114` exits success on low disk in non-strict mode.
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/test_changed_fast.sh:7` always invokes disk-headroom check with default strict mode.
-  - Release-profile run in this pass logged: `test-changed-fast: insufficient disk headroom ... continuing in non-strict mode ...`.
+  - `crates/gc_prelude/src/selfhost_coreform_v1.rs:314` sets `ctx.step_limit = None` inside trusted bootstrap.
+  - `crates/gc_prelude/src/selfhost_coreform_v1.rs:315` resets memory limits to defaults in the same path.
   Acceptance:
-  - Perf/SLO entrypoints (`check_perf_budgets.sh`, `check_ai_iteration_slo.sh`, `check_hot_path_budgets.sh`, `check_runtime_microbench_budgets.sh`) now force strict disk mode via `GENESIS_PERF_DISK_STRICT_MODE` (default `1`).
-  - `test_changed_fast.sh` now supports explicit strict mode (`--strict-disk`, `GENESIS_TEST_CHANGED_STRICT_DISK`) and `check_ai_iteration_slo.sh` calls it in strict mode.
-  - Low-disk conditions now fail budget checks in these gates instead of producing false-green measurements.
+  - Trusted bootstrap uses bounded, profile-controlled limits.
+  - Limits and observed counters are emitted into bootstrap evidence.
+  - OOM/step exhaustion during bootstrap is surfaced as deterministic sealed errors, not bypassed.
 
-- [x] P1.2 Run performance budgets on release-equivalent artifacts and record profile metadata in reports.
+- [ ] P0.5 Ship a first-party registry server runtime and CLI command.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_perf_budgets.sh:21` builds debug (`cargo build -p gc_cli`) and measures `target/debug/genesis`.
-  - `/Users/corbensorenson/Documents/genesisCode/scripts/check_runtime_microbench_budgets.sh:23` uses `cargo run -p gc_runtime_bench` (debug by default).
+  - `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md:25`-`56` defines server endpoints (`/v1/ping`, `/v1/store/*`, `/v1/refs/*`).
+  - `crates/gc_cli_driver/src/cli_args.rs:597` `SyncCmd` exposes only `Pull` and `Push`; no serve command.
+  - No non-test `impl InProcRegistry` exists under `crates/` (only test implementation in `crates/gc_registry/tests/chunk_upload.rs:56`).
   Acceptance:
-  - Perf scripts now default to `GENESIS_PERF_CARGO_PROFILE=selfhost-strict` and consistently build/run `target/<profile>/...` artifacts.
-  - Profile/build metadata is now emitted in perf artifacts (`perf_budget_metrics.json`, `hot_path_metrics.json`, `ai_iteration_slo_metrics.json`, runtime microbench + concurrency SLO outputs).
-  - Runtime microbench report schema now includes `build_profile` and `build_mode` for auditability.
+  - Add `genesis registry serve` (native) with protocol-compliant endpoints.
+  - Add end-to-end publish/install integration tests against that server.
+  - Keep policy gating for `refs/set` enforced server-side.
 
-## P2 - AI-First Authoring and Agent Ergonomics
-
-- [ ] P2.1 Tighten source-size budgets and split remaining oversized hot files/modules.
+- [ ] P0.6 Close WASI remote sync gap for HTTP registries.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:5` sets Rust max lines to 2200 and `/Users/corbensorenson/Documents/genesisCode/policies/source_size_budget.toml:10` sets `.gc` max lines to 1800.
-  - Current production sizes from this pass:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/lib.rs` = 2048 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs` = 1991 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_cap_vcs_low.rs` = 1902 lines
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_cap_pkg_low.rs` = 1852 lines
-    - `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc` = 1700 lines
+  - `crates/gc_registry/src/lib.rs:1024` returns `wasi_http_unsupported(...)`.
+  - `crates/gc_registry/src/lib.rs:1026` explicitly states HTTP(S) remotes are unsupported in WASI builds.
   Acceptance:
-  - Reduce budget targets to AI-editable levels (Rust <= 1600, `.gc` <= 1200) with staged rollout.
-  - Split listed large files into focused modules with stable interfaces and ownership boundaries.
-  - Add regression checks to prevent monolith regrowth.
+  - Provide a WASI-safe HTTP transport path (host bridge/proxy/capability adapter) for registry operations.
+  - `genesis_wasi` can perform sync pull/push with HTTP remotes under policy constraints.
+  - Add deterministic replay tests for WASI remote flows.
 
-- [ ] P2.2 Publish a full CLI JSON schema registry for non-gcpm commands (agent-safe contracts).
+## P1 - Performance and Reliability
+
+- [ ] P1.1 Remove per-command shell/process cold starts from `test_changed_fast` execution path.
   Evidence:
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md:177`-`183` documents only a generic envelope (`genesis/<command>-v0.2`) without per-command field contracts.
-  - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_JSON_SCHEMAS_v0.1.md` exists for gcpm, but no equivalent schema index exists for `store/*`, `refs/*`, `sync/*`, `gc/*`, `vcs/*`, `eval`, `run`, `replay`, etc.
+  - `scripts/test_changed_fast.sh:316` iterates commands serially.
+  - `scripts/test_changed_fast.sh:318` executes each command through `bash -lc`, forcing repeated shell startup.
   Acceptance:
-  - Add `docs/spec/CLI_JSON_SCHEMAS_v0.1.md` (or equivalent split docs) covering every command kind and required/optional `data` fields.
-  - Add conformance tests that assert each command’s emitted JSON matches documented schema (including error envelope variants).
-  - Keep schema IDs stable and versioned to support autonomous agent planning.
+  - Replace per-command shell spawning with direct process execution or batched `nextest` invocations.
+  - Keep equivalent test selection semantics and deterministic reporting.
+  - Demonstrate lower wall-clock on unchanged/low-diff loops with the same coverage set.
 
-## Execution Order (Recommended)
+- [ ] P1.2 Stop rebuilding full selfhost artifact on every fast-loop freshness check.
+  Evidence:
+  - `scripts/check_selfhost_artifact_fresh.sh:25` always runs `genesis selfhost-artifact` to rebuild.
+  - `scripts/test_fast.sh:20` runs freshness check in the local fast path.
+  Acceptance:
+  - Introduce source-manifest/hash staleness detection before rebuild.
+  - Keep byte-for-byte artifact correctness guarantees.
+  - Preserve deterministic failure behavior when committed artifact is stale.
 
-1. P0.1 -> P0.2 -> P0.3
-2. P1.1 -> P1.2
-3. P2.1 -> P2.2
+- [ ] P1.3 Bring integration test sprawl under explicit budgets and modularization targets.
+  Evidence:
+  - `crates/gc_cli/tests/cli_stage1_pipeline.rs` is 1622 lines.
+  - `crates/gc_cli/tests/cli_selfhost_only.rs` is 1603 lines.
+  - `policies/source_size_budget.toml:15` excludes `/tests/` from size budgets.
+  Acceptance:
+  - Add dedicated test-file size budgets with debt allowlists and burn-down plan.
+  - Split oversized integration suites into narrower capability-focused modules.
+  - Keep coverage parity while reducing per-file cognitive load for agent editing.
+
+- [ ] P1.4 Expand panic-guard coverage to all production crates on user paths.
+  Evidence:
+  - `scripts/check_no_user_panics.sh:8`-`14` runs clippy checks on a subset of libraries only.
+  - Current guard omits several production crates that still participate in user workflows.
+  Acceptance:
+  - Define and enforce full production crate list for panic/unwrap/expect lints.
+  - Keep exemptions explicit, minimal, and documented.
+  - Fail CI when coverage list drifts from workspace production membership.
+
+- [ ] P1.5 Remove duplicate task-op entries from generic not-supported dispatcher path.
+  Evidence:
+  - `crates/gc_effects/src/runner.rs:209` routes `core/task::*` through dedicated task runtime first.
+  - `crates/gc_effects/src/runner_capability_dispatch.rs:232`-`241` still lists the same task ops in the generic not-supported branch.
+  Acceptance:
+  - Single source of truth for capability op routing.
+  - No duplicated task op declarations across dispatch layers.
+  - Conformance guard ensures dispatch table consistency.
+
+## P2 - AI-First Surface and Capability Architecture
+
+- [ ] P2.1 Unify graphics-compute architecture so compute is first-class (not split across overlapping namespaces).
+  Evidence:
+  - `prelude/modules/10_gfx.gc:30` and `prelude/modules/10_gfx.gc:77` expose compute pipeline/submit under `core/gfx/gpu::*`.
+  - `prelude/modules/11_gpu_compute.gc:1`-`51` exposes parallel compute surface under `core/gpu/compute::*`.
+  - `docs/spec/GFX_CAPS.md:18`-`50` documents compute primarily under `gfx/gpu::*` while host ABI also exposes `gpu/compute::*` (`docs/spec/HOST_ABI.md:124`-`136`).
+  Acceptance:
+  - Define one canonical compute surface and one compatibility layer.
+  - Keep graphics-specific APIs separate from general GPU compute APIs.
+  - Update host ABI + prelude wrappers + tests to one stable architecture.
+
+- [ ] P2.2 Publish machine-readable host ABI and prelude capability indices for agent planning.
+  Evidence:
+  - `docs/spec/HOST_ABI.md` is markdown-only.
+  - `docs/spec` has no machine-readable HOST ABI artifact (JSON/TOML) equivalent to CLI schema docs.
+  Acceptance:
+  - Generate versioned `HOST_ABI` and prelude-capability indices in machine-readable form.
+  - Add CI drift check from Rust dispatch + prelude wrappers -> generated ABI index.
+  - Include canonical examples for payload/response terms per op family.
+
+## Recommended Execution Order
+
+1. P0.1 -> P0.2 -> P0.3 -> P0.4
+2. P0.5 -> P0.6
+3. P1.1 -> P1.2 -> P1.3 -> P1.4 -> P1.5
+4. P2.1 -> P2.2

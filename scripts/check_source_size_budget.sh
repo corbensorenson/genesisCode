@@ -43,6 +43,8 @@ parse_array_tokens() {
 
 RUST_MAX_LINES="$(parse_positive_int rust_max_lines 1)"
 GC_MAX_LINES="$(parse_positive_int gc_max_lines 0)"
+RUST_TARGET_LINES="$(parse_positive_int rust_target_lines 0)"
+GC_TARGET_LINES="$(parse_positive_int gc_target_lines 0)"
 
 EXCLUDES=()
 while IFS= read -r token; do
@@ -53,6 +55,16 @@ GC_EXCLUDE_PATHS=()
 while IFS= read -r token; do
   [[ -n "$token" ]] && GC_EXCLUDE_PATHS+=("$token")
 done < <(parse_array_tokens gc_exclude_paths || true)
+
+RUST_TARGET_EXCLUDE_PATHS=()
+while IFS= read -r token; do
+  [[ -n "$token" ]] && RUST_TARGET_EXCLUDE_PATHS+=("$token")
+done < <(parse_array_tokens rust_target_exclude_paths || true)
+
+GC_TARGET_EXCLUDE_PATHS=()
+while IFS= read -r token; do
+  [[ -n "$token" ]] && GC_TARGET_EXCLUDE_PATHS+=("$token")
+done < <(parse_array_tokens gc_target_exclude_paths || true)
 
 contains_token_match() {
   local needle="$1"
@@ -76,9 +88,13 @@ list_rust_source_files() {
 
 TMP_COUNTS="$(mktemp)"
 TMP_GC_COUNTS="$(mktemp)"
+TMP_TARGET_DEBT_RUST="$(mktemp)"
+TMP_TARGET_DEBT_GC="$(mktemp)"
 cleanup() {
   rm -f "$TMP_COUNTS"
   rm -f "$TMP_GC_COUNTS"
+  rm -f "$TMP_TARGET_DEBT_RUST"
+  rm -f "$TMP_TARGET_DEBT_GC"
 }
 trap cleanup EXIT
 
@@ -94,6 +110,14 @@ while IFS= read -r f; do
   if (( lines > RUST_MAX_LINES )); then
     echo "source-size-budget: violation $f has $lines lines (max $RUST_MAX_LINES)" >&2
     violations=1
+  fi
+  if [[ -n "$RUST_TARGET_LINES" && "$lines" -gt "$RUST_TARGET_LINES" ]]; then
+    if contains_token_match "$f" "${RUST_TARGET_EXCLUDE_PATHS[@]:-}"; then
+      printf "%s %s\n" "$lines" "$f" >> "$TMP_TARGET_DEBT_RUST"
+    else
+      echo "source-size-budget: target violation $f has $lines lines (target $RUST_TARGET_LINES)" >&2
+      violations=1
+    fi
   fi
 done < <(list_rust_source_files)
 
@@ -114,10 +138,18 @@ if [[ -n "$GC_MAX_LINES" ]]; then
       echo "source-size-budget: violation $rel has $lines lines (max $GC_MAX_LINES)" >&2
       violations=1
     fi
+    if [[ -n "$GC_TARGET_LINES" && "$lines" -gt "$GC_TARGET_LINES" ]]; then
+      if contains_token_match "$rel" "${GC_TARGET_EXCLUDE_PATHS[@]:-}"; then
+        printf "%s %s\n" "$lines" "$rel" >> "$TMP_TARGET_DEBT_GC"
+      else
+        echo "source-size-budget: target violation $rel has $lines lines (target $GC_TARGET_LINES)" >&2
+        violations=1
+      fi
+    fi
   done < <(find "$ROOT_DIR/prelude/modules" "$ROOT_DIR/selfhost" -maxdepth 1 -type f -name '*.gc' | sort)
 fi
 
-echo "source-size-budget: policy=$POLICY_FILE rust_max_lines=$RUST_MAX_LINES gc_max_lines=${GC_MAX_LINES:-<disabled>}"
+echo "source-size-budget: policy=$POLICY_FILE rust_max_lines=$RUST_MAX_LINES gc_max_lines=${GC_MAX_LINES:-<disabled>} rust_target_lines=${RUST_TARGET_LINES:-<disabled>} gc_target_lines=${GC_TARGET_LINES:-<disabled>}"
 echo "source-size-budget: top production files by line count:"
 sort -nr "$TMP_COUNTS" | head -n 8 | awk '{printf "  %5s  %s\n", $1, $2}'
 if [[ -n "$GC_MAX_LINES" ]]; then
@@ -126,6 +158,24 @@ if [[ -n "$GC_MAX_LINES" ]]; then
     sort -nr "$TMP_GC_COUNTS" | head -n 8 | awk '{printf "  %5s  %s\n", $1, $2}'
   else
     echo "      0  <none>"
+  fi
+fi
+
+if [[ -n "$RUST_TARGET_LINES" ]]; then
+  if [[ -s "$TMP_TARGET_DEBT_RUST" ]]; then
+    echo "source-size-budget: rust target debt allowlist (must trend to zero):"
+    sort -nr "$TMP_TARGET_DEBT_RUST" | awk '{printf "  %5s  %s\n", $1, $2}'
+  else
+    echo "source-size-budget: rust target debt allowlist is empty"
+  fi
+fi
+
+if [[ -n "$GC_TARGET_LINES" ]]; then
+  if [[ -s "$TMP_TARGET_DEBT_GC" ]]; then
+    echo "source-size-budget: gc target debt allowlist (must trend to zero):"
+    sort -nr "$TMP_TARGET_DEBT_GC" | awk '{printf "  %5s  %s\n", $1, $2}'
+  else
+    echo "source-size-budget: gc target debt allowlist is empty"
   fi
 fi
 

@@ -87,28 +87,20 @@ pub(super) fn cmd_commit(
                 author.as_deref(),
                 sign.as_deref(),
             );
-            let commit_hash = gc_vcs::bytes32_to_hex(&gc_coreform::hash_term(&artifact));
+            let mut commit_hash = hex32(*blake3::hash(print_term(&artifact).as_bytes()).as_bytes());
 
             if *store {
                 let (store_v, store_log) =
                     run_effect_forms(cli, &policy, mk_store_put_program(&artifact))?;
                 logs.push(store_log);
-                let stored = extract_hash_field(&store_v, ":hash").ok_or_else(|| {
+                let stored = extract_store_put_hash(&store_v).ok_or_else(|| {
                     cli_err(
                         EX_INTERNAL,
                         "commit/new",
                         "store put returned no :hash for commit artifact",
                     )
                 })?;
-                if stored != commit_hash {
-                    return Err(cli_err(
-                        EX_INTERNAL,
-                        "commit/new",
-                        format!(
-                            "stored commit hash mismatch: computed={commit_hash} stored={stored}"
-                        ),
-                    ));
-                }
+                commit_hash = stored;
             }
 
             let mut out = BTreeMap::new();
@@ -145,7 +137,7 @@ pub(super) fn cmd_commit(
                 .map_err(|e| cli_err(EX_PARSE, "commit/show", format!("invalid hash: {e}")))?;
             let (resp, step_log) = run_effect_forms(cli, &policy, mk_store_get_program(hash))?;
             logs.push(step_log);
-            let artifact = extract_artifact_field(&resp).ok_or_else(|| {
+            let artifact = extract_store_get_artifact(&resp).ok_or_else(|| {
                 cli_err(
                     EX_INTERNAL,
                     "commit/show",
@@ -250,7 +242,7 @@ fn resolve_base_snapshot(
     if base.starts_with("refs/") {
         let (refs_v, refs_log) = run_effect_forms(cli, policy, mk_refs_get_program(base))?;
         logs.push(refs_log);
-        let parent_hash = extract_hash_field(&refs_v, ":hash").ok_or_else(|| {
+        let parent_hash = extract_refs_get_hash(&refs_v).ok_or_else(|| {
             cli_err(
                 EX_INTERNAL,
                 "commit/new",
@@ -275,7 +267,7 @@ fn resolve_base_snapshot(
         let (store_v, store_log) =
             run_effect_forms(cli, policy, mk_store_get_program(&parent_hash))?;
         logs.push(store_log);
-        let artifact = extract_artifact_field(&store_v).ok_or_else(|| {
+        let artifact = extract_store_get_artifact(&store_v).ok_or_else(|| {
             cli_err(
                 EX_INTERNAL,
                 "commit/new",
@@ -316,7 +308,7 @@ fn resolve_patch_hash(
 
     let (put_v, put_log) = run_effect_forms(cli, policy, mk_store_put_program(&patch_term))?;
     logs.push(put_log);
-    extract_hash_field(&put_v, ":hash").ok_or_else(|| {
+    extract_store_put_hash(&put_v).ok_or_else(|| {
         cli_err(
             EX_INTERNAL,
             "commit/new",
@@ -338,7 +330,7 @@ fn apply_patch_for_result(
         mk_vcs_apply_program(base_snapshot, patch_hash, None, true),
     )?;
     logs.push(apply_log);
-    extract_hash_field(&apply_v, ":snapshot").ok_or_else(|| {
+    extract_vcs_snapshot_hash(&apply_v).ok_or_else(|| {
         cli_err(
             EX_INTERNAL,
             "commit/new",
@@ -475,21 +467,6 @@ fn run_effect_forms(
         });
     }
     Ok((run.value, run.log))
-}
-
-fn extract_hash_field(v: &Value, key: &str) -> Option<String> {
-    let t = v.to_term_for_log(None);
-    let Term::Map(m) = t else { return None };
-    match m.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Str(s)) => Some(s.clone()),
-        _ => None,
-    }
-}
-
-fn extract_artifact_field(v: &Value) -> Option<Term> {
-    let t = v.to_term_for_log(None);
-    let Term::Map(m) = t else { return None };
-    m.get(&TermOrdKey(Term::symbol(":artifact"))).cloned()
 }
 
 fn commit_error_json_code(code: &str) -> &'static str {

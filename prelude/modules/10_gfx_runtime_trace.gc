@@ -1,0 +1,504 @@
+(def core/gfx/runtime::ui-count-children-loop
+  (fn (children)
+    (fn (i)
+      (fn (n)
+        (fn (acc)
+          (if ((core/int::lt? i) n)
+            (let ((child ((core/vec::get children) i))
+                  (i2 ((core/int::add i) 1))
+                  (child-count
+                    (if ((core/sym::eq? (core/data::tag child)) (quote :map))
+                      (core/gfx/runtime::ui-node-count child)
+                      1))
+                  (acc2 ((core/int::add acc) child-count)))
+              ((((core/gfx/runtime::ui-count-children-loop children) i2) n) acc2))
+            acc))))))
+
+(def core/gfx/runtime::ui-node-count
+  (fn (node)
+    (if ((core/sym::eq? (core/data::tag node)) (quote :map))
+      (let ((children ((core/map::get node) (quote :children))))
+        ((core/int::add 1)
+          ((((core/gfx/runtime::ui-count-children-loop children) 0)
+            (if ((core/sym::eq? (core/data::tag children)) (quote :vec))
+              (core/vec::len children)
+              0))
+            0)))
+      1)))
+
+(def core/gfx/runtime::append-ui-draws
+  (fn (remaining)
+    (fn (commands)
+      (if ((core/sym::eq? (core/data::tag remaining)) (quote :int))
+        (if ((core/int::lt? 0) remaining)
+          ((core/gfx/runtime::append-ui-draws ((core/int::sub remaining) 1))
+            ((core/vec::push commands) ((((core/gfx/frame::cmd-draw 6) 1) 0) 0)))
+          commands)
+        commands))))
+
+(def core/gfx/runtime::plan-ui-pass
+  (fn (ui-root)
+    (fn (label)
+      (fn (pipeline-id)
+        (let ((count (core/gfx/runtime::ui-node-count ui-root))
+              (base [(core/gfx/frame::cmd-set-pipeline pipeline-id)]))
+          ((((core/gfx/frame::render-pass label) []) nil)
+            ((core/gfx/runtime::append-ui-draws count) base)))))))
+
+(def core/gfx/runtime::plan-frame-2d+ui
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (let ((graph1
+                      ((core/gfx/frame::add-render-pass core/gfx/frame::empty)
+                        (((core/gfx/runtime::plan-render-pass scene) scene-label) scene-pipeline-id))))
+                ((core/gfx/frame::add-render-pass graph1)
+                  (((core/gfx/runtime::plan-ui-pass ui-root) ui-label) ui-pipeline-id))))))))))
+
+(def core/gfx/runtime::hash-scene (fn (scene) (core/coreform::hash-term scene)))
+
+(def core/gfx/runtime::hash-frame-graph (fn (graph) (core/coreform::hash-term graph)))
+
+(def core/gfx/runtime::vec-or-empty
+  (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :vec)) x [])))
+
+(def core/gfx/runtime::pass-label
+  (fn (pass)
+    (if ((core/sym::eq? (core/data::tag pass)) (quote :map))
+      (let ((label ((core/map::get pass) (quote :label))))
+        (if ((core/sym::eq? (core/data::tag label)) (quote :str)) label ""))
+      "")))
+
+(def core/gfx/runtime::pass-commands
+  (fn (pass)
+    (if ((core/sym::eq? (core/data::tag pass)) (quote :map))
+      (core/gfx/runtime::vec-or-empty ((core/map::get pass) (quote :commands)))
+      [])))
+
+(def core/gfx/runtime::pass-command-count
+  (fn (pass) (core/vec::len (core/gfx/runtime::pass-commands pass))))
+
+(def core/gfx/runtime::command-count
+  (fn (passes)
+    ((((core/gfx/runtime::command-count-loop passes) 0) (core/vec::len passes)) 0)))
+
+(def core/gfx/runtime::command-count-loop
+  (fn (passes)
+    (fn (i)
+      (fn (n)
+        (fn (total)
+          (if ((core/int::lt? i) n)
+            (let ((pass ((core/vec::get passes) i)) (i2 ((core/int::add i) 1)))
+              ((((core/gfx/runtime::command-count-loop passes) i2) n)
+                ((core/int::add total) (core/gfx/runtime::pass-command-count pass))))
+            total))))))
+
+(def core/gfx/runtime::pass-summaries
+  (fn (passes)
+    (fn (pass-kind)
+      (((((core/gfx/runtime::pass-summaries-loop passes) pass-kind) 0) (core/vec::len passes)) []))))
+
+(def core/gfx/runtime::pass-summaries-loop
+  (fn (passes)
+    (fn (pass-kind)
+      (fn (i)
+        (fn (n)
+          (fn (out)
+            (if ((core/int::lt? i) n)
+              (let ((pass ((core/vec::get passes) i)) (i2 ((core/int::add i) 1)))
+                ((((core/gfx/runtime::pass-summaries-loop passes) pass-kind) i2) n)
+                  ((core/vec::push out)
+                    {
+                      :command-count (core/gfx/runtime::pass-command-count pass)
+                      :kind pass-kind
+                      :label (core/gfx/runtime::pass-label pass)
+                      :pass-h (core/coreform::hash-term pass)}))
+              out)))))))
+
+(def core/gfx/runtime::frame-trace
+  (fn (scene)
+    (fn (frame-graph)
+      (let
+        ((render-passes
+           (core/gfx/runtime::vec-or-empty ((core/map::get frame-graph) (quote :render-passes))))
+          (compute-passes
+            (core/gfx/runtime::vec-or-empty ((core/map::get frame-graph) (quote :compute-passes))))
+          (render-command-count (core/gfx/runtime::command-count render-passes))
+          (compute-command-count (core/gfx/runtime::command-count compute-passes))
+          (render-pass-summaries ((core/gfx/runtime::pass-summaries render-passes) (quote :render-pass)))
+          (compute-pass-summaries ((core/gfx/runtime::pass-summaries compute-passes) (quote :compute-pass))))
+        {
+          :compute-command-count compute-command-count
+          :compute-pass-count (core/vec::len compute-passes)
+          :compute-pass-summaries compute-pass-summaries
+          :frame-h (core/gfx/runtime::hash-frame-graph frame-graph)
+          :kind (quote :gfx/frame-trace)
+          :render-command-count render-command-count
+          :render-pass-count (core/vec::len render-passes)
+          :render-pass-summaries render-pass-summaries
+          :scene-h (core/gfx/runtime::hash-scene scene)
+          :total-command-count ((core/int::add render-command-count) compute-command-count)
+          :v 1}))))
+
+(def core/gfx/runtime::frame-trace+ui
+  (fn (scene)
+    (fn (ui-root)
+      (fn (frame-graph)
+        (let ((trace ((core/gfx/runtime::frame-trace scene) frame-graph)))
+          (prim map/put
+            (prim map/put trace (quote :ui-node-count) (core/gfx/runtime::ui-node-count ui-root))
+            (quote :ui-root-h)
+            (core/coreform::hash-term ui-root)))))))
+
+(def core/gfx/runtime::trace-artifact
+  (fn (trace)
+    {
+      :frame-h ((core/map::get trace) (quote :frame-h))
+      :kind (quote genesis/gfx-frame-trace-v0.2)
+      :scene-h ((core/map::get trace) (quote :scene-h))
+      :trace trace
+      :trace-h (core/coreform::hash-term trace)
+      :v 1}))
+
+(def core/gfx/runtime::trace-artifact-with-meta
+  (fn (trace)
+    (fn (meta)
+      (if ((core/sym::eq? (core/data::tag meta)) (quote :map))
+        (prim map/put (core/gfx/runtime::trace-artifact trace) (quote :meta) meta)
+        (core/gfx/runtime::trace-artifact trace)))))
+
+(def core/gfx/runtime::store-trace-artifact
+  (fn (trace) (core/store::put (core/gfx/runtime::trace-artifact trace))))
+
+(def core/gfx/runtime::store-trace-artifact-with-meta
+  (fn (trace)
+    (fn (meta) (core/store::put ((core/gfx/runtime::trace-artifact-with-meta trace) meta)))))
+
+(def core/gfx/runtime::plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (let
+                ((frame
+                   ((((((core/gfx/runtime::plan-frame-2d+ui scene) ui-root) scene-label) scene-pipeline-id)
+                     ui-label)
+                     ui-pipeline-id))
+                  (trace (((core/gfx/runtime::frame-trace+ui scene) ui-root) frame)))
+                {
+                  :frame frame
+                  :frame-h (core/gfx/runtime::hash-frame-graph frame)
+                  :kind (quote :gfx/plan-frame-2d+ui-trace)
+                  :trace trace
+                  :trace-h (core/coreform::hash-term trace)}))))))))
+
+(def core/gfx/runtime::store-plan-frame-2d+ui-trace
+  (fn (scene)
+    (fn (ui-root)
+      (fn (scene-label)
+        (fn (scene-pipeline-id)
+          (fn (ui-label)
+            (fn (ui-pipeline-id)
+              (fn (meta)
+                (let
+                  ((plan
+                     ((((((core/gfx/runtime::plan-frame-2d+ui-trace scene) ui-root) scene-label)
+                       scene-pipeline-id)
+                       ui-label)
+                       ui-pipeline-id))
+                    (trace ((core/map::get plan) (quote :trace))))
+                  ((core/gfx/runtime::store-trace-artifact-with-meta trace) meta))))))))))
+
+(def core/gfx/obligation::golden-report
+  (fn (package)
+    (fn (ok)
+      (fn (cases)
+        (fn (errors)
+          {
+            :cases (core/gfx/runtime::vec-or-empty cases)
+            :errors (core/gfx/runtime::vec-or-empty errors)
+            :kind "genesis/gfx-golden-images-v0.2"
+            :ok ok
+            :package package})))))
+
+(def core/gfx/obligation::frame-budget-report
+  (fn (package)
+    (fn (ok)
+      (fn (limits)
+        (fn (cases)
+          (fn (errors)
+            {
+              :cases (core/gfx/runtime::vec-or-empty cases)
+              :errors (core/gfx/runtime::vec-or-empty errors)
+              :kind "genesis/gfx-frame-budgets-v0.2"
+              :limits (if ((core/sym::eq? (core/data::tag limits)) (quote :map)) limits {})
+              :ok ok
+              :package package}))))))
+
+(def core/gfx/obligation::api-stability-report
+  (fn (package)
+    (fn (ok)
+      (fn (surface-h)
+        (fn (expected-surface-h)
+          (fn (surface)
+            (fn (errors)
+              {
+                :errors (core/gfx/runtime::vec-or-empty errors)
+                :expected-surface-h expected-surface-h
+                :kind "genesis/gfx-api-stability-v0.2"
+                :ok ok
+                :package package
+                :surface surface
+                :surface-h surface-h})))))))
+
+(def core/gfx/obligation::sym?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/gfx/obligation::str?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/gfx/obligation::int?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/gfx/obligation::vec-contains-sym?
+  (fn (xs) (fn (sym) ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) 0) false))))
+
+(def core/gfx/obligation::vec-contains-sym-loop
+  (fn (xs)
+    (fn (sym)
+      (fn (i)
+        (fn (found)
+          (if found
+            true
+            (if ((core/int::eq? i) (core/vec::len xs))
+              false
+              (let ((x ((core/vec::get xs) i)))
+                ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) ((core/int::add i) 1))
+                  (if (core/gfx/obligation::sym? x) ((core/sym::eq? x) sym) false))))))))))
+
+(def core/gfx/obligation::sym-diff
+  (fn (left) (fn (right) ((((core/gfx/obligation::sym-diff-loop left) right) 0) []))))
+
+(def core/gfx/obligation::sym-diff-loop
+  (fn (left)
+    (fn (right)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len left))
+            out
+            (let ((x ((core/vec::get left) i)))
+              ((((core/gfx/obligation::sym-diff-loop left) right) ((core/int::add i) 1))
+                (if (core/gfx/obligation::sym? x)
+                  (if ((core/gfx/obligation::vec-contains-sym? right) x) out ((core/vec::push out) x))
+                  out)))))))))
+
+(def core/gfx/obligation::errors-push-if
+  (fn (errors)
+    (fn (cond)
+      (fn (msg) (if cond ((core/vec::push errors) msg) errors)))))
+
+(def core/gfx/obligation::golden-case
+  (fn (suite)
+    (fn (name)
+      (fn (kind)
+        (fn (expect-h)
+          (fn (actual-h)
+            (fn (expect-png-h)
+              (fn (actual-png-h)
+                (fn (pixel-width)
+                  (fn (pixel-height)
+                    (fn (runtime-error)
+                      (let
+                        ((runtime-ok (if (core/gfx/obligation::str? runtime-error) false true))
+                          (hash-ok (if runtime-ok ((core/eq? expect-h) actual-h) false))
+                          (need-png (if ((core/sym::eq? (core/data::tag expect-png-h)) (quote :nil)) false true))
+                          (png-ok
+                            (if runtime-ok
+                              (if need-png ((core/eq? expect-png-h) actual-png-h) true)
+                              false)))
+                        (let
+                          ((errors0 [])
+                            (errors1
+                              (((core/gfx/obligation::errors-push-if errors0)
+                                (core/gfx/obligation::str? runtime-error))
+                                (if (core/gfx/obligation::str? runtime-error)
+                                  runtime-error
+                                  "runtime error")))
+                            (errors2
+                              (((core/gfx/obligation::errors-push-if errors1)
+                                (if runtime-ok (if hash-ok false true) false))
+                                "golden hash mismatch"))
+                            (errors3
+                              (((core/gfx/obligation::errors-push-if errors2)
+                                (if runtime-ok (if need-png (if png-ok false true) false) false))
+                                "golden png hash mismatch")))
+                          {
+                            :actual-h actual-h
+                            :actual-png-h actual-png-h
+                            :error runtime-error
+                            :errors errors3
+                            :expect-h expect-h
+                            :expect-png-h expect-png-h
+                            :kind kind
+                            :name name
+                            :ok
+                              (if runtime-ok
+                                (if hash-ok
+                                  (if need-png png-ok true)
+                                  false)
+                                false)
+                            :pixel-height pixel-height
+                            :pixel-width pixel-width
+                            :suite suite})))))))))))))
+
+(def core/gfx/obligation::metric-int
+  (fn (m)
+    (fn (k)
+      (let ((v ((core/map::get m) k))) (if (core/gfx/obligation::int? v) v nil)))))
+
+(def core/gfx/obligation::frame-budget-case
+  (fn (suite)
+    (fn (name)
+      (fn (metrics)
+        (fn (limits)
+          (fn (frame-time-ms)
+            (fn (runtime-error)
+              (let
+                ((render-passes ((core/gfx/obligation::metric-int metrics) (quote :render-passes)))
+                  (compute-passes ((core/gfx/obligation::metric-int metrics) (quote :compute-passes)))
+                  (draw-commands ((core/gfx/obligation::metric-int metrics) (quote :draw-commands)))
+                  (compute-commands ((core/gfx/obligation::metric-int metrics) (quote :compute-commands)))
+                  (frame-graph-bytes ((core/gfx/obligation::metric-int metrics) (quote :frame-graph-bytes)))
+                  (max-render-passes ((core/gfx/obligation::metric-int limits) (quote :max-render-passes-per-frame)))
+                  (max-compute-passes ((core/gfx/obligation::metric-int limits) (quote :max-compute-passes-per-frame)))
+                  (max-draw-commands ((core/gfx/obligation::metric-int limits) (quote :max-draw-commands-per-frame)))
+                  (max-compute-commands
+                    ((core/gfx/obligation::metric-int limits) (quote :max-compute-commands-per-frame)))
+                  (max-frame-graph-bytes ((core/gfx/obligation::metric-int limits) (quote :max-frame-graph-bytes)))
+                  (max-frame-time-ms ((core/gfx/obligation::metric-int limits) (quote :max-frame-time-ms))))
+                (let
+                  ((errors0
+                     (((core/gfx/obligation::errors-push-if [])
+                       (core/gfx/obligation::str? runtime-error))
+                       (if (core/gfx/obligation::str? runtime-error) runtime-error "runtime error")))
+                    (errors1
+                      (((core/gfx/obligation::errors-push-if errors0)
+                        (if (core/gfx/obligation::int? max-render-passes)
+                          (if (core/gfx/obligation::int? render-passes)
+                            ((core/int::lt? max-render-passes) render-passes)
+                            false)
+                          false))
+                        "render passes exceed max"))
+                    (errors2
+                      (((core/gfx/obligation::errors-push-if errors1)
+                        (if (core/gfx/obligation::int? max-compute-passes)
+                          (if (core/gfx/obligation::int? compute-passes)
+                            ((core/int::lt? max-compute-passes) compute-passes)
+                            false)
+                          false))
+                        "compute passes exceed max"))
+                    (errors3
+                      (((core/gfx/obligation::errors-push-if errors2)
+                        (if (core/gfx/obligation::int? max-draw-commands)
+                          (if (core/gfx/obligation::int? draw-commands)
+                            ((core/int::lt? max-draw-commands) draw-commands)
+                            false)
+                          false))
+                        "draw commands exceed max"))
+                    (errors4
+                      (((core/gfx/obligation::errors-push-if errors3)
+                        (if (core/gfx/obligation::int? max-compute-commands)
+                          (if (core/gfx/obligation::int? compute-commands)
+                            ((core/int::lt? max-compute-commands) compute-commands)
+                            false)
+                          false))
+                        "compute commands exceed max"))
+                    (errors5
+                      (((core/gfx/obligation::errors-push-if errors4)
+                        (if (core/gfx/obligation::int? max-frame-graph-bytes)
+                          (if (core/gfx/obligation::int? frame-graph-bytes)
+                            ((core/int::lt? max-frame-graph-bytes) frame-graph-bytes)
+                            false)
+                          false))
+                        "frame graph bytes exceed max"))
+                    (errors6
+                      (((core/gfx/obligation::errors-push-if errors5)
+                        (if (core/gfx/obligation::int? max-frame-time-ms)
+                          (if (core/gfx/obligation::int? frame-time-ms)
+                            ((core/int::lt? max-frame-time-ms) frame-time-ms)
+                            true)
+                          false))
+                        "frame time exceeds max or is missing")))
+                  {
+                    :compute-commands compute-commands
+                    :compute-passes compute-passes
+                    :draw-commands draw-commands
+                    :errors errors6
+                    :frame-graph-bytes frame-graph-bytes
+                    :frame-time-ms frame-time-ms
+                    :name name
+                    :ok ((core/int::eq? (core/vec::len errors6)) 0)
+                    :render-passes render-passes
+                    :suite suite})))))))))
+
+(def core/gfx/obligation::api-stability-analysis
+  (fn (exported)
+    (fn (expected-exports)
+      (fn (tracked)
+        (fn (expected-surface-h)
+          (fn (surface-h)
+            (fn (has-config)
+              (fn (missing-defs)
+                (let
+                  ((compare-exports (if ((core/int::eq? (core/vec::len expected-exports)) 0) false true))
+                    (missing
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff expected-exports) exported)
+                        []))
+                    (extra
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff exported) expected-exports)
+                        []))
+                    (surface-mismatch
+                      (if (core/gfx/obligation::str? expected-surface-h)
+                        (if ((core/eq? expected-surface-h) surface-h) false true)
+                        false)))
+                  (let
+                    ((errors0
+                       (((core/gfx/obligation::errors-push-if [])
+                         (if compare-exports
+                           (if ((core/int::eq? (core/vec::len missing)) 0) false true)
+                           false))
+                         "missing exported gfx symbols"))
+                      (errors1
+                        (((core/gfx/obligation::errors-push-if errors0)
+                          (if compare-exports
+                            (if ((core/int::eq? (core/vec::len extra)) 0) false true)
+                            false))
+                          "unexpected exported gfx symbols"))
+                      (errors2
+                        (((core/gfx/obligation::errors-push-if errors1)
+                          (if ((core/int::eq? (core/vec::len tracked)) 0) true false))
+                          "no tracked gfx API exports found"))
+                      (errors3
+                        (((core/gfx/obligation::errors-push-if errors2) (if has-config false true))
+                          "gfx api stability requires gfx.api_exports and/or gfx.api_surface_hash configuration"))
+                      (errors4
+                        (((core/gfx/obligation::errors-push-if errors3) surface-mismatch)
+                          "gfx API surface hash mismatch"))
+                      (errors5
+                        (((core/gfx/obligation::errors-push-if errors4)
+                          (if ((core/int::eq? (core/vec::len missing-defs)) 0) false true))
+                          "tracked API symbol has no defining def form")))
+                    {
+                      :errors errors5
+                      :extra extra
+                      :missing missing
+                      :missing-defs missing-defs
+                      :ok ((core/int::eq? (core/vec::len errors5)) 0)}))))))))))
+

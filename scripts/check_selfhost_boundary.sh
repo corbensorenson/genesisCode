@@ -20,6 +20,8 @@ is_allowed_path() {
     crates/gc_cli_driver/src/*) return 0 ;;
     crates/gc_effects/src/lib.rs) return 0 ;;
     crates/gc_effects/src/runner*.rs) return 0 ;;
+    crates/*/src/tests.rs) return 0 ;;
+    crates/*/src/tests_*.rs) return 0 ;;
     crates/gc_cli/src/main.rs) return 0 ;;
     crates/gc_wasi_cli/src/main.rs) return 0 ;;
     crates/gc_wasm/src/lib.rs) return 0 ;;

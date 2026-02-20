@@ -191,3 +191,27 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         "vcs merge3 --help output missing --out"
     );
 }
+
+#[test]
+fn production_help_does_not_advertise_rust_frontend_or_engine_values() {
+    for args in [
+        vec!["--help"],
+        vec!["fmt", "--help"],
+        vec!["eval", "--help"],
+        vec!["run", "--help"],
+        vec!["replay", "--help"],
+    ] {
+        let s = stdout_str(&args);
+        let lower = s.to_ascii_lowercase();
+        assert!(
+            !lower.contains("possible values: rust"),
+            "production help unexpectedly advertises rust value for {:?}: {s}",
+            args
+        );
+        assert!(
+            !lower.contains("[possible values: rust"),
+            "production help unexpectedly advertises rust enum list for {:?}: {s}",
+            args
+        );
+    }
+}

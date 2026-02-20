@@ -813,6 +813,7 @@ pub(super) fn sync_parallel_upload_missing(
     store: &ArtifactStore,
     missing: &[String],
     workers: usize,
+    max_chunk_bytes: Option<usize>,
 ) -> Vec<Result<(), String>> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
@@ -826,7 +827,9 @@ pub(super) fn sync_parallel_upload_missing(
             .iter()
             .map(|h| {
                 let bytes = store.get_bytes(h).map_err(|e| format!("store-read:{e}"))?;
-                client.store_put(h, &bytes).map_err(|e| format!("{e}"))
+                client
+                    .store_put_auto(h, &bytes, max_chunk_bytes)
+                    .map_err(|e| format!("{e}"))
             })
             .collect();
     }
@@ -850,7 +853,10 @@ pub(super) fn sync_parallel_upload_missing(
                     let res = s
                         .get_bytes(h)
                         .map_err(|e| format!("store-read:{e}"))
-                        .and_then(|bytes| c.store_put(h, &bytes).map_err(|e| format!("{e}")));
+                        .and_then(|bytes| {
+                            c.store_put_auto(h, &bytes, max_chunk_bytes)
+                                .map_err(|e| format!("{e}"))
+                        });
                     if let Ok(mut g) = out.lock() {
                         g[i] = Some(res);
                     } else {
@@ -952,7 +958,6 @@ pub(super) fn capability_sync_pull(
             return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
         }
     };
-
     let mut pulled: u64 = 0;
     let mut already: u64 = 0;
     let mut heads: Vec<Term> = Vec::new();
@@ -1147,6 +1152,13 @@ pub(super) fn capability_sync_push(
             return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
         }
     };
+    let remote_max_chunk_bytes = match client.ping() {
+        Ok(p) => p
+            .max_chunk_bytes
+            .and_then(|n| usize::try_from(n).ok())
+            .filter(|n| *n > 0),
+        Err(_) => None,
+    };
 
     let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for h in &roots {
@@ -1179,8 +1191,13 @@ pub(super) fn capability_sync_push(
     missing.sort();
     missing.dedup();
 
-    let upload_results =
-        sync_parallel_upload_missing(&client, store, &missing, sp.transfer_workers);
+    let upload_results = sync_parallel_upload_missing(
+        &client,
+        store,
+        &missing,
+        sp.transfer_workers,
+        remote_max_chunk_bytes,
+    );
     let mut uploaded: u64 = 0;
     for r in upload_results {
         match r {

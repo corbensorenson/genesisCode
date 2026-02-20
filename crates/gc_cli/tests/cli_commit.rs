@@ -234,7 +234,7 @@ fn commit_new_rejects_unset_base_ref() {
         .args(["--message", "new commit", "--store"])
         .assert()
         .code(10)
-        .stdout(predicates::str::contains(
+        .stderr(predicates::str::contains(
             "base ref `refs/heads/main` is unset",
         ));
 }

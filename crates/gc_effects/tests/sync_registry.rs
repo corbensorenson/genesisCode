@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
@@ -11,6 +12,18 @@ use gc_effects::{CapsPolicy, Decision, EffectLog, replay, run};
 struct RegistryState {
     store: BTreeMap<String, Vec<u8>>,
     refs: BTreeMap<String, String>,
+    uploads: BTreeMap<String, UploadSession>,
+    upload_started: u64,
+    upload_chunk_calls: u64,
+    upload_finished: u64,
+}
+
+#[derive(Debug, Clone)]
+struct UploadSession {
+    hash: String,
+    size_bytes: u64,
+    chunk_bytes: u64,
+    chunks: BTreeMap<u64, Vec<u8>>,
 }
 
 #[derive(Debug)]
@@ -20,6 +33,8 @@ struct MemRegistry {
     required_basic: Option<(String, String)>,
     require_mtls: bool,
     auth_audit: Mutex<Vec<AuthAudit>>,
+    max_chunk_bytes: u64,
+    next_upload_id: AtomicU64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -37,12 +52,18 @@ fn hash_bytes_hex(bytes: &[u8]) -> String {
 
 impl MemRegistry {
     fn new() -> Self {
+        Self::new_with_max_chunk_bytes(4_194_304)
+    }
+
+    fn new_with_max_chunk_bytes(max_chunk_bytes: u64) -> Self {
         Self {
             st: Mutex::new(RegistryState::default()),
             required_bearer: None,
             required_basic: None,
             require_mtls: false,
             auth_audit: Mutex::new(Vec::new()),
+            max_chunk_bytes,
+            next_upload_id: AtomicU64::new(1),
         }
     }
 
@@ -53,6 +74,8 @@ impl MemRegistry {
             required_basic: None,
             require_mtls: false,
             auth_audit: Mutex::new(Vec::new()),
+            max_chunk_bytes: 4_194_304,
+            next_upload_id: AtomicU64::new(1),
         }
     }
 
@@ -63,6 +86,8 @@ impl MemRegistry {
             required_basic: Some((username.to_string(), password.to_string())),
             require_mtls: false,
             auth_audit: Mutex::new(Vec::new()),
+            max_chunk_bytes: 4_194_304,
+            next_upload_id: AtomicU64::new(1),
         }
     }
 
@@ -73,6 +98,8 @@ impl MemRegistry {
             required_basic: None,
             require_mtls: true,
             auth_audit: Mutex::new(Vec::new()),
+            max_chunk_bytes: 4_194_304,
+            next_upload_id: AtomicU64::new(1),
         }
     }
 
@@ -95,6 +122,11 @@ impl MemRegistry {
 
     fn auth_audit(&self) -> Vec<AuthAudit> {
         self.auth_audit.lock().expect("lock").clone()
+    }
+
+    fn upload_counts(&self) -> (u64, u64, u64) {
+        let g = self.st.lock().expect("lock");
+        (g.upload_started, g.upload_chunk_calls, g.upload_finished)
     }
 }
 
@@ -150,7 +182,7 @@ impl gc_registry::InProcRegistry for MemRegistry {
             ok: true,
             version: "0.1".to_string(),
             hash: "blake3-256".to_string(),
-            max_chunk_bytes: Some(4_194_304),
+            max_chunk_bytes: Some(self.max_chunk_bytes),
         })
     }
 
@@ -184,6 +216,103 @@ impl gc_registry::InProcRegistry for MemRegistry {
         let mut g = self.st.lock().expect("lock");
         g.store.entry(hash.to_string()).or_insert(bytes.to_vec());
         Ok(())
+    }
+
+    fn store_upload_start(
+        &self,
+        hash: &str,
+        size_bytes: u64,
+    ) -> Result<gc_registry::StoreUploadStartResp, gc_registry::RegistryError> {
+        let upload_id = format!("u_{}", self.next_upload_id.fetch_add(1, Ordering::Relaxed));
+        let mut g = self.st.lock().expect("lock");
+        g.uploads.insert(
+            upload_id.clone(),
+            UploadSession {
+                hash: hash.to_string(),
+                size_bytes,
+                chunk_bytes: self.max_chunk_bytes,
+                chunks: BTreeMap::new(),
+            },
+        );
+        g.upload_started = g.upload_started.saturating_add(1);
+        Ok(gc_registry::StoreUploadStartResp {
+            upload_id,
+            chunk_bytes: self.max_chunk_bytes,
+        })
+    }
+
+    fn store_upload_chunk(
+        &self,
+        upload_id: &str,
+        index: u64,
+        bytes: &[u8],
+    ) -> Result<gc_registry::StoreUploadChunkResp, gc_registry::RegistryError> {
+        let mut g = self.st.lock().expect("lock");
+        let session = g.uploads.get_mut(upload_id).ok_or_else(|| {
+            gc_registry::RegistryError::Http("store/upload/chunk: status 404".to_string())
+        })?;
+        if bytes.len() as u64 > session.chunk_bytes {
+            return Err(gc_registry::RegistryError::Protocol(
+                "store/upload/chunk: chunk exceeds advertised chunk_bytes".to_string(),
+            ));
+        }
+        session.chunks.insert(index, bytes.to_vec());
+        g.upload_chunk_calls = g.upload_chunk_calls.saturating_add(1);
+        Ok(gc_registry::StoreUploadChunkResp {
+            ok: true,
+            received: bytes.len() as u64,
+        })
+    }
+
+    fn store_upload_finish(
+        &self,
+        upload_id: &str,
+    ) -> Result<gc_registry::StoreUploadFinishResp, gc_registry::RegistryError> {
+        let mut g = self.st.lock().expect("lock");
+        let session = g.uploads.remove(upload_id).ok_or_else(|| {
+            gc_registry::RegistryError::Http("store/upload/finish: status 404".to_string())
+        })?;
+        let mut keys: Vec<u64> = session.chunks.keys().copied().collect();
+        keys.sort_unstable();
+        for (i, k) in keys.iter().enumerate() {
+            if *k != i as u64 {
+                return Err(gc_registry::RegistryError::Protocol(
+                    "store/upload/finish: missing chunk index".to_string(),
+                ));
+            }
+        }
+        let mut assembled = Vec::new();
+        for i in 0..keys.len() as u64 {
+            let chunk = session.chunks.get(&i).expect("chunk exists");
+            assembled.extend_from_slice(chunk);
+        }
+        if assembled.len() as u64 != session.size_bytes {
+            return Err(gc_registry::RegistryError::Protocol(
+                "store/upload/finish: size mismatch".to_string(),
+            ));
+        }
+        let got = hash_bytes_hex(&assembled);
+        if got != session.hash {
+            return Err(gc_registry::RegistryError::Protocol(
+                "store/upload/finish: hash mismatch".to_string(),
+            ));
+        }
+        g.store.entry(session.hash).or_insert(assembled);
+        g.upload_finished = g.upload_finished.saturating_add(1);
+        Ok(gc_registry::StoreUploadFinishResp { ok: true })
+    }
+
+    fn store_upload_status(
+        &self,
+        upload_id: &str,
+    ) -> Result<gc_registry::StoreUploadStatusResp, gc_registry::RegistryError> {
+        let g = self.st.lock().expect("lock");
+        let session = g.uploads.get(upload_id).ok_or_else(|| {
+            gc_registry::RegistryError::Http("store/upload/status: status 404".to_string())
+        })?;
+        let mut received_chunks: Vec<u64> = session.chunks.keys().copied().collect();
+        received_chunks.sort_unstable();
+        Ok(gc_registry::StoreUploadStatusResp { received_chunks })
     }
 
     fn refs_get(&self, name: &str) -> Result<Option<String>, gc_registry::RegistryError> {
@@ -903,6 +1032,78 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let prog3 = eval_module(&mut ctx3, &mut env3, &pull_forms).unwrap();
     let v3 = replay(&mut ctx3, prog3, &log2).unwrap();
     assert_eq!(value_hash(&r2.value), value_hash(&v3));
+}
+
+#[test]
+fn sync_push_uses_chunked_upload_when_remote_advertises_small_chunks() {
+    let reg = Arc::new(MemRegistry::new_with_max_chunk_bytes(32));
+    gc_registry::register_inproc("t_sync_chunked", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_chunked");
+
+    let policy_t = mk_policy_artifact();
+    let policy_hex = reg.put_artifact(print_term(&policy_t).as_bytes());
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+
+    let local_store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let local_policy_hex = local_store
+        .put_bytes(print_term(&policy_t).as_bytes())
+        .unwrap();
+    assert_eq!(local_policy_hex, policy_hex);
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "ok"}"#).unwrap();
+    let module_hex = local_store
+        .put_bytes(print_term(&module_art).as_bytes())
+        .unwrap();
+    let module_h = gc_coreform::hash_term(&module_art);
+    let patch_t = mk_patch_with_value(&module_hex);
+    let patch_hex = local_store
+        .put_bytes(print_term(&patch_t).as_bytes())
+        .unwrap();
+    let evidence_t = mk_evidence_with_data(&module_hex);
+    let evidence_hex = local_store
+        .put_bytes(print_term(&evidence_t).as_bytes())
+        .unwrap();
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = local_store
+        .put_bytes(print_term(&snap_t).as_bytes())
+        .unwrap();
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &evidence_hex);
+    let commit_hex = local_store
+        .put_bytes(print_term(&commit_t).as_bytes())
+        .unwrap();
+
+    let push_payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :roots ["{commit_hex}"]
+          :depth 0
+          :set-refs [
+            {{ :name "refs/heads/main" :hash "{commit_hex}" :policy "{policy_hex}" :expected-old nil }}
+          ]
+        }}"#
+    ))
+    .unwrap();
+    let (push_forms, push_h) = mk_prog("core/sync::push", &push_payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &push_forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, push_h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "push returned error: {}",
+        r.value.debug_repr()
+    );
+    assert_eq!(reg.ref_get("refs/heads/main"), Some(commit_hex));
+
+    let (starts, chunks, finishes) = reg.upload_counts();
+    assert!(starts > 0, "expected chunked upload start calls");
+    assert!(chunks >= starts, "expected chunk upload calls");
+    assert!(finishes > 0, "expected chunked upload finish calls");
 }
 
 #[test]

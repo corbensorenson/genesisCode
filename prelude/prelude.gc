@@ -888,6 +888,7 @@
               :ttl-days ttl-days})
           (fn (resp) (core/effect::pure resp)))))))
 
+
 ; -----------------------------------------------------------------------------
 ; VCS/GPK reachability helpers (pure planning helpers for host-bridge ops)
 ; -----------------------------------------------------------------------------
@@ -2519,6 +2520,59 @@
       (fn (pipeline-id)
         (((core/gfx/runtime::plan-frame-2d-batched ((core/map::get scene) (quote :draws))) label) pipeline-id)))))
 
+(def core/gfx/gpu::limits
+  (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
+
+(def core/gfx/gpu::features
+  (fn (_) ((core/caps::perform (quote gfx/gpu::features)) {})))
+
+(def core/gfx/window::create-surface
+  (fn (opts) ((core/caps::perform (quote gfx/window::create-surface)) {:opts opts})))
+
+(def core/gfx/window::resize-surface
+  (fn (surface)
+    (fn (width)
+      (fn (height)
+        ((core/caps::perform (quote gfx/window::resize-surface))
+          {
+            :height height
+            :surface surface
+            :width width})))))
+
+(def core/gfx/window::set-title
+  (fn (surface)
+    (fn (title)
+      ((core/caps::perform (quote gfx/window::set-title))
+        {
+          :surface surface
+          :title title}))))
+
+(def core/gfx/window::request-redraw
+  (fn (surface) ((core/caps::perform (quote gfx/window::request-redraw)) {:surface surface})))
+
+(def core/gfx/window::surface-info
+  (fn (surface) ((core/caps::perform (quote gfx/window::surface-info)) {:surface surface})))
+
+(def core/gfx/input::poll-events
+  (fn (surface) ((core/caps::perform (quote gfx/input::poll-events)) {:surface surface})))
+
+(def core/gfx/input::set-cursor-mode
+  (fn (surface)
+    (fn (mode)
+      ((core/caps::perform (quote gfx/input::set-cursor-mode))
+        {
+          :mode mode
+          :surface surface}))))
+
+(def core/gfx/time::frame-tick
+  (fn (surface) ((core/caps::perform (quote gfx/time::frame-tick)) {:surface surface})))
+
+(def core/gfx/audio::enqueue
+  (fn (event) ((core/caps::perform (quote gfx/audio::enqueue)) {:event event})))
+
+(def core/gfx/audio::set-master
+  (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))
+
 (def core/gfx/runtime::ui-count-children-loop
   (fn (children)
     (fn (i)
@@ -3023,58 +3077,6 @@
                       :missing-defs missing-defs
                       :ok ((core/int::eq? (core/vec::len errors5)) 0)}))))))))))
 
-(def core/gfx/gpu::limits
-  (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
-
-(def core/gfx/gpu::features
-  (fn (_) ((core/caps::perform (quote gfx/gpu::features)) {})))
-
-(def core/gfx/window::create-surface
-  (fn (opts) ((core/caps::perform (quote gfx/window::create-surface)) {:opts opts})))
-
-(def core/gfx/window::resize-surface
-  (fn (surface)
-    (fn (width)
-      (fn (height)
-        ((core/caps::perform (quote gfx/window::resize-surface))
-          {
-            :height height
-            :surface surface
-            :width width})))))
-
-(def core/gfx/window::set-title
-  (fn (surface)
-    (fn (title)
-      ((core/caps::perform (quote gfx/window::set-title))
-        {
-          :surface surface
-          :title title}))))
-
-(def core/gfx/window::request-redraw
-  (fn (surface) ((core/caps::perform (quote gfx/window::request-redraw)) {:surface surface})))
-
-(def core/gfx/window::surface-info
-  (fn (surface) ((core/caps::perform (quote gfx/window::surface-info)) {:surface surface})))
-
-(def core/gfx/input::poll-events
-  (fn (surface) ((core/caps::perform (quote gfx/input::poll-events)) {:surface surface})))
-
-(def core/gfx/input::set-cursor-mode
-  (fn (surface)
-    (fn (mode)
-      ((core/caps::perform (quote gfx/input::set-cursor-mode))
-        {
-          :mode mode
-          :surface surface}))))
-
-(def core/gfx/time::frame-tick
-  (fn (surface) ((core/caps::perform (quote gfx/time::frame-tick)) {:surface surface})))
-
-(def core/gfx/audio::enqueue
-  (fn (event) ((core/caps::perform (quote gfx/audio::enqueue)) {:event event})))
-
-(def core/gfx/audio::set-master
-  (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))
 
 (def core/gpu/compute::create-buffer
   (fn (desc) ((core/caps::perform (quote gpu/compute::create-buffer)) {:desc desc})))
@@ -4250,6 +4252,7 @@
       (fn (payload)
         (((core/editor/plugin::call plugin) (quote editor/plugin::command))
           {:command command :payload payload})))))
+
 
 (def core/editor/agent::session-empty
   (fn (agent-id)
