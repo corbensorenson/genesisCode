@@ -125,15 +125,34 @@ Open checklist items: 3
   - Preserve deterministic task resolution and policy boundaries.
 
 - [ ] P2.3 Reduce high-churn large-file hotspots to improve agent editability and reviewability.
+  Progress checklist:
+  - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` into domain command modules.
+  - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` to keep editor runtime orchestration thin.
+  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/expr_lowering.rs` by lowering stage families.
+  - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` by obligation family executors.
+  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` by patch artifact/merge/apply surfaces.
+  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` by evaluator phase boundaries.
+  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` by parser/lowering/runtime bridge layers.
   Evidence:
+  - Completed this pass:
+    - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` into domain modules:
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` = 759
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args/pkg_cmd.rs` = 319
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs` = 253
+    - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` task execution into module:
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` = 491
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_tasks.rs` = 607
+    - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` by obligation family executors:
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` = 695
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec_tests.rs` = 386
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec_replay.rs` = 243
   - `wc -l` current hotspots:
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` = 1587
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` = 1549
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` = 1518
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/expr_lowering.rs` = 1346
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` = 1330
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` = 1275
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` = 1100
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` = 695
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` = 491
   Acceptance:
   - Decompose these modules along stable domain boundaries with no behavior drift.
   - Preserve/expand tests while reducing per-file cognitive load for agent-driven edits.
