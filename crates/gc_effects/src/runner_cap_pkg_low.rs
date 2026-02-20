@@ -451,48 +451,37 @@ pub(super) fn capability_pkg_low(
                         ));
                     }
                 };
-                let forms = match gc_coreform::parse_module(&src) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/parse-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
+                let parsed = match gc_pkg::parse_canonical_module_source(
+                    &src,
+                    &me.path,
+                    me.hash.as_deref(),
+                ) {
+                    Ok(v) => v,
+                    Err(gc_pkg::ModuleSemanticError::Parse { message }) => {
+                        return Ok(mk_error(error_tok, "core/pkg/parse-error", message, Some(op)));
                     }
-                };
-                let forms = match gc_coreform::canonicalize_module(forms) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/canon-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
+                    Err(gc_pkg::ModuleSemanticError::Canon { message }) => {
+                        return Ok(mk_error(error_tok, "core/pkg/canon-error", message, Some(op)));
                     }
-                };
-                let module_h = gc_coreform::hash_module(&forms);
-                if let Some(want_hex) = &me.hash {
-                    if want_hex.len() != 64 || !want_hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                    Err(gc_pkg::ModuleSemanticError::BadPinnedHash { path }) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/pkg/bad-hash",
-                            format!("manifest module hash is not 64-hex: {}", me.path),
+                            format!("manifest module hash is not 64-hex: {path}"),
                             Some(op),
                         ));
                     }
-                    let got_hex = blake3::Hash::from_bytes(module_h).to_hex().to_string();
-                    if &got_hex != want_hex {
+                    Err(gc_pkg::ModuleSemanticError::HashMismatch { path }) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/pkg/hash-mismatch",
-                            format!("module hash mismatch: {}", me.path),
+                            format!("module hash mismatch: {path}"),
                             Some(op),
                         ));
                     }
-                }
+                };
+                let forms = parsed.forms;
+                let module_h = parsed.module_hash;
 
                 let mut mm = BTreeMap::new();
                 mm.insert(
@@ -1727,48 +1716,37 @@ pub(super) fn capability_pkg_low(
                         ));
                     }
                 };
-                let forms = match gc_coreform::parse_module(&src) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/parse-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
+                let parsed = match gc_pkg::parse_canonical_module_source(
+                    &src,
+                    &me.path,
+                    me.hash.as_deref(),
+                ) {
+                    Ok(v) => v,
+                    Err(gc_pkg::ModuleSemanticError::Parse { message }) => {
+                        return Ok(mk_error(error_tok, "core/pkg/parse-error", message, Some(op)));
                     }
-                };
-                let forms = match gc_coreform::canonicalize_module(forms) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/canon-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
+                    Err(gc_pkg::ModuleSemanticError::Canon { message }) => {
+                        return Ok(mk_error(error_tok, "core/pkg/canon-error", message, Some(op)));
                     }
-                };
-                let module_h = gc_coreform::hash_module(&forms);
-                if let Some(want_hex) = &me.hash {
-                    if want_hex.len() != 64 || !want_hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                    Err(gc_pkg::ModuleSemanticError::BadPinnedHash { path }) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/pkg/bad-hash",
-                            format!("manifest module hash is not 64-hex: {}", me.path),
+                            format!("manifest module hash is not 64-hex: {path}"),
                             Some(op),
                         ));
                     }
-                    let got_hex = blake3::Hash::from_bytes(module_h).to_hex().to_string();
-                    if &got_hex != want_hex {
+                    Err(gc_pkg::ModuleSemanticError::HashMismatch { path }) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/pkg/hash-mismatch",
-                            format!("module hash mismatch: {}", me.path),
+                            format!("module hash mismatch: {path}"),
                             Some(op),
                         ));
                     }
-                }
+                };
+                let forms = parsed.forms;
+                let module_h = parsed.module_hash;
 
                 let module_art = Term::Vector(forms);
                 let module_bytes = print_term(&module_art);

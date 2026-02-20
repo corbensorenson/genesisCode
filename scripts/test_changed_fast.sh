@@ -134,7 +134,7 @@ if [[ "$RUNNER" == "nextest" && "$NEXTTEST_AVAILABLE" -ne 1 ]]; then
 fi
 
 BASE="$(resolve_base_ref)"
-CHANGED_FILES=()
+declare -a CHANGED_FILES=()
 while IFS= read -r line; do
   [[ -n "$line" ]] || continue
   CHANGED_FILES+=("$line")
@@ -149,13 +149,13 @@ if (( CHANGED_COUNT > FULL_MODE_THRESHOLD )); then
   MODE="full-threshold"
 fi
 
-CHANGED_CRATES=()
-GC_CLI_TESTS=()
-GC_WASI_TESTS=()
+declare -a CHANGED_CRATES=()
+declare -a GC_CLI_TESTS=()
+declare -a GC_WASI_TESTS=()
 NEEDS_SELFHOST_CACHE=0
 NEEDS_FULL_FAST=0
 
-for f in "${CHANGED_FILES[@]}"; do
+for f in "${CHANGED_FILES[@]-}"; do
   case "$f" in
     crates/*/*)
       crate="$(cut -d'/' -f2 <<<"$f")"
@@ -191,9 +191,9 @@ if (( NEEDS_FULL_FAST == 1 )); then
   MODE="full-global-change"
 fi
 
-TARGET_CRATES=()
+declare -a TARGET_CRATES=()
 if [[ "$MODE" != "clean-tree" && "$MODE" != "full-threshold" && "$MODE" != "full-global-change" ]]; then
-  for c in "${CHANGED_CRATES[@]}"; do
+  for c in "${CHANGED_CRATES[@]-}"; do
     add_unique TARGET_CRATES "$c"
     case "$c" in
       gc_coreform|gc_kernel|gc_prelude|gc_effects|gc_obligations|gc_patches|gc_types|gc_opt|gc_vcs|gc_registry|gc_pkg|gc_cli_driver)
@@ -216,14 +216,14 @@ else
   # WASI integration suites are valuable but expensive; include them only when their crate or
   # WASI-facing specs changed. Full CI lanes still run complete WASI coverage.
   INCLUDE_WASI=0
-  if contains "gc_wasi_cli" "${TARGET_CRATES[@]}"; then
+  if contains "gc_wasi_cli" "${TARGET_CRATES[@]-}"; then
     INCLUDE_WASI=1
-  elif printf '%s\n' "${CHANGED_FILES[@]}" | rg -q '^docs/spec/WASI\.md$'; then
+  elif printf '%s\n' "${CHANGED_FILES[@]-}" | rg -q '^docs/spec/WASI\.md$'; then
     INCLUDE_WASI=1
   fi
   if (( INCLUDE_WASI == 0 )); then
-    FILTERED=()
-    for c in "${TARGET_CRATES[@]}"; do
+    declare -a FILTERED=()
+    for c in "${TARGET_CRATES[@]-}"; do
       if [[ "$c" != "gc_wasi_cli" ]]; then
         FILTERED+=("$c")
       fi
@@ -236,38 +236,38 @@ else
   fi
 
   if [[ "$RUNNER" == "nextest" ]]; then
-    for c in "${TARGET_CRATES[@]}"; do
+    for c in "${TARGET_CRATES[@]-}"; do
       if [[ "$c" == "gc_cli" && "${#GC_CLI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_CLI_TESTS[@]}"; do
+        for t in "${GC_CLI_TESTS[@]-}"; do
           COMMANDS+=("cargo nextest run -p gc_cli --test ${t} --profile ci")
         done
-      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]}"; then
+      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]-}"; then
         COMMANDS+=("cargo nextest run -p gc_cli --test cli_smoke --test cli_selfhost_only --test cli_store --profile ci")
       elif [[ "$c" == "gc_wasi_cli" && "${#GC_WASI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_WASI_TESTS[@]}"; do
+        for t in "${GC_WASI_TESTS[@]-}"; do
           COMMANDS+=("cargo nextest run -p gc_wasi_cli --test ${t} --profile ci")
         done
-      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]}"; then
+      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]-}"; then
         COMMANDS+=("cargo nextest run -p gc_wasi_cli --test cli_eval_engine --test cli_store_engine --profile ci")
       else
         COMMANDS+=("cargo nextest run -p ${c} --profile ci")
       fi
     done
   else
-    for c in "${TARGET_CRATES[@]}"; do
+    for c in "${TARGET_CRATES[@]-}"; do
       if [[ "$c" == "gc_cli" && "${#GC_CLI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_CLI_TESTS[@]}"; do
+        for t in "${GC_CLI_TESTS[@]-}"; do
           COMMANDS+=("cargo test -p gc_cli --test ${t}")
         done
-      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]}"; then
+      elif [[ "$c" == "gc_cli" ]] && ! contains "gc_cli" "${CHANGED_CRATES[@]-}"; then
         COMMANDS+=("cargo test -p gc_cli --test cli_smoke")
         COMMANDS+=("cargo test -p gc_cli --test cli_selfhost_only")
         COMMANDS+=("cargo test -p gc_cli --test cli_store")
       elif [[ "$c" == "gc_wasi_cli" && "${#GC_WASI_TESTS[@]}" -gt 0 ]]; then
-        for t in "${GC_WASI_TESTS[@]}"; do
+        for t in "${GC_WASI_TESTS[@]-}"; do
           COMMANDS+=("cargo test -p gc_wasi_cli --test ${t}")
         done
-      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]}"; then
+      elif [[ "$c" == "gc_wasi_cli" ]] && ! contains "gc_wasi_cli" "${CHANGED_CRATES[@]-}"; then
         COMMANDS+=("cargo test -p gc_wasi_cli --test cli_eval_engine")
         COMMANDS+=("cargo test -p gc_wasi_cli --test cli_store_engine")
       else
@@ -301,7 +301,7 @@ print(time.time_ns())
 PY
 )"
 
-for cmd in "${COMMANDS[@]}"; do
+for cmd in "${COMMANDS[@]-}"; do
   echo ">> $cmd"
   bash -lc "$cmd"
 done

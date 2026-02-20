@@ -1,9 +1,13 @@
 mod lock;
 mod manifest;
+mod module_semantics;
 mod workspace;
 
 pub use crate::manifest::{
     Budgets, DepEntry, Limits, ManifestError, ModuleEntry, PackageManifest, PropertyConfig,
+};
+pub use crate::module_semantics::{
+    CanonicalModule, ModuleSemanticError, parse_canonical_module_source,
 };
 
 pub use crate::lock::{

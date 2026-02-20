@@ -18,7 +18,7 @@ if [[ -z "$declared_open" || ! "$declared_open" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-actual_open="$(rg -n '^- \[ \]' "$PLAN_FILE" | wc -l | tr -d '[:space:]')"
+actual_open="$( (rg -n '^- \[ \]' "$PLAN_FILE" || true) | wc -l | tr -d '[:space:]' )"
 if [[ "$declared_open" != "$actual_open" ]]; then
   echo "upgrade-plan-health: declared open item count does not match unchecked checklist entries"
   echo "  declared_open=$declared_open"
@@ -41,5 +41,6 @@ bash scripts/check_prelude_capability_coverage.sh
 cargo test -p gc_cli --test cli_smoke --quiet
 cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet
 bash scripts/check_ai_iteration_slo.sh
+bash scripts/check_ai_stress_suite.sh
 
 echo "upgrade-plan-health: ok"

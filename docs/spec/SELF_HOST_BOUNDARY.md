@@ -73,10 +73,21 @@ Guardrail rule:
   modules and routed through selfhost execution paths; Rust host modules may only marshal inputs,
   call the kernel/runtime, and materialize capability effects.
 
+Temporary package semantic bridge (2026-02-20, approved for v0.2 cutover):
+- `core/pkg-low::{load-package,snapshot}` may use `gc_pkg::parse_canonical_module_source` as a
+  narrow bridge while package tooling continues moving to selfhost `.gc`.
+- `crates/gc_effects/src/runner_cap_pkg_low.rs` must not call
+  `parse_module`, `canonicalize_module`, or `hash_module` directly.
+- Enforcement:
+  `scripts/check_pkg_low_semantic_boundary.sh` and
+  `crates/gc_cli/tests/pkg_low_semantic_boundary.rs`.
+
 CI enforcement:
 - `scripts/check_selfhost_boundary.sh` fails when a change adds core semantic API usage
   (`parse_module`, `canonicalize_module`, `print_module`, `hash_module`, `eval_module`, `eval_term`)
   in non-approved Rust files.
+  - Rust test files under `crates/*/tests/*` are excluded from this guard so conformance and
+    adversarial fixtures can exercise semantic APIs without widening the production runtime TCB.
 - `scripts/check_prelude_capability_coverage.sh` fails when a shipped
   `prelude/modules/10_gfx.gc`, `prelude/modules/11_gpu_compute.gc`, or
   `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by

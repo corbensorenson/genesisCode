@@ -172,7 +172,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(vcs_log);
-    assert_eq!(req.op, "core/vcs::log");
+    assert_eq!(req.op, "core/vcs-low::log");
 
     let pkg_init = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -190,7 +190,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(gc_plan);
-    assert_eq!(req.op, "core/gc::plan");
+    assert_eq!(req.op, "core/gc-low::plan");
 
     let task_scope = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -442,7 +442,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_log_panel);
-    assert_eq!(req.op, "core/vcs::log");
+    assert_eq!(req.op, "core/vcs-low::log");
 
     let editor_vcs_diff_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -451,7 +451,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_diff_panel);
-    assert_eq!(req.op, "core/vcs::diff");
+    assert_eq!(req.op, "core/vcs-low::diff");
 
     let editor_vcs_apply_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -460,7 +460,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_apply_panel);
-    assert_eq!(req.op, "core/vcs::apply");
+    assert_eq!(req.op, "core/vcs-low::apply");
 
     let editor_vcs_merge3_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -469,7 +469,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_merge3_panel);
-    assert_eq!(req.op, "core/vcs::merge3");
+    assert_eq!(req.op, "core/vcs-low::merge3");
 
     let editor_vcs_resolve_conflict_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -478,7 +478,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_resolve_conflict_panel);
-    assert_eq!(req.op, "core/vcs::resolve-conflict");
+    assert_eq!(req.op, "core/vcs-low::resolve-conflict");
     let gc_coreform::Term::Map(mm) = req.payload else {
         panic!("expected map payload");
     };
@@ -496,7 +496,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_resolve_conflict_with_panel);
-    assert_eq!(req.op, "core/vcs::resolve-conflict");
+    assert_eq!(req.op, "core/vcs-low::resolve-conflict");
     let gc_coreform::Term::Map(mm) = req.payload else {
         panic!("expected map payload");
     };
@@ -554,7 +554,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_blame_panel);
-    assert_eq!(req.op, "core/vcs::blame");
+    assert_eq!(req.op, "core/vcs-low::blame");
 
     let editor_vcs_blame_panel_with_path = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -563,7 +563,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_blame_panel_with_path);
-    assert_eq!(req.op, "core/vcs::blame");
+    assert_eq!(req.op, "core/vcs-low::blame");
 
     let editor_vcs_why_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -572,7 +572,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_why_panel);
-    assert_eq!(req.op, "core/vcs::why");
+    assert_eq!(req.op, "core/vcs-low::why");
 
     let editor_vcs_why_panel_with_op = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -581,7 +581,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_vcs_why_panel_with_op);
-    assert_eq!(req.op, "core/vcs::why");
+    assert_eq!(req.op, "core/vcs-low::why");
 
     let editor_format_file_task = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -690,7 +690,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_agent_propose_patch);
-    assert_eq!(req.op, "core/vcs::diff");
+    assert_eq!(req.op, "core/vcs-low::diff");
 
     let editor_agent_apply_patch_with_obligations = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -699,7 +699,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_agent_apply_patch_with_obligations);
-    assert_eq!(req.op, "core/vcs::apply");
+    assert_eq!(req.op, "core/vcs-low::apply");
 
     let editor_typecheck_pkg_task = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -798,7 +798,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_gpk_export_panel);
-    assert_eq!(req.op, "core/gpk::export");
+    assert_eq!(req.op, "core/gpk-low::export");
 
     let editor_gpk_import_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
@@ -807,7 +807,7 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         .unwrap()
         .clone();
     let req = get_req(editor_gpk_import_panel);
-    assert_eq!(req.op, "core/gpk::import");
+    assert_eq!(req.op, "core/gpk-low::import");
 
     let editor_sync_pull_panel = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

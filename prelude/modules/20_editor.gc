@@ -957,7 +957,7 @@
         (
           (core/effect::map
             (
-              ((core/effect::perform (quote core/vcs::resolve-conflict))
+              ((core/effect::perform (quote core/vcs-low::resolve-conflict))
                 {
                   :conflict conflict
                   :out nil

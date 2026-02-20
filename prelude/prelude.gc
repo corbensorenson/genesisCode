@@ -561,7 +561,7 @@
 (def core/vcs::log
   (fn (root)
     (fn (max)
-      (((core/effect::perform (quote core/vcs::log)) {:max max :root root})
+      (((core/effect::perform (quote core/vcs-low::log)) {:max max :root root})
         (fn (resp) (core/effect::pure resp))))))
 
 (def core/vcs::blame
@@ -569,7 +569,7 @@
     (fn (sym)
       (fn (path)
         (
-          ((core/effect::perform (quote core/vcs::blame))
+          ((core/effect::perform (quote core/vcs-low::blame))
             {
               :path path
               :snapshot snapshot
@@ -581,7 +581,7 @@
     (fn (sym)
       (fn (op)
         (
-          ((core/effect::perform (quote core/vcs::why))
+          ((core/effect::perform (quote core/vcs-low::why))
             {
               :op op
               :snapshot snapshot
@@ -594,7 +594,7 @@
       (fn (out)
         (fn (store)
           (
-            ((core/effect::perform (quote core/vcs::diff))
+            ((core/effect::perform (quote core/vcs-low::diff))
               {
                 :base base
                 :out out
@@ -608,7 +608,7 @@
       (fn (out)
         (fn (store)
           (
-            ((core/effect::perform (quote core/vcs::apply))
+            ((core/effect::perform (quote core/vcs-low::apply))
               {
                 :base base
                 :out out
@@ -623,7 +623,7 @@
         (fn (out)
           (fn (store)
             (
-              ((core/effect::perform (quote core/vcs::merge3))
+              ((core/effect::perform (quote core/vcs-low::merge3))
                 {
                   :base base
                   :left left
@@ -637,7 +637,7 @@
     (fn (out)
       (fn (store)
         (
-          ((core/effect::perform (quote core/vcs::resolve-conflict))
+          ((core/effect::perform (quote core/vcs-low::resolve-conflict))
             {
               :conflict conflict
               :out out
@@ -783,7 +783,7 @@
         (fn (depth)
           (fn (refs)
             (
-              ((core/effect::perform (quote core/gpk::export))
+              ((core/effect::perform (quote core/gpk-low::export))
                 {
                   :depth depth
                   :mode mode
@@ -794,7 +794,7 @@
 
 (def core/gpk::import
   (fn (in)
-    (((core/effect::perform (quote core/gpk::import)) {:in in}) (fn (resp) (core/effect::pure resp)))))
+    (((core/effect::perform (quote core/gpk-low::import)) {:in in}) (fn (resp) (core/effect::pure resp)))))
 
 (def core/sync::pull
   (fn (remote)
@@ -835,7 +835,7 @@
         (fn (include-lock)
           (fn (include-refs)
             (
-              ((core/effect::perform (quote core/gc::plan))
+              ((core/effect::perform (quote core/gc-low::plan))
                 {
                   :depth depth
                   :include-lock include-lock
@@ -853,7 +853,7 @@
             (fn (quarantine)
               (fn (quarantine-dir)
                 (
-                  ((core/effect::perform (quote core/gc::run))
+                  ((core/effect::perform (quote core/gc-low::run))
                     {
                       :depth depth
                       :include-lock include-lock
@@ -867,13 +867,13 @@
 (def core/gc::pin
   (fn (pins)
     (fn (target)
-      (((core/effect::perform (quote core/gc::pin)) {:pins pins :target target})
+      (((core/effect::perform (quote core/gc-low::pin)) {:pins pins :target target})
         (fn (resp) (core/effect::pure resp))))))
 
 (def core/gc::unpin
   (fn (pins)
     (fn (target)
-      (((core/effect::perform (quote core/gc::unpin)) {:pins pins :target target})
+      (((core/effect::perform (quote core/gc-low::unpin)) {:pins pins :target target})
         (fn (resp) (core/effect::pure resp))))))
 
 (def core/gc::purge
@@ -881,7 +881,7 @@
     (fn (ttl-days)
       (fn (quarantine-dir)
         (
-          ((core/effect::perform (quote core/gc::purge))
+          ((core/effect::perform (quote core/gc-low::purge))
             {
               :pins pins
               :quarantine-dir quarantine-dir
@@ -4087,7 +4087,7 @@
         (
           (core/effect::map
             (
-              ((core/effect::perform (quote core/vcs::resolve-conflict))
+              ((core/effect::perform (quote core/vcs-low::resolve-conflict))
                 {
                   :conflict conflict
                   :out nil

@@ -155,6 +155,10 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_ai_iteration_slo.sh
 
+      - name: AI Stress Suite (Tasks + Bridge + GPU/Compute)
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_ai_stress_suite.sh
+
       - name: Hot Path Budgets
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_hot_path_budgets.sh
