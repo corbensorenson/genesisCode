@@ -11,8 +11,8 @@ use gc_coreform::{
     Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
 };
 use gc_kernel::{
-    CompiledModule, Env, EvalCtx, compile_module, decode_compiled_module_blob,
-    encode_compiled_module_blob, eval_compiled_module,
+    CompiledModule, Env, EvalCtx, EvalObservedCounters, MemLimits, Value, compile_module,
+    decode_compiled_module_blob, encode_compiled_module_blob, eval_compiled_module,
 };
 
 const SELFHOST_TOOLCHAIN_MANIFEST_SRC: &str =
@@ -27,6 +27,9 @@ const SELFHOST_TOOLCHAIN_ARTIFACT_KIND: &str = "genesis/selfhost-toolchain-artif
 const DEFAULT_SELFHOST_TOOLCHAIN_ARTIFACT_REL: &str = ".genesis/selfhost/toolchain.gc";
 const DEFAULT_SELFHOST_COMPILED_CACHE_REL: &str = ".genesis/cache/selfhost_compiled_v1";
 const SELFHOST_COMPILED_CACHE_FILE_MAGIC: &[u8] = b"GCSHC1\0";
+const SELFHOST_BOOTSTRAP_EVIDENCE_SYMBOL: &str = "core/selfhost::bootstrap-evidence";
+const PRODUCTION_BOOTSTRAP_STEP_LIMIT: u64 = 500_000_000;
+const PARITY_BOOTSTRAP_STEP_LIMIT: u64 = 1_000_000_000;
 
 #[derive(Debug, Clone)]
 struct ToolchainManifest {
@@ -305,19 +308,211 @@ fn map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, k: &str) -> Option<&'a Term> {
     m.get(&TermOrdKey(Term::symbol(k)))
 }
 
-fn with_trusted_bootstrap_limits<T, F>(ctx: &mut EvalCtx, f: F) -> anyhow::Result<T>
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct TrustedBootstrapBudget {
+    profile: &'static str,
+    step_limit: u64,
+    mem_limits: MemLimits,
+}
+
+fn production_bootstrap_mem_limits() -> MemLimits {
+    MemLimits {
+        max_pair_cells: Some(12_000_000),
+        max_vec_len: Some(2_000_000),
+        max_map_len: Some(2_000_000),
+        max_bytes_len: Some(128 * 1024 * 1024),
+        max_string_len: Some(128 * 1024 * 1024),
+    }
+}
+
+fn parity_bootstrap_mem_limits() -> MemLimits {
+    MemLimits {
+        max_pair_cells: Some(24_000_000),
+        max_vec_len: Some(4_000_000),
+        max_map_len: Some(4_000_000),
+        max_bytes_len: Some(256 * 1024 * 1024),
+        max_string_len: Some(256 * 1024 * 1024),
+    }
+}
+
+fn trusted_bootstrap_budget() -> TrustedBootstrapBudget {
+    if non_artifact_bootstrap_modes_allowed() {
+        TrustedBootstrapBudget {
+            profile: "parity-harness",
+            step_limit: PARITY_BOOTSTRAP_STEP_LIMIT,
+            mem_limits: parity_bootstrap_mem_limits(),
+        }
+    } else {
+        TrustedBootstrapBudget {
+            profile: "production",
+            step_limit: PRODUCTION_BOOTSTRAP_STEP_LIMIT,
+            mem_limits: production_bootstrap_mem_limits(),
+        }
+    }
+}
+
+fn bootstrap_limits_term(limits: MemLimits, step_limit: u64) -> Term {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":step-limit")),
+        Term::Int(step_limit.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-pair-cells")),
+        Term::Int(limits.max_pair_cells.unwrap_or(0).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-vec-len")),
+        Term::Int(limits.max_vec_len.unwrap_or(0).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-map-len")),
+        Term::Int(limits.max_map_len.unwrap_or(0).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-bytes-len")),
+        Term::Int(limits.max_bytes_len.unwrap_or(0).into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-string-len")),
+        Term::Int(limits.max_string_len.unwrap_or(0).into()),
+    );
+    Term::Map(m)
+}
+
+fn bootstrap_observed_term(observed: EvalObservedCounters) -> Term {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":steps")),
+        Term::Int(observed.steps.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":pair-cells")),
+        Term::Int(observed.mem.pair_cells.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-vec-len")),
+        Term::Int(observed.mem.max_vec_len.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-map-len")),
+        Term::Int(observed.mem.max_map_len.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-bytes-len")),
+        Term::Int(observed.mem.max_bytes_len.into()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":max-string-len")),
+        Term::Int(observed.mem.max_string_len.into()),
+    );
+    Term::Map(m)
+}
+
+fn bootstrap_evidence_term(
+    stage: &str,
+    budget: TrustedBootstrapBudget,
+    observed: EvalObservedCounters,
+    err: Option<&str>,
+) -> Term {
+    let mut m = BTreeMap::new();
+    m.insert(
+        TermOrdKey(Term::symbol(":kind")),
+        Term::symbol(":selfhost/bootstrap-evidence"),
+    );
+    m.insert(TermOrdKey(Term::symbol(":v")), Term::Int(1.into()));
+    m.insert(
+        TermOrdKey(Term::symbol(":stage")),
+        Term::Str(stage.to_string()),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":profile")),
+        Term::symbol(if budget.profile == "production" {
+            ":production"
+        } else {
+            ":parity-harness"
+        }),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":limits")),
+        bootstrap_limits_term(budget.mem_limits, budget.step_limit),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":observed")),
+        bootstrap_observed_term(observed),
+    );
+    m.insert(
+        TermOrdKey(Term::symbol(":result")),
+        Term::symbol(if err.is_none() { ":ok" } else { ":error" }),
+    );
+    if let Some(msg) = err {
+        m.insert(
+            TermOrdKey(Term::symbol(":error")),
+            Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":code")),
+                        Term::symbol(":core/selfhost/bootstrap-resource-limit"),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":message")),
+                        Term::Str(msg.to_string()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+        );
+    }
+    Term::Map(m)
+}
+
+fn set_bootstrap_evidence_binding(env: &mut Env, evidence: Term) {
+    *env = Env::with_binding(
+        env,
+        SELFHOST_BOOTSTRAP_EVIDENCE_SYMBOL,
+        Value::Data(evidence),
+    );
+}
+
+fn with_trusted_bootstrap_limits<T, F>(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    stage: &str,
+    f: F,
+) -> anyhow::Result<T>
 where
-    F: FnOnce(&mut EvalCtx) -> anyhow::Result<T>,
+    F: FnOnce(&mut EvalCtx, &mut Env) -> anyhow::Result<T>,
 {
+    let budget = trusted_bootstrap_budget();
     let saved_step_limit = ctx.step_limit;
     let saved_mem_limits = ctx.mem_limits;
-    ctx.step_limit = None;
-    ctx.mem_limits = gc_kernel::MemLimits::default();
-    let out = f(ctx);
+    ctx.step_limit = Some(budget.step_limit);
+    ctx.mem_limits = budget.mem_limits;
+    ctx.reset_counters();
+    let out = f(ctx, env);
+    let observed = ctx.observed_counters();
+    let err_msg = out.as_ref().err().map(|e| e.to_string());
+    set_bootstrap_evidence_binding(
+        env,
+        bootstrap_evidence_term(stage, budget, observed, err_msg.as_deref()),
+    );
     ctx.step_limit = saved_step_limit;
     ctx.mem_limits = saved_mem_limits;
     ctx.reset_counters();
-    out
+    out.map_err(|err| {
+        anyhow::anyhow!(
+            "selfhost bootstrap failed under bounded limits (stage={stage}, profile={}, step_limit={}, observed_steps={}, observed_pair_cells={}, observed_max_vec_len={}, observed_max_map_len={}, observed_max_bytes_len={}, observed_max_string_len={}): {err}",
+            budget.profile,
+            budget.step_limit,
+            observed.steps,
+            observed.mem.pair_cells,
+            observed.mem.max_vec_len,
+            observed.mem.max_map_len,
+            observed.mem.max_bytes_len,
+            observed.mem.max_string_len
+        )
+    })
 }
 
 fn env_truthy(name: &str) -> bool {
@@ -603,7 +798,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
             .get(&artifact_h)
             .cloned();
         if let Some(compiled) = cached {
-            return with_trusted_bootstrap_limits(ctx, |ctx| {
+            return with_trusted_bootstrap_limits(ctx, env, "artifact-cache-hit", |ctx, env| {
                 for (name, m) in &compiled {
                     eval_compiled_module(ctx, env, m).with_context(|| format!("eval {name}"))?;
                 }
@@ -614,7 +809,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
 
     let manifest = toolchain_manifest()?;
     if let Some(compiled_in_order) = try_read_compiled_cache(artifact_h, manifest) {
-        let out = with_trusted_bootstrap_limits(ctx, |ctx| {
+        let out = with_trusted_bootstrap_limits(ctx, env, "artifact-compiled-cache", |ctx, env| {
             for (path, module) in &compiled_in_order {
                 eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
             }
@@ -786,7 +981,7 @@ pub fn load_selfhost_coreform_toolchain_v1_from_artifact_source(
         compiled_in_order.push((path.clone(), module));
     }
 
-    let out = with_trusted_bootstrap_limits(ctx, |ctx| {
+    let out = with_trusted_bootstrap_limits(ctx, env, "artifact-modules", |ctx, env| {
         for (path, module) in &compiled_in_order {
             eval_compiled_module(ctx, env, module).with_context(|| format!("eval {path}"))?;
         }
@@ -817,7 +1012,7 @@ fn load_selfhost_coreform_toolchain_v1_embedded(
         let mods = SELFHOST_COREFORM_V1
             .as_ref()
             .map_err(|s| anyhow::anyhow!("selfhost toolchain init failed: {s}"))?;
-        return with_trusted_bootstrap_limits(ctx, |ctx| {
+        return with_trusted_bootstrap_limits(ctx, env, "embedded-modules", |ctx, env| {
             for (name, module) in mods {
                 eval_compiled_module(ctx, env, module).with_context(|| format!("eval {name}"))?;
             }
@@ -906,6 +1101,29 @@ mod tests {
         assert!(format!("{err}").contains("development-only"));
         enforce_bootstrap_mode_allowed_with_flag(SelfhostBootstrapMode::Embedded, true)
             .expect("embedded mode should be allowed in development mode");
+    }
+
+    #[test]
+    fn trusted_bootstrap_budget_is_bounded_and_profile_controlled() {
+        set_bootstrap_runtime_profile_parity_harness(false);
+        let production = trusted_bootstrap_budget();
+        assert_eq!(production.profile, "production");
+        assert!(production.step_limit > 0);
+        assert!(production.mem_limits.max_pair_cells.is_some());
+        assert!(production.mem_limits.max_vec_len.is_some());
+        assert!(production.mem_limits.max_map_len.is_some());
+        assert!(production.mem_limits.max_bytes_len.is_some());
+        assert!(production.mem_limits.max_string_len.is_some());
+
+        set_bootstrap_runtime_profile_parity_harness(true);
+        let parity = trusted_bootstrap_budget();
+        assert_eq!(parity.profile, "parity-harness");
+        assert!(parity.step_limit >= production.step_limit);
+        assert!(
+            parity.mem_limits.max_pair_cells.unwrap_or(0)
+                >= production.mem_limits.max_pair_cells.unwrap_or(0)
+        );
+        set_bootstrap_runtime_profile_parity_harness(false);
     }
 
     #[test]

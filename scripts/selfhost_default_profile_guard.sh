@@ -55,9 +55,9 @@ expect_rust_engine_rejected() {
   out="$("$@" 2>&1)"
   local code=$?
   set -e
-  [[ "$code" == "50" ]] || fail "$label expected exit 50, got $code (out=$out)"
-  [[ "$out" == *"dedicated parity harness binaries"* ]] || {
-    fail "$label missing compat rejection message (out=$out)"
+  [[ "$code" == "2" ]] || fail "$label expected exit 2, got $code (out=$out)"
+  [[ "$out" == *"invalid value 'rust'"* && "$out" == *"expected"* && "$out" == *"selfhost"* ]] || {
+    fail "$label missing parse-level rust rejection (out=$out)"
   }
 }
 

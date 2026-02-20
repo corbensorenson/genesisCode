@@ -606,10 +606,11 @@ fn rust_engine_requires_compat_flag_and_can_override_when_enabled() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "dedicated parity harness binaries",
-        ));
+            "invalid value 'rust' for '--engine <ENGINE>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 
     cargo_bin_cmd!("genesis_wasi_parity")
         .args([
@@ -664,10 +665,11 @@ fn selfhost_only_rejects_rust_coreform_frontend_for_pack() {
         ])
         .assert()
         .failure()
-        .code(50)
+        .code(2)
         .stderr(predicate::str::contains(
-            "selfhost-only mode requires --coreform-frontend selfhost",
-        ));
+            "invalid value 'rust' for '--coreform-frontend <COREFORM_FRONTEND>'",
+        ))
+        .stderr(predicate::str::contains("expected `selfhost`"));
 }
 
 #[test]

@@ -6,6 +6,7 @@ license.workspace = true
 
 [features]
 default = []
+parity-harness = []
 embedded-bootstrap = ["gc_prelude/embedded-bootstrap"]
 
 [dependencies]
@@ -28,6 +29,7 @@ gc_types = { path = "../gc_types" }
 gc_opt = { path = "../gc_opt" }
 gc_vcs = { path = "../gc_vcs" }
 gc_pkg = { path = "../gc_pkg" }
+gc_registry = { path = "../gc_registry" }
 
 [dev-dependencies]
 serde_json.workspace = true

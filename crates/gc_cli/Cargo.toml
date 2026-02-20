@@ -18,6 +18,7 @@ embedded-bootstrap = ["gc_cli_driver/embedded-bootstrap"]
 
 [dependencies]
 gc_cli_driver = { path = "../gc_cli_driver" }
+gc_cli_driver_parity = { path = "../gc_cli_driver_parity" }
 
 [dev-dependencies]
 assert_cmd = "2"
@@ -28,3 +29,4 @@ blake3.workspace = true
 gc_coreform = { path = "../gc_coreform" }
 gc_effects = { path = "../gc_effects" }
 gc_vcs = { path = "../gc_vcs" }
+gc_registry = { path = "../gc_registry" }

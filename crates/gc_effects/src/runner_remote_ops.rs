@@ -60,7 +60,10 @@ fn validate_wasi_remote_profile(
             "WASI remote {capability_scope} access is disabled; set wasi_network_profile to `local` or `preview2` in caps.toml op policy"
         )),
         "local" => {
-            if matches!(scheme, "file" | "inproc") {
+            if matches!(scheme, "file" | "inproc")
+                || (matches!(scheme, "http" | "https")
+                    && gc_registry::wasi_http_bridge_configured())
+            {
                 Ok(())
             } else {
                 Err(format!(

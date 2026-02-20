@@ -36,6 +36,36 @@ wasi_network_profile = "local"
     caps
 }
 
+fn write_http_bridge_caps(dir: &Path, remote_allow: &str) -> PathBuf {
+    let caps = dir.join("caps_http_bridge.toml");
+    fs::write(
+        &caps,
+        format!(
+            r#"
+allow = ["core/sync::push", "core/sync::pull"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/sync::push"]
+remote_allow = ["{remote_allow}"]
+allow_http = true
+wasi_network_profile = "local"
+
+[op."core/sync::pull"]
+remote_allow = ["{remote_allow}"]
+allow_http = true
+wasi_network_profile = "local"
+"#
+        ),
+    )
+    .unwrap();
+    caps
+}
+
 fn put_term(store_dir: &Path, term_src: &str) -> String {
     fs::create_dir_all(store_dir).unwrap();
     let term = gc_coreform::parse_term(term_src).unwrap();
@@ -481,6 +511,7 @@ wasi_network_profile = "local"
 
     cmd()
         .current_dir(&src)
+        .env_remove("GENESIS_WASI_HTTP_BRIDGE_ROOT")
         .args(["sync", "--caps"])
         .arg(&caps)
         .args([
@@ -496,4 +527,116 @@ wasi_network_profile = "local"
         .stdout(predicates::str::contains(
             "wasi_network_profile=local only allows file:// or inproc:// remotes",
         ));
+}
+
+#[test]
+fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
+    let td = tempfile::tempdir().unwrap();
+    let root = td.path();
+    let src = root.join("src");
+    let dst_a = root.join("dst_a");
+    let dst_b = root.join("dst_b");
+    let remote_dir = root.join("remote-registry");
+    let remote_v1 = remote_dir.join("v1");
+    fs::create_dir_all(&src).unwrap();
+    fs::create_dir_all(&dst_a).unwrap();
+    fs::create_dir_all(&dst_b).unwrap();
+    fs::create_dir_all(&remote_v1).unwrap();
+
+    let remote = "http://bridge.test/".to_string();
+    let remote_allow = "http://bridge.test/v1/".to_string();
+    let src_caps = write_http_bridge_caps(&src, &remote_allow);
+    let dst_a_caps = write_http_bridge_caps(&dst_a, &remote_allow);
+    let dst_b_caps = write_http_bridge_caps(&dst_b, &remote_allow);
+
+    let src_store = src.join(".genesis").join("store");
+    let patch_h = put_term(&src_store, "{:type :vcs/patch :v 1 :ops []}");
+    let snap_h = put_term(
+        &src_store,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "mini" :pkg/version "0.1.0" :members {} :exports [] :deps [] :obligations [core/obligation::unit-tests]}"#,
+    );
+    let evidence_h = put_term(
+        &src_store,
+        "{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}",
+    );
+    let policy_h = put_term(
+        &src_store,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+    );
+    let commit_h = put_term(
+        &src_store,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "mini" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_h}"]
+  :attestations []
+  :message "wasi-http-bridge-roundtrip"
+}}"#
+        ),
+    );
+
+    cmd()
+        .current_dir(&src)
+        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
+        .args(["sync", "--caps"])
+        .arg(&src_caps)
+        .args([
+            "push", "--remote", &remote, "--root", &commit_h, "--root", &policy_h,
+        ])
+        .args([
+            "--set-ref",
+            &format!("refs/heads/main:{commit_h}:{policy_h}@nil"),
+        ])
+        .assert()
+        .success();
+
+    assert_eq!(
+        get_remote_ref(&remote_dir, "refs/heads/main"),
+        Some(commit_h.clone())
+    );
+    assert!(remote_v1.join("store").join(&commit_h).exists());
+
+    let log_a = dst_a.join("pull_a.gclog");
+    let log_b = dst_b.join("pull_b.gclog");
+    cmd()
+        .current_dir(&dst_a)
+        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
+        .args(["sync", "--caps"])
+        .arg(&dst_a_caps)
+        .args(["--log", log_a.to_str().unwrap()])
+        .args(["pull", "--remote", &remote, "--ref", "refs/heads/main"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(&dst_b)
+        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
+        .args(["sync", "--caps"])
+        .arg(&dst_b_caps)
+        .args(["--log", log_b.to_str().unwrap()])
+        .args(["pull", "--remote", &remote, "--ref", "refs/heads/main"])
+        .assert()
+        .success();
+
+    let log_a_src = fs::read_to_string(&log_a).unwrap();
+    let log_b_src = fs::read_to_string(&log_b).unwrap();
+    assert_eq!(log_a_src, log_b_src);
 }

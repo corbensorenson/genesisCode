@@ -26,6 +26,7 @@ mod cmd_gc;
 mod cmd_pkg;
 mod cmd_policy;
 mod cmd_refs;
+mod cmd_registry;
 mod cmd_security_ops;
 mod cmd_selfhost;
 mod cmd_store;
@@ -58,6 +59,7 @@ use cmd_gc::cmd_gc;
 use cmd_pkg::cmd_pkg;
 use cmd_policy::cmd_policy;
 use cmd_refs::cmd_refs;
+use cmd_registry::cmd_registry;
 use cmd_security_ops::*;
 use cmd_selfhost::*;
 use cmd_store::cmd_store;
@@ -290,6 +292,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::Pkg { caps, log, cmd } => cmd_pkg(cli, caps, log.as_deref(), cmd),
         Cmd::Policy { cmd } => cmd_policy(cli, cmd),
         Cmd::Sync { caps, log, cmd } => cmd_sync(cli, caps, log.as_deref(), cmd),
+        Cmd::Registry { cmd } => cmd_registry(cli, flavor, cmd),
         Cmd::Gc { caps, log, cmd } => cmd_gc(cli, caps, log.as_deref(), cmd),
         Cmd::Vcs { caps, log, cmd } => cmd_vcs(cli, caps.as_deref(), log.as_deref(), cmd),
     }?;
@@ -393,13 +396,7 @@ fn inherited_global_args(cli: &Cli) -> Vec<String> {
     }
     if let Some(frontend) = cli.coreform_frontend {
         out.push("--coreform-frontend".to_string());
-        out.push(
-            match frontend {
-                CoreformFrontendArg::Rust => "rust",
-                CoreformFrontendArg::Selfhost => "selfhost",
-            }
-            .to_string(),
-        );
+        out.push(frontend.as_str().to_string());
     }
     out
 }
@@ -440,10 +437,7 @@ fn warm_session_cache_key(
             SelfhostBootstrapArg::ArtifactPreferred => "artifact-preferred",
             SelfhostBootstrapArg::Embedded => "embedded",
         },
-        "coreform_frontend": cli.coreform_frontend.map(|v| match v {
-            CoreformFrontendArg::Rust => "rust",
-            CoreformFrontendArg::Selfhost => "selfhost",
-        }),
+        "coreform_frontend": cli.coreform_frontend.map(|v| v.as_str()),
         "selfhost_artifact": cli.selfhost_artifact.as_ref().map(|p| p.display().to_string()),
         "cwd": cwd,
         "inherited": inherited,

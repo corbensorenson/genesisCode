@@ -12,6 +12,7 @@ pub(super) fn cmd_fmt(
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
 
     let out = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -83,10 +84,7 @@ pub(super) fn cmd_fmt(
             "file": file.display().to_string(),
             "check": check,
             "changed": changed,
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
         })),
         error: if ok {
@@ -120,6 +118,7 @@ pub(super) fn cmd_eval(
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
 
     let (mut ctx, mut env, mut forms) = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -219,10 +218,7 @@ pub(super) fn cmd_eval(
         kind: "genesis/eval-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "stage1": stage1.as_ref().map(gc_opt::stage1_pipeline_json),
@@ -255,6 +251,7 @@ pub(super) fn cmd_explain(
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
     let (mut ctx, mut env, forms, contract_term, msg_term) = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -317,10 +314,7 @@ pub(super) fn cmd_explain(
         kind: "genesis/explain-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "contract": contract_src,
@@ -354,6 +348,7 @@ pub(super) fn cmd_run(
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
     let (mut ctx, mut env, forms) = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -414,10 +409,7 @@ pub(super) fn cmd_run(
         kind: "genesis/run-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "caps": caps.display().to_string(),
@@ -467,6 +459,7 @@ pub(super) fn cmd_replay(
         .with_context(|| format!("read {}", file.display()))
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
     let (mut ctx, mut env, forms) = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -534,10 +527,7 @@ pub(super) fn cmd_replay(
         kind: "genesis/replay-v0.2",
         data: Some(serde_json::json!({
             "file": file.display().to_string(),
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "kernel_eval_backend": eval_backend.as_str(),
             "log": log_path.display().to_string(),

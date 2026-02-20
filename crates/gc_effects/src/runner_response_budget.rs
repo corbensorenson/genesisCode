@@ -325,7 +325,13 @@ pub(super) fn mk_resource_limit_error(
 }
 
 pub(super) fn dispatch_op_alias(op: &str) -> &str {
-    op
+    match op {
+        // Compute is canonical under gpu/compute::*.
+        // Keep gfx/gpu compute names as compatibility aliases.
+        "gfx/gpu::create-compute-pipeline" => "gpu/compute::create-compute-pipeline",
+        "gfx/gpu::submit-compute-graph" => "gpu/compute::submit",
+        _ => op,
+    }
 }
 
 pub(super) fn consume_budget(used: &mut usize, incoming: usize) {

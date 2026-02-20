@@ -107,6 +107,21 @@ struct MemState {
     max_string_len: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct MemObservedCounters {
+    pub pair_cells: u64,
+    pub max_vec_len: u64,
+    pub max_map_len: u64,
+    pub max_bytes_len: u64,
+    pub max_string_len: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct EvalObservedCounters {
+    pub steps: u64,
+    pub mem: MemObservedCounters,
+}
+
 #[derive(Debug, Clone)]
 struct CoverageState {
     tracked: BTreeSet<String>,
@@ -213,6 +228,19 @@ impl EvalCtx {
 
     pub fn coverage_hits(&self) -> Option<&BTreeMap<String, u64>> {
         self.coverage.as_ref().map(|c| &c.hits)
+    }
+
+    pub fn observed_counters(&self) -> EvalObservedCounters {
+        EvalObservedCounters {
+            steps: self.steps,
+            mem: MemObservedCounters {
+                pair_cells: self.mem_state.pair_cells,
+                max_vec_len: self.mem_state.max_vec_len,
+                max_map_len: self.mem_state.max_map_len,
+                max_bytes_len: self.mem_state.max_bytes_len,
+                max_string_len: self.mem_state.max_string_len,
+            },
+        }
     }
 
     pub(crate) fn coverage_hit(&mut self, sym: &str) {

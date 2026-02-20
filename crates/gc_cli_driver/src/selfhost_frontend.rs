@@ -28,8 +28,10 @@ pub(super) fn selfhost_only_enabled(cli: &Cli) -> bool {
             .unwrap_or(false)
 }
 
+#[cfg(feature = "parity-harness")]
 pub(super) fn rust_engine_compat_enabled() -> bool {
-    matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+    cfg!(feature = "parity-harness")
+        && matches!(runtime_profile(), RuntimeProfile::ParityHarness)
 }
 
 pub(super) fn frontend_is_rust(frontend: &gc_obligations::CoreformFrontend) -> bool {
@@ -238,6 +240,7 @@ pub(super) fn resolved_coreform_frontend(
         .coreform_frontend
         .unwrap_or(CoreformFrontendArg::Selfhost);
     match selected {
+        #[cfg(feature = "parity-harness")]
         CoreformFrontendArg::Rust => {
             if strict {
                 return Err(cli_err(
@@ -312,6 +315,7 @@ pub(super) fn coreform_frontend_for_engine(
     engine: FmtEngine,
 ) -> Result<gc_obligations::CoreformFrontend, CliError> {
     match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => Ok(gc_obligations::rust_coreform_frontend()),
         FmtEngine::Selfhost => {
             let mode = resolved_selfhost_bootstrap_mode(cli);
@@ -327,6 +331,7 @@ pub(super) fn coreform_frontend_for_engine(
     }
 }
 
+#[cfg(feature = "parity-harness")]
 pub(super) fn rust_engine_disabled_message(cmd_name: &str) -> String {
     if cfg!(debug_assertions) {
         format!(
@@ -355,6 +360,7 @@ pub(super) fn resolved_engine(
     }
     enforce_selfhost_engine(cli, cmd_name, engine)?;
     if let Some(e) = engine {
+        #[cfg(feature = "parity-harness")]
         if e == FmtEngine::Rust && !rust_engine_compat_enabled() {
             return Err(cli_err(
                 EX_VERIFY,
@@ -452,16 +458,26 @@ pub(super) fn enforce_selfhost_engine(
     if !selfhost_only_enabled(cli) {
         return Ok(());
     }
-    if engine != Some(FmtEngine::Rust) {
-        return Ok(());
+    #[cfg(feature = "parity-harness")]
+    {
+        if engine == Some(FmtEngine::Rust) {
+            Err(cli_err(
+                EX_VERIFY,
+                "selfhost-only/engine",
+                format!(
+                    "selfhost-only mode requires --engine selfhost for `{cmd_name}` (got --engine rust)"
+                ),
+            ))
+        } else {
+            Ok(())
+        }
     }
-    Err(cli_err(
-        EX_VERIFY,
-        "selfhost-only/engine",
-        format!(
-            "selfhost-only mode requires --engine selfhost for `{cmd_name}` (got --engine rust)"
-        ),
-    ))
+    #[cfg(not(feature = "parity-harness"))]
+    {
+        let _ = cmd_name;
+        let _ = engine;
+        Ok(())
+    }
 }
 
 pub(super) fn is_legacy_high_level_semantic_op(op: &str) -> bool {
@@ -528,6 +544,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Pkg { .. } => Ok(()),
         Cmd::Policy { .. } => Ok(()),
         Cmd::Sync { .. } => Ok(()),
+        Cmd::Registry { .. } => Ok(()),
         Cmd::Gc { .. } => Ok(()),
         Cmd::SelfhostArtifact { .. } => Ok(()),
         Cmd::Keygen { .. } => Ok(()),

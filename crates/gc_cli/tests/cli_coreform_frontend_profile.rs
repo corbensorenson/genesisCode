@@ -78,10 +78,11 @@ fn default_profile_rejects_rust_coreform_frontend_for_semantic_groups() {
             .args(args)
             .assert()
             .failure()
-            .code(50)
+            .code(2)
             .stderr(predicate::str::contains(
-                "dedicated parity harness binaries",
-            ));
+                "invalid value 'rust' for '--coreform-frontend <COREFORM_FRONTEND>'",
+            ))
+            .stderr(predicate::str::contains("expected `selfhost`"));
     }
 }
 

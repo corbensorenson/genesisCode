@@ -18,6 +18,15 @@ use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[cfg(not(target_os = "wasi"))]
+mod server;
+#[cfg(not(target_os = "wasi"))]
+pub use server::{
+    HttpRegistryServerConfig, HttpRegistryServerHandle, spawn_http_file_registry_server,
+};
+
+pub const WASI_HTTP_BRIDGE_ROOT_ENV: &str = "GENESIS_WASI_HTTP_BRIDGE_ROOT";
+
 pub trait InProcRegistry: Send + Sync {
     fn authorize(&self, _auth: &RegistryAuth) -> Result<(), RegistryError> {
         Ok(())
@@ -228,13 +237,13 @@ struct StoreHasResp {
     present: BTreeMap<String, bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefsGetResp {
     pub name: String,
     pub hash: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefsListEntry {
     pub name: String,
     pub hash: Option<String>,
@@ -255,7 +264,7 @@ pub struct RefsSetReq<'a> {
     pub expected_old: Option<&'a str>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefsSetResp {
     pub ok: bool,
     pub name: String,
@@ -287,37 +296,47 @@ impl RegistryClient {
         let base = normalize_remote_base(remote)?;
         let kind = match base.scheme() {
             "https" | "http" => {
-                #[cfg(target_os = "wasi")]
-                {
+                if let Some(root) = wasi_http_bridge_root_for_base(&base) {
                     if auth.has_any() {
-                        return Err(RegistryError::Auth(
-                            "http(s) registry auth is not supported on WASI builds".to_string(),
-                        ));
+                        return Err(RegistryError::Auth(format!(
+                            "http bridge adapter does not support registry transport auth; unset auth fields or clear {WASI_HTTP_BRIDGE_ROOT_ENV}"
+                        )));
                     }
-                    RegistryKind::Http
-                }
-                #[cfg(not(target_os = "wasi"))]
-                {
-                    let mut b = Client::builder();
-                    if let Some(t) = timeout {
-                        b = b.timeout(t);
+                    RegistryKind::File { root }
+                } else {
+                    #[cfg(target_os = "wasi")]
+                    {
+                        if auth.has_any() {
+                            return Err(RegistryError::Auth(
+                                "http(s) registry auth is not supported on WASI builds".to_string(),
+                            ));
+                        }
+                        RegistryKind::Http
                     }
-                    if let Some(ca_pem) = auth.mtls_ca_pem.as_ref() {
-                        let cert = reqwest::Certificate::from_pem(ca_pem).map_err(|e| {
-                            RegistryError::Auth(format!("invalid mTLS CA PEM: {e}"))
-                        })?;
-                        b = b.add_root_certificate(cert);
+                    #[cfg(not(target_os = "wasi"))]
+                    {
+                        let mut b = Client::builder();
+                        if let Some(t) = timeout {
+                            b = b.timeout(t);
+                        }
+                        if let Some(ca_pem) = auth.mtls_ca_pem.as_ref() {
+                            let cert = reqwest::Certificate::from_pem(ca_pem).map_err(|e| {
+                                RegistryError::Auth(format!("invalid mTLS CA PEM: {e}"))
+                            })?;
+                            b = b.add_root_certificate(cert);
+                        }
+                        if let Some(identity_pem) = auth.mtls_identity_pem.as_ref() {
+                            let identity =
+                                reqwest::Identity::from_pem(identity_pem).map_err(|e| {
+                                    RegistryError::Auth(format!("invalid mTLS identity PEM: {e}"))
+                                })?;
+                            b = b.identity(identity);
+                        }
+                        let http = b
+                            .build()
+                            .map_err(|e| RegistryError::Http(format!("build client: {e}")))?;
+                        RegistryKind::Http { http }
                     }
-                    if let Some(identity_pem) = auth.mtls_identity_pem.as_ref() {
-                        let identity = reqwest::Identity::from_pem(identity_pem).map_err(|e| {
-                            RegistryError::Auth(format!("invalid mTLS identity PEM: {e}"))
-                        })?;
-                        b = b.identity(identity);
-                    }
-                    let http = b
-                        .build()
-                        .map_err(|e| RegistryError::Http(format!("build client: {e}")))?;
-                    RegistryKind::Http { http }
                 }
             }
             "inproc" => {
@@ -1018,6 +1037,29 @@ impl RegistryClient {
         }
         req
     }
+}
+
+pub fn wasi_http_bridge_configured() -> bool {
+    std::env::var(WASI_HTTP_BRIDGE_ROOT_ENV)
+        .ok()
+        .map(|v| !v.trim().is_empty())
+        .unwrap_or(false)
+}
+
+fn wasi_http_bridge_root_for_base(_base: &Url) -> Option<PathBuf> {
+    let raw = std::env::var(WASI_HTTP_BRIDGE_ROOT_ENV).ok()?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let mut root = PathBuf::from(trimmed);
+    if !root.file_name().map(|n| n == "v1").unwrap_or(false) {
+        let candidate = root.join("v1");
+        if candidate.exists() {
+            root = candidate;
+        }
+    }
+    Some(root)
 }
 
 #[cfg(target_os = "wasi")]

@@ -91,11 +91,13 @@ COMMON_GATES=(
   "bash scripts/check_host_abi_conformance.sh"
   "bash scripts/check_runner_high_level_op_guard.sh"
   "bash scripts/check_prelude_capability_coverage.sh"
+  "bash scripts/check_capability_indices.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
   "bash scripts/check_source_size_budget.sh"
+  "bash scripts/check_test_size_budget.sh"
 )
 
 PROFILE_GATES=()

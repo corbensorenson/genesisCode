@@ -17,3 +17,4 @@ gc_vcs = { path = "../gc_vcs" }
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
 fs2 = "0.4"
+tiny_http = "0.12"

@@ -315,7 +315,8 @@ PY
 
 for cmd in "${COMMANDS[@]-}"; do
   echo ">> $cmd"
-  bash -lc "$cmd"
+  # Execute in-process to avoid one shell startup per command in the hot loop.
+  eval "$cmd"
 done
 
 END_NS="$(python3 - <<'PY'

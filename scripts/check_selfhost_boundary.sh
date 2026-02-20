@@ -17,7 +17,10 @@ is_allowed_path() {
     crates/gc_types/*) return 0 ;;
     crates/gc_patches/*) return 0 ;;
     crates/gc_obligations/*) return 0 ;;
-    crates/gc_cli_driver/src/*) return 0 ;;
+    crates/gc_cli_driver/src/cmd_*.rs) return 0 ;;
+    crates/gc_cli_driver/src/selfhost_bridge.rs) return 0 ;;
+    crates/gc_cli_driver/src/pkg_self_opt.rs) return 0 ;;
+    crates/gc_cli_driver/src/kernel_exec.rs) return 0 ;;
     crates/gc_effects/src/lib.rs) return 0 ;;
     crates/gc_effects/src/runner*.rs) return 0 ;;
     crates/*/src/tests.rs) return 0 ;;
@@ -137,13 +140,19 @@ if [[ "$MODE" == "strict" ]]; then
 else
   BASE_REF="$(resolve_base)"
   if [[ -z "$BASE_REF" ]]; then
-    echo "selfhost-boundary: no diff base detected; skipping guard."
-    exit 0
-  fi
-  FILES_TO_SCAN="$(git diff --name-only "$BASE_REF"...HEAD -- 'crates/**/*.rs')"
-  if [[ -z "$FILES_TO_SCAN" ]]; then
-    echo "selfhost-boundary: no changed Rust files under crates/."
-    exit 0
+    echo "selfhost-boundary: no diff base detected; escalating to strict mode."
+    MODE="strict"
+    FILES_TO_SCAN="$(list_production_rust_files)"
+    if [[ -z "$FILES_TO_SCAN" ]]; then
+      echo "selfhost-boundary: no Rust files under crates/."
+      exit 0
+    fi
+  else
+    FILES_TO_SCAN="$(git diff --name-only "$BASE_REF"...HEAD -- 'crates/**/*.rs')"
+    if [[ -z "$FILES_TO_SCAN" ]]; then
+      echo "selfhost-boundary: no changed Rust files under crates/."
+      exit 0
+    fi
   fi
 fi
 

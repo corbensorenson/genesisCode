@@ -12,6 +12,7 @@ pub fn repo_toolchain_artifact() -> PathBuf {
     repo_root().join("selfhost").join("toolchain.gc")
 }
 
+#[allow(dead_code)]
 pub fn copy_repo_toolchain_artifact(dst_dir: &Path) -> PathBuf {
     let src = repo_toolchain_artifact();
     assert!(

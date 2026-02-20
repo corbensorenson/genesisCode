@@ -17,6 +17,9 @@ Compatibility notes:
 - Host-integrated domains (`editor/*`, `gfx/*`, `gpu/compute::*`) execute through
   per-op bridge policy (`bridge_cmd`, `bridge_args`) and return deterministic
   sealed errors when bridge policy is missing.
+- Canonical compute ABI lives under `gpu/compute::*`.
+  Legacy `gfx/gpu::create-compute-pipeline` and `gfx/gpu::submit-compute-graph`
+  are compatibility aliases that normalize to canonical compute ops before dispatch.
 - Under WASI profile, bridge-backed domains execute through deterministic response
   configuration (`wasi_bridge_response`, `wasi_bridge_response_file`, or
   `GENESIS_WASI_BRIDGE_RESPONSES`) instead of process spawning.
@@ -98,7 +101,6 @@ Compatibility notes:
 - `gfx/gpu::create-bind-group`
 - `gfx/gpu::create-bind-group-layout`
 - `gfx/gpu::create-buffer`
-- `gfx/gpu::create-compute-pipeline`
 - `gfx/gpu::create-pipeline-layout`
 - `gfx/gpu::create-render-pipeline`
 - `gfx/gpu::create-sampler`
@@ -109,7 +111,6 @@ Compatibility notes:
 - `gfx/gpu::limits`
 - `gfx/gpu::read-buffer`
 - `gfx/gpu::read-texture`
-- `gfx/gpu::submit-compute-graph`
 - `gfx/gpu::submit-frame-graph`
 - `gfx/gpu::write-buffer`
 - `gfx/gpu::write-texture`
@@ -142,3 +143,12 @@ Compatibility notes:
 ## Conformance
 
 CI must run `scripts/check_host_abi_conformance.sh`, which diffs this op list against the dispatch surface in `crates/gc_effects/src/runner_capability_dispatch.rs`.
+
+Machine-readable indices for agent planning:
+
+- `docs/spec/HOST_ABI_INDEX_v0.1.json` (derived from Rust dispatch sources)
+- `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json` (derived from prelude `core/caps::perform` wrappers)
+
+CI drift check:
+
+- `scripts/check_capability_indices.sh`

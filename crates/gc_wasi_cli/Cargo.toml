@@ -18,6 +18,7 @@ embedded-bootstrap = ["gc_cli_driver/embedded-bootstrap"]
 
 [dependencies]
 gc_cli_driver = { path = "../gc_cli_driver" }
+gc_cli_driver_parity = { path = "../gc_cli_driver_parity" }
 
 [dev-dependencies]
 assert_cmd = "2"

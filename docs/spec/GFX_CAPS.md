@@ -16,6 +16,7 @@ Non-goals:
 All ops are deny-by-default and effect-logged.
 
 - `gfx/gpu::*`
+- `gpu/compute::*`
 - `gfx/window::*`
 - `gfx/input::*`
 - `gfx/time::*`
@@ -32,7 +33,6 @@ Resource lifecycle:
 - `gfx/gpu::create-bind-group`
 - `gfx/gpu::create-pipeline-layout`
 - `gfx/gpu::create-render-pipeline`
-- `gfx/gpu::create-compute-pipeline`
 - `gfx/gpu::destroy-resource`
 
 Data upload/readback:
@@ -43,11 +43,34 @@ Data upload/readback:
 
 Frame/dispatch:
 - `gfx/gpu::submit-frame-graph`
-- `gfx/gpu::submit-compute-graph`
 
 Introspection:
 - `gfx/gpu::limits`
 - `gfx/gpu::features`
+
+## `gpu/compute::*` ops (canonical compute surface)
+
+Resource lifecycle:
+- `gpu/compute::create-buffer`
+- `gpu/compute::create-shader-module`
+- `gpu/compute::create-bind-group-layout`
+- `gpu/compute::create-bind-group`
+- `gpu/compute::create-pipeline-layout`
+- `gpu/compute::create-compute-pipeline`
+- `gpu/compute::create-kernel` (alias of `create-compute-pipeline`)
+- `gpu/compute::destroy-resource`
+
+Data upload/readback:
+- `gpu/compute::write-buffer`
+- `gpu/compute::read-buffer`
+
+Dispatch/introspection:
+- `gpu/compute::submit`
+- `gpu/compute::limits`
+- `gpu/compute::features`
+
+Compatibility layer:
+- `core/gfx/gpu::create-compute-pipeline` and `core/gfx/gpu::submit-compute-graph` remain available as compatibility wrappers and forward to canonical `gpu/compute::*` ops.
 
 ## `gfx/window::*` ops
 
@@ -81,4 +104,3 @@ Introspection:
 - PBR-oriented material schema
 
 The GenesisCode language implementation will mirror these shapes as CoreForm contracts.
-

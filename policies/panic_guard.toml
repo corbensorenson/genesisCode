@@ -1,0 +1,12 @@
+version = 1
+
+# Workspace packages excluded from production panic guard checks.
+# `gc_runtime_bench` is benchmark-only and intentionally out of user execution paths.
+exclude_packages = ["gc_runtime_bench"]
+
+# Temporary library-level exemptions. Keep this list minimal and drive it to empty.
+lib_exempt_packages = []
+
+# Binary targets excluded from production panic guard checks.
+# Parity harness binaries are development-only compatibility tools.
+bin_exempt_targets = ["genesis_parity", "genesis_wasi_parity"]

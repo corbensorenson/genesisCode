@@ -82,7 +82,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Selfhost Boundary Guard
-        run: bash scripts/check_selfhost_boundary.sh
+        run: bash scripts/check_selfhost_boundary.sh --strict
 
       - name: Rust Bootstrap Retirement Gate
         run: |
@@ -102,14 +102,23 @@ jobs:
       - name: Prelude Capability Coverage Guard
         run: bash scripts/check_prelude_capability_coverage.sh
 
+      - name: Capability Indices Guard
+        run: bash scripts/check_capability_indices.sh
+
       - name: User-Path Panic Guard
         run: bash scripts/check_no_user_panics.sh
 
       - name: Rust Engine Compatibility Guard
         run: bash scripts/check_rust_engine_compat.sh
 
+      - name: Production CLI Parse Surface Guard
+        run: bash scripts/check_production_cli_parse_surface.sh
+
       - name: Source Size Budget Guard
         run: bash scripts/check_source_size_budget.sh
+
+      - name: Test Size Budget Guard
+        run: bash scripts/check_test_size_budget.sh
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings

@@ -280,6 +280,7 @@ pub(super) fn cmd_optimize(
         .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
 
     let forms = match engine {
+        #[cfg(feature = "parity-harness")]
         FmtEngine::Rust => {
             let forms = parse_module(&src)
                 .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
@@ -365,10 +366,7 @@ pub(super) fn cmd_optimize(
             "file": file.display().to_string(),
             "out": out.map(|p| p.display().to_string()),
             "wasm_out": emit_wasm.map(|p| p.display().to_string()),
-            "engine": match engine {
-                FmtEngine::Rust => "rust",
-                FmtEngine::Selfhost => "selfhost",
-            },
+            "engine": engine.as_str(),
             "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
             "coreform_frontend": frontend_info,
             "stage1": gc_opt::stage1_pipeline_json(&pipeline.stage1),

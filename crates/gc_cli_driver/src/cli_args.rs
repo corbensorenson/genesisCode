@@ -69,20 +69,39 @@ enum SelfhostBootstrapArg {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CoreformFrontendArg {
+    #[cfg(feature = "parity-harness")]
     Rust,
     Selfhost,
+}
+
+fn coreform_frontend_expected_values() -> &'static str {
+    if cfg!(feature = "parity-harness") {
+        "`selfhost` or `rust`"
+    } else {
+        "`selfhost`"
+    }
 }
 
 impl std::str::FromStr for CoreformFrontendArg {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let expected = coreform_frontend_expected_values();
         match s.trim().to_ascii_lowercase().as_str() {
-            "rust" => Ok(Self::Rust),
             "selfhost" => Ok(Self::Selfhost),
-            other => Err(format!(
-                "invalid frontend `{other}`; expected `selfhost` or `rust`"
-            )),
+            #[cfg(feature = "parity-harness")]
+            "rust" => Ok(Self::Rust),
+            other => Err(format!("invalid frontend `{other}`; expected {expected}")),
+        }
+    }
+}
+
+impl CoreformFrontendArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            #[cfg(feature = "parity-harness")]
+            Self::Rust => "rust",
+            Self::Selfhost => "selfhost",
         }
     }
 }
@@ -395,6 +414,12 @@ enum Cmd {
         cmd: SyncCmd,
     },
 
+    /// First-party Genesis registry server operations.
+    Registry {
+        #[command(subcommand)]
+        cmd: RegistryCmd,
+    },
+
     /// Garbage-collect the local artifact store using reachability closure from refs + locks + pins.
     Gc {
         /// Capability policy TOML (deny-by-default allowlist).
@@ -428,20 +453,39 @@ enum Cmd {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum FmtEngine {
+    #[cfg(feature = "parity-harness")]
     Rust,
     Selfhost,
+}
+
+fn fmt_engine_expected_values() -> &'static str {
+    if cfg!(feature = "parity-harness") {
+        "`selfhost` or `rust`"
+    } else {
+        "`selfhost`"
+    }
 }
 
 impl std::str::FromStr for FmtEngine {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let expected = fmt_engine_expected_values();
         match s.trim().to_ascii_lowercase().as_str() {
-            "rust" => Ok(Self::Rust),
             "selfhost" => Ok(Self::Selfhost),
-            other => Err(format!(
-                "invalid engine `{other}`; expected `selfhost` or `rust`"
-            )),
+            #[cfg(feature = "parity-harness")]
+            "rust" => Ok(Self::Rust),
+            other => Err(format!("invalid engine `{other}`; expected {expected}")),
+        }
+    }
+}
+
+impl FmtEngine {
+    fn as_str(self) -> &'static str {
+        match self {
+            #[cfg(feature = "parity-harness")]
+            Self::Rust => "rust",
+            Self::Selfhost => "selfhost",
         }
     }
 }
@@ -637,6 +681,28 @@ enum SyncCmd {
         /// Format: `<refname>:<commit-hash>:<policy-hash>[@<expected-old-hash|nil>]`
         #[arg(long = "set-ref")]
         set_refs: Vec<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum RegistryCmd {
+    /// Serve a policy-gated HTTP registry backed by a local file store.
+    Serve {
+        /// Bind address (supports :0 for ephemeral local ports).
+        #[arg(long, default_value = "127.0.0.1:8080")]
+        addr: String,
+
+        /// Registry root directory; server stores data under <root>/v1.
+        #[arg(long)]
+        root: PathBuf,
+
+        /// Maximum accepted upload chunk size in bytes.
+        #[arg(long, default_value_t = 4_194_304)]
+        max_chunk_bytes: u64,
+
+        /// Optional request cap (mainly for deterministic tests).
+        #[arg(long)]
+        max_requests: Option<u64>,
     },
 }
 
