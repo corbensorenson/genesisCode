@@ -282,7 +282,9 @@ pub(super) fn lower_str_join_sep_expr(
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
     if let Some(sep_id) = planner_const_string_id(planner, &sep) {
-        return lower_str_join_const_pair(parts_ids, sep, sep_id, planner);
+        return super::expr_lowering_value_lowering::lower_str_join_const_pair(
+            parts_ids, sep, sep_id, planner,
+        );
     }
     match sep {
         PExpr::Begin { mut exprs, .. } => {
@@ -377,7 +379,9 @@ pub(super) fn lower_bytes_join_parts_term_with_aliases(
         &global_vec_aliases,
         planner,
     )? {
-        return lower_bytes_join_const_parts(parts_ids, planner);
+        return super::expr_lowering_value_lowering::lower_bytes_join_const_parts(
+            parts_ids, planner,
+        );
     }
 
     let Some(xs) = parts_t.as_proper_list() else {

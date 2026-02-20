@@ -16,6 +16,13 @@ use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
+#[path = "patch_parse.rs"]
+mod patch_parse;
+#[path = "patch_semantic.rs"]
+mod patch_semantic;
+
+use patch_semantic::{hash32_hex, path_steps_to_term, resolve_node_id_path, semantic_node_id};
+
 #[derive(Debug, Error)]
 pub enum PatchError {
     #[error("patch parse error: {0}")]
@@ -111,141 +118,6 @@ struct AppliedSemanticEdit {
     new_term_hash: String,
 }
 
-fn usize_to_int_term(x: usize) -> Result<Term, PatchError> {
-    let i = i64::try_from(x).map_err(|_| PatchError::Validate("index out of range".to_string()))?;
-    Ok(Term::Int(i.into()))
-}
-
-fn path_steps_to_term(path: &[PathStep]) -> Result<Term, PatchError> {
-    let mut steps = Vec::with_capacity(path.len());
-    for st in path {
-        let t = match st {
-            PathStep::Form(i) => Term::Vector(vec![Term::symbol(":form"), usize_to_int_term(*i)?]),
-            PathStep::PairCar => Term::Vector(vec![Term::symbol(":pair-car")]),
-            PathStep::PairCdr => Term::Vector(vec![Term::symbol(":pair-cdr")]),
-            PathStep::Vec(i) => Term::Vector(vec![Term::symbol(":vec"), usize_to_int_term(*i)?]),
-            PathStep::Map(k) => Term::Vector(vec![Term::symbol(":map"), k.clone()]),
-        };
-        steps.push(t);
-    }
-    Ok(Term::Vector(steps))
-}
-
-fn hash32_hex(h: [u8; 32]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(64);
-    for b in h {
-        out.push(HEX[(b >> 4) as usize] as char);
-        out.push(HEX[(b & 0x0f) as usize] as char);
-    }
-    out
-}
-
-fn semantic_node_id(module_path: &str, path: &[PathStep]) -> Result<String, PatchError> {
-    let path_term = path_steps_to_term(path)?;
-    let path_repr = print_term(&path_term);
-    let mut h = blake3::Hasher::new();
-    h.update(b"GCv0.2\0semantic-node-id\0");
-    h.update(module_path.as_bytes());
-    h.update(b"\0");
-    h.update(path_repr.as_bytes());
-    Ok(h.finalize().to_hex().to_string())
-}
-
-fn term_tag(t: &Term) -> &'static str {
-    match t {
-        Term::Nil => "nil",
-        Term::Bool(_) => "bool",
-        Term::Int(_) => "int",
-        Term::Str(_) => "str",
-        Term::Bytes(_) => "bytes",
-        Term::Symbol(_) => "sym",
-        Term::Pair(_, _) => "pair",
-        Term::Vector(_) => "vec",
-        Term::Map(_) => "map",
-    }
-}
-
-fn collect_term_nodes(
-    module_path: &str,
-    path: &mut Vec<PathStep>,
-    t: &Term,
-    out: &mut Vec<SemanticNodeRecord>,
-) -> Result<(), PatchError> {
-    let node_id = semantic_node_id(module_path, path)?;
-    let path_term = path_steps_to_term(path)?;
-    let path_repr = print_term(&path_term);
-    out.push(SemanticNodeRecord {
-        module_path: module_path.to_string(),
-        node_id,
-        path: path_term,
-        path_repr,
-        term_tag: term_tag(t).to_string(),
-        term_hash: hash32_hex(hash_term(t)),
-    });
-    match t {
-        Term::Pair(a, d) => {
-            path.push(PathStep::PairCar);
-            collect_term_nodes(module_path, path, a, out)?;
-            path.pop();
-            path.push(PathStep::PairCdr);
-            collect_term_nodes(module_path, path, d, out)?;
-            path.pop();
-        }
-        Term::Vector(xs) => {
-            for (i, child) in xs.iter().enumerate() {
-                path.push(PathStep::Vec(i));
-                collect_term_nodes(module_path, path, child, out)?;
-                path.pop();
-            }
-        }
-        Term::Map(m) => {
-            for (k, child) in m {
-                path.push(PathStep::Map(k.0.clone()));
-                collect_term_nodes(module_path, path, child, out)?;
-                path.pop();
-            }
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
-fn semantic_node_index_for_forms(
-    module_path: &str,
-    forms: &[Term],
-) -> Result<Vec<SemanticNodeRecord>, PatchError> {
-    let mut out = Vec::new();
-    for (i, form) in forms.iter().enumerate() {
-        let mut path = vec![PathStep::Form(i)];
-        collect_term_nodes(module_path, &mut path, form, &mut out)?;
-    }
-    Ok(out)
-}
-
-fn resolve_node_id_path(
-    module_path: &str,
-    forms: &[Term],
-    node_id: &str,
-) -> Result<Vec<PathStep>, PatchError> {
-    let nodes = semantic_node_index_for_forms(module_path, forms)?;
-    let mut matches = nodes
-        .into_iter()
-        .filter(|n| n.node_id == node_id)
-        .collect::<Vec<_>>();
-    if matches.is_empty() {
-        return Err(PatchError::Validate(format!(
-            "replace-node-id unknown :node-id {node_id} in module {module_path}"
-        )));
-    }
-    if matches.len() > 1 {
-        return Err(PatchError::Validate(format!(
-            "replace-node-id ambiguous :node-id {node_id} in module {module_path}"
-        )));
-    }
-    parse_path(&matches.remove(0).path)
-}
-
 pub fn semantic_node_index_for_module_with_frontend(
     module_path: &str,
     src: &str,
@@ -253,10 +125,18 @@ pub fn semantic_node_index_for_module_with_frontend(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<Vec<SemanticNodeRecord>, PatchError> {
-    let forms = parse_canonicalize_module_src(src, frontend, step_limit, mem_limits)?;
-    semantic_node_index_for_forms(module_path, &forms)
+    patch_semantic::semantic_node_index_for_module_with_frontend(
+        module_path,
+        src,
+        frontend,
+        step_limit,
+        mem_limits,
+    )
 }
 
+fn parse_path(t: &Term) -> Result<Vec<PathStep>, PatchError> {
+    patch_parse::parse_path(t)
+}
 struct SelfhostPatchToolchain {
     ctx: EvalCtx,
     error_token: SealId,
@@ -1277,242 +1157,5 @@ impl<'a> ReplaceTarget<'a> {
                 }
             }
         }
-    }
-}
-
-impl Patch {
-    fn from_term(t: &Term) -> Result<Self, PatchError> {
-        let Term::Map(m) = t else {
-            return Err(PatchError::Validate("patch must be a map".to_string()));
-        };
-        let version = get_int(m, ":version")?.unwrap_or(1);
-        let intent = get_str(m, ":intent")?.unwrap_or_else(|| "".to_string());
-        let provenance = m
-            .get(&TermOrdKey(Term::Symbol(":provenance".to_string())))
-            .cloned()
-            .unwrap_or(Term::Map(BTreeMap::new()));
-        let ops_t = m
-            .get(&TermOrdKey(Term::Symbol(":ops".to_string())))
-            .ok_or_else(|| PatchError::Validate("missing :ops".to_string()))?;
-        let Term::Vector(ops) = ops_t else {
-            return Err(PatchError::Validate(":ops must be a vector".to_string()));
-        };
-        let mut parsed = Vec::new();
-        for op in ops {
-            parsed.push(parse_op(op)?);
-        }
-        Ok(Self {
-            version,
-            intent,
-            provenance,
-            ops: parsed,
-        })
-    }
-}
-
-fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
-    let Term::Map(m) = t else {
-        return Err(PatchError::Validate("op must be a map".to_string()));
-    };
-    let op = match m.get(&TermOrdKey(Term::Symbol(":op".to_string()))) {
-        Some(Term::Symbol(s)) => s.as_str(),
-        Some(x) => {
-            return Err(PatchError::Validate(format!(
-                ":op must be symbol, got {}",
-                print_term(x)
-            )));
-        }
-        None => return Err(PatchError::Validate("missing :op".to_string())),
-    };
-    match op {
-        ":replace-node" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("replace-node missing :module-path".to_string())
-            })?;
-            let path_t = m
-                .get(&TermOrdKey(Term::Symbol(":path".to_string())))
-                .ok_or_else(|| PatchError::Validate("replace-node missing :path".to_string()))?;
-            let path = parse_path(path_t)?;
-            let new_term = m
-                .get(&TermOrdKey(Term::Symbol(":new".to_string())))
-                .ok_or_else(|| PatchError::Validate("replace-node missing :new".to_string()))?
-                .clone();
-            Ok(PatchOp::ReplaceNode {
-                module_path,
-                path,
-                new_term,
-            })
-        }
-        ":replace-node-id" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("replace-node-id missing :module-path".to_string())
-            })?;
-            let node_id = get_str(m, ":node-id")?.ok_or_else(|| {
-                PatchError::Validate("replace-node-id missing :node-id".to_string())
-            })?;
-            if node_id.trim().is_empty() {
-                return Err(PatchError::Validate(
-                    "replace-node-id :node-id must be non-empty".to_string(),
-                ));
-            }
-            let new_term = m
-                .get(&TermOrdKey(Term::Symbol(":new".to_string())))
-                .ok_or_else(|| PatchError::Validate("replace-node-id missing :new".to_string()))?
-                .clone();
-            Ok(PatchOp::ReplaceNodeId {
-                module_path,
-                node_id,
-                new_term,
-            })
-        }
-        ":add-module" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("add-module missing :module-path".to_string())
-            })?;
-            let content_t = m
-                .get(&TermOrdKey(Term::Symbol(":content".to_string())))
-                .ok_or_else(|| PatchError::Validate("add-module missing :content".to_string()))?;
-            let content = match content_t {
-                Term::Str(s) => ModuleContent::Source(s.clone()),
-                Term::Vector(xs) => ModuleContent::Forms(xs.clone()),
-                _ => {
-                    return Err(PatchError::Validate(
-                        ":content must be string or vector".to_string(),
-                    ));
-                }
-            };
-            Ok(PatchOp::AddModule {
-                module_path,
-                content,
-            })
-        }
-        ":remove-module" => {
-            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
-                PatchError::Validate("remove-module missing :module-path".to_string())
-            })?;
-            Ok(PatchOp::RemoveModule { module_path })
-        }
-        ":update-manifest" => {
-            let set = m
-                .get(&TermOrdKey(Term::Symbol(":set".to_string())))
-                .cloned();
-            let obligations_add = get_sym_vec(m, ":obligations-add")?;
-            let obligations_remove = get_sym_vec(m, ":obligations-remove")?;
-            let tests_add = get_sym_vec(m, ":tests-add")?;
-            let tests_remove = get_sym_vec(m, ":tests-remove")?;
-            let caps_policy = get_str(m, ":caps-policy")?;
-            Ok(PatchOp::UpdateManifest {
-                set,
-                obligations_add,
-                obligations_remove,
-                tests_add,
-                tests_remove,
-                caps_policy,
-            })
-        }
-        other => Err(PatchError::Validate(format!("unknown op {other}"))),
-    }
-}
-
-fn parse_path(t: &Term) -> Result<Vec<PathStep>, PatchError> {
-    let Term::Vector(steps) = t else {
-        return Err(PatchError::Validate(":path must be a vector".to_string()));
-    };
-    let mut out = Vec::new();
-    for s in steps {
-        let Term::Vector(items) = s else {
-            return Err(PatchError::Validate(
-                "path step must be a vector".to_string(),
-            ));
-        };
-        if items.is_empty() {
-            return Err(PatchError::Validate("empty path step".to_string()));
-        }
-        let tag = match &items[0] {
-            Term::Symbol(x) => x.as_str(),
-            other => {
-                return Err(PatchError::Validate(format!(
-                    "bad path tag {}",
-                    print_term(other)
-                )));
-            }
-        };
-        match tag {
-            ":form" => {
-                if items.len() != 2 {
-                    return Err(PatchError::Validate(":form expects 1 arg".to_string()));
-                }
-                let idx = term_to_usize(&items[1])?;
-                out.push(PathStep::Form(idx));
-            }
-            ":pair-car" => out.push(PathStep::PairCar),
-            ":pair-cdr" => out.push(PathStep::PairCdr),
-            ":vec" => {
-                if items.len() != 2 {
-                    return Err(PatchError::Validate(":vec expects 1 arg".to_string()));
-                }
-                out.push(PathStep::Vec(term_to_usize(&items[1])?));
-            }
-            ":map" => {
-                if items.len() != 2 {
-                    return Err(PatchError::Validate(":map expects 1 arg".to_string()));
-                }
-                out.push(PathStep::Map(items[1].clone()));
-            }
-            other => return Err(PatchError::Validate(format!("unknown path step {other}"))),
-        }
-    }
-    Ok(out)
-}
-
-fn term_to_usize(t: &Term) -> Result<usize, PatchError> {
-    match t {
-        Term::Int(i) => i
-            .to_usize()
-            .ok_or_else(|| PatchError::Validate("index out of range".to_string())),
-        _ => Err(PatchError::Validate("index must be int".to_string())),
-    }
-}
-
-fn get_int(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<u64>, PatchError> {
-    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
-        None => Ok(None),
-        Some(Term::Int(i)) => {
-            Ok(Some(i.to_u64().ok_or_else(|| {
-                PatchError::Validate(format!("{k} out of range"))
-            })?))
-        }
-        Some(x) => Err(PatchError::Validate(format!(
-            "{k} must be int, got {}",
-            print_term(x)
-        ))),
-    }
-}
-
-fn get_str(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Option<String>, PatchError> {
-    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
-        None => Ok(None),
-        Some(Term::Str(s)) => Ok(Some(s.clone())),
-        Some(x) => Err(PatchError::Validate(format!(
-            "{k} must be string, got {}",
-            print_term(x)
-        ))),
-    }
-}
-
-fn get_sym_vec(m: &BTreeMap<TermOrdKey, Term>, k: &str) -> Result<Vec<String>, PatchError> {
-    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
-        None => Ok(Vec::new()),
-        Some(Term::Vector(xs)) => Ok(xs
-            .iter()
-            .filter_map(|t| match t {
-                Term::Symbol(s) => Some(s.clone()),
-                _ => None,
-            })
-            .collect()),
-        Some(x) => Err(PatchError::Validate(format!(
-            "{k} must be vector, got {}",
-            print_term(x)
-        ))),
     }
 }
