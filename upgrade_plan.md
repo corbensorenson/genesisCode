@@ -5,7 +5,7 @@ Last updated: 2026-02-20
 This file contains only unresolved findings from the latest fine-tooth-comb red-team pass.
 Completed work is intentionally removed.
 
-Open checklist items: 3
+Open checklist items: 2
 
 ## P0 - Self-Hosted v1 Blockers
 
@@ -124,15 +124,15 @@ Open checklist items: 3
   - Add richer deterministic task graph support suitable for agent-authored project workflows (build/run/bench/lint/custom task contracts).
   - Preserve deterministic task resolution and policy boundaries.
 
-- [ ] P2.3 Reduce high-churn large-file hotspots to improve agent editability and reviewability.
+- [x] P2.3 Reduce high-churn large-file hotspots to improve agent editability and reviewability.
   Progress checklist:
   - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` into domain command modules.
   - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_host.rs` to keep editor runtime orchestration thin.
   - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/expr_lowering.rs` by lowering stage families.
   - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` by obligation family executors.
   - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` by patch artifact/merge/apply surfaces.
-  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` by evaluator phase boundaries.
-  - [ ] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` by parser/lowering/runtime bridge layers.
+  - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` by evaluator phase boundaries.
+  - [x] Decompose `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` by parser/lowering/runtime bridge layers.
   Evidence:
   - Completed this pass:
     - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/cli_args.rs` into domain modules:
@@ -154,9 +154,18 @@ Open checklist items: 3
       - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` = 1161
       - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/patch_semantic.rs` = 147
       - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/patch_parse.rs` = 244
+    - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` by evaluator phase boundaries:
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` = 781
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval_prims.rs` = 772
+    - Split `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` by parser/lowering/runtime bridge layers:
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` = 836
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/coreform_bridge.rs` = 219
+      - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/tests.rs` = 541
   - `wc -l` current hotspots:
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` = 1587
-    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` = 1549
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/lib.rs` = 836
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_wasm/src/tests.rs` = 541
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval.rs` = 781
+    - `/Users/corbensorenson/Documents/genesisCode/crates/gc_kernel/src/eval_prims.rs` = 772
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_patches/src/lib.rs` = 1161
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/expr_lowering.rs` = 228
     - `/Users/corbensorenson/Documents/genesisCode/crates/gc_obligations/src/obligation_exec.rs` = 695
