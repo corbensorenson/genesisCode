@@ -14,6 +14,7 @@ mod runner_gpu_host;
 mod runner_host_bridge;
 mod runner_io_ops;
 mod runner_pkg_payload;
+mod runner_plugin_schema;
 mod runner_refs_ops;
 mod runner_store_ops;
 mod runner_sync_payload;

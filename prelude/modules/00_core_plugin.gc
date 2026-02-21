@@ -1,21 +1,41 @@
+(def core/plugin::typed-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote host/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
+
 (def core/plugin::command
   (fn (plugin)
     (fn (command)
       (fn (payload)
-        (((core/effect::perform (quote host/plugin::command))
-          {
-            :command command
-            :payload payload
-            :plugin plugin})
-          (fn (resp) (core/effect::pure resp)))))))
+        (((((core/plugin::typed-command plugin) command) nil) nil) payload)))))
+
+(def core/plugin::typed-editor-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote editor/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
 
 (def core/plugin::editor-command
   (fn (plugin)
     (fn (command)
       (fn (payload)
-        (((core/effect::perform (quote editor/plugin::command))
-          {
-            :command command
-            :payload payload
-            :plugin plugin})
-          (fn (resp) (core/effect::pure resp)))))))
+        (((((core/plugin::typed-editor-command plugin) command) nil) nil) payload)))))

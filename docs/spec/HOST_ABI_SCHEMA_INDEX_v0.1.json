@@ -1300,6 +1300,22 @@
           {
             "name": ":payload",
             "type": "term"
+          },
+          {
+            "constraints": [
+              "alias :request-schema accepted",
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":request-schema-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "alias :response-schema accepted",
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":response-schema-id",
+            "type": "string|symbol"
           }
         ],
         "required_fields": [
@@ -2513,6 +2529,22 @@
           {
             "name": ":payload",
             "type": "term"
+          },
+          {
+            "constraints": [
+              "alias :request-schema accepted",
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":request-schema-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "alias :response-schema accepted",
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":response-schema-id",
+            "type": "string|symbol"
           }
         ],
         "required_fields": [

@@ -7,6 +7,7 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - `docs/spec/HOST_ABI.md`
 - `docs/spec/HOST_ABI_INDEX_v0.1.md`
 - `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.md`
+- `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`
 - `docs/spec/HOST_BRIDGE_PROTOCOL.md`
 - `docs/spec/CAPS_TOML.md`
 - `docs/spec/LIMITS.md`

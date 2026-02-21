@@ -1,5 +1,8 @@
 use super::*;
 use crate::runner_host_bridge::{BridgeError, call_host_bridge};
+use crate::runner_plugin_schema::{
+    parse_plugin_schema_ids, validate_plugin_request_schema, validate_plugin_response_schema,
+};
 
 fn backend_unavailable_message(op: &str) -> String {
     if op.starts_with("gpu/compute::") || op.starts_with("gfx/gpu::") {
@@ -104,6 +107,19 @@ fn payload_required_field(payload: &Term, op: &str, key: &str) -> Result<Term, E
         )));
     };
     Ok(value.clone())
+}
+
+fn payload_optional_field(
+    payload: &Term,
+    op: &str,
+    key: &str,
+) -> Result<Option<Term>, EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    Ok(mm.get(&TermOrdKey(Term::symbol(key))).cloned())
 }
 
 fn payload_optional_bool_field(
@@ -214,6 +230,21 @@ fn plugin_command_allowlist_from_policy(
     .map(Some)
 }
 
+fn plugin_schema_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Option<Vec<String>>, String> {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    if !pol.extra.contains_key("allow_schema_ids") {
+        return Ok(None);
+    }
+    parse_nonempty_string_array(
+        Some(pol),
+        "allow_schema_ids",
+        "allow_schema_ids must be configured with at least one schema id",
+    )
+    .map(Some)
+}
+
 fn capability_host_plugin_command(
     op: &str,
     payload: &Term,
@@ -222,6 +253,7 @@ fn capability_host_plugin_command(
 ) -> Result<Value, EffectsError> {
     let plugin = payload_required_string_or_symbol_field(payload, op, ":plugin")?;
     let command = payload_required_string_or_symbol_field(payload, op, ":command")?;
+    let schema_ids = parse_plugin_schema_ids(payload, op)?;
     let allow_plugins = match plugin_allowlist_from_policy(pol, op) {
         Ok(v) => v,
         Err(e) => {
@@ -254,13 +286,78 @@ fn capability_host_plugin_command(
             Some(op),
         ));
     }
+    if schema_ids.has_any() {
+        let allow_schema_ids = match plugin_schema_allowlist_from_policy(pol) {
+            Ok(Some(v)) => v,
+            Ok(None) => {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/caps/policy-error",
+                    format!(
+                        "{op} typed plugin schemas require per-op allow_schema_ids allowlist in caps.toml"
+                    ),
+                    Some(op),
+                ));
+            }
+            Err(e) => {
+                return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+            }
+        };
+        if let Some(schema_id) = schema_ids.request_schema_id.as_deref()
+            && !allow_schema_ids.iter().any(|allowed| allowed == schema_id)
+        {
+            return Ok(mk_error(
+                error_tok,
+                "core/caps/policy-error",
+                format!(
+                    "{op} denied request schema `{schema_id}`; configure allow_schema_ids in caps.toml op policy"
+                ),
+                Some(op),
+            ));
+        }
+        if let Some(schema_id) = schema_ids.response_schema_id.as_deref()
+            && !allow_schema_ids.iter().any(|allowed| allowed == schema_id)
+        {
+            return Ok(mk_error(
+                error_tok,
+                "core/caps/policy-error",
+                format!(
+                    "{op} denied response schema `{schema_id}`; configure allow_schema_ids in caps.toml op policy"
+                ),
+                Some(op),
+            ));
+        }
+    }
+    let plugin_payload = payload_optional_field(payload, op, ":payload")?.unwrap_or(Term::Nil);
+    if let Some(schema_id) = schema_ids.request_schema_id.as_deref()
+        && let Err(err) = validate_plugin_request_schema(schema_id, &plugin_payload, &plugin, &command)
+    {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/schema-error",
+            format!("{op} request schema `{schema_id}` validation failed: {err}"),
+            Some(op),
+        ));
+    }
     let family = if op.starts_with("editor/") {
         "editor"
     } else {
         "host/plugin"
     };
     match call_host_bridge(family, op, payload, pol) {
-        Ok(resp) => Ok(Value::Data(resp)),
+        Ok(resp) => {
+            if let Some(schema_id) = schema_ids.response_schema_id.as_deref()
+                && let Err(err) = validate_plugin_response_schema(schema_id, &resp)
+            {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/caps/schema-error",
+                    format!("{op} response schema `{schema_id}` validation failed: {err}"),
+                    Some(op),
+                ));
+            }
+            Ok(Value::Data(resp))
+        }
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
     }
 }

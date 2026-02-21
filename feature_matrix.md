@@ -28,7 +28,7 @@ Legend:
 | Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Raw socket/stream networking primitives | ✅ (first-class `core/net::*` socket wrappers + required gauntlet domain coverage) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ⚠️ (client-centric `io/net::*` today; no first-class listen/accept server contracts yet) | ⚠️ | ✅ | ✅ | ✅ |
-| Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers for `host/plugin::command` + `editor/plugin::command`) | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | WebXR runtime primitives (session/frame/input/haptics) | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | Durable data capability family (`io/db::*`) | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -65,7 +65,6 @@ Known GenesisCode gaps (current red-team focus):
 - P1.4 durable data capability family (`io/db::*`)
 - P1.5 deterministic deployment target bundling (`gcpm build --target`)
 - P1.6 gauntlet domain expansion for browser/xr/server/data/deploy
-- P2.1 typed plugin ABI schemas
 - P2.2 workspace semantic graph/refactor API
 - P2.3 deterministic runtime profiling for non-gfx workloads
 - P2.4 media/asset pipeline contracts

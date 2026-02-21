@@ -296,7 +296,19 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                     field(":plugin", "string|symbol", ["allow_plugins policy required"]),
                     field(":command", "string|symbol"),
                 ],
-                "optional_fields": [field(":payload", "term")],
+                "optional_fields": [
+                    field(":payload", "term"),
+                    field(
+                        ":request-schema-id",
+                        "string|symbol",
+                        ["alias :request-schema accepted", "requires allow_schema_ids when present"],
+                    ),
+                    field(
+                        ":response-schema-id",
+                        "string|symbol",
+                        ["alias :response-schema accepted", "requires allow_schema_ids when present"],
+                    ),
+                ],
             }
         },
         "editor/plugin::command": {
@@ -305,7 +317,19 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                     field(":plugin", "string|symbol", ["allow_plugins policy required"]),
                     field(":command", "string|symbol"),
                 ],
-                "optional_fields": [field(":payload", "term")],
+                "optional_fields": [
+                    field(":payload", "term"),
+                    field(
+                        ":request-schema-id",
+                        "string|symbol",
+                        ["alias :request-schema accepted", "requires allow_schema_ids when present"],
+                    ),
+                    field(
+                        ":response-schema-id",
+                        "string|symbol",
+                        ["alias :response-schema accepted", "requires allow_schema_ids when present"],
+                    ),
+                ],
             }
         },
         "core/store::put": {

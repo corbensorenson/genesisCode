@@ -68,8 +68,23 @@ fn low_level_caps_wrappers_emit_expected_ops() {
         :process_stdin_write ((core/process::stdin-write "proc-1") "stdin")
         :time_now (core/time::now nil)
         :plugin_host_command (((core/plugin::command "demo") "run") {:x 1})
+        :plugin_host_typed_command
+          (((((core/plugin::typed-command "demo") "run")
+             "genesis/plugin.request.exec.v1")
+            "genesis/plugin.response.result.v1")
+           {:args ["--help"]})
         :plugin_editor_command (((core/plugin::editor-command "demo") "run") {:x 1})
+        :plugin_editor_typed_command
+          (((((core/plugin::typed-editor-command "demo") "run")
+             "genesis/plugin.request.exec.v1")
+            "genesis/plugin.response.result.v1")
+           {:args ["--help"]})
         :editor_plugin_host_command (((core/editor/plugin::host-command "demo") "run") {:x 1})
+        :editor_plugin_host_typed_command
+          (((((core/editor/plugin::typed-host-command "demo") "run")
+             "genesis/plugin.request.exec.v1")
+            "genesis/plugin.response.result.v1")
+           {:args ["--help"]})
         :gpu_create_kernel (core/gpu/compute::create-kernel {:label "kernel"})
       }
     "#;
@@ -131,7 +146,67 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":process_stdin_write", "sys/process::stdin-write");
     expect_op(":time_now", "sys/time::now");
     expect_op(":plugin_host_command", "host/plugin::command");
+    expect_op(":plugin_host_typed_command", "host/plugin::command");
     expect_op(":plugin_editor_command", "editor/plugin::command");
+    expect_op(":plugin_editor_typed_command", "editor/plugin::command");
     expect_op(":editor_plugin_host_command", "editor/plugin::command");
+    expect_op(":editor_plugin_host_typed_command", "editor/plugin::command");
     expect_op(":gpu_create_kernel", "gpu/compute::create-kernel");
+}
+
+#[test]
+fn typed_plugin_wrappers_emit_schema_fields() {
+    let src = r#"
+      {
+        :typed_host
+          (((((core/plugin::typed-command "demo") "run")
+             "genesis/plugin.request.exec.v1")
+            "genesis/plugin.response.result.v1")
+           {:args ["--help"]})
+        :typed_editor
+          (((((core/plugin::typed-editor-command "demo") "run")
+             "genesis/plugin.request.exec.v1")
+            "genesis/plugin.response.result.v1")
+           {:args ["--help"]})
+      }
+    "#;
+
+    let forms = canonicalize_module(parse_module(src).expect("parse")).expect("canonicalize");
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let value = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let Value::Map(m) = value else {
+        panic!("expected map");
+    };
+
+    let host_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":typed_host")))
+            .expect("typed_host")
+            .clone(),
+    );
+    let editor_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":typed_editor")))
+            .expect("typed_editor")
+            .clone(),
+    );
+
+    let expect_schema_fields = |req: &EffectRequest| {
+        let Term::Map(payload) = &req.payload else {
+            panic!("expected payload map");
+        };
+        assert_eq!(
+            payload.get(&TermOrdKey(Term::symbol(":request-schema-id"))),
+            Some(&Term::Str("genesis/plugin.request.exec.v1".to_string()))
+        );
+        assert_eq!(
+            payload.get(&TermOrdKey(Term::symbol(":response-schema-id"))),
+            Some(&Term::Str("genesis/plugin.response.result.v1".to_string()))
+        );
+    };
+
+    assert_eq!(host_req.op, "host/plugin::command");
+    expect_schema_fields(&host_req);
+    assert_eq!(editor_req.op, "editor/plugin::command");
+    expect_schema_fields(&editor_req);
 }

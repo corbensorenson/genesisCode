@@ -325,10 +325,16 @@ Determinism:
     - `:command` (string or symbol)
   - Optional payload field:
     - `:payload` (arbitrary CoreForm term, forwarded to bridge)
+    - `:request-schema-id` (string or symbol, alias `:request-schema`)
+    - `:response-schema-id` (string or symbol, alias `:response-schema`)
+      - when either schema field is present, request/response are validated against
+        schema-id contracts in `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`.
   - Required per-op policy controls:
     - `allow_plugins` (array<string>): explicit plugin allowlist.
   - Optional per-op policy controls:
     - `allow_commands` (array<string>): optional command allowlist.
+    - `allow_schema_ids` (array<string>): required when typed schema ids are used;
+      every request/response schema id must be allowlisted.
   - Bridge execution:
     - same deterministic bridge framing contract as other bridge-backed domains (`docs/spec/HOST_BRIDGE_PROTOCOL.md`).
     - supports `bridge_cmd` / `bridge_args` and WASI bridge profile response controls.

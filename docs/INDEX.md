@@ -43,6 +43,7 @@ This is the canonical entrypoint for project documentation.
 - Effects/policies/runtime:
   - `docs/spec/CAPS_TOML.md`
   - `docs/spec/HOST_ABI.md`
+  - `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`
   - `docs/spec/LIMITS.md`
   - `docs/spec/DOMAIN_KITS_v0.1.md`
   - `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`

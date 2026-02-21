@@ -195,6 +195,7 @@ Supported keys:
 - `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): optional command allowlist for `host/plugin::command` and `editor/plugin::command`.
+- `allow_schema_ids` (array<string>): required when typed plugin schemas are used (`:request-schema-id` / `:response-schema-id`); every schema id must be allowlisted.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -220,6 +221,10 @@ bridge_cmd = "./tools/editor_bridge.sh"
 bridge_args = ["--mode", "stdio-coreform"]
 allow_plugins = ["demo-plugin"]
 allow_commands = ["run", "health"]
+allow_schema_ids = [
+  "genesis/plugin.request.exec.v1",
+  "genesis/plugin.response.result.v1",
+]
 
 [op."gfx/gpu::create-buffer"]
 base_dir = "./workspace"
