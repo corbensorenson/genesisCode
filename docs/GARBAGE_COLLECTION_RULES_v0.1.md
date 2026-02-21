@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # Garbage Collection Rules v0.1
 
 Safe pruning for the local Genesis store using reachability closures.

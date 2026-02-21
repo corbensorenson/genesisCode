@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # GenesisPkg + GenesisGraph CLI Spec v0.1
 
 Exact commands, flags, lock snapshot format, and expected behavior.

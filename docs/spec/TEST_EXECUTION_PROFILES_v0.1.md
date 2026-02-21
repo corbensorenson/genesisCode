@@ -71,6 +71,21 @@ Strict/full profile runtime reports:
     - `dev-fast` and `prepush-standard` remain opt-in via
       `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
 
+### AI Iteration SLO Contention Policy
+
+- `scripts/check_ai_iteration_slo.sh` enforces budgets using **median-of-samples** per metric,
+  not single-shot wall time.
+- Default sample counts are tuned for contention robustness without excessive loop time:
+  - `incremental_warm_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM=3`
+  - `changed_fast_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST=2`
+  - `core_suite_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE=2`
+  - `gcpm_lock_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK=2`
+  - `gcpm_env_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=2`
+- Reports include raw sample vectors + spread telemetry and contention warnings
+  (`GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT`, default `60`).
+- Baseline regression gates continue to use history p95, but compare against
+  median-per-run metrics to reduce host contention noise.
+
 ## CI Profiles
 
 - `fast`: runs `scripts/test_changed_fast.sh` (default local/CI fast path)

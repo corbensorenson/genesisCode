@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # Remote Registry Minimal Protocol v0.1
 
 HTTP+JSON control messages, binary artifact payloads.

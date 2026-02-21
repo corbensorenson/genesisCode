@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # Registry Object Reachability Rules v0.1
 
 What "reachable" means for shallow export, full export, and policy-gated publish.
@@ -209,4 +211,3 @@ Use this closure planner for:
 - publish refusal when policy-required evidence missing
 - dependency inclusion behavior
 - attestation inclusion for tags
-

@@ -14,14 +14,17 @@ root = pathlib.Path(sys.argv[1])
 upgrade_plan = root / "upgrade_plan.md"
 feature_matrix = root / "feature_matrix.md"
 docs_index = root / "docs" / "INDEX.md"
+agent_onboarding = root / "docs" / "AGENT_ONBOARDING_v0.1.md"
+deprecation_map = root / "docs" / "DEPRECATION_MAP_v0.1.md"
 
-for p in (upgrade_plan, feature_matrix, docs_index):
+for p in (upgrade_plan, feature_matrix, docs_index, agent_onboarding, deprecation_map):
     if not p.is_file():
         raise SystemExit(f"planning-docs-fresh: missing file: {p}")
 
 upgrade_text = upgrade_plan.read_text(encoding="utf-8")
 feature_text = feature_matrix.read_text(encoding="utf-8")
 index_text = docs_index.read_text(encoding="utf-8")
+agent_onboarding_text = agent_onboarding.read_text(encoding="utf-8")
 
 upgrade_match = re.search(r"^Last updated:\s+(\d{4}-\d{2}-\d{2})$", upgrade_text, re.MULTILINE)
 if not upgrade_match:
@@ -53,13 +56,28 @@ if index_date < upgrade_date:
 
 if "upgrade_plan.md" not in index_text or "feature_matrix.md" not in index_text:
     raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference upgrade_plan.md and feature_matrix.md")
+if "AGENT_ONBOARDING_v0.1.md" not in index_text:
+    raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/AGENT_ONBOARDING_v0.1.md")
+if "DEPRECATION_MAP_v0.1.md" not in index_text:
+    raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/DEPRECATION_MAP_v0.1.md")
 
 if "/upgrade_plan.md" not in feature_text:
     raise SystemExit("planning-docs-fresh: feature_matrix.md evidence list must reference upgrade_plan.md")
+
+for required in (
+    "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
+    "docs/spec/GCPM_BUNDLE_v0.1.md",
+    "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
+    "docs/spec/TESTING_BUNDLE_v0.1.md",
+):
+    if required not in agent_onboarding_text:
+        raise SystemExit(
+            "planning-docs-fresh: docs/AGENT_ONBOARDING_v0.1.md missing canonical bundle reference: "
+            + required
+        )
 
 print(
     "planning-docs-fresh: ok "
     f"(upgrade_plan={upgrade_date.isoformat()} feature_matrix={feature_date.isoformat()} docs_index={index_date.isoformat()})"
 )
 PY
-

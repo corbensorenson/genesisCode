@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # GenesisGraph VCS + GenesisPkg Sharing System (v0.2 Addendum)
 
 Audience: Codex agent implementing runtime/tooling.

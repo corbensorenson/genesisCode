@@ -6,6 +6,7 @@ This is the canonical entrypoint for project documentation.
 
 ## Start Here
 
+- `docs/AGENT_ONBOARDING_v0.1.md` - minimal stable retrieval path for AI coding agents.
 - `docs/GETTING_STARTED.md` - local setup and first workflows.
 - `docs/PAPER_v0.2.md` - language thesis and architecture.
 - `docs/TECH_HANDOFF.md` - implementation handoff details.
@@ -69,6 +70,7 @@ This is the canonical entrypoint for project documentation.
 
 ## Legacy/Bootstrap Reference
 
+- `docs/DEPRECATION_MAP_v0.1.md` - explicit superseded/overlapping doc mapping.
 - `docs/spec/BOOTSTRAP_OLD.md` - bootstrap/parity historical reference only.
 - `docs/spec/PARITY_HARNESS.md` - parity binaries and migration boundaries.
 - `old_bootstrap/` - archived bootstrap artifacts and compatibility material.

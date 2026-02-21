@@ -18,6 +18,12 @@ HISTORY_OUT="${GENESIS_AI_ITERATION_SLO_HISTORY:-.genesis/perf/ai_iteration_slo_
 BASELINE_HISTORY="${GENESIS_AI_ITERATION_SLO_BASELINE:-policies/perf/ai_iteration_slo_seed_history.jsonl}"
 HISTORY_MIN_SAMPLES="${GENESIS_AI_ITERATION_SLO_MIN_HISTORY:-5}"
 REGRESSION_PERCENT="${GENESIS_AI_ITERATION_SLO_REGRESSION_PERCENT:-100}"
+SAMPLES_INCREMENTAL_WARM="${GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM:-3}"
+SAMPLES_CHANGED_FAST="${GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST:-2}"
+SAMPLES_CORE_SUITE="${GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE:-2}"
+SAMPLES_GCPM_LOCK="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK:-2}"
+SAMPLES_GCPM_ENV="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV:-2}"
+CONTENTION_WARN_PERCENT="${GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT:-60}"
 
 now_ns() {
   python3 - <<'PY'
@@ -46,6 +52,53 @@ fail() {
   exit 1
 }
 
+require_positive_int() {
+  local name="$1"
+  local value="$2"
+  [[ "$value" =~ ^[1-9][0-9]*$ ]] || fail "$name must be a positive integer (got '$value')"
+}
+
+require_non_negative_int() {
+  local name="$1"
+  local value="$2"
+  [[ "$value" =~ ^[0-9]+$ ]] || fail "$name must be a non-negative integer (got '$value')"
+}
+
+measure_ms_samples() {
+  local label="$1"
+  local sample_count="$2"
+  shift 2
+  local -a cmd=("$@")
+  local -a samples=()
+  local i csv stats
+
+  for ((i = 1; i <= sample_count; i += 1)); do
+    measure_ms "${label}" "${cmd[@]}"
+    samples+=("$MEASURE_LAST_MS")
+  done
+  csv="$(IFS=,; echo "${samples[*]}")"
+  stats="$(python3 - "$csv" <<'PY'
+import math
+import sys
+
+values = [int(x) for x in sys.argv[1].split(",") if x]
+ordered = sorted(values)
+n = len(ordered)
+mid = n // 2
+if n % 2 == 1:
+    median = ordered[mid]
+else:
+    median = int((ordered[mid - 1] + ordered[mid]) / 2.0)
+idx = max(0, min(n - 1, int(round(0.95 * (n - 1)))))
+p95 = ordered[idx]
+print(f"{median},{p95}")
+PY
+)"
+  MEASURE_LAST_SAMPLES_CSV="$csv"
+  MEASURE_LAST_MEDIAN_MS="${stats%,*}"
+  MEASURE_LAST_P95_MS="${stats#*,}"
+}
+
 profile_target_dir() {
   case "$1" in
     release) echo "release" ;;
@@ -55,6 +108,14 @@ profile_target_dir() {
 }
 
 TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
+
+require_positive_int "GENESIS_AI_ITERATION_SLO_MIN_HISTORY" "$HISTORY_MIN_SAMPLES"
+require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM" "$SAMPLES_INCREMENTAL_WARM"
+require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST" "$SAMPLES_CHANGED_FAST"
+require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE" "$SAMPLES_CORE_SUITE"
+require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK" "$SAMPLES_GCPM_LOCK"
+require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV" "$SAMPLES_GCPM_ENV"
+require_non_negative_int "GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT" "$CONTENTION_WARN_PERCENT"
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "ai-iteration-slo" --strict "$DISK_STRICT_MODE"
 
@@ -121,33 +182,43 @@ run_core_suite() {
 # One warm-up pass to amortize startup and artifact load effects.
 run_incremental_loop >/dev/null
 
-echo "ai-iteration-slo: measuring warm incremental loop"
-measure_ms incremental_warm_ms run_incremental_loop
-INCREMENTAL_WARM_MS="$MEASURE_LAST_MS"
+echo "ai-iteration-slo: measuring warm incremental loop (samples=$SAMPLES_INCREMENTAL_WARM, statistic=median)"
+measure_ms_samples incremental_warm_ms "$SAMPLES_INCREMENTAL_WARM" run_incremental_loop
+INCREMENTAL_WARM_MS="$MEASURE_LAST_MEDIAN_MS"
+INCREMENTAL_WARM_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
+INCREMENTAL_WARM_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
 
-echo "ai-iteration-slo: measuring default changed-file fast loop"
-measure_ms changed_fast_ms run_changed_fast_loop
-CHANGED_FAST_MS="$MEASURE_LAST_MS"
+echo "ai-iteration-slo: measuring default changed-file fast loop (samples=$SAMPLES_CHANGED_FAST, statistic=median)"
+measure_ms_samples changed_fast_ms "$SAMPLES_CHANGED_FAST" run_changed_fast_loop
+CHANGED_FAST_MS="$MEASURE_LAST_MEDIAN_MS"
+CHANGED_FAST_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
+CHANGED_FAST_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
 
 echo "ai-iteration-slo: warming core suite build graph"
 run_core_suite --no-run >/dev/null
 
-echo "ai-iteration-slo: measuring core suite wall-time"
-measure_ms core_suite_ms run_core_suite
-CORE_SUITE_MS="$MEASURE_LAST_MS"
+echo "ai-iteration-slo: measuring core suite wall-time (samples=$SAMPLES_CORE_SUITE, statistic=median)"
+measure_ms_samples core_suite_ms "$SAMPLES_CORE_SUITE" run_core_suite
+CORE_SUITE_MS="$MEASURE_LAST_MEDIAN_MS"
+CORE_SUITE_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
+CORE_SUITE_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
 
 echo "ai-iteration-slo: measuring gcpm lock/env iteration path"
 run_gcpm_tmp new --workspace "slo" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
-measure_ms gcpm_lock_ms run_gcpm_tmp lock --strict
-GCPM_LOCK_MS="$MEASURE_LAST_MS"
-measure_ms gcpm_env_ms run_gcpm_tmp env --profile dev
-GCPM_ENV_MS="$MEASURE_LAST_MS"
+measure_ms_samples gcpm_lock_ms "$SAMPLES_GCPM_LOCK" run_gcpm_tmp lock --strict
+GCPM_LOCK_MS="$MEASURE_LAST_MEDIAN_MS"
+GCPM_LOCK_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
+GCPM_LOCK_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
+measure_ms_samples gcpm_env_ms "$SAMPLES_GCPM_ENV" run_gcpm_tmp env --profile dev
+GCPM_ENV_MS="$MEASURE_LAST_MEDIAN_MS"
+GCPM_ENV_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
+GCPM_ENV_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
 
 mkdir -p "$(dirname "$REPORT_OUT")"
 mkdir -p "$(dirname "$HISTORY_OUT")"
 mkdir -p "$(dirname "$BASELINE_HISTORY")"
 
-python3 - "$REPORT_OUT" "$HISTORY_OUT" "$BASELINE_HISTORY" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$INCREMENTAL_WARM_MS" "$CHANGED_FAST_MS" "$CORE_SUITE_MS" "$GCPM_LOCK_MS" "$GCPM_ENV_MS" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" <<'PY'
+python3 - "$REPORT_OUT" "$HISTORY_OUT" "$BASELINE_HISTORY" "$CARGO_PROFILE" "$TARGET_PROFILE_DIR" "$DISK_STRICT_MODE" "$HISTORY_MIN_SAMPLES" "$REGRESSION_PERCENT" "$CONTENTION_WARN_PERCENT" "$INCREMENTAL_WARM_SAMPLES" "$CHANGED_FAST_SAMPLES" "$CORE_SUITE_SAMPLES" "$GCPM_LOCK_SAMPLES" "$GCPM_ENV_SAMPLES" "$BUDGET_INCREMENTAL_WARM_MS" "$BUDGET_CHANGED_FAST_MS" "$BUDGET_CORE_SUITE_MS" "$BUDGET_GCPM_LOCK_MS" "$BUDGET_GCPM_ENV_MS" <<'PY'
 import json
 import math
 import os
@@ -163,11 +234,12 @@ import time
     disk_strict_mode,
     history_min_samples_s,
     regression_percent_s,
-    incremental_warm_ms_s,
-    changed_fast_ms_s,
-    core_suite_ms_s,
-    gcpm_lock_ms_s,
-    gcpm_env_ms_s,
+    contention_warn_percent_s,
+    incremental_warm_samples_csv,
+    changed_fast_samples_csv,
+    core_suite_samples_csv,
+    gcpm_lock_samples_csv,
+    gcpm_env_samples_csv,
     budget_incremental_warm_ms_s,
     budget_changed_fast_ms_s,
     budget_core_suite_ms_s,
@@ -177,12 +249,42 @@ import time
 
 history_min_samples = int(history_min_samples_s)
 regression_percent = float(regression_percent_s)
+contention_warn_percent = int(contention_warn_percent_s)
+sample_csv = {
+    "incremental_warm_ms": incremental_warm_samples_csv,
+    "changed_fast_ms": changed_fast_samples_csv,
+    "core_suite_ms": core_suite_samples_csv,
+    "gcpm_lock_ms": gcpm_lock_samples_csv,
+    "gcpm_env_ms": gcpm_env_samples_csv,
+}
+
+def parse_samples(raw):
+    parts = [p for p in raw.split(",") if p]
+    if not parts:
+        raise SystemExit("ai-iteration-slo: empty measurement sample set")
+    values = []
+    for p in parts:
+        try:
+            v = int(p)
+        except Exception as exc:
+            raise SystemExit(f"ai-iteration-slo: invalid sample value {p!r}: {exc}") from exc
+        if v < 0:
+            raise SystemExit(f"ai-iteration-slo: negative sample value {v}")
+        values.append(v)
+    return values
+
+measurement_samples = {key: parse_samples(raw) for key, raw in sample_csv.items()}
+
+def median(values):
+    ordered = sorted(values)
+    n = len(ordered)
+    mid = n // 2
+    if n % 2 == 1:
+        return ordered[mid]
+    return int((ordered[mid - 1] + ordered[mid]) / 2.0)
+
 metrics = {
-    "incremental_warm_ms": int(incremental_warm_ms_s),
-    "changed_fast_ms": int(changed_fast_ms_s),
-    "core_suite_ms": int(core_suite_ms_s),
-    "gcpm_lock_ms": int(gcpm_lock_ms_s),
-    "gcpm_env_ms": int(gcpm_env_ms_s),
+    key: median(values) for key, values in measurement_samples.items()
 }
 budgets = {
     "incremental_warm_ms": int(budget_incremental_warm_ms_s),
@@ -199,6 +301,31 @@ def p95(values):
     ordered = sorted(values)
     idx = max(0, min(len(ordered) - 1, int(round(0.95 * (len(ordered) - 1)))))
     return ordered[idx]
+
+sample_stats = {}
+contention_warnings = []
+for key, values in measurement_samples.items():
+    ordered = sorted(values)
+    min_v = ordered[0]
+    max_v = ordered[-1]
+    med_v = median(values)
+    spread_pct = 0.0
+    if med_v > 0:
+        spread_pct = ((max_v - min_v) * 100.0) / med_v
+    sample_stats[key] = {
+        "samples": values,
+        "count": len(values),
+        "min_ms": min_v,
+        "max_ms": max_v,
+        "median_ms": med_v,
+        "p95_ms": p95(values),
+        "spread_pct": round(spread_pct, 2),
+    }
+    if len(values) > 1 and spread_pct > contention_warn_percent:
+        contention_warnings.append(
+            f"{key} sample spread {spread_pct:.2f}% exceeded contention warn threshold "
+            f"{contention_warn_percent}% (samples={values})"
+        )
 
 
 history = []
@@ -252,6 +379,12 @@ entry = {
     "disk_strict_mode": disk_strict_mode,
     "metrics": metrics,
     "budgets": budgets,
+    "sampling": {
+        "statistic": "median",
+        "contention_warn_percent": contention_warn_percent,
+        "warnings": contention_warnings,
+    },
+    "measurement_samples": sample_stats,
 }
 
 history.append(entry)
@@ -307,11 +440,11 @@ PY
 echo "ai-iteration-slo: wrote report $REPORT_OUT"
 
 echo "ai-iteration-slo: metrics"
-echo "  incremental_warm_ms=$INCREMENTAL_WARM_MS (budget=$BUDGET_INCREMENTAL_WARM_MS)"
-echo "  changed_fast_ms=$CHANGED_FAST_MS (budget=$BUDGET_CHANGED_FAST_MS)"
-echo "  core_suite_ms=$CORE_SUITE_MS (budget=$BUDGET_CORE_SUITE_MS)"
-echo "  gcpm_lock_ms=$GCPM_LOCK_MS (budget=$BUDGET_GCPM_LOCK_MS)"
-echo "  gcpm_env_ms=$GCPM_ENV_MS (budget=$BUDGET_GCPM_ENV_MS)"
+echo "  incremental_warm_ms=$INCREMENTAL_WARM_MS samples=[$INCREMENTAL_WARM_SAMPLES] sample_p95=$INCREMENTAL_WARM_SAMPLE_P95_MS (budget=$BUDGET_INCREMENTAL_WARM_MS)"
+echo "  changed_fast_ms=$CHANGED_FAST_MS samples=[$CHANGED_FAST_SAMPLES] sample_p95=$CHANGED_FAST_SAMPLE_P95_MS (budget=$BUDGET_CHANGED_FAST_MS)"
+echo "  core_suite_ms=$CORE_SUITE_MS samples=[$CORE_SUITE_SAMPLES] sample_p95=$CORE_SUITE_SAMPLE_P95_MS (budget=$BUDGET_CORE_SUITE_MS)"
+echo "  gcpm_lock_ms=$GCPM_LOCK_MS samples=[$GCPM_LOCK_SAMPLES] sample_p95=$GCPM_LOCK_SAMPLE_P95_MS (budget=$BUDGET_GCPM_LOCK_MS)"
+echo "  gcpm_env_ms=$GCPM_ENV_MS samples=[$GCPM_ENV_SAMPLES] sample_p95=$GCPM_ENV_SAMPLE_P95_MS (budget=$BUDGET_GCPM_ENV_MS)"
 
 [[ "$INCREMENTAL_WARM_MS" -le "$BUDGET_INCREMENTAL_WARM_MS" ]] || fail "warm incremental loop regression: $INCREMENTAL_WARM_MS > $BUDGET_INCREMENTAL_WARM_MS"
 [[ "$CHANGED_FAST_MS" -le "$BUDGET_CHANGED_FAST_MS" ]] || fail "changed fast loop regression: $CHANGED_FAST_MS > $BUDGET_CHANGED_FAST_MS"

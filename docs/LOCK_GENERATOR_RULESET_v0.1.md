@@ -1,3 +1,5 @@
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+
 # Default `genesis.lock` Generator Ruleset v0.1
 
 What gets written when, how locking works, and update invariants.
