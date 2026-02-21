@@ -22,9 +22,16 @@ for module in "${required_modules[@]}"; do
     echo "domain-kit-workflows: missing prelude module: prelude/modules/$module" >&2
     exit 1
   fi
-  if ! rg -q "\"$module\"" "$MANIFEST"; then
-    echo "domain-kit-workflows: manifest missing module entry: $module" >&2
-    exit 1
+  if command -v rg >/dev/null 2>&1; then
+    if ! rg -q "\"$module\"" "$MANIFEST"; then
+      echo "domain-kit-workflows: manifest missing module entry: $module" >&2
+      exit 1
+    fi
+  else
+    if ! grep -q "\"$module\"" "$MANIFEST"; then
+      echo "domain-kit-workflows: manifest missing module entry: $module" >&2
+      exit 1
+    fi
   fi
 done
 
@@ -35,9 +42,16 @@ check_ref() {
     echo "domain-kit-workflows: missing workflow file: $file" >&2
     exit 1
   fi
-  if ! rg -q "$pattern" "$file"; then
-    echo "domain-kit-workflows: expected '$pattern' in $file" >&2
-    exit 1
+  if command -v rg >/dev/null 2>&1; then
+    if ! rg -q "$pattern" "$file"; then
+      echo "domain-kit-workflows: expected '$pattern' in $file" >&2
+      exit 1
+    fi
+  else
+    if ! grep -q "$pattern" "$file"; then
+      echo "domain-kit-workflows: expected '$pattern' in $file" >&2
+      exit 1
+    fi
   fi
 }
 

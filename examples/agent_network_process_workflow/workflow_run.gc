@@ -1,7 +1,7 @@
 (def workflow/spec
   (((core/kit/network::workflow-http-process-v1 "agent_network_process_workflow")
      (((core/kit/network::http-step-v1 "https://example.test/health") "GET") []))
-    ((core/kit/network::process-step-v1 "echo") ["pong"]))
+    ((core/kit/network::process-step-v1 "echo") ["pong"])))
 
 (def prog (core/kit/network::run-http-process workflow/spec))
 

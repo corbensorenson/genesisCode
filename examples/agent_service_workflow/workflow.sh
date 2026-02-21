@@ -165,10 +165,10 @@ cat >"$CONSUMER/check_pull.gc" <<EOF
 
 (def prog
   ((core/effect::bind (core/store::has "$commit_h"))
-    (fn (present)
+    (fn (present-resp)
       (core/effect::pure
         (((core/kit/service::status-v1 ((core/map::get service/manifest) (quote :name)))
-           present)
+           ((core/map::get present-resp) (quote :present)))
           {:commit "$commit_h"})))))
 prog
 EOF
