@@ -24,13 +24,21 @@ use coreform_bridge::{
     selfhost_parse_and_canon_forms,
 };
 
+fn require_wasm_selfhost_artifact(api: &str) -> Result<(), JsValue> {
+    if cfg!(target_arch = "wasm32") {
+        return Err(js_err(
+            "selfhost/artifact-required",
+            format!(
+                "{api} requires explicit selfhost artifact input in wasm; use the corresponding *_with_artifact API"
+            ),
+        ));
+    }
+    Ok(())
+}
+
 #[wasm_bindgen]
 pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
-    if cfg!(target_arch = "wasm32") {
-        fmt_coreform_module_selfhost(src, 0)
-    } else {
-        fmt_coreform_module_rust(src)
-    }
+    fmt_coreform_module_rust(src)
 }
 
 #[wasm_bindgen]
@@ -42,11 +50,7 @@ pub fn fmt_coreform_module_rust(src: &str) -> Result<String, JsValue> {
 
 #[wasm_bindgen]
 pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
-    if cfg!(target_arch = "wasm32") {
-        hash_coreform_module_selfhost(src, 0)
-    } else {
-        hash_coreform_module_rust(src)
-    }
+    hash_coreform_module_rust(src)
 }
 
 #[wasm_bindgen]
@@ -58,6 +62,7 @@ pub fn hash_coreform_module_rust(src: &str) -> Result<String, JsValue> {
 
 #[wasm_bindgen]
 pub fn fmt_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    require_wasm_selfhost_artifact("fmt_coreform_module_selfhost")?;
     // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
@@ -128,6 +133,7 @@ pub fn fmt_coreform_module_selfhost_with_artifact(
 
 #[wasm_bindgen]
 pub fn hash_coreform_module_selfhost(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    require_wasm_selfhost_artifact("hash_coreform_module_selfhost")?;
     // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
@@ -221,23 +227,7 @@ pub fn eval_coreform_module_with_gates(
     stage1_gate: bool,
     stage2_gate: bool,
 ) -> Result<String, JsValue> {
-    if cfg!(target_arch = "wasm32") {
-        eval_coreform_module_selfhost_with_gates(
-            src,
-            step_limit,
-            stage1_pipeline,
-            stage1_gate,
-            stage2_gate,
-        )
-    } else {
-        eval_coreform_module_with_gates_rust(
-            src,
-            step_limit,
-            stage1_pipeline,
-            stage1_gate,
-            stage2_gate,
-        )
-    }
+    eval_coreform_module_with_gates_rust(src, step_limit, stage1_pipeline, stage1_gate, stage2_gate)
 }
 
 #[wasm_bindgen]
@@ -290,6 +280,7 @@ pub fn eval_coreform_module_selfhost_with_gates(
     stage1_gate: bool,
     stage2_gate: bool,
 ) -> Result<String, JsValue> {
+    require_wasm_selfhost_artifact("eval_coreform_module_selfhost_with_gates")?;
     // Toolchain bootstrap is trusted; do not charge it against the step limit for the input module.
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
@@ -447,17 +438,7 @@ impl Runtime {
         stage1_gate: bool,
         stage2_gate: bool,
     ) -> Result<JsValue, JsValue> {
-        let r = if cfg!(target_arch = "wasm32") {
-            self.eval_module_selfhost_internal(
-                src,
-                None,
-                stage1_pipeline,
-                stage1_gate,
-                stage2_gate,
-            )?
-        } else {
-            self.eval_module_internal(src, stage1_pipeline, stage1_gate, stage2_gate)?
-        };
+        let r = self.eval_module_internal(src, stage1_pipeline, stage1_gate, stage2_gate)?;
         serde_wasm_bindgen::to_value(&r).map_err(|e| js_err("serde", e))
     }
 
@@ -491,6 +472,7 @@ impl Runtime {
         stage1_gate: bool,
         stage2_gate: bool,
     ) -> Result<JsValue, JsValue> {
+        require_wasm_selfhost_artifact("Runtime.eval_module_selfhost_with_gates")?;
         let r = self.eval_module_selfhost_internal(
             src,
             None,

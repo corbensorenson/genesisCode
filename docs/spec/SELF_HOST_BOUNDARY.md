@@ -276,6 +276,8 @@ WASM host bridge support:
   - `eval_coreform_module_selfhost_with_artifact`
   - `Runtime.eval_module_selfhost_with_artifact`
 - This allows browser/Node hosts to pass a verified artifact directly without filesystem coupling.
+- Production wasm selfhost paths fail closed when no explicit artifact is provided.
+  Implicit embedded bootstrap fallback is not allowed in `wasm32` selfhost APIs.
 
 ## Translation Validation Strategy
 

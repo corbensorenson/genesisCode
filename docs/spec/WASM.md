@@ -21,6 +21,7 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Run the self-hosted CoreForm toolchain inside the kernel to format a module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to formatting the input module.
+  - On `wasm32`, this API fails closed unless an explicit artifact is provided via `fmt_coreform_module_selfhost_with_artifact`.
 - `fmt_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Selfhost format using a caller-supplied toolchain artifact source (no filesystem dependency).
 - `hash_coreform_module(src: &str) -> Result<String, JsValue>`
@@ -29,6 +30,7 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Run the self-hosted CoreForm toolchain inside the kernel to hash a module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to hashing the input module.
+  - On `wasm32`, this API fails closed unless an explicit artifact is provided via `hash_coreform_module_selfhost_with_artifact`.
 - `hash_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
   - Selfhost hash using a caller-supplied toolchain artifact source (no filesystem dependency).
 - `eval_coreform_module(src: &str, step_limit: u32) -> Result<String, JsValue>`
@@ -44,6 +46,7 @@ The WASM module exports these functions via `wasm-bindgen`:
   - Run self-hosted parse+canonicalize in-kernel, then pure-evaluate the module.
   - `step_limit=0` means “no limit”.
   - Toolchain bootstrap is not charged against `step_limit`; the limit applies to evaluation of the input module.
+  - On `wasm32`, this API fails closed unless an explicit artifact is provided via `eval_coreform_module_selfhost_with_artifact`.
 - `eval_coreform_module_selfhost_with_gates(src: &str, step_limit: u32, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<String, JsValue>`
   - Same as `eval_coreform_module_selfhost`, plus Stage-1/Stage-2 gating behavior.
 - `eval_coreform_module_selfhost_with_artifact(src: &str, artifact_src: &str, step_limit: u32) -> Result<String, JsValue>`
@@ -66,6 +69,7 @@ For effectful programs, the WASM module exports a stateful runtime that supports
   - Stage-2 validation uses Stage-1 transformed CoreForm input when enabled.
 - `Runtime.eval_module_selfhost(src: &str) -> Result<JsValue, JsValue>`
   - Uses self-hosted parse/canonicalize in-kernel, then returns the first step result (`done` or `effect`).
+  - On `wasm32`, this API fails closed unless an explicit artifact is provided via `Runtime.eval_module_selfhost_with_artifact`.
 - `Runtime.eval_module_selfhost_with_gates(src: &str, stage1_pipeline: bool, stage1_gate: bool, stage2_gate: bool) -> Result<JsValue, JsValue>`
   - Self-hosted frontend path with optional Stage-1/Stage-2 gate enforcement.
 - `Runtime.eval_module_selfhost_with_artifact(src: &str, artifact_src: &str) -> Result<JsValue, JsValue>`

@@ -2,7 +2,7 @@
 
 This document defines the deterministic profile environment realization used by:
 
-- `genesis gcpm env --profile <name> [--hydrate]`
+- `genesis gcpm env --profile <name> [--runtime-backend <token>] [--hydrate]`
 
 ## Goals
 
@@ -24,12 +24,14 @@ This document defines the deterministic profile environment realization used by:
 - the profile does not exist in `genesis.workspace.toml`
 - the resolved `caps_policy` file for the profile does not exist
 - any locked dependency artifact referenced by `genesis.lock` is missing from local `.genesis/store`
+- resolved runtime backend profile contract is incompatible with active CLI runtime backend profile
 
 When `--hydrate` is set, `gcpm env` first computes missing lock-pinned commit/snapshot hashes and
 fetches them through policy-gated `core/store::get` before materialization. Hydration is
 deterministic (sorted hash order) and recorded in the effect log.
 
 Relative `caps_policy` paths are resolved against the workspace descriptor directory.
+`runtime_backend` tokens are canonicalized to `headless|gpu|gfx|backend` (`profile-*` aliases accepted).
 
 ## Artifact Layout
 
@@ -55,3 +57,7 @@ For environment hash `<env-h>`:
 ## JSON Kind
 
 - `gcpm env` emits `kind = "genesis/pkg-env-v0.1"`.
+- `data.value`/`profile.gc` include:
+  - `:runtime-backend-profile`
+  - `:active-runtime-backend-profile`
+  - `:runtime-backend-compatible`

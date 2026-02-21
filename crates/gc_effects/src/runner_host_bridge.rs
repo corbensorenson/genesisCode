@@ -860,7 +860,6 @@ fn decode_bridge_stdout(
     })
 }
 
-
 #[cfg(test)]
 #[path = "runner_host_bridge_tests.rs"]
 mod tests;

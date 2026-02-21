@@ -765,7 +765,9 @@ pub(crate) fn eval_cexpr(
             }
             CExpr::If(c, t, e) => {
                 let cv = eval_cexpr(ctx, &cur_env, c)?;
-                cur = if cv.truthy() { t.clone() } else { e.clone() };
+                let cond_truthy = cv.truthy();
+                ctx.coverage_decision(cond_truthy);
+                cur = if cond_truthy { t.clone() } else { e.clone() };
                 continue;
             }
             CExpr::Begin(xs) => {

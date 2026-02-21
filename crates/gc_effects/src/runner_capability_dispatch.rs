@@ -23,6 +23,12 @@ fn backend_unavailable_message(op: &str) -> String {
 and requires explicit per-op bridge policy"
         );
     }
+    if op.starts_with("host/plugin::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and plugin/command allowlists"
+        );
+    }
     if op.starts_with("io/net::") {
         return format!(
             "capability backend unavailable for {op}; configure per-op bridge policy \
@@ -84,6 +90,157 @@ fn payload_required_string_field(
         )));
     }
     Ok(trimmed.to_string())
+}
+
+fn payload_required_field(payload: &Term, op: &str, key: &str) -> Result<Term, EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    let Some(value) = mm.get(&TermOrdKey(Term::symbol(key))) else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must contain field `{key}`"
+        )));
+    };
+    Ok(value.clone())
+}
+
+fn payload_required_string_or_symbol_field(
+    payload: &Term,
+    op: &str,
+    key: &str,
+) -> Result<String, EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    let Some(raw) = mm.get(&TermOrdKey(Term::symbol(key))) else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must contain string/symbol field `{key}`"
+        )));
+    };
+    let trimmed = match raw {
+        Term::Str(s) | Term::Symbol(s) => s.trim(),
+        _ => {
+            return Err(EffectsError::BadPayload(format!(
+                "{op} payload field `{key}` must be a string or symbol"
+            )));
+        }
+    };
+    if trimmed.is_empty() {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload field `{key}` must not be empty"
+        )));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn parse_nonempty_string_array(
+    pol: Option<&OpPolicy>,
+    key: &str,
+    missing_msg: &str,
+) -> Result<Vec<String>, String> {
+    let Some(pol) = pol else {
+        return Err(missing_msg.to_string());
+    };
+    let Some(v) = pol.extra.get(key) else {
+        return Err(missing_msg.to_string());
+    };
+    let Some(arr) = v.as_array() else {
+        return Err(format!("{key} must be an array of strings"));
+    };
+    let mut out = Vec::with_capacity(arr.len());
+    for x in arr {
+        let Some(raw) = x.as_str() else {
+            return Err(format!("{key} entries must be strings"));
+        };
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            out.push(trimmed.to_string());
+        }
+    }
+    if out.is_empty() {
+        return Err(format!("{key} must contain at least one entry"));
+    }
+    Ok(out)
+}
+
+fn plugin_allowlist_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<String>, String> {
+    parse_nonempty_string_array(
+        pol,
+        "allow_plugins",
+        &format!("{op} requires per-op allow_plugins allowlist in caps.toml"),
+    )
+}
+
+fn plugin_command_allowlist_from_policy(
+    pol: Option<&OpPolicy>,
+) -> Result<Option<Vec<String>>, String> {
+    let Some(pol) = pol else {
+        return Ok(None);
+    };
+    if !pol.extra.contains_key("allow_commands") {
+        return Ok(None);
+    }
+    parse_nonempty_string_array(
+        Some(pol),
+        "allow_commands",
+        "allow_commands must be configured with at least one command",
+    )
+    .map(Some)
+}
+
+fn capability_host_plugin_command(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let plugin = payload_required_string_or_symbol_field(payload, op, ":plugin")?;
+    let command = payload_required_string_or_symbol_field(payload, op, ":command")?;
+    let allow_plugins = match plugin_allowlist_from_policy(pol, op) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    if !allow_plugins.iter().any(|allowed| allowed == &plugin) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!(
+                "{op} denied for plugin `{plugin}`; configure allow_plugins in caps.toml op policy"
+            ),
+            Some(op),
+        ));
+    }
+    if let Some(allow_commands) = match plugin_command_allowlist_from_policy(pol) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    } && !allow_commands.iter().any(|allowed| allowed == &command)
+    {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!(
+                "{op} denied for command `{command}`; configure allow_commands in caps.toml op policy"
+            ),
+            Some(op),
+        ));
+    }
+    let family = if op.starts_with("editor/") {
+        "editor"
+    } else {
+        "host/plugin"
+    };
+    match call_host_bridge(family, op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
 }
 
 fn net_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, String> {
@@ -243,6 +400,78 @@ fn capability_io_net_http_request(
     }
 }
 
+fn capability_io_net_ws_open(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let url = payload_required_string_field(payload, op, ":url")?;
+    if let Err(e) = validate_net_request_policy(pol, &url) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} remote denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_ws_send(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _stream_id = payload_required_string_field(payload, op, ":stream-id")?;
+    let _data = payload_required_field(payload, op, ":data")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_ws_recv_or_close(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _stream_id = payload_required_string_field(payload, op, ":stream-id")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
 fn process_allow_programs_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, String> {
     let Some(pol) = pol else {
         return Err(
@@ -362,7 +591,15 @@ pub(super) fn call_capability(
         "core/refs::list" => cap_refs_list(payload, refs),
         "core/refs::set" => cap_refs_set(op, payload, store, refs, error_tok),
         "core/refs::delete" => cap_refs_delete(op, payload, store, refs, error_tok),
+        "host/plugin::command" | "editor/plugin::command" => {
+            capability_host_plugin_command(op, payload, pol, error_tok)
+        }
         "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
+        "io/net::ws-open" => capability_io_net_ws_open(op, payload, pol, error_tok),
+        "io/net::ws-send" => capability_io_net_ws_send(op, payload, pol, error_tok),
+        "io/net::ws-recv" | "io/net::ws-close" => {
+            capability_io_net_ws_recv_or_close(op, payload, pol, error_tok)
+        }
         "sys/process::exec" => capability_sys_process_exec(op, payload, pol, error_tok),
         "sys/time::now" => {
             if let Some(ms) = timeout_ms {
@@ -582,7 +819,6 @@ pub(super) fn call_capability(
         | "editor/clipboard::set"
         | "editor/dialog::open"
         | "editor/dialog::save"
-        | "editor/plugin::command"
         | "editor/task::spawn"
         | "editor/task::fmt-coreform"
         | "editor/task::lint-module"
@@ -757,6 +993,185 @@ wasi_bridge_response = "{:ok true :status 200 :body \"ok\"}"
     }
 
     #[test]
+    fn io_net_ws_open_policy_gate_enforces_remote_allowlist() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::ws-open"]
+
+[op."io/net::ws-open"]
+url_allow = ["wss://realtime.example.com/ws/"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"ws-1\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":url")),
+                Term::Str("wss://evil.example.com/ws/room".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::ws-open",
+            &payload,
+            policy.op_policy("io/net::ws-open"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(10),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn io_net_ws_family_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::ws-open", "io/net::ws-send", "io/net::ws-recv", "io/net::ws-close"]
+
+[op."io/net::ws-open"]
+url_allow = ["wss://realtime.example.com/ws/"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"ws-1\"}"
+
+[op."io/net::ws-send"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :sent-bytes 5}"
+
+[op."io/net::ws-recv"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :data b\"hello\" :eof false}"
+
+[op."io/net::ws-close"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :closed true}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let open_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":url")),
+                Term::Str("wss://realtime.example.com/ws/room".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let open_out = call_capability(
+            "io/net::ws-open",
+            &open_payload,
+            policy.op_policy("io/net::ws-open"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(12),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(open_map)) = open_out else {
+            panic!("expected ws-open data map");
+        };
+        assert_eq!(
+            open_map.get(&TermOrdKey(Term::symbol(":stream-id"))),
+            Some(&Term::Str("ws-1".to_string()))
+        );
+
+        let send_payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":stream-id")),
+                    Term::Str("ws-1".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":data")),
+                    Term::Bytes(b"hello".to_vec().into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let send_out = call_capability(
+            "io/net::ws-send",
+            &send_payload,
+            policy.op_policy("io/net::ws-send"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(14),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(send_map)) = send_out else {
+            panic!("expected ws-send data map");
+        };
+        assert_eq!(
+            send_map.get(&TermOrdKey(Term::symbol(":sent-bytes"))),
+            Some(&Term::Int(5_i64.into()))
+        );
+
+        let recv_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":stream-id")),
+                Term::Str("ws-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let recv_out = call_capability(
+            "io/net::ws-recv",
+            &recv_payload,
+            policy.op_policy("io/net::ws-recv"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(16),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(recv_map)) = recv_out else {
+            panic!("expected ws-recv data map");
+        };
+        assert_eq!(
+            recv_map.get(&TermOrdKey(Term::symbol(":eof"))),
+            Some(&Term::Bool(false))
+        );
+
+        let close_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":stream-id")),
+                Term::Str("ws-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let close_out = call_capability(
+            "io/net::ws-close",
+            &close_payload,
+            policy.op_policy("io/net::ws-close"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(18),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(close_map)) = close_out else {
+            panic!("expected ws-close data map");
+        };
+        assert_eq!(
+            close_map.get(&TermOrdKey(Term::symbol(":closed"))),
+            Some(&Term::Bool(true))
+        );
+    }
+
+    #[test]
     fn sys_process_exec_policy_gate_requires_allowlisted_program() {
         let policy = CapsPolicy::from_toml_str(
             r#"
@@ -831,6 +1246,98 @@ wasi_bridge_response = "{:ok true :status 0 :stdout \"ready\"}"
         assert_eq!(
             mm.get(&TermOrdKey(Term::symbol(":status"))),
             Some(&Term::Int(0_i64.into()))
+        );
+    }
+
+    #[test]
+    fn host_plugin_policy_gate_requires_allowlisted_plugin() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":plugin")),
+                    Term::Str("other".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":command")),
+                    Term::Str("run".to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "host/plugin::command",
+            &payload,
+            policy.op_policy("host/plugin::command"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(17),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn host_plugin_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status \"ok\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":plugin")),
+                    Term::Str("demo".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":command")),
+                    Term::Symbol("run".to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "host/plugin::command",
+            &payload,
+            policy.op_policy("host/plugin::command"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(19),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(mm)) = out else {
+            panic!("expected data map");
+        };
+        assert_eq!(
+            mm.get(&TermOrdKey(Term::symbol(":status"))),
+            Some(&Term::Str("ok".to_string()))
         );
     }
 }

@@ -40,6 +40,7 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/WASM.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`
+  - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
   - `docs/spec/REGISTRY_POLICY.md`
   - `docs/spec/TRANSPARENCY_LOG.md`
 

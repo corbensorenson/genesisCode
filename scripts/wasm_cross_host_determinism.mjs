@@ -5,6 +5,7 @@ import process from "node:process";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
+const startMs = Date.now();
 
 function isHex32(s) {
   return typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
@@ -77,5 +78,40 @@ for (const k of Object.keys(native)) {
   );
 }
 
-process.stdout.write("ok\n");
+const elapsedMs = Date.now() - startMs;
+const reportPath =
+  process.env.GENESIS_WASM_CROSS_HOST_PROFILE_REPORT ??
+  ".genesis/perf/wasm_cross_host_profile_report.json";
+const historyPath =
+  process.env.GENESIS_WASM_CROSS_HOST_PROFILE_HISTORY ??
+  ".genesis/perf/wasm_cross_host_profile_history.jsonl";
+const budgetMs =
+  process.env.GENESIS_WASM_CROSS_HOST_BUDGET_MS ?? "300000";
+const minHistory =
+  process.env.GENESIS_WASM_CROSS_HOST_MIN_HISTORY ?? "5";
+const helperPath = path.resolve("scripts/lib/profile_runtime_budget.py");
+execFileSync(
+  "python3",
+  [
+    helperPath,
+    "--profile",
+    "wasm-cross-host",
+    "--kind",
+    "genesis/test-profile-runtime-v0.1",
+    "--report",
+    reportPath,
+    "--history",
+    historyPath,
+    "--elapsed-ms",
+    `${elapsedMs}`,
+    "--budget-ms",
+    `${budgetMs}`,
+    "--min-history",
+    `${minHistory}`,
+    "--extra-json",
+    '{"command":"node scripts/wasm_cross_host_determinism.mjs"}',
+  ],
+  { stdio: "inherit" },
+);
 
+process.stdout.write("ok\n");

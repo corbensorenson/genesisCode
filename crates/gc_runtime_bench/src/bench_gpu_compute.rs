@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module};
 use gc_effects::{CapsPolicy, run};
-use gc_kernel::{EvalCtx, compile_module, eval_compiled_module};
 use gc_kernel::Value;
+use gc_kernel::{EvalCtx, compile_module, eval_compiled_module};
 use gc_prelude::build_prelude;
 
 use crate::config::BenchConfig;

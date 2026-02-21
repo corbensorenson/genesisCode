@@ -93,6 +93,26 @@ fn build_selfhost_artifact(dir: &Path) -> PathBuf {
     common::copy_repo_selfhost_toolchain_artifact(dir)
 }
 
+fn keygen_public_key_b64(dir: &Path) -> String {
+    let key_path = dir.join("publish_signature_key.toml");
+    cmd()
+        .current_dir(dir)
+        .args(["keygen", "--out"])
+        .arg(&key_path)
+        .assert()
+        .success();
+    let key_s = fs::read_to_string(&key_path).unwrap();
+    key_s
+        .lines()
+        .find_map(|l| {
+            let l = l.trim();
+            l.strip_prefix("pk_b64 = \"")
+                .and_then(|rest| rest.strip_suffix('\"'))
+        })
+        .expect("pk_b64 in key file")
+        .to_string()
+}
+
 fn json_value(stdout: &[u8]) -> String {
     let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
     v.get("data")
@@ -262,6 +282,100 @@ fn wasi_pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
     );
 }
 
+#[test]
+fn wasi_pkg_publish_enforces_required_attestation_roles_on_protected_refs() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(dir, &remote_allow, true);
+    let pk_b64 = keygen_public_key_b64(dir);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"
+{{
+  :type :vcs/policy
+  :v 1
+  :name "policy:roles"
+  :refs {{ :frozen-prefixes [] }}
+  :classes {{
+    :main {{
+      :patterns ["refs/**/heads/main"]
+      :required-obligations [core/obligation::unit-tests]
+      :require-signatures true
+      :min-signatures 0
+      :allowed-public-keys ["{pk_b64}"]
+      :required-attestation-roles [:reviewer :verifier]
+      :role-min-signatures {{:reviewer 1 :verifier 1}}
+      :independent-role-pairs [{{:left :reviewer :right :verifier}}]
+    }}
+  }}
+}}
+"#
+        ),
+        "policy_roles.gc",
+    );
+
+    let patch_hex = cli_store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let evidence_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "evidence.gc",
+    );
+    let commit_h = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_hex}"]
+  :attestations []
+  :message "missing-roles"
+}}"#
+        ),
+        "commit_missing_roles.gc",
+    );
+    set_local_ref(dir, &commit_h);
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .code(30);
+
+    assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
+}
+
 fn setup_publish_ok_fixture(
     dir: &Path,
     include_pkg_publish: bool,
@@ -412,6 +526,201 @@ fn wasi_pkg_publish_value_matches_between_frontends() {
         get_remote_ref(&self_remote_dir, "refs/heads/main"),
         Some(self_commit)
     );
+}
+
+#[test]
+fn wasi_pkg_publish_rejects_invalid_requirements_trace_when_policy_requires_it() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(dir, &remote_allow, true);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:trace"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :main {
+      :patterns ["refs/**/heads/main"]
+      :required-obligations [core/obligation::unit-tests]
+      :required-evidence-kinds [:requirements-trace]
+      :require-signatures false
+    }
+  }
+}
+"#,
+        "policy_trace.gc",
+    );
+    let patch_hex = cli_store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let trace_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/evidence
+  :v 1
+  :kind :requirements-trace
+  :status :pending
+  :graph-h "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  :release {:commit nil :snapshot "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" :policy nil}
+  :requirements [{:id "SYS-1" :level :system :parents [] :hazards [] :links {:evidence-kinds [:requirements-trace]}}]
+}
+"#,
+        "trace_bad.gc",
+    );
+    let commit_hex = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{trace_hex}"]
+  :attestations []
+  :message "trace-bad"
+}}"#
+        ),
+        "commit_trace_bad.gc",
+    );
+    set_local_ref(dir, &commit_hex);
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .code(30);
+    assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
+}
+
+#[test]
+fn wasi_pkg_publish_rejects_invalid_tool_qualification_when_policy_requires_it() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps(dir, &remote_allow, true);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:qual"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :main {
+      :patterns ["refs/**/heads/main"]
+      :required-obligations [core/obligation::unit-tests]
+      :required-evidence-kinds [:tool-qualification]
+      :require-signatures false
+    }
+  }
+}
+"#,
+        "policy_qual.gc",
+    );
+    let patch_hex = cli_store_put(dir, &caps, r#"{:type :vcs/patch :v 1 :ops []}"#, "patch.gc");
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap.gc",
+    );
+    let unit_evidence_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "unit_evidence.gc",
+    );
+    let qual_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/evidence
+  :v 1
+  :kind :tool-qualification
+  :status :qualified
+  :release {:commit nil :policy nil}
+  :requirements ["TQ-1"]
+  :tools [{:name "genesis" :path "./genesis" :blake3 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" :size-bytes 1}]
+  :qualification-tests [{:id "selfhost-boundary" :artifact "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" :result :fail}]
+}
+"#,
+        "qualification_bad.gc",
+    );
+    let commit_hex = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{unit_evidence_hex}" "{qual_hex}"]
+  :attestations []
+  :message "qual-bad"
+}}"#
+        ),
+        "commit_qual_bad.gc",
+    );
+    set_local_ref(dir, &commit_hex);
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .code(30);
+    assert_eq!(get_remote_ref(&remote_dir, "refs/heads/main"), None);
 }
 
 #[test]

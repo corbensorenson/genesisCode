@@ -454,7 +454,6 @@ fn is_editor_host_op(op: &str) -> bool {
             | "editor/clipboard::set"
             | "editor/dialog::open"
             | "editor/dialog::save"
-            | "editor/plugin::command"
             | "editor/watch::subscribe"
             | "editor/watch::poll"
             | "editor/watch::unsubscribe"

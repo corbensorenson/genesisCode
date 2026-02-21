@@ -265,6 +265,10 @@ jobs:
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
 
+      - name: Full Cross-Host Runtime Budget Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
+        run: bash scripts/check_full_cross_host_profile_budget.sh
+
       - name: Install JS Deps (Playwright)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' }}
         run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
@@ -321,6 +325,9 @@ jobs:
         run: |
           bash scripts/wasm_bindgen_node.sh >/dev/null
           node scripts/wasm_cross_host_determinism.mjs
+
+      - name: Full Cross-Host Runtime Budget Gate (PR Required)
+        run: bash scripts/check_full_cross_host_profile_budget.sh
 
   gpu_device_microbench:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}

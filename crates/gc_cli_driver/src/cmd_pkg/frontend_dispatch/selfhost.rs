@@ -17,6 +17,8 @@ pub(super) fn build(
         | PkgCmd::Test { .. }
         | PkgCmd::SelfOptimize { .. }
         | PkgCmd::Abi { .. }
+        | PkgCmd::Trace { .. }
+        | PkgCmd::Qualify { .. }
         | PkgCmd::Env { .. } => {
             return Err(cli_err(
                 EX_INTERNAL,

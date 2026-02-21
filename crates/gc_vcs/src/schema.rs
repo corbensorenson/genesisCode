@@ -332,6 +332,7 @@ pub struct Attestation {
     pub signing_hash: [u8; 32],
     pub pk: [u8; 32],
     pub sig: [u8; 64],
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -549,12 +550,40 @@ impl Attestation {
             }
             None => return Err(SchemaError::Bad("attestation: missing :sig".to_string())),
         };
+        let role = match get(m, ":role") {
+            None | Some(Term::Nil) => None,
+            Some(Term::Str(s)) => {
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    return Err(SchemaError::Bad(
+                        "attestation: :role cannot be empty".to_string(),
+                    ));
+                }
+                Some(trimmed.to_string())
+            }
+            Some(Term::Symbol(s)) => {
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    return Err(SchemaError::Bad(
+                        "attestation: :role cannot be empty".to_string(),
+                    ));
+                }
+                Some(trimmed.to_string())
+            }
+            Some(other) => {
+                return Err(SchemaError::Bad(format!(
+                    "attestation: :role must be string/symbol or nil, got {}",
+                    print_term(other)
+                )));
+            }
+        };
 
         Ok(Self {
             alg,
             signing_hash,
             pk,
             sig,
+            role,
         })
     }
 }

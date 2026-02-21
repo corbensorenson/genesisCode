@@ -1,3 +1,4 @@
+mod assurance;
 mod gpk;
 mod patch;
 mod policy;
@@ -5,6 +6,10 @@ mod schema;
 mod signing;
 mod snapshot;
 
+pub use crate::assurance::{
+    RequirementsTraceGateContext, ToolQualificationGateContext,
+    validate_requirements_trace_evidence, validate_tool_qualification_evidence,
+};
 pub use crate::gpk::{
     GpkBundle, GpkEntry, GpkError, GpkReadLimits, GpkRef, read_bundle, read_bundle_with_limits,
     write_bundle,

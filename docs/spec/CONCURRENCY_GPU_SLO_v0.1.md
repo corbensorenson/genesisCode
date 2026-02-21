@@ -84,6 +84,8 @@ Failure behavior:
 `.github/workflows/ci.yml` runs `scripts/check_runtime_microbench_budgets.sh` on
 `standard` and `full` profiles, and runs `scripts/check_gpu_compute_device_conformance.sh`
 on the self-hosted GPU lane to produce adapter-scoped conformance artifacts.
+`scripts/check_upgrade_plan_health.sh --profile release-full` also requires device
+conformance by default (fail-closed for release/full profile health gates).
 
 ## Device-Backed Compute Path
 

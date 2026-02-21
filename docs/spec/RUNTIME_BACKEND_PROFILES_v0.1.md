@@ -45,4 +45,16 @@ cargo build -p gc_cli --no-default-features --features profile-backend
 - `gc_effects` feature combinations
 - `gc_cli` profile combinations
 - `gc_cli_driver` profile/backend consistency tests
+- `gcpm env` runtime backend contract mapping under each profile build
+  (`gcpm_env_runtime_backend_profile_contract_is_machine_readable`).
 
+## GCPM Integration
+
+`genesis gcpm` workspace/profile descriptors can carry runtime backend contracts:
+- `[defaults].runtime_backend`
+- `[profiles.<name>].runtime_backend`
+
+`gcpm env --runtime-backend <token>` provides deterministic override selection.
+
+`gcpm run` fails closed when the resolved workspace runtime backend contract
+(profile `dev` then defaults) is incompatible with the active CLI runtime backend profile.

@@ -221,3 +221,471 @@ path = "./.genesis/refs.gc"
         other => panic!("expected sealed error, got {}", other.debug_repr()),
     }
 }
+
+#[test]
+fn refs_set_rejects_non_independent_reviewer_verifier_roles() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/refs::set"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+
+    let store_dir = td.path().join(".genesis").join("store");
+    let store = ArtifactStore::open(&store_dir).unwrap();
+
+    let sk = SigningKey::generate(&mut OsRng);
+    let pk_b64 = Base64::encode_string(&sk.verifying_key().to_bytes());
+
+    let policy_term = parse_term(&format!(
+        r#"
+        {{
+          :type :vcs/policy
+          :v 1
+          :classes {{
+            :tags {{
+              :patterns ["refs/**/tags/*"]
+              :required-obligations ["core/obligation::unit-tests"]
+              :require-signatures true
+              :min-signatures 1
+              :allowed-public-keys ["{pk_b64}"]
+              :required-attestation-roles [:reviewer :verifier]
+              :role-min-signatures {{:reviewer 1 :verifier 1}}
+              :independent-role-pairs [{{:left :reviewer :right :verifier}}]
+            }}
+          }}
+        }}
+        "#
+    ))
+    .unwrap();
+    let policy_h = store
+        .put_bytes(print_term(&policy_term).as_bytes())
+        .unwrap();
+
+    let evidence_term =
+        parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let evidence_h = store
+        .put_bytes(print_term(&evidence_term).as_bytes())
+        .unwrap();
+
+    let commit_base_term = parse_term(&format!(
+        r#"
+        {{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :base nil
+          :patch "{z}"
+          :result "{z}"
+          :obligations ["core/obligation::unit-tests"]
+          :evidence ["{evidence_h}"]
+          :attestations []
+          :message "t"
+        }}
+        "#,
+        z = "0".repeat(64)
+    ))
+    .unwrap();
+
+    let signing_h = gc_vcs::commit_signing_hash(&commit_base_term).unwrap();
+    let msg = gc_vcs::commit_attestation_message(&signing_h);
+    let sig = sk.sign(&msg);
+
+    let att_reviewer = Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":vcs/attestation"),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":v")),
+                Term::Int(1.into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":alg")),
+                Term::Str("ed25519".to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":role")),
+                Term::symbol(":reviewer"),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":signing-h")),
+                Term::Bytes(signing_h.to_vec().into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":pk")),
+                Term::Bytes(sk.verifying_key().to_bytes().to_vec().into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":sig")),
+                Term::Bytes(sig.to_bytes().to_vec().into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let att_reviewer_h = store
+        .put_bytes(print_term(&att_reviewer).as_bytes())
+        .unwrap();
+    let att_verifier = Term::Map(
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":vcs/attestation"),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":v")),
+                Term::Int(1.into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":alg")),
+                Term::Str("ed25519".to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":role")),
+                Term::symbol(":verifier"),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":signing-h")),
+                Term::Bytes(signing_h.to_vec().into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":pk")),
+                Term::Bytes(sk.verifying_key().to_bytes().to_vec().into()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":sig")),
+                Term::Bytes(sig.to_bytes().to_vec().into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let att_verifier_h = store
+        .put_bytes(print_term(&att_verifier).as_bytes())
+        .unwrap();
+
+    let commit_term = parse_term(&format!(
+        r#"
+        {{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :base nil
+          :patch "{z}"
+          :result "{z}"
+          :obligations ["core/obligation::unit-tests"]
+          :evidence ["{evidence_h}"]
+          :attestations ["{att_reviewer_h}" "{att_verifier_h}"]
+          :message "t"
+        }}
+        "#,
+        z = "0".repeat(64)
+    ))
+    .unwrap();
+    let commit_h = store
+        .put_bytes(print_term(&commit_term).as_bytes())
+        .unwrap();
+
+    let set_src = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::set
+            {{:name "refs/tags/v2.0.0" :hash "{commit_h}" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let set_forms = parse_module(&set_src).unwrap();
+    let set_hash = hash_module(&set_forms);
+    let (mut ctx, prog) = eval_prog(&set_forms);
+    let r = run(
+        &mut ctx,
+        &pol,
+        prog,
+        set_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    match r.value {
+        Value::Sealed { payload, .. } => match *payload {
+            Value::Data(Term::Map(mm)) => {
+                let code = mm
+                    .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
+                    .and_then(|t| match t {
+                        Term::Str(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or_default();
+                assert_eq!(code, "core/refs/role-independence-violation");
+            }
+            other => panic!("expected map payload, got {}", other.debug_repr()),
+        },
+        other => panic!("expected sealed error, got {}", other.debug_repr()),
+    }
+}
+
+#[test]
+fn refs_set_rejects_invalid_requirements_trace_evidence_when_policy_requires_it() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/refs::set"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let store_dir = td.path().join(".genesis").join("store");
+    let store = ArtifactStore::open(&store_dir).unwrap();
+
+    let policy_term = parse_term(
+        r#"
+        {
+          :type :vcs/policy
+          :v 1
+          :classes {
+            :tags {
+              :patterns ["refs/**/tags/*"]
+              :required-obligations ["core/obligation::unit-tests"]
+              :required-evidence-kinds [:requirements-trace]
+            }
+          }
+        }
+        "#,
+    )
+    .unwrap();
+    let policy_h = store
+        .put_bytes(print_term(&policy_term).as_bytes())
+        .unwrap();
+
+    let bad_trace = parse_term(
+        r#"
+        {
+          :type :vcs/evidence
+          :v 1
+          :kind :requirements-trace
+          :status :pending
+          :graph-h "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          :release {
+            :commit "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            :snapshot "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            :policy nil
+          }
+          :requirements [{
+            :id "SYS-1"
+            :level :system
+            :parents []
+            :hazards []
+            :links {:evidence-kinds [:requirements-trace]}
+          }]
+        }
+        "#,
+    )
+    .unwrap();
+    let evidence_h = store.put_bytes(print_term(&bad_trace).as_bytes()).unwrap();
+
+    let commit_term = parse_term(&format!(
+        r#"
+        {{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :base nil
+          :patch "{z}"
+          :result "{z}"
+          :obligations ["core/obligation::unit-tests"]
+          :evidence ["{evidence_h}"]
+          :attestations []
+          :message "invalid-trace"
+        }}
+        "#,
+        z = "0".repeat(64)
+    ))
+    .unwrap();
+    let commit_h = store
+        .put_bytes(print_term(&commit_term).as_bytes())
+        .unwrap();
+
+    let set_src = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::set
+            {{:name "refs/tags/v3.0.0" :hash "{commit_h}" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let set_forms = parse_module(&set_src).unwrap();
+    let set_hash = hash_module(&set_forms);
+    let (mut ctx, prog) = eval_prog(&set_forms);
+    let r = run(
+        &mut ctx,
+        &pol,
+        prog,
+        set_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    match r.value {
+        Value::Sealed { payload, .. } => match *payload {
+            Value::Data(Term::Map(mm)) => {
+                let code = mm
+                    .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
+                    .and_then(|t| match t {
+                        Term::Str(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or_default();
+                assert_eq!(code, "core/refs/invalid-requirements-trace");
+            }
+            other => panic!("expected map payload, got {}", other.debug_repr()),
+        },
+        other => panic!("expected sealed error, got {}", other.debug_repr()),
+    }
+}
+
+#[test]
+fn refs_set_rejects_invalid_tool_qualification_evidence_when_policy_requires_it() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/refs::set"]
+
+[store]
+dir = "./.genesis/store"
+
+[refs]
+path = "./.genesis/refs.gc"
+"#,
+    )
+    .unwrap();
+    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let store_dir = td.path().join(".genesis").join("store");
+    let store = ArtifactStore::open(&store_dir).unwrap();
+
+    let policy_term = parse_term(
+        r#"
+        {
+          :type :vcs/policy
+          :v 1
+          :classes {
+            :tags {
+              :patterns ["refs/**/tags/*"]
+              :required-obligations []
+              :required-evidence-kinds [:tool-qualification]
+            }
+          }
+        }
+        "#,
+    )
+    .unwrap();
+    let policy_h = store
+        .put_bytes(print_term(&policy_term).as_bytes())
+        .unwrap();
+
+    let bad_qual = parse_term(
+        r#"
+        {
+          :type :vcs/evidence
+          :v 1
+          :kind :tool-qualification
+          :status :qualified
+          :release {
+            :commit "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            :policy nil
+          }
+          :requirements ["TQ-1"]
+          :tools [{:name "genesis" :path "./genesis" :blake3 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" :size-bytes 1}]
+          :qualification-tests [{:id "selfhost-boundary" :artifact "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" :result :pass}]
+        }
+        "#,
+    )
+    .unwrap();
+    let evidence_h = store.put_bytes(print_term(&bad_qual).as_bytes()).unwrap();
+
+    let commit_term = parse_term(&format!(
+        r#"
+        {{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :base nil
+          :patch "{z}"
+          :result "{z}"
+          :obligations []
+          :evidence ["{evidence_h}"]
+          :attestations []
+          :message "invalid-qualification"
+        }}
+        "#,
+        z = "0".repeat(64)
+    ))
+    .unwrap();
+    let commit_h = store
+        .put_bytes(print_term(&commit_term).as_bytes())
+        .unwrap();
+
+    let set_src = format!(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/refs::set
+            {{:name "refs/tags/v4.0.0" :hash "{commit_h}" :policy "{policy_h}"}}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#
+    );
+    let set_forms = parse_module(&set_src).unwrap();
+    let set_hash = hash_module(&set_forms);
+    let (mut ctx, prog) = eval_prog(&set_forms);
+    let r = run(
+        &mut ctx,
+        &pol,
+        prog,
+        set_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    match r.value {
+        Value::Sealed { payload, .. } => match *payload {
+            Value::Data(Term::Map(mm)) => {
+                let code = mm
+                    .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
+                    .and_then(|t| match t {
+                        Term::Str(s) => Some(s.as_str()),
+                        _ => None,
+                    })
+                    .unwrap_or_default();
+                assert_eq!(code, "core/refs/invalid-tool-qualification");
+            }
+            other => panic!("expected map payload, got {}", other.debug_repr()),
+        },
+        other => panic!("expected sealed error, got {}", other.debug_repr()),
+    }
+}

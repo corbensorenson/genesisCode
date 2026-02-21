@@ -39,6 +39,13 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read check_ai_iteration_slo.sh");
     let micro = fs::read_to_string(root.join("scripts/check_runtime_microbench_budgets.sh"))
         .expect("read check_runtime_microbench_budgets.sh");
+    let strict_golden = fs::read_to_string(root.join("scripts/selfhost_strict_golden.sh"))
+        .expect("read selfhost_strict_golden.sh");
+    let wasm_cross = fs::read_to_string(root.join("scripts/wasm_cross_host_determinism.mjs"))
+        .expect("read wasm_cross_host_determinism.mjs");
+    let full_cross =
+        fs::read_to_string(root.join("scripts/check_full_cross_host_profile_budget.sh"))
+            .expect("read check_full_cross_host_profile_budget.sh");
 
     assert!(
         hot.contains("source \"$ROOT_DIR/scripts/lib/measure.sh\""),
@@ -105,12 +112,40 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "hot-path report must include build profile metadata"
     );
     assert!(
-        slo.contains("\"build_profile\": \"$CARGO_PROFILE\""),
-        "ai-iteration report must include build profile metadata"
+        slo.contains("\"build_profile\": profile"),
+        "ai-iteration report must include build profile metadata field"
+    );
+    assert!(
+        slo.contains("\"$CARGO_PROFILE\""),
+        "ai-iteration report generator must pass active cargo profile into report writer"
     );
     assert!(
         micro.contains("GENESIS_RUNTIME_MICROBENCH_PROFILE=\"$CARGO_PROFILE\""),
         "runtime microbench runner must stamp profile metadata into report"
+    );
+    assert!(
+        strict_golden.contains("profile_runtime_budget.py"),
+        "strict-golden lane must emit runtime profile report via shared helper"
+    );
+    assert!(
+        strict_golden.contains("--profile strict-golden"),
+        "strict-golden lane must stamp strict-golden profile label"
+    );
+    assert!(
+        wasm_cross.contains("profile_runtime_budget.py"),
+        "wasm cross-host lane must emit runtime profile report via shared helper"
+    );
+    assert!(
+        wasm_cross.contains("\"wasm-cross-host\""),
+        "wasm cross-host lane must stamp wasm-cross-host profile label"
+    );
+    assert!(
+        full_cross.contains("profile_runtime_budget.py"),
+        "full cross-host lane must emit aggregate runtime profile report via shared helper"
+    );
+    assert!(
+        full_cross.contains("--profile full-cross-host"),
+        "full cross-host lane must stamp full-cross-host profile label"
     );
 }
 

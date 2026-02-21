@@ -43,6 +43,8 @@ Determinism:
 - `editor/plugin::command`
   - payload: `{ :plugin str|sym :command str|sym :payload term }`
   - response: bridge-defined CoreForm term | ERROR
+  - policy: wrapper over generic host extension ABI (`host/plugin::command`) and must use per-op
+    allowlists (`allow_plugins`, optional `allow_commands`) plus bridge policy.
 
 Determinism:
 - replay consumes logged bridge responses.

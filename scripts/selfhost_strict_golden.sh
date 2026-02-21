@@ -4,7 +4,30 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+STRICT_GOLDEN_REPORT="${GENESIS_STRICT_GOLDEN_PROFILE_REPORT:-.genesis/perf/strict_golden_profile_report.json}"
+STRICT_GOLDEN_HISTORY="${GENESIS_STRICT_GOLDEN_PROFILE_HISTORY:-.genesis/perf/strict_golden_profile_history.jsonl}"
+STRICT_GOLDEN_BUDGET_MS="${GENESIS_STRICT_GOLDEN_BUDGET_MS:-900000}"
+STRICT_GOLDEN_MIN_HISTORY="${GENESIS_STRICT_GOLDEN_MIN_HISTORY:-5}"
+
 source "$ROOT_DIR/scripts/lib/selfhost_artifact_cache.sh"
+
+now_ms() {
+  python3 - <<'PY'
+import time
+print(int(time.time() * 1000))
+PY
+}
+
+[[ "$STRICT_GOLDEN_BUDGET_MS" =~ ^[0-9]+$ && "$STRICT_GOLDEN_BUDGET_MS" -gt 0 ]] || {
+  echo "selfhost-strict-golden: GENESIS_STRICT_GOLDEN_BUDGET_MS must be a positive integer" >&2
+  exit 2
+}
+[[ "$STRICT_GOLDEN_MIN_HISTORY" =~ ^[0-9]+$ && "$STRICT_GOLDEN_MIN_HISTORY" -gt 0 ]] || {
+  echo "selfhost-strict-golden: GENESIS_STRICT_GOLDEN_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+}
+
+START_MS="$(now_ms)"
 
 cargo build -p gc_cli -p gc_wasi_cli >/dev/null
 
@@ -268,5 +291,16 @@ wasi_self_patch="$("$GWASI" --selfhost-only --selfhost-artifact "$ART" --corefor
 "$GWASI" --selfhost-only --selfhost-artifact "$ART" selfhost-dashboard --store "$TMP_DIR/wasi.store" --markdown "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" >/dev/null
 grep -q '\`policy/\*\`' "$TMP_DIR/SELFHOST_CUTOVER.md" || fail "native selfhost dashboard markdown missing policy/* row"
 grep -q '\`policy/\*\`' "$TMP_DIR/WASI_SELFHOST_CUTOVER.md" || fail "WASI selfhost dashboard markdown missing policy/* row"
+
+ELAPSED_MS=$(( $(now_ms) - START_MS ))
+python3 "$ROOT_DIR/scripts/lib/profile_runtime_budget.py" \
+  --profile strict-golden \
+  --kind genesis/test-profile-runtime-v0.1 \
+  --report "$STRICT_GOLDEN_REPORT" \
+  --history "$STRICT_GOLDEN_HISTORY" \
+  --elapsed-ms "$ELAPSED_MS" \
+  --budget-ms "$STRICT_GOLDEN_BUDGET_MS" \
+  --min-history "$STRICT_GOLDEN_MIN_HISTORY" \
+  --extra-json '{"command":"bash scripts/selfhost_strict_golden.sh"}'
 
 echo "selfhost-strict-golden: ok"

@@ -875,7 +875,6 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
     Some((name.clone(), items[2].clone()))
 }
 
-
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;

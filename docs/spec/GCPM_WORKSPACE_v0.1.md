@@ -14,11 +14,13 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
   - optional `registry`
   - optional `policy`
   - optional `toolchain` (selfhost toolchain artifact pin; relative to workspace file unless absolute)
+  - optional `runtime_backend` (`headless|gpu|gfx|backend`, `profile-*` aliases accepted)
 - `[profiles.<name>]`:
   - optional `caps_policy`
   - optional `registry`
   - optional `policy`
   - optional `toolchain`
+  - optional `runtime_backend` (`headless|gpu|gfx|backend`, `profile-*` aliases accepted)
 - `[tasks.<name>]`:
   - `cmd`
   - optional `file`
@@ -45,6 +47,9 @@ Mismatch fails closed and task execution is refused.
 - Member names and paths must be unique.
 - Production frontend flows may resolve `defaults.toolchain` as the workspace-pinned selfhost
   artifact identity when `--selfhost-artifact`/`GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT` are not set.
+- `runtime_backend` values are canonicalized to one of `headless|gpu|gfx|backend`.
+- `gcpm run` validates the resolved workspace runtime backend contract (profile `dev` then defaults)
+  against the active CLI runtime backend profile and fails closed on incompatibility.
 
 ## Commands
 
@@ -53,4 +58,6 @@ Mismatch fails closed and task execution is refused.
 - `genesis gcpm remove <name>` deterministically removes requirement + locked entry from lock.
 - `genesis gcpm run <task>` resolves and executes workspace task command data (built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, hash-pinned `contract`, `eval`, `fmt`, `optimize`).
 - `genesis gcpm env --profile <name> [--hydrate]` materializes deterministic profile environment artifacts (see `docs/spec/GCPM_ENV_v0.1.md`).
+  - optional `--runtime-backend <headless|gpu|gfx|backend|profile-*>` overrides profile/default
+    runtime backend selection for that realization.
   - `--hydrate` pulls missing lock-pinned artifacts through policy-gated `core/store::get` before writing env artifacts.

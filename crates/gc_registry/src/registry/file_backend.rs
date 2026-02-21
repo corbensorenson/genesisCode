@@ -196,6 +196,8 @@ fn file_gate_refs_set(
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
     }
     let mut evidence_kinds: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut requirements_trace_terms: Vec<Term> = Vec::new();
+    let mut tool_qualification_terms: Vec<Term> = Vec::new();
     for ev_h in &commit.evidence {
         let ev_bytes = std::fs::read(file_store_path(root, ev_h))
             .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
@@ -210,11 +212,49 @@ fn file_gate_refs_set(
             .map_err(|e| RegistryError::Protocol(format!("refs/set: bad evidence term: {e}")))?;
         let ev = gc_vcs::Evidence::from_term(&ev_t)
             .map_err(|e| RegistryError::Protocol(format!("refs/set: bad evidence schema: {e}")))?;
-        evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+        let norm_kind = gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind);
+        if norm_kind == ":requirements-trace" {
+            requirements_trace_terms.push(ev_t.clone());
+        } else if norm_kind == ":tool-qualification" {
+            tool_qualification_terms.push(ev_t.clone());
+        }
+        evidence_kinds.insert(norm_kind);
     }
     let missing_kinds = class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
     if !missing_kinds.is_empty() {
         return Err(RegistryError::Http("refs/set: status 403".to_string()));
+    }
+    let required_kinds = class.required_evidence_kind_set(&commit.obligations);
+    if required_kinds.contains(":requirements-trace") {
+        if requirements_trace_terms.is_empty() {
+            return Err(RegistryError::Http("refs/set: status 403".to_string()));
+        }
+        let ctx = gc_vcs::RequirementsTraceGateContext {
+            commit_hash: commit_h,
+            snapshot_hash: &commit.result,
+            policy_hash: Some(policy_h),
+            commit_obligations: &commit.obligations,
+            observed_evidence_kinds: &evidence_kinds,
+        };
+        for t in &requirements_trace_terms {
+            if gc_vcs::validate_requirements_trace_evidence(t, &ctx).is_err() {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
+        }
+    }
+    if required_kinds.contains(":tool-qualification") {
+        if tool_qualification_terms.is_empty() {
+            return Err(RegistryError::Http("refs/set: status 403".to_string()));
+        }
+        let ctx = gc_vcs::ToolQualificationGateContext {
+            commit_hash: commit_h,
+            policy_hash: Some(policy_h),
+        };
+        for t in &tool_qualification_terms {
+            if gc_vcs::validate_tool_qualification_evidence(t, &ctx).is_err() {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
+        }
     }
 
     if class.require_signatures {
@@ -223,6 +263,8 @@ fn file_gate_refs_set(
         })?;
         let mut valid: u64 = 0;
         let mut seen_pks: std::collections::BTreeSet<Vec<u8>> = std::collections::BTreeSet::new();
+        let mut role_signers: std::collections::BTreeMap<String, std::collections::BTreeSet<Vec<u8>>> =
+            std::collections::BTreeMap::new();
         for at_h in &commit.attestations {
             let at_bytes = std::fs::read(file_store_path(root, at_h))
                 .map_err(|_| RegistryError::Http("refs/set: status 403".to_string()))?;
@@ -240,17 +282,44 @@ fn file_gate_refs_set(
             let att = gc_vcs::Attestation::from_term(&at_t).map_err(|e| {
                 RegistryError::Protocol(format!("refs/set: bad attestation schema: {e}"))
             })?;
-            if !seen_pks.insert(att.pk.to_vec()) {
-                continue;
-            }
-            if gc_vcs::verify_commit_attestation(&att, &signing_h, &class.allowed_public_keys)
-                .is_ok()
+            let pk_vec = att.pk.to_vec();
+            if gc_vcs::verify_commit_attestation(&att, &signing_h, &class.allowed_public_keys).is_ok()
             {
-                valid = valid.saturating_add(1);
+                if seen_pks.insert(pk_vec.clone()) {
+                    valid = valid.saturating_add(1);
+                }
+                if let Some(role) = att.role.as_deref() {
+                    let norm = gc_vcs::PolicyClass::normalize_attestation_role(role);
+                    if norm != ":" {
+                        role_signers.entry(norm).or_default().insert(pk_vec);
+                    }
+                }
             }
         }
         if valid < class.min_signatures {
             return Err(RegistryError::Http("refs/set: status 403".to_string()));
+        }
+        for role in &class.required_attestation_roles {
+            if role_signers.get(role).map_or(0, |s| s.len()) == 0 {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
+        }
+        for (role, min) in &class.role_min_signatures {
+            if role_signers.get(role).map_or(0, |s| s.len()) < *min as usize {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
+        }
+        for (left, right) in &class.independent_role_pairs {
+            let left_set = role_signers.get(left);
+            let right_set = role_signers.get(right);
+            if left_set.map_or(0, |s| s.len()) == 0 || right_set.map_or(0, |s| s.len()) == 0 {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
+            if let (Some(a), Some(b)) = (left_set, right_set)
+                && a.iter().any(|pk| b.contains(pk))
+            {
+                return Err(RegistryError::Http("refs/set: status 403".to_string()));
+            }
         }
     }
 

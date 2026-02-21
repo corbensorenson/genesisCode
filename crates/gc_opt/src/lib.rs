@@ -882,7 +882,6 @@ fn flatten_app(t: &Term) -> Option<(Term, Vec<Term>)> {
     None
 }
 
-
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;

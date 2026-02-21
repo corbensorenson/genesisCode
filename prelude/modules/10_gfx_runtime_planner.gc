@@ -1,0 +1,305 @@
+; Extracted from 10_gfx_ui_runtime.gc to keep modules focused for AI-first maintenance.
+; Runtime frame planning and batching helpers (2D/3D/PBR).
+
+(def core/gfx/ui/runtime::plan-frame-batched
+  (fn (ui-root)
+    (fn (viewport-w)
+      (fn (viewport-h)
+        (fn (label)
+          (fn (pipeline-id)
+            (let ((scene (((core/gfx/ui/runtime::to-2d-scene ui-root) viewport-w) viewport-h)))
+              (((core/gfx/runtime::plan-frame-2d-scene-batched scene) label) pipeline-id))))))))
+
+(def core/gfx/runtime::node-renderable?
+  (fn (node)
+    (if (core/list::is-nil? ((core/map::get node) (quote :mesh)))
+      false
+      (if (core/list::is-nil? ((core/map::get node) (quote :material)))
+        false
+        true))))
+
+(def core/gfx/runtime::append-node-draw
+  (fn (commands)
+    (fn (node)
+      (if (core/gfx/runtime::node-renderable? node)
+        ((core/vec::push commands) ((((core/gfx/frame::cmd-draw 6) 1) 0) 0))
+        commands))))
+
+(def core/gfx/runtime::plan-render-commands-loop
+  (fn (nodes)
+    (fn (i)
+      (fn (n)
+        (fn (commands)
+          (if ((core/int::lt? i) n)
+            (let ((node ((core/vec::get nodes) i))
+                  (i2 ((core/int::add i) 1))
+                  (commands2 ((core/gfx/runtime::append-node-draw commands) node)))
+              ((((core/gfx/runtime::plan-render-commands-loop nodes) i2) n) commands2))
+            commands))))))
+
+(def core/gfx/runtime::plan-render-pass
+  (fn (scene)
+    (fn (label)
+      (fn (pipeline-id)
+        (let ((nodes ((core/map::get scene) (quote :nodes)))
+              (n (core/vec::len ((core/map::get scene) (quote :nodes))))
+              (base [(core/gfx/frame::cmd-set-pipeline pipeline-id)]))
+          ((((core/gfx/frame::render-pass label) []) nil)
+            ((((core/gfx/runtime::plan-render-commands-loop nodes) 0) n) base)))))))
+
+(def core/gfx/runtime::plan-render-pass-3d
+  (fn (scene)
+    (fn (label)
+      (fn (pipeline-id)
+        (fn (color-attachments)
+          (fn (depth-attachment)
+            (let ((nodes ((core/map::get scene) (quote :nodes)))
+                  (n (core/vec::len ((core/map::get scene) (quote :nodes))))
+                  (base [(core/gfx/frame::cmd-set-pipeline pipeline-id)]))
+              ((((core/gfx/frame::render-pass label) color-attachments) depth-attachment)
+                ((((core/gfx/runtime::plan-render-commands-loop nodes) 0) n) base)))))))))
+
+(def core/gfx/runtime::plan-frame-2d
+  (fn (scene)
+    (fn (label)
+      (fn (pipeline-id)
+        ((core/gfx/frame::add-render-pass core/gfx/frame::empty)
+          (((core/gfx/runtime::plan-render-pass scene) label) pipeline-id))))))
+
+(def core/gfx/runtime::plan-frame-3d
+  (fn (scene)
+    (fn (label)
+      (fn (pipeline-id)
+        (fn (color-attachments)
+          (fn (depth-attachment)
+            ((core/gfx/frame::add-render-pass core/gfx/frame::empty)
+              (((((core/gfx/runtime::plan-render-pass-3d scene) label) pipeline-id) color-attachments)
+                depth-attachment))))))))
+
+(def core/gfx/runtime::first-camera-loop
+  (fn (nodes)
+    (fn (i)
+      (fn (n)
+        (if ((core/int::lt? i) n)
+          (let ((node ((core/vec::get nodes) i))
+                (i2 ((core/int::add i) 1))
+                (camera ((core/map::get ((core/vec::get nodes) i)) (quote :camera))))
+            (if (core/list::is-nil? camera)
+              (((core/gfx/runtime::first-camera-loop nodes) i2) n)
+              camera))
+          nil)))))
+
+(def core/gfx/runtime::first-camera
+  (fn (scene)
+    (let ((nodes ((core/map::get scene) (quote :nodes))))
+      (((core/gfx/runtime::first-camera-loop nodes) 0) (core/vec::len nodes)))))
+
+(def core/gfx/runtime::count-lights-loop
+  (fn (nodes)
+    (fn (i)
+      (fn (n)
+        (fn (acc)
+          (if ((core/int::lt? i) n)
+            (let ((node ((core/vec::get nodes) i))
+                  (i2 ((core/int::add i) 1))
+                  (light ((core/map::get ((core/vec::get nodes) i)) (quote :light)))
+                  (acc2
+                    (if (core/list::is-nil? light)
+                      acc
+                      ((core/int::add acc) 1))))
+              ((((core/gfx/runtime::count-lights-loop nodes) i2) n) acc2))
+            acc))))))
+
+(def core/gfx/runtime::count-lights
+  (fn (scene)
+    (let ((nodes ((core/map::get scene) (quote :nodes))))
+      ((((core/gfx/runtime::count-lights-loop nodes) 0) (core/vec::len nodes)) 0))))
+
+(def core/gfx/runtime::light-casts-shadow?
+  (fn (light)
+    (if (core/list::is-nil? light)
+      false
+      (let ((flag ((core/map::get light) (quote :casts-shadow))))
+        (if (core/list::is-nil? flag)
+          true
+          flag)))))
+
+(def core/gfx/runtime::count-shadow-lights-loop
+  (fn (nodes)
+    (fn (i)
+      (fn (n)
+        (fn (acc)
+          (if ((core/int::lt? i) n)
+            (let ((light ((core/map::get ((core/vec::get nodes) i)) (quote :light)))
+                  (i2 ((core/int::add i) 1))
+                  (acc2
+                    (if (core/gfx/runtime::light-casts-shadow? light)
+                      ((core/int::add acc) 1)
+                      acc)))
+              ((((core/gfx/runtime::count-shadow-lights-loop nodes) i2) n) acc2))
+            acc))))))
+
+(def core/gfx/runtime::count-shadow-lights
+  (fn (scene)
+    (let ((nodes ((core/map::get scene) (quote :nodes))))
+      ((((core/gfx/runtime::count-shadow-lights-loop nodes) 0) (core/vec::len nodes)) 0))))
+
+(def core/gfx/runtime::append-shadow-passes-loop
+  (fn (graph)
+    (fn (scene)
+      (fn (shadow-label-prefix)
+        (fn (shadow-pipeline-id)
+          (fn (shadow-depth-prefix)
+            (fn (i)
+              (fn (n)
+                (if ((core/int::lt? i) n)
+                  (let ((i2 ((core/int::add i) 1))
+                        (idx-str (core/int::to-str i))
+                        (label ((core/str::concat shadow-label-prefix) idx-str))
+                        (depth-view ((core/str::concat shadow-depth-prefix) idx-str))
+                        (depth-att
+                          (((((core/gfx/frame::depth-attachment depth-view) 1000000) 0) "clear")
+                            "store"))
+                        (shadow-pass
+                          (((((core/gfx/runtime::plan-render-pass-3d scene) label) shadow-pipeline-id) [])
+                            depth-att))
+                        (graph2 ((core/gfx/frame::add-render-pass graph) shadow-pass)))
+                    (((((((core/gfx/runtime::append-shadow-passes-loop graph2) scene) shadow-label-prefix)
+                      shadow-pipeline-id)
+                      shadow-depth-prefix)
+                      i2)
+                      n))
+                  graph)))))))))
+
+(def core/gfx/runtime::plan-frame-3d-pbr
+  (fn (scene)
+    (fn (main-label)
+      (fn (main-pipeline-id)
+        (fn (main-color-attachments)
+          (fn (main-depth-attachment)
+            (fn (shadow-label-prefix)
+              (fn (shadow-pipeline-id)
+                (fn (shadow-depth-prefix)
+                  (let ((camera (core/gfx/runtime::first-camera scene))
+                        (light-count (core/gfx/runtime::count-lights scene))
+                        (shadow-count (core/gfx/runtime::count-shadow-lights scene))
+                        (main-pass
+                          (((((core/gfx/runtime::plan-render-pass-3d scene) main-label) main-pipeline-id)
+                            main-color-attachments)
+                            main-depth-attachment))
+                        (graph-main ((core/gfx/frame::add-render-pass core/gfx/frame::empty) main-pass))
+                        (graph-shadows
+                          (((((((core/gfx/runtime::append-shadow-passes-loop graph-main) scene)
+                            shadow-label-prefix)
+                            shadow-pipeline-id)
+                            shadow-depth-prefix)
+                            0)
+                            shadow-count))
+                        (meta
+                          {
+                            :camera camera
+                            :light-count light-count
+                            :shadow-light-count shadow-count}))
+                    (((core/map::put graph-shadows) (quote :meta)) meta)))))))))))
+
+(def core/gfx/runtime::vec4
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        (fn (d)
+          ((core/vec::push ((core/vec::push ((core/vec::push ((core/vec::push []) a)) b)) c)) d))))))
+
+(def core/gfx/runtime::2d-draw-batch-key
+  (fn (draw)
+    (if ((core/sym::eq? (core/data::tag draw)) (quote :map))
+      (let ((kind ((core/map::get draw) (quote :kind)))
+            (texture ((core/map::get draw) (quote :texture)))
+            (font ((core/map::get draw) (quote :font)))
+            (blend ((core/map::get draw) (quote :blend))))
+        ((((core/gfx/runtime::vec4 kind) texture) font) blend))
+      ((((core/gfx/runtime::vec4 (quote :invalid)) nil) nil) nil))))
+
+(def core/gfx/runtime::2d-batch
+  (fn (key)
+    (fn (count)
+      {
+        :type (quote :gfx/2d-batch)
+        :key key
+        :count count})))
+
+(def core/gfx/runtime::2d-batches-loop
+  (fn (draws)
+    (fn (i)
+      (fn (n)
+        (fn (current-key)
+          (fn (current-count)
+            (fn (out)
+              (if ((core/int::lt? i) n)
+                (let ((draw ((core/vec::get draws) i))
+                      (key (core/gfx/runtime::2d-draw-batch-key draw))
+                      (i2 ((core/int::add i) 1)))
+                  (if ((core/eq? key) current-key)
+                    ((((((core/gfx/runtime::2d-batches-loop draws) i2) n) current-key)
+                      ((core/int::add current-count) 1))
+                      out)
+                    (let ((out2
+                            (if ((core/int::lt? 0) current-count)
+                              ((core/vec::push out) ((core/gfx/runtime::2d-batch current-key) current-count))
+                              out)))
+                      ((((((core/gfx/runtime::2d-batches-loop draws) i2) n) key) 1) out2))))
+                (if ((core/int::lt? 0) current-count)
+                  ((core/vec::push out) ((core/gfx/runtime::2d-batch current-key) current-count))
+                  out)))))))))
+
+(def core/gfx/runtime::2d-batches
+  (fn (draws)
+    ((((((core/gfx/runtime::2d-batches-loop draws) 0)
+      (if ((core/sym::eq? (core/data::tag draws)) (quote :vec))
+        (core/vec::len draws)
+        0))
+      nil)
+      0)
+      [])))
+
+(def core/gfx/runtime::append-2d-batch-commands-loop
+  (fn (batches)
+    (fn (i)
+      (fn (n)
+        (fn (commands)
+          (if ((core/int::lt? i) n)
+            (let ((batch ((core/vec::get batches) i))
+                  (count0
+                    (if ((core/sym::eq? (core/data::tag batch)) (quote :map))
+                      ((core/map::get batch) (quote :count))
+                      1))
+                  (count
+                    (if ((core/sym::eq? (core/data::tag count0)) (quote :int))
+                      count0
+                      1))
+                  (i2 ((core/int::add i) 1))
+                  (commands2 ((core/vec::push commands) ((((core/gfx/frame::cmd-draw 6) count) 0) 0))))
+              ((((core/gfx/runtime::append-2d-batch-commands-loop batches) i2) n) commands2))
+            commands))))))
+
+(def core/gfx/runtime::plan-2d-pass-batched
+  (fn (draws)
+    (fn (label)
+      (fn (pipeline-id)
+        (let ((batches (core/gfx/runtime::2d-batches draws))
+              (n (core/vec::len (core/gfx/runtime::2d-batches draws)))
+              (base [(core/gfx/frame::cmd-set-pipeline pipeline-id)]))
+          ((((core/gfx/frame::render-pass label) []) nil)
+            ((((core/gfx/runtime::append-2d-batch-commands-loop batches) 0) n) base)))))))
+
+(def core/gfx/runtime::plan-frame-2d-batched
+  (fn (draws)
+    (fn (label)
+      (fn (pipeline-id)
+        ((core/gfx/frame::add-render-pass core/gfx/frame::empty)
+          (((core/gfx/runtime::plan-2d-pass-batched draws) label) pipeline-id))))))
+
+(def core/gfx/runtime::plan-frame-2d-scene-batched
+  (fn (scene)
+    (fn (label)
+      (fn (pipeline-id)
+        (((core/gfx/runtime::plan-frame-2d-batched ((core/map::get scene) (quote :draws))) label) pipeline-id)))))

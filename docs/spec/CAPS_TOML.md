@@ -139,9 +139,10 @@ Supported keys:
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
 - `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
-  - used by host-integrated ops such as `editor/plugin::command`,
+  - used by host-integrated ops such as `host/plugin::command`,
+    `editor/plugin::command`,
     `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`, `gfx/gpu::*`,
-    `gpu/compute::*`, `io/net::http-request`, and `sys/process::exec`.
+    `gpu/compute::*`, `io/net::http-request`, `io/net::ws-*`, and `sys/process::exec`.
   - first-party runtime domains (canonical `gpu/compute::*`,
     `gfx/gpu::*`, `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`,
     `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`,
@@ -185,10 +186,12 @@ Supported keys:
   - bridge-backed ops (`editor/*`, `gfx/*`, `gpu/compute::*`): maximum bytes for both framed
     request payload and framed response payload.
 - `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg-low::publish` (see below).
-- `url_allow` (array of strings): URL prefix allowlist for `io/net::http-request`.
+- `url_allow` (array of strings): URL prefix allowlist for `io/net::http-request` and `io/net::ws-open`.
 - `allow_http` (bool): if true, `http://` URLs are permitted for `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request` (default is false).
-- `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request`.
+- `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, `io/net::http-request`, and `io/net::ws-open`.
 - `allow_programs` (array<string>): required allowlist for `sys/process::exec` program names.
+- `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
+- `allow_commands` (array<string>): optional command allowlist for `host/plugin::command` and `editor/plugin::command`.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -208,10 +211,12 @@ timeout_ms = 250
 base_dir = "./sandbox"
 create_dirs = true
 
-[op."editor/plugin::command"]
+[op."host/plugin::command"]
 base_dir = "./workspace"
 bridge_cmd = "./tools/editor_bridge.sh"
 bridge_args = ["--mode", "stdio-coreform"]
+allow_plugins = ["demo-plugin"]
+allow_commands = ["run", "health"]
 
 [op."gfx/gpu::create-buffer"]
 base_dir = "./workspace"
@@ -224,6 +229,20 @@ bridge_cmd = "./tools/host_bridge.sh"
 [op."io/net::http-request"]
 url_allow = ["https://registry.example.com/api/"]
 wasi_network_profile = "preview2"
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::ws-open"]
+url_allow = ["wss://realtime.example.com/ws/"]
+wasi_network_profile = "preview2"
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::ws-send"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::ws-recv"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::ws-close"]
 bridge_cmd = "./tools/host_bridge.sh"
 
 [op."sys/process::exec"]

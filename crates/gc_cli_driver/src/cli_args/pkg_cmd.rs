@@ -137,6 +137,74 @@ enum PkgCmd {
         dry_run: bool,
     },
 
+    /// Build a deterministic requirements-trace evidence artifact for regulated assurance workflows.
+    Trace {
+        /// Path to package.toml.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Requirements graph CoreForm term path.
+        #[arg(long, default_value = "requirements.gc")]
+        requirements: PathBuf,
+
+        /// Optional release commit hash this trace binds to.
+        /// When omitted, trace verification is snapshot+policy anchored and avoids commit/evidence hash cycles.
+        #[arg(long)]
+        commit: Option<String>,
+
+        /// Release snapshot hash this trace binds to.
+        #[arg(long)]
+        snapshot: String,
+
+        /// Policy artifact hash this trace was verified against.
+        #[arg(long)]
+        policy: Option<String>,
+
+        /// Output path for the generated evidence term.
+        #[arg(long, default_value = ".genesis/assurance/requirements_trace.gc")]
+        out: PathBuf,
+
+        /// Do not import generated artifacts into `.genesis/store`.
+        #[arg(long)]
+        no_store: bool,
+    },
+
+    /// Build a deterministic tool-qualification evidence artifact for protected releases.
+    Qualify {
+        /// Optional release commit hash this qualification binds to.
+        /// When omitted, qualification is policy anchored and can be attached pre-commit.
+        #[arg(long)]
+        commit: Option<String>,
+
+        /// Policy artifact hash this qualification was validated against.
+        #[arg(long)]
+        policy: Option<String>,
+
+        /// Qualification profile label (e.g. release-full, ci, dal-a).
+        #[arg(long, default_value = "release-full")]
+        profile: String,
+
+        /// Qualification requirement identifier (repeatable).
+        #[arg(long = "requirement")]
+        requirements: Vec<String>,
+
+        /// Qualification test artifact link in the form `id=<64-hex>`, repeatable.
+        #[arg(long = "test-artifact")]
+        test_artifacts: Vec<String>,
+
+        /// Tool descriptor in the form `name=/absolute/or/relative/path`, repeatable.
+        #[arg(long = "tool")]
+        tools: Vec<String>,
+
+        /// Output path for the generated evidence term.
+        #[arg(long, default_value = ".genesis/assurance/tool_qualification.gc")]
+        out: PathBuf,
+
+        /// Do not import generated artifacts into `.genesis/store`.
+        #[arg(long)]
+        no_store: bool,
+    },
+
     /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
     Install {
         /// Lock path (relative to the capability base_dir).
@@ -280,6 +348,13 @@ enum PkgCmd {
         /// Profile name (e.g. dev|ci|release).
         #[arg(long, default_value = "dev")]
         profile: String,
+
+        /// Runtime backend profile contract for this realized environment.
+        ///
+        /// Accepted values: `headless|gpu|gfx|backend` and `profile-*` aliases.
+        /// When omitted, resolves from workspace profile/defaults.
+        #[arg(long = "runtime-backend")]
+        runtime_backend: Option<String>,
 
         /// Lock path.
         #[arg(long, default_value = "genesis.lock")]

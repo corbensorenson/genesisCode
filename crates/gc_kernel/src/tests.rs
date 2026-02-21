@@ -1,5 +1,6 @@
 use gc_coreform::{Term, parse_module};
 use num_bigint::BigInt;
+use std::collections::BTreeSet;
 
 use crate::{
     Env, EvalCtx, KernelErrorKind, MemLimits, Value, compile_module, decode_compiled_module_blob,
@@ -196,6 +197,42 @@ fn compiled_module_blob_roundtrip_preserves_behavior() {
     let out_b = eval_compiled_module(&mut ctx_b, &mut env_b, &restored).unwrap();
 
     assert_eq!(out_a.debug_repr(), out_b.debug_repr());
+}
+
+#[test]
+fn coverage_decision_counts_track_treewalk_if_branches() {
+    let src = r#"
+      (def choose (fn (x) (if x 1 2)))
+      (choose true)
+      (choose false)
+    "#;
+    let forms = parse_module(src).unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.enable_coverage(BTreeSet::new());
+    let mut env = Env::empty();
+    let _ = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let decision = ctx.coverage_decision_counts().expect("coverage enabled");
+    assert_eq!(decision.total, 2);
+    assert_eq!(decision.taken_true, 1);
+    assert_eq!(decision.taken_false, 1);
+}
+
+#[test]
+fn coverage_decision_counts_track_compiled_if_branches() {
+    let src = r#"
+      (def choose (fn (x) (if x 1 2)))
+      (choose true)
+      (choose false)
+    "#;
+    let forms = parse_module(src).unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.enable_coverage(BTreeSet::new());
+    let mut env = Env::empty();
+    let _ = eval_module_compiled(&mut ctx, &mut env, &forms).unwrap();
+    let decision = ctx.coverage_decision_counts().expect("coverage enabled");
+    assert_eq!(decision.total, 2);
+    assert_eq!(decision.taken_true, 1);
+    assert_eq!(decision.taken_false, 1);
 }
 
 #[test]

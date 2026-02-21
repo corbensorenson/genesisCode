@@ -144,12 +144,19 @@
       "gpu/compute::submit",
       "gpu/compute::write-buffer"
     ],
+    "host/plugin": [
+      "host/plugin::command"
+    ],
     "io/fs": [
       "io/fs::read",
       "io/fs::write"
     ],
     "io/net": [
-      "io/net::http-request"
+      "io/net::http-request",
+      "io/net::ws-close",
+      "io/net::ws-open",
+      "io/net::ws-recv",
+      "io/net::ws-send"
     ],
     "sys/process": [
       "sys/process::exec"
@@ -273,9 +280,14 @@
     "gpu/compute::read-buffer",
     "gpu/compute::submit",
     "gpu/compute::write-buffer",
+    "host/plugin::command",
     "io/fs::read",
     "io/fs::write",
     "io/net::http-request",
+    "io/net::ws-close",
+    "io/net::ws-open",
+    "io/net::ws-recv",
+    "io/net::ws-send",
     "sys/process::exec",
     "sys/time::now"
   ]

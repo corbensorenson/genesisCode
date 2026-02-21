@@ -74,8 +74,8 @@ CI enforces this profile in standard/full lanes before strict selfhost suites:
   in the dedicated `gpu_device_microbench` self-hosted GPU lane to enforce
   `require-device` backend policy and persist adapter-specific artifacts.
 - `scripts/check_upgrade_plan_health.sh` includes the same guard for prepush/release profiles.
-  Optional device conformance in health profiles is enabled with
-  `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
+  `release-full` requires device conformance by default; `dev-fast`/`prepush-standard`
+  opt in with `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
 
 ## Reference Workload
 

@@ -27,6 +27,9 @@ pub struct PolicyClass {
     pub require_signatures: bool,
     pub min_signatures: u64,
     pub allowed_public_keys: Vec<VerifyingKey>,
+    pub required_attestation_roles: Vec<String>,
+    pub role_min_signatures: BTreeMap<String, u64>,
+    pub independent_role_pairs: Vec<(String, String)>,
 }
 
 impl PolicyClass {
@@ -36,6 +39,15 @@ impl PolicyClass {
 
     pub fn normalize_evidence_kind(kind: &str) -> String {
         let trimmed = kind.trim();
+        if trimmed.starts_with(':') {
+            trimmed.to_string()
+        } else {
+            format!(":{trimmed}")
+        }
+    }
+
+    pub fn normalize_attestation_role(role: &str) -> String {
+        let trimmed = role.trim();
         if trimmed.starts_with(':') {
             trimmed.to_string()
         } else {
@@ -271,10 +283,27 @@ fn parse_class(
             )));
         }
     };
+    let required_attestation_roles =
+        parse_role_vec(m, key, ":required-attestation-roles", false)?.unwrap_or_default();
+    let role_min_signatures = parse_role_min_signatures_map(m, key, ":role-min-signatures")?;
+    let independent_role_pairs = parse_independent_role_pairs(m, key, ":independent-role-pairs")?;
 
     if min_signatures > 0 && allowed_public_keys.is_empty() {
         return Err(PolicyError::Invalid(format!(
             "{key}: min_signatures > 0 but allowed_public_keys is empty"
+        )));
+    }
+    let has_role_constraints = !required_attestation_roles.is_empty()
+        || !role_min_signatures.is_empty()
+        || !independent_role_pairs.is_empty();
+    if has_role_constraints && !require_signatures {
+        return Err(PolicyError::Invalid(format!(
+            "{key}: role constraints require :require-signatures true"
+        )));
+    }
+    if has_role_constraints && allowed_public_keys.is_empty() {
+        return Err(PolicyError::Invalid(format!(
+            "{key}: role constraints require :allowed-public-keys"
         )));
     }
 
@@ -291,6 +320,9 @@ fn parse_class(
         require_signatures,
         min_signatures,
         allowed_public_keys,
+        required_attestation_roles,
+        role_min_signatures,
+        independent_role_pairs,
     }))
 }
 
@@ -354,6 +386,172 @@ fn parse_obligation_evidence_kind_map(
         out.insert(ob, dedup.into_iter().collect());
     }
     Ok(out)
+}
+
+fn parse_role_vec(
+    m: &BTreeMap<TermOrdKey, Term>,
+    class_key: &str,
+    field: &str,
+    allow_empty: bool,
+) -> Result<Option<Vec<String>>, PolicyError> {
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(field))) else {
+        return Ok(None);
+    };
+    let Term::Vector(xs) = t else {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} must be vector, got {}",
+            print_term(t)
+        )));
+    };
+    if xs.is_empty() && !allow_empty {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} cannot be empty when present"
+        )));
+    }
+    let mut out: BTreeSet<String> = BTreeSet::new();
+    for x in xs {
+        let raw = match x {
+            Term::Str(s) => s.as_str(),
+            Term::Symbol(s) => s.as_str(),
+            other => {
+                return Err(PolicyError::Schema(format!(
+                    "{class_key}: {field} entries must be strings/symbols, got {}",
+                    print_term(other)
+                )));
+            }
+        };
+        let norm = PolicyClass::normalize_attestation_role(raw);
+        if norm == ":" {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field} entries cannot be empty"
+            )));
+        }
+        out.insert(norm);
+    }
+    Ok(Some(out.into_iter().collect()))
+}
+
+fn parse_role_min_signatures_map(
+    m: &BTreeMap<TermOrdKey, Term>,
+    class_key: &str,
+    field: &str,
+) -> Result<BTreeMap<String, u64>, PolicyError> {
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(field))) else {
+        return Ok(BTreeMap::new());
+    };
+    let Term::Map(mm) = t else {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} must be map, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out = BTreeMap::new();
+    for (k, v) in mm {
+        let raw_role = match &k.0 {
+            Term::Str(s) => s.as_str(),
+            Term::Symbol(s) => s.as_str(),
+            other => {
+                return Err(PolicyError::Schema(format!(
+                    "{class_key}: {field} keys must be strings/symbols, got {}",
+                    print_term(other)
+                )));
+            }
+        };
+        let role = PolicyClass::normalize_attestation_role(raw_role);
+        if role == ":" {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field} keys cannot be empty"
+            )));
+        }
+        let min = match v {
+            Term::Int(i) => {
+                use num_traits::ToPrimitive;
+                i.to_u64().ok_or_else(|| {
+                    PolicyError::Schema(format!("{class_key}: {field}[{role}] out of range"))
+                })?
+            }
+            other => {
+                return Err(PolicyError::Schema(format!(
+                    "{class_key}: {field}[{role}] must be int, got {}",
+                    print_term(other)
+                )));
+            }
+        };
+        out.insert(role, min);
+    }
+    Ok(out)
+}
+
+fn parse_independent_role_pairs(
+    m: &BTreeMap<TermOrdKey, Term>,
+    class_key: &str,
+    field: &str,
+) -> Result<Vec<(String, String)>, PolicyError> {
+    let Some(t) = m.get(&TermOrdKey(Term::symbol(field))) else {
+        return Ok(Vec::new());
+    };
+    let Term::Vector(xs) = t else {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} must be vector, got {}",
+            print_term(t)
+        )));
+    };
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut dedup: BTreeSet<(String, String)> = BTreeSet::new();
+    for x in xs {
+        let Term::Map(mm) = x else {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field} entries must be maps, got {}",
+                print_term(x)
+            )));
+        };
+        let left = parse_pair_role(mm, class_key, field, ":left")?;
+        let right = parse_pair_role(mm, class_key, field, ":right")?;
+        if left == right {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field} pair roles must differ"
+            )));
+        }
+        let canonical = if left < right {
+            (left, right)
+        } else {
+            (right, left)
+        };
+        if dedup.insert(canonical.clone()) {
+            out.push(canonical);
+        }
+    }
+    Ok(out)
+}
+
+fn parse_pair_role(
+    mm: &BTreeMap<TermOrdKey, Term>,
+    class_key: &str,
+    field: &str,
+    key: &str,
+) -> Result<String, PolicyError> {
+    let Some(t) = mm.get(&TermOrdKey(Term::symbol(key))) else {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field} entries must include {key}"
+        )));
+    };
+    let raw = match t {
+        Term::Str(s) => s.as_str(),
+        Term::Symbol(s) => s.as_str(),
+        other => {
+            return Err(PolicyError::Schema(format!(
+                "{class_key}: {field}.{key} must be string/symbol, got {}",
+                print_term(other)
+            )));
+        }
+    };
+    let role = PolicyClass::normalize_attestation_role(raw);
+    if role == ":" {
+        return Err(PolicyError::Schema(format!(
+            "{class_key}: {field}.{key} cannot be empty"
+        )));
+    }
+    Ok(role)
 }
 
 fn compile_globs(pats: &[String]) -> Result<GlobSet, String> {
@@ -479,6 +677,8 @@ impl From<SchemaError> for PolicyError {
 #[cfg(test)]
 mod tests {
     use super::Policy;
+    use base64ct::{Base64, Encoding};
+    use ed25519_dalek::SigningKey;
     use gc_coreform::parse_term;
     use std::collections::BTreeSet;
 
@@ -519,5 +719,50 @@ mod tests {
             &observed,
         );
         assert_eq!(missing, vec![":effect-log".to_string()]);
+    }
+
+    #[test]
+    fn policy_parses_role_constraints_for_signature_classes() {
+        let sk = SigningKey::from_bytes(&[7u8; 32]);
+        let pk_b64 = Base64::encode_string(&sk.verifying_key().to_bytes());
+        let policy_src = r#"
+            {
+              :type :vcs/policy
+              :v 1
+              :classes {
+                :tags {
+                  :patterns ["refs/**/tags/*"]
+                  :required-obligations [core/obligation::unit-tests]
+                  :require-signatures true
+                  :min-signatures 2
+                  :allowed-public-keys ["__PK_B64__"]
+                  :required-attestation-roles [:reviewer :verifier]
+                  :role-min-signatures {:reviewer 1 :verifier 1}
+                  :independent-role-pairs [{:left :reviewer :right :verifier}]
+                }
+              }
+            }
+            "#
+        .replace("__PK_B64__", &pk_b64);
+        let t = parse_term(&policy_src).expect("policy term");
+
+        let pol = Policy::from_term(&t).expect("policy parse");
+        let class = pol.class_for_ref("refs/tags/v1.2.3").expect("class");
+        assert!(
+            class
+                .required_attestation_roles
+                .contains(&":reviewer".to_string())
+        );
+        assert!(
+            class
+                .required_attestation_roles
+                .contains(&":verifier".to_string())
+        );
+        assert_eq!(class.role_min_signatures.get(":reviewer"), Some(&1));
+        assert_eq!(class.role_min_signatures.get(":verifier"), Some(&1));
+        assert_eq!(
+            class.independent_role_pairs,
+            vec![(":reviewer".to_string(), ":verifier".to_string())]
+        );
     }
 }

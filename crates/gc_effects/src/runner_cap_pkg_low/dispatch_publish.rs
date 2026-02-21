@@ -217,6 +217,8 @@ pub(super) fn dispatch_publish(
             }
             let mut evidence_kinds: std::collections::BTreeSet<String> =
                 std::collections::BTreeSet::new();
+            let mut requirements_trace_terms: Vec<Term> = Vec::new();
+            let mut tool_qualification_terms: Vec<Term> = Vec::new();
             for ev_h in &commit.evidence {
                 let ev_term = match store_get_term(store, ev_h) {
                     Ok(t) => t,
@@ -240,7 +242,13 @@ pub(super) fn dispatch_publish(
                         ));
                     }
                 };
-                evidence_kinds.insert(gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind));
+                let norm_kind = gc_vcs::PolicyClass::normalize_evidence_kind(&ev.kind);
+                if norm_kind == ":requirements-trace" {
+                    requirements_trace_terms.push(ev_term.clone());
+                } else if norm_kind == ":tool-qualification" {
+                    tool_qualification_terms.push(ev_term.clone());
+                }
+                evidence_kinds.insert(norm_kind);
             }
             let missing_kinds =
                 class.missing_required_evidence_kinds(&commit.obligations, &evidence_kinds);
@@ -254,6 +262,58 @@ pub(super) fn dispatch_publish(
                     ),
                     Some(op),
                 ));
+            }
+            let required_kinds = class.required_evidence_kind_set(&commit.obligations);
+            if required_kinds.contains(":requirements-trace") {
+                if requirements_trace_terms.is_empty() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-requirements-trace",
+                        "required evidence kind :requirements-trace is present but no trace artifact was parsed".to_string(),
+                        Some(op),
+                    ));
+                }
+                let ctx = gc_vcs::RequirementsTraceGateContext {
+                    commit_hash: &commit_hex,
+                    snapshot_hash: &commit.result,
+                    policy_hash: Some(&policy_h),
+                    commit_obligations: &commit.obligations,
+                    observed_evidence_kinds: &evidence_kinds,
+                };
+                for t in &requirements_trace_terms {
+                    if let Err(e) = gc_vcs::validate_requirements_trace_evidence(t, &ctx) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/invalid-requirements-trace",
+                            e,
+                            Some(op),
+                        ));
+                    }
+                }
+            }
+            if required_kinds.contains(":tool-qualification") {
+                if tool_qualification_terms.is_empty() {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/missing-tool-qualification",
+                        "required evidence kind :tool-qualification is present but no qualification artifact was parsed".to_string(),
+                        Some(op),
+                    ));
+                }
+                let ctx = gc_vcs::ToolQualificationGateContext {
+                    commit_hash: &commit_hex,
+                    policy_hash: Some(&policy_h),
+                };
+                for t in &tool_qualification_terms {
+                    if let Err(e) = gc_vcs::validate_tool_qualification_evidence(t, &ctx) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/invalid-tool-qualification",
+                            e,
+                            Some(op),
+                        ));
+                    }
+                }
             }
 
             if class.require_signatures {
@@ -271,6 +331,10 @@ pub(super) fn dispatch_publish(
                 let mut valid: u64 = 0;
                 let mut seen_pks: std::collections::BTreeSet<Vec<u8>> =
                     std::collections::BTreeSet::new();
+                let mut role_signers: std::collections::BTreeMap<
+                    String,
+                    std::collections::BTreeSet<Vec<u8>>,
+                > = std::collections::BTreeMap::new();
                 for at_h in &commit.attestations {
                     let at_term = match store_get_term(store, at_h) {
                         Ok(t) => t,
@@ -295,9 +359,6 @@ pub(super) fn dispatch_publish(
                         }
                     };
                     let pk_vec = at.pk.to_vec();
-                    if seen_pks.contains(&pk_vec) {
-                        continue;
-                    }
                     if gc_vcs::verify_commit_attestation(
                         &at,
                         &signing_h,
@@ -305,8 +366,15 @@ pub(super) fn dispatch_publish(
                     )
                     .is_ok()
                     {
-                        seen_pks.insert(pk_vec);
-                        valid = valid.saturating_add(1);
+                        if seen_pks.insert(pk_vec.clone()) {
+                            valid = valid.saturating_add(1);
+                        }
+                        if let Some(role) = at.role.as_deref() {
+                            let norm = gc_vcs::PolicyClass::normalize_attestation_role(role);
+                            if norm != ":" {
+                                role_signers.entry(norm).or_default().insert(pk_vec);
+                            }
+                        }
                     }
                 }
                 if valid < class.min_signatures {
@@ -319,6 +387,53 @@ pub(super) fn dispatch_publish(
                         ),
                         Some(op),
                     ));
+                }
+                for role in &class.required_attestation_roles {
+                    let count = role_signers.get(role).map(|s| s.len()).unwrap_or(0);
+                    if count == 0 {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/missing-attestation-role",
+                            format!("missing required attestation role {role}"),
+                            Some(op),
+                        ));
+                    }
+                }
+                for (role, min) in &class.role_min_signatures {
+                    let count = role_signers.get(role).map(|s| s.len()).unwrap_or(0);
+                    if count < *min as usize {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/missing-attestation-role-signatures",
+                            format!("role {role} requires {min} distinct signer(s), got {count}"),
+                            Some(op),
+                        ));
+                    }
+                }
+                for (left, right) in &class.independent_role_pairs {
+                    let left_set = role_signers.get(left);
+                    let right_set = role_signers.get(right);
+                    if left_set.map_or(0, |s| s.len()) == 0 || right_set.map_or(0, |s| s.len()) == 0
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/missing-attestation-role",
+                            format!(
+                                "independence pair requires both roles present: {left}, {right}"
+                            ),
+                            Some(op),
+                        ));
+                    }
+                    if let (Some(a), Some(b)) = (left_set, right_set)
+                        && a.iter().any(|pk| b.contains(pk))
+                    {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/role-independence-violation",
+                            format!("roles {left} and {right} must be signed by independent keys"),
+                            Some(op),
+                        ));
+                    }
                 }
             }
 

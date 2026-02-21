@@ -19,6 +19,7 @@ This document freezes the first AI-agent-facing contract for GenesisCode project
 - deterministic diagnostics (`doctor`)
 - workspace task execution (`run`)
 - package obligation execution alias (`test`)
+- regulated assurance artifact emission (`trace`, `qualify`)
 - deterministic profile environment realization (`env`)
 - snapshot and distribution (`snapshot`, `export`, `import`, `publish`)
 

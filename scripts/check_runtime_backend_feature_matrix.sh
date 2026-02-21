@@ -25,5 +25,11 @@ for profile in profile-headless profile-gpu profile-gfx profile-backend; do
     backend_feature_flags_match_active_profile --quiet
 done
 
-echo "runtime-backend-feature-matrix: ok"
+echo "runtime-backend-feature-matrix: checking gcpm env runtime backend mapping end-to-end"
+for profile in profile-headless profile-gpu profile-gfx profile-backend; do
+  echo "runtime-backend-feature-matrix: gc_cli gcpm env runtime profile contract profile=${profile}"
+  cargo test -p gc_cli --no-default-features --features "${profile}" --test cli_pkg_workspace \
+    gcpm_env_runtime_backend_profile_contract_is_machine_readable --quiet
+done
 
+echo "runtime-backend-feature-matrix: ok"

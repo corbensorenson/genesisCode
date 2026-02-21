@@ -1,8 +1,7 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
-use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::sync::{Arc, mpsc};
+use std::thread::JoinHandle;
 
 use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
@@ -10,31 +9,16 @@ use num_bigint::BigInt;
 
 use crate::policy::CapsPolicy;
 use crate::runner_task_exec::execute_task_payload;
+#[path = "runner_task_policy.rs"]
+mod runner_task_policy;
 #[path = "runner_task_terms.rs"]
 mod runner_task_terms;
-use runner_task_terms::{
-    map_field, map_field_int_u64, map_field_str_or_symbol, task_map, value_data_map_field,
+#[path = "runner_task_workers.rs"]
+mod runner_task_workers;
+pub(crate) use runner_task_policy::{
+    TaskBudgetState, enforce_task_policy_limits, task_schedule_event_for,
 };
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub(crate) struct TaskScheduleEvent {
-    pub(crate) task_id: Option<String>,
-    pub(crate) parent_task: Option<String>,
-    pub(crate) schedule_step: Option<u64>,
-    pub(crate) await_edge: Option<String>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct TaskBudgetState {
-    per_task: BTreeMap<String, TaskBudgetCounters>,
-}
-
-#[derive(Debug, Clone)]
-struct TaskBudgetCounters {
-    first_step: u64,
-    last_step: u64,
-    steps: u64,
-}
+use runner_task_terms::{map_field, map_field_int_u64, map_field_str_or_symbol, task_map};
 
 #[derive(Debug, Default)]
 pub(crate) struct TaskRuntime {
@@ -531,106 +515,6 @@ pub(crate) fn task_runtime_call(
     }
 }
 
-impl TaskRuntime {
-    fn wait_for_completion(&mut self, task_id: &str) -> Result<TaskCompletion, String> {
-        if let Some(c) = self.completed.remove(task_id) {
-            return Ok(c);
-        }
-        self.pool.wait_for_completion(task_id, &mut self.completed)
-    }
-}
-
-impl TaskWorkerPool {
-    fn ensure_started(&mut self, worker_count: usize) {
-        if self.tx.is_some() || worker_count == 0 {
-            return;
-        }
-        let (tx, rx) = mpsc::channel::<TaskJob>();
-        let (done_tx, done_rx) = mpsc::channel::<TaskCompletion>();
-        let (ready_tx, ready_rx) = mpsc::channel::<()>();
-        let shared_rx = Arc::new(Mutex::new(rx));
-        let mut started_workers = 0usize;
-        for idx in 0..worker_count {
-            let shared_rx = Arc::clone(&shared_rx);
-            let done_tx = done_tx.clone();
-            let ready_tx = ready_tx.clone();
-            let worker_result = thread::Builder::new()
-                .name(format!("genesis-task-{idx}"))
-                .spawn(move || worker_loop(shared_rx, done_tx, ready_tx));
-            match worker_result {
-                Ok(worker) => {
-                    self.workers.push(worker);
-                    started_workers = started_workers.saturating_add(1);
-                }
-                Err(_) => break,
-            }
-        }
-        if started_workers == 0 {
-            return;
-        }
-        for _ in 0..started_workers {
-            let _ = ready_rx.recv_timeout(Duration::from_secs(1));
-        }
-        self.tx = Some(tx);
-        self.rx = Some(done_rx);
-    }
-
-    fn dispatch(&self, job: TaskJob) -> Result<(), String> {
-        match &self.tx {
-            Some(tx) => tx
-                .send(job)
-                .map_err(|e| format!("task dispatch failed: {e}")),
-            None => Err("task worker pool not initialized".to_string()),
-        }
-    }
-
-    fn wait_for_completion(
-        &mut self,
-        task_id: &str,
-        completed: &mut BTreeMap<String, TaskCompletion>,
-    ) -> Result<TaskCompletion, String> {
-        if let Some(c) = completed.remove(task_id) {
-            return Ok(c);
-        }
-        let rx = self
-            .rx
-            .as_ref()
-            .ok_or_else(|| "task worker completion channel not initialized".to_string())?;
-        loop {
-            let completion = rx
-                .recv()
-                .map_err(|e| format!("task completion channel closed: {e}"))?;
-            if completion.task_id == task_id {
-                return Ok(completion);
-            }
-            completed.insert(completion.task_id.clone(), completion);
-        }
-    }
-}
-
-fn worker_loop(
-    shared_rx: Arc<Mutex<mpsc::Receiver<TaskJob>>>,
-    done_tx: mpsc::Sender<TaskCompletion>,
-    ready_tx: mpsc::Sender<()>,
-) {
-    let _ = ready_tx.send(());
-    loop {
-        let recv = match shared_rx.lock() {
-            Ok(rx) => rx.recv(),
-            Err(poisoned) => poisoned.into_inner().recv(),
-        };
-        let job = match recv {
-            Ok(job) => job,
-            Err(_) => break,
-        };
-        let outcome = execute_task_payload(job.payload, &job.cancel_flag, job.policy.as_ref());
-        let _ = done_tx.send(TaskCompletion {
-            task_id: job.task_id,
-            outcome,
-        });
-    }
-}
-
 fn apply_completion(runtime: &mut TaskRuntime, completion: TaskCompletion) {
     let Some(rec) = runtime.tasks.get_mut(&completion.task_id) else {
         return;
@@ -662,149 +546,6 @@ fn apply_completion(runtime: &mut TaskRuntime, completion: TaskCompletion) {
     rec.cancel_flag = None;
 }
 
-pub(crate) fn task_schedule_event_for(
-    i: u64,
-    op: &str,
-    payload: &Term,
-    resp_val: &Value,
-) -> TaskScheduleEvent {
-    let mut out = TaskScheduleEvent::default();
-    if is_task_like_op(op) {
-        out.schedule_step = Some(i);
-    }
-    match op {
-        "core/task::spawn" | "editor/task::spawn" => {
-            out.parent_task = map_field_str_or_symbol(payload, ":parent-task")
-                .or_else(|| map_field_str_or_symbol(payload, ":scope"));
-            out.task_id = value_data_map_field(resp_val, ":task-id");
-        }
-        "core/task::channel-open" => {
-            out.task_id = value_data_map_field(resp_val, ":channel-id");
-        }
-        "core/task::channel-send"
-        | "core/task::channel-recv"
-        | "core/task::channel-close"
-        | "core/task::channel-status" => {
-            out.task_id = map_field_str_or_symbol(payload, ":channel-id");
-        }
-        "core/task::await" => {
-            let tid = map_field_str_or_symbol(payload, ":task-id");
-            out.task_id = tid.clone();
-            out.await_edge = tid;
-        }
-        "core/task::cancel" | "core/task::status" | "editor/task::poll" | "editor/task::cancel" => {
-            out.task_id = map_field_str_or_symbol(payload, ":task-id");
-        }
-        "core/task::scope" => {
-            out.parent_task = map_field_str_or_symbol(payload, ":scope");
-        }
-        _ => {}
-    }
-    out
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "task policy limiter receives explicit runtime and protocol context"
-)]
-pub(crate) fn enforce_task_policy_limits(
-    policy: &CapsPolicy,
-    state: &mut TaskBudgetState,
-    runtime: &TaskRuntime,
-    i: u64,
-    op: &str,
-    payload: &Term,
-    resp_val: &Value,
-    error_tok: SealId,
-) -> Option<Value> {
-    if !is_task_like_op(op) {
-        return None;
-    }
-
-    let tid = task_target_id(op, payload, resp_val);
-    if let Some(tid) = &tid {
-        let c = state
-            .per_task
-            .entry(tid.clone())
-            .or_insert(TaskBudgetCounters {
-                first_step: i,
-                last_step: i,
-                steps: 0,
-            });
-        c.steps = c.steps.saturating_add(1);
-        c.last_step = i;
-    }
-
-    if let Some(max_tasks) = policy.task.max_tasks
-        && (state.per_task.len() as u64) > max_tasks
-    {
-        return Some(task_limit_error(
-            error_tok,
-            "max_tasks",
-            max_tasks,
-            state.per_task.len() as u64,
-            op,
-            tid.as_deref(),
-        ));
-    }
-    if let Some(max_workers) = policy.task.max_workers
-        && runtime_running_count(runtime) > max_workers
-    {
-        return Some(task_limit_error(
-            error_tok,
-            "max_workers",
-            max_workers,
-            runtime_running_count(runtime),
-            op,
-            tid.as_deref(),
-        ));
-    }
-    if let Some(max_queue) = policy.task.max_queue
-        && runtime_queue_count(runtime) > max_queue
-    {
-        return Some(task_limit_error(
-            error_tok,
-            "max_queue",
-            max_queue,
-            runtime_queue_count(runtime),
-            op,
-            tid.as_deref(),
-        ));
-    }
-    if let Some(max_steps) = policy.task.max_steps_per_task
-        && let Some(tid) = &tid
-        && let Some(c) = state.per_task.get(tid)
-        && c.steps > max_steps
-    {
-        return Some(task_limit_error(
-            error_tok,
-            "max_steps_per_task",
-            max_steps,
-            c.steps,
-            op,
-            Some(tid),
-        ));
-    }
-    if let Some(max_time_ms) = policy.task.max_time_ms_per_task
-        && let Some(tid) = &tid
-        && let Some(c) = state.per_task.get(tid)
-    {
-        let logical_elapsed = c.last_step.saturating_sub(c.first_step);
-        if logical_elapsed > max_time_ms {
-            return Some(task_limit_error(
-                error_tok,
-                "max_time_ms_per_task",
-                max_time_ms,
-                logical_elapsed,
-                op,
-                Some(tid),
-            ));
-        }
-    }
-
-    None
-}
-
 fn task_state_term(state: &TaskState) -> Term {
     match state {
         TaskState::Queued => Term::symbol(":queued"),
@@ -815,21 +556,13 @@ fn task_state_term(state: &TaskState) -> Term {
     }
 }
 
-fn runtime_running_count(runtime: &TaskRuntime) -> u64 {
-    runtime.running_count
-}
-
-fn runtime_queue_count(runtime: &TaskRuntime) -> u64 {
-    runtime.queued_count
-}
-
 fn promote_queued_task(runtime: &mut TaskRuntime, policy: &CapsPolicy, op: &str) {
     let worker_budget = task_worker_budget(policy);
     if worker_budget == 0 {
         return;
     }
     runtime.pool.ensure_started(worker_budget as usize);
-    while runtime_running_count(runtime) < worker_budget {
+    while runtime.running_count < worker_budget {
         let Some(task_id) = runtime.queue.pop_front() else {
             break;
         };
@@ -877,67 +610,6 @@ fn task_worker_budget(policy: &CapsPolicy) -> u64 {
         Some(v) => v,
         None => policy.task.default_workers.max(1),
     }
-}
-
-fn task_target_id(op: &str, payload: &Term, resp_val: &Value) -> Option<String> {
-    match op {
-        "core/task::spawn" | "editor/task::spawn" => value_data_map_field(resp_val, ":task-id"),
-        "core/task::channel-open" => value_data_map_field(resp_val, ":channel-id"),
-        "core/task::channel-send"
-        | "core/task::channel-recv"
-        | "core/task::channel-close"
-        | "core/task::channel-status" => map_field_str_or_symbol(payload, ":channel-id"),
-        "core/task::await"
-        | "core/task::cancel"
-        | "core/task::status"
-        | "editor/task::poll"
-        | "editor/task::cancel" => map_field_str_or_symbol(payload, ":task-id"),
-        _ => None,
-    }
-}
-
-fn task_limit_error(
-    error_tok: SealId,
-    budget: &str,
-    limit: u64,
-    observed: u64,
-    op: &str,
-    task_id: Option<&str>,
-) -> Value {
-    mk_error_with_ctx(
-        error_tok,
-        "core/task/budget-exceeded",
-        format!("task policy limit exceeded: {budget} observed {observed} > {limit} for {op}"),
-        Some(op),
-        Term::Map(
-            [
-                (
-                    TermOrdKey(Term::symbol(":task/budget")),
-                    Term::Str(budget.to_string()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":task/limit")),
-                    Term::Int(BigInt::from(limit)),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":task/observed")),
-                    Term::Int(BigInt::from(observed)),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":task/id")),
-                    task_id
-                        .map(|s| Term::Str(s.to_string()))
-                        .unwrap_or(Term::Nil),
-                ),
-            ]
-            .into_iter()
-            .collect(),
-        ),
-    )
-}
-
-fn is_task_like_op(op: &str) -> bool {
-    op.starts_with("core/task::") || op.starts_with("editor/task::")
 }
 
 fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Value {

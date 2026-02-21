@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
@@ -22,7 +23,14 @@ assert.equal(typeof wasm.fmt_coreform_module, "function");
 assert.equal(typeof wasm.hash_coreform_module, "function");
 assert.equal(typeof wasm.fmt_coreform_module_selfhost, "function");
 assert.equal(typeof wasm.hash_coreform_module_selfhost, "function");
+assert.equal(typeof wasm.fmt_coreform_module_selfhost_with_artifact, "function");
+assert.equal(typeof wasm.hash_coreform_module_selfhost_with_artifact, "function");
 assert.equal(typeof wasm.Runtime, "function");
+
+const artifactPath = path.resolve(
+  process.argv[3] ?? "selfhost/toolchain.gc",
+);
+const artifactSrc = fs.readFileSync(artifactPath, "utf8");
 
 // Term fmt/hash idempotency and canonical hashing invariants.
 const t0 = "{:b 2 :a 1}";
@@ -43,11 +51,29 @@ const m0 = `
   m::y
 `;
 const mfmtRust = wasm.fmt_coreform_module(m0);
-const mfmtSelf = wasm.fmt_coreform_module_selfhost(m0, 5_000_000);
+assert.throws(
+  () => wasm.fmt_coreform_module_selfhost(m0, 5_000_000),
+  /selfhost\/artifact-required/,
+  "wasm selfhost fmt without explicit artifact should fail closed",
+);
+const mfmtSelf = wasm.fmt_coreform_module_selfhost_with_artifact(
+  m0,
+  artifactSrc,
+  5_000_000,
+);
 assert.equal(mfmtSelf, mfmtRust, "selfhost module fmt must match rust module fmt");
 
 const mhRust = wasm.hash_coreform_module(m0);
-const mhSelf = wasm.hash_coreform_module_selfhost(m0, 5_000_000);
+assert.throws(
+  () => wasm.hash_coreform_module_selfhost(m0, 5_000_000),
+  /selfhost\/artifact-required/,
+  "wasm selfhost hash without explicit artifact should fail closed",
+);
+const mhSelf = wasm.hash_coreform_module_selfhost_with_artifact(
+  m0,
+  artifactSrc,
+  5_000_000,
+);
 assert.ok(isHex32(mhRust), "hash_coreform_module should be 64-hex");
 assert.equal(mhSelf, mhRust, "selfhost module hash must match rust module hash");
 

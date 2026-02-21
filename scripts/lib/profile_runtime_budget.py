@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Emit deterministic runtime profile reports and enforce elapsed/p95 budgets."""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import math
+from pathlib import Path
+from typing import Any
+
+
+def parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--profile", required=True)
+    ap.add_argument("--kind", default="genesis/test-profile-runtime-v0.1")
+    ap.add_argument("--report", required=True)
+    ap.add_argument("--history", required=True)
+    ap.add_argument("--elapsed-ms", required=True, type=int)
+    ap.add_argument("--budget-ms", required=True, type=int)
+    ap.add_argument("--min-history", required=True, type=int)
+    ap.add_argument("--extra-json", default="")
+    return ap.parse_args()
+
+
+def require_positive(name: str, value: int) -> None:
+    if value <= 0:
+        raise SystemExit(f"profile-runtime-budget: {name} must be > 0")
+
+
+def compute_p95(samples: list[int]) -> int:
+    idx = max(0, math.ceil(0.95 * len(samples)) - 1)
+    return sorted(samples)[idx]
+
+
+def read_history(path: Path, profile: str, budget_ms: int) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(row, dict)
+            and row.get("profile") == profile
+            and isinstance(row.get("elapsed_ms"), int)
+            and int(row.get("budget_ms", -1)) == budget_ms
+        ):
+            rows.append(row)
+    return rows
+
+
+def parse_extra(extra_json: str) -> dict[str, Any]:
+    if not extra_json.strip():
+        return {}
+    try:
+        parsed = json.loads(extra_json)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"profile-runtime-budget: --extra-json is invalid JSON: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise SystemExit("profile-runtime-budget: --extra-json must decode to an object")
+    return parsed
+
+
+def main() -> None:
+    args = parse_args()
+    require_positive("elapsed-ms", args.elapsed_ms)
+    require_positive("budget-ms", args.budget_ms)
+    require_positive("min-history", args.min_history)
+
+    report_path = Path(args.report)
+    history_path = Path(args.history)
+    extra = parse_extra(args.extra_json)
+
+    history_rows = read_history(history_path, args.profile, args.budget_ms)
+    now_utc = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    current_row = {
+        "kind": args.kind,
+        "profile": args.profile,
+        "elapsed_ms": args.elapsed_ms,
+        "budget_ms": args.budget_ms,
+        "timestamp_utc": now_utc,
+    }
+    current_row.update(extra)
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with history_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(current_row, sort_keys=True) + "\n")
+
+    history_rows.append(current_row)
+    elapsed_samples = [int(row["elapsed_ms"]) for row in history_rows]
+    p95_ms = compute_p95(elapsed_samples)
+
+    previous_elapsed = None
+    if report_path.is_file():
+        try:
+            previous_doc = json.loads(report_path.read_text(encoding="utf-8"))
+            if (
+                isinstance(previous_doc, dict)
+                and previous_doc.get("kind") == args.kind
+                and previous_doc.get("profile") == args.profile
+                and isinstance(previous_doc.get("elapsed_ms"), int)
+            ):
+                previous_elapsed = int(previous_doc["elapsed_ms"])
+        except json.JSONDecodeError:
+            previous_elapsed = None
+
+    report_doc = {
+        "kind": args.kind,
+        "profile": args.profile,
+        "elapsed_ms": args.elapsed_ms,
+        "budget_ms": args.budget_ms,
+        "history_samples": len(elapsed_samples),
+        "history_p95_ms": p95_ms,
+        "history_file": str(history_path),
+        "ok": True,
+        "timestamp_utc": now_utc,
+    }
+    if previous_elapsed is not None:
+        report_doc["previous_elapsed_ms"] = previous_elapsed
+        report_doc["elapsed_delta_ms"] = args.elapsed_ms - previous_elapsed
+    report_doc.update(extra)
+
+    elapsed_fail = args.elapsed_ms > args.budget_ms
+    p95_fail = len(elapsed_samples) >= args.min_history and p95_ms > args.budget_ms
+    if elapsed_fail or p95_fail:
+        report_doc["ok"] = False
+
+    report_path.write_text(
+        json.dumps(report_doc, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        "profile-runtime-budget: "
+        f"profile={args.profile} elapsed_ms={args.elapsed_ms} budget_ms={args.budget_ms} "
+        f"history_samples={len(elapsed_samples)} history_p95_ms={p95_ms} report={report_path}"
+    )
+
+    if elapsed_fail:
+        raise SystemExit(
+            f"profile-runtime-budget: elapsed budget exceeded for {args.profile}: "
+            f"{args.elapsed_ms} > {args.budget_ms}"
+        )
+    if p95_fail:
+        raise SystemExit(
+            f"profile-runtime-budget: history p95 budget exceeded for {args.profile}: "
+            f"{p95_ms} > {args.budget_ms} with {len(elapsed_samples)} samples"
+        )
+
+
+if __name__ == "__main__":
+    main()

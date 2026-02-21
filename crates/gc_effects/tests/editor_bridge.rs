@@ -148,6 +148,8 @@ allow = ["editor/plugin::command"]
 [op."editor/plugin::command"]
 base_dir = "{base}"
 bridge_cmd = "bridge.sh"
+allow_plugins = ["demo"]
+allow_commands = ["run"]
 "#
     ))
     .expect("caps");
@@ -181,8 +183,16 @@ bridge_cmd = "bridge.sh"
 
 #[test]
 fn editor_plugin_command_without_bridge_cmd_returns_error() {
-    let policy =
-        CapsPolicy::from_toml_str(r#"allow = ["editor/plugin::command"]"#).expect("caps policy");
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["editor/plugin::command"]
+
+[op."editor/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+"#,
+    )
+    .expect("caps policy");
     let src = r#"
         (def prog
           (core/effect::perform
@@ -206,5 +216,86 @@ fn editor_plugin_command_without_bridge_cmd_returns_error() {
     assert_eq!(
         mm.get(&TermOrdKey(Term::symbol(":error/code"))),
         Some(&Term::Str("editor/bridge-required".to_string()))
+    );
+}
+
+#[test]
+fn host_plugin_command_wasi_profile_is_replay_deterministic() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status \"ok\" :bridge-op \"host/plugin::command\"}"
+"#,
+    )
+    .expect("caps policy");
+    let src = r#"
+        (def prog
+          (core/effect::perform
+            'host/plugin::command
+            {:command "run" :payload {:x 1} :plugin "demo"}
+            (fn (x) (core/effect::pure x))))
+        prog
+    "#;
+
+    let mut ctx1 = EvalCtx::new();
+    let (prog1, h) = parse_and_eval(&mut ctx1, src);
+    let run_out = run(&mut ctx1, &policy, prog1, h, "gc_effects-test".to_string()).expect("run");
+    let Value::Data(resp) = &run_out.value else {
+        panic!("host plugin command should return data");
+    };
+    assert_eq!(
+        map_get(resp, ":bridge-op"),
+        Some(&Term::Str("host/plugin::command".to_string()))
+    );
+    assert_eq!(map_get(resp, ":ok"), Some(&Term::Bool(true)));
+
+    let mut ctx2 = EvalCtx::new();
+    let (prog2, _) = parse_and_eval(&mut ctx2, src);
+    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+}
+
+#[test]
+fn host_plugin_command_requires_allowlisted_plugin() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true}"
+"#,
+    )
+    .expect("caps policy");
+    let src = r#"
+        (def prog
+          (core/effect::perform
+            'host/plugin::command
+            {:command "run" :payload {:x 1} :plugin "other"}
+            (fn (x) (core/effect::pure x))))
+        prog
+    "#;
+
+    let mut ctx = EvalCtx::new();
+    let (prog, h) = parse_and_eval(&mut ctx, src);
+    let error_tok = ctx.protocol.expect("protocol").error;
+    let run_out = run(&mut ctx, &policy, prog, h, "gc_effects-test".to_string()).expect("run");
+    let Value::Sealed { token, payload } = run_out.value else {
+        panic!("host plugin command denied plugin should return sealed error");
+    };
+    assert_eq!(token, error_tok);
+    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+        panic!("sealed error payload map expected");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("core/caps/policy-error".to_string()))
     );
 }

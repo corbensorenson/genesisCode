@@ -236,6 +236,9 @@ pub(super) fn obligation_coverage(
         .map_err(|e| ObligationError::Test(format!("artifact store open failed: {e}")))?;
 
     let mut total_hits: BTreeMap<String, u64> = BTreeMap::new();
+    let mut total_decision_total: u64 = 0;
+    let mut total_decision_true: u64 = 0;
+    let mut total_decision_false: u64 = 0;
     let mut test_terms: Vec<Term> = Vec::new();
 
     for t in tests {
@@ -306,6 +309,11 @@ pub(super) fn obligation_coverage(
             }
         }
 
+        let decision = ctx.coverage_decision_counts().unwrap_or_default();
+        total_decision_total = total_decision_total.saturating_add(decision.total);
+        total_decision_true = total_decision_true.saturating_add(decision.taken_true);
+        total_decision_false = total_decision_false.saturating_add(decision.taken_false);
+
         test_terms.push(Term::Map(
             [
                 (
@@ -317,6 +325,27 @@ pub(super) fn obligation_coverage(
                     Term::Str(t.id.test_name.clone()),
                 ),
                 (TermOrdKey(Term::symbol(":hits")), Term::Vector(hits_vec)),
+                (
+                    TermOrdKey(Term::symbol(":decision")),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":total")),
+                                Term::Int((decision.total as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":taken-true")),
+                                Term::Int((decision.taken_true as i64).into()),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":taken-false")),
+                                Term::Int((decision.taken_false as i64).into()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ),
             ]
             .into_iter()
             .collect(),
@@ -365,6 +394,34 @@ pub(super) fn obligation_coverage(
                 Term::Vector(export_terms),
             ),
             (TermOrdKey(Term::symbol(":missing")), Term::Vector(missing)),
+            (
+                TermOrdKey(Term::symbol(":structural")),
+                Term::Map(
+                    [(
+                        TermOrdKey(Term::symbol(":decision")),
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":total")),
+                                    Term::Int((total_decision_total as i64).into()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":taken-true")),
+                                    Term::Int((total_decision_true as i64).into()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":taken-false")),
+                                    Term::Int((total_decision_false as i64).into()),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        ),
+                    )]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
             (TermOrdKey(Term::symbol(":tests")), Term::Vector(test_terms)),
         ]
         .into_iter()

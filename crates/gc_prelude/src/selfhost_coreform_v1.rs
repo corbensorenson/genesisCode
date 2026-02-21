@@ -8,11 +8,11 @@ use anyhow::Context;
 use once_cell::sync::Lazy;
 
 use gc_coreform::{
-    canonicalize_module, hash_module, parse_module, parse_term, print_term, Term, TermOrdKey,
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
 };
 use gc_kernel::{
-    compile_module, eval_compiled_module, CompiledModule, Env, EvalCtx, EvalObservedCounters,
-    MemLimits, Value,
+    CompiledModule, Env, EvalCtx, EvalObservedCounters, MemLimits, Value, compile_module,
+    eval_compiled_module,
 };
 
 #[path = "selfhost_compiled_cache.rs"]

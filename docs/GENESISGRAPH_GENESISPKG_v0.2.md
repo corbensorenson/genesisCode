@@ -99,5 +99,14 @@ transparency log features:
 
 - signatures attach to commits/releases as `:vcs/attestation` artifacts
 - policies decide which refs require signatures
+- protected ref classes may require explicit attestation roles (for example `:reviewer` and
+  `:verifier`) and enforce independence constraints between those roles
 - transparency logs can record published commits/bundles/ref movements
 
+Recommended attestation extension for protected profiles:
+
+- optional `:role` field on `:vcs/attestation` (`symbol|string`)
+- role-aware policy keys on `:vcs/policy` classes:
+  - `:required-attestation-roles`
+  - `:role-min-signatures`
+  - `:independent-role-pairs`

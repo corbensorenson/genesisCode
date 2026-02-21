@@ -129,6 +129,16 @@ pub struct EvalObservedCounters {
 struct CoverageState {
     tracked: BTreeSet<String>,
     hits: BTreeMap<String, u64>,
+    decision_total: u64,
+    decision_true: u64,
+    decision_false: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct DecisionCoverageCounters {
+    pub total: u64,
+    pub taken_true: u64,
+    pub taken_false: u64,
 }
 
 impl EvalCtx {
@@ -217,6 +227,9 @@ impl EvalCtx {
         self.coverage = Some(CoverageState {
             tracked,
             hits: BTreeMap::new(),
+            decision_total: 0,
+            decision_true: 0,
+            decision_false: 0,
         });
     }
 
@@ -231,6 +244,14 @@ impl EvalCtx {
 
     pub fn coverage_hits(&self) -> Option<&BTreeMap<String, u64>> {
         self.coverage.as_ref().map(|c| &c.hits)
+    }
+
+    pub fn coverage_decision_counts(&self) -> Option<DecisionCoverageCounters> {
+        self.coverage.as_ref().map(|c| DecisionCoverageCounters {
+            total: c.decision_total,
+            taken_true: c.decision_true,
+            taken_false: c.decision_false,
+        })
     }
 
     pub fn observed_counters(&self) -> EvalObservedCounters {
@@ -252,6 +273,16 @@ impl EvalCtx {
             return;
         }
         *c.hits.entry(sym.to_string()).or_insert(0) += 1;
+    }
+
+    pub(crate) fn coverage_decision(&mut self, truthy: bool) {
+        let Some(c) = &mut self.coverage else { return };
+        c.decision_total = c.decision_total.saturating_add(1);
+        if truthy {
+            c.decision_true = c.decision_true.saturating_add(1);
+        } else {
+            c.decision_false = c.decision_false.saturating_add(1);
+        }
     }
 
     fn mem_observe_max(
@@ -481,7 +512,9 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
                     ));
                 }
                 let c = eval_term(ctx, env, items[1])?;
-                let next = if c.truthy() { items[2] } else { items[3] };
+                let cond_truthy = c.truthy();
+                ctx.coverage_decision(cond_truthy);
+                let next = if cond_truthy { items[2] } else { items[3] };
                 return Ok(EvalOutcome::Tail {
                     env: env.clone(),
                     term: next.clone(),

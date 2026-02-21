@@ -23,10 +23,14 @@ Compatibility notes:
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
   - `io/net::http-request` (policy-gated remote allowlist + bridge-backed execution)
+  - `io/net::ws-open`, `io/net::ws-send`, `io/net::ws-recv`, `io/net::ws-close`
+    (policy-gated WebSocket stream lifecycle + bridge-backed execution)
   - `sys/process::exec` (policy-gated program allowlist + bridge-backed execution)
 - Explicit per-op bridge policy (`bridge_cmd`, `bridge_args`, or WASI bridge response
   profile) overrides first-party backends and uses bridge transport.
-- Bridge-mediated domains without first-party runtime (`editor/plugin::command`)
+- Bridge-mediated extension domains without first-party runtime:
+  - `host/plugin::command` (generic host extension ABI)
+  - `editor/plugin::command` (editor-domain wrapper over `host/plugin::command`)
   return deterministic sealed bridge errors when bridge policy is missing.
 - Canonical compute ABI lives under `gpu/compute::*`.
   Legacy `gfx/gpu::create-compute-pipeline` and `gfx/gpu::submit-compute-graph`
@@ -146,9 +150,14 @@ Compatibility notes:
 - `gpu/compute::read-buffer`
 - `gpu/compute::submit`
 - `gpu/compute::write-buffer`
+- `host/plugin::command`
 - `io/fs::read`
 - `io/fs::write`
 - `io/net::http-request`
+- `io/net::ws-close`
+- `io/net::ws-open`
+- `io/net::ws-recv`
+- `io/net::ws-send`
 - `sys/process::exec`
 - `sys/time::now`
 <!-- HOST_ABI_OPS_END -->
@@ -172,6 +181,19 @@ CI drift check:
   - Required payload field: `:url` (string).
   - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::ws-open`
+  - Required payload field: `:url` (string, typically `wss://...`).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::ws-send`
+  - Required payload fields: `:stream-id` (string), `:data` (term; typically bytes/string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::ws-recv`
+  - Required payload field: `:stream-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::ws-close`
+  - Required payload field: `:stream-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `sys/process::exec`
   - Required payload field: `:program` (string).
   - Policy-gated by per-op `allow_programs` allowlist.
@@ -180,3 +202,24 @@ CI drift check:
 Determinism:
 - Run-time responses for these ops are effect-logged as normal capability outcomes.
 - Replay uses logged responses and does not re-invoke host network/process side effects.
+
+## Host Extension Capability Contract
+
+- `host/plugin::command`
+  - Required payload fields:
+    - `:plugin` (string or symbol)
+    - `:command` (string or symbol)
+  - Optional payload field:
+    - `:payload` (arbitrary CoreForm term, forwarded to bridge)
+  - Required per-op policy controls:
+    - `allow_plugins` (array<string>): explicit plugin allowlist.
+  - Optional per-op policy controls:
+    - `allow_commands` (array<string>): optional command allowlist.
+  - Bridge execution:
+    - same deterministic bridge framing contract as other bridge-backed domains (`docs/spec/HOST_BRIDGE_PROTOCOL.md`).
+    - supports `bridge_cmd` / `bridge_args` and WASI bridge profile response controls.
+
+- `editor/plugin::command`
+  - Compatibility wrapper with editor-domain naming.
+  - Uses the same payload/policy contract as `host/plugin::command`.
+  - Preserves deterministic effect-log/replay behavior identical to generic host extension ops.

@@ -15,9 +15,23 @@ Deterministic test execution policy for local iteration and CI.
 | `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
 | `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 300000` | `<= 5m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 15m` |
-| `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` | `<= 20m` |
+| `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 20m` |
 
 The local default high-signal workflow is `changed-fast` with a hard 300000ms budget.
+
+Strict/full profile runtime reports:
+- `strict-golden`
+  - report: `.genesis/perf/strict_golden_profile_report.json`
+  - history: `.genesis/perf/strict_golden_profile_history.jsonl`
+  - enforced by `scripts/selfhost_strict_golden.sh` via measured elapsed + history p95 checks.
+- `wasm-cross-host`
+  - report: `.genesis/perf/wasm_cross_host_profile_report.json`
+  - history: `.genesis/perf/wasm_cross_host_profile_history.jsonl`
+  - enforced by `scripts/wasm_cross_host_determinism.mjs` via measured elapsed + history p95 checks.
+- `full-cross-host` aggregate lane
+  - report: `.genesis/perf/full_cross_host_profile_report.json`
+  - history: `.genesis/perf/full_cross_host_profile_history.jsonl`
+  - enforced by `scripts/check_full_cross_host_profile_budget.sh` as strict-golden + wasm-cross-host elapsed sum with history p95 gate.
 
 ## Runners
 
@@ -46,9 +60,10 @@ The local default high-signal workflow is `changed-fast` with a hard 300000ms bu
     `.genesis/perf/upgrade_plan_health_profile_report.json`
   - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `240000`)
     whenever health gates are enforced
-  - optional GPU device-conformance lane:
-    set `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1` to require
-    `scripts/check_gpu_compute_device_conformance.sh` in profile gates
+  - GPU device-conformance lane policy:
+    - `release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default.
+    - `dev-fast` and `prepush-standard` remain opt-in via
+      `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
 
 ## CI Profiles
 
@@ -77,6 +92,10 @@ This guard enforces:
 - 300000ms default budget pin for local high-signal workflows
 - prepush strict loop budget/shard defaults (`GENESIS_HEALTH_PREPUSH_BUDGET_MS`,
   `GENESIS_HEALTH_SHARDS`) and profile report kind
+- strict/full measured runtime gate wiring:
+  - strict-golden profile runtime report + p95 budget helper
+  - wasm cross-host runtime report + p95 budget helper
+  - full-cross-host aggregate runtime budget gate command in CI
 
 ## Determinism
 

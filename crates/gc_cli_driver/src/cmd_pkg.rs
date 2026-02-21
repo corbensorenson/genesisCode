@@ -94,6 +94,8 @@ pub(super) fn cmd_pkg(
             | PkgCmd::Run { .. }
             | PkgCmd::Test { .. }
             | PkgCmd::SelfOptimize { .. }
+            | PkgCmd::Trace { .. }
+            | PkgCmd::Qualify { .. }
             | PkgCmd::Env { .. } => extract_pkg_lock_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
@@ -226,6 +228,8 @@ fn cmd_pkg_local_workspace_ops(
             task,
             workspace_file,
         } => {
+            pkg_workspace_ops::validate_workspace_runtime_backend_for_run(workspace_file)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
             let action = pkg_task_runner::resolve_workspace_task(workspace_file, task)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
             let out = match action {
@@ -452,8 +456,53 @@ fn cmd_pkg_local_workspace_ops(
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/abi", e))?,
         ),
+        PkgCmd::Trace {
+            pkg,
+            requirements,
+            commit,
+            snapshot,
+            policy,
+            out,
+            no_store,
+        } => Some(
+            pkg_assurance_ops::handle_trace(
+                pkg,
+                requirements,
+                commit.as_deref(),
+                Some(snapshot.as_str()),
+                policy.as_deref(),
+                out,
+                *no_store,
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/trace", e))?,
+        ),
+        PkgCmd::Qualify {
+            commit,
+            policy,
+            profile,
+            requirements,
+            test_artifacts,
+            tools,
+            out,
+            no_store,
+        } => Some(
+            pkg_assurance_ops::handle_tool_qualification(
+                pkg_assurance_ops::ToolQualificationArgs {
+                    commit: commit.as_deref(),
+                    policy: policy.as_deref(),
+                    profile,
+                    requirement_ids: requirements,
+                    test_artifacts,
+                    tools,
+                    out,
+                    no_store: *no_store,
+                },
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/qualify", e))?,
+        ),
         PkgCmd::Env {
             profile,
+            runtime_backend,
             lock,
             workspace_file,
             out_dir,
@@ -519,8 +568,14 @@ fn cmd_pkg_local_workspace_ops(
                     env_hydrate_log = Some(run.log);
                 }
             }
-            pkg_workspace_ops::handle_env(profile, lock, workspace_file, out_dir)
-                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?
+            pkg_workspace_ops::handle_env(
+                profile,
+                runtime_backend.as_deref(),
+                lock,
+                workspace_file,
+                out_dir,
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?
         }),
         _ => None,
     };

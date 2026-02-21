@@ -506,6 +506,145 @@ fn refs_set_tag_signature_policy_rejects_unsigned_commit_in_both_frontends() {
 }
 
 #[test]
+fn refs_set_enforces_required_attestation_roles_in_both_frontends() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let artifact = build_selfhost_artifact(dir);
+    let pk_b64 = keygen_public_key_b64(dir);
+
+    let policy_term = dir.join("policy_roles.gc");
+    fs::write(
+        &policy_term,
+        format!(
+            r#"
+{{
+  :type :vcs/policy
+  :v 1
+  :refs {{:frozen-prefixes []}}
+  :classes {{
+    :tags {{:patterns ["refs/**/tags/*"]
+           :required-obligations ["core/obligation::unit-tests"]
+           :require-signatures true
+           :min-signatures 0
+           :allowed-public-keys ["{pk_b64}"]
+           :required-attestation-roles [:reviewer :verifier]
+           :role-min-signatures {{:reviewer 1 :verifier 1}}
+           :independent-role-pairs [{{:left :reviewer :right :verifier}}]}}
+  }}
+}}
+"#
+        ),
+    )
+    .unwrap();
+    let policy_h = store_put(dir, &caps, &policy_term);
+
+    let evidence_term = dir.join("evidence_roles.gc");
+    fs::write(
+        &evidence_term,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#,
+    )
+    .unwrap();
+    let evidence_h = store_put(dir, &caps, &evidence_term);
+
+    let commit_term = dir.join("unsigned_roles_commit.gc");
+    fs::write(
+        &commit_term,
+        format!(
+            r#"
+{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :base nil
+  :patch "{z}"
+  :result "{z}"
+  :obligations ["core/obligation::unit-tests"]
+  :evidence ["{evidence_h}"]
+  :attestations []
+  :message "unsigned-role-commit"
+}}
+"#,
+            z = "0".repeat(64)
+        ),
+    )
+    .unwrap();
+    let commit_h = store_put(dir, &caps, &commit_term);
+
+    let rust_out = cmd()
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "refs",
+            "--caps",
+            caps.to_str().unwrap(),
+            "set",
+            "refs/tags/v2.0.0",
+            &commit_h,
+            "--policy",
+            &policy_h,
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let rust_json: serde_json::Value = serde_json::from_slice(&rust_out).unwrap();
+
+    let self_out = cmd()
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "selfhost",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "refs",
+            "--caps",
+            caps.to_str().unwrap(),
+            "set",
+            "refs/tags/v2.0.0",
+            &commit_h,
+            "--policy",
+            &policy_h,
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let self_json: serde_json::Value = serde_json::from_slice(&self_out).unwrap();
+
+    assert_eq!(rust_json["ok"], serde_json::Value::Bool(false));
+    assert_eq!(self_json["ok"], serde_json::Value::Bool(false));
+    let rust_code = rust_json["error"]["code"].as_str().unwrap_or_default();
+    let self_code = self_json["error"]["code"].as_str().unwrap_or_default();
+    assert_eq!(rust_code, self_code);
+    assert!(
+        rust_code == "core/refs/missing-attestation-role" || rust_code == "refs/error",
+        "unexpected error code: {rust_code}"
+    );
+
+    let got = cmd()
+        .current_dir(dir)
+        .args([
+            "refs",
+            "--caps",
+            caps.to_str().unwrap(),
+            "get",
+            "refs/tags/v2.0.0",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert_eq!(String::from_utf8(got).unwrap().trim(), "nil");
+}
+
+#[test]
 fn refs_get_selfhost_frontend_fails_when_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

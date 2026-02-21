@@ -23,7 +23,7 @@ else
   ENFORCE_GATES_DEFAULT="0"
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
-GPU_DEVICE_CONFORMANCE="${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE:-0}"
+GPU_DEVICE_CONFORMANCE=""
 
 now_ms() {
   python3 - <<'PY'
@@ -225,6 +225,15 @@ done
 if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "prepush-standard" && "$PROFILE" != "release-full" ]]; then
   echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|prepush-standard|release-full)" >&2
   exit 2
+fi
+if [[ -z "${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE+x}" ]]; then
+  if [[ "$PROFILE" == "release-full" ]]; then
+    GPU_DEVICE_CONFORMANCE="1"
+  else
+    GPU_DEVICE_CONFORMANCE="0"
+  fi
+else
+  GPU_DEVICE_CONFORMANCE="${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE}"
 fi
 if [[ "$ENFORCE_GATES" != "0" && "$ENFORCE_GATES" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_ENFORCE_GATES must be 0 or 1" >&2

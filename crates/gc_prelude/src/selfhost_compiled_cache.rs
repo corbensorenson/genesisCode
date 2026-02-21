@@ -5,9 +5,9 @@ use std::sync::{Mutex, MutexGuard};
 use gc_kernel::{decode_compiled_module_blob, encode_compiled_module_blob};
 
 use super::{
-    env_truthy, CachedCompiledModules, ToolchainManifest, DEFAULT_SELFHOST_COMPILED_CACHE_REL,
-    SELFHOST_COMPILED_CACHE_DIR_ENV, SELFHOST_COMPILED_CACHE_DISABLE_ENV,
-    SELFHOST_COMPILED_CACHE_FILE_MAGIC,
+    CachedCompiledModules, DEFAULT_SELFHOST_COMPILED_CACHE_REL, SELFHOST_COMPILED_CACHE_DIR_ENV,
+    SELFHOST_COMPILED_CACHE_DISABLE_ENV, SELFHOST_COMPILED_CACHE_FILE_MAGIC, ToolchainManifest,
+    env_truthy,
 };
 
 pub(super) fn lock_artifact_compiled_cache<'a>(

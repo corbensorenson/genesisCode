@@ -2271,6 +2271,10 @@
               (scene (core/gfx/2d::scene-empty "ui")))
           (((core/map::put scene) (quote :draws)) draws))))))
 
+
+; Extracted from 10_gfx_ui_runtime.gc to keep modules focused for AI-first maintenance.
+; Runtime frame planning and batching helpers (2D/3D/PBR).
+
 (def core/gfx/ui/runtime::plan-frame-batched
   (fn (ui-root)
     (fn (viewport-w)

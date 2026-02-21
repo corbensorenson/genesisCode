@@ -24,6 +24,9 @@ All commands return:
 All `gcpm` commands include prompt-safe deterministic telemetry under `data.telemetry`
 (see `docs/spec/GCPM_TELEMETRY_v0.1.md`).
 
+`gcpm env` embeds runtime backend profile contract fields in canonical CoreForm `data.value`
+(`:runtime-backend-profile`, `:active-runtime-backend-profile`, `:runtime-backend-compatible`).
+
 ## Command -> Kind
 
 - `gcpm init` -> `genesis/pkg-init-v0.1`
@@ -41,6 +44,8 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
   - `fmt` -> `genesis/fmt-v0.2`
   - `optimize` -> `genesis/optimize-v0.2`
 - `gcpm test` -> `genesis/test-v0.2`
+- `gcpm trace` -> `genesis/pkg-requirements-trace-v0.1`
+- `gcpm qualify` -> `genesis/pkg-tool-qualification-v0.1`
 - `gcpm install` -> `genesis/pkg-install-v0.1`
 - `gcpm verify` -> `genesis/pkg-verify-v0.1`
 - `gcpm doctor` -> `genesis/pkg-doctor-v0.1`

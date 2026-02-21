@@ -2,7 +2,10 @@ use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
-use gc_pkg::{PackageManifest, UpdatePolicy, WorkspaceConfig, WorkspaceMember, WorkspaceTask};
+use gc_pkg::{
+    PackageManifest, RUNTIME_BACKEND_HEADLESS, UpdatePolicy, WorkspaceConfig, WorkspaceMember,
+    WorkspaceTask, normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
+};
 
 pub(crate) struct LocalPkgResult {
     pub(crate) kind: &'static str,
@@ -20,8 +23,10 @@ pub(crate) fn handle_new(
     members: &[String],
 ) -> Result<LocalPkgResult, String> {
     let mut ws = WorkspaceConfig::empty(workspace.to_string());
+    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
     let policy_s = policy.to_string();
     ws.defaults.policy = Some(policy_s.clone());
+    ws.defaults.runtime_backend = Some(active_runtime_backend.clone());
     ws.profiles.insert(
         "dev".to_string(),
         gc_pkg::WorkspaceProfile {
@@ -29,6 +34,7 @@ pub(crate) fn handle_new(
             registry: registry_default.map(|s| s.to_string()),
             policy: Some(policy_s.clone()),
             toolchain: None,
+            runtime_backend: Some(active_runtime_backend.clone()),
         },
     );
     ws.profiles.insert(
@@ -38,6 +44,7 @@ pub(crate) fn handle_new(
             registry: registry_default.map(|s| s.to_string()),
             policy: Some(policy_s.clone()),
             toolchain: None,
+            runtime_backend: Some(RUNTIME_BACKEND_HEADLESS.to_string()),
         },
     );
     ws.profiles.insert(
@@ -47,6 +54,7 @@ pub(crate) fn handle_new(
             registry: registry_default.map(|s| s.to_string()),
             policy: Some(policy_s),
             toolchain: None,
+            runtime_backend: Some(active_runtime_backend),
         },
     );
     ws.defaults.registry = registry_default.map(|s| s.to_string());
@@ -240,6 +248,7 @@ pub(crate) fn handle_migrate(
 
 pub(crate) fn handle_env(
     profile: &str,
+    runtime_backend_override: Option<&str>,
     lock: &Path,
     workspace_file: &Path,
     out_dir: &Path,
@@ -250,6 +259,20 @@ pub(crate) fn handle_env(
         .profiles
         .get(profile)
         .ok_or_else(|| format!("workspace profile `{profile}` not found"))?;
+    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
+    let selected_runtime_backend = resolve_env_runtime_backend_profile(
+        profile,
+        runtime_backend_override,
+        prof.runtime_backend.as_deref(),
+        ws.defaults.runtime_backend.as_deref(),
+    )?;
+    let runtime_backend_compatible =
+        runtime_backend_profile_is_compatible(&selected_runtime_backend, &active_runtime_backend);
+    if !runtime_backend_compatible {
+        return Err(format!(
+            "profile `{profile}` runtime_backend `{selected_runtime_backend}` is incompatible with active runtime backend profile `{active_runtime_backend}`"
+        ));
+    }
 
     let ws_body = ws.to_toml_canonical();
     let lock_body = l.to_toml_canonical();
@@ -319,6 +342,18 @@ pub(crate) fn handle_env(
                 Term::Str(profile.to_string()),
             ),
             (
+                TermOrdKey(Term::symbol(":runtime-backend-profile")),
+                Term::Str(selected_runtime_backend.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
+                Term::Str(active_runtime_backend.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
+                Term::Bool(runtime_backend_compatible),
+            ),
+            (
                 TermOrdKey(Term::symbol(":policy")),
                 prof.policy
                     .clone()
@@ -384,8 +419,19 @@ pub(crate) fn handle_env(
         write_if_same_or_new(&env_root.join("toolchain.gc"), &bytes).map_err(|e| e.to_string())?;
     }
 
-    let profile_term =
-        build_env_profile_term(profile, &ws, prof, &caps_policy_path, &toolchain_path);
+    let runtime_backend_contract = RuntimeBackendContract {
+        selected: &selected_runtime_backend,
+        active: &active_runtime_backend,
+        compatible: runtime_backend_compatible,
+    };
+    let profile_term = build_env_profile_term(
+        profile,
+        &ws,
+        prof,
+        &caps_policy_path,
+        &toolchain_path,
+        runtime_backend_contract,
+    );
     let profile_body = gc_coreform::print_term(&profile_term) + "\n";
     let profile_h = blake3::hash(profile_body.as_bytes()).to_hex().to_string();
     write_if_same_or_new(&env_root.join("profile.gc"), profile_body.as_bytes())
@@ -429,6 +475,18 @@ pub(crate) fn handle_env(
             (
                 TermOrdKey(Term::symbol(":caps-policy")),
                 Term::Str(caps_policy_path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime-backend-profile")),
+                Term::Str(selected_runtime_backend),
+            ),
+            (
+                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
+                Term::Str(active_runtime_backend),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
+                Term::Bool(runtime_backend_compatible),
             ),
             (
                 TermOrdKey(Term::symbol(":caps-policy-h")),
@@ -728,6 +786,31 @@ pub(crate) fn collect_missing_locked_hashes(
     Ok(missing)
 }
 
+pub(crate) fn validate_workspace_runtime_backend_for_run(
+    workspace_file: &Path,
+) -> Result<String, String> {
+    let ws = WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
+    let dev_profile_runtime_backend = ws
+        .profiles
+        .get("dev")
+        .and_then(|p| p.runtime_backend.as_deref());
+    let selected_runtime_backend = resolve_env_runtime_backend_profile(
+        "dev",
+        None,
+        dev_profile_runtime_backend,
+        ws.defaults.runtime_backend.as_deref(),
+    )?;
+    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
+    let compatible =
+        runtime_backend_profile_is_compatible(&selected_runtime_backend, &active_runtime_backend);
+    if !compatible {
+        return Err(format!(
+            "workspace runtime_backend `{selected_runtime_backend}` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `{active_runtime_backend}`"
+        ));
+    }
+    Ok(selected_runtime_backend)
+}
+
 fn workspace_store_dir(workspace_file: &Path) -> PathBuf {
     workspace_file
         .parent()
@@ -736,12 +819,20 @@ fn workspace_store_dir(workspace_file: &Path) -> PathBuf {
         .join("store")
 }
 
+#[derive(Clone, Copy)]
+struct RuntimeBackendContract<'a> {
+    selected: &'a str,
+    active: &'a str,
+    compatible: bool,
+}
+
 fn build_env_profile_term(
     profile_name: &str,
     ws: &WorkspaceConfig,
     prof: &gc_pkg::WorkspaceProfile,
     caps_policy_path: &Path,
     toolchain_path: &Option<PathBuf>,
+    runtime_backend: RuntimeBackendContract<'_>,
 ) -> Term {
     Term::Map(
         [
@@ -779,6 +870,18 @@ fn build_env_profile_term(
                 Term::Str(caps_policy_path.display().to_string()),
             ),
             (
+                TermOrdKey(Term::symbol(":runtime-backend-profile")),
+                Term::Str(runtime_backend.selected.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
+                Term::Str(runtime_backend.active.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
+                Term::Bool(runtime_backend.compatible),
+            ),
+            (
                 TermOrdKey(Term::symbol(":toolchain")),
                 toolchain_path
                     .as_ref()
@@ -789,6 +892,23 @@ fn build_env_profile_term(
         .into_iter()
         .collect(),
     )
+}
+
+fn resolve_env_runtime_backend_profile(
+    profile_name: &str,
+    runtime_backend_override: Option<&str>,
+    profile_runtime_backend: Option<&str>,
+    default_runtime_backend: Option<&str>,
+) -> Result<String, String> {
+    let raw = runtime_backend_override
+        .or(profile_runtime_backend)
+        .or(default_runtime_backend)
+        .unwrap_or(RUNTIME_BACKEND_HEADLESS);
+    normalize_runtime_backend_profile(raw).ok_or_else(|| {
+        format!(
+            "profile `{profile_name}` has invalid runtime_backend `{raw}`; expected one of headless|gpu|gfx|backend (or profile-* aliases)"
+        )
+    })
 }
 
 fn is_hash_hex_64(s: &str) -> bool {

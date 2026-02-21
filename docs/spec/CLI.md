@@ -161,13 +161,19 @@ CI strict selfhost gates:
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
     Built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, hash-pinned `contract`, `eval`, `fmt`, `optimize`.
     - `cmd = "contract"` tasks require `--contract-h <hex64>` in task args; `gcpm run` verifies file hash before execution.
-  - `genesis gcpm env --profile <dev|ci|release> [--hydrate]` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
+  - `genesis gcpm env --profile <dev|ci|release> [--runtime-backend <headless|gpu|gfx|backend|profile-*>] [--hydrate]` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
     including profile/workspace/lock/caps/dependency/member state required for reproducible workspace execution.
     - `--hydrate` fetches missing locked artifacts deterministically through policy-gated `core/store::get` before materialization.
   - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
+  - `genesis gcpm trace --pkg <package.toml> --requirements <requirements.gc> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--out <path>] [--no-store]`
+    emits deterministic `:requirements-trace` evidence for protected release traceability gates.
+    `--commit` is optional to support pre-commit evidence generation without commit/evidence hash cycles.
+  - `genesis gcpm qualify [--commit <hex64>] [--policy <hex64>] --profile <name> --requirement <id>... --test-artifact <id=hex64>... --tool <name=path>... [--out <path>] [--no-store]`
+    emits deterministic `:tool-qualification` evidence for protected release qualification gates.
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
   - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
+  - Assurance evidence schemas: `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`.
   - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.

@@ -10,6 +10,7 @@ A policy is a content-addressed artifact defining:
 - which obligations are required to advance each ref class
 - which evidence kinds are required
 - optional signature/attestation requirements
+- optional signer-role requirements and role-separation constraints
 
 Enforcement occurs at:
 
@@ -54,7 +55,18 @@ Required obligations:
 - `core/obligation::no-unknown-deps`
 - `core/obligation::signed-provenance` (default ON)
 
+Recommended required evidence kinds for regulated release profiles:
+
+- `:requirements-trace`
+- `:tool-qualification`
+
 Signatures: required by default.
+
+Role separation (default for protected release profiles):
+
+- required attestation roles: `:reviewer`, `:verifier`
+- minimum per-role signatures: `:reviewer >= 1`, `:verifier >= 1`
+- independence pair: `(:reviewer, :verifier)` must be signed by distinct keys
 
 ### 3.4 Frozen refs
 
@@ -108,7 +120,17 @@ required_obligations = [
   "core/obligation::no-unknown-deps",
   "core/obligation::signed-provenance"
 ]
+required_evidence_kinds = [":requirements-trace", ":tool-qualification"]
 require_signatures = true
+required_attestation_roles = [":reviewer", ":verifier"]
+
+[classes.tags.role_min_signatures]
+":reviewer" = 1
+":verifier" = 1
+
+[[classes.tags.independent_role_pairs]]
+left = ":reviewer"
+right = ":verifier"
 
 [install]
 verify = "basic"
@@ -121,11 +143,19 @@ verify = "basic"
 - determine ref class
 - verify commit obligations and evidence presence
 - verify attestations if required
+- enforce role requirements (`required_attestation_roles`, `role_min_signatures`)
+- enforce separation-of-duty (`independent_role_pairs`)
 - only then advance ref
 
 ### 7.2 `pkg publish`
 
 Same checks as `refs set`, plus push required artifacts.
+
+### 7.4 Role-aware attestation artifact fields
+
+` :vcs/attestation` may include an optional `:role` field (`symbol|string`) such as
+`:reviewer` or `:verifier`. Policies evaluate role gates only on cryptographically valid
+attestations.
 
 ### 7.3 Optional `pkg install`
 

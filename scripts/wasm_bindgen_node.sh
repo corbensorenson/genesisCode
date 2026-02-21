@@ -15,5 +15,12 @@ wasm-bindgen \
   --out-name gc_wasm \
   target/wasm32-unknown-unknown/debug/gc_wasm.wasm
 
-echo "$OUT_DIR/gc_wasm.js"
+# Ensure Node treats generated bindings as CommonJS even when the repo root
+# is configured as ESM (`"type": "module"`).
+cat >"$OUT_DIR/package.json" <<'JSON'
+{
+  "type": "commonjs"
+}
+JSON
 
+echo "$OUT_DIR/gc_wasm.js"
