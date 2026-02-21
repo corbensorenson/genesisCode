@@ -22,7 +22,7 @@ Legend:
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Device-backed GPU compute required in release profile | ✅ (`release-full` health profile + dedicated GPU conformance lane require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Device-backed GPU compute required in release profile | ✅ (`release-full` health profile and agent gauntlet release posture require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
@@ -52,12 +52,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P2.1` Primary agent workflows still allow deterministic GPU fallback in non-release posture.
-- `P2.2` Missing high-contention deterministic concurrency stress matrix.
-- `P2.3` Dev-fast health path still shows lock-contention overhead under some runs.
-- `P2.4` Missing host bridge fault-injection conformance matrix.
-- `P2.5` Agent workflow parity is not yet enforced across native + WASI/wasm-host execution.
-- `P2.6` Agent authoring skill pack needs full end-to-end domain playbooks.
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
@@ -69,6 +64,8 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASM.md`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

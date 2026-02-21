@@ -6,7 +6,14 @@ cd "$ROOT_DIR"
 
 GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
 if [[ ! -x "$GENESIS_BIN" ]]; then
-  cargo build -p gc_cli >/dev/null
+  case "$(basename "$GENESIS_BIN")" in
+    genesis_wasi|genesis_wasi_parity)
+      cargo build -p gc_wasi_cli >/dev/null
+      ;;
+    *)
+      cargo build -p gc_cli >/dev/null
+      ;;
+  esac
 fi
 
 GAUNTLET_REPORT="${GENESIS_AGENT_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
@@ -15,6 +22,7 @@ GAUNTLET_DEFAULT_MAX_MS="${GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS:-300000}"
 
 python3 - "$ROOT_DIR" "$GENESIS_BIN" "$GAUNTLET_REPORT" "$GAUNTLET_HISTORY" "$GAUNTLET_DEFAULT_MAX_MS" <<'PY'
 import datetime as dt
+import hashlib
 import json
 import os
 import pathlib
@@ -22,6 +30,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import Optional
 
 root = pathlib.Path(sys.argv[1])
 genesis_bin = sys.argv[2]
@@ -108,6 +117,7 @@ required_domains = {
 env = dict(os.environ)
 env["GENESIS_BIN"] = genesis_bin
 profile = env.get("GENESIS_AGENT_GAUNTLET_PROFILE", "dev-fast").strip().lower()
+runtime_profile = env.get("GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE", "native").strip().lower()
 require_gpu_device_raw = env.get("GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND")
 if require_gpu_device_raw is None:
     require_gpu_device = profile in {"release-full", "release"}
@@ -117,6 +127,15 @@ if require_gpu_device:
     env["GENESIS_AGENT_GPU_REQUIRE_DEVICE"] = "1"
 
 backend_pattern = re.compile(r':backend\s+"([^"]+)"')
+replay_pattern = re.compile(r"replay=([^\r\n]+)")
+
+def normalize_replay_value(workflow_name: str, replay_value: Optional[str]) -> Optional[str]:
+    if replay_value is None:
+        return None
+    normalized = replay_value
+    if workflow_name == "agent_time_control_workflow":
+        normalized = re.sub(r":delta-ms\s+\d+", ":delta-ms <normalized>", normalized)
+    return normalized
 
 started = time.time()
 workflow_reports = []
@@ -138,9 +157,18 @@ for wf in workflows:
     combined = (proc.stdout or "") + (proc.stderr or "")
     backend_matches = backend_pattern.findall(combined)
     reported_backend = backend_matches[-1] if backend_matches else None
+    replay_matches = replay_pattern.findall(combined)
+    replay_value = replay_matches[-1] if replay_matches else None
+    replay_value_normalized = normalize_replay_value(wf["name"], replay_value)
+    replay_hash = hashlib.sha256(replay_value.encode("utf-8")).hexdigest() if replay_value else None
+    replay_hash_normalized = (
+        hashlib.sha256(replay_value_normalized.encode("utf-8")).hexdigest()
+        if replay_value_normalized
+        else None
+    )
     gpu_backend_required = require_gpu_device and ("gpu_compute" in wf["domains"])
     gpu_backend_ok = (not gpu_backend_required) or (reported_backend == "device-runtime")
-    replay_signal = "replay=" in combined
+    replay_signal = replay_value is not None
     duration_ok = duration_ms <= max_ms
     exit_ok = proc.returncode == 0
     ok = exit_ok and replay_signal and duration_ok and gpu_backend_ok
@@ -152,6 +180,10 @@ for wf in workflows:
             "exit_code": proc.returncode,
             "exit_ok": exit_ok,
             "replay_signal": replay_signal,
+            "replay_value": replay_value,
+            "replay_value_normalized": replay_value_normalized,
+            "replay_hash": replay_hash,
+            "replay_hash_normalized": replay_hash_normalized,
             "duration_ms": duration_ms,
             "max_ms": max_ms,
             "duration_ok": duration_ok,
@@ -195,7 +227,9 @@ report = {
     "elapsed_ms": int((time.time() - started) * 1000),
     "default_max_ms": default_max_ms,
     "profile": profile,
+    "runtime_profile": runtime_profile,
     "require_gpu_device_backend": require_gpu_device,
+    "genesis_bin": genesis_bin,
     "domains": domain_reports,
     "workflows": workflow_reports,
     "timestamp_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
@@ -214,6 +248,7 @@ history_entry = {
     "domain_successes": report["domain_successes"],
     "domain_count": report["domain_count"],
     "elapsed_ms": report["elapsed_ms"],
+    "runtime_profile": runtime_profile,
     "timestamp_utc": report["timestamp_utc"],
 }
 with history_path.open("a", encoding="utf-8") as f:
@@ -221,6 +256,7 @@ with history_path.open("a", encoding="utf-8") as f:
 
 print(
     f"agent-capability-gauntlet: report={report_path} "
+    f"runtime_profile={runtime_profile} "
     f"score={score_percent}% workflows={workflow_successes}/{workflow_count} "
     f"domains={report['domain_successes']}/{report['domain_count']}"
 )

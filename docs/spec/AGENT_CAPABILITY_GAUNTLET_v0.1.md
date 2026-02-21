@@ -21,6 +21,7 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `workflow_count`, `workflow_successes`, `score_percent`
 - `domain_count`, `domain_successes`
 - `elapsed_ms`, `default_max_ms`
+- `profile`, `runtime_profile`, `genesis_bin`
 - `domains`:
   - `domain`
   - `required_successes`
@@ -29,7 +30,8 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `workflows`:
   - `name`, `path`, `domains`
   - `exit_code`, `exit_ok`
-  - `replay_signal`
+  - `replay_signal`, `replay_value`, `replay_hash`
+  - `replay_value_normalized`, `replay_hash_normalized`
   - `duration_ms`, `max_ms`, `duration_ok`
   - `ok`
 
@@ -42,6 +44,11 @@ The gate requires at least one successful workflow for each:
 - `package_publish_sync`
 - `graphics`
 - `gpu_compute`
+- `filesystem`
+- `raw_network_sockets`
+- `process_lifecycle`
+- `plugin_runtime`
+- `time_control`
 
 If any required domain misses its minimum success threshold, the script exits non-zero.
 
@@ -54,3 +61,4 @@ If any required domain misses its minimum success threshold, the script exits no
 
 - `standard` and `full` CI profiles run this gate.
 - Failures in workflow checks or domain thresholds fail CI.
+- Release/full profile also runs `scripts/check_agent_workflow_runtime_parity.sh` to enforce native vs WASI/wasm-host bridge parity hash equivalence for the same workflows.

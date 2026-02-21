@@ -53,9 +53,11 @@ path = "./.genesis/refs.gc"
 [op."core/pkg-low::publish"]
 base_dir = "."
 remote_allow = ["$REMOTE_ALLOW"]
+wasi_network_profile = "local"
 
 [op."core/sync::push"]
 remote_allow = ["$REMOTE_ALLOW"]
+wasi_network_profile = "local"
 EOF
 
 cat >"$CONSUMER/caps.toml" <<EOF
@@ -71,6 +73,7 @@ dir = "./.genesis/store"
 
 [op."core/sync::pull"]
 remote_allow = ["$REMOTE_ALLOW"]
+wasi_network_profile = "local"
 EOF
 
 g() {

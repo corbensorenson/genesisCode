@@ -17,6 +17,7 @@ DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-12000
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000}"
+HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
 else
@@ -293,19 +294,32 @@ if [[ "$declared_open" -gt 0 ]]; then
   echo "upgrade-plan-health: backlog status: open checklist items = $declared_open"
   if [[ "$ENFORCE_GATES" != "1" ]]; then
     echo "upgrade-plan-health: backlog open; running mandatory local guard gates."
-    MANDATORY_LOCAL_GATES=(
+    MANDATORY_LOCAL_NON_CARGO_GATES=(
       "bash scripts/check_selfhost_boundary.sh --strict"
       "bash scripts/check_selfhost_doc_runtime_parity.sh"
       "bash scripts/check_redteam_report.sh"
       "bash scripts/check_selfhost_symbol_ownership.sh"
       "bash scripts/check_planning_docs_fresh.sh"
-      "bash scripts/check_task_concurrency_stress.sh"
-      "bash scripts/check_host_bridge_fault_injection.sh"
-      "bash scripts/check_no_user_panics.sh"
       "bash scripts/check_no_production_rust_frontend_refs.sh"
     )
+    MANDATORY_LOCAL_CARGO_GATES=(
+      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_task_concurrency_stress.sh"
+      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_host_bridge_fault_injection.sh"
+      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_no_user_panics.sh"
+    )
+    MANDATORY_LOCAL_GATES=(
+      "${MANDATORY_LOCAL_NON_CARGO_GATES[@]}"
+      "${MANDATORY_LOCAL_CARGO_GATES[@]}"
+    )
     start_ms="$(now_ms)"
-    run_gate_commands "mandatory-local" "$HEALTH_SHARDS" "${MANDATORY_LOCAL_GATES[@]}"
+    if [[ "${#MANDATORY_LOCAL_NON_CARGO_GATES[@]}" -gt 0 ]]; then
+      run_gate_commands "mandatory-local-non-cargo" "$HEALTH_SHARDS" "${MANDATORY_LOCAL_NON_CARGO_GATES[@]}"
+    fi
+    if [[ "${#MANDATORY_LOCAL_CARGO_GATES[@]}" -gt 0 ]]; then
+      # Keep cargo-heavy checks serialized against a shared cache target dir to
+      # avoid lock contention while preserving deterministic artifact reuse.
+      run_gate_commands "mandatory-local-cargo" "1" "${MANDATORY_LOCAL_CARGO_GATES[@]}"
+    fi
     end_ms="$(now_ms)"
     elapsed_ms=$((end_ms - start_ms))
     gate_count="${#MANDATORY_LOCAL_GATES[@]}"
@@ -399,6 +413,7 @@ case "$PROFILE" in
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
+    PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")

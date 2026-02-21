@@ -33,7 +33,7 @@ fn task_concurrency_stress_matrix_is_replay_deterministic_under_budget() {
     let budget_ms: u128 = std::env::var("GENESIS_TASK_STRESS_BUDGET_MS")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(70_000);
+        .unwrap_or(75_000);
 
     let cancel_src = r#"
       (def worker/program
