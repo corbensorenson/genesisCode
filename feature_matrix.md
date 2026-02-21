@@ -27,10 +27,17 @@ Legend:
 | Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Raw socket/stream networking primitives | ✅ (first-class `core/net::*` socket wrappers + required gauntlet domain coverage) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ⚠️ (client-centric `io/net::*` today; no first-class listen/accept server contracts yet) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers for `host/plugin::command` + `editor/plugin::command`) | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Browser runtime host profile for wasm-hosted apps | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| WebXR runtime primitives (session/frame/input/haptics) | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| Durable data capability family (`io/db::*`) | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
+| Deployment/bundle target pipeline in core toolchain | ⚠️ (`pack` exists; no first-class deterministic `web/desktop/service` target bundlers yet) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Workspace semantic graph/refactor API for automation | ⚠️ (`semantic-edit index` is module-scoped; no first-class workspace graph API yet) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Machine-consumable agent authoring contract | ⚠️ (skill guidance exists, but no schema-versioned conformance contract yet) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -43,7 +50,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current red-team backlog is focused on unresolved P2 runtime-breadth items.
+- Current red-team backlog spans unresolved P1 platform blockers and P2 breadth/optimization items.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -52,7 +59,20 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- none
+- P1.1 browser runtime host profile + ABI family
+- P1.2 WebXR runtime (`gfx/xr::*`) support
+- P1.3 inbound/server networking primitives
+- P1.4 durable data capability family (`io/db::*`)
+- P1.5 deterministic deployment target bundling (`gcpm build --target`)
+- P1.6 gauntlet domain expansion for browser/xr/server/data/deploy
+- P2.1 typed plugin ABI schemas
+- P2.2 workspace semantic graph/refactor API
+- P2.3 deterministic runtime profiling for non-gfx workloads
+- P2.4 media/asset pipeline contracts
+- P2.5 documentation consolidation + drift reduction
+- P2.6 schema-versioned `write_genesisCode_skill` conformance
+- P2.7 conformance lanes for new platform domains
+- P2.8 end-to-end agent workflow performance SLO gates
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
