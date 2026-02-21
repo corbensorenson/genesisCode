@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GCPM_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GCPM Telemetry v0.1
 
 `genesis gcpm --json` emits deterministic, prompt-safe telemetry under `data.telemetry`.

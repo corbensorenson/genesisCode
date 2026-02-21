@@ -56,7 +56,7 @@ pub(super) fn eval_modules(
     let mut out = Vec::new();
     let mut cur_base = base.clone();
     for m in modules {
-        let eval = eval_one_module(ctx, &cur_base, &m.forms, &m.abs_path)?;
+        let eval = eval_one_module(ctx, &cur_base, &m.forms, &m.entry.path, &m.abs_path)?;
         // Export-only merge for next modules.
         let mut exports = BTreeMap::new();
         for e in &eval.exports {
@@ -74,6 +74,7 @@ pub(super) fn eval_one_module(
     ctx: &mut EvalCtx,
     base: &Env,
     forms: &[Term],
+    module_rel_path: &str,
     path: &Path,
 ) -> Result<ModuleEval, ObligationError> {
     let mut env = base.clone();
@@ -81,7 +82,7 @@ pub(super) fn eval_one_module(
         .iter()
         .filter_map(|form| parse_def(form).map(|(name, _)| name))
         .collect();
-    eval_module_default(&mut env, ctx, forms).map_err(|e| {
+    eval_module_default(&mut env, ctx, forms, module_rel_path).map_err(|e| {
         ObligationError::Module(format!("{}: module eval failed: {e}", path.display()))
     })?;
 
@@ -116,8 +117,9 @@ pub(super) fn eval_module_default(
     env: &mut Env,
     ctx: &mut EvalCtx,
     forms: &[Term],
+    site_namespace: &str,
 ) -> Result<Value, gc_kernel::KernelError> {
-    let compiled = compile_module(forms)?;
+    let compiled = compile_module_with_site_namespace(forms, site_namespace)?;
     eval_compiled_module(ctx, env, &compiled)
 }
 

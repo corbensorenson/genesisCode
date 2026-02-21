@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # HOST ABI Index v0.1
 
 Machine-readable host ABI index for agent planning lives at:

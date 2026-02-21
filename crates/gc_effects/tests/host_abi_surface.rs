@@ -405,3 +405,79 @@ wasi_bridge_response = "{:ok true :closed true}"
 
     assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
 }
+
+#[test]
+fn net_raw_ops_are_replay_deterministic_with_wasi_bridge_profile() {
+    let src = r#"
+        (def prog
+          (core/effect::bind
+            (core/effect::perform
+              'io/net::dns-resolve
+              {:name "allowed.example.com"}
+              (fn (dns-resp) (core/effect::pure dns-resp)))
+            (fn (dns-resp)
+              (core/effect::bind
+                (core/effect::perform
+                  'io/net::tcp-open
+                  {:remote "tcp://allowed.example.com:443"}
+                  (fn (tcp-resp) (core/effect::pure tcp-resp)))
+                (fn (tcp-resp)
+                  (core/effect::bind
+                    (core/effect::perform
+                      'io/net::udp-bind
+                      {:local "udp://127.0.0.1:5353"}
+                      (fn (udp-resp) (core/effect::pure udp-resp)))
+                    (fn (udp-resp)
+                      (core/effect::pure {:dns dns-resp :tcp tcp-resp :udp udp-resp}))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::dns-resolve", "io/net::tcp-open", "io/net::udp-bind"]
+
+[op."io/net::dns-resolve"]
+url_allow = ["dns://allowed.example.com"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :records [{:type \"A\" :value \"127.0.0.1\"}]}"
+
+[op."io/net::tcp-open"]
+url_allow = ["tcp://allowed.example.com:443"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"tcp-1\"}"
+
+[op."io/net::udp-bind"]
+url_allow = ["udp://127.0.0.1:5353"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :socket-id \"udp-1\"}"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 3);
+    assert_eq!(run_out.log.entries[0].op, "io/net::dns-resolve");
+    assert_eq!(run_out.log.entries[1].op, "io/net::tcp-open");
+    assert_eq!(run_out.log.entries[2].op, "io/net::udp-bind");
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}

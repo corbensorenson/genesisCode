@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # CLI Schema v0.1
 
 `genesis cli-schema` provides a machine-readable command/option schema for agent planning.

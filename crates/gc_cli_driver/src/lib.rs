@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+#[cfg(feature = "parity-harness")]
 use std::sync::atomic::{AtomicU8, Ordering};
 
 use anyhow::Context;
@@ -140,41 +141,109 @@ pub enum Flavor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeProfile {
     Production,
+    #[cfg(feature = "parity-harness")]
     ParityHarness,
 }
 
+#[cfg(feature = "parity-harness")]
 static RUNTIME_PROFILE: AtomicU8 = AtomicU8::new(0);
 
 pub(crate) fn runtime_profile() -> RuntimeProfile {
-    match RUNTIME_PROFILE.load(Ordering::Relaxed) {
-        1 => RuntimeProfile::ParityHarness,
-        _ => RuntimeProfile::Production,
+    #[cfg(feature = "parity-harness")]
+    {
+        match RUNTIME_PROFILE.load(Ordering::Relaxed) {
+            1 => RuntimeProfile::ParityHarness,
+            _ => RuntimeProfile::Production,
+        }
+    }
+    #[cfg(not(feature = "parity-harness"))]
+    {
+        RuntimeProfile::Production
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn set_runtime_profile(profile: RuntimeProfile) {
     let encoded = match profile {
         RuntimeProfile::Production => 0,
+        #[cfg(feature = "parity-harness")]
         RuntimeProfile::ParityHarness => 1,
     };
     RUNTIME_PROFILE.store(encoded, Ordering::Relaxed);
 }
 
-pub fn run(flavor: Flavor) -> std::process::ExitCode {
-    run_with_profile(flavor, RuntimeProfile::Production)
-}
+#[cfg(not(feature = "parity-harness"))]
+fn set_runtime_profile(_profile: RuntimeProfile) {}
 
-pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process::ExitCode {
-    set_runtime_profile(profile);
-    let parity = matches!(profile, RuntimeProfile::ParityHarness);
+#[cfg(feature = "parity-harness")]
+fn configure_profile_flags(parity: bool) {
     gc_prelude::set_bootstrap_runtime_profile_parity_harness(parity);
     gc_obligations::set_frontend_runtime_profile_parity_harness(parity);
+}
+
+#[cfg(not(feature = "parity-harness"))]
+fn configure_profile_flags(_parity: bool) {}
+
+pub fn run(flavor: Flavor) -> std::process::ExitCode {
+    set_runtime_profile(RuntimeProfile::Production);
+    configure_profile_flags(false);
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {
         Ok(out) => {
             if cli.json {
                 // JSON mode: exactly one JSON object on stdout.
+                println!("{}", json_canonical_string(&out.json));
+            } else if !out.stdout.is_empty() {
+                print!("{}", out.stdout);
+            }
+            std::process::ExitCode::from(out.exit_code)
+        }
+        Err(e) => {
+            if cli.json {
+                let out = match json_envelope_value(JsonEnvelope::<serde_json::Value> {
+                    ok: false,
+                    kind: "genesis/error-v0.2",
+                    data: None,
+                    error: Some(e.json),
+                }) {
+                    Ok(v) => v,
+                    Err(serr) => serde_json::json!({
+                        "ok": false,
+                        "kind": "genesis/error-v0.2",
+                        "error": {
+                            "code": serr.json.code,
+                            "message": serr.json.message,
+                            "context": serr.json.context,
+                        },
+                    }),
+                };
+                let out = annotate_envelope(out, e.exit_code);
+                println!("{}", json_canonical_string(&out));
+            } else {
+                eprintln!("{}", e.json.message);
+                if let Some(ctx) = e.json.context
+                    && let Some(s) = ctx.as_str()
+                    && !s.is_empty()
+                {
+                    eprintln!("{s}");
+                }
+            }
+            std::process::ExitCode::from(e.exit_code)
+        }
+    }
+}
+
+#[cfg(feature = "parity-harness")]
+pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process::ExitCode {
+    set_runtime_profile(profile);
+    let parity = matches!(profile, RuntimeProfile::ParityHarness);
+    configure_profile_flags(parity);
+    gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
+    let cli = Cli::parse();
+    match dispatch(&cli, flavor) {
+        Ok(out) => {
+            if cli.json {
                 println!("{}", json_canonical_string(&out.json));
             } else if !out.stdout.is_empty() {
                 print!("{}", out.stdout);

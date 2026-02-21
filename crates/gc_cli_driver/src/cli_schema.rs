@@ -34,6 +34,7 @@ pub(super) fn build_cli_schema(profile: RuntimeProfile) -> serde_json::Value {
 pub(super) fn runtime_profile_token(profile: RuntimeProfile) -> &'static str {
     match profile {
         RuntimeProfile::Production => "production",
+        #[cfg(feature = "parity-harness")]
         RuntimeProfile::ParityHarness => "parity-harness",
     }
 }
@@ -125,6 +126,7 @@ fn expected_values_by_profile(long_name: &str, profile: RuntimeProfile) -> Optio
     if long_name == "engine" || long_name == "coreform-frontend" {
         return Some(match profile {
             RuntimeProfile::Production => vec!["selfhost".to_string()],
+            #[cfg(feature = "parity-harness")]
             RuntimeProfile::ParityHarness => vec!["selfhost".to_string(), "rust".to_string()],
         });
     }

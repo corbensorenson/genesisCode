@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Host ABI (v0.2)
 
 This document defines the stable host capability ABI for GenesisCode v0.2.
@@ -22,7 +25,12 @@ Compatibility notes:
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
+  - `io/net::dns-resolve` (policy-gated DNS lookup + bridge-backed execution)
   - `io/net::http-request` (policy-gated remote allowlist + bridge-backed execution)
+  - `io/net::tcp-open`, `io/net::tcp-send`, `io/net::tcp-recv`, `io/net::tcp-close`
+    (policy-gated TCP stream lifecycle + bridge-backed execution)
+  - `io/net::udp-bind`, `io/net::udp-send`, `io/net::udp-recv`, `io/net::udp-close`
+    (policy-gated UDP socket lifecycle + bridge-backed execution)
   - `io/net::ws-open`, `io/net::ws-send`, `io/net::ws-recv`, `io/net::ws-close`
     (policy-gated WebSocket stream lifecycle + bridge-backed execution)
   - `sys/process::exec` (policy-gated program allowlist + bridge-backed execution)
@@ -153,7 +161,16 @@ Compatibility notes:
 - `host/plugin::command`
 - `io/fs::read`
 - `io/fs::write`
+- `io/net::dns-resolve`
 - `io/net::http-request`
+- `io/net::tcp-close`
+- `io/net::tcp-open`
+- `io/net::tcp-recv`
+- `io/net::tcp-send`
+- `io/net::udp-bind`
+- `io/net::udp-close`
+- `io/net::udp-recv`
+- `io/net::udp-send`
 - `io/net::ws-close`
 - `io/net::ws-open`
 - `io/net::ws-recv`
@@ -179,6 +196,37 @@ CI drift check:
 
 - `io/net::http-request`
   - Required payload field: `:url` (string).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-open`
+  - Required payload field: `:remote` (string URL-like target, e.g. `tcp://host:port`).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-send`
+  - Required payload fields: `:stream-id` (string), `:data` (term; usually bytes/string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-recv`
+  - Required payload field: `:stream-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-close`
+  - Required payload field: `:stream-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::udp-bind`
+  - Required payload field: `:local` (string URL-like target, e.g. `udp://ip:port`).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::udp-send`
+  - Required payload fields: `:socket-id` (string), `:remote` (string URL-like target), `:data` (term; usually bytes/string).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::udp-recv`
+  - Required payload field: `:socket-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::udp-close`
+  - Required payload field: `:socket-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::dns-resolve`
+  - Required payload field: `:name` (string DNS name).
   - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::ws-open`

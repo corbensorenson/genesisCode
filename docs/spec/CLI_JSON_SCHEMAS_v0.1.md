@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # CLI JSON Schemas v0.1 (Non-GCPM)
 
 This document freezes the `--json` schema IDs for `genesis` commands outside the `pkg/gcpm` surface.

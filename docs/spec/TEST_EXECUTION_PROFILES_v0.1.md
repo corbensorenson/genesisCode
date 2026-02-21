@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/TESTING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Test Execution Profiles v0.1
 
 Deterministic test execution policy for local iteration and CI.
@@ -45,7 +48,10 @@ Strict/full profile runtime reports:
   - warms selfhost artifact cache when relevant paths change
   - emits deterministic metrics report `kind = genesis/test-changed-fast-metrics-v0.1`
   - default hard budget: 300000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
-- Full fast fallback: `scripts/test_fast.sh`
+- Alias wrapper: `scripts/test_fast.sh`
+  - defaults to `scripts/test_changed_fast.sh`
+  - pass `--full` to run the broad fast suite
+- Full fast fallback: `scripts/test_fast_full.sh`
   - auto-detects nextest
   - runs high-signal core libs + selected CLI integration tests
 - Full/sharded loop: `scripts/test_shard_workspace.sh --total N --index I --runner auto|nextest|cargo`

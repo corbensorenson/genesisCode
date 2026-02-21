@@ -359,7 +359,40 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_property_tests(&store, &pkg_dir, &manifest, &modules, limits)
             }
             "core/obligation::coverage" => {
-                obligation_coverage(&store, &pkg_dir, &manifest, &modules, &test_runs, limits)
+                obligation_coverage(CoverageRunArgs {
+                    store: &store,
+                    pkg_dir: &pkg_dir,
+                    manifest: &manifest,
+                    modules: &modules,
+                    tests: &test_runs,
+                    limits,
+                    profile: CoverageProfile::Symbol,
+                    obligation_name: "core/obligation::coverage",
+                })
+            }
+            "core/obligation::coverage-decision" => {
+                obligation_coverage(CoverageRunArgs {
+                    store: &store,
+                    pkg_dir: &pkg_dir,
+                    manifest: &manifest,
+                    modules: &modules,
+                    tests: &test_runs,
+                    limits,
+                    profile: CoverageProfile::Decision,
+                    obligation_name: "core/obligation::coverage-decision",
+                })
+            }
+            "core/obligation::coverage-mcdc" => {
+                obligation_coverage(CoverageRunArgs {
+                    store: &store,
+                    pkg_dir: &pkg_dir,
+                    manifest: &manifest,
+                    modules: &modules,
+                    tests: &test_runs,
+                    limits,
+                    profile: CoverageProfile::Mcdc,
+                    obligation_name: "core/obligation::coverage-mcdc",
+                })
             }
             "core/obligation::determinism" => {
                 obligation_determinism(&store, &manifest, &modules, &test_runs)

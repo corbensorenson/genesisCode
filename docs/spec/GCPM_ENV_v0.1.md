@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GCPM_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GCPM Environment Realization v0.1
 
 This document defines the deterministic profile environment realization used by:

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Graphics Obligations v0.2
 
 This document specifies the graphics-oriented obligations supported by `genesis test`.

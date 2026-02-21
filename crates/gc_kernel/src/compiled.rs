@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use crate::env::Env;
@@ -11,11 +12,19 @@ const COMPILED_MODULE_BLOB_MAGIC: &[u8] = b"GCKM1\0";
 #[derive(Clone, Debug)]
 pub(crate) enum CExpr {
     Atom(Term),
-    Var(String),
+    Var {
+        name: String,
+        site_id: String,
+    },
     Vector(Vec<Term>),
     Map(Vec<(TermOrdKey, Arc<CExpr>)>),
     Quote(Term),
-    If(Arc<CExpr>, Arc<CExpr>, Arc<CExpr>),
+    If {
+        cond: Arc<CExpr>,
+        then_expr: Arc<CExpr>,
+        else_expr: Arc<CExpr>,
+        site_id: String,
+    },
     Begin(Vec<Arc<CExpr>>),
     Let(Vec<(String, Arc<CExpr>)>, Arc<CExpr>),
     FnUnary {
@@ -38,6 +47,13 @@ pub struct CompiledModule {
     forms: Vec<CompiledForm>,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CoverageSiteManifest {
+    pub statement_sites: BTreeSet<String>,
+    pub decision_sites: BTreeSet<String>,
+    pub decision_conditions: BTreeMap<String, BTreeSet<String>>,
+}
+
 #[derive(Clone, Debug)]
 enum CompiledForm {
     Def(String, Arc<CExpr>),
@@ -45,15 +61,59 @@ enum CompiledForm {
 }
 
 pub fn compile_module(forms: &[Term]) -> Result<CompiledModule, KernelError> {
+    compile_module_with_site_namespace(forms, "")
+}
+
+pub fn compile_module_with_site_namespace(
+    forms: &[Term],
+    site_namespace: &str,
+) -> Result<CompiledModule, KernelError> {
     let mut out = Vec::with_capacity(forms.len());
-    for form in forms {
+    for (form_idx, form) in forms.iter().enumerate() {
+        let form_idx = u32::try_from(form_idx).map_err(|_| {
+            KernelError::new(
+                KernelErrorKind::Internal,
+                "compiled module form index exceeds u32 range",
+            )
+        })?;
         if let Some((name, expr)) = parse_def(form) {
-            out.push(CompiledForm::Def(name, compile_term(&expr)?));
+            let mut path = vec![form_idx, 2];
+            out.push(CompiledForm::Def(
+                name,
+                compile_term_with_site_path(&expr, &mut path, site_namespace)?,
+            ));
         } else {
-            out.push(CompiledForm::Expr(compile_term(form)?));
+            let mut path = vec![form_idx];
+            out.push(CompiledForm::Expr(compile_term_with_site_path(
+                form,
+                &mut path,
+                site_namespace,
+            )?));
         }
     }
     Ok(CompiledModule { forms: out })
+}
+
+pub fn compiled_module_coverage_manifest(
+    forms: &[Term],
+    site_namespace: &str,
+) -> Result<CoverageSiteManifest, KernelError> {
+    let compiled = compile_module_with_site_namespace(forms, site_namespace)?;
+    Ok(compiled_module_coverage_manifest_from_compiled(&compiled))
+}
+
+pub fn compiled_module_coverage_manifest_from_compiled(
+    compiled: &CompiledModule,
+) -> CoverageSiteManifest {
+    let mut manifest = CoverageSiteManifest::default();
+    for form in &compiled.forms {
+        match form {
+            CompiledForm::Def(_, expr) | CompiledForm::Expr(expr) => {
+                collect_coverage_manifest_from_expr(expr, &mut manifest);
+            }
+        }
+    }
+    manifest
 }
 
 pub fn eval_compiled_module(
@@ -192,9 +252,10 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             out.push(0);
             push_term(out, t)
         }
-        CExpr::Var(name) => {
+        CExpr::Var { name, site_id } => {
             out.push(1);
-            push_str(out, name)
+            push_str(out, name)?;
+            push_str(out, site_id)
         }
         CExpr::Vector(items) => {
             out.push(2);
@@ -217,11 +278,17 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
             out.push(4);
             push_term(out, t)
         }
-        CExpr::If(c, t, e) => {
+        CExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            site_id,
+        } => {
             out.push(5);
-            encode_cexpr(out, c)?;
-            encode_cexpr(out, t)?;
-            encode_cexpr(out, e)
+            push_str(out, site_id)?;
+            encode_cexpr(out, cond)?;
+            encode_cexpr(out, then_expr)?;
+            encode_cexpr(out, else_expr)
         }
         CExpr::Begin(items) => {
             out.push(6);
@@ -344,7 +411,10 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
     let tag = cur.read_u8()?;
     let out = match tag {
         0 => CExpr::Atom(cur.read_term()?),
-        1 => CExpr::Var(cur.read_str()?),
+        1 => CExpr::Var {
+            name: cur.read_str()?,
+            site_id: cur.read_str()?,
+        },
         2 => {
             let n = cur.read_u32()? as usize;
             let mut items = Vec::with_capacity(n);
@@ -364,7 +434,12 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
             CExpr::Map(entries)
         }
         4 => CExpr::Quote(cur.read_term()?),
-        5 => CExpr::If(decode_cexpr(cur)?, decode_cexpr(cur)?, decode_cexpr(cur)?),
+        5 => CExpr::If {
+            site_id: cur.read_str()?,
+            cond: decode_cexpr(cur)?,
+            then_expr: decode_cexpr(cur)?,
+            else_expr: decode_cexpr(cur)?,
+        },
         6 => {
             let n = cur.read_u32()? as usize;
             let mut items = Vec::with_capacity(n);
@@ -417,21 +492,76 @@ fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
     Ok(Arc::new(out))
 }
 
-fn compile_term(t: &Term) -> Result<Arc<CExpr>, KernelError> {
-    Ok(Arc::new(compile_term_inner(t)?))
+fn site_id(kind: &str, site_namespace: &str, path: &[u32]) -> String {
+    let path_str = path
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(".");
+    if site_namespace.is_empty() {
+        format!("{kind}:{path_str}")
+    } else {
+        format!("{site_namespace}::{kind}:{path_str}")
+    }
 }
 
-fn compile_term_inner(t: &Term) -> Result<CExpr, KernelError> {
+fn child_index(i: usize) -> Result<u32, KernelError> {
+    u32::try_from(i).map_err(|_| {
+        KernelError::new(
+            KernelErrorKind::Internal,
+            "compiled expression child index exceeds u32 range",
+        )
+    })
+}
+
+fn with_child_path<T>(
+    path: &mut Vec<u32>,
+    child: u32,
+    f: impl FnOnce(&mut Vec<u32>) -> Result<T, KernelError>,
+) -> Result<T, KernelError> {
+    path.push(child);
+    let out = f(path);
+    path.pop();
+    out
+}
+
+fn compile_term(t: &Term) -> Result<Arc<CExpr>, KernelError> {
+    let mut path = vec![0];
+    compile_term_with_site_path(t, &mut path, "")
+}
+
+fn compile_term_with_site_path(
+    t: &Term,
+    path: &mut Vec<u32>,
+    site_namespace: &str,
+) -> Result<Arc<CExpr>, KernelError> {
+    Ok(Arc::new(compile_term_inner(t, path, site_namespace)?))
+}
+
+fn compile_term_inner(
+    t: &Term,
+    path: &mut Vec<u32>,
+    site_namespace: &str,
+) -> Result<CExpr, KernelError> {
     match t {
         Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Str(_) | Term::Bytes(_) => {
             Ok(CExpr::Atom(t.clone()))
         }
-        Term::Symbol(s) => Ok(CExpr::Var(s.clone())),
+        Term::Symbol(s) => Ok(CExpr::Var {
+            name: s.clone(),
+            site_id: site_id("stmt", site_namespace, path),
+        }),
         Term::Vector(xs) => Ok(CExpr::Vector(xs.clone())),
         Term::Map(m) => {
             let mut out = Vec::with_capacity(m.len());
-            for (k, v) in m.iter() {
-                out.push((k.clone(), compile_term(v)?));
+            for (idx, (k, v)) in m.iter().enumerate() {
+                let child = child_index(idx)?;
+                out.push((
+                    k.clone(),
+                    with_child_path(path, child, |p| {
+                        compile_term_with_site_path(v, p, site_namespace)
+                    })?,
+                ));
             }
             Ok(CExpr::Map(out))
         }
@@ -442,12 +572,16 @@ fn compile_term_inner(t: &Term) -> Result<CExpr, KernelError> {
                     "improper list is not a valid form",
                 ));
             };
-            compile_list(items)
+            compile_list(items, path, site_namespace)
         }
     }
 }
 
-fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
+fn compile_list(
+    items: Vec<&Term>,
+    path: &mut Vec<u32>,
+    site_namespace: &str,
+) -> Result<CExpr, KernelError> {
     if items.is_empty() {
         return Ok(CExpr::Atom(Term::Nil));
     }
@@ -465,7 +599,9 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
             }
             "fn" => {
                 let (param, body_term) = desugar_fn_to_unary(&items)?;
-                let body = compile_term(&body_term)?;
+                let body = with_child_path(path, 0, |p| {
+                    compile_term_with_site_path(&body_term, p, site_namespace)
+                })?;
                 return Ok(CExpr::FnUnary {
                     param,
                     body_term,
@@ -479,11 +615,18 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                         "(if c t e) expects exactly 3 arguments",
                     ));
                 }
-                return Ok(CExpr::If(
-                    compile_term(items[1])?,
-                    compile_term(items[2])?,
-                    compile_term(items[3])?,
-                ));
+                return Ok(CExpr::If {
+                    site_id: site_id("decision", site_namespace, path),
+                    cond: with_child_path(path, 0, |p| {
+                        compile_term_with_site_path(items[1], p, site_namespace)
+                    })?,
+                    then_expr: with_child_path(path, 1, |p| {
+                        compile_term_with_site_path(items[2], p, site_namespace)
+                    })?,
+                    else_expr: with_child_path(path, 2, |p| {
+                        compile_term_with_site_path(items[3], p, site_namespace)
+                    })?,
+                });
             }
             "begin" => {
                 if items.len() < 2 {
@@ -493,11 +636,16 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                     ));
                 }
                 if items.len() == 2 {
-                    return compile_term_inner(items[1]);
+                    return with_child_path(path, 0, |p| {
+                        compile_term_inner(items[1], p, site_namespace)
+                    });
                 }
                 let mut xs = Vec::with_capacity(items.len() - 1);
-                for it in items.iter().skip(1) {
-                    xs.push(compile_term(it)?);
+                for (idx, it) in items.iter().skip(1).enumerate() {
+                    let child = child_index(idx)?;
+                    xs.push(with_child_path(path, child, |p| {
+                        compile_term_with_site_path(it, p, site_namespace)
+                    })?);
                 }
                 return Ok(CExpr::Begin(xs));
             }
@@ -516,7 +664,7 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                     ));
                 };
                 let mut out_bs = Vec::with_capacity(bs.len());
-                for b in bs {
+                for (idx, b) in bs.into_iter().enumerate() {
                     let Some(pair) = b.as_proper_list() else {
                         return Err(KernelError::new(
                             KernelErrorKind::BadForm,
@@ -535,7 +683,13 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                             "(let ...) binding name must be symbol",
                         ));
                     };
-                    out_bs.push((name.clone(), compile_term(pair[1])?));
+                    let child = child_index(idx)?;
+                    out_bs.push((
+                        name.clone(),
+                        with_child_path(path, child, |p| {
+                            compile_term_with_site_path(pair[1], p, site_namespace)
+                        })?,
+                    ));
                 }
 
                 // multi-body => (begin ...)
@@ -549,7 +703,13 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                     }
                     Term::list(xs)
                 };
-                return Ok(CExpr::Let(out_bs, compile_term(&body_term)?));
+                let body_child = child_index(out_bs.len())?;
+                return Ok(CExpr::Let(
+                    out_bs,
+                    with_child_path(path, body_child, |p| {
+                        compile_term_with_site_path(&body_term, p, site_namespace)
+                    })?,
+                ));
             }
             "prim" => {
                 if items.len() < 2 {
@@ -565,8 +725,11 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                     ));
                 };
                 let mut args = Vec::with_capacity(items.len().saturating_sub(2));
-                for a in items.iter().skip(2) {
-                    args.push(compile_term(a)?);
+                for (idx, a) in items.iter().skip(2).enumerate() {
+                    let child = child_index(idx)?;
+                    args.push(with_child_path(path, child, |p| {
+                        compile_term_with_site_path(a, p, site_namespace)
+                    })?);
                 }
                 return Ok(CExpr::Prim {
                     op: op.clone(),
@@ -577,8 +740,12 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                 return match items.len() {
                     1 => Ok(CExpr::SealNew),
                     3 => Ok(CExpr::Seal(
-                        compile_term(items[1])?,
-                        compile_term(items[2])?,
+                        with_child_path(path, 0, |p| {
+                            compile_term_with_site_path(items[1], p, site_namespace)
+                        })?,
+                        with_child_path(path, 1, |p| {
+                            compile_term_with_site_path(items[2], p, site_namespace)
+                        })?,
                     )),
                     _ => Err(KernelError::new(
                         KernelErrorKind::BadForm,
@@ -594,8 +761,12 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
                     ));
                 }
                 return Ok(CExpr::Unseal(
-                    compile_term(items[1])?,
-                    compile_term(items[2])?,
+                    with_child_path(path, 0, |p| {
+                        compile_term_with_site_path(items[1], p, site_namespace)
+                    })?,
+                    with_child_path(path, 1, |p| {
+                        compile_term_with_site_path(items[2], p, site_namespace)
+                    })?,
                 ));
             }
             "def" => {
@@ -609,13 +780,19 @@ fn compile_list(items: Vec<&Term>) -> Result<CExpr, KernelError> {
     }
 
     // General application.
-    let f = compile_term(items[0])?;
+    let f = with_child_path(path, 0, |p| {
+        compile_term_with_site_path(items[0], p, site_namespace)
+    })?;
     if items.len() == 1 {
-        return compile_term_inner(items[0]);
+        return with_child_path(path, 0, |p| compile_term_inner(items[0], p, site_namespace));
     }
     let mut acc = f;
-    for a in items.iter().skip(1) {
-        acc = Arc::new(CExpr::App(acc, compile_term(a)?));
+    for (idx, a) in items.iter().skip(1).enumerate() {
+        let child = child_index(idx + 1)?;
+        let arg = with_child_path(path, child, |p| {
+            compile_term_with_site_path(a, p, site_namespace)
+        })?;
+        acc = Arc::new(CExpr::App(acc, arg));
     }
     Ok((*acc).clone())
 }
@@ -711,6 +888,108 @@ fn desugar_fn_to_unary(items: &[&Term]) -> Result<(String, Term), KernelError> {
     Ok((param.clone(), items2[2].clone()))
 }
 
+fn collect_coverage_manifest_from_expr(expr: &Arc<CExpr>, manifest: &mut CoverageSiteManifest) {
+    match expr.as_ref() {
+        CExpr::Atom(_) | CExpr::Vector(_) | CExpr::Quote(_) | CExpr::SealNew => {}
+        CExpr::Var { site_id, .. } => {
+            manifest.statement_sites.insert(site_id.clone());
+        }
+        CExpr::Map(entries) => {
+            for (_, v) in entries {
+                collect_coverage_manifest_from_expr(v, manifest);
+            }
+        }
+        CExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            site_id,
+        } => {
+            manifest.decision_sites.insert(site_id.clone());
+            let mut vars = BTreeSet::new();
+            collect_condition_symbols_from_expr(cond, &mut vars);
+            manifest
+                .decision_conditions
+                .entry(site_id.clone())
+                .or_default()
+                .extend(vars);
+            collect_coverage_manifest_from_expr(cond, manifest);
+            collect_coverage_manifest_from_expr(then_expr, manifest);
+            collect_coverage_manifest_from_expr(else_expr, manifest);
+        }
+        CExpr::Begin(xs) => {
+            for x in xs {
+                collect_coverage_manifest_from_expr(x, manifest);
+            }
+        }
+        CExpr::Let(bindings, body) => {
+            for (_, rhs) in bindings {
+                collect_coverage_manifest_from_expr(rhs, manifest);
+            }
+            collect_coverage_manifest_from_expr(body, manifest);
+        }
+        CExpr::FnUnary { body, .. } => {
+            collect_coverage_manifest_from_expr(body, manifest);
+        }
+        CExpr::Prim { args, .. } => {
+            for a in args {
+                collect_coverage_manifest_from_expr(a, manifest);
+            }
+        }
+        CExpr::Seal(v, tok) | CExpr::Unseal(v, tok) | CExpr::App(v, tok) => {
+            collect_coverage_manifest_from_expr(v, manifest);
+            collect_coverage_manifest_from_expr(tok, manifest);
+        }
+    }
+}
+
+fn collect_condition_symbols_from_expr(expr: &Arc<CExpr>, out: &mut BTreeSet<String>) {
+    match expr.as_ref() {
+        CExpr::Var { name, .. } => {
+            out.insert(name.clone());
+        }
+        CExpr::Atom(_) | CExpr::Vector(_) | CExpr::Quote(_) | CExpr::SealNew => {}
+        CExpr::Map(entries) => {
+            for (_, v) in entries {
+                collect_condition_symbols_from_expr(v, out);
+            }
+        }
+        CExpr::If {
+            cond,
+            then_expr,
+            else_expr,
+            ..
+        } => {
+            collect_condition_symbols_from_expr(cond, out);
+            collect_condition_symbols_from_expr(then_expr, out);
+            collect_condition_symbols_from_expr(else_expr, out);
+        }
+        CExpr::Begin(xs) => {
+            for x in xs {
+                collect_condition_symbols_from_expr(x, out);
+            }
+        }
+        CExpr::Let(bindings, body) => {
+            for (_, rhs) in bindings {
+                collect_condition_symbols_from_expr(rhs, out);
+            }
+            collect_condition_symbols_from_expr(body, out);
+        }
+        CExpr::FnUnary { body, .. } => {
+            collect_condition_symbols_from_expr(body, out);
+        }
+        CExpr::Prim { args, .. } => {
+            for a in args {
+                collect_condition_symbols_from_expr(a, out);
+            }
+        }
+        CExpr::Seal(v, tok) | CExpr::Unseal(v, tok) | CExpr::App(v, tok) => {
+            collect_condition_symbols_from_expr(v, out);
+            collect_condition_symbols_from_expr(tok, out);
+        }
+    }
+}
+
 pub(crate) fn eval_cexpr(
     ctx: &mut EvalCtx,
     env: &Env,
@@ -734,11 +1013,13 @@ pub(crate) fn eval_cexpr(
                 }
                 return Ok(Value::Data(t.clone()));
             }
-            CExpr::Var(name) => {
-                ctx.coverage_hit(name);
-                return cur_env.get(name).ok_or_else(|| {
+            CExpr::Var { name, site_id } => {
+                let value = cur_env.get(name).ok_or_else(|| {
                     KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {name}"))
-                });
+                })?;
+                ctx.coverage_statement_site(site_id);
+                ctx.coverage_hit(name, &value);
+                return Ok(value);
             }
             CExpr::Vector(xs) => {
                 ctx.mem_observe_vec_len(xs.len())?;
@@ -763,11 +1044,27 @@ pub(crate) fn eval_cexpr(
                 ctx.mem_observe_data_term(d)?;
                 return Ok(Value::Data(d.clone()));
             }
-            CExpr::If(c, t, e) => {
-                let cv = eval_cexpr(ctx, &cur_env, c)?;
+            CExpr::If {
+                cond,
+                then_expr,
+                else_expr,
+                site_id,
+            } => {
+                ctx.coverage_begin_decision_site(site_id);
+                let cv = match eval_cexpr(ctx, &cur_env, cond) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        ctx.coverage_abort_decision_site();
+                        return Err(e);
+                    }
+                };
                 let cond_truthy = cv.truthy();
-                ctx.coverage_decision(cond_truthy);
-                cur = if cond_truthy { t.clone() } else { e.clone() };
+                ctx.coverage_finish_decision_site(cond_truthy);
+                cur = if cond_truthy {
+                    then_expr.clone()
+                } else {
+                    else_expr.clone()
+                };
                 continue;
             }
             CExpr::Begin(xs) => {

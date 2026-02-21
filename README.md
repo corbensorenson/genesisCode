@@ -46,9 +46,19 @@ cargo run -p gc_cli -- apply-patch path/to/change.gcpatch --pkg path/to/package.
 
 ## Test Iteration Loops
 
-Fast local loop (auto-uses `cargo nextest` when available, falls back to `cargo test`):
+Default fast local loop (changed-aware, hard budgeted):
+```sh
+bash scripts/test_changed_fast.sh
+```
+
+Alias for the default fast loop:
 ```sh
 bash scripts/test_fast.sh
+```
+
+Full fast fallback suite (broader, slower):
+```sh
+bash scripts/test_fast.sh --full
 ```
 
 Deterministic sharded workspace tests (for parallel local/CI execution):

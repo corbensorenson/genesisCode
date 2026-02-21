@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Genesis CLI v0.2 (Exit Codes + JSON)
 
 This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.

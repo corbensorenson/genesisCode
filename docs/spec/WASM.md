@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # WASM Build (Pure Kernel) v0.2
 
 GenesisCode keeps the kernel pure. The WASM target builds the **parser + canonicalizer + pure evaluator**

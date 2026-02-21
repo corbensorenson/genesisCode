@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GCPM_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GCPM Workspace Descriptor v0.1
 
 Genesis workspace roots are described by `genesis.workspace.toml`.

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/TESTING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Unit Test Suite Schema v0.2
 
 GenesisCode v0.2 unit tests are discovered by evaluating suites listed in `package.toml` under `tests = [...]`.

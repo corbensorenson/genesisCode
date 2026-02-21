@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # WASI Tooling Build v0.2 (Rust Bootstrap -> `genesis.wasm`)
 
 Goal: run GenesisCode tooling "on top of wasm" using WASI (`wasm32-wasip1`), without depending on

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GPU Compute Device Bridge v0.1
 
 This spec defines the first-party in-repo device bridge path for `gpu/compute::*` host ops.

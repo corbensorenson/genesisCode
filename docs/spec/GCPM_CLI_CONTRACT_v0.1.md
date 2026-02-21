@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GCPM_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GCPM CLI Contract v0.1
 
 This document freezes the first AI-agent-facing contract for GenesisCode project management.

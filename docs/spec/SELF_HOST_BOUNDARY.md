@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Self-Host Boundary (WASM-First) v0.2
 
 Goal: reach a state where the GenesisCode toolchain can run **on top of WASM** with a minimal Rust TCB,

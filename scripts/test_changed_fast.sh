@@ -223,7 +223,7 @@ COMMANDS=()
 if [[ "$MODE" == "clean-tree" ]]; then
   COMMANDS+=("cargo test -p gc_coreform -p gc_kernel --lib --quiet")
 elif [[ "$MODE" == "full-threshold" || "$MODE" == "full-global-change" ]]; then
-  COMMANDS+=("bash scripts/test_fast.sh")
+  COMMANDS+=("bash scripts/test_fast_full.sh")
 else
   # WASI integration suites are valuable but expensive; include them only when their crate or
   # WASI-facing specs changed. Full CI lanes still run complete WASI coverage.

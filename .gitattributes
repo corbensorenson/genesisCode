@@ -1,0 +1,4 @@
+# Generated selfhost artifacts are committed for reproducibility, but large text diffs
+# add noise for AI-agent editing loops. Keep source-of-truth files reviewable instead.
+selfhost/toolchain.gc -diff
+prelude/prelude.gc -diff

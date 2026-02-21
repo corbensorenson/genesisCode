@@ -20,6 +20,12 @@ This is the canonical entrypoint for project documentation.
 
 ## Core Specs (Normative)
 
+- Canonical bundles (agent-first entrypoints):
+  - `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
+  - `docs/spec/GCPM_BUNDLE_v0.1.md`
+  - `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+  - `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+  - `docs/spec/TESTING_BUNDLE_v0.1.md`
 - Kernel/evaluator/contracts:
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GCPM_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GCPM Workflow Reports v0.1
 
 Deterministic AI-facing workflow summaries are emitted in `--json` under `data.report` for:

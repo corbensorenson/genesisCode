@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # `caps.toml` (Capability Policy) v0.2
 
 This file defines the *deny-by-default* capability policy used by `genesis run` and by effectful obligations.

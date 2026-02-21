@@ -44,6 +44,7 @@ Required obligations:
 - `core/obligation::replayable-tests`
 - `core/obligation::capabilities-declared`
 - `core/obligation::determinism` (for declared-pure packages/modules)
+- `core/obligation::coverage-decision` (structural statement+decision coverage gate)
 
 Signatures: optional.
 
@@ -52,6 +53,7 @@ Signatures: optional.
 Required obligations:
 
 - all mainline obligations
+- `core/obligation::coverage-mcdc` (upgrade structural gate from decision to MC/DC)
 - `core/obligation::no-unknown-deps`
 - `core/obligation::signed-provenance` (default ON)
 
@@ -106,7 +108,8 @@ required_obligations = [
   "core/obligation::unit-tests",
   "core/obligation::replayable-tests",
   "core/obligation::capabilities-declared",
-  "core/obligation::determinism"
+  "core/obligation::determinism",
+  "core/obligation::coverage-decision"
 ]
 require_signatures = false
 
@@ -117,6 +120,7 @@ required_obligations = [
   "core/obligation::replayable-tests",
   "core/obligation::capabilities-declared",
   "core/obligation::determinism",
+  "core/obligation::coverage-mcdc",
   "core/obligation::no-unknown-deps",
   "core/obligation::signed-provenance"
 ]

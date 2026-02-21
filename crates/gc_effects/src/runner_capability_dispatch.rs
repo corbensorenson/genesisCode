@@ -243,11 +243,11 @@ fn capability_host_plugin_command(
     }
 }
 
-fn net_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, String> {
+fn net_allowlist_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<String>, String> {
     let Some(pol) = pol else {
-        return Err(
-            "io/net::http-request requires per-op url_allow allowlist in caps.toml".to_string(),
-        );
+        return Err(format!(
+            "{op} requires per-op url_allow allowlist in caps.toml"
+        ));
     };
     let allow_key = if pol.extra.contains_key("url_allow") {
         "url_allow"
@@ -255,9 +255,9 @@ fn net_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Vec<String>, Stri
         "remote_allow"
     };
     let Some(v) = pol.extra.get(allow_key) else {
-        return Err(
-            "io/net::http-request requires per-op url_allow allowlist in caps.toml".to_string(),
-        );
+        return Err(format!(
+            "{op} requires per-op url_allow allowlist in caps.toml"
+        ));
     };
     let Some(arr) = v.as_array() else {
         return Err(format!("{allow_key} must be an array of strings"));
@@ -308,14 +308,16 @@ fn net_wasi_network_profile_from_policy(pol: Option<&OpPolicy>) -> Result<Option
     Ok(Some(trimmed.to_string()))
 }
 
-fn parse_url_scheme(url: &str) -> Result<&str, String> {
+fn parse_url_scheme<'a>(url: &'a str, op: &str, field: &str) -> Result<&'a str, String> {
     let Some((scheme, _rest)) = url.split_once("://") else {
         return Err(format!(
-            "io/net::http-request url must include scheme:// (got `{url}`)"
+            "{op} payload field `{field}` must include scheme:// (got `{url}`)"
         ));
     };
     if scheme.trim().is_empty() {
-        return Err("io/net::http-request url scheme must not be empty".to_string());
+        return Err(format!(
+            "{op} payload field `{field}` scheme must not be empty"
+        ));
     }
     Ok(scheme)
 }
@@ -353,22 +355,27 @@ fn url_matches_allowlist(url: &str, allow: &str, scheme: &str) -> bool {
     url.starts_with(rule)
 }
 
-fn validate_net_request_policy(pol: Option<&OpPolicy>, url: &str) -> Result<(), String> {
-    let scheme = parse_url_scheme(url)?;
+fn validate_net_target_policy(
+    pol: Option<&OpPolicy>,
+    target: &str,
+    op: &str,
+    field: &str,
+) -> Result<(), String> {
+    let scheme = parse_url_scheme(target, op, field)?;
     let allow_http = net_allow_http_from_policy(pol)?;
     if scheme == "http" && !allow_http {
         return Err("http URLs are disabled by policy (set allow_http=true)".to_string());
     }
     let wasi_profile = net_wasi_network_profile_from_policy(pol)?;
     validate_net_wasi_profile(wasi_profile.as_deref(), scheme)?;
-    let allowlist = net_allowlist_from_policy(pol)?;
+    let allowlist = net_allowlist_from_policy(pol, op)?;
     if allowlist
         .iter()
-        .any(|rule| url_matches_allowlist(url, rule, scheme))
+        .any(|rule| url_matches_allowlist(target, rule, scheme))
     {
         return Ok(());
     }
-    Err("url is not in policy url_allow allowlist".to_string())
+    Err("target is not in policy url_allow allowlist".to_string())
 }
 
 fn capability_io_net_http_request(
@@ -378,7 +385,7 @@ fn capability_io_net_http_request(
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let url = payload_required_string_field(payload, op, ":url")?;
-    if let Err(e) = validate_net_request_policy(pol, &url) {
+    if let Err(e) = validate_net_target_policy(pol, &url, op, ":url") {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
@@ -407,11 +414,194 @@ fn capability_io_net_ws_open(
     error_tok: SealId,
 ) -> Result<Value, EffectsError> {
     let url = payload_required_string_field(payload, op, ":url")?;
-    if let Err(e) = validate_net_request_policy(pol, &url) {
+    if let Err(e) = validate_net_target_policy(pol, &url, op, ":url") {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
             format!("{op} remote denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_tcp_open(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let remote = payload_required_string_field(payload, op, ":remote")?;
+    if let Err(e) = validate_net_target_policy(pol, &remote, op, ":remote") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} remote denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_tcp_send(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _stream_id = payload_required_string_field(payload, op, ":stream-id")?;
+    let _data = payload_required_field(payload, op, ":data")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_tcp_recv_or_close(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _stream_id = payload_required_string_field(payload, op, ":stream-id")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_udp_bind(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let local = payload_required_string_field(payload, op, ":local")?;
+    if let Err(e) = validate_net_target_policy(pol, &local, op, ":local") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} bind denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_udp_send(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _socket_id = payload_required_string_field(payload, op, ":socket-id")?;
+    let remote = payload_required_string_field(payload, op, ":remote")?;
+    let _data = payload_required_field(payload, op, ":data")?;
+    if let Err(e) = validate_net_target_policy(pol, &remote, op, ":remote") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} remote denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_udp_recv_or_close(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _socket_id = payload_required_string_field(payload, op, ":socket-id")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_dns_resolve(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let name = payload_required_string_field(payload, op, ":name")?;
+    let target = format!("dns://{name}");
+    if let Err(e) = validate_net_target_policy(pol, &target, op, ":name") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} query denied: {e}"),
             Some(op),
         ));
     }
@@ -595,6 +785,17 @@ pub(super) fn call_capability(
             capability_host_plugin_command(op, payload, pol, error_tok)
         }
         "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
+        "io/net::dns-resolve" => capability_io_net_dns_resolve(op, payload, pol, error_tok),
+        "io/net::tcp-open" => capability_io_net_tcp_open(op, payload, pol, error_tok),
+        "io/net::tcp-send" => capability_io_net_tcp_send(op, payload, pol, error_tok),
+        "io/net::tcp-recv" | "io/net::tcp-close" => {
+            capability_io_net_tcp_recv_or_close(op, payload, pol, error_tok)
+        }
+        "io/net::udp-bind" => capability_io_net_udp_bind(op, payload, pol, error_tok),
+        "io/net::udp-send" => capability_io_net_udp_send(op, payload, pol, error_tok),
+        "io/net::udp-recv" | "io/net::udp-close" => {
+            capability_io_net_udp_recv_or_close(op, payload, pol, error_tok)
+        }
         "io/net::ws-open" => capability_io_net_ws_open(op, payload, pol, error_tok),
         "io/net::ws-send" => capability_io_net_ws_send(op, payload, pol, error_tok),
         "io/net::ws-recv" | "io/net::ws-close" => {
@@ -1169,6 +1370,441 @@ wasi_bridge_response = "{:ok true :closed true}"
             close_map.get(&TermOrdKey(Term::symbol(":closed"))),
             Some(&Term::Bool(true))
         );
+    }
+
+    #[test]
+    fn io_net_tcp_open_policy_gate_enforces_remote_allowlist() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::tcp-open"]
+
+[op."io/net::tcp-open"]
+url_allow = ["tcp://allowed.example.com:443"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"tcp-1\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":remote")),
+                Term::Str("tcp://evil.example.com:443".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::tcp-open",
+            &payload,
+            policy.op_policy("io/net::tcp-open"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(32),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn io_net_tcp_family_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::tcp-open", "io/net::tcp-send", "io/net::tcp-recv", "io/net::tcp-close"]
+
+[op."io/net::tcp-open"]
+url_allow = ["tcp://allowed.example.com:443"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"tcp-1\"}"
+
+[op."io/net::tcp-send"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :sent-bytes 4}"
+
+[op."io/net::tcp-recv"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :data b\"pong\" :eof false}"
+
+[op."io/net::tcp-close"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :closed true}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let open_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":remote")),
+                Term::Str("tcp://allowed.example.com:443".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let open_out = call_capability(
+            "io/net::tcp-open",
+            &open_payload,
+            policy.op_policy("io/net::tcp-open"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(34),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(open_map)) = open_out else {
+            panic!("expected tcp-open data map");
+        };
+        assert_eq!(
+            open_map.get(&TermOrdKey(Term::symbol(":stream-id"))),
+            Some(&Term::Str("tcp-1".to_string()))
+        );
+        let send_payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":stream-id")),
+                    Term::Str("tcp-1".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":data")),
+                    Term::Bytes(b"ping".to_vec().into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let send_out = call_capability(
+            "io/net::tcp-send",
+            &send_payload,
+            policy.op_policy("io/net::tcp-send"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(36),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(send_map)) = send_out else {
+            panic!("expected tcp-send data map");
+        };
+        assert_eq!(
+            send_map.get(&TermOrdKey(Term::symbol(":sent-bytes"))),
+            Some(&Term::Int(4_i64.into()))
+        );
+        let recv_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":stream-id")),
+                Term::Str("tcp-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let recv_out = call_capability(
+            "io/net::tcp-recv",
+            &recv_payload,
+            policy.op_policy("io/net::tcp-recv"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(38),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(recv_map)) = recv_out else {
+            panic!("expected tcp-recv data map");
+        };
+        assert_eq!(
+            recv_map.get(&TermOrdKey(Term::symbol(":eof"))),
+            Some(&Term::Bool(false))
+        );
+        let close_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":stream-id")),
+                Term::Str("tcp-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let close_out = call_capability(
+            "io/net::tcp-close",
+            &close_payload,
+            policy.op_policy("io/net::tcp-close"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(40),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(close_map)) = close_out else {
+            panic!("expected tcp-close data map");
+        };
+        assert_eq!(
+            close_map.get(&TermOrdKey(Term::symbol(":closed"))),
+            Some(&Term::Bool(true))
+        );
+    }
+
+    #[test]
+    fn io_net_udp_bind_policy_gate_enforces_allowlist() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::udp-bind"]
+
+[op."io/net::udp-bind"]
+url_allow = ["udp://127.0.0.1:5353"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :socket-id \"udp-1\"}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":local")),
+                Term::Str("udp://0.0.0.0:5353".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::udp-bind",
+            &payload,
+            policy.op_policy("io/net::udp-bind"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(42),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn io_net_udp_family_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::udp-bind", "io/net::udp-send", "io/net::udp-recv", "io/net::udp-close"]
+
+[op."io/net::udp-bind"]
+url_allow = ["udp://127.0.0.1:5353"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :socket-id \"udp-1\"}"
+
+[op."io/net::udp-send"]
+url_allow = ["udp://127.0.0.1:5354"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :sent-bytes 3}"
+
+[op."io/net::udp-recv"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :remote \"udp://127.0.0.1:5354\" :data b\"ack\"}"
+
+[op."io/net::udp-close"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :closed true}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let bind_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":local")),
+                Term::Str("udp://127.0.0.1:5353".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let bind_out = call_capability(
+            "io/net::udp-bind",
+            &bind_payload,
+            policy.op_policy("io/net::udp-bind"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(44),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(bind_map)) = bind_out else {
+            panic!("expected udp-bind data map");
+        };
+        assert_eq!(
+            bind_map.get(&TermOrdKey(Term::symbol(":socket-id"))),
+            Some(&Term::Str("udp-1".to_string()))
+        );
+        let send_payload = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":socket-id")),
+                    Term::Str("udp-1".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":remote")),
+                    Term::Str("udp://127.0.0.1:5354".to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":data")),
+                    Term::Bytes(b"msg".to_vec().into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let send_out = call_capability(
+            "io/net::udp-send",
+            &send_payload,
+            policy.op_policy("io/net::udp-send"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(46),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(send_map)) = send_out else {
+            panic!("expected udp-send data map");
+        };
+        assert_eq!(
+            send_map.get(&TermOrdKey(Term::symbol(":sent-bytes"))),
+            Some(&Term::Int(3_i64.into()))
+        );
+        let recv_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":socket-id")),
+                Term::Str("udp-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let recv_out = call_capability(
+            "io/net::udp-recv",
+            &recv_payload,
+            policy.op_policy("io/net::udp-recv"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(48),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(recv_map)) = recv_out else {
+            panic!("expected udp-recv data map");
+        };
+        assert_eq!(
+            recv_map.get(&TermOrdKey(Term::symbol(":remote"))),
+            Some(&Term::Str("udp://127.0.0.1:5354".to_string()))
+        );
+        let close_payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":socket-id")),
+                Term::Str("udp-1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let close_out = call_capability(
+            "io/net::udp-close",
+            &close_payload,
+            policy.op_policy("io/net::udp-close"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(50),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(close_map)) = close_out else {
+            panic!("expected udp-close data map");
+        };
+        assert_eq!(
+            close_map.get(&TermOrdKey(Term::symbol(":closed"))),
+            Some(&Term::Bool(true))
+        );
+    }
+
+    #[test]
+    fn io_net_dns_resolve_policy_gate_enforces_allowlist() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::dns-resolve"]
+
+[op."io/net::dns-resolve"]
+url_allow = ["dns://allowed.example.com"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :records [{:type \"A\" :value \"127.0.0.1\"}]}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":name")),
+                Term::Str("evil.example.com".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::dns-resolve",
+            &payload,
+            policy.op_policy("io/net::dns-resolve"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(52),
+        )
+        .expect("call capability");
+        assert_eq!(code_from_error(out), "core/caps/policy-error");
+    }
+
+    #[test]
+    fn io_net_dns_resolve_wasi_bridge_profile_returns_data() {
+        let policy = CapsPolicy::from_toml_str(
+            r#"
+allow = ["io/net::dns-resolve"]
+
+[op."io/net::dns-resolve"]
+url_allow = ["dns://allowed.example.com"]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :records [{:type \"A\" :value \"127.0.0.1\"}]}"
+"#,
+        )
+        .expect("caps");
+        let mut budget = ArtifactBudgetState::default();
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":name")),
+                Term::Str("allowed.example.com".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let out = call_capability(
+            "io/net::dns-resolve",
+            &payload,
+            policy.op_policy("io/net::dns-resolve"),
+            &policy,
+            None,
+            None,
+            &mut budget,
+            SealId(54),
+        )
+        .expect("call capability");
+        let Value::Data(Term::Map(mm)) = out else {
+            panic!("expected dns-resolve data map");
+        };
+        assert!(mm.contains_key(&TermOrdKey(Term::symbol(":records"))));
     }
 
     #[test]

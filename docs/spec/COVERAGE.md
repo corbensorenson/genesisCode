@@ -1,6 +1,10 @@
 # Coverage Obligation (v0.2)
 
-This document specifies the normative behavior of the `core/obligation::coverage` obligation.
+This document specifies the normative behavior of coverage obligations:
+
+- `core/obligation::coverage` (symbol profile)
+- `core/obligation::coverage-decision` (statement+decision profile)
+- `core/obligation::coverage-mcdc` (statement+decision+MC/DC profile)
 
 ## Goal
 
@@ -21,15 +25,19 @@ Ensure that the package’s public, non-test API is exercised by unit tests.
 
 ## Obligation Behavior
 
-`core/obligation::coverage` MUST:
+Coverage obligations MUST:
 
 1. Compute `tracked_symbols` as the union of all module `:exports` symbols, minus `tests` and `property_tests` suite symbols from the manifest.
-2. If `tracked_symbols` is empty, succeed and emit a coverage report noting there are no non-test exports.
-3. If the manifest has no unit tests (`tests` is empty) and `tracked_symbols` is non-empty, fail.
+2. If the manifest has no unit tests (`tests` is empty) and either tracked exports are non-empty or the selected profile requires structural gates, fail.
 4. Execute the package unit tests and measure hits for `tracked_symbols`.
    - For effectful tests, the obligation MUST NOT re-run host capabilities; it MUST use effect log replay (`genesis replay` semantics) to execute continuations deterministically.
-5. Fail if any `tracked_symbol` has total hit count `0` across all unit tests.
-6. Collect deterministic decision counters (`:total`, `:taken-true`, `:taken-false`) for each executed test and aggregate totals across the obligation run.
+5. Collect deterministic structural coverage using stable site identities:
+   - statement sites (`:stmt`) and decision sites (`:decision`) from compiled module structure.
+   - decision samples that include observed boolean condition bindings and outcome.
+6. Profile gates:
+   - `symbol`: fail if any tracked export has zero hits.
+   - `decision`: `symbol` gates + fail if any expected statement site has zero hits, or any expected decision site misses true/false branch coverage.
+   - `mcdc`: `decision` gates + fail when condition independence is not demonstrated for every condition at each expected decision site.
 
 ## Evidence Artifact
 
@@ -38,11 +46,17 @@ The obligation MUST write a report artifact to the evidence store with:
 - `:kind` = `"genesis/coverage-v0.2"`
 - `:package` = package name (string)
 - `:ok` = boolean
+- `:profile` = `:symbol | :decision | :mcdc`
 - `:definition` = string describing the tracked set rule
 - `:exports` = vector of `{ :sym <symbol> :hits <int> }` for each tracked symbol
 - `:missing` = vector of missing tracked symbols (those with `:hits = 0`)
-- `:structural` = `{ :decision { :total <int> :taken-true <int> :taken-false <int> } }`
-- `:tests` = per-test vector of `{ :suite <symbol> :name <string> :hits <vector> :decision <map> }`
+- `:structural` map containing:
+  - aggregate decision counters
+  - expected site counts
+  - per-site statement and decision coverage
+  - per-site MC/DC condition status
+  - vectors of missing statement/decision/MC/DC requirements
+- `:tests` = per-test vector including symbol hits plus per-test statement/decision site coverage slices
 - `:errors` = (optional) vector of strings
 
 All terms MUST be in canonical CoreForm form.

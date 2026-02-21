@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Limits and Resource Safety (v0.2)
 
 GenesisCode v0.2 is designed to run on untrusted inputs, but the initial toolchain is intentionally conservative: it provides practical safety valves (step limits, deny-by-default effects, deterministic logs) while leaving room for stronger sandboxing and proof-carrying constraints in later versions.

@@ -375,7 +375,8 @@ fn eval_module_default_executes_with_compiled_fast_path() {
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let value = eval_module_default(&mut env, &mut ctx, &forms).expect("eval");
+    let value =
+        eval_module_default(&mut env, &mut ctx, &forms, "tests/eval_default.gc").expect("eval");
     let Value::Data(Term::Int(n)) = value else {
         panic!("expected int result");
     };

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # GPU Compute Runtime Profile v0.1
 
 Status: normative contract for compute-only runtime profiling and CI gating.

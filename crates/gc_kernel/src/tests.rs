@@ -3,8 +3,10 @@ use num_bigint::BigInt;
 use std::collections::BTreeSet;
 
 use crate::{
-    Env, EvalCtx, KernelErrorKind, MemLimits, Value, compile_module, decode_compiled_module_blob,
-    encode_compiled_module_blob, eval_compiled_module, eval_module, eval_module_compiled,
+    Env, EvalCtx, KernelErrorKind, MemLimits, Value, compile_module,
+    compile_module_with_site_namespace, compiled_module_coverage_manifest,
+    decode_compiled_module_blob, encode_compiled_module_blob, eval_compiled_module, eval_module,
+    eval_module_compiled,
 };
 
 #[test]
@@ -233,6 +235,45 @@ fn coverage_decision_counts_track_compiled_if_branches() {
     assert_eq!(decision.total, 2);
     assert_eq!(decision.taken_true, 1);
     assert_eq!(decision.taken_false, 1);
+}
+
+#[test]
+fn compiled_module_site_namespace_emits_distinct_coverage_sites() {
+    let forms = parse_module("(def x 1)\n(def y (if true x x))\n").unwrap();
+    let a = compiled_module_coverage_manifest(&forms, "pkg/a.gc").expect("coverage manifest a");
+    let b = compiled_module_coverage_manifest(&forms, "pkg/b.gc").expect("coverage manifest b");
+    assert!(!a.statement_sites.is_empty());
+    assert!(!a.decision_sites.is_empty());
+    assert_ne!(a.statement_sites, b.statement_sites);
+    assert_ne!(a.decision_sites, b.decision_sites);
+}
+
+#[test]
+fn compiled_eval_records_per_site_statement_and_decision_hits() {
+    let forms = parse_module(
+        r#"
+      (def choose (fn (x) (if x 1 2)))
+      (choose true)
+      (choose false)
+    "#,
+    )
+    .unwrap();
+    let compiled = compile_module_with_site_namespace(&forms, "pkg/coverage.gc").unwrap();
+    let mut ctx = EvalCtx::new();
+    ctx.enable_coverage(BTreeSet::new());
+    let mut env = Env::empty();
+    let _ = eval_compiled_module(&mut ctx, &mut env, &compiled).unwrap();
+    let statement_sites = ctx.coverage_statement_site_hits().expect("statement sites");
+    assert!(!statement_sites.is_empty());
+    let decision_sites = ctx.coverage_decision_site_hits().expect("decision sites");
+    assert_eq!(decision_sites.len(), 1);
+    let counts = decision_sites.values().next().unwrap();
+    assert_eq!(counts.total, 2);
+    assert_eq!(counts.taken_true, 1);
+    assert_eq!(counts.taken_false, 1);
+    let samples = ctx.coverage_decision_samples().expect("decision samples");
+    assert_eq!(samples.len(), 1);
+    assert_eq!(samples.values().next().unwrap().len(), 2);
 }
 
 #[test]

@@ -17,14 +17,14 @@ Legend:
 | Built-in package/project manager | ✅ (`gcpm/pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
 | Strict selfhost frontend default in production CLI | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explicit selfhost-only execution mode | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (close; parity/bootstrap surfaces remain) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Fully self-hosted toolchain with zero bootstrap-language dependency | ✅ (production binaries are selfhost-first; Rust parity is isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Artifact-only bootstrap default across WASM host APIs | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (`release-full` health profile + dedicated GPU conformance lane require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Raw socket/stream networking primitives | ⚠️ (`io/net::ws-*` stream family + HTTP request) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Raw socket/stream networking primitives | ✅ (`io/net::tcp-*`, `io/net::udp-*`, `io/net::dns-resolve`, `io/net::ws-*`, `io/net::http-request`) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Generic host extension/FFI capability ABI | ✅ (`host/plugin::command` + `editor/plugin::command` wrapper) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
@@ -34,24 +34,23 @@ Legend:
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Structural coverage profiles (decision/MC/DC) | ❌ (export-hit coverage only today) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` + `:tool-qualification` schema + fail-closed policy gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Independent verifier role-separation policy enforcement | ✅ (ref/publish policy classes support required roles + per-role minimums + independence pairs enforced on valid attestations) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current main GenesisCode gaps are no longer P0/P1 structural blockers; remaining work is primarily performance, ergonomics, and capability hardening.
+- Current main GenesisCode gaps are concentrated in non-`P0`/`P1` hardening and performance tuning lanes.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
-- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability and tool qualification workflows are in place; MC/DC structural coverage profile remains open).
-- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, and role gates are strong; independent V&V process controls and structural coverage profile remain open).
+- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability, structural decision/MC/DC coverage, and tool qualification workflows are in place; formal process qualification and certification evidence packs remain open).
+- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, and structural decision/MC/DC coverage are strong; independent IV&V process controls remain open).
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates and qualification artifacts are in place; richer risk/coverage process mapping remains open).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.6` High-churn Rust and `.gc` hotspots still need further decomposition for AI edit reliability.
-- `P1.8` Structural coverage obligations (including decision/MC/DC profiles) are not yet implemented.
+- No active `P0`/`P1` items are currently open in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

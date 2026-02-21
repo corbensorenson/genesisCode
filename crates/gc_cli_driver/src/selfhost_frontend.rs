@@ -32,20 +32,30 @@ pub(super) fn selfhost_only_enabled(cli: &Cli) -> bool {
 
 #[cfg(feature = "parity-harness")]
 pub(super) fn rust_engine_compat_enabled() -> bool {
-    cfg!(feature = "parity-harness") && matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+    runtime_profile_is_parity()
 }
 
 pub(super) fn frontend_is_rust(frontend: &gc_obligations::CoreformFrontend) -> bool {
     gc_obligations::coreform_frontend_is_rust(frontend)
 }
 
-pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
+#[cfg(feature = "parity-harness")]
+fn runtime_profile_is_parity() -> bool {
     matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+}
+
+#[cfg(not(feature = "parity-harness"))]
+fn runtime_profile_is_parity() -> bool {
+    false
+}
+
+pub(super) fn non_artifact_bootstrap_modes_allowed() -> bool {
+    runtime_profile_is_parity()
 }
 
 pub(super) fn implicit_selfhost_artifact_discovery_allowed() -> bool {
     // Implicit artifact discovery is reserved for explicit parity harness workflows.
-    matches!(runtime_profile(), RuntimeProfile::ParityHarness)
+    runtime_profile_is_parity()
 }
 
 pub(super) fn bootstrap_mode_label(mode: SelfhostBootstrapMode) -> &'static str {

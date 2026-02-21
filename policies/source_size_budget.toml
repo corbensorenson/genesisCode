@@ -18,7 +18,8 @@ gc_source_roots = ["prelude/modules", "selfhost", "prelude/prelude.gc"]
 exclude_substrings = ["/tests/", "/benches/", "/examples/"]
 
 # Explicit generated artifact carve-outs for .gc budget enforcement.
-gc_generated_exclude_paths = ["prelude/prelude.gc"]
+# These are assembled artifacts committed for reproducibility, not authoring sources.
+gc_generated_exclude_paths = ["prelude/prelude.gc", "selfhost/toolchain.gc"]
 
 # Stage-rollout debt allowlists:
 # Files listed here are legacy over target and are tracked separately as debt.

@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/TESTING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Fuzz + Differential Hardening v0.1
 
 Status: normative gate for parser/toolchain robustness against malformed and adversarial inputs.

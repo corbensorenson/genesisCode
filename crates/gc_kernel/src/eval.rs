@@ -6,7 +6,7 @@ use bytes::{Bytes, BytesMut};
 use crate::env::Env;
 use crate::error::{KernelError, KernelErrorKind};
 use crate::value::{Apply, SealId, Value};
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, hash_term};
 use num_traits::ToPrimitive;
 
 #[path = "eval_decimal_ops.rs"]
@@ -132,6 +132,10 @@ struct CoverageState {
     decision_total: u64,
     decision_true: u64,
     decision_false: u64,
+    statement_site_hits: BTreeMap<String, u64>,
+    decision_site_hits: BTreeMap<String, DecisionCoverageCounters>,
+    decision_samples: BTreeMap<String, Vec<DecisionSample>>,
+    decision_stack: Vec<DecisionFrame>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -139,6 +143,18 @@ pub struct DecisionCoverageCounters {
     pub total: u64,
     pub taken_true: u64,
     pub taken_false: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DecisionSample {
+    pub conditions: BTreeMap<String, bool>,
+    pub outcome: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct DecisionFrame {
+    site_id: String,
+    conditions: BTreeMap<String, bool>,
 }
 
 impl EvalCtx {
@@ -230,6 +246,10 @@ impl EvalCtx {
             decision_total: 0,
             decision_true: 0,
             decision_false: 0,
+            statement_site_hits: BTreeMap::new(),
+            decision_site_hits: BTreeMap::new(),
+            decision_samples: BTreeMap::new(),
+            decision_stack: Vec::new(),
         });
     }
 
@@ -254,6 +274,20 @@ impl EvalCtx {
         })
     }
 
+    pub fn coverage_statement_site_hits(&self) -> Option<&BTreeMap<String, u64>> {
+        self.coverage.as_ref().map(|c| &c.statement_site_hits)
+    }
+
+    pub fn coverage_decision_site_hits(
+        &self,
+    ) -> Option<&BTreeMap<String, DecisionCoverageCounters>> {
+        self.coverage.as_ref().map(|c| &c.decision_site_hits)
+    }
+
+    pub fn coverage_decision_samples(&self) -> Option<&BTreeMap<String, Vec<DecisionSample>>> {
+        self.coverage.as_ref().map(|c| &c.decision_samples)
+    }
+
     pub fn observed_counters(&self) -> EvalObservedCounters {
         EvalObservedCounters {
             steps: self.steps,
@@ -267,12 +301,29 @@ impl EvalCtx {
         }
     }
 
-    pub(crate) fn coverage_hit(&mut self, sym: &str) {
+    pub(crate) fn coverage_hit(&mut self, sym: &str, value: &Value) {
         let Some(c) = &mut self.coverage else { return };
         if !c.tracked.contains(sym) {
+            if let Some(frame) = c.decision_stack.last_mut()
+                && let Value::Data(Term::Bool(b)) = value
+            {
+                frame.conditions.entry(sym.to_string()).or_insert(*b);
+            }
             return;
         }
         *c.hits.entry(sym.to_string()).or_insert(0) += 1;
+        if let Some(frame) = c.decision_stack.last_mut()
+            && let Value::Data(Term::Bool(b)) = value
+        {
+            frame.conditions.entry(sym.to_string()).or_insert(*b);
+        }
+    }
+
+    pub(crate) fn coverage_statement_site(&mut self, site_id: &str) {
+        let Some(c) = &mut self.coverage else { return };
+        *c.statement_site_hits
+            .entry(site_id.to_string())
+            .or_insert(0) += 1;
     }
 
     pub(crate) fn coverage_decision(&mut self, truthy: bool) {
@@ -283,6 +334,44 @@ impl EvalCtx {
         } else {
             c.decision_false = c.decision_false.saturating_add(1);
         }
+    }
+
+    pub(crate) fn coverage_begin_decision_site(&mut self, site_id: &str) {
+        let Some(c) = &mut self.coverage else { return };
+        c.decision_stack.push(DecisionFrame {
+            site_id: site_id.to_string(),
+            conditions: BTreeMap::new(),
+        });
+    }
+
+    pub(crate) fn coverage_abort_decision_site(&mut self) {
+        let Some(c) = &mut self.coverage else { return };
+        let _ = c.decision_stack.pop();
+    }
+
+    pub(crate) fn coverage_finish_decision_site(&mut self, truthy: bool) {
+        self.coverage_decision(truthy);
+        let Some(c) = &mut self.coverage else { return };
+        let Some(frame) = c.decision_stack.pop() else {
+            return;
+        };
+        let site_counts = c
+            .decision_site_hits
+            .entry(frame.site_id.clone())
+            .or_default();
+        site_counts.total = site_counts.total.saturating_add(1);
+        if truthy {
+            site_counts.taken_true = site_counts.taken_true.saturating_add(1);
+        } else {
+            site_counts.taken_false = site_counts.taken_false.saturating_add(1);
+        }
+        c.decision_samples
+            .entry(frame.site_id)
+            .or_default()
+            .push(DecisionSample {
+                conditions: frame.conditions,
+                outcome: truthy,
+            });
     }
 
     fn mem_observe_max(
@@ -408,6 +497,21 @@ fn parse_def(t: &Term) -> Option<(String, Term)> {
     Some((name.clone(), items[2].clone()))
 }
 
+fn hash_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn treewalk_site_id(kind: &str, term: &Term) -> String {
+    let h = hash_term(term);
+    format!("{kind}:{}", hash_hex(&h))
+}
+
 pub fn eval_term(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, KernelError> {
     // Evaluator is structurally recursive; grow stack as needed.
     stacker::maybe_grow(32 * 1024, 1024 * 1024, || eval_term_impl(ctx, env, term))
@@ -461,10 +565,12 @@ fn eval_term_impl(ctx: &mut EvalCtx, env: &Env, term: &Term) -> Result<Value, Ke
                 return Ok(Value::Map(out));
             }
             Term::Symbol(s) => {
-                ctx.coverage_hit(s);
-                return cur_env.get(s).ok_or_else(|| {
+                let value = cur_env.get(s).ok_or_else(|| {
                     KernelError::new(KernelErrorKind::Unbound, format!("unbound symbol: {s}"))
-                });
+                })?;
+                ctx.coverage_statement_site(&treewalk_site_id("stmt", &cur_term));
+                ctx.coverage_hit(s, &value);
+                return Ok(value);
             }
             Term::Pair(_, _) => match eval_list_tco(ctx, &cur_env, &cur_term)? {
                 EvalOutcome::Value(v) => return Ok(v),
@@ -511,9 +617,16 @@ fn eval_list_tco(ctx: &mut EvalCtx, env: &Env, t: &Term) -> Result<EvalOutcome, 
                         "(if c t e) expects exactly 3 arguments",
                     ));
                 }
-                let c = eval_term(ctx, env, items[1])?;
+                ctx.coverage_begin_decision_site(&treewalk_site_id("decision", t));
+                let c = match eval_term(ctx, env, items[1]) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        ctx.coverage_abort_decision_site();
+                        return Err(e);
+                    }
+                };
                 let cond_truthy = c.truthy();
-                ctx.coverage_decision(cond_truthy);
+                ctx.coverage_finish_decision_site(cond_truthy);
                 let next = if cond_truthy { items[2] } else { items[3] };
                 return Ok(EvalOutcome::Tail {
                     env: env.clone(),

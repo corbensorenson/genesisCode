@@ -21,7 +21,8 @@ use gc_coreform::{
 };
 use gc_effects::{CapsPolicy, EffectLog};
 use gc_kernel::{
-    Apply, Env, EvalCtx, MemLimits, StepLimit, Value, compile_module, eval_compiled_module,
+    Apply, DecisionCoverageCounters, DecisionSample, Env, EvalCtx, MemLimits, StepLimit, Value,
+    compile_module_with_site_namespace, compiled_module_coverage_manifest, eval_compiled_module,
     value_hash,
 };
 use gc_prelude::{

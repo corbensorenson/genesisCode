@@ -1,3 +1,6 @@
+> Bundle Entry: `docs/spec/TESTING_BUNDLE_v0.1.md`
+> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
+
 # Property Tests Obligation (v0.2)
 
 This document defines the `core/obligation::property-tests` obligation, which executes deterministic, seed-recorded property tests and emits evidence artifacts.
