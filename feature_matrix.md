@@ -31,12 +31,10 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current main GenesisCode gaps are runtime hardening and packaging consistency, not missing surface area.
+- Current main GenesisCode gaps are release-gate coherence, maintainability budgets, and documentation truth sync for agents.
 
 Known GenesisCode gaps (current red-team focus):
-- Backend-capable production feature wiring (`gpu-device-backend`, `gfx-desktop-backend`) is not yet standardized in release builds.
-- `device-runtime` backend currently covers submit/introspection lanes, not full canonical GPU lifecycle.
-- GPU backend naming is split across runtime and microbench surfaces (`device-runtime` vs `device-bridge`).
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
@@ -45,6 +43,7 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CONCURRENCY_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASM.md`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

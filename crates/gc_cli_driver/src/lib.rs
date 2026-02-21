@@ -109,9 +109,9 @@ pub(crate) use vcs_helpers::SetRefSpec;
 use vcs_helpers::{
     extract_pkg_export_bundle_hash, extract_pkg_import_root, extract_pkg_lock_hash,
     extract_pkg_ok_bool, extract_pkg_publish_commit, extract_pkg_snapshot_hash,
-    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash,
-    extract_vcs_commit_hash, extract_vcs_patch_hash, extract_vcs_snapshot_hash, is_hex64,
-    normalize_pkg_add_strategy, parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
+    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash, extract_vcs_commit_hash,
+    extract_vcs_patch_hash, extract_vcs_snapshot_hash, is_hex64, normalize_pkg_add_strategy,
+    parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
 };
 
 const EX_OK: u8 = 0;

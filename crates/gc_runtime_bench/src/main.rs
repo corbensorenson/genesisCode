@@ -18,7 +18,7 @@ use crate::bench_patch::run_patch_apply;
 use crate::bench_runner::run_effect_runner;
 use crate::bench_store_sync::run_store_sync;
 use crate::config::{BenchMode, parse as parse_config};
-use crate::report::{Metrics, Report};
+use crate::report::{Metrics, Report, ReportMeta};
 
 fn main() -> Result<()> {
     if device_bridge::maybe_run_bridge_mode_from_argv()? {
@@ -69,13 +69,15 @@ fn main() -> Result<()> {
         }
     };
     let report = Report::new(
-        cfg.build_profile.clone(),
-        cfg.build_mode.clone(),
-        cfg.gpu_compute_backend_policy.clone(),
-        cfg.bench_mode.as_str().to_string(),
-        cfg.warmups,
-        cfg.repeats,
-        gpu_compute_backend.clone(),
+        ReportMeta {
+            build_profile: cfg.build_profile.clone(),
+            build_mode: cfg.build_mode.clone(),
+            gpu_compute_backend_policy: cfg.gpu_compute_backend_policy.clone(),
+            bench_mode: cfg.bench_mode.as_str().to_string(),
+            warmups: cfg.warmups,
+            repeats: cfg.repeats,
+            gpu_compute_backend: gpu_compute_backend.clone(),
+        },
         cfg.budgets,
         metrics,
     );

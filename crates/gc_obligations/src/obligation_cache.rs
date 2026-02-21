@@ -53,40 +53,39 @@ pub(super) fn mem_limits_term(mem: MemLimits) -> Term {
 }
 
 pub(super) fn frontend_term(frontend: &CoreformFrontend) -> Term {
-    match frontend {
-        CoreformFrontend::Rust => Term::Map(
+    if let CoreformFrontend::Selfhost(cfg) = frontend {
+        let mode = match cfg.bootstrap_mode {
+            SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
+            SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
+            SelfhostBootstrapMode::Embedded => ":embedded",
+        };
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":kind")),
+                    Term::symbol(":frontend/selfhost"),
+                ),
+                (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
+                (
+                    TermOrdKey(Term::symbol(":artifact")),
+                    cfg.artifact
+                        .as_ref()
+                        .map(|p| Term::Str(p.display().to_string()))
+                        .unwrap_or(Term::Nil),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        )
+    } else {
+        Term::Map(
             [(
                 TermOrdKey(Term::symbol(":kind")),
                 Term::symbol(":frontend/rust"),
             )]
             .into_iter()
             .collect(),
-        ),
-        CoreformFrontend::Selfhost(cfg) => {
-            let mode = match cfg.bootstrap_mode {
-                SelfhostBootstrapMode::ArtifactOnly => ":artifact-only",
-                SelfhostBootstrapMode::ArtifactPreferred => ":artifact-preferred",
-                SelfhostBootstrapMode::Embedded => ":embedded",
-            };
-            Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":kind")),
-                        Term::symbol(":frontend/selfhost"),
-                    ),
-                    (TermOrdKey(Term::symbol(":mode")), Term::symbol(mode)),
-                    (
-                        TermOrdKey(Term::symbol(":artifact")),
-                        cfg.artifact
-                            .as_ref()
-                            .map(|p| Term::Str(p.display().to_string()))
-                            .unwrap_or(Term::Nil),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            )
-        }
+        )
     }
 }
 

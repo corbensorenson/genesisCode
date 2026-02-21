@@ -148,7 +148,7 @@ fn foundation_required_behavior_conforms() {
     ));
     assert!(matches!(
         map_value(&m, ":bytes-slice"),
-        Value::Data(Term::Bytes(bs)) if bs.as_ref() == &[2, 3]
+        Value::Data(Term::Bytes(bs)) if bs.as_ref() == [2, 3]
     ));
     assert!(matches!(
         map_value(&m, ":sym-eq"),

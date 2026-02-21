@@ -291,20 +291,26 @@ pub(super) fn resolved_coreform_frontend(
 pub(super) fn coreform_frontend_json(
     frontend: &gc_obligations::CoreformFrontend,
 ) -> serde_json::Value {
-    match frontend {
-        gc_obligations::CoreformFrontend::Rust => serde_json::json!({
+    if gc_obligations::coreform_frontend_is_rust(frontend) {
+        return serde_json::json!({
             "name": "rust"
-        }),
-        gc_obligations::CoreformFrontend::Selfhost(cfg) => serde_json::json!({
-            "name": "selfhost",
-            "bootstrap_mode": match cfg.bootstrap_mode {
-                SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
-                SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
-                SelfhostBootstrapMode::Embedded => "embedded",
-            },
-            "artifact": cfg.artifact.as_ref().map(|p| p.display().to_string()),
-        }),
+        });
     }
+
+    let gc_obligations::CoreformFrontend::Selfhost(cfg) = frontend else {
+        return serde_json::json!({
+            "name": "rust"
+        });
+    };
+    serde_json::json!({
+        "name": "selfhost",
+        "bootstrap_mode": match cfg.bootstrap_mode {
+            SelfhostBootstrapMode::ArtifactOnly => "artifact-only",
+            SelfhostBootstrapMode::ArtifactPreferred => "artifact-preferred",
+            SelfhostBootstrapMode::Embedded => "embedded",
+        },
+        "artifact": cfg.artifact.as_ref().map(|p| p.display().to_string()),
+    })
 }
 
 pub(super) fn coreform_frontend_for_engine(

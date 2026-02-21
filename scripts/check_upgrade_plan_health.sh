@@ -321,6 +321,7 @@ COMMON_GATES=(
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"
   "bash scripts/check_redteam_report.sh"
+  "bash scripts/check_feature_matrix_gap_hygiene.sh"
   "bash scripts/check_planning_docs_fresh.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"

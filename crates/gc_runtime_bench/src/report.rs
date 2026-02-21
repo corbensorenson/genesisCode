@@ -30,27 +30,28 @@ pub struct Report {
     metrics: Metrics,
 }
 
+#[derive(Debug)]
+pub struct ReportMeta {
+    pub build_profile: String,
+    pub build_mode: String,
+    pub gpu_compute_backend_policy: String,
+    pub bench_mode: String,
+    pub warmups: usize,
+    pub repeats: usize,
+    pub gpu_compute_backend: String,
+}
+
 impl Report {
-    pub fn new(
-        build_profile: String,
-        build_mode: String,
-        gpu_compute_backend_policy: String,
-        bench_mode: String,
-        warmups: usize,
-        repeats: usize,
-        gpu_compute_backend: String,
-        budgets: Budgets,
-        metrics: Metrics,
-    ) -> Self {
+    pub fn new(meta: ReportMeta, budgets: Budgets, metrics: Metrics) -> Self {
         Self {
             kind: "genesis/runtime-microbench-v0.1",
-            build_profile,
-            build_mode,
-            gpu_compute_backend_policy,
-            bench_mode,
-            warmups,
-            repeats,
-            gpu_compute_backend,
+            build_profile: meta.build_profile,
+            build_mode: meta.build_mode,
+            gpu_compute_backend_policy: meta.gpu_compute_backend_policy,
+            bench_mode: meta.bench_mode,
+            warmups: meta.warmups,
+            repeats: meta.repeats,
+            gpu_compute_backend: meta.gpu_compute_backend,
             budgets,
             metrics,
         }
