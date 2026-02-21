@@ -5,9 +5,15 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-default = []
+default = ["profile-headless"]
 parity-harness = []
 embedded-bootstrap = ["gc_prelude/embedded-bootstrap"]
+gpu-device-backend = ["gc_effects/gpu-device-backend"]
+gfx-desktop-backend = ["gc_effects/gfx-desktop-backend"]
+profile-headless = []
+profile-gpu = ["gpu-device-backend"]
+profile-gfx = ["gfx-desktop-backend"]
+profile-backend = ["gpu-device-backend", "gfx-desktop-backend"]
 
 [dependencies]
 anyhow.workspace = true

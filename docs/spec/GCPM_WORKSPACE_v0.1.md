@@ -25,6 +25,20 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
   - optional `pkg`
   - optional `args = ["..."]`
 
+### Contract Task Hook (AI-First)
+
+`cmd = "contract"` is a hash-pinned custom task hook for agent-defined workflows:
+
+- requires `file` (CoreForm effect program path)
+- requires `args` to include `--contract-h <hex64>`
+- optional args:
+  - `--caps <path>`
+  - `--log <path>`
+  - `--engine <selfhost|rust>`
+
+Before execution, `gcpm run` verifies `blake3(file-bytes) == --contract-h`.
+Mismatch fails closed and task execution is refused.
+
 ## Determinism
 
 - Canonical writer must produce stable output ordering.
@@ -37,5 +51,6 @@ Genesis workspace roots are described by `genesis.workspace.toml`.
 - `genesis gcpm new` creates `genesis.workspace.toml` + `genesis.lock`.
 - `genesis gcpm migrate` creates workspace + lock from `package.toml`.
 - `genesis gcpm remove <name>` deterministically removes requirement + locked entry from lock.
-- `genesis gcpm run <task>` resolves and executes workspace task command data (built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, `contract`, `eval`, `fmt`, `optimize`).
-- `genesis gcpm env --profile <name>` materializes deterministic profile environment artifacts (see `docs/spec/GCPM_ENV_v0.1.md`).
+- `genesis gcpm run <task>` resolves and executes workspace task command data (built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, hash-pinned `contract`, `eval`, `fmt`, `optimize`).
+- `genesis gcpm env --profile <name> [--hydrate]` materializes deterministic profile environment artifacts (see `docs/spec/GCPM_ENV_v0.1.md`).
+  - `--hydrate` pulls missing lock-pinned artifacts through policy-gated `core/store::get` before writing env artifacts.

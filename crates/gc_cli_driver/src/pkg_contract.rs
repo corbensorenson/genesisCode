@@ -167,6 +167,7 @@ mod tests {
                 lock: PathBuf::from("genesis.lock"),
                 workspace_file: PathBuf::from("genesis.workspace.toml"),
                 out_dir: PathBuf::from(".genesis/env"),
+                hydrate: false,
             },
         ];
 

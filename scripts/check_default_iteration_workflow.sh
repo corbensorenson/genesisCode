@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BUDGET_CHANGED_FAST_MS="${GENESIS_BUDGET_CHANGED_FAST_MS:-300000}"
+BUDGET_CHANGED_FAST_MS="${GENESIS_BUDGET_CHANGED_FAST_MS:-60000}"
 TMP_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -14,7 +14,7 @@ trap cleanup EXIT
 echo "default-iteration-workflow: measuring changed-file default loop"
 bash scripts/test_changed_fast.sh \
   --base HEAD \
-  --runner cargo \
+  --runner auto \
   --budget-ms "$BUDGET_CHANGED_FAST_MS" \
   --min-history 1 \
   --report "$TMP_DIR/changed_fast_report.json" \

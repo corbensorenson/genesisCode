@@ -13,11 +13,17 @@ name = "genesis_parity"
 path = "src/main_parity.rs"
 
 [features]
-default = []
+default = ["profile-headless"]
 embedded-bootstrap = ["gc_cli_driver/embedded-bootstrap"]
+gpu-device-backend = ["gc_cli_driver/gpu-device-backend"]
+gfx-desktop-backend = ["gc_cli_driver/gfx-desktop-backend"]
+profile-headless = ["gc_cli_driver/profile-headless"]
+profile-gpu = ["gc_cli_driver/profile-gpu"]
+profile-gfx = ["gc_cli_driver/profile-gfx"]
+profile-backend = ["gc_cli_driver/profile-backend"]
 
 [dependencies]
-gc_cli_driver = { path = "../gc_cli_driver" }
+gc_cli_driver = { path = "../gc_cli_driver", default-features = false }
 gc_cli_driver_parity = { path = "../gc_cli_driver_parity" }
 
 [dev-dependencies]

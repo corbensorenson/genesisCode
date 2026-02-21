@@ -45,9 +45,10 @@ Compute-only mode requirements:
 Optional environment knobs:
 
 - `GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_REQUIRED_BACKEND`
-  - If set, backend must match (`device-bridge` or `deterministic-fallback`).
+  - If set, backend must match (`device-runtime` or `deterministic-fallback`).
+  - Legacy alias `device-bridge` is accepted and normalized to `device-runtime`.
 - `GENESIS_RUNTIME_MICROBENCH_FEATURES`
-  - For device-backed runs use `device-bridge`.
+  - For device-backed runs use `device-bridge` (feature name); emitted backend label remains `device-runtime`.
 - `GENESIS_GPU_COMPUTE_BACKEND_POLICY`
   - `require-device` for perf-critical/release lanes (fails closed if no device backend exists).
   - `dev-allow-fallback` for explicit dev/test fallback mode.
@@ -58,6 +59,8 @@ Per-op `caps.toml` knobs for first-party runtime lanes:
 
 - `gpu_backend = "device-runtime"` selects in-repo device-backed execution for
   `gpu/compute::*` and `gfx/gpu::*` submit/introspection ops.
+- `gpu_backend = "device-runtime-full"` requests device backend routing for canonical
+  GPU lifecycle operations (create/write/read/destroy + submit/introspection).
 - `gpu_backend_policy = "require-device|allow-fallback"` defines fail-closed vs fail-open
   behavior when a device backend is unavailable.
 

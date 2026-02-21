@@ -292,6 +292,10 @@ enum PkgCmd {
         /// Environment output root.
         #[arg(long, default_value = ".genesis/env")]
         out_dir: PathBuf,
+
+        /// Hydrate missing locked artifacts via policy-gated `core/store::get` before materialization.
+        #[arg(long)]
+        hydrate: bool,
     },
 
     /// Migrate a package-only repo into workspace+gcpm mode.

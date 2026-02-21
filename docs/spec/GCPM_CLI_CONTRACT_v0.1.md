@@ -39,6 +39,7 @@ Workflow-level `data.report` artifacts for lock/update/publish are frozen in
 
 - `pkg` and `gcpm` command aliases MUST produce byte-equivalent lockfile output for identical inputs.
 - Effectful operations must keep deterministic `.gclog` ordering and replay behavior unchanged across aliases.
+- `gcpm run` `cmd="contract"` tasks MUST be hash-pinned (`--contract-h <hex64>`) and fail closed on file hash mismatch before execution.
 
 ## Acceptance
 

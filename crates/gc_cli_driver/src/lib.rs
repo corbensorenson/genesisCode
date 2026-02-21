@@ -19,6 +19,31 @@ use gc_prelude::{
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
 };
 
+#[cfg(all(feature = "profile-headless", feature = "profile-gpu"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: `profile-headless` cannot be combined with `profile-gpu`"
+);
+#[cfg(all(feature = "profile-headless", feature = "profile-gfx"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: `profile-headless` cannot be combined with `profile-gfx`"
+);
+#[cfg(all(feature = "profile-headless", feature = "profile-backend"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: `profile-headless` cannot be combined with `profile-backend`"
+);
+#[cfg(all(feature = "profile-gpu", feature = "profile-gfx"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: use `profile-backend` instead of combining `profile-gpu` and `profile-gfx`"
+);
+#[cfg(all(feature = "profile-gpu", feature = "profile-backend"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: `profile-gpu` cannot be combined with `profile-backend`"
+);
+#[cfg(all(feature = "profile-gfx", feature = "profile-backend"))]
+compile_error!(
+    "gc_cli_driver runtime profile conflict: `profile-gfx` cannot be combined with `profile-backend`"
+);
+
 mod cli_json;
 mod cli_schema;
 mod cmd_agent_index;
@@ -49,10 +74,12 @@ mod pkg_workspace_ops;
 mod policy_config;
 mod program_builders;
 mod refs_contract;
+mod runtime_backend_profile;
 mod selfhost_bridge;
 mod selfhost_frontend;
 mod sync_contract;
 mod vcs_contract;
+mod vcs_helpers;
 
 use cli_json::*;
 use cli_schema::cmd_cli_schema;
@@ -68,20 +95,24 @@ use cmd_security_ops::*;
 use cmd_selfhost::*;
 use cmd_store::cmd_store;
 use cmd_sync::cmd_sync;
-pub(crate) use cmd_vcs::SetRefSpec;
-use cmd_vcs::{
-    cmd_vcs, extract_pkg_export_bundle_hash, extract_pkg_import_root, extract_pkg_lock_hash,
-    extract_pkg_ok_bool, extract_pkg_publish_commit, extract_pkg_snapshot_hash,
-    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash,
-    extract_vcs_snapshot_hash, is_hex64, normalize_pkg_add_strategy, parse_local_set_refs,
-    parse_pkg_spec, parse_sync_set_refs,
-};
+use cmd_vcs::cmd_vcs;
 use diagnostics::annotate_envelope;
 use kernel_exec::eval_module_default;
 use policy_config::*;
 use program_builders::*;
+use runtime_backend_profile::{
+    active_runtime_backend_profile, gfx_desktop_backend_enabled, gpu_device_backend_enabled,
+};
 use selfhost_bridge::*;
 use selfhost_frontend::*;
+pub(crate) use vcs_helpers::SetRefSpec;
+use vcs_helpers::{
+    extract_pkg_export_bundle_hash, extract_pkg_import_root, extract_pkg_lock_hash,
+    extract_pkg_ok_bool, extract_pkg_publish_commit, extract_pkg_snapshot_hash,
+    extract_refs_get_hash, extract_refs_list_pairs, extract_refs_set_hash,
+    extract_vcs_commit_hash, extract_vcs_patch_hash, extract_vcs_snapshot_hash, is_hex64,
+    normalize_pkg_add_strategy, parse_local_set_refs, parse_pkg_spec, parse_sync_set_refs,
+};
 
 const EX_OK: u8 = 0;
 const EX_INTERNAL: u8 = 1;
@@ -194,6 +225,8 @@ struct CmdOut {
 }
 
 fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
+    let _active_backend_profile = active_runtime_backend_profile();
+    let _backend_flags = (gpu_device_backend_enabled(), gfx_desktop_backend_enabled());
     enforce_selfhost_only_cmd(cli, flavor)?;
     let mut out = match &cli.cmd {
         Cmd::Fmt {
@@ -845,7 +878,7 @@ mod tests {
         EX_PARSE, EX_VERIFY, SelfhostBootstrapMode, enforce_bootstrap_mode_allowed_with_flag,
         json_canonical_string, parse_sync_set_refs,
     };
-    use crate::cmd_vcs::parse_set_ref_spec;
+    use crate::vcs_helpers::parse_set_ref_spec;
 
     #[test]
     fn parse_set_ref_spec_supports_contract_refs_with_colons() {

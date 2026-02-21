@@ -76,7 +76,7 @@ prog
     };
     assert_eq!(
         run_map.get(&TermOrdKey(Term::symbol(":backend"))),
-        Some(&Term::Str("device-bridge".to_string()))
+        Some(&Term::Str("device-runtime".to_string()))
     );
     assert_eq!(
         run_map.get(&TermOrdKey(Term::symbol(":ok"))),

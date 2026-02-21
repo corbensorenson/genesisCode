@@ -275,7 +275,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     staging.unmap();
 
     Ok(format!(
-        "{{:ok true :kind \"gpu-compute-submit\" :backend \"device-bridge\" :adapter \"{}\" :lanes {} :checksum \"{}\"}}",
+        "{{:ok true :kind \"gpu-compute-submit\" :backend \"device-runtime\" :adapter \"{}\" :lanes {} :checksum \"{}\"}}",
         shell_escape_string(&ctx.adapter_info.name),
         LANES,
         checksum
@@ -287,7 +287,7 @@ fn limits_response() -> Result<String> {
     let ctx = DeviceContext::new().context("initialize gpu device context")?;
     let l = ctx.device.limits();
     Ok(format!(
-        "{{:ok true :backend \"device-bridge\" :max-buffer-bytes {} :max-storage-buffer-binding-size {} :max-compute-workgroup-size-x {} :max-compute-invocations-per-workgroup {}}}",
+        "{{:ok true :backend \"device-runtime\" :max-buffer-bytes {} :max-storage-buffer-binding-size {} :max-compute-workgroup-size-x {} :max-compute-invocations-per-workgroup {}}}",
         l.max_buffer_size,
         l.max_storage_buffer_binding_size,
         l.max_compute_workgroup_size_x,
@@ -318,7 +318,7 @@ fn features_response() -> Result<String> {
         )
     };
     Ok(format!(
-        "{{:ok true :backend \"device-bridge\" :adapter \"{}\" :features {}}}",
+        "{{:ok true :backend \"device-runtime\" :adapter \"{}\" :features {}}}",
         shell_escape_string(&ctx.adapter_info.name),
         feature_list
     ))

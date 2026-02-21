@@ -2,7 +2,7 @@
 
 This document defines the deterministic profile environment realization used by:
 
-- `genesis gcpm env --profile <name>`
+- `genesis gcpm env --profile <name> [--hydrate]`
 
 ## Goals
 
@@ -24,6 +24,10 @@ This document defines the deterministic profile environment realization used by:
 - the profile does not exist in `genesis.workspace.toml`
 - the resolved `caps_policy` file for the profile does not exist
 - any locked dependency artifact referenced by `genesis.lock` is missing from local `.genesis/store`
+
+When `--hydrate` is set, `gcpm env` first computes missing lock-pinned commit/snapshot hashes and
+fetches them through policy-gated `core/store::get` before materialization. Hydration is
+deterministic (sorted hash order) and recorded in the effect log.
 
 Relative `caps_policy` paths are resolved against the workspace descriptor directory.
 

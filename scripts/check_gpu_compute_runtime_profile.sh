@@ -42,11 +42,19 @@ metrics_path = pathlib.Path(sys.argv[1])
 summary_path = pathlib.Path(sys.argv[2])
 required_backend = sys.argv[3].strip()
 
+def normalize_backend(raw: str) -> str:
+    backend = raw.strip().lower()
+    if backend == "device-bridge":
+        return "device-runtime"
+    return backend
+
 doc = json.loads(metrics_path.read_text(encoding="utf-8"))
 kind = str(doc.get("kind", ""))
 bench_mode = str(doc.get("bench_mode", ""))
-gpu_compute_backend = str(doc.get("gpu_compute_backend", "unknown"))
+gpu_compute_backend_raw = str(doc.get("gpu_compute_backend", "unknown"))
+gpu_compute_backend = normalize_backend(gpu_compute_backend_raw)
 gpu_compute_backend_policy = str(doc.get("gpu_compute_backend_policy", "unknown"))
+required_backend_normalized = normalize_backend(required_backend) if required_backend else ""
 metrics = doc.get("metrics")
 budgets = doc.get("budgets")
 
@@ -88,7 +96,7 @@ for key in non_compute_keys:
     if value != 0:
         non_compute_nonzero[key] = value
 
-backend_ok = (not required_backend) or gpu_compute_backend == required_backend
+backend_ok = (not required_backend_normalized) or gpu_compute_backend == required_backend_normalized
 gpu_budget_ok = gpu_metric <= gpu_budget
 non_compute_ok = not non_compute_nonzero
 ok = backend_ok and gpu_budget_ok and non_compute_ok
@@ -98,8 +106,10 @@ summary = {
     "source_report": str(metrics_path),
     "bench_mode": bench_mode,
     "gpu_compute_backend": gpu_compute_backend,
+    "gpu_compute_backend_raw": gpu_compute_backend_raw,
     "gpu_compute_backend_policy": gpu_compute_backend_policy,
-    "required_backend": required_backend or None,
+    "required_backend": required_backend_normalized or None,
+    "required_backend_raw": required_backend or None,
     "gpu_compute_submit_ms": gpu_metric,
     "gpu_compute_submit_budget_ms": gpu_budget,
     "gpu_compute_submit_ok": gpu_budget_ok,
@@ -116,7 +126,7 @@ print(f"gpu-compute-runtime-profile: wrote guard report {summary_path}")
 if not ok:
     raise SystemExit(
         "gpu-compute-runtime-profile: guard failure "
-        f"(backend={gpu_compute_backend}, required={required_backend or 'any'}, "
+        f"(backend={gpu_compute_backend}, required={required_backend_normalized or 'any'}, "
         f"gpu_compute_submit={gpu_metric}/{gpu_budget}, non_compute_nonzero={non_compute_nonzero})"
     )
 PY

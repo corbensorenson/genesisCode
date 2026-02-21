@@ -12,7 +12,8 @@ if [[ "${CI:-}" == "true" ]]; then
   DEFAULT_PROFILE="release-full"
 fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
-DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-300000}"
+DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
+DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-120000}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000}"
@@ -45,9 +46,29 @@ default_health_shards_for_profile() {
   local cpu_count
   cpu_count="$(detect_parallelism)"
   case "$profile" in
+    dev-fast)
+      if (( cpu_count >= 8 )); then
+        echo "3"
+      elif (( cpu_count >= 4 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
     prepush-standard)
       if (( cpu_count >= 4 )); then
         echo "4"
+      elif (( cpu_count >= 2 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
+    release-full)
+      if (( cpu_count >= 8 )); then
+        echo "4"
+      elif (( cpu_count >= 4 )); then
+        echo "3"
       elif (( cpu_count >= 2 )); then
         echo "2"
       else
@@ -92,6 +113,20 @@ doc = {
     "budget_ms": budget_ms,
     "ok": ok,
 }
+if report_path.is_file():
+    try:
+        prev = json.loads(report_path.read_text(encoding="utf-8"))
+        if (
+            isinstance(prev, dict)
+            and prev.get("kind") == "genesis/upgrade-plan-health-profile-v0.1"
+            and prev.get("profile") == profile
+        ):
+            prev_elapsed = prev.get("elapsed_ms")
+            if isinstance(prev_elapsed, int):
+                doc["previous_elapsed_ms"] = prev_elapsed
+                doc["elapsed_delta_ms"] = elapsed_ms - prev_elapsed
+    except Exception:
+        pass
 report_path.parent.mkdir(parents=True, exist_ok=True)
 report_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 print(f"upgrade-plan-health: wrote profile report {report_path}")
@@ -198,6 +233,10 @@ if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
 fi
+if [[ ! "$DEV_FAST_PROFILE_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$DEV_FAST_PROFILE_WALL_BUDGET_MS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
 
 DEFAULT_HEALTH_SHARDS="$(default_health_shards_for_profile "$PROFILE")"
 HEALTH_SHARDS="${GENESIS_HEALTH_SHARDS:-$DEFAULT_HEALTH_SHARDS}"
@@ -228,7 +267,40 @@ fi
 if [[ "$declared_open" -gt 0 ]]; then
   echo "upgrade-plan-health: backlog status: open checklist items = $declared_open"
   if [[ "$ENFORCE_GATES" != "1" ]]; then
-    echo "upgrade-plan-health: code health gates deferred for local iteration (set GENESIS_HEALTH_ENFORCE_GATES=1 to enforce locally)."
+    echo "upgrade-plan-health: backlog open; running mandatory local guard gates."
+    MANDATORY_LOCAL_GATES=(
+      "bash scripts/check_selfhost_boundary.sh --strict"
+      "bash scripts/check_redteam_report.sh"
+      "bash scripts/check_planning_docs_fresh.sh"
+      "bash scripts/check_no_user_panics.sh"
+      "bash scripts/check_no_production_rust_frontend_refs.sh"
+    )
+    start_ms="$(now_ms)"
+    run_gate_commands "mandatory-local" "$HEALTH_SHARDS" "${MANDATORY_LOCAL_GATES[@]}"
+    end_ms="$(now_ms)"
+    elapsed_ms=$((end_ms - start_ms))
+    gate_count="${#MANDATORY_LOCAL_GATES[@]}"
+    mandatory_budget=""
+    mandatory_ok=1
+    if [[ "$PROFILE" == "dev-fast" ]]; then
+      mandatory_budget="$DEV_FAST_PROFILE_WALL_BUDGET_MS"
+      if (( elapsed_ms > DEV_FAST_PROFILE_WALL_BUDGET_MS )); then
+        mandatory_ok=0
+      fi
+    fi
+    write_health_profile_report \
+      "$PROFILE" \
+      "$HEALTH_SHARDS" \
+      "$gate_count" \
+      "$elapsed_ms" \
+      "$mandatory_budget" \
+      "$mandatory_ok" \
+      "$HEALTH_PROFILE_REPORT"
+    echo "upgrade-plan-health: mandatory-local elapsed_ms=${elapsed_ms} gate_count=${gate_count}"
+    if (( mandatory_ok == 0 )); then
+      echo "upgrade-plan-health: dev-fast mandatory-local wall-time exceeded budget (${elapsed_ms}ms > ${DEV_FAST_PROFILE_WALL_BUDGET_MS}ms)" >&2
+      exit 1
+    fi
     echo "upgrade-plan-health: ok"
     exit 0
   fi
@@ -249,6 +321,7 @@ COMMON_GATES=(
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"
   "bash scripts/check_redteam_report.sh"
+  "bash scripts/check_planning_docs_fresh.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
@@ -266,13 +339,14 @@ case "$PROFILE" in
   dev-fast)
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=(
-      "bash scripts/test_changed_fast.sh --base HEAD --runner cargo --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/upgrade_plan_dev_fast_metrics.json --history .genesis/perf/upgrade_plan_dev_fast_history.jsonl"
+      "bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/upgrade_plan_dev_fast_metrics.json --history .genesis/perf/upgrade_plan_dev_fast_history.jsonl"
     )
     ;;
   prepush-standard)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
+    PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
@@ -283,6 +357,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
+    PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")

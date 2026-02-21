@@ -19,6 +19,13 @@ pub(crate) enum WorkspaceTaskAction {
         log: Option<PathBuf>,
         engine: Option<String>,
     },
+    Contract {
+        file: PathBuf,
+        caps: Option<PathBuf>,
+        log: Option<PathBuf>,
+        engine: Option<String>,
+        contract_hash_hex: String,
+    },
     Eval {
         file: PathBuf,
         engine: Option<String>,
@@ -65,13 +72,23 @@ pub(crate) fn resolve_workspace_task(
         "typecheck" | "lint" => Ok(WorkspaceTaskAction::Typecheck {
             pkg: resolve_pkg_path(workspace_file, task),
         }),
-        "run" | "bench" | "contract" => {
+        "run" | "bench" => {
             let args = parse_run_like_args(workspace_file, task_name, &task.args)?;
             Ok(WorkspaceTaskAction::Run {
                 file: resolve_file_path(workspace_file, task_name, task)?,
                 caps: args.caps,
                 log: args.log,
                 engine: args.engine,
+            })
+        }
+        "contract" => {
+            let args = parse_contract_task_args(workspace_file, task_name, &task.args)?;
+            Ok(WorkspaceTaskAction::Contract {
+                file: resolve_file_path(workspace_file, task_name, task)?,
+                caps: args.caps,
+                log: args.log,
+                engine: args.engine,
+                contract_hash_hex: args.contract_hash_hex,
             })
         }
         "eval" => {
@@ -212,7 +229,7 @@ fn parse_run_like_args(
             }
             other => {
                 return Err(format!(
-                    "task `{task_name}` has unsupported arg `{other}` for cmd=run|bench|contract; \
+                    "task `{task_name}` has unsupported arg `{other}` for cmd=run|bench; \
 supported: --caps <path>, --log <path>, --engine <selfhost|rust>"
                 ));
             }
@@ -226,6 +243,95 @@ struct RunLikeTaskArgs {
     caps: Option<PathBuf>,
     log: Option<PathBuf>,
     engine: Option<String>,
+}
+
+#[derive(Default)]
+struct ContractTaskArgs {
+    caps: Option<PathBuf>,
+    log: Option<PathBuf>,
+    engine: Option<String>,
+    contract_hash_hex: String,
+}
+
+fn parse_contract_task_args(
+    workspace_file: &Path,
+    task_name: &str,
+    args: &[String],
+) -> Result<ContractTaskArgs, String> {
+    let mut out = ContractTaskArgs::default();
+    let mut i = 0_usize;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--caps" => {
+                let Some(raw) = args.get(i + 1) else {
+                    return Err(format!("task `{task_name}` missing value for --caps"));
+                };
+                out.caps = Some(resolve_workspace_relative_path(workspace_file, raw));
+                i += 2;
+            }
+            "--log" => {
+                let Some(raw) = args.get(i + 1) else {
+                    return Err(format!("task `{task_name}` missing value for --log"));
+                };
+                out.log = Some(resolve_workspace_relative_path(workspace_file, raw));
+                i += 2;
+            }
+            "--engine" => {
+                let Some(raw) = args.get(i + 1) else {
+                    return Err(format!("task `{task_name}` missing value for --engine"));
+                };
+                out.engine = Some(raw.trim().to_ascii_lowercase());
+                i += 2;
+            }
+            "--contract-h" | "--contract-hash" => {
+                let Some(raw) = args.get(i + 1) else {
+                    return Err(format!("task `{task_name}` missing value for --contract-h"));
+                };
+                out.contract_hash_hex = parse_contract_hash_hex(task_name, raw)?;
+                i += 2;
+            }
+            other => {
+                return Err(format!(
+                    "task `{task_name}` has unsupported arg `{other}` for cmd=contract; supported: \
+--contract-h <hex64>, --caps <path>, --log <path>, --engine <selfhost|rust>"
+                ));
+            }
+        }
+    }
+    if out.contract_hash_hex.is_empty() {
+        return Err(format!(
+            "task `{task_name}` missing required --contract-h <hex64> for cmd=contract"
+        ));
+    }
+    Ok(out)
+}
+
+fn parse_contract_hash_hex(task_name: &str, raw: &str) -> Result<String, String> {
+    let h = raw.trim().to_ascii_lowercase();
+    if h.len() != 64 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(format!(
+            "task `{task_name}` has invalid --contract-h `{raw}` (expected 64 hex chars)"
+        ));
+    }
+    Ok(h)
+}
+
+pub(crate) fn verify_contract_task_file_hash(
+    file: &Path,
+    expected_hash_hex: &str,
+) -> Result<String, String> {
+    let bytes = std::fs::read(file)
+        .map_err(|e| format!("read contract task file {}: {e}", file.display()))?;
+    let actual = blake3::hash(&bytes).to_hex().to_string();
+    if actual != expected_hash_hex {
+        return Err(format!(
+            "contract task hash mismatch for {}: expected {}, got {}",
+            file.display(),
+            expected_hash_hex,
+            actual
+        ));
+    }
+    Ok(actual)
 }
 
 #[derive(Default)]
@@ -364,17 +470,23 @@ fn parse_optimize_args(
 
 #[cfg(test)]
 mod tests {
-    use super::{WorkspaceTaskAction, resolve_workspace_task};
+    use super::{WorkspaceTaskAction, resolve_workspace_task, verify_contract_task_file_hash};
     use std::fs;
     use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn unique_tmp_dir() -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!("gcpm-task-runner-{stamp}"));
+        let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "gcpm-task-runner-{stamp}-{}-{seq}",
+            std::process::id()
+        ));
         fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -503,5 +615,123 @@ args = ["--out", "opt.gc", "--emit-wasm", "opt.wasm", "--stage1-gate"]
             }
             _ => panic!("optimize task must resolve to optimize action"),
         }
+    }
+
+    #[test]
+    fn resolves_contract_task_with_hash_pin_and_validates_file_hash() {
+        let dir = unique_tmp_dir();
+        let workspace = dir.join("genesis.workspace.toml");
+        let contract_file = dir.join("contract_task.gc");
+        fs::write(
+            &contract_file,
+            "(def task/prog (core/effect::pure {:ok true}))\n",
+        )
+        .unwrap();
+        let contract_h = blake3::hash(&fs::read(&contract_file).unwrap())
+            .to_hex()
+            .to_string();
+
+        write_workspace(
+            &workspace,
+            &format!(
+                r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "root"
+path = "."
+role = "root"
+
+[tasks."contract-local"]
+cmd = "contract"
+file = "contract_task.gc"
+args = ["--contract-h", "{contract_h}", "--caps", "caps.toml", "--log", ".genesis/logs/contract.gclog", "--engine", "selfhost"]
+"#
+            ),
+        );
+
+        match resolve_workspace_task(&workspace, "contract-local").unwrap() {
+            WorkspaceTaskAction::Contract {
+                file,
+                caps,
+                log,
+                engine,
+                contract_hash_hex,
+            } => {
+                assert!(file.ends_with("contract_task.gc"));
+                assert!(caps.unwrap().ends_with("caps.toml"));
+                assert!(log.unwrap().ends_with(".genesis/logs/contract.gclog"));
+                assert_eq!(engine.as_deref(), Some("selfhost"));
+                assert_eq!(contract_hash_hex, contract_h);
+                let verified = verify_contract_task_file_hash(&file, &contract_hash_hex).unwrap();
+                assert_eq!(verified, contract_h);
+            }
+            _ => panic!("contract task must resolve to contract action"),
+        }
+    }
+
+    #[test]
+    fn contract_task_requires_hash_pin_and_reports_mismatch() {
+        let dir = unique_tmp_dir();
+        let workspace = dir.join("genesis.workspace.toml");
+        let contract_file = dir.join("contract_task.gc");
+        fs::write(
+            &contract_file,
+            "(def task/prog (core/effect::pure {:ok true}))\n",
+        )
+        .unwrap();
+
+        write_workspace(
+            &workspace,
+            r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "root"
+path = "."
+role = "root"
+
+[tasks."contract-missing-hash"]
+cmd = "contract"
+file = "contract_task.gc"
+args = ["--caps", "caps.toml"]
+"#,
+        );
+        let err = match resolve_workspace_task(&workspace, "contract-missing-hash") {
+            Ok(_) => panic!("expected missing-hash contract task to fail"),
+            Err(e) => e,
+        };
+        assert!(err.contains("missing required --contract-h"));
+
+        write_workspace(
+            &workspace,
+            r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "root"
+path = "."
+role = "root"
+
+[tasks."contract-bad-hash"]
+cmd = "contract"
+file = "contract_task.gc"
+args = ["--contract-h", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+"#,
+        );
+        let action = resolve_workspace_task(&workspace, "contract-bad-hash").unwrap();
+        let WorkspaceTaskAction::Contract {
+            file,
+            contract_hash_hex,
+            ..
+        } = action
+        else {
+            panic!("expected contract action");
+        };
+        let mismatch = verify_contract_task_file_hash(&file, &contract_hash_hex).unwrap_err();
+        assert!(mismatch.contains("contract task hash mismatch"));
     }
 }

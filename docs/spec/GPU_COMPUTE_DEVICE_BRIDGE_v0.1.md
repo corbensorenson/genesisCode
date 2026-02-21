@@ -5,7 +5,7 @@ This spec defines the first-party in-repo device bridge path for `gpu/compute::*
 Status:
 - Microbench/runtime-benchmark profile document.
 - Canonical runtime capability policy naming remains `device-runtime` (see `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`).
-- `device-bridge` naming in this file is retained for benchmark lane compatibility.
+- `device-bridge` naming in this file is retained only as a build-feature label and legacy alias.
 
 For compute-only runtime productization and CI gating that is independent of graphics
 runtime lanes, see:
@@ -36,14 +36,14 @@ and benchmark execution fails closed if no device-grade bridge is available.
 
 Reported backend labels:
 
-- `device-bridge`
+- `device-runtime`
 - `deterministic-fallback`
 
 ## CI/Perf Policy
 
 - GPU lane compiles runtime microbench with `GENESIS_RUNTIME_MICROBENCH_FEATURES=device-bridge`.
 - GPU lane sets `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`.
-- GPU lane enforces `GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND=device-bridge`.
+- GPU lane enforces `GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND=device-runtime`.
 - Dev/test lanes may keep deterministic fallback available by using
   `GENESIS_GPU_COMPUTE_BACKEND_POLICY=dev-allow-fallback`.
 

@@ -150,6 +150,10 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      - name: Runtime Backend Feature Matrix Guard
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_runtime_backend_feature_matrix.sh
+
       - name: Test
         run: |
           if [[ "${GENESIS_CI_PROFILE}" == "fast" ]]; then
@@ -325,7 +329,7 @@ jobs:
       GENESIS_ALLOW_RUST_ENGINE: "0"
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
       GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
-      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-bridge"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
     steps:

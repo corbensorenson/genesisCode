@@ -44,6 +44,18 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - Kernel module evaluation uses the compiled evaluator by default and fails closed on compilation errors.
 - Tree-walk evaluation is reserved for explicit parity harnesses and is not a mainline CLI execution mode.
 
+## Runtime Backend Build Profiles
+
+`genesis` production builds define explicit runtime backend feature profiles:
+
+- `profile-headless` (default): no first-party GPU/desktop host backends.
+- `profile-gpu`: enables `gpu-device-backend`.
+- `profile-gfx`: enables `gfx-desktop-backend`.
+- `profile-backend`: enables both backends.
+
+Normative profile contract:
+- `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`
+
 ## Rust Engine Compatibility Mode (Historical Comparisons Only)
 
 `--engine rust` and `--coreform-frontend rust` exist solely to support deterministic parity checks
@@ -147,9 +159,11 @@ CI strict selfhost gates:
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
-    Built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, `contract`, `eval`, `fmt`, `optimize`.
-  - `genesis gcpm env --profile <dev|ci|release>` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
+    Built-ins: `test`, `pack`, `build`, `typecheck`, `lint`, `run`, `bench`, hash-pinned `contract`, `eval`, `fmt`, `optimize`.
+    - `cmd = "contract"` tasks require `--contract-h <hex64>` in task args; `gcpm run` verifies file hash before execution.
+  - `genesis gcpm env --profile <dev|ci|release> [--hydrate]` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
     including profile/workspace/lock/caps/dependency/member state required for reproducible workspace execution.
+    - `--hydrate` fetches missing locked artifacts deterministically through policy-gated `core/store::get` before materialization.
   - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.

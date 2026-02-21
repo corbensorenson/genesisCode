@@ -219,6 +219,8 @@ fn cmd_pkg_local_workspace_ops(
     frontend: &gc_obligations::CoreformFrontend,
     frontend_info: serde_json::Value,
 ) -> Result<Option<CmdOut>, CliError> {
+    let mut env_hydrate_log: Option<EffectLog> = None;
+
     match cmd {
         PkgCmd::Run {
             task,
@@ -240,6 +242,25 @@ fn cmd_pkg_local_workspace_ops(
                     log: rlog,
                     engine,
                 } => {
+                    let parsed_engine = parse_task_engine(engine)?;
+                    cmd_run(
+                        cli,
+                        flavor,
+                        &file,
+                        parsed_engine,
+                        rcaps.as_deref().unwrap_or(caps),
+                        rlog.as_deref(),
+                    )?
+                }
+                pkg_task_runner::WorkspaceTaskAction::Contract {
+                    file,
+                    caps: rcaps,
+                    log: rlog,
+                    engine,
+                    contract_hash_hex,
+                } => {
+                    pkg_task_runner::verify_contract_task_file_hash(&file, &contract_hash_hex)
+                        .map_err(|e| cli_err(EX_VERIFY, "pkg/run-contract", e))?;
                     let parsed_engine = parse_task_engine(engine)?;
                     cmd_run(
                         cli,
@@ -436,10 +457,71 @@ fn cmd_pkg_local_workspace_ops(
             lock,
             workspace_file,
             out_dir,
-        } => Some(
+            hydrate,
+        } => Some({
+            if *hydrate {
+                let missing =
+                    pkg_workspace_ops::collect_missing_locked_hashes(workspace_file, lock)
+                        .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?;
+                if !missing.is_empty() {
+                    let policy = CapsPolicy::load(caps)
+                        .with_context(|| format!("read {}", caps.display()))
+                        .map_err(caps_parse_cli_err)?;
+                    let mut ctx = mk_ctx(cli);
+                    let prelude = build_prelude(&mut ctx);
+                    let mut env = prelude.env;
+                    let forms = canonicalize_module(mk_pkg_env_hydrate_program(&missing))
+                        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+                    let program_hash = hash_module(&forms);
+                    let prog = eval_module(&mut ctx, &mut env, &forms)
+                        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+                    let toolchain = format!("genesis {}", env!("CARGO_PKG_VERSION"));
+                    let run = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
+                        .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
+                    if let Some(proto) = ctx.protocol
+                        && let Value::Sealed { token, payload } = &run.value
+                        && *token == proto.error
+                    {
+                        let (code, message) = match payload.as_ref() {
+                            Value::Data(Term::Map(m)) => {
+                                let code = m
+                                    .get(&gc_coreform::TermOrdKey(Term::symbol(":error/code")))
+                                    .and_then(|t| match t {
+                                        Term::Str(s) => Some(s.as_str()),
+                                        _ => None,
+                                    })
+                                    .unwrap_or("core/effect/error");
+                                let message = m
+                                    .get(&gc_coreform::TermOrdKey(Term::symbol(":error/message")))
+                                    .and_then(|t| match t {
+                                        Term::Str(s) => Some(s.as_str()),
+                                        _ => None,
+                                    })
+                                    .unwrap_or("env hydration failed");
+                                (code.to_string(), message.to_string())
+                            }
+                            _ => (
+                                "core/effect/error".to_string(),
+                                "env hydration failed".to_string(),
+                            ),
+                        };
+                        let exit_code = if code == "core/caps/denied" {
+                            EX_CAPS_DENIED
+                        } else {
+                            EX_EVAL
+                        };
+                        return Err(cli_err(
+                            exit_code,
+                            "pkg/env-hydrate",
+                            format!("{code}: {message}"),
+                        ));
+                    }
+                    env_hydrate_log = Some(run.log);
+                }
+            }
             pkg_workspace_ops::handle_env(profile, lock, workspace_file, out_dir)
-                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?,
-        ),
+                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?
+        }),
         _ => None,
     };
     let Some(local) = local else {
@@ -449,7 +531,8 @@ fn cmd_pkg_local_workspace_ops(
     let log_path = log
         .map(PathBuf::from)
         .unwrap_or_else(|| default_log_path(local.log_op));
-    let log_obj = pkg_workspace_ops::empty_log(local.program_hash);
+    let log_obj =
+        env_hydrate_log.unwrap_or_else(|| pkg_workspace_ops::empty_log(local.program_hash));
     std::fs::write(&log_path, log_obj.to_string_canonical() + "\n")
         .with_context(|| format!("write {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;

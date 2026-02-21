@@ -505,6 +505,231 @@ gpu_backend_policy = "allow-fallback"
 }
 
 #[test]
+fn gpu_compute_device_runtime_submit_scope_keeps_lifecycle_on_first_party() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gpu/compute::create-buffer",
+  "gpu/compute::write-buffer",
+  "gpu/compute::read-buffer",
+  "gpu/compute::destroy-resource"
+]
+
+[op."gpu/compute::create-buffer"]
+gpu_backend = "device-runtime"
+
+[op."gpu/compute::write-buffer"]
+gpu_backend = "device-runtime"
+
+[op."gpu/compute::read-buffer"]
+gpu_backend = "device-runtime"
+
+[op."gpu/compute::destroy-resource"]
+gpu_backend = "device-runtime"
+"#,
+    )
+    .expect("parse caps");
+
+    let src = r#"
+        (def prog
+          ((core/effect::bind (core/effect::perform
+                                'gpu/compute::create-buffer
+                                {:desc {:size 8}}
+                                (fn (x) (core/effect::pure x))))
+            (fn (create-buffer)
+              (let ((buffer-id ((core/map::get create-buffer) ':id)))
+                ((core/effect::bind (core/effect::perform
+                                      'gpu/compute::write-buffer
+                                      {:data b"\x01\x02\x03" :id buffer-id :offset 2}
+                                      (fn (x) (core/effect::pure x))))
+                  (fn (write-buffer)
+                    ((core/effect::bind (core/effect::perform
+                                          'gpu/compute::read-buffer
+                                          {:id buffer-id :offset 0 :size 8}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (read-buffer)
+                        ((core/effect::bind (core/effect::perform
+                                              'gpu/compute::destroy-resource
+                                              {:id buffer-id}
+                                              (fn (x) (core/effect::pure x))))
+                          (fn (destroy-buffer)
+                            (core/effect::pure
+                              {:create-buffer create-buffer
+                               :destroy-buffer destroy-buffer
+                               :read-buffer read-buffer
+                               :write-buffer write-buffer})))))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+    let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    let Value::Map(top) = &run_out.value else {
+        panic!("expected top-level map, got {}", run_out.value.debug_repr());
+    };
+    for key in [
+        ":create-buffer",
+        ":write-buffer",
+        ":read-buffer",
+        ":destroy-buffer",
+    ] {
+        let Some(Value::Data(Term::Map(entry))) = top.get(&TermOrdKey(Term::symbol(key))) else {
+            panic!("missing map entry {key}");
+        };
+        assert_eq!(
+            entry.get(&TermOrdKey(Term::symbol(":backend"))),
+            Some(&Term::Str("first-party-runtime".to_string())),
+            "{key} should remain on first-party backend under submit/introspection scope"
+        );
+        assert!(
+            !entry.contains_key(&TermOrdKey(Term::symbol(":backend-fallback-from"))),
+            "{key} should not carry fallback metadata under submit/introspection scope"
+        );
+    }
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+}
+
+#[test]
+fn gpu_compute_device_runtime_full_lifecycle_require_device_fails_closed() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gpu/compute::create-buffer"]
+
+[op."gpu/compute::create-buffer"]
+gpu_backend = "device-runtime-full"
+gpu_backend_policy = "require-device"
+"#,
+    )
+    .expect("parse caps");
+
+    let (forms, h) = mk_prog_for("gpu/compute::create-buffer", "{:desc {:size 16}}");
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+    match out.value {
+        Value::Sealed { token, .. } => {
+            assert_eq!(token, ctx.protocol.expect("protocol").error);
+        }
+        other => panic!(
+            "expected sealed error when full lifecycle backend is required, got {}",
+            other.debug_repr()
+        ),
+    }
+}
+
+#[test]
+fn gpu_compute_device_runtime_full_lifecycle_allow_fallback_marks_lifecycle_ops() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gpu/compute::create-buffer",
+  "gpu/compute::write-buffer",
+  "gpu/compute::read-buffer",
+  "gpu/compute::destroy-resource"
+]
+
+[op."gpu/compute::create-buffer"]
+gpu_backend = "device-runtime-full"
+gpu_backend_policy = "allow-fallback"
+
+[op."gpu/compute::write-buffer"]
+gpu_backend = "device-runtime-full"
+gpu_backend_policy = "allow-fallback"
+
+[op."gpu/compute::read-buffer"]
+gpu_backend = "device-runtime-full"
+gpu_backend_policy = "allow-fallback"
+
+[op."gpu/compute::destroy-resource"]
+gpu_backend = "device-runtime-full"
+gpu_backend_policy = "allow-fallback"
+"#,
+    )
+    .expect("parse caps");
+
+    let src = r#"
+        (def prog
+          ((core/effect::bind (core/effect::perform
+                                'gpu/compute::create-buffer
+                                {:desc {:size 8}}
+                                (fn (x) (core/effect::pure x))))
+            (fn (create-buffer)
+              (let ((buffer-id ((core/map::get create-buffer) ':id)))
+                ((core/effect::bind (core/effect::perform
+                                      'gpu/compute::write-buffer
+                                      {:data b"\x01\x02\x03" :id buffer-id :offset 2}
+                                      (fn (x) (core/effect::pure x))))
+                  (fn (write-buffer)
+                    ((core/effect::bind (core/effect::perform
+                                          'gpu/compute::read-buffer
+                                          {:id buffer-id :offset 0 :size 8}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (read-buffer)
+                        ((core/effect::bind (core/effect::perform
+                                              'gpu/compute::destroy-resource
+                                              {:id buffer-id}
+                                              (fn (x) (core/effect::pure x))))
+                          (fn (destroy-buffer)
+                            (core/effect::pure
+                              {:create-buffer create-buffer
+                               :destroy-buffer destroy-buffer
+                               :read-buffer read-buffer
+                               :write-buffer write-buffer})))))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+    let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    let Value::Map(top) = &run_out.value else {
+        panic!("expected top-level map, got {}", run_out.value.debug_repr());
+    };
+    for key in [
+        ":create-buffer",
+        ":write-buffer",
+        ":read-buffer",
+        ":destroy-buffer",
+    ] {
+        let Some(Value::Data(Term::Map(entry))) = top.get(&TermOrdKey(Term::symbol(key))) else {
+            panic!("missing map entry {key}");
+        };
+        assert_eq!(
+            entry.get(&TermOrdKey(Term::symbol(":backend"))),
+            Some(&Term::Str("first-party-runtime".to_string()))
+        );
+        assert_eq!(
+            entry.get(&TermOrdKey(Term::symbol(":backend-fallback-from"))),
+            Some(&Term::Str("device-runtime-full".to_string())),
+            "{key} should be marked as fallback from full lifecycle device backend"
+        );
+    }
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+}
+
+#[test]
 fn gpu_compute_first_party_lifecycle_ops_are_replayable_without_bridge() {
     let pol = CapsPolicy::from_toml_str(
         r#"

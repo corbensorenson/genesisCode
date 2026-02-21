@@ -6,9 +6,8 @@ use num_traits::ToPrimitive;
 
 use crate::policy::OpPolicy;
 use crate::runner_gpu_backend_policy::{
-    GPU_BACKEND_DEVICE_RUNTIME, GpuBackendFallbackPolicy, GpuBackendKind,
-    gpu_backend_fallback_policy, gpu_backend_kind, gpu_op_prefers_device_backend,
-    inject_backend_fallback_metadata,
+    GpuBackendFallbackPolicy, GpuBackendKind, gpu_backend_fallback_policy, gpu_backend_kind,
+    gpu_backend_kind_label, gpu_op_prefers_device_backend, inject_backend_fallback_metadata,
 };
 use crate::runner_gpu_device_backend::call_device_backend;
 use crate::runner_host_bridge::{BridgeError, call_host_bridge};
@@ -50,8 +49,9 @@ pub(crate) fn gpu_host_call(
         return None;
     }
     if !has_explicit_bridge_profile(pol) {
-        if gpu_backend_kind(pol) == GpuBackendKind::DeviceRuntime
-            && gpu_op_prefers_device_backend(op)
+        let backend_kind = gpu_backend_kind(pol);
+        if backend_kind != GpuBackendKind::FirstParty
+            && gpu_op_prefers_device_backend(op, backend_kind)
         {
             return Some(match call_device_backend(op, payload) {
                 Ok(resp) => Value::Data(resp),
@@ -68,7 +68,7 @@ pub(crate) fn gpu_host_call(
                         let fallback = first_party_gpu_response(runtime, op, payload);
                         let decorated = inject_backend_fallback_metadata(
                             fallback,
-                            GPU_BACKEND_DEVICE_RUNTIME,
+                            gpu_backend_kind_label(backend_kind),
                             &err.message,
                         );
                         Value::Data(decorated)

@@ -26,7 +26,7 @@ Required fields:
 - `budgets.bridge_runner_ms`
 - `budgets.gpu_compute_submit_ms`
 - `budgets.task_runner_ms`
-- `gpu_compute_backend` (`"deterministic-fallback"` or `"device-bridge"`)
+- `gpu_compute_backend` (`"deterministic-fallback"` or `"device-runtime"`)
 - `gpu_compute_backend_policy` (`"dev-allow-fallback"` or `"require-device"`)
 
 ## Output Artifact
@@ -89,7 +89,7 @@ Failure behavior:
 
 - default mode: deterministic fallback bridge (`gpu_compute_backend = deterministic-fallback`)
 - device mode: set `GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD=/abs/path/to/bridge` to benchmark a
-  device-backed bridge path (`gpu_compute_backend = device-bridge`)
+  device-backed bridge path (`gpu_compute_backend = device-runtime`)
 
 This keeps the bridge-overhead metric (`bridge_runner_ms`) and compute-submit metric
 (`gpu_compute_submit_ms`) independently visible in SLO reports.

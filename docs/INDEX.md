@@ -35,6 +35,7 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/CAPS_TOML.md`
   - `docs/spec/HOST_ABI.md`
   - `docs/spec/LIMITS.md`
+  - `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`
   - `docs/spec/WASI.md`
   - `docs/spec/WASM.md`
 - VCS/pkg/registry:

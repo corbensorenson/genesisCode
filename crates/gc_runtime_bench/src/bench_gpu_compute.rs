@@ -11,7 +11,7 @@ use crate::device_bridge::inrepo_device_bridge_spec;
 use crate::measure::best_of;
 
 pub(crate) const GPU_COMPUTE_BACKEND_FALLBACK: &str = "deterministic-fallback";
-pub(crate) const GPU_COMPUTE_BACKEND_DEVICE: &str = "device-bridge";
+pub(crate) const GPU_COMPUTE_BACKEND_DEVICE_RUNTIME: &str = "device-runtime";
 pub(crate) const GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK: &str = "dev-allow-fallback";
 pub(crate) const GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE: &str = "require-device";
 
@@ -85,10 +85,17 @@ fn resolve_device_bridge_cmd_from(raw: Option<&str>) -> Option<PathBuf> {
 
 fn resolve_device_bridge_cmd() -> Option<PathBuf> {
     resolve_device_bridge_cmd_from(
-        std::env::var("GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD")
+        std::env::var("GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD")
             .ok()
             .as_deref(),
     )
+    .or_else(|| {
+        resolve_device_bridge_cmd_from(
+            std::env::var("GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD")
+                .ok()
+                .as_deref(),
+        )
+    })
 }
 
 fn encode_bridge_policy(
@@ -129,17 +136,17 @@ fn compute_bridge_policy_with_override(
             .ok_or_else(|| anyhow::anyhow!("invalid device bridge command path"))?;
         let base_dir = device_cmd.parent().unwrap_or(tmp_dir);
         let policy = encode_bridge_policy(base_dir, cmd_name, &[])?;
-        return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE.to_string()));
+        return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME.to_string()));
     }
 
     if let Some(spec) = inrepo_device_bridge_spec()? {
         let policy = encode_bridge_policy(&spec.base_dir, &spec.cmd_name, &spec.args)?;
-        return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE.to_string()));
+        return Ok((policy, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME.to_string()));
     }
 
     if backend_policy == GpuComputeBackendPolicy::RequireDevice {
         bail!(
-            "device-grade gpu compute backend is required by GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device; configure GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD or build gc_runtime_bench with --features device-bridge"
+            "device-grade gpu compute backend is required by GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device; configure GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD (or legacy GENESIS_GPU_COMPUTE_DEVICE_BRIDGE_CMD) or build gc_runtime_bench with --features device-bridge"
         );
     }
 
@@ -200,7 +207,7 @@ bench/prog
 #[cfg(test)]
 mod tests {
     use super::{
-        GPU_COMPUTE_BACKEND_DEVICE, GPU_COMPUTE_BACKEND_FALLBACK,
+        GPU_COMPUTE_BACKEND_DEVICE_RUNTIME, GPU_COMPUTE_BACKEND_FALLBACK,
         GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK, GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE,
         GpuComputeBackendPolicy, compute_bridge_policy_with_override,
         resolve_device_bridge_cmd_from,
@@ -237,7 +244,7 @@ mod tests {
             GpuComputeBackendPolicy::DevAllowFallback,
         )
         .expect("policy");
-        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE);
+        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME);
     }
 
     #[cfg(feature = "device-bridge")]
@@ -250,7 +257,7 @@ mod tests {
             GpuComputeBackendPolicy::RequireDevice,
         )
         .expect("policy");
-        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE);
+        assert_eq!(backend, GPU_COMPUTE_BACKEND_DEVICE_RUNTIME);
     }
 
     #[cfg(not(feature = "device-bridge"))]

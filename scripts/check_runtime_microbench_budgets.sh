@@ -58,6 +58,12 @@ doc = json.loads(metrics_path.read_text(encoding="utf-8"))
 metrics = doc.get("metrics")
 budgets = doc.get("budgets")
 
+def normalize_backend(raw: str) -> str:
+    backend = raw.strip().lower()
+    if backend == "device-bridge":
+        return "device-runtime"
+    return backend
+
 if not isinstance(metrics, dict) or not isinstance(budgets, dict):
     raise SystemExit("runtime-microbench: missing metrics/budgets map")
 
@@ -77,14 +83,16 @@ bridge_budget = int(budgets["bridge_runner_ms"])
 gpu_compute_submit_ms = int(metrics["gpu_compute_submit_ms"])
 task_ms = int(metrics["task_runner_ms"])
 task_budget = int(budgets["task_runner_ms"])
-gpu_compute_backend = str(doc.get("gpu_compute_backend", "unknown"))
+gpu_compute_backend_raw = str(doc.get("gpu_compute_backend", "unknown"))
+gpu_compute_backend = normalize_backend(gpu_compute_backend_raw)
 gpu_compute_backend_policy = str(doc.get("gpu_compute_backend_policy", "unknown"))
+required_backend_normalized = normalize_backend(required_backend) if required_backend else ""
 if gpu_compute_backend_policy not in {"dev-allow-fallback", "require-device"}:
     raise SystemExit(
         f"runtime-microbench: unexpected gpu_compute_backend_policy {gpu_compute_backend_policy!r}"
     )
 
-if gpu_compute_backend == "device-bridge":
+if gpu_compute_backend == "device-runtime":
     gpu_compute_submit_budget = device_budget
 else:
     gpu_compute_submit_budget = fallback_budget
@@ -92,7 +100,7 @@ else:
 bridge_ok = bridge_ms <= bridge_budget
 gpu_compute_submit_ok = gpu_compute_submit_ms <= gpu_compute_submit_budget
 task_ok = task_ms <= task_budget
-backend_ok = (not required_backend) or gpu_compute_backend == required_backend
+backend_ok = (not required_backend_normalized) or gpu_compute_backend == required_backend_normalized
 ok = bridge_ok and gpu_compute_submit_ok and task_ok and backend_ok
 
 slo = {
@@ -102,8 +110,10 @@ slo = {
     "build_mode": str(doc.get("build_mode", "release-equivalent")),
     "disk_strict_mode": disk_strict_mode,
     "gpu_compute_backend": gpu_compute_backend,
+    "gpu_compute_backend_raw": gpu_compute_backend_raw,
     "gpu_compute_backend_policy": gpu_compute_backend_policy,
-    "gpu_compute_required_backend": required_backend or None,
+    "gpu_compute_required_backend": required_backend_normalized or None,
+    "gpu_compute_required_backend_raw": required_backend or None,
     "ci_enforced": True,
     "slo": {
         "gpu_compute_bridge": {
@@ -117,13 +127,13 @@ slo = {
             "observed_ms": gpu_compute_submit_ms,
             "budget_ms": gpu_compute_submit_budget,
             "budget_by_backend_ms": {
-                "device-bridge": device_budget,
+                "device-runtime": device_budget,
                 "deterministic-fallback": fallback_budget,
             },
             "ok": gpu_compute_submit_ok,
         },
         "gpu_compute_backend_required": {
-            "required_backend": required_backend or None,
+            "required_backend": required_backend_normalized or None,
             "observed_backend": gpu_compute_backend,
             "ok": backend_ok,
         },
@@ -143,8 +153,10 @@ print(f"runtime-microbench: wrote concurrency/gpu slo report {slo_path}")
 
 if not ok:
     backend_msg = ""
-    if required_backend and gpu_compute_backend != required_backend:
-        backend_msg = f", backend={gpu_compute_backend} (required={required_backend})"
+    if required_backend_normalized and gpu_compute_backend != required_backend_normalized:
+        backend_msg = (
+            f", backend={gpu_compute_backend} (required={required_backend_normalized})"
+        )
     raise SystemExit(
         "runtime-microbench: concurrency/gpu slo failure "
         f"(bridge={bridge_ms}/{bridge_budget}, gpu_compute_submit={gpu_compute_submit_ms}/{gpu_compute_submit_budget}, task={task_ms}/{task_budget}{backend_msg})"

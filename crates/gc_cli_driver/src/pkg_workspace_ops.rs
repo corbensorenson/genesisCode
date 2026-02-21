@@ -571,11 +571,7 @@ fn build_env_members_term(
 }
 
 fn build_env_deps_term(workspace_file: &Path, lock: &gc_pkg::GenesisLock) -> Result<Term, String> {
-    let store_dir = workspace_file
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .join(".genesis")
-        .join("store");
+    let store_dir = workspace_store_dir(workspace_file);
 
     let mut reqs = Vec::new();
     for (name, req) in &lock.requirements {
@@ -708,6 +704,36 @@ fn build_env_deps_term(workspace_file: &Path, lock: &gc_pkg::GenesisLock) -> Res
         .into_iter()
         .collect(),
     ))
+}
+
+pub(crate) fn collect_missing_locked_hashes(
+    workspace_file: &Path,
+    lock_file: &Path,
+) -> Result<Vec<String>, String> {
+    let lock = gc_pkg::GenesisLock::load(lock_file).map_err(|e| e.to_string())?;
+    let store_dir = workspace_store_dir(workspace_file);
+    let mut missing: Vec<String> = Vec::new();
+    for entry in lock.locked.values() {
+        if !store_dir.join(&entry.snapshot).is_file() {
+            missing.push(entry.snapshot.clone());
+        }
+        if let Some(commit) = &entry.commit
+            && !store_dir.join(commit).is_file()
+        {
+            missing.push(commit.clone());
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    Ok(missing)
+}
+
+fn workspace_store_dir(workspace_file: &Path) -> PathBuf {
+    workspace_file
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join(".genesis")
+        .join("store")
 }
 
 fn build_env_profile_term(

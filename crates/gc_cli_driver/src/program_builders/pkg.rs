@@ -198,6 +198,56 @@ pub(crate) fn mk_pkg_install_program(lock: &Path, frozen: bool, strict: bool) ->
     ]
 }
 
+pub(crate) fn mk_pkg_env_hydrate_program(missing_hashes: &[String]) -> Vec<Term> {
+    let mut tail = Term::list(vec![
+        Term::symbol("core/effect::pure"),
+        Term::Map(
+            [
+                (
+                    gc_coreform::TermOrdKey(Term::symbol(":ok")),
+                    Term::Bool(true),
+                ),
+                (
+                    gc_coreform::TermOrdKey(Term::symbol(":hydrated")),
+                    Term::Int((missing_hashes.len() as i64).into()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    ]);
+
+    for hash in missing_hashes.iter().rev() {
+        let op = Term::list(vec![Term::symbol("quote"), Term::symbol("core/store::get")]);
+        let payload = Term::Map(
+            [(
+                gc_coreform::TermOrdKey(Term::symbol(":hash")),
+                Term::Str(hash.clone()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let continuation = Term::list(vec![
+            Term::symbol("fn"),
+            Term::list(vec![Term::symbol("r")]),
+            // We intentionally ignore each individual store/get return value and continue
+            // to hydrate the full lock set in deterministic order.
+            tail,
+        ]);
+        tail = Term::list(vec![
+            Term::symbol("core/effect::perform"),
+            op,
+            payload,
+            continuation,
+        ]);
+    }
+
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), tail]),
+        Term::symbol("prog"),
+    ]
+}
+
 pub(crate) fn mk_pkg_verify_program(lock: &Path) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),

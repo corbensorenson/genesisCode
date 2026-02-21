@@ -9,6 +9,33 @@ fn write_caps(dir: &Path) -> PathBuf {
     caps
 }
 
+fn write_caps_with_store_remote(dir: &Path, remote: &str, remote_allow: &str) -> PathBuf {
+    let caps = dir.join("caps.toml");
+    fs::write(
+        &caps,
+        format!(
+            r#"
+allow = [
+  "core/store::get"
+]
+
+[store]
+dir = "./.genesis/store"
+remote = "{remote}"
+remote_allow = ["{remote_allow}"]
+"#
+        ),
+    )
+    .unwrap();
+    caps
+}
+
+fn put_remote_artifact(remote_dir: &Path, hex: &str, bytes: &[u8]) {
+    let store = remote_dir.join("v1").join("store");
+    fs::create_dir_all(&store).unwrap();
+    fs::write(store.join(hex), bytes).unwrap();
+}
+
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
     let td = tempfile::tempdir().unwrap();
@@ -353,4 +380,103 @@ fn gcpm_env_materializes_deterministic_profile_record() {
     assert!(entries[0].join("members.gc").is_file());
     assert!(entries[0].join("deps.gc").is_file());
     assert!(entries[0].join("caps-policy.toml").is_file());
+}
+
+#[test]
+fn gcpm_env_hydrate_fetches_missing_locked_artifacts_via_store_get() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps_with_store_remote(dir, &remote, &remote_allow);
+
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+            "--registry-default",
+            "gen://registry",
+        ])
+        .assert()
+        .success();
+
+    let snapshot = gc_coreform::parse_term("{:type :vcs/snapshot :v 1 :kind :package}").unwrap();
+    let snapshot_bytes = gc_coreform::print_term(&snapshot).into_bytes();
+    let snapshot_h = blake3::hash(&snapshot_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &snapshot_h, &snapshot_bytes);
+
+    let commit = gc_coreform::parse_term(&format!(
+        "{{:type :vcs/commit :v 1 :parents [] :base nil :patch nil :result \"{snapshot_h}\" :obligations [] :evidence []}}"
+    ))
+    .unwrap();
+    let commit_bytes = gc_coreform::print_term(&commit).into_bytes();
+    let commit_h = blake3::hash(&commit_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &commit_h, &commit_bytes);
+
+    fs::write(
+        dir.join("genesis.lock"),
+        format!(
+            r#"
+version = 1
+workspace = "ws"
+policy = "policy:default-v0.1"
+
+[requirements]
+"dep" = {{ selector = "commit:{commit_h}", update_policy = "manual", registry = "default" }}
+
+[locked]
+"dep" = {{ commit = "{commit_h}", snapshot = "{snapshot_h}", registry = "default", source_selector = "commit:{commit_h}" }}
+"#
+        ),
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .code(10);
+
+    let log = dir.join("env-hydrate.gclog");
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["--log"])
+        .arg(&log)
+        .args(["env", "--profile", "dev", "--hydrate"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        v.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/pkg-env-v0.1")
+    );
+    assert!(
+        dir.join(".genesis")
+            .join("store")
+            .join(&snapshot_h)
+            .is_file()
+    );
+    assert!(dir.join(".genesis").join("store").join(&commit_h).is_file());
+
+    let log_src = fs::read_to_string(log).unwrap();
+    assert!(log_src.contains("core/store::get"));
 }

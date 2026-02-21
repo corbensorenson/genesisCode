@@ -161,9 +161,14 @@ Supported keys:
 - `gpu_backend` (string): optional backend selector for first-party GPU runtime domains (`gpu/compute::*`, `gfx/gpu::*`).
   - supported values:
     - `first-party-runtime` (default): deterministic in-memory runtime backend.
-    - `device-runtime`: in-repo device-backed backend (requires `gc_effects` `gpu-device-backend` feature at build time).
+    - `device-runtime`: in-repo device-backed backend for submit/introspection ops (`submit`, `limits`, `features`).
+    - `device-runtime-full`: in-repo device-backed backend request for canonical lifecycle ops (`create*`, `write*`, `read*`, `destroy-resource`, `submit`, `limits`, `features`).
+    - legacy aliases accepted and normalized:
+      - `device-bridge` -> `device-runtime`
+      - `device-runtime-submit` -> `device-runtime`
+      - `device-runtime-lifecycle` -> `device-runtime-full`
   - applies only when no explicit bridge profile is configured for the op.
-- `gpu_backend_policy` (string): optional fail behavior for `gpu_backend = "device-runtime"`.
+- `gpu_backend_policy` (string): optional fail behavior for `gpu_backend = "device-runtime"` or `"device-runtime-full"`.
   - supported values:
     - `allow-fallback` (default): on device backend unavailability/error, fail open to `first-party-runtime` and annotate response with fallback metadata.
     - `require-device`: fail closed with sealed error when device backend is unavailable/errors.
