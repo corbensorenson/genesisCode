@@ -26,6 +26,8 @@ pub struct Report {
     warmups: usize,
     repeats: usize,
     gpu_compute_backend: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    gpu_compute_adapter: Option<String>,
     budgets: Budgets,
     metrics: Metrics,
 }
@@ -39,6 +41,7 @@ pub struct ReportMeta {
     pub warmups: usize,
     pub repeats: usize,
     pub gpu_compute_backend: String,
+    pub gpu_compute_adapter: Option<String>,
 }
 
 impl Report {
@@ -52,6 +55,7 @@ impl Report {
             warmups: meta.warmups,
             repeats: meta.repeats,
             gpu_compute_backend: meta.gpu_compute_backend,
+            gpu_compute_adapter: meta.gpu_compute_adapter,
             budgets,
             metrics,
         }

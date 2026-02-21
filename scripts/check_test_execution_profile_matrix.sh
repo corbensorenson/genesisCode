@@ -61,13 +61,23 @@ if ! grep -Fq 'GENESIS_BUDGET_CHANGED_FAST_MS:-300000' "$DEFAULT_LOOP_SCRIPT"; t
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000' scripts/check_upgrade_plan_health.sh; then
-  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 720000ms (12m)" >&2
+if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 240000ms (4m)" >&2
   exit 1
 fi
 
 if ! grep -Fq 'default_health_shards_for_profile' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep deterministic shard default function" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'PROFILE_SHARDS' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep dedicated profile shard control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep explicit gpu device conformance lane toggle" >&2
   exit 1
 fi
 

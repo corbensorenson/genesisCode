@@ -39,6 +39,7 @@ Compute-only mode requirements:
   - `patch_apply_ms`
   - `store_cycle_ms`
   - `sync_pull_ms`
+- Device-runtime executions additionally emit `gpu_compute_adapter` in the runtime report.
 
 ## Policy Inputs
 
@@ -69,7 +70,12 @@ Per-op `caps.toml` knobs for first-party runtime lanes:
 CI enforces this profile in standard/full lanes before strict selfhost suites:
 
 - `.github/workflows/ci.yml` runs `bash scripts/check_gpu_compute_runtime_profile.sh`.
+- `.github/workflows/ci.yml` also runs `bash scripts/check_gpu_compute_device_conformance.sh`
+  in the dedicated `gpu_device_microbench` self-hosted GPU lane to enforce
+  `require-device` backend policy and persist adapter-specific artifacts.
 - `scripts/check_upgrade_plan_health.sh` includes the same guard for prepush/release profiles.
+  Optional device conformance in health profiles is enabled with
+  `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
 
 ## Reference Workload
 

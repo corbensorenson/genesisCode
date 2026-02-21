@@ -6,16 +6,19 @@ This document defines maintainability boundaries for source-of-truth `.gc` modul
 
 Applies to:
 
-- `/Users/corbensorenson/Documents/genesisCode/prelude/modules/*.gc`
-- `/Users/corbensorenson/Documents/genesisCode/selfhost/*.gc` (authoring modules, not assembled artifacts)
+- all `.gc` paths resolved from policy `gc_source_roots` (directories scanned recursively):
+  - `/Users/corbensorenson/Documents/genesisCode/prelude/modules`
+  - `/Users/corbensorenson/Documents/genesisCode/selfhost`
+  - `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`
 
 Generated artifacts are excluded:
 
-- `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`
+- policy allowlist `gc_generated_exclude_paths` (currently `/Users/corbensorenson/Documents/genesisCode/prelude/prelude.gc`)
 
 Notes:
 
 - `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain.gc` remains a generated assembly artifact, but is now emitted in compact CoreForm form and stays within enforced `.gc` line budgets (no policy carve-out).
+- `gc_prelude` bootstrap now assembles embedded prelude source from `prelude/modules/manifest.toml` at build time; runtime no longer consumes `prelude/prelude.gc` as its source of truth.
 
 ## Boundary Rules
 

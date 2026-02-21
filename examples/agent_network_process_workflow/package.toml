@@ -1,0 +1,14 @@
+name = "agent_network_process_workflow"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+]
+tests = ["pkg/agent_network_process::tests"]
+
+[[modules]]
+hash = "e81efc95fa10e72fd6274c20fae6db7939a190fb9a5b2b4e5aaf0b1944e9ed0b"
+path = "service.gc"

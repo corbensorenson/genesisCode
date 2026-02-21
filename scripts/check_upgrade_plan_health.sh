@@ -16,13 +16,14 @@ DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
 DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-120000}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
-PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-720000}"
+PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
 else
   ENFORCE_GATES_DEFAULT="0"
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
+GPU_DEVICE_CONFORMANCE="${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE:-0}"
 
 now_ms() {
   python3 - <<'PY'
@@ -229,6 +230,10 @@ if [[ "$ENFORCE_GATES" != "0" && "$ENFORCE_GATES" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_ENFORCE_GATES must be 0 or 1" >&2
   exit 2
 fi
+if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE must be 0 or 1" >&2
+  exit 2
+fi
 if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
@@ -242,6 +247,17 @@ DEFAULT_HEALTH_SHARDS="$(default_health_shards_for_profile "$PROFILE")"
 HEALTH_SHARDS="${GENESIS_HEALTH_SHARDS:-$DEFAULT_HEALTH_SHARDS}"
 if [[ ! "$HEALTH_SHARDS" =~ ^[0-9]+$ || "$HEALTH_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_SHARDS must be a positive integer" >&2
+  exit 2
+fi
+
+PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"
+if [[ -z "${GENESIS_HEALTH_PROFILE_SHARDS:-}" && ( "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" ) ]]; then
+  # Profile gates include multiple cargo-heavy commands. Serial execution avoids lock contention
+  # and redundant recompiles while preserving full semantic coverage.
+  PROFILE_SHARDS="1"
+fi
+if [[ ! "$PROFILE_SHARDS" =~ ^[0-9]+$ || "$PROFILE_SHARDS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PROFILE_SHARDS must be a positive integer" >&2
   exit 2
 fi
 
@@ -368,6 +384,10 @@ case "$PROFILE" in
     ;;
 esac
 
+if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
+  PROFILE_GATES+=("bash scripts/check_gpu_compute_device_conformance.sh")
+fi
+
 if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   COMMON_GATES=("$TEST_GATE_OVERRIDE")
   PROFILE_GATES=()
@@ -378,7 +398,7 @@ if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
 fi
 
 if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#PROFILE_GATES[@]} profile gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
+  echo "upgrade-plan-health: running ${#PROFILE_GATES[@]} profile gates (profile=${PROFILE}, shards=${PROFILE_SHARDS})"
 fi
 
 start_ms="$(now_ms)"
@@ -386,7 +406,7 @@ if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
   run_gate_commands "common" "$HEALTH_SHARDS" "${COMMON_GATES[@]}"
 fi
 if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "profile:${PROFILE}" "$HEALTH_SHARDS" "${PROFILE_GATES[@]}"
+  run_gate_commands "profile:${PROFILE}" "$PROFILE_SHARDS" "${PROFILE_GATES[@]}"
 fi
 end_ms="$(now_ms)"
 elapsed_ms=$((end_ms - start_ms))

@@ -1,0 +1,17 @@
+allow = [
+  "io/net::http-request",
+  "sys/process::exec",
+]
+
+[op."io/net::http-request"]
+base_dir = "."
+url_allow = ["https://example.test/"]
+allow_http = false
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."sys/process::exec"]
+base_dir = "."
+allow_programs = ["echo"]
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096

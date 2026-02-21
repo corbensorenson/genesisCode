@@ -1,0 +1,14 @@
+name = "agent_long_running_gfx_loop_workflow"
+version = "0.1.0"
+caps_policy = "caps.toml"
+dependencies = []
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::capabilities-declared",
+    "core/obligation::replayable-tests",
+]
+tests = ["pkg/agent_gfx_loop::tests"]
+
+[[modules]]
+hash = "0d0c6b225dc8ff0e63d0b1d33165cdd69ccfb2dd196ed0215c9f85811b1da02a"
+path = "loop.gc"

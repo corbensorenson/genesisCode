@@ -2,19 +2,25 @@ version = 1
 
 modules = [
   "00_core.gc",
+  "00_core_system_ops.gc",
   "00_core_reachability.gc",
   "10_gfx.gc",
+  "10_gfx_ui_runtime.gc",
   "10_gfx_runtime_trace.gc",
   "11_gpu_compute.gc",
+  "20_editor_lint.gc",
   "20_editor.gc",
   "20_editor_agent_pkg.gc",
 ]
 
 [deps]
 "00_core.gc" = []
-"00_core_reachability.gc" = ["00_core.gc"]
-"10_gfx.gc" = ["00_core.gc", "00_core_reachability.gc"]
-"10_gfx_runtime_trace.gc" = ["10_gfx.gc"]
-"11_gpu_compute.gc" = ["00_core.gc", "00_core_reachability.gc"]
-"20_editor.gc" = ["00_core.gc", "00_core_reachability.gc"]
-"20_editor_agent_pkg.gc" = ["20_editor.gc"]
+"00_core_system_ops.gc" = ["00_core.gc"]
+"00_core_reachability.gc" = ["00_core.gc", "00_core_system_ops.gc"]
+"10_gfx.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
+"10_gfx_ui_runtime.gc" = ["10_gfx.gc"]
+"10_gfx_runtime_trace.gc" = ["10_gfx.gc", "10_gfx_ui_runtime.gc"]
+"11_gpu_compute.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
+"20_editor_lint.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
+"20_editor.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_lint.gc"]
+"20_editor_agent_pkg.gc" = ["20_editor.gc", "20_editor_lint.gc"]

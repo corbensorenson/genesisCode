@@ -1,0 +1,52 @@
+{
+  :entries
+    [
+      {
+        :cap {:op io/net::http-request}
+        :cont-h b"BC2\xD36Y\xA8\xEFg\xF0\x9E\xCD`.|\x18\xD4bFHu\xA8\xE0\xB0\xA4\x0B\x88\xE2\xEDx+*"
+        :decision :allow
+        :i 0
+        :op io/net::http-request
+        :payload-h
+          b"QZ\xE5\xE3\xDD\xD4\xA3\x1E\xB1jUb\xE9\xCA\x87\x85q\x86\x7FD\xFFxa\x82\x00\xC9\x86\xED\xC7\x91\x07\xA3"
+        :req-h
+          b"\xE6\xC3b\xC4@\x07\xEDM\x87\x16t\x97\xC6g\x8B$+\xF4k}9\x1C\xDE\xB8\xC9\xEE\x95\x05\xD08\xB4\x8E"
+        :resp
+          {
+            :kind :error
+            :value
+              {
+                :error/code "net/bridge-path"
+                :error/context {:op io/net::http-request :subsystem "effects"}
+                :error/message
+                  "log parse error: read path invalid `/Users/corbensorenson/Documents/genesisCode/tools/host_bridge.sh`: No such file or directory (os error 2)"
+                :error/op io/net::http-request}}
+        :resp-h
+          b"\x8B\xF3\xA6lJ\xFC\xEF\"\xA7\xF2\xE3\xD1\xE4\xB3\x82(\xC7`\xB6mGX\xD9x\xBDFH)\xE21y\xDC"}
+      {
+        :cap {:op sys/process::exec}
+        :cont-h
+          b"\xF1\xDD\x96ul\xE51\xADx\xEE{\xC2l\t\xF1\x12B\xBA\x95\r1\x07|r\x86\xEArM\xAC\xBF\x1EK"
+        :decision :allow
+        :i 1
+        :op sys/process::exec
+        :payload-h
+          b"Z\xEBP\xE3\xA7\xAF\xEE\xDD>\x16\xF1&?\xAA\xD3-\xBA\xF1\x02\xBB\xF5\xF7\xD0!i:\x81}5\xA8\xEA\xFF"
+        :req-h
+          b"h\x85\xCD\xED\x922\x8D\x98\r\xDD\x19\xB3\xE62\xCEv\xDD#\x89\x00*\r\x1A\x9F\xFF\x9D\x82\xB4\xB7\xEF\xE6\xD2"
+        :resp
+          {
+            :kind :error
+            :value
+              {
+                :error/code "process/bridge-path"
+                :error/context {:op sys/process::exec :subsystem "effects"}
+                :error/message
+                  "log parse error: read path invalid `/Users/corbensorenson/Documents/genesisCode/tools/host_bridge.sh`: No such file or directory (os error 2)"
+                :error/op sys/process::exec}}
+        :resp-h
+          b"\t\x91\x97'q\xB7W1\xC4_\x81\x1F\xCF\xCBj\xD4\xB6\xCD\xEEh%[t;\x8B\xA9\xAF/\x8F}\xBE\xD3"}]
+  :program-hash
+    b"z\xE9\"?\x00\x18V]\xDD\xA8^\xB9\xE3Lc\x00\x8DT\x8D^\xCE\xD4\x1B\xEF\xEA\xE0\x06\xE1\x16e+J"
+  :toolchain "genesis/0.1.0 (native)"
+  :version 3}

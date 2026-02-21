@@ -54,6 +54,12 @@ bench_mode = str(doc.get("bench_mode", ""))
 gpu_compute_backend_raw = str(doc.get("gpu_compute_backend", "unknown"))
 gpu_compute_backend = normalize_backend(gpu_compute_backend_raw)
 gpu_compute_backend_policy = str(doc.get("gpu_compute_backend_policy", "unknown"))
+gpu_compute_adapter_raw = doc.get("gpu_compute_adapter")
+gpu_compute_adapter = None
+if isinstance(gpu_compute_adapter_raw, str):
+    trimmed = gpu_compute_adapter_raw.strip()
+    if trimmed:
+        gpu_compute_adapter = trimmed
 required_backend_normalized = normalize_backend(required_backend) if required_backend else ""
 metrics = doc.get("metrics")
 budgets = doc.get("budgets")
@@ -108,6 +114,7 @@ summary = {
     "gpu_compute_backend": gpu_compute_backend,
     "gpu_compute_backend_raw": gpu_compute_backend_raw,
     "gpu_compute_backend_policy": gpu_compute_backend_policy,
+    "gpu_compute_adapter": gpu_compute_adapter,
     "required_backend": required_backend_normalized or None,
     "required_backend_raw": required_backend or None,
     "gpu_compute_submit_ms": gpu_metric,

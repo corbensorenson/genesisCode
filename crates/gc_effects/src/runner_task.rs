@@ -7,10 +7,14 @@ use std::time::Duration;
 use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
 
 use crate::policy::CapsPolicy;
 use crate::runner_task_exec::execute_task_payload;
+#[path = "runner_task_terms.rs"]
+mod runner_task_terms;
+use runner_task_terms::{
+    map_field, map_field_int_u64, map_field_str_or_symbol, task_map, value_data_map_field,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct TaskScheduleEvent {
@@ -875,15 +879,6 @@ fn task_worker_budget(policy: &CapsPolicy) -> u64 {
     }
 }
 
-fn task_map<const N: usize>(pairs: [(&str, Term); N]) -> Term {
-    Term::Map(
-        pairs
-            .into_iter()
-            .map(|(k, v)| (TermOrdKey(Term::symbol(k)), v))
-            .collect(),
-    )
-}
-
 fn task_target_id(op: &str, payload: &Term, resp_val: &Value) -> Option<String> {
     match op {
         "core/task::spawn" | "editor/task::spawn" => value_data_map_field(resp_val, ":task-id"),
@@ -943,39 +938,6 @@ fn task_limit_error(
 
 fn is_task_like_op(op: &str) -> bool {
     op.starts_with("core/task::") || op.starts_with("editor/task::")
-}
-
-fn map_field<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
-    let Term::Map(m) = t else {
-        return None;
-    };
-    m.get(&TermOrdKey(Term::symbol(key)))
-}
-
-fn map_field_str_or_symbol(t: &Term, key: &str) -> Option<String> {
-    match map_field(t, key) {
-        Some(Term::Str(s)) => Some(s.clone()),
-        Some(Term::Symbol(s)) => Some(s.clone()),
-        _ => None,
-    }
-}
-
-fn map_field_int_u64(t: &Term, key: &str) -> Option<u64> {
-    match map_field(t, key) {
-        Some(Term::Int(i)) if i.sign() != num_bigint::Sign::Minus => i.to_u64(),
-        _ => None,
-    }
-}
-
-fn value_data_map_field(v: &Value, key: &str) -> Option<String> {
-    let Value::Data(Term::Map(m)) = v else {
-        return None;
-    };
-    match m.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Str(s)) => Some(s.clone()),
-        Some(Term::Symbol(s)) => Some(s.clone()),
-        _ => None,
-    }
 }
 
 fn mk_error(error_tok: SealId, code: &str, msg: String, op: Option<&str>) -> Value {

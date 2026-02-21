@@ -28,6 +28,7 @@ Required fields:
 - `budgets.task_runner_ms`
 - `gpu_compute_backend` (`"deterministic-fallback"` or `"device-runtime"`)
 - `gpu_compute_backend_policy` (`"dev-allow-fallback"` or `"require-device"`)
+- `gpu_compute_adapter` (required in device-runtime conformance lanes)
 
 ## Output Artifact
 
@@ -81,7 +82,8 @@ Failure behavior:
 ## CI Integration
 
 `.github/workflows/ci.yml` runs `scripts/check_runtime_microbench_budgets.sh` on
-`standard` and `full` profiles and uploads `.genesis/perf/*.json` as artifacts.
+`standard` and `full` profiles, and runs `scripts/check_gpu_compute_device_conformance.sh`
+on the self-hosted GPU lane to produce adapter-scoped conformance artifacts.
 
 ## Device-Backed Compute Path
 

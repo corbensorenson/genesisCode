@@ -11,16 +11,16 @@ edits, review diffs, and semantic patching remain tractable.
 
 - Policy file: `policies/source_size_budget.toml`
 - Current budget:
-  - `rust_max_lines = 4700`
+  - `rust_max_lines = 2200`
   - `gc_max_lines = 1800`
 - Applies to:
   - `crates/**/*.rs`
-  - `prelude/modules/*.gc`
-  - `selfhost/*.gc`
+  - all `.gc` files resolved from `gc_source_roots` (default: `prelude/modules`, `selfhost`, `prelude/prelude.gc`)
 - Excludes:
   - paths containing `/tests/`, `/benches/`, `/examples/`
-  - generated `.gc` artifacts:
-    - `prelude/prelude.gc`
+  - generated `.gc` artifacts listed in `gc_generated_exclude_paths` (currently `prelude/prelude.gc`)
+  - runtime bootstrap uses build-time assembly from `prelude/modules/manifest.toml`; checked-in
+    assembled artifacts are compatibility outputs, not authoring roots.
 
 ## Enforcement
 

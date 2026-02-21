@@ -1,0 +1,32 @@
+(def ::meta
+  (quote
+    {
+      :caps [io/net::http-request sys/process::exec]
+      :exports [pkg/agent_network_process::tests]
+      :types {pkg/agent_network_process::tests ?}
+    }))
+
+(def pkg/agent_network_process::program
+  ((core/effect::bind
+     (core/effect::perform
+       (quote io/net::http-request)
+       {:url "https://example.test/health" :method "GET" :headers []}
+       (fn (x) (core/effect::pure x))))
+    (fn (http-resp)
+      ((core/effect::bind
+         (core/effect::perform
+           (quote sys/process::exec)
+           {:program "echo" :args ["pong"]}
+           (fn (x) (core/effect::pure x))))
+        (fn (proc-resp)
+          (core/effect::pure
+            {
+              :ok true
+              :http-status ((core/map::get http-resp) (quote :status))
+              :exit ((core/map::get proc-resp) (quote :exit))
+            }))))))
+
+(def pkg/agent_network_process::tests
+  {"network-process-roundtrip" {:body (fn (_) pkg/agent_network_process::program)}})
+
+pkg/agent_network_process::tests

@@ -1,0 +1,27 @@
+(def ::meta
+  (quote
+    {
+      :caps [gfx/time::frame-tick]
+      :exports [pkg/agent_gfx_loop::tests]
+      :types {pkg/agent_gfx_loop::tests ?}
+    }))
+
+(def pkg/agent_gfx_loop::step
+  (fn (n)
+    (fn (frames)
+      (if ((core/int::eq? n) 0)
+        (core/effect::pure {:ok true :frames frames})
+        ((core/effect::bind
+           (core/effect::perform
+             (quote gfx/time::frame-tick)
+             {:scope "agent-gfx-loop"}
+             (fn (x) (core/effect::pure x))))
+          (fn (_tick)
+            (((pkg/agent_gfx_loop::step ((core/int::sub n) 1)) ((core/int::add frames) 1)))))))))
+
+(def pkg/agent_gfx_loop::program ((pkg/agent_gfx_loop::step 64) 0))
+
+(def pkg/agent_gfx_loop::tests
+  {"long-running-gfx-loop" {:body (fn (_) pkg/agent_gfx_loop::program)}})
+
+pkg/agent_gfx_loop::tests

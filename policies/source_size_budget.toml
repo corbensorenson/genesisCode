@@ -11,11 +11,14 @@ rust_target_lines = 1600
 gc_max_lines = 1800
 gc_target_lines = 1200
 
+# Authoritative .gc source roots (files or directories; directories are scanned recursively).
+gc_source_roots = ["prelude/modules", "selfhost", "prelude/prelude.gc"]
+
 # Paths containing tests/bench fixtures are excluded from this production-code budget gate.
 exclude_substrings = ["/tests/", "/benches/", "/examples/"]
 
 # Explicit generated artifact carve-outs for .gc budget enforcement.
-gc_exclude_paths = ["prelude/prelude.gc"]
+gc_generated_exclude_paths = ["prelude/prelude.gc"]
 
 # Stage-rollout debt allowlists:
 # Files listed here are legacy over target and are tracked separately as debt.

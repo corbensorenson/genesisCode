@@ -330,6 +330,8 @@ jobs:
       GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
       GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
       GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_report.json"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
       GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
     steps:
@@ -345,15 +347,15 @@ jobs:
       - name: Device Bridge Replay Determinism (Feature Gate)
         run: cargo test -p gc_runtime_bench --features device-bridge --test device_bridge_replay --quiet
 
-      - name: Runtime Microbench Budgets (Device Bridge Required)
-        run: bash scripts/check_runtime_microbench_budgets.sh
+      - name: GPU Device Conformance Lane (Require Device Backend)
+        run: bash scripts/check_gpu_compute_device_conformance.sh
 
       - name: Upload GPU Perf Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: gpu-device-microbench-artifacts
+          name: gpu-device-conformance-artifacts
           path: |
-            .genesis/perf/runtime_microbench_metrics.json
-            .genesis/perf/concurrency_gpu_slo_report.json
+            .genesis/perf/gpu_device_conformance/
+            .genesis/perf/gpu_device_conformance_report.json
           if-no-files-found: warn

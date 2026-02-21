@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use gc_coreform::{canonicalize_module, hash_module, parse_module};
+use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module};
 use gc_effects::{CapsPolicy, run};
 use gc_kernel::{EvalCtx, compile_module, eval_compiled_module};
+use gc_kernel::Value;
 use gc_prelude::build_prelude;
 
 use crate::config::BenchConfig;
@@ -163,7 +164,25 @@ fn compute_bridge_policy(
     compute_bridge_policy_with_override(tmp_dir, None, backend_policy)
 }
 
-pub fn run_gpu_compute_submit(cfg: &BenchConfig) -> Result<(u128, String)> {
+fn extract_adapter_name(value: &Value) -> Option<String> {
+    let Value::Data(Term::Map(mm)) = value else {
+        return None;
+    };
+    let adapter = mm
+        .get(&TermOrdKey(Term::symbol(":adapter")))
+        .or_else(|| mm.get(&TermOrdKey(Term::Str(":adapter".to_string()))));
+    let Some(Term::Str(raw)) = adapter else {
+        return None;
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+pub fn run_gpu_compute_submit(cfg: &BenchConfig) -> Result<(u128, String, Option<String>)> {
     let src = r#"
 (def bench/prog
   (core/effect::perform
@@ -183,6 +202,7 @@ bench/prog
     let tmp = tempfile::tempdir().context("create gpu compute benchmark tempdir")?;
     let backend_policy = GpuComputeBackendPolicy::from_env(&cfg.gpu_compute_backend_policy)?;
     let (policy, backend) = compute_bridge_policy(tmp.path(), backend_policy)?;
+    let mut adapter: Option<String> = None;
 
     let elapsed_ms = best_of(cfg.warmups, cfg.repeats, || {
         let mut ctx = EvalCtx::with_step_limit(None);
@@ -190,7 +210,7 @@ bench/prog
         let mut env = prelude.env;
         let program = eval_compiled_module(&mut ctx, &mut env, &compiled)
             .context("eval gpu compute benchmark module")?;
-        let _ = run(
+        let run_out = run(
             &mut ctx,
             &policy,
             program,
@@ -198,14 +218,20 @@ bench/prog
             "runtime-bench".to_string(),
         )
         .context("run gpu compute benchmark effect program")?;
+        if adapter.is_none() {
+            adapter = extract_adapter_name(&run_out.value);
+        }
         Ok(())
     })?;
 
-    Ok((elapsed_ms, backend))
+    Ok((elapsed_ms, backend, adapter))
 }
 
 #[cfg(test)]
 mod tests {
+    use gc_coreform::{Term, TermOrdKey};
+    use gc_kernel::Value;
+
     use super::{
         GPU_COMPUTE_BACKEND_DEVICE_RUNTIME, GPU_COMPUTE_BACKEND_FALLBACK,
         GPU_COMPUTE_BACKEND_POLICY_DEV_ALLOW_FALLBACK, GPU_COMPUTE_BACKEND_POLICY_REQUIRE_DEVICE,
@@ -292,6 +318,35 @@ mod tests {
         assert!(
             GpuComputeBackendPolicy::from_env("unknown-policy").is_err(),
             "unknown policy should fail"
+        );
+    }
+
+    #[test]
+    fn extract_adapter_name_reads_symbol_and_string_keys() {
+        let adapter_value = Value::Data(Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":adapter")),
+                Term::Str("GPU Adapter 0".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        ));
+        assert_eq!(
+            super::extract_adapter_name(&adapter_value),
+            Some("GPU Adapter 0".to_string())
+        );
+
+        let adapter_string_key = Value::Data(Term::Map(
+            [(
+                TermOrdKey(Term::Str(":adapter".to_string())),
+                Term::Str("GPU Adapter 1".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        ));
+        assert_eq!(
+            super::extract_adapter_name(&adapter_string_key),
+            Some("GPU Adapter 1".to_string())
         );
     }
 }

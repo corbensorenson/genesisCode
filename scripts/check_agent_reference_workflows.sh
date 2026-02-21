@@ -18,8 +18,14 @@ GENESIS_BIN="$GENESIS_BIN" bash examples/agent_gpu_compute_workflow/workflow.sh
 echo "agent-reference-workflows: running interactive gfx+compute workflow"
 GENESIS_BIN="$GENESIS_BIN" bash examples/agent_interactive_gfx_compute_workflow/workflow.sh
 
+echo "agent-reference-workflows: running long-running gfx loop workflow"
+GENESIS_BIN="$GENESIS_BIN" bash examples/agent_long_running_gfx_loop_workflow/workflow.sh
+
 echo "agent-reference-workflows: running service workflow"
 GENESIS_BIN="$GENESIS_BIN" bash examples/agent_service_workflow/workflow.sh
+
+echo "agent-reference-workflows: running network+process workflow"
+GENESIS_BIN="$GENESIS_BIN" bash examples/agent_network_process_workflow/workflow.sh
 
 echo "agent-reference-workflows: running multi-package publish workflow"
 GENESIS_BIN="$GENESIS_BIN" bash examples/agent_multi_package_publish_workflow/workflow.sh

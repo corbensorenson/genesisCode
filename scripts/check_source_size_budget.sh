@@ -41,6 +41,46 @@ parse_array_tokens() {
   printf "%s\n" "$line" | grep -oE '"[^"]+"' | tr -d '"'
 }
 
+parse_gc_source_roots() {
+  local saw=0
+  local token
+  while IFS= read -r token; do
+    [[ -n "$token" ]] || continue
+    saw=1
+    printf "%s\n" "$token"
+  done < <(parse_array_tokens gc_source_roots || true)
+
+  if (( saw == 0 )); then
+    printf "%s\n" "prelude/modules"
+    printf "%s\n" "selfhost"
+    printf "%s\n" "prelude/prelude.gc"
+  fi
+}
+
+collect_gc_sources() {
+  local root_spec="$1"
+  local abs_root
+  if [[ "$root_spec" == /* ]]; then
+    abs_root="$root_spec"
+  else
+    abs_root="$ROOT_DIR/$root_spec"
+  fi
+
+  if [[ -f "$abs_root" ]]; then
+    if [[ "$abs_root" == *.gc ]]; then
+      printf "%s\n" "$abs_root"
+    fi
+    return 0
+  fi
+  if [[ -d "$abs_root" ]]; then
+    find "$abs_root" -type f -name '*.gc'
+    return 0
+  fi
+
+  echo "source-size-budget: configured gc_source_roots entry does not exist: $root_spec" >&2
+  exit 1
+}
+
 RUST_MAX_LINES="$(parse_positive_int rust_max_lines 1)"
 GC_MAX_LINES="$(parse_positive_int gc_max_lines 0)"
 RUST_TARGET_LINES="$(parse_positive_int rust_target_lines 0)"
@@ -51,10 +91,10 @@ while IFS= read -r token; do
   [[ -n "$token" ]] && EXCLUDES+=("$token")
 done < <(parse_array_tokens exclude_substrings || true)
 
-GC_EXCLUDE_PATHS=()
+GC_GENERATED_EXCLUDE_PATHS=()
 while IFS= read -r token; do
-  [[ -n "$token" ]] && GC_EXCLUDE_PATHS+=("$token")
-done < <(parse_array_tokens gc_exclude_paths || true)
+  [[ -n "$token" ]] && GC_GENERATED_EXCLUDE_PATHS+=("$token")
+done < <(parse_array_tokens gc_generated_exclude_paths || true)
 
 RUST_TARGET_EXCLUDE_PATHS=()
 while IFS= read -r token; do
@@ -90,11 +130,13 @@ TMP_COUNTS="$(mktemp)"
 TMP_GC_COUNTS="$(mktemp)"
 TMP_TARGET_DEBT_RUST="$(mktemp)"
 TMP_TARGET_DEBT_GC="$(mktemp)"
+TMP_GC_DISCOVERED="$(mktemp)"
 cleanup() {
   rm -f "$TMP_COUNTS"
   rm -f "$TMP_GC_COUNTS"
   rm -f "$TMP_TARGET_DEBT_RUST"
   rm -f "$TMP_TARGET_DEBT_GC"
+  rm -f "$TMP_GC_DISCOVERED"
 }
 trap cleanup EXIT
 
@@ -122,13 +164,19 @@ while IFS= read -r f; do
 done < <(list_rust_source_files)
 
 if [[ -n "$GC_MAX_LINES" ]]; then
+  while IFS= read -r root_spec; do
+    [[ -n "$root_spec" ]] || continue
+    collect_gc_sources "$root_spec" >> "$TMP_GC_DISCOVERED"
+  done < <(parse_gc_source_roots)
+  sort -u "$TMP_GC_DISCOVERED" -o "$TMP_GC_DISCOVERED"
+
   while IFS= read -r f; do
     [[ -n "$f" ]] || continue
     rel="${f#$ROOT_DIR/}"
     if contains_token_match "$rel" "${EXCLUDES[@]:-}"; then
       continue
     fi
-    if contains_token_match "$rel" "${GC_EXCLUDE_PATHS[@]:-}"; then
+    if contains_token_match "$rel" "${GC_GENERATED_EXCLUDE_PATHS[@]:-}"; then
       continue
     fi
 
@@ -146,7 +194,7 @@ if [[ -n "$GC_MAX_LINES" ]]; then
         violations=1
       fi
     fi
-  done < <(find "$ROOT_DIR/prelude/modules" "$ROOT_DIR/selfhost" -maxdepth 1 -type f -name '*.gc' | sort)
+  done < "$TMP_GC_DISCOVERED"
 fi
 
 echo "source-size-budget: policy=$POLICY_FILE rust_max_lines=$RUST_MAX_LINES gc_max_lines=${GC_MAX_LINES:-<disabled>} rust_target_lines=${RUST_TARGET_LINES:-<disabled>} gc_target_lines=${GC_TARGET_LINES:-<disabled>}"

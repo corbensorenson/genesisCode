@@ -40,10 +40,15 @@ The local default high-signal workflow is `changed-fast` with a hard 300000ms bu
 - Prepush strict loop: `scripts/check_upgrade_plan_health.sh --profile prepush-standard`
   - defaults to deterministic gate sharding (`GENESIS_HEALTH_SHARDS`) derived from host parallelism
     for non-release loops (2-way on small hosts, 4-way on larger hosts)
+  - defaults profile gates to serial execution (`GENESIS_HEALTH_PROFILE_SHARDS=1`) to reduce
+    cargo build-lock contention while preserving full gate coverage
   - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
     `.genesis/perf/upgrade_plan_health_profile_report.json`
-  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `720000`)
+  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `240000`)
     whenever health gates are enforced
+  - optional GPU device-conformance lane:
+    set `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1` to require
+    `scripts/check_gpu_compute_device_conformance.sh` in profile gates
 
 ## CI Profiles
 

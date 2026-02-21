@@ -45,20 +45,24 @@ fn ci_has_gpu_device_microbench_lane() {
         "gpu lane must target dedicated self-hosted gpu runners"
     );
     assert!(
-        ci.contains("GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: \"device-bridge\""),
-        "gpu lane must require device-bridge backend"
+        ci.contains("GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: \"device-runtime\""),
+        "gpu lane must require device-runtime backend"
     );
     assert!(
         ci.contains("GENESIS_RUNTIME_MICROBENCH_FEATURES: \"device-bridge\""),
         "gpu lane must compile runtime microbench with first-party device bridge feature"
     );
     assert!(
-        ci.contains("bash scripts/check_runtime_microbench_budgets.sh"),
-        "gpu lane must run runtime microbench budget checks"
+        ci.contains("bash scripts/check_gpu_compute_device_conformance.sh"),
+        "gpu lane must run dedicated gpu device conformance checks"
     );
     assert!(
         ci.contains("Device Bridge Replay Determinism (Feature Gate)"),
         "gpu lane must verify replay determinism for device bridge mode"
+    );
+    assert!(
+        ci.contains("gpu-device-conformance-artifacts"),
+        "gpu lane must upload adapter-aware device conformance artifacts"
     );
 }
 

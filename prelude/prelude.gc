@@ -486,6 +486,7 @@
               :task/args args
               :task/eval expr}))))))
 
+
 (def core/contract::call
   (fn (c) (fn (op) (fn (payload) ((core/contract::dispatch c) ((core/msg::make op) payload))))))
 
@@ -1904,6 +1905,59 @@
                   :z z
                   :px-size px-size}))))))))
 
+(def core/gfx/gpu::limits
+  (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
+
+(def core/gfx/gpu::features
+  (fn (_) ((core/caps::perform (quote gfx/gpu::features)) {})))
+
+(def core/gfx/window::create-surface
+  (fn (opts) ((core/caps::perform (quote gfx/window::create-surface)) {:opts opts})))
+
+(def core/gfx/window::resize-surface
+  (fn (surface)
+    (fn (width)
+      (fn (height)
+        ((core/caps::perform (quote gfx/window::resize-surface))
+          {
+            :height height
+            :surface surface
+            :width width})))))
+
+(def core/gfx/window::set-title
+  (fn (surface)
+    (fn (title)
+      ((core/caps::perform (quote gfx/window::set-title))
+        {
+          :surface surface
+          :title title}))))
+
+(def core/gfx/window::request-redraw
+  (fn (surface) ((core/caps::perform (quote gfx/window::request-redraw)) {:surface surface})))
+
+(def core/gfx/window::surface-info
+  (fn (surface) ((core/caps::perform (quote gfx/window::surface-info)) {:surface surface})))
+
+(def core/gfx/input::poll-events
+  (fn (surface) ((core/caps::perform (quote gfx/input::poll-events)) {:surface surface})))
+
+(def core/gfx/input::set-cursor-mode
+  (fn (surface)
+    (fn (mode)
+      ((core/caps::perform (quote gfx/input::set-cursor-mode))
+        {
+          :mode mode
+          :surface surface}))))
+
+(def core/gfx/time::frame-tick
+  (fn (surface) ((core/caps::perform (quote gfx/time::frame-tick)) {:surface surface})))
+
+(def core/gfx/audio::enqueue
+  (fn (event) ((core/caps::perform (quote gfx/audio::enqueue)) {:event event})))
+
+(def core/gfx/audio::set-master
+  (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))
+
 (def core/gfx/ui::node
   (fn (kind)
     (fn (id)
@@ -2520,59 +2574,6 @@
       (fn (pipeline-id)
         (((core/gfx/runtime::plan-frame-2d-batched ((core/map::get scene) (quote :draws))) label) pipeline-id)))))
 
-(def core/gfx/gpu::limits
-  (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
-
-(def core/gfx/gpu::features
-  (fn (_) ((core/caps::perform (quote gfx/gpu::features)) {})))
-
-(def core/gfx/window::create-surface
-  (fn (opts) ((core/caps::perform (quote gfx/window::create-surface)) {:opts opts})))
-
-(def core/gfx/window::resize-surface
-  (fn (surface)
-    (fn (width)
-      (fn (height)
-        ((core/caps::perform (quote gfx/window::resize-surface))
-          {
-            :height height
-            :surface surface
-            :width width})))))
-
-(def core/gfx/window::set-title
-  (fn (surface)
-    (fn (title)
-      ((core/caps::perform (quote gfx/window::set-title))
-        {
-          :surface surface
-          :title title}))))
-
-(def core/gfx/window::request-redraw
-  (fn (surface) ((core/caps::perform (quote gfx/window::request-redraw)) {:surface surface})))
-
-(def core/gfx/window::surface-info
-  (fn (surface) ((core/caps::perform (quote gfx/window::surface-info)) {:surface surface})))
-
-(def core/gfx/input::poll-events
-  (fn (surface) ((core/caps::perform (quote gfx/input::poll-events)) {:surface surface})))
-
-(def core/gfx/input::set-cursor-mode
-  (fn (surface)
-    (fn (mode)
-      ((core/caps::perform (quote gfx/input::set-cursor-mode))
-        {
-          :mode mode
-          :surface surface}))))
-
-(def core/gfx/time::frame-tick
-  (fn (surface) ((core/caps::perform (quote gfx/time::frame-tick)) {:surface surface})))
-
-(def core/gfx/audio::enqueue
-  (fn (event) ((core/caps::perform (quote gfx/audio::enqueue)) {:event event})))
-
-(def core/gfx/audio::set-master
-  (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))
-
 (def core/gfx/runtime::ui-count-children-loop
   (fn (children)
     (fn (i)
@@ -3130,62 +3131,6 @@
 (def core/gpu/compute::features
   (fn (_) ((core/caps::perform (quote gpu/compute::features)) {})))
 
-(def core/editor/clipboard::get (fn (_) ((core/caps::perform (quote editor/clipboard::get)) {})))
-
-(def core/editor/clipboard::set
-  (fn (mime)
-    (fn (data) ((core/caps::perform (quote editor/clipboard::set)) {:data data :mime mime}))))
-
-(def core/editor/dialog::open
-  (fn (title)
-    (fn (multi)
-      (fn (filters)
-        (fn (start-dir)
-          ((core/caps::perform (quote editor/dialog::open))
-            {
-              :filters filters
-              :multi multi
-              :start-dir start-dir
-              :title title}))))))
-
-(def core/editor/dialog::save
-  (fn (title)
-    (fn (default-name)
-      (fn (filters)
-        (fn (start-dir)
-          ((core/caps::perform (quote editor/dialog::save))
-            {
-              :default-name default-name
-              :filters filters
-              :start-dir start-dir
-              :title title}))))))
-
-(def core/editor/task::spawn
-  (fn (task-kind)
-    (fn (input)
-      (fn (budget-ms)
-        ((core/caps::perform (quote editor/task::spawn))
-          {
-            :budget-ms budget-ms
-            :input input
-            :task-kind task-kind})))))
-
-(def core/editor/task::poll
-  (fn (task-id) ((core/caps::perform (quote editor/task::poll)) {:task-id task-id})))
-
-(def core/editor/task::cancel
-  (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
-
-(def core/editor/watch::subscribe
-  (fn (root)
-    (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
-
-(def core/editor/watch::poll
-  (fn (watch-id) ((core/caps::perform (quote editor/watch::poll)) {:watch-id watch-id})))
-
-(def core/editor/watch::unsubscribe
-  (fn (watch-id) ((core/caps::perform (quote editor/watch::unsubscribe)) {:watch-id watch-id})))
-
 (def core/editor/lint::diag
   (fn (level)
     (fn (code)
@@ -3716,6 +3661,63 @@
             :kind (quote :editor/lint-panel)
             :ok false
             :warn-count 0})))))
+
+
+(def core/editor/clipboard::get (fn (_) ((core/caps::perform (quote editor/clipboard::get)) {})))
+
+(def core/editor/clipboard::set
+  (fn (mime)
+    (fn (data) ((core/caps::perform (quote editor/clipboard::set)) {:data data :mime mime}))))
+
+(def core/editor/dialog::open
+  (fn (title)
+    (fn (multi)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::open))
+            {
+              :filters filters
+              :multi multi
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/dialog::save
+  (fn (title)
+    (fn (default-name)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::save))
+            {
+              :default-name default-name
+              :filters filters
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/task::spawn
+  (fn (task-kind)
+    (fn (input)
+      (fn (budget-ms)
+        ((core/caps::perform (quote editor/task::spawn))
+          {
+            :budget-ms budget-ms
+            :input input
+            :task-kind task-kind})))))
+
+(def core/editor/task::poll
+  (fn (task-id) ((core/caps::perform (quote editor/task::poll)) {:task-id task-id})))
+
+(def core/editor/task::cancel
+  (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
+
+(def core/editor/watch::subscribe
+  (fn (root)
+    (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
+
+(def core/editor/watch::poll
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::poll)) {:watch-id watch-id})))
+
+(def core/editor/watch::unsubscribe
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::unsubscribe)) {:watch-id watch-id})))
 
 (def core/editor/vcs::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
 

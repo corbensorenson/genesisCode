@@ -27,12 +27,13 @@ fn main() -> Result<()> {
 
     let cfg = parse_config()?;
 
-    let (metrics, gpu_compute_backend) = match cfg.bench_mode {
+    let (metrics, gpu_compute_backend, gpu_compute_adapter) = match cfg.bench_mode {
         BenchMode::Full => {
             let eval_ms = bench_eval(&cfg)?;
             let runner_ms = run_effect_runner(&cfg)?;
             let bridge_runner_ms = run_bridge_runner(&cfg)?;
-            let (gpu_compute_submit_ms, gpu_compute_backend) = run_gpu_compute_submit(&cfg)?;
+            let (gpu_compute_submit_ms, gpu_compute_backend, gpu_compute_adapter) =
+                run_gpu_compute_submit(&cfg)?;
             let task_runner_ms = run_task_runner(&cfg)?;
             let patch_apply_ms = run_patch_apply(&cfg)?;
             let (store_cycle_ms, sync_pull_ms) = run_store_sync(&cfg)?;
@@ -49,10 +50,12 @@ fn main() -> Result<()> {
                     sync_pull_ms,
                 },
                 gpu_compute_backend,
+                gpu_compute_adapter,
             )
         }
         BenchMode::ComputeOnly => {
-            let (gpu_compute_submit_ms, gpu_compute_backend) = run_gpu_compute_submit(&cfg)?;
+            let (gpu_compute_submit_ms, gpu_compute_backend, gpu_compute_adapter) =
+                run_gpu_compute_submit(&cfg)?;
             (
                 Metrics {
                     eval_ms: 0,
@@ -65,6 +68,7 @@ fn main() -> Result<()> {
                     sync_pull_ms: 0,
                 },
                 gpu_compute_backend,
+                gpu_compute_adapter,
             )
         }
     };
@@ -77,6 +81,7 @@ fn main() -> Result<()> {
             warmups: cfg.warmups,
             repeats: cfg.repeats,
             gpu_compute_backend: gpu_compute_backend.clone(),
+            gpu_compute_adapter: gpu_compute_adapter.clone(),
         },
         cfg.budgets,
         metrics,
@@ -86,7 +91,7 @@ fn main() -> Result<()> {
 
     println!("runtime-microbench: wrote {}", cfg.out.display());
     println!(
-        "runtime-microbench: mode={} eval_ms={} runner_ms={} bridge_runner_ms={} gpu_compute_submit_ms={} task_runner_ms={} patch_apply_ms={} store_cycle_ms={} sync_pull_ms={} gpu_compute_backend={}",
+        "runtime-microbench: mode={} eval_ms={} runner_ms={} bridge_runner_ms={} gpu_compute_submit_ms={} task_runner_ms={} patch_apply_ms={} store_cycle_ms={} sync_pull_ms={} gpu_compute_backend={} gpu_compute_adapter={}",
         cfg.bench_mode.as_str(),
         metrics.eval_ms,
         metrics.runner_ms,
@@ -96,7 +101,8 @@ fn main() -> Result<()> {
         metrics.patch_apply_ms,
         metrics.store_cycle_ms,
         metrics.sync_pull_ms,
-        gpu_compute_backend
+        gpu_compute_backend,
+        gpu_compute_adapter.as_deref().unwrap_or("unknown")
     );
     Ok(())
 }
