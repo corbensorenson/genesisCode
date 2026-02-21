@@ -61,8 +61,45 @@ fn ci_has_gpu_device_microbench_lane() {
         "gpu lane must verify replay determinism for device bridge mode"
     );
     assert!(
-        ci.contains("gpu-device-conformance-artifacts"),
+        ci.contains("gpu-device-conformance-artifacts-selfhosted-linux"),
         "gpu lane must upload adapter-aware device conformance artifacts"
+    );
+}
+
+#[test]
+fn ci_has_secondary_gpu_deterministic_lane_and_release_parity_gate() {
+    let root = repo_root();
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml"))
+        .expect("read .github/workflows/ci.yml");
+    assert!(
+        ci.contains("gpu_device_microbench_deterministic:"),
+        "ci workflow must define a deterministic independent gpu conformance lane"
+    );
+    assert!(
+        ci.contains("GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD: \"${{ github.workspace }}/scripts/gpu_device_runtime_deterministic.sh\""),
+        "deterministic gpu lane must use first-party deterministic runtime bridge command"
+    );
+    assert!(
+        ci.contains("gpu-device-conformance-artifacts-deterministic"),
+        "deterministic gpu lane must upload independent conformance artifacts"
+    );
+    assert!(
+        ci.contains("gpu_device_conformance_release_gate:"),
+        "ci workflow must define a release gpu conformance parity gate"
+    );
+    assert!(
+        ci.contains(
+            "needs:\n      - gpu_device_microbench\n      - gpu_device_microbench_deterministic"
+        ),
+        "release parity gate must depend on both conformance lanes"
+    );
+    assert!(
+        ci.contains("bash scripts/check_gpu_device_conformance_lane_parity.sh"),
+        "release parity gate must compare conformance artifacts for contract parity"
+    );
+    assert!(
+        ci.contains("gpu-device-conformance-lane-parity"),
+        "release parity gate must upload parity report artifact"
     );
 }
 
@@ -96,6 +133,14 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
         "ci workflow must run test execution profile matrix guard script"
     );
     assert!(
+        ci.contains("GPU Conformance Lane Matrix Guard"),
+        "ci workflow must enforce gpu conformance lane matrix guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_gpu_conformance_lane_matrix.sh"),
+        "ci workflow must run gpu conformance lane matrix guard script"
+    );
+    assert!(
         ci.contains("Fuzz + Differential Hardening Guard"),
         "ci workflow must enforce fuzz + differential hardening guard"
     );
@@ -118,6 +163,22 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
     assert!(
         ci.contains("bash scripts/check_genesiscode_authoring_skill.sh"),
         "ci workflow must run genesiscode authoring skill drift guard script"
+    );
+    assert!(
+        ci.contains("Agent Authoring Bundle Guard"),
+        "ci workflow must enforce agent authoring bundle drift/orphan guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_agent_authoring_bundle.sh"),
+        "ci workflow must run agent authoring bundle drift/orphan guard script"
+    );
+    assert!(
+        ci.contains("Domain Kit Workflow Guard"),
+        "ci workflow must enforce domain kit workflow migration guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_domain_kit_workflows.sh"),
+        "ci workflow must run domain kit workflow migration guard script"
     );
     assert!(
         ci.contains("env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request'"),

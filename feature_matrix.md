@@ -43,7 +43,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current main GenesisCode gaps are concentrated in non-`P0`/`P1` hardening and performance tuning lanes.
+- Current red-team backlog has no unresolved upgrade-plan items.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -52,10 +52,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.2` Iteration profile budgets still permit slow loops (`changed-fast` up to 5m, `full-cross-host` up to 20m).
-- `P1.3` Spec/doc surface is large (91 Markdown docs total; 70 in `docs/spec`) and needs stronger bundle-first consolidation.
-- `P2.1` High-level domain kits are limited; prelude breadth is still concentrated in core/gfx/editor layers.
-- `P2.2` Device-runtime GPU conformance is anchored to a single CI host class.
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
@@ -63,6 +60,7 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CONCURRENCY_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/DOMAIN_KITS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`

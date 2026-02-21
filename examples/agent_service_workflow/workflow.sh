@@ -161,11 +161,15 @@ fi
 g sync --caps "$CONSUMER/caps.toml" pull --remote "$REMOTE" --root "$commit_h" >/dev/null
 
 cat >"$CONSUMER/check_pull.gc" <<EOF
+(def service/manifest ((((core/kit/service::manifest-v1 "agent-service") "0.1.0") "check_pull") []))
+
 (def prog
-  (core/effect::perform
-    'core/store::has
-    {:hash "$commit_h"}
-    (fn (x) (core/effect::pure x))))
+  ((core/effect::bind (core/store::has "$commit_h"))
+    (fn (present)
+      (core/effect::pure
+        (((core/kit/service::status-v1 ((core/map::get service/manifest) (quote :name)))
+           present)
+          {:commit "$commit_h"})))))
 prog
 EOF
 

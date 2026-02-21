@@ -108,8 +108,14 @@ jobs:
       - name: Capability Indices Guard
         run: bash scripts/check_capability_indices.sh
 
+      - name: Agent Authoring Bundle Guard
+        run: bash scripts/check_agent_authoring_bundle.sh
+
       - name: GenesisCode Authoring Skill Guard
         run: bash scripts/check_genesiscode_authoring_skill.sh
+
+      - name: Domain Kit Workflow Guard
+        run: bash scripts/check_domain_kit_workflows.sh
 
       - name: Selfhost Refactor Guard
         run: bash scripts/check_selfhost_refactor_guard.sh
@@ -140,6 +146,9 @@ jobs:
 
       - name: Test Execution Profile Matrix Guard
         run: bash scripts/check_test_execution_profile_matrix.sh
+
+      - name: GPU Conformance Lane Matrix Guard
+        run: bash scripts/check_gpu_conformance_lane_matrix.sh
 
       - name: Source Size Budget Guard
         run: bash scripts/check_source_size_budget.sh
@@ -364,8 +373,80 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: gpu-device-conformance-artifacts
+          name: gpu-device-conformance-artifacts-selfhosted-linux
           path: |
             .genesis/perf/gpu_device_conformance/
             .genesis/perf/gpu_device_conformance_report.json
+          if-no-files-found: warn
+
+  gpu_device_microbench_deterministic:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_deterministic"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_deterministic_report.json"
+      GENESIS_GPU_DEVICE_CONFORMANCE_FEATURES: ""
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
+      GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD: "${{ github.workspace }}/scripts/gpu_device_runtime_deterministic.sh"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: GPU Device Conformance Lane (Deterministic Runner)
+        run: bash scripts/check_gpu_compute_device_conformance.sh
+
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-deterministic
+          path: |
+            .genesis/perf/gpu_device_conformance_deterministic/
+            .genesis/perf/gpu_device_conformance_deterministic_report.json
+          if-no-files-found: warn
+
+  gpu_device_conformance_release_gate:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full') }}
+    needs:
+      - gpu_device_microbench
+      - gpu_device_microbench_deterministic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Self-Hosted GPU Lane Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-selfhosted-linux
+          path: .genesis/perf/lane_a
+
+      - name: Download Deterministic GPU Lane Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-deterministic
+          path: .genesis/perf/lane_b
+
+      - name: GPU Device Conformance Lane Parity Gate
+        run: |
+          bash scripts/check_gpu_device_conformance_lane_parity.sh \
+            --lane-a .genesis/perf/lane_a/gpu_device_conformance_report.json \
+            --lane-b .genesis/perf/lane_b/gpu_device_conformance_deterministic_report.json \
+            --out .genesis/perf/gpu_device_lane_parity_report.json
+
+      - name: Upload GPU Lane Parity Artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-lane-parity
+          path: .genesis/perf/gpu_device_lane_parity_report.json
           if-no-files-found: warn

@@ -83,7 +83,10 @@ Failure behavior:
 
 `.github/workflows/ci.yml` runs `scripts/check_runtime_microbench_budgets.sh` on
 `standard` and `full` profiles, and runs `scripts/check_gpu_compute_device_conformance.sh`
-on the self-hosted GPU lane to produce adapter-scoped conformance artifacts.
+on both GPU conformance lanes (`gpu_device_microbench` + `gpu_device_microbench_deterministic`)
+to produce adapter-scoped conformance artifacts.
+Release profile runs additionally enforce lane parity with
+`scripts/check_gpu_device_conformance_lane_parity.sh`.
 `scripts/check_upgrade_plan_health.sh --profile release-full` also requires device
 conformance by default (fail-closed for release/full profile health gates).
 

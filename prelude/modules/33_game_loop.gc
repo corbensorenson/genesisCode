@@ -1,0 +1,36 @@
+(def core/kit/game::fixed-loop-v1
+  (fn (scope)
+    (fn (frames)
+      {
+        :schema (quote :core/kit/game-fixed-loop.v1)
+        :scope scope
+        :frames frames})))
+
+(def core/kit/game::frame-tick
+  (fn (scope)
+    (((core/effect::perform (quote gfx/time::frame-tick))
+      {:scope scope})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/kit/game::run-fixed-loop-step
+  (fn (scope)
+    (fn (remaining)
+      (fn (frames)
+        (if ((core/int::eq? remaining) 0)
+          (core/effect::pure
+            {
+              :schema (quote :core/kit/game-loop-result.v1)
+              :ok true
+              :frames frames
+              :scope scope})
+          ((core/effect::bind (core/kit/game::frame-tick scope))
+            (fn (_tick)
+              ((((core/kit/game::run-fixed-loop-step scope) ((core/int::sub remaining) 1))
+                ((core/int::add frames) 1))))))))))
+
+(def core/kit/game::run-fixed-loop
+  (fn (spec)
+    (((core/kit/game::run-fixed-loop-step
+       ((core/map::get spec) (quote :scope)))
+      ((core/map::get spec) (quote :frames)))
+      0)))

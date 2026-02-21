@@ -1,0 +1,49 @@
+(def core/kit/pipeline::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/pipeline::stage-v1
+  (fn (name)
+    (fn (run)
+      {
+        :schema (quote :core/kit/pipeline-stage.v1)
+        :name name
+        :run run})))
+
+(def core/kit/pipeline::spec-v1
+  (fn (name)
+    (fn (seed)
+      (fn (stages)
+        {
+          :schema (quote :core/kit/pipeline-spec.v1)
+          :name name
+          :seed seed
+          :stages stages}))))
+
+(def core/kit/pipeline::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/pipeline-invalid-spec") message))))
+
+(def core/kit/pipeline::run-stage
+  (fn (stage)
+    (fn (state)
+      (((core/map::get stage) (quote :run)) state))))
+
+(def core/kit/pipeline::run-loop
+  (fn (stages)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            (core/effect::pure state)
+            ((core/effect::bind ((core/kit/pipeline::run-stage ((core/vec::get stages) i)) state))
+              (fn (next-state)
+                ((((core/kit/pipeline::run-loop stages) n) ((core/int::add i) 1)) next-state)))))))))
+
+(def core/kit/pipeline::run-spec
+  (fn (spec)
+    (let ((stages ((core/map::get spec) (quote :stages))))
+      (if (core/kit/pipeline::vec? stages)
+        ((((core/kit/pipeline::run-loop stages) (core/vec::len stages)) 0)
+          ((core/map::get spec) (quote :seed)))
+        (core/kit/pipeline::invalid-spec "core/kit/pipeline::run-spec expects :stages vec")))))
+
+(def core/kit/pipeline::run core/kit/pipeline::run-spec)

@@ -8,7 +8,7 @@ BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH="${GENESIS_TEST_CHANGED_REPORT:-.genesis/perf/test_changed_fast_metrics.json}"
 HISTORY_PATH="${GENESIS_TEST_CHANGED_HISTORY:-.genesis/perf/test_changed_fast_history.jsonl}"
-BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-300000}" # 5 minutes
+BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-120000}" # 2 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
 STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
@@ -23,7 +23,7 @@ Options:
   --runner <name>      auto|cargo|nextest (default: auto)
   --report <path>      metrics report path (default: .genesis/perf/test_changed_fast_metrics.json)
   --history <path>     metrics history jsonl (default: .genesis/perf/test_changed_fast_history.jsonl)
-  --budget-ms <N>      max allowed elapsed ms for this run (default: 300000)
+  --budget-ms <N>      max allowed elapsed ms for this run (default: 120000)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
   --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
   --dry-run            print selected commands without executing

@@ -56,6 +56,11 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("selfhost/toolchain_manifest.gc")
     );
     assert_eq!(
+        json.pointer("/data/docs/agent_authoring_bundle")
+            .and_then(Value::as_str),
+        Some("docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md")
+    );
+    assert_eq!(
         json.pointer("/data/selfhost_symbol_index/loaded")
             .and_then(Value::as_bool),
         Some(true)

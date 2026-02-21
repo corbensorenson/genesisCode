@@ -1,0 +1,65 @@
+(def core/kit/network::http-step-v1
+  (fn (url)
+    (fn (method)
+      (fn (headers)
+        {
+          :schema (quote :core/kit/network-http-step.v1)
+          :url url
+          :method method
+          :headers headers}))))
+
+(def core/kit/network::process-step-v1
+  (fn (program)
+    (fn (args)
+      {
+        :schema (quote :core/kit/network-process-step.v1)
+        :program program
+        :args args})))
+
+(def core/kit/network::workflow-http-process-v1
+  (fn (name)
+    (fn (http-step)
+      (fn (process-step)
+        {
+          :schema (quote :core/kit/network-workflow.v1)
+          :name name
+          :http http-step
+          :process process-step}))))
+
+(def core/kit/network::http-request
+  (fn (url)
+    (fn (method)
+      (fn (headers)
+        (((core/effect::perform (quote io/net::http-request))
+          {:url url :method method :headers headers})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/kit/network::process-exec
+  (fn (program)
+    (fn (args)
+      (((core/effect::perform (quote sys/process::exec))
+        {:program program :args args})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/kit/network::run-http-process
+  (fn (workflow)
+    (let ((http ((core/map::get workflow) (quote :http))))
+      (let ((proc ((core/map::get workflow) (quote :process))))
+        ((core/effect::bind
+           ((((core/kit/network::http-request ((core/map::get http) (quote :url)))
+              ((core/map::get http) (quote :method)))
+             ((core/map::get http) (quote :headers))))
+          (fn (http-resp)
+            ((core/effect::bind
+               ((core/kit/network::process-exec
+                  ((core/map::get proc) (quote :program)))
+                 ((core/map::get proc) (quote :args))))
+              (fn (proc-resp)
+                (core/effect::pure
+                  {
+                    :schema (quote :core/kit/network-workflow-result.v1)
+                    :ok true
+                    :http-status ((core/map::get http-resp) (quote :status))
+                    :exit ((core/map::get proc-resp) (quote :exit))
+                    :network http-resp
+                    :process proc-resp}))))))))))

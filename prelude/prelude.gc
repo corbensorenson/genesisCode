@@ -4662,3 +4662,219 @@
           ((core/effect::map ((((core/sync::push remote) refs) roots) depth))
             (core/editor/pkg::status-panel-from-response (quote :editor/sync-push-panel))))))))
 
+(def core/kit/service::dependency-v1
+  (fn (name)
+    (fn (selector)
+      {
+        :schema (quote :core/kit/service-dependency.v1)
+        :name name
+        :selector selector})))
+
+(def core/kit/service::manifest-v1
+  (fn (name)
+    (fn (version)
+      (fn (entrypoint)
+        (fn (deps)
+          {
+            :schema (quote :core/kit/service-manifest.v1)
+            :name name
+            :version version
+            :entrypoint entrypoint
+            :deps deps})))))
+
+(def core/kit/service::step-v1
+  (fn (step-id)
+    (fn (kind)
+      (fn (payload)
+        {
+          :schema (quote :core/kit/service-step.v1)
+          :id step-id
+          :kind kind
+          :payload payload}))))
+
+(def core/kit/service::publish-step-v1
+  (fn (step-id)
+    (fn (remote)
+      (fn (refname)
+        (((core/kit/service::step-v1 step-id) (quote :publish))
+          {:remote remote :ref refname})))))
+
+(def core/kit/service::sync-step-v1
+  (fn (step-id)
+    (fn (remote)
+      (fn (root)
+        (((core/kit/service::step-v1 step-id) (quote :sync-pull))
+          {:remote remote :root root})))))
+
+(def core/kit/service::workflow-v1
+  (fn (service)
+    (fn (steps)
+      {
+        :schema (quote :core/kit/service-workflow.v1)
+        :service service
+        :steps steps})))
+
+(def core/kit/service::status-v1
+  (fn (service-name)
+    (fn (ok)
+      (fn (context)
+        {
+          :schema (quote :core/kit/service-status.v1)
+          :kind (quote :service-status)
+          :name service-name
+          :ok ok
+          :context context}))))
+
+(def core/kit/pipeline::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/pipeline::stage-v1
+  (fn (name)
+    (fn (run)
+      {
+        :schema (quote :core/kit/pipeline-stage.v1)
+        :name name
+        :run run})))
+
+(def core/kit/pipeline::spec-v1
+  (fn (name)
+    (fn (seed)
+      (fn (stages)
+        {
+          :schema (quote :core/kit/pipeline-spec.v1)
+          :name name
+          :seed seed
+          :stages stages}))))
+
+(def core/kit/pipeline::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/pipeline-invalid-spec") message))))
+
+(def core/kit/pipeline::run-stage
+  (fn (stage)
+    (fn (state)
+      (((core/map::get stage) (quote :run)) state))))
+
+(def core/kit/pipeline::run-loop
+  (fn (stages)
+    (fn (n)
+      (fn (i)
+        (fn (state)
+          (if ((core/int::eq? i) n)
+            (core/effect::pure state)
+            ((core/effect::bind ((core/kit/pipeline::run-stage ((core/vec::get stages) i)) state))
+              (fn (next-state)
+                ((((core/kit/pipeline::run-loop stages) n) ((core/int::add i) 1)) next-state)))))))))
+
+(def core/kit/pipeline::run-spec
+  (fn (spec)
+    (let ((stages ((core/map::get spec) (quote :stages))))
+      (if (core/kit/pipeline::vec? stages)
+        ((((core/kit/pipeline::run-loop stages) (core/vec::len stages)) 0)
+          ((core/map::get spec) (quote :seed)))
+        (core/kit/pipeline::invalid-spec "core/kit/pipeline::run-spec expects :stages vec")))))
+
+(def core/kit/pipeline::run core/kit/pipeline::run-spec)
+
+(def core/kit/network::http-step-v1
+  (fn (url)
+    (fn (method)
+      (fn (headers)
+        {
+          :schema (quote :core/kit/network-http-step.v1)
+          :url url
+          :method method
+          :headers headers}))))
+
+(def core/kit/network::process-step-v1
+  (fn (program)
+    (fn (args)
+      {
+        :schema (quote :core/kit/network-process-step.v1)
+        :program program
+        :args args})))
+
+(def core/kit/network::workflow-http-process-v1
+  (fn (name)
+    (fn (http-step)
+      (fn (process-step)
+        {
+          :schema (quote :core/kit/network-workflow.v1)
+          :name name
+          :http http-step
+          :process process-step}))))
+
+(def core/kit/network::http-request
+  (fn (url)
+    (fn (method)
+      (fn (headers)
+        (((core/effect::perform (quote io/net::http-request))
+          {:url url :method method :headers headers})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/kit/network::process-exec
+  (fn (program)
+    (fn (args)
+      (((core/effect::perform (quote sys/process::exec))
+        {:program program :args args})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/kit/network::run-http-process
+  (fn (workflow)
+    (let ((http ((core/map::get workflow) (quote :http))))
+      (let ((proc ((core/map::get workflow) (quote :process))))
+        ((core/effect::bind
+           ((((core/kit/network::http-request ((core/map::get http) (quote :url)))
+              ((core/map::get http) (quote :method)))
+             ((core/map::get http) (quote :headers))))
+          (fn (http-resp)
+            ((core/effect::bind
+               ((core/kit/network::process-exec
+                  ((core/map::get proc) (quote :program)))
+                 ((core/map::get proc) (quote :args))))
+              (fn (proc-resp)
+                (core/effect::pure
+                  {
+                    :schema (quote :core/kit/network-workflow-result.v1)
+                    :ok true
+                    :http-status ((core/map::get http-resp) (quote :status))
+                    :exit ((core/map::get proc-resp) (quote :exit))
+                    :network http-resp
+                    :process proc-resp}))))))))))
+
+(def core/kit/game::fixed-loop-v1
+  (fn (scope)
+    (fn (frames)
+      {
+        :schema (quote :core/kit/game-fixed-loop.v1)
+        :scope scope
+        :frames frames})))
+
+(def core/kit/game::frame-tick
+  (fn (scope)
+    (((core/effect::perform (quote gfx/time::frame-tick))
+      {:scope scope})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/kit/game::run-fixed-loop-step
+  (fn (scope)
+    (fn (remaining)
+      (fn (frames)
+        (if ((core/int::eq? remaining) 0)
+          (core/effect::pure
+            {
+              :schema (quote :core/kit/game-loop-result.v1)
+              :ok true
+              :frames frames
+              :scope scope})
+          ((core/effect::bind (core/kit/game::frame-tick scope))
+            (fn (_tick)
+              ((((core/kit/game::run-fixed-loop-step scope) ((core/int::sub remaining) 1))
+                ((core/int::add frames) 1))))))))))
+
+(def core/kit/game::run-fixed-loop
+  (fn (spec)
+    (((core/kit/game::run-fixed-loop-step
+       ((core/map::get spec) (quote :scope)))
+      ((core/map::get spec) (quote :frames)))
+      0)))
+

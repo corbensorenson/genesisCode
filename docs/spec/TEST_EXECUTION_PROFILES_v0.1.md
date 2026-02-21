@@ -7,7 +7,7 @@ Deterministic test execution policy for local iteration and CI.
 
 ## Goals
 
-- Keep local high-signal feedback loops fast (`<=5m` default target).
+- Keep local high-signal feedback loops fast (`<=2m` default target).
 - Preserve full suite coverage in CI profiles.
 - Keep shard assignment deterministic across runs.
 
@@ -16,11 +16,11 @@ Deterministic test execution policy for local iteration and CI.
 | Profile | Primary command(s) | Runtime budget |
 |---|---|---|
 | `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
-| `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 300000` | `<= 5m` |
-| `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 15m` |
-| `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 20m` |
+| `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 120000` | `<= 2m` |
+| `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
+| `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 12m` |
 
-The local default high-signal workflow is `changed-fast` with a hard 300000ms budget.
+The local default high-signal workflow is `changed-fast` with a hard 120000ms budget.
 
 Strict/full profile runtime reports:
 - `strict-golden`
@@ -47,7 +47,7 @@ Strict/full profile runtime reports:
   - changed-file aware selection (or clean-tree fallback)
   - warms selfhost artifact cache when relevant paths change
   - emits deterministic metrics report `kind = genesis/test-changed-fast-metrics-v0.1`
-  - default hard budget: 300000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
+  - default hard budget: 120000ms (`GENESIS_TEST_CHANGED_BUDGET_MS`)
 - Alias wrapper: `scripts/test_fast.sh`
   - defaults to `scripts/test_changed_fast.sh`
   - pass `--full` to run the broad fast suite
@@ -100,10 +100,13 @@ Strict/full profile runtime reports:
     agent-capability gauntlet (`genesis/agent-capability-gauntlet-v0.1`) with
     required domain thresholds for service, network/process,
     package-publish/sync, graphics, and gpu/compute workflows.
+  - full release-profile workflows also require dual GPU conformance lanes
+    (`gpu_device_microbench` + `gpu_device_microbench_deterministic`) and
+    lane-contract parity via `scripts/check_gpu_device_conformance_lane_parity.sh`.
 - Iteration conformance check:
   - `scripts/check_default_iteration_workflow.sh` validates measurable fast-path execution and
     deterministic shard selection.
-  - default budget for changed-fast in this check is 300000ms (`GENESIS_BUDGET_CHANGED_FAST_MS`).
+  - default budget for changed-fast in this check is 120000ms (`GENESIS_BUDGET_CHANGED_FAST_MS`).
 
 ## Drift Guard
 
@@ -114,7 +117,7 @@ This guard enforces:
 - matrix rows for `smoke`, `changed-fast`, `strict-golden`, `full-cross-host`
 - explicit budget strings in this spec
 - CI step presence for each matrix lane
-- 300000ms default budget pin for local high-signal workflows
+- 120000ms default budget pin for local high-signal workflows
 - prepush strict loop budget/shard defaults (`GENESIS_HEALTH_PREPUSH_BUDGET_MS`,
   `GENESIS_HEALTH_SHARDS`) and profile report kind
 - strict/full measured runtime gate wiring:

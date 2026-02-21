@@ -1,20 +1,23 @@
-(def prog
-  ((core/effect::bind (((core/task::spawn "scope/workflow") "compile") {:job "compile"}))
-    (fn (spawn-resp)
-      (let ((tid ((core/map::get spawn-resp) (quote :task-id))))
-        ((core/effect::bind (core/task::await tid))
-          (fn (_awaited)
-            (core/effect::perform
-              'gpu/compute::submit
-              {
-                :graph {
-                  :passes [{
-                    :dispatch {:x 128 :y 1 :z 1}
-                    :kernel "bench/vecadd"
-                    :bindings [{:buffer "in-a"} {:buffer "in-b"} {:buffer "out"}]
-                  }]
-                }
-              }
-              (fn (resp) (core/effect::pure resp)))))))))
+(def pipeline/spec
+  (((core/kit/pipeline::spec-v1 "agent_gpu_compute_workflow") nil)
+    [
+      ((core/kit/pipeline::stage-v1 "compile")
+        (fn (_state)
+          ((core/effect::bind (((core/task::spawn "scope/workflow") "compile") {:job "compile"}))
+            (fn (spawn-resp)
+              (core/task::await ((core/map::get spawn-resp) (quote :task-id)))))))
+      ((core/kit/pipeline::stage-v1 "compute-submit")
+        (fn (_state)
+          (core/gpu/compute::submit
+            {
+              :passes [{
+                :dispatch {:x 128 :y 1 :z 1}
+                :kernel "bench/vecadd"
+                :bindings [{:buffer "in-a"} {:buffer "in-b"} {:buffer "out"}]
+              }]
+            })))
+    ])
+
+(def prog (core/kit/pipeline::run-spec pipeline/spec))
 
 prog

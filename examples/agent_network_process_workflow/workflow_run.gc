@@ -1,21 +1,8 @@
-(def prog
-  ((core/effect::bind
-     (core/effect::perform
-       (quote io/net::http-request)
-       {:url "https://example.test/health" :method "GET" :headers []}
-       (fn (x) (core/effect::pure x))))
-    (fn (http-resp)
-      ((core/effect::bind
-         (core/effect::perform
-           (quote sys/process::exec)
-           {:program "echo" :args ["pong"]}
-           (fn (x) (core/effect::pure x))))
-        (fn (proc-resp)
-          (core/effect::pure
-            {
-              :ok true
-              :http-status ((core/map::get http-resp) (quote :status))
-              :exit ((core/map::get proc-resp) (quote :exit))
-            }))))))
+(def workflow/spec
+  (((core/kit/network::workflow-http-process-v1 "agent_network_process_workflow")
+     (((core/kit/network::http-step-v1 "https://example.test/health") "GET") []))
+    ((core/kit/network::process-step-v1 "echo") ["pong"]))
+
+(def prog (core/kit/network::run-http-process workflow/spec))
 
 prog

@@ -1,0 +1,62 @@
+(def core/kit/service::dependency-v1
+  (fn (name)
+    (fn (selector)
+      {
+        :schema (quote :core/kit/service-dependency.v1)
+        :name name
+        :selector selector})))
+
+(def core/kit/service::manifest-v1
+  (fn (name)
+    (fn (version)
+      (fn (entrypoint)
+        (fn (deps)
+          {
+            :schema (quote :core/kit/service-manifest.v1)
+            :name name
+            :version version
+            :entrypoint entrypoint
+            :deps deps})))))
+
+(def core/kit/service::step-v1
+  (fn (step-id)
+    (fn (kind)
+      (fn (payload)
+        {
+          :schema (quote :core/kit/service-step.v1)
+          :id step-id
+          :kind kind
+          :payload payload}))))
+
+(def core/kit/service::publish-step-v1
+  (fn (step-id)
+    (fn (remote)
+      (fn (refname)
+        (((core/kit/service::step-v1 step-id) (quote :publish))
+          {:remote remote :ref refname})))))
+
+(def core/kit/service::sync-step-v1
+  (fn (step-id)
+    (fn (remote)
+      (fn (root)
+        (((core/kit/service::step-v1 step-id) (quote :sync-pull))
+          {:remote remote :root root})))))
+
+(def core/kit/service::workflow-v1
+  (fn (service)
+    (fn (steps)
+      {
+        :schema (quote :core/kit/service-workflow.v1)
+        :service service
+        :steps steps})))
+
+(def core/kit/service::status-v1
+  (fn (service-name)
+    (fn (ok)
+      (fn (context)
+        {
+          :schema (quote :core/kit/service-status.v1)
+          :kind (quote :service-status)
+          :name service-name
+          :ok ok
+          :context context}))))

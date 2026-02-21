@@ -8,5 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P1.2` Test/iteration profile budgets still allow high-latency loops for agent development (`changed-fast` 5m, `full-cross-host` 20m).
-- `P1.3` Documentation/spec retrieval surface remains large; bundle-first consolidation and orphan-guarding are incomplete.
+- None currently open.

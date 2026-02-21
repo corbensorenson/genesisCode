@@ -2,6 +2,9 @@
 
 Canonical authoring guidance for AI agents and contributors writing GenesisCode.
 
+Canonical retrieval bundle:
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+
 Primary source of truth:
 - `/Users/corbensorenson/Documents/genesisCode/.agents/skills/genesiscode-authoring/SKILL.md`
 

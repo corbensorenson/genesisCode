@@ -343,7 +343,9 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_agent_authoring_bundle.sh"
   "bash scripts/check_genesiscode_authoring_skill.sh"
+  "bash scripts/check_domain_kit_workflows.sh"
   "bash scripts/check_selfhost_refactor_guard.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"
@@ -358,6 +360,7 @@ COMMON_GATES=(
   "bash scripts/check_cli_diagnostics_contract.sh"
   "bash scripts/check_fuzz_differential_hardening.sh"
   "bash scripts/check_test_execution_profile_matrix.sh"
+  "bash scripts/check_gpu_conformance_lane_matrix.sh"
   "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
   "bash scripts/check_test_size_budget.sh"
@@ -398,6 +401,12 @@ esac
 
 if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
   PROFILE_GATES+=("bash scripts/check_gpu_compute_device_conformance.sh")
+  PROFILE_GATES+=(
+    "GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR=.genesis/perf/gpu_device_conformance_deterministic GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT=.genesis/perf/gpu_device_conformance_deterministic_report.json GENESIS_GPU_DEVICE_CONFORMANCE_FEATURES= GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device GENESIS_GPU_COMPUTE_DEVICE_RUNTIME_CMD=$ROOT_DIR/scripts/gpu_device_runtime_deterministic.sh GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND=device-runtime bash scripts/check_gpu_compute_device_conformance.sh"
+  )
+  PROFILE_GATES+=(
+    "bash scripts/check_gpu_device_conformance_lane_parity.sh --lane-a .genesis/perf/gpu_device_conformance_report.json --lane-b .genesis/perf/gpu_device_conformance_deterministic_report.json --out .genesis/perf/gpu_device_lane_parity_report.json"
+  )
 fi
 
 if [[ -n "$TEST_GATE_OVERRIDE" ]]; then

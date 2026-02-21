@@ -58,6 +58,8 @@ genesis --json agent-index
 - `reference_workflows`: vector of workflow descriptors
 - `missing_sources`: vector of unresolved source paths
 - `docs`: canonical doc pointer map
+  - includes `agent_authoring_bundle = "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"` as the
+    normative retrieval entrypoint for common authoring workflows.
 
 ## Determinism
 

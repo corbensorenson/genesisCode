@@ -74,8 +74,13 @@ CI enforces this profile in standard/full lanes before strict selfhost suites:
 
 - `.github/workflows/ci.yml` runs `bash scripts/check_gpu_compute_runtime_profile.sh`.
 - `.github/workflows/ci.yml` also runs `bash scripts/check_gpu_compute_device_conformance.sh`
-  in the dedicated `gpu_device_microbench` self-hosted GPU lane to enforce
-  `require-device` backend policy and persist adapter-specific artifacts.
+  in two independent lanes:
+  - `gpu_device_microbench` (`self-hosted, linux, x64, gpu`)
+  - `gpu_device_microbench_deterministic` (`ubuntu-latest` deterministic runtime command)
+  Both lanes enforce `require-device` backend policy and persist adapter-specific artifacts.
+- `.github/workflows/ci.yml` runs `bash scripts/check_gpu_device_conformance_lane_parity.sh`
+  in `gpu_device_conformance_release_gate` and fails release-profile runs when lane contracts
+  are unavailable or mismatched.
 - `scripts/check_upgrade_plan_health.sh` includes the same guard for prepush/release profiles.
   `release-full` requires device conformance by default; `dev-fast`/`prepush-standard`
   opt in with `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.

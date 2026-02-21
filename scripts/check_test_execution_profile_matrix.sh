@@ -46,10 +46,10 @@ require_doc_pattern '| `smoke` |'
 require_doc_pattern '| `changed-fast` |'
 require_doc_pattern '| `strict-golden` |'
 require_doc_pattern '| `full-cross-host` |'
-require_doc_pattern '`<= 5m`'
+require_doc_pattern '`<= 2m`'
 require_doc_pattern '`<= 3m`'
-require_doc_pattern '`<= 15m`'
-require_doc_pattern '`<= 20m`'
+require_doc_pattern '`<= 8m`'
+require_doc_pattern '`<= 12m`'
 require_doc_pattern 'scripts/check_upgrade_plan_health.sh --profile prepush-standard'
 require_doc_pattern 'genesis/upgrade-plan-health-profile-v0.1'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BUDGET_MS'
@@ -72,13 +72,23 @@ require_ci_pattern 'WASM Cross-Host Determinism (Native vs Node)'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate (PR Required)'
 
-if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-300000' "$CHANGED_FAST_SCRIPT"; then
-  echo "test-execution-profile-matrix: changed-fast default budget must remain 300000ms (5m)" >&2
+if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; then
+  echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_BUDGET_CHANGED_FAST_MS:-300000' "$DEFAULT_LOOP_SCRIPT"; then
-  echo "test-execution-profile-matrix: default iteration workflow budget must remain 300000ms (5m)" >&2
+if ! grep -Fq 'GENESIS_BUDGET_CHANGED_FAST_MS:-120000' "$DEFAULT_LOOP_SCRIPT"; then
+  echo "test-execution-profile-matrix: default iteration workflow budget must remain 120000ms (2m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_STRICT_GOLDEN_BUDGET_MS:-480000' "$STRICT_GOLDEN_SCRIPT"; then
+  echo "test-execution-profile-matrix: strict-golden default budget must remain 480000ms (8m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_FULL_CROSS_HOST_BUDGET_MS:-720000' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
+  echo "test-execution-profile-matrix: full-cross-host default budget must remain 720000ms (12m)" >&2
   exit 1
 fi
 
