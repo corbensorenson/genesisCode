@@ -6,6 +6,27 @@ Use this skill when implementing or modifying GenesisCode language/runtime/tooli
 
 Deliver deterministic, obligation-gated changes that move the system toward fully self-hosted GenesisCode workflows, minimizing Rust bootstrap dependence without sacrificing correctness.
 
+## Required references (must stay synchronized)
+
+- `docs/spec/CLI.md`
+- `docs/spec/CLI_SCHEMA_v0.1.md`
+- `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+- `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
+- `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`
+- `docs/spec/HOST_ABI_INDEX_v0.1.json`
+- `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
+- `docs/spec/SELF_HOST_BOUNDARY.md`
+- `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+- `upgrade_plan.md`
+
+## Required contract IDs (must stay present)
+
+- `genesis/cli-schema-v0.1`
+- `genesis/error-v0.2`
+- `genesis/pkg-lock-v0.1`
+- `genesis/pkg-update-v0.1`
+- `genesis/pkg-publish-v0.1`
+
 ## Ground rules (non-negotiable)
 
 - Kernel purity: never introduce ambient filesystem/time/network/LLM into evaluator semantics.

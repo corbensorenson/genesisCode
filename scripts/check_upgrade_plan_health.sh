@@ -343,6 +343,7 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_genesiscode_authoring_skill.sh"
   "bash scripts/check_selfhost_refactor_guard.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"

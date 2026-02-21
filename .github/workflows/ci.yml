@@ -108,6 +108,9 @@ jobs:
       - name: Capability Indices Guard
         run: bash scripts/check_capability_indices.sh
 
+      - name: GenesisCode Authoring Skill Guard
+        run: bash scripts/check_genesiscode_authoring_skill.sh
+
       - name: Selfhost Refactor Guard
         run: bash scripts/check_selfhost_refactor_guard.sh
 
@@ -231,7 +234,7 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/selfhost_strict_smoke.sh
 
-      - name: Agent Reference Workflow Smoke (Selfhost-Only)
+      - name: Agent Capability Gauntlet (Selfhost-Only)
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_agent_reference_workflows.sh
 

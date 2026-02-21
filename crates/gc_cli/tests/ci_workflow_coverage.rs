@@ -112,6 +112,14 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
         "ci workflow must run compute-only runtime profile guard script"
     );
     assert!(
+        ci.contains("GenesisCode Authoring Skill Guard"),
+        "ci workflow must enforce genesiscode authoring skill drift guard"
+    );
+    assert!(
+        ci.contains("bash scripts/check_genesiscode_authoring_skill.sh"),
+        "ci workflow must run genesiscode authoring skill drift guard script"
+    );
+    assert!(
         ci.contains("env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request'"),
         "full-profile strict-equivalence checks in test job must skip pull_request to avoid duplication with pr_strict_equivalence_gate"
     );

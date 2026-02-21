@@ -96,6 +96,10 @@ Strict/full profile runtime reports:
   - preserves existing strict/smoke/golden gates as separate steps
   - runs `scripts/check_ai_stress_suite.sh` to enforce deterministic high-throughput stress
     coverage for tasks + bridge + gpu/compute + replay integrity.
+  - runs `scripts/check_agent_reference_workflows.sh` as the scored
+    agent-capability gauntlet (`genesis/agent-capability-gauntlet-v0.1`) with
+    required domain thresholds for service, network/process,
+    package-publish/sync, graphics, and gpu/compute workflows.
 - Iteration conformance check:
   - `scripts/check_default_iteration_workflow.sh` validates measurable fast-path execution and
     deterministic shard selection.

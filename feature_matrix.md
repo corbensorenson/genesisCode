@@ -52,10 +52,8 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.1` Agent capability validation is smoke-oriented; a scored multi-domain gauntlet is not yet enforced.
 - `P1.2` Iteration profile budgets still permit slow loops (`changed-fast` up to 5m, `full-cross-host` up to 20m).
 - `P1.3` Spec/doc surface is large (91 Markdown docs total; 70 in `docs/spec`) and needs stronger bundle-first consolidation.
-- `P1.4` Agent authoring skill exists but lacks CI drift guards against evolving schemas/capability indices.
 - `P2.1` High-level domain kits are limited; prelude breadth is still concentrated in core/gfx/editor layers.
 - `P2.2` Device-runtime GPU conformance is anchored to a single CI host class.
 

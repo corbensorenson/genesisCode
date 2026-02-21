@@ -5,17 +5,9 @@ Last updated: 2026-02-21
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 6
+Open checklist items: 4
 
 ## Agent-First Productization Blockers
-
-- [ ] P1.1 Replace smoke-only reference workflows with a scored agent capability gauntlet.
-  - Why: “AI can build anything” requires breadth + depth validation, not just per-workflow success exits.
-  - Evidence:
-    - `scripts/check_agent_reference_workflows.sh` runs example workflows sequentially and succeeds on exit codes; it does not emit a scored capability report or enforce cross-domain minimums.
-  - Done when:
-    - add a deterministic gauntlet report artifact (e.g., `genesis/agent-capability-gauntlet-v0.1`) covering service, network/process, package publish/sync, graphics, and GPU compute scenarios;
-    - CI fails if any required domain falls below declared success/replay/perf thresholds.
 
 - [ ] P1.2 Tighten iteration SLOs for AI coding loops (current defaults remain too high).
   - Why: agent iteration speed degrades when default/high-signal loops are budgeted in multi-minute windows.
@@ -32,14 +24,6 @@ Open checklist items: 6
   - Done when:
     - publish a single normative agent authoring bundle entrypoint that supersedes split docs for common workflows;
     - add a drift/orphan guard that verifies every normative spec path is reachable from the bundle/index and legacy split docs are clearly marked.
-
-- [ ] P1.4 Add CI drift guards for the GenesisCode authoring skill used by coding agents.
-  - Why: AI-first authoring quality depends on keeping agent skill guidance synchronized with current schemas/capabilities.
-  - Evidence:
-    - authoring skill exists at `.agents/skills/genesiscode-authoring/SKILL.md`, but no guard script currently validates freshness or required links against active schema/capability indices.
-  - Done when:
-    - add a deterministic guard (script + test) that verifies required sections, required spec links, and capability/schema references in the skill file;
-    - wire guard into health/profile gates.
 
 ## Runtime + Language Breadth
 
