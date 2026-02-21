@@ -2,6 +2,7 @@ use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 const HOST_ABI_INDEX_PATH: &str = "docs/spec/HOST_ABI_INDEX_v0.1.json";
+const HOST_ABI_SCHEMA_INDEX_PATH: &str = "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json";
 const PRELUDE_CAP_INDEX_PATH: &str = "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json";
 const SELFHOST_TOOLCHAIN_MANIFEST_PATH: &str = "selfhost/toolchain_manifest.gc";
 const SELFHOST_SYMBOL_OWNERSHIP_SCHEMA: &str = "genesis/selfhost-symbol-ownership-index-v0.1";
@@ -15,6 +16,7 @@ struct SelfhostSymbolOwner {
 fn resolve_repo_root(start: &Path) -> PathBuf {
     for candidate in start.ancestors() {
         let has_indices = candidate.join(HOST_ABI_INDEX_PATH).is_file()
+            && candidate.join(HOST_ABI_SCHEMA_INDEX_PATH).is_file()
             && candidate.join(PRELUDE_CAP_INDEX_PATH).is_file();
         let has_examples = candidate.join("examples").is_dir();
         if has_indices && has_examples {
@@ -298,8 +300,10 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
     let repo_root = resolve_repo_root(&cwd);
 
     let host_abi_path = repo_root.join(HOST_ABI_INDEX_PATH);
+    let host_abi_schema_path = repo_root.join(HOST_ABI_SCHEMA_INDEX_PATH);
     let prelude_cap_path = repo_root.join(PRELUDE_CAP_INDEX_PATH);
     let host_abi_index = read_json_file(&host_abi_path);
+    let host_abi_schema_index = read_json_file(&host_abi_schema_path);
     let prelude_cap_index = read_json_file(&prelude_cap_path);
     let (selfhost_symbol_index, selfhost_missing_sources) =
         read_selfhost_symbol_ownership_index(&repo_root);
@@ -308,6 +312,9 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
     let mut missing_sources: Vec<String> = Vec::new();
     if host_abi_index.is_none() {
         missing_sources.push(HOST_ABI_INDEX_PATH.to_string());
+    }
+    if host_abi_schema_index.is_none() {
+        missing_sources.push(HOST_ABI_SCHEMA_INDEX_PATH.to_string());
     }
     if prelude_cap_index.is_none() {
         missing_sources.push(PRELUDE_CAP_INDEX_PATH.to_string());
@@ -330,6 +337,11 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                     "loaded": host_abi_index.is_some(),
                     "index": host_abi_index,
                 },
+                "host_abi_schema": {
+                    "path": HOST_ABI_SCHEMA_INDEX_PATH,
+                    "loaded": host_abi_schema_index.is_some(),
+                    "index": host_abi_schema_index,
+                },
                 "prelude_capabilities": {
                     "path": PRELUDE_CAP_INDEX_PATH,
                     "loaded": prelude_cap_index.is_some(),
@@ -349,6 +361,7 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 "cli": "docs/spec/CLI.md",
                 "schema_registry": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
                 "host_abi": "docs/spec/HOST_ABI.md",
+                "host_abi_schema": "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.md",
                 "foundation_stdlib": "docs/FOUNDATION_STDLIB_v0.2.md",
                 "agent_index": "docs/spec/AGENT_INDEX_v0.1.md",
                 "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",

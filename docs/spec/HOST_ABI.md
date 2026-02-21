@@ -33,7 +33,8 @@ Compatibility notes:
     (policy-gated UDP socket lifecycle + bridge-backed execution)
   - `io/net::ws-open`, `io/net::ws-send`, `io/net::ws-recv`, `io/net::ws-close`
     (policy-gated WebSocket stream lifecycle + bridge-backed execution)
-  - `sys/process::exec` (policy-gated program allowlist + bridge-backed execution)
+  - `sys/process::*` (`exec|spawn|wait|kill|stdin-write|stdout-read|stderr-read`,
+    policy-gated with program allowlists for launch ops and bridge-backed execution)
 - Explicit per-op bridge policy (`bridge_cmd`, `bridge_args`, or WASI bridge response
   profile) overrides first-party backends and uses bridge transport.
 - Bridge-mediated extension domains without first-party runtime:
@@ -159,7 +160,12 @@ Compatibility notes:
 - `gpu/compute::submit`
 - `gpu/compute::write-buffer`
 - `host/plugin::command`
+- `io/fs::list`
+- `io/fs::mkdir`
 - `io/fs::read`
+- `io/fs::remove`
+- `io/fs::rename`
+- `io/fs::stat`
 - `io/fs::write`
 - `io/net::dns-resolve`
 - `io/net::http-request`
@@ -176,6 +182,12 @@ Compatibility notes:
 - `io/net::ws-recv`
 - `io/net::ws-send`
 - `sys/process::exec`
+- `sys/process::kill`
+- `sys/process::spawn`
+- `sys/process::stderr-read`
+- `sys/process::stdin-write`
+- `sys/process::stdout-read`
+- `sys/process::wait`
 - `sys/time::now`
 <!-- HOST_ABI_OPS_END -->
 
@@ -186,6 +198,7 @@ CI must run `scripts/check_host_abi_conformance.sh`, which diffs this op list ag
 Machine-readable indices for agent planning:
 
 - `docs/spec/HOST_ABI_INDEX_v0.1.json` (derived from Rust dispatch sources)
+- `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json` (derived per-op payload/response contracts)
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json` (derived from prelude `core/caps::perform` wrappers)
 
 CI drift check:
@@ -246,6 +259,59 @@ CI drift check:
   - Required payload field: `:program` (string).
   - Policy-gated by per-op `allow_programs` allowlist.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::spawn`
+  - Required payload field: `:program` (string).
+  - Policy-gated by per-op `allow_programs` allowlist.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::wait`
+  - Required payload field: `:process-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::kill`
+  - Required payload field: `:process-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::stdin-write`
+  - Required payload fields: `:process-id` (string), `:data` (term; typically bytes/string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::stdout-read`
+  - Required payload field: `:process-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `sys/process::stderr-read`
+  - Required payload field: `:process-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+
+## Filesystem Capability Contracts
+
+- `io/fs::read`
+  - Required payload field: `:path` (string).
+  - Optional per-op policy controls: `base_dir`, `max_bytes`.
+  - Deterministic semantics: returns `bytes` data or sealed io/resource-limit errors; replay uses logged responses.
+- `io/fs::write`
+  - Required payload fields: `:path` (string), `:data` (bytes/string term).
+  - Optional per-op policy controls: `base_dir`, `create_dirs`.
+  - Deterministic semantics: returns `nil` on success; replay uses logged responses.
+- `io/fs::stat`
+  - Required payload field: `:path` (string).
+  - Optional per-op policy controls: `base_dir`.
+  - Response envelope: map with `:path`, `:exists`, `:kind`, `:len-bytes`, `:readonly`.
+- `io/fs::list`
+  - Required payload field: `:path` (string directory).
+  - Optional per-op policy controls: `base_dir`.
+  - Response envelope: vector of maps with `:name`, `:path`, `:kind`, `:len-bytes` sorted deterministically.
+- `io/fs::mkdir`
+  - Required payload field: `:path` (string).
+  - Optional payload field: `:parents` (bool, default `true`).
+  - Optional per-op policy controls: `base_dir`.
+  - Deterministic semantics: returns `nil` on success.
+- `io/fs::remove`
+  - Required payload field: `:path` (string).
+  - Optional payload field: `:recursive` (bool, default `false`).
+  - Optional per-op policy controls: `base_dir`.
+  - Deterministic semantics: returns `nil` on success; missing path is a no-op.
+- `io/fs::rename`
+  - Required payload fields: `:from` (string), `:to` (string).
+  - Optional payload field: `:overwrite` (bool, default `false`).
+  - Optional per-op policy controls: `base_dir`, `create_dirs`.
+  - Deterministic semantics: returns `nil` on success.
 
 Determinism:
 - Run-time responses for these ops are effect-logged as normal capability outcomes.

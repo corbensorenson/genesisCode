@@ -36,6 +36,10 @@ genesis --json agent-index
     - `path`: `"docs/spec/HOST_ABI_INDEX_v0.1.json"`
     - `loaded`: bool
     - `index`: JSON object or `null`
+  - `host_abi_schema`:
+    - `path`: `"docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json"`
+    - `loaded`: bool
+    - `index`: JSON object or `null`
   - `prelude_capabilities`:
     - `path`: `"docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json"`
     - `loaded`: bool

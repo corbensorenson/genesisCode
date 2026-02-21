@@ -138,14 +138,14 @@ Some ops may accept a per-op policy object. This is represented as a TOML table 
 
 Supported keys:
 - `base_dir` (string): base directory sandbox for `io/fs::*` ops. Paths must remain under this directory after canonicalization.
-- `create_dirs` (bool): if true, `io/fs::write` may create parent directories.
+- `create_dirs` (bool): if true, `io/fs::write` and `io/fs::rename` may create parent directories.
 - `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
 - `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
   - used by host-integrated ops such as `host/plugin::command`,
     `editor/plugin::command`,
     `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`, `gfx/gpu::*`,
-    `gpu/compute::*`, `io/net::http-request`, `io/net::ws-*`, and `sys/process::exec`.
+    `gpu/compute::*`, `io/net::http-request`, `io/net::ws-*`, and `sys/process::*`.
   - first-party runtime domains (canonical `gpu/compute::*`,
     `gfx/gpu::*`, `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`,
     `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`,
@@ -192,7 +192,7 @@ Supported keys:
 - `url_allow` (array of strings): URL prefix allowlist for `io/net::http-request` and `io/net::ws-open`.
 - `allow_http` (bool): if true, `http://` URLs are permitted for `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request` (default is false).
 - `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, `io/net::http-request`, and `io/net::ws-open`.
-- `allow_programs` (array<string>): required allowlist for `sys/process::exec` program names.
+- `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): optional command allowlist for `host/plugin::command` and `editor/plugin::command`.
 - `auth_token` (string): optional bearer token for remote auth.
@@ -309,7 +309,10 @@ For `core/gc-low::*`, paths may refer to files/directories that do not exist yet
 Notes on `timeout_ms`:
 - Timeouts are enforced by running the capability in a background thread and waiting for a result.
 - If the timeout elapses, the runner returns a sealed ERROR response with code `core/caps/timeout` and records it in the log.
-- Timeouts are rejected for mutating ops like `io/fs::write` (policy error), to avoid "timed out but side-effect happened" ambiguity.
+- Timeouts are rejected for mutating ops such as `io/fs::write`, `io/fs::mkdir`,
+  `io/fs::remove`, `io/fs::rename`, `sys/process::exec`, `sys/process::spawn`,
+  `sys/process::kill`, and `sys/process::stdin-write` (policy error), to avoid
+  "timed out but side-effect happened" ambiguity.
 - Bridge-backed ops also honor `timeout_ms`; timeout yields deterministic `<family>/bridge-timeout`.
 
 Bridge protocol:

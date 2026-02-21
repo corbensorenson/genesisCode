@@ -148,7 +148,12 @@
       "host/plugin::command"
     ],
     "io/fs": [
+      "io/fs::list",
+      "io/fs::mkdir",
       "io/fs::read",
+      "io/fs::remove",
+      "io/fs::rename",
+      "io/fs::stat",
       "io/fs::write"
     ],
     "io/net": [
@@ -168,7 +173,13 @@
       "io/net::ws-send"
     ],
     "sys/process": [
-      "sys/process::exec"
+      "sys/process::exec",
+      "sys/process::kill",
+      "sys/process::spawn",
+      "sys/process::stderr-read",
+      "sys/process::stdin-write",
+      "sys/process::stdout-read",
+      "sys/process::wait"
     ],
     "sys/time": [
       "sys/time::now"
@@ -290,7 +301,12 @@
     "gpu/compute::submit",
     "gpu/compute::write-buffer",
     "host/plugin::command",
+    "io/fs::list",
+    "io/fs::mkdir",
     "io/fs::read",
+    "io/fs::remove",
+    "io/fs::rename",
+    "io/fs::stat",
     "io/fs::write",
     "io/net::dns-resolve",
     "io/net::http-request",
@@ -307,6 +323,12 @@
     "io/net::ws-recv",
     "io/net::ws-send",
     "sys/process::exec",
+    "sys/process::kill",
+    "sys/process::spawn",
+    "sys/process::stderr-read",
+    "sys/process::stdin-write",
+    "sys/process::stdout-read",
+    "sys/process::wait",
     "sys/time::now"
   ]
 }

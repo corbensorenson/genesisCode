@@ -6,6 +6,7 @@
 Machine-readable host ABI index for agent planning lives at:
 
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI_INDEX_v0.1.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json`
 
 Generation + drift checks:
 
@@ -22,6 +23,19 @@ Top-level keys:
 - `generated_from` (`string[]` of Rust source paths)
 - `operations` (`string[]`, sorted unique)
 - `families` (`map<string, string[]>`, sorted keys and values)
+
+Schema index (`HOST_ABI_SCHEMA_INDEX_v0.1.json`) top-level keys:
+
+- `kind = "genesis/host-abi-schema-index-v0.1"`
+- `generated_from` (`string[]` of Rust/doc source paths)
+- `operations` (`map<string, schema-entry>`)
+  - `payload`:
+    - `type` (usually `"map"`)
+    - `required_fields` / `optional_fields` (`[{name,type,constraints?}]`)
+    - `constraints` (`string[]`)
+  - `response_envelope`:
+    - `success` (`value_kind`, `shape`)
+    - `error` (`sealed`, `code_field`, `code_prefix`)
 
 ## Canonical Family Examples
 
@@ -44,8 +58,10 @@ These examples define stable payload/response map shapes used by agent workflows
 
 - `io/fs::*`
   - `io/fs::read`
-  - payload: `{:path "relative/or/absolute" :limit-bytes <int>?}`
-  - response: `{:data <bytes> :path "<resolved>"}` (bounded by policy)
+  - payload: `{:path "relative/or/absolute"}`
+  - response: `<bytes>` (bounded by per-op `max_bytes` policy when configured)
+  - `io/fs::stat`
+  - response: `{:path <string> :exists <bool> :kind <symbol> :len-bytes <int> :readonly <bool>}`
 
 - `sys/time::now`
   - payload: `{}`

@@ -10,15 +10,8 @@ FULL_REPORT="${GENESIS_FULL_CROSS_HOST_PROFILE_REPORT:-.genesis/perf/full_cross_
 FULL_HISTORY="${GENESIS_FULL_CROSS_HOST_PROFILE_HISTORY:-.genesis/perf/full_cross_host_profile_history.jsonl}"
 FULL_BUDGET_MS="${GENESIS_FULL_CROSS_HOST_BUDGET_MS:-1200000}"
 FULL_MIN_HISTORY="${GENESIS_FULL_CROSS_HOST_MIN_HISTORY:-5}"
+WASM_BINDGEN_JS_PATH="${GENESIS_WASM_BINDGEN_NODE_JS:-target/wasm-bindgen/gc_wasm/gc_wasm.js}"
 
-[[ -f "$STRICT_REPORT" ]] || {
-  echo "full-cross-host-budget: missing strict-golden report: $STRICT_REPORT" >&2
-  exit 1
-}
-[[ -f "$WASM_REPORT" ]] || {
-  echo "full-cross-host-budget: missing wasm cross-host report: $WASM_REPORT" >&2
-  exit 1
-}
 [[ "$FULL_BUDGET_MS" =~ ^[0-9]+$ && "$FULL_BUDGET_MS" -gt 0 ]] || {
   echo "full-cross-host-budget: GENESIS_FULL_CROSS_HOST_BUDGET_MS must be a positive integer" >&2
   exit 2
@@ -27,6 +20,37 @@ FULL_MIN_HISTORY="${GENESIS_FULL_CROSS_HOST_MIN_HISTORY:-5}"
   echo "full-cross-host-budget: GENESIS_FULL_CROSS_HOST_MIN_HISTORY must be a positive integer" >&2
   exit 2
 }
+
+ensure_runtime_prerequisites() {
+  if [[ ! -f "$STRICT_REPORT" ]]; then
+    echo "full-cross-host-budget: strict-golden report missing; generating via scripts/selfhost_strict_golden.sh"
+    bash scripts/selfhost_strict_golden.sh
+  fi
+  if [[ ! -f "$STRICT_REPORT" ]]; then
+    echo "full-cross-host-budget: strict-golden report generation failed: $STRICT_REPORT" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$WASM_REPORT" ]]; then
+    echo "full-cross-host-budget: wasm cross-host report missing; generating bindgen + determinism report"
+    local bindgen_out
+    bindgen_out="$(bash scripts/wasm_bindgen_node.sh | tail -n 1)"
+    if [[ -n "$bindgen_out" && -f "$bindgen_out" ]]; then
+      WASM_BINDGEN_JS_PATH="$bindgen_out"
+    fi
+    if [[ ! -f "$WASM_BINDGEN_JS_PATH" ]]; then
+      echo "full-cross-host-budget: wasm-bindgen output missing at $WASM_BINDGEN_JS_PATH" >&2
+      exit 1
+    fi
+    node scripts/wasm_cross_host_determinism.mjs "$WASM_BINDGEN_JS_PATH"
+  fi
+  if [[ ! -f "$WASM_REPORT" ]]; then
+    echo "full-cross-host-budget: wasm cross-host report generation failed: $WASM_REPORT" >&2
+    exit 1
+  fi
+}
+
+ensure_runtime_prerequisites
 
 read -r STRICT_ELAPSED_MS WASM_ELAPSED_MS < <(
   python3 - "$STRICT_REPORT" "$WASM_REPORT" <<'PY'

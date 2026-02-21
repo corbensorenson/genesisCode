@@ -24,6 +24,8 @@ Legend:
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (`release-full` health profile + dedicated GPU conformance lane require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ⚠️ (`io/fs::read`, `io/fs::write` only today) | ✅ | ✅ | ✅ | ✅ |
+| Process lifecycle + stdio streaming primitives | ⚠️ (`sys/process::exec` only today) | ✅ | ✅ | ✅ | ✅ |
 | Raw socket/stream networking primitives | ✅ (`io/net::tcp-*`, `io/net::udp-*`, `io/net::dns-resolve`, `io/net::ws-*`, `io/net::http-request`) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Generic host extension/FFI capability ABI | ✅ (`host/plugin::command` + `editor/plugin::command` wrapper) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
@@ -50,7 +52,10 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates and qualification artifacts are in place; richer risk/coverage process mapping remains open).
 
 Known GenesisCode gaps (current red-team focus):
-- No active `P0`/`P1` items are currently open in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
+- `P1.1` Selfhost artifact bootstrap path is over perf budget; incremental/cached artifact build is required for fast agent loops.
+- `P1.2` Filesystem capabilities are incomplete for general project orchestration (`io/fs::read|write` only).
+- `P1.3` Process capabilities are incomplete for long-running agent workflows (`sys/process::exec` only).
+- `P1.4` Host ABI indices lack machine-readable per-op payload/response schemas for strict agent prompting.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

@@ -31,6 +31,11 @@ fn wasi_agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/HOST_ABI_INDEX_v0.1.json")
     );
     assert_eq!(
+        json.pointer("/data/capability_indices/host_abi_schema/path")
+            .and_then(Value::as_str),
+        Some("docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json")
+    );
+    assert_eq!(
         json.pointer("/data/selfhost_symbol_index/schema")
             .and_then(Value::as_str),
         Some("genesis/selfhost-symbol-ownership-index-v0.1")

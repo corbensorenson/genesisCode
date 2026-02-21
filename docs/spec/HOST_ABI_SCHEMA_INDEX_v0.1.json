@@ -1,0 +1,3486 @@
+{
+  "generated_from": [
+    "crates/gc_effects/src/runner_capability_dispatch.rs",
+    "crates/gc_effects/src/runner_task.rs",
+    "crates/gc_effects/src/runner_cap_pkg_low.rs",
+    "crates/gc_effects/src/runner_cap_vcs_low.rs",
+    "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+    "docs/spec/HOST_ABI.md"
+  ],
+  "kind": "genesis/host-abi-schema-index-v0.1",
+  "operations": {
+    "core/gc-low::pin": {
+      "operation": "core/gc-low::pin",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gc-low::plan": {
+      "operation": "core/gc-low::plan",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gc-low::purge": {
+      "operation": "core/gc-low::purge",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gc-low::run": {
+      "operation": "core/gc-low::run",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gc-low::unpin": {
+      "operation": "core/gc-low::unpin",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gpk-low::export": {
+      "operation": "core/gpk-low::export",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/gpk-low::import": {
+      "operation": "core/gpk-low::import",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::add": {
+      "operation": "core/pkg-low::add",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::info": {
+      "operation": "core/pkg-low::info",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::init": {
+      "operation": "core/pkg-low::init",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::install": {
+      "operation": "core/pkg-low::install",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::list": {
+      "operation": "core/pkg-low::list",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::load-lock": {
+      "operation": "core/pkg-low::load-lock",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::load-package": {
+      "operation": "core/pkg-low::load-package",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::lock": {
+      "operation": "core/pkg-low::lock",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::publish": {
+      "operation": "core/pkg-low::publish",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::save-lock": {
+      "operation": "core/pkg-low::save-lock",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::snapshot": {
+      "operation": "core/pkg-low::snapshot",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::update": {
+      "operation": "core/pkg-low::update",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/pkg-low::verify": {
+      "operation": "core/pkg-low::verify",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/refs::delete": {
+      "operation": "core/refs::delete",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/refs::get": {
+      "operation": "core/refs::get",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":name",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/refs::list": {
+      "operation": "core/refs::list",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/refs::set": {
+      "operation": "core/refs::set",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":policy",
+            "type": "hex64"
+          },
+          {
+            "name": ":expected-old",
+            "type": "hex64|nil"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":name",
+            "type": "string"
+          },
+          {
+            "name": ":hash",
+            "type": "hex64"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/store::get": {
+      "operation": "core/store::get",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":hash",
+            "type": "hex64"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:artifact term}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/store::has": {
+      "operation": "core/store::has",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":hash",
+            "type": "hex64"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:present bool}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/store::put": {
+      "operation": "core/store::put",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":artifact",
+            "type": "term"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:hash hex64}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/store::verify": {
+      "operation": "core/store::verify",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/sync::pull": {
+      "operation": "core/sync::pull",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/sync::push": {
+      "operation": "core/sync::push",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::await": {
+      "operation": "core/task::await",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::cancel": {
+      "operation": "core/task::cancel",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::channel-close": {
+      "operation": "core/task::channel-close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::channel-open": {
+      "operation": "core/task::channel-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::channel-recv": {
+      "operation": "core/task::channel-recv",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::channel-send": {
+      "operation": "core/task::channel-send",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::channel-status": {
+      "operation": "core/task::channel-status",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::scope": {
+      "operation": "core/task::scope",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::spawn": {
+      "operation": "core/task::spawn",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/task::status": {
+      "operation": "core/task::status",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::apply": {
+      "operation": "core/vcs-low::apply",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::apply-patch": {
+      "operation": "core/vcs-low::apply-patch",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::blame": {
+      "operation": "core/vcs-low::blame",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::diff": {
+      "operation": "core/vcs-low::diff",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::diff-terms": {
+      "operation": "core/vcs-low::diff-terms",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::log": {
+      "operation": "core/vcs-low::log",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::merge3": {
+      "operation": "core/vcs-low::merge3",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::merge3-contract-snapshots": {
+      "operation": "core/vcs-low::merge3-contract-snapshots",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::resolve-conflict": {
+      "operation": "core/vcs-low::resolve-conflict",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "core/vcs-low::why": {
+      "operation": "core/vcs-low::why",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/clipboard::get": {
+      "operation": "editor/clipboard::get",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/clipboard::set": {
+      "operation": "editor/clipboard::set",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/dialog::open": {
+      "operation": "editor/dialog::open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/dialog::save": {
+      "operation": "editor/dialog::save",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/plugin::command": {
+      "operation": "editor/plugin::command",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":payload",
+            "type": "term"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_plugins policy required"
+            ],
+            "name": ":plugin",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":command",
+            "type": "string|symbol"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::cancel": {
+      "operation": "editor/task::cancel",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::fmt-coreform": {
+      "operation": "editor/task::fmt-coreform",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::lint-module": {
+      "operation": "editor/task::lint-module",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::optimize-module": {
+      "operation": "editor/task::optimize-module",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::parse-module": {
+      "operation": "editor/task::parse-module",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::poll": {
+      "operation": "editor/task::poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::spawn": {
+      "operation": "editor/task::spawn",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::test-pkg": {
+      "operation": "editor/task::test-pkg",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/task::typecheck-pkg": {
+      "operation": "editor/task::typecheck-pkg",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/watch::poll": {
+      "operation": "editor/watch::poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/watch::subscribe": {
+      "operation": "editor/watch::subscribe",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "editor/watch::unsubscribe": {
+      "operation": "editor/watch::unsubscribe",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/audio::enqueue": {
+      "operation": "gfx/audio::enqueue",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/audio::set-master": {
+      "operation": "gfx/audio::set-master",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-bind-group": {
+      "operation": "gfx/gpu::create-bind-group",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-bind-group-layout": {
+      "operation": "gfx/gpu::create-bind-group-layout",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-buffer": {
+      "operation": "gfx/gpu::create-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-pipeline-layout": {
+      "operation": "gfx/gpu::create-pipeline-layout",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-render-pipeline": {
+      "operation": "gfx/gpu::create-render-pipeline",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-sampler": {
+      "operation": "gfx/gpu::create-sampler",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-shader-module": {
+      "operation": "gfx/gpu::create-shader-module",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::create-texture": {
+      "operation": "gfx/gpu::create-texture",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::destroy-resource": {
+      "operation": "gfx/gpu::destroy-resource",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::features": {
+      "operation": "gfx/gpu::features",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::limits": {
+      "operation": "gfx/gpu::limits",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::read-buffer": {
+      "operation": "gfx/gpu::read-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::read-texture": {
+      "operation": "gfx/gpu::read-texture",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::submit-frame-graph": {
+      "operation": "gfx/gpu::submit-frame-graph",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::write-buffer": {
+      "operation": "gfx/gpu::write-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/gpu::write-texture": {
+      "operation": "gfx/gpu::write-texture",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/input::poll-events": {
+      "operation": "gfx/input::poll-events",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/input::set-cursor-mode": {
+      "operation": "gfx/input::set-cursor-mode",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/time::frame-tick": {
+      "operation": "gfx/time::frame-tick",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/window::create-surface": {
+      "operation": "gfx/window::create-surface",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/window::request-redraw": {
+      "operation": "gfx/window::request-redraw",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/window::resize-surface": {
+      "operation": "gfx/window::resize-surface",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/window::set-title": {
+      "operation": "gfx/window::set-title",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gfx/window::surface-info": {
+      "operation": "gfx/window::surface-info",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-bind-group": {
+      "operation": "gpu/compute::create-bind-group",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-bind-group-layout": {
+      "operation": "gpu/compute::create-bind-group-layout",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-buffer": {
+      "operation": "gpu/compute::create-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-compute-pipeline": {
+      "operation": "gpu/compute::create-compute-pipeline",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-kernel": {
+      "operation": "gpu/compute::create-kernel",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-pipeline-layout": {
+      "operation": "gpu/compute::create-pipeline-layout",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::create-shader-module": {
+      "operation": "gpu/compute::create-shader-module",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::destroy-resource": {
+      "operation": "gpu/compute::destroy-resource",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::features": {
+      "operation": "gpu/compute::features",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::limits": {
+      "operation": "gpu/compute::limits",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::read-buffer": {
+      "operation": "gpu/compute::read-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::submit": {
+      "operation": "gpu/compute::submit",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "gpu/compute::write-buffer": {
+      "operation": "gpu/compute::write-buffer",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "host/plugin::command": {
+      "operation": "host/plugin::command",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":payload",
+            "type": "term"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_plugins policy required"
+            ],
+            "name": ":plugin",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":command",
+            "type": "string|symbol"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/fs::list": {
+      "operation": "io/fs::list",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "[{:name string :path string :kind symbol :len-bytes int} ...]",
+          "value_kind": "vector"
+        }
+      }
+    },
+    "io/fs::mkdir": {
+      "operation": "io/fs::mkdir",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":parents",
+            "type": "bool"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "nil",
+          "value_kind": "nil"
+        }
+      }
+    },
+    "io/fs::read": {
+      "operation": "io/fs::read",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "file bytes",
+          "value_kind": "bytes"
+        }
+      }
+    },
+    "io/fs::remove": {
+      "operation": "io/fs::remove",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":recursive",
+            "type": "bool"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "nil",
+          "value_kind": "nil"
+        }
+      }
+    },
+    "io/fs::rename": {
+      "operation": "io/fs::rename",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":overwrite",
+            "type": "bool"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":from",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":to",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "nil",
+          "value_kind": "nil"
+        }
+      }
+    },
+    "io/fs::stat": {
+      "operation": "io/fs::stat",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:path string :exists bool :kind symbol :len-bytes int :readonly bool}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/fs::write": {
+      "operation": "io/fs::write",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "sandboxed-under-base_dir"
+            ],
+            "name": ":path",
+            "type": "string"
+          },
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "nil",
+          "value_kind": "nil"
+        }
+      }
+    },
+    "io/net::dns-resolve": {
+      "operation": "io/net::dns-resolve",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "dns-label-or-fqdn"
+            ],
+            "name": ":name",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "dns records map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/net::http-request": {
+      "operation": "io/net::http-request",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":method",
+            "type": "string"
+          },
+          {
+            "name": ":headers",
+            "type": "map|vector"
+          },
+          {
+            "name": ":body",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "allowlisted-prefix"
+            ],
+            "name": ":url",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge/http response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/net::tcp-close": {
+      "operation": "io/net::tcp-close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::tcp-open": {
+      "operation": "io/net::tcp-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "tcp://host:port",
+              "allowlisted-prefix"
+            ],
+            "name": ":remote",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::tcp-recv": {
+      "operation": "io/net::tcp-recv",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::tcp-send": {
+      "operation": "io/net::tcp-send",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          },
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::udp-bind": {
+      "operation": "io/net::udp-bind",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "udp://ip:port"
+            ],
+            "name": ":local",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::udp-close": {
+      "operation": "io/net::udp-close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":socket-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::udp-recv": {
+      "operation": "io/net::udp-recv",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":socket-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::udp-send": {
+      "operation": "io/net::udp-send",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":socket-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "udp://ip:port"
+            ],
+            "name": ":remote",
+            "type": "string"
+          },
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::ws-close": {
+      "operation": "io/net::ws-close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::ws-open": {
+      "operation": "io/net::ws-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "ws:// or wss://",
+              "allowlisted-prefix"
+            ],
+            "name": ":url",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::ws-recv": {
+      "operation": "io/net::ws-recv",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::ws-send": {
+      "operation": "io/net::ws-send",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":stream-id",
+            "type": "string"
+          },
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/process::exec": {
+      "operation": "sys/process::exec",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":args",
+            "type": "vector<string>"
+          },
+          {
+            "name": ":env",
+            "type": "map<string,string>"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_programs policy required"
+            ],
+            "name": ":program",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge process result map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "sys/process::kill": {
+      "operation": "sys/process::kill",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":process-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/process::spawn": {
+      "operation": "sys/process::spawn",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":args",
+            "type": "vector<string>"
+          },
+          {
+            "name": ":env",
+            "type": "map<string,string>"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_programs policy required"
+            ],
+            "name": ":program",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge spawn result map (typically includes :process-id)",
+          "value_kind": "map"
+        }
+      }
+    },
+    "sys/process::stderr-read": {
+      "operation": "sys/process::stderr-read",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":process-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/process::stdin-write": {
+      "operation": "sys/process::stdin-write",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":process-id",
+            "type": "string"
+          },
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/process::stdout-read": {
+      "operation": "sys/process::stdout-read",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":process-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/process::wait": {
+      "operation": "sys/process::wait",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":process-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "sys/time::now": {
+      "operation": "sys/time::now",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    }
+  }
+}

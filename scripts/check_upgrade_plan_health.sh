@@ -295,6 +295,7 @@ if [[ "$declared_open" -gt 0 ]]; then
     echo "upgrade-plan-health: backlog open; running mandatory local guard gates."
     MANDATORY_LOCAL_GATES=(
       "bash scripts/check_selfhost_boundary.sh --strict"
+      "bash scripts/check_selfhost_doc_runtime_parity.sh"
       "bash scripts/check_redteam_report.sh"
       "bash scripts/check_planning_docs_fresh.sh"
       "bash scripts/check_no_user_panics.sh"
@@ -345,6 +346,7 @@ COMMON_GATES=(
   "bash scripts/check_selfhost_refactor_guard.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"
+  "bash scripts/check_selfhost_doc_runtime_parity.sh"
   "bash scripts/check_redteam_report.sh"
   "bash scripts/check_feature_matrix_gap_hygiene.sh"
   "bash scripts/check_planning_docs_fresh.sh"
@@ -421,12 +423,17 @@ end_ms="$(now_ms)"
 elapsed_ms=$((end_ms - start_ms))
 gate_count=$(( ${#COMMON_GATES[@]} + ${#PROFILE_GATES[@]} ))
 
-prepush_budget=""
-prepush_ok=1
-if [[ "$PROFILE" == "prepush-standard" ]]; then
-  prepush_budget="$PREPUSH_WALL_BUDGET_MS"
+profile_budget=""
+profile_ok=1
+if [[ "$PROFILE" == "dev-fast" ]]; then
+  profile_budget="$DEV_FAST_PROFILE_WALL_BUDGET_MS"
+  if (( elapsed_ms > DEV_FAST_PROFILE_WALL_BUDGET_MS )); then
+    profile_ok=0
+  fi
+elif [[ "$PROFILE" == "prepush-standard" ]]; then
+  profile_budget="$PREPUSH_WALL_BUDGET_MS"
   if (( elapsed_ms > PREPUSH_WALL_BUDGET_MS )); then
-    prepush_ok=0
+    profile_ok=0
   fi
 fi
 
@@ -435,12 +442,18 @@ write_health_profile_report \
   "$HEALTH_SHARDS" \
   "$gate_count" \
   "$elapsed_ms" \
-  "$prepush_budget" \
-  "$prepush_ok" \
+  "$profile_budget" \
+  "$profile_ok" \
   "$HEALTH_PROFILE_REPORT"
 
-if (( prepush_ok == 0 )); then
-  echo "upgrade-plan-health: prepush wall-time exceeded budget (${elapsed_ms}ms > ${PREPUSH_WALL_BUDGET_MS}ms)" >&2
+if (( profile_ok == 0 )); then
+  if [[ "$PROFILE" == "dev-fast" ]]; then
+    echo "upgrade-plan-health: dev-fast wall-time exceeded budget (${elapsed_ms}ms > ${DEV_FAST_PROFILE_WALL_BUDGET_MS}ms)" >&2
+  elif [[ "$PROFILE" == "prepush-standard" ]]; then
+    echo "upgrade-plan-health: prepush wall-time exceeded budget (${elapsed_ms}ms > ${PREPUSH_WALL_BUDGET_MS}ms)" >&2
+  else
+    echo "upgrade-plan-health: profile wall-time exceeded budget (${elapsed_ms}ms > ${profile_budget}ms)" >&2
+  fi
   exit 1
 fi
 

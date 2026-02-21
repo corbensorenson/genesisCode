@@ -46,17 +46,329 @@ def extract_prelude_capability_ops(root: pathlib.Path) -> list[str]:
     return sorted(found)
 
 
+def field(name: str, typ: str, constraints: list[str] | None = None) -> dict[str, object]:
+    out: dict[str, object] = {"name": name, "type": typ}
+    if constraints:
+        out["constraints"] = constraints
+    return out
+
+
+def default_schema_entry(op: str) -> dict[str, object]:
+    return {
+        "operation": op,
+        "payload": {
+            "type": "map",
+            "required_fields": [],
+            "optional_fields": [],
+            "constraints": [
+                "deny-by-default policy gate applies",
+                "payload is a CoreForm map unless otherwise documented",
+            ],
+        },
+        "response_envelope": {
+            "success": {
+                "value_kind": "term",
+                "shape": "op-specific data term (or nil) on success",
+            },
+            "error": {
+                "sealed": True,
+                "code_field": ":error/code",
+                "code_prefix": "core/caps/",
+            },
+        },
+    }
+
+
+def apply_schema_override(entry: dict[str, object], override: dict[str, object]) -> dict[str, object]:
+    payload = entry["payload"]
+    response = entry["response_envelope"]
+    if "payload" in override:
+        payload_override = override["payload"]
+        if isinstance(payload, dict) and isinstance(payload_override, dict):
+            payload.update(payload_override)
+    if "response_envelope" in override:
+        response_override = override["response_envelope"]
+        if isinstance(response, dict) and isinstance(response_override, dict):
+            response.update(response_override)
+    return entry
+
+
+def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
+    return {
+        "io/fs::read": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"])
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "bytes", "shape": "file bytes"},
+            },
+        },
+        "io/fs::write": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"]),
+                    field(":data", "bytes|string"),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "nil", "shape": "nil"},
+            },
+        },
+        "io/fs::stat": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"])
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:path string :exists bool :kind symbol :len-bytes int :readonly bool}",
+                },
+            },
+        },
+        "io/fs::list": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"])
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "vector",
+                    "shape": "[{:name string :path string :kind symbol :len-bytes int} ...]",
+                },
+            },
+        },
+        "io/fs::mkdir": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"])
+                ],
+                "optional_fields": [field(":parents", "bool")],
+            },
+            "response_envelope": {"success": {"value_kind": "nil", "shape": "nil"}},
+        },
+        "io/fs::remove": {
+            "payload": {
+                "required_fields": [
+                    field(":path", "string", ["non-empty", "sandboxed-under-base_dir"])
+                ],
+                "optional_fields": [field(":recursive", "bool")],
+            },
+            "response_envelope": {"success": {"value_kind": "nil", "shape": "nil"}},
+        },
+        "io/fs::rename": {
+            "payload": {
+                "required_fields": [
+                    field(":from", "string", ["non-empty", "sandboxed-under-base_dir"]),
+                    field(":to", "string", ["non-empty", "sandboxed-under-base_dir"]),
+                ],
+                "optional_fields": [field(":overwrite", "bool")],
+            },
+            "response_envelope": {"success": {"value_kind": "nil", "shape": "nil"}},
+        },
+        "io/net::http-request": {
+            "payload": {
+                "required_fields": [field(":url", "string", ["non-empty", "allowlisted-prefix"])],
+                "optional_fields": [
+                    field(":method", "string"),
+                    field(":headers", "map|vector"),
+                    field(":body", "bytes|string"),
+                ],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge/http response map"}
+            },
+        },
+        "io/net::dns-resolve": {
+            "payload": {
+                "required_fields": [field(":name", "string", ["dns-label-or-fqdn"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {"success": {"value_kind": "map", "shape": "dns records map"}},
+        },
+        "io/net::tcp-open": {
+            "payload": {
+                "required_fields": [
+                    field(":remote", "string", ["tcp://host:port", "allowlisted-prefix"])
+                ],
+                "optional_fields": [],
+            }
+        },
+        "io/net::tcp-send": {
+            "payload": {
+                "required_fields": [field(":stream-id", "string"), field(":data", "bytes|string")],
+                "optional_fields": [],
+            }
+        },
+        "io/net::tcp-recv": {
+            "payload": {"required_fields": [field(":stream-id", "string")], "optional_fields": []}
+        },
+        "io/net::tcp-close": {
+            "payload": {"required_fields": [field(":stream-id", "string")], "optional_fields": []}
+        },
+        "io/net::udp-bind": {
+            "payload": {
+                "required_fields": [field(":local", "string", ["udp://ip:port"])],
+                "optional_fields": [],
+            }
+        },
+        "io/net::udp-send": {
+            "payload": {
+                "required_fields": [
+                    field(":socket-id", "string"),
+                    field(":remote", "string", ["udp://ip:port"]),
+                    field(":data", "bytes|string"),
+                ],
+                "optional_fields": [],
+            }
+        },
+        "io/net::udp-recv": {
+            "payload": {"required_fields": [field(":socket-id", "string")], "optional_fields": []}
+        },
+        "io/net::udp-close": {
+            "payload": {"required_fields": [field(":socket-id", "string")], "optional_fields": []}
+        },
+        "io/net::ws-open": {
+            "payload": {
+                "required_fields": [field(":url", "string", ["ws:// or wss://", "allowlisted-prefix"])],
+                "optional_fields": [],
+            }
+        },
+        "io/net::ws-send": {
+            "payload": {
+                "required_fields": [field(":stream-id", "string"), field(":data", "bytes|string")],
+                "optional_fields": [],
+            }
+        },
+        "io/net::ws-recv": {
+            "payload": {"required_fields": [field(":stream-id", "string")], "optional_fields": []}
+        },
+        "io/net::ws-close": {
+            "payload": {"required_fields": [field(":stream-id", "string")], "optional_fields": []}
+        },
+        "sys/process::exec": {
+            "payload": {
+                "required_fields": [field(":program", "string", ["allow_programs policy required"])],
+                "optional_fields": [field(":args", "vector<string>"), field(":env", "map<string,string>")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge process result map"}
+            },
+        },
+        "sys/process::spawn": {
+            "payload": {
+                "required_fields": [field(":program", "string", ["allow_programs policy required"])],
+                "optional_fields": [field(":args", "vector<string>"), field(":env", "map<string,string>")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge spawn result map (typically includes :process-id)"}
+            },
+        },
+        "sys/process::wait": {
+            "payload": {"required_fields": [field(":process-id", "string")], "optional_fields": []}
+        },
+        "sys/process::kill": {
+            "payload": {"required_fields": [field(":process-id", "string")], "optional_fields": []}
+        },
+        "sys/process::stdin-write": {
+            "payload": {
+                "required_fields": [field(":process-id", "string"), field(":data", "bytes|string")],
+                "optional_fields": [],
+            }
+        },
+        "sys/process::stdout-read": {
+            "payload": {"required_fields": [field(":process-id", "string")], "optional_fields": []}
+        },
+        "sys/process::stderr-read": {
+            "payload": {"required_fields": [field(":process-id", "string")], "optional_fields": []}
+        },
+        "host/plugin::command": {
+            "payload": {
+                "required_fields": [
+                    field(":plugin", "string|symbol", ["allow_plugins policy required"]),
+                    field(":command", "string|symbol"),
+                ],
+                "optional_fields": [field(":payload", "term")],
+            }
+        },
+        "editor/plugin::command": {
+            "payload": {
+                "required_fields": [
+                    field(":plugin", "string|symbol", ["allow_plugins policy required"]),
+                    field(":command", "string|symbol"),
+                ],
+                "optional_fields": [field(":payload", "term")],
+            }
+        },
+        "core/store::put": {
+            "payload": {"required_fields": [field(":artifact", "term")], "optional_fields": []},
+            "response_envelope": {"success": {"value_kind": "map", "shape": "{:hash hex64}"}},
+        },
+        "core/store::get": {
+            "payload": {"required_fields": [field(":hash", "hex64")], "optional_fields": []},
+            "response_envelope": {"success": {"value_kind": "map", "shape": "{:artifact term}"}},
+        },
+        "core/store::has": {
+            "payload": {"required_fields": [field(":hash", "hex64")], "optional_fields": []},
+            "response_envelope": {"success": {"value_kind": "map", "shape": "{:present bool}"}},
+        },
+        "core/refs::get": {
+            "payload": {"required_fields": [field(":name", "string")], "optional_fields": []}
+        },
+        "core/refs::set": {
+            "payload": {
+                "required_fields": [field(":name", "string"), field(":hash", "hex64")],
+                "optional_fields": [field(":policy", "hex64"), field(":expected-old", "hex64|nil")],
+            }
+        },
+    }
+
+
+def build_host_schema_index(host_ops: list[str]) -> dict[str, object]:
+    overrides = explicit_host_schema_overrides()
+    schemas: dict[str, dict[str, object]] = {}
+    for op in host_ops:
+        entry = default_schema_entry(op)
+        override = overrides.get(op)
+        if override is not None:
+            entry = apply_schema_override(entry, override)
+        schemas[op] = entry
+    return {
+        "kind": "genesis/host-abi-schema-index-v0.1",
+        "generated_from": [
+            "crates/gc_effects/src/runner_capability_dispatch.rs",
+            "crates/gc_effects/src/runner_task.rs",
+            "crates/gc_effects/src/runner_cap_pkg_low.rs",
+            "crates/gc_effects/src/runner_cap_vcs_low.rs",
+            "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+            "docs/spec/HOST_ABI.md",
+        ],
+        "operations": schemas,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True)
     parser.add_argument("--out-host", required=True)
+    parser.add_argument("--out-host-schema", required=True)
     parser.add_argument("--out-prelude", required=True)
     args = parser.parse_args()
 
     root = pathlib.Path(args.root).resolve()
     out_host = pathlib.Path(args.out_host).resolve()
+    out_host_schema = pathlib.Path(args.out_host_schema).resolve()
     out_prelude = pathlib.Path(args.out_prelude).resolve()
     out_host.parent.mkdir(parents=True, exist_ok=True)
+    out_host_schema.parent.mkdir(parents=True, exist_ok=True)
     out_prelude.parent.mkdir(parents=True, exist_ok=True)
 
     host_ops = extract_host_ops(root)
@@ -75,6 +387,10 @@ def main() -> int:
         "families": stable_ops_by_family(host_ops),
     }
     out_host.write_text(json.dumps(host_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_host_schema.write_text(
+        json.dumps(build_host_schema_index(host_ops), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     prelude_payload = {
         "kind": "genesis/prelude-capability-index-v0.1",
