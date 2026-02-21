@@ -1,0 +1,43 @@
+(def core/pkg::load-lock
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg-low::load-lock)) {:lock lock})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::load-package
+  (fn (pkg)
+    (((core/effect::perform (quote core/pkg-low::load-package)) {:pkg pkg})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::save-lock
+  (fn (payload)
+    (((core/effect::perform (quote core/pkg-low::save-lock)) payload)
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/vcs::diff-terms
+  (fn (base-term)
+    (fn (to-term)
+      (((core/effect::perform (quote core/vcs-low::diff-terms))
+        {
+          :base-term base-term
+          :to-term to-term})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/vcs::apply-patch
+  (fn (base-term)
+    (fn (patch-term)
+      (((core/effect::perform (quote core/vcs-low::apply-patch))
+        {
+          :base-term base-term
+          :patch-term patch-term})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/vcs::merge3-contract-snapshots
+  (fn (base-term)
+    (fn (left-term)
+      (fn (right-term)
+        (((core/effect::perform (quote core/vcs-low::merge3-contract-snapshots))
+          {
+            :base-term base-term
+            :left-term left-term
+            :right-term right-term})
+          (fn (resp) (core/effect::pure resp)))))))

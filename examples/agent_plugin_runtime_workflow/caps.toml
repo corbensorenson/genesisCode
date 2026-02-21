@@ -1,0 +1,18 @@
+allow = [
+  "editor/plugin::command",
+  "host/plugin::command",
+]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run", "format"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."editor/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run", "format"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096

@@ -1,0 +1,74 @@
+(def core/net::dns-resolve
+  (fn (name)
+    (((core/effect::perform (quote io/net::dns-resolve)) {:name name})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-open
+  (fn (remote)
+    (((core/effect::perform (quote io/net::tcp-open)) {:remote remote})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-send
+  (fn (stream-id)
+    (fn (data)
+      (((core/effect::perform (quote io/net::tcp-send))
+        {:data data :stream-id stream-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/net::tcp-recv
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::tcp-recv)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-close
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::tcp-close)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-bind
+  (fn (local)
+    (((core/effect::perform (quote io/net::udp-bind)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-send
+  (fn (socket-id)
+    (fn (remote)
+      (fn (data)
+        (((core/effect::perform (quote io/net::udp-send))
+          {
+            :data data
+            :remote remote
+            :socket-id socket-id})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/net::udp-recv
+  (fn (socket-id)
+    (((core/effect::perform (quote io/net::udp-recv)) {:socket-id socket-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-close
+  (fn (socket-id)
+    (((core/effect::perform (quote io/net::udp-close)) {:socket-id socket-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-open
+  (fn (url)
+    (((core/effect::perform (quote io/net::ws-open)) {:url url})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-send
+  (fn (stream-id)
+    (fn (data)
+      (((core/effect::perform (quote io/net::ws-send))
+        {:data data :stream-id stream-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/net::ws-recv
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::ws-recv)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-close
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::ws-close)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))

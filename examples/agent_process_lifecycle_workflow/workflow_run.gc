@@ -1,0 +1,18 @@
+(def prog
+  ((core/effect::bind (((core/process::spawn "echo") ["hello"]) {}))
+    (fn (spawned)
+      (let ((process-id ((core/map::get spawned) (quote :process-id))))
+        ((core/effect::bind (core/process::stdout-read process-id))
+          (fn (stdout-resp)
+            ((core/effect::bind ((core/process::stdin-write process-id) "stdin"))
+              (fn (_stdin-ok)
+                ((core/effect::bind (core/process::wait process-id))
+                  (fn (wait-resp)
+                    (core/effect::pure
+                      {
+                        :exit ((core/map::get wait-resp) (quote :exit))
+                        :ok true
+                        :stdout ((core/map::get stdout-resp) (quote :stdout))
+                      })))))))))))
+
+prog

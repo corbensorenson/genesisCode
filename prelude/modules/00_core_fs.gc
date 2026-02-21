@@ -1,0 +1,46 @@
+(def core/fs::read
+  (fn (path)
+    (((core/effect::perform (quote io/fs::read)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::write
+  (fn (path)
+    (fn (data)
+      (((core/effect::perform (quote io/fs::write))
+        {:data data :path path})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::stat
+  (fn (path)
+    (((core/effect::perform (quote io/fs::stat)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::list
+  (fn (path)
+    (((core/effect::perform (quote io/fs::list)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::mkdir
+  (fn (path)
+    (fn (parents)
+      (((core/effect::perform (quote io/fs::mkdir))
+        {:parents parents :path path})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::remove
+  (fn (path)
+    (fn (recursive)
+      (((core/effect::perform (quote io/fs::remove))
+        {:path path :recursive recursive})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::rename
+  (fn (from)
+    (fn (to)
+      (fn (overwrite)
+        (((core/effect::perform (quote io/fs::rename))
+          {
+            :from from
+            :overwrite overwrite
+            :to to})
+          (fn (resp) (core/effect::pure resp)))))))

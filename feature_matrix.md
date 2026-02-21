@@ -24,10 +24,10 @@ Legend:
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (`release-full` health profile + dedicated GPU conformance lane require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Process lifecycle + stdio streaming primitives | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Raw socket/stream networking primitives | ✅ (`io/net::tcp-*`, `io/net::udp-*`, `io/net::dns-resolve`, `io/net::ws-*`, `io/net::http-request`) | ⚠️ | ✅ | ⚠️ | ⚠️ |
-| Generic host extension/FFI capability ABI | ✅ (`host/plugin::command` + `editor/plugin::command` wrapper) | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
+| Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
+| Raw socket/stream networking primitives | ✅ (first-class `core/net::*` socket wrappers + required gauntlet domain coverage) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers for `host/plugin::command` + `editor/plugin::command`) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
@@ -43,7 +43,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current red-team backlog has no unresolved upgrade-plan items.
+- Current red-team backlog is focused on unresolved P2 runtime-breadth items.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -52,7 +52,12 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- none
+- `P2.1` Primary agent workflows still allow deterministic GPU fallback in non-release posture.
+- `P2.2` Missing high-contention deterministic concurrency stress matrix.
+- `P2.3` Dev-fast health path still shows lock-contention overhead under some runs.
+- `P2.4` Missing host bridge fault-injection conformance matrix.
+- `P2.5` Agent workflow parity is not yet enforced across native + WASI/wasm-host execution.
+- `P2.6` Agent authoring skill pack needs full end-to-end domain playbooks.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

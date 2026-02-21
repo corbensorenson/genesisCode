@@ -17,3 +17,7 @@ first_party_profile = "interactive"
 
 [op."gfx/audio::set-master"]
 first_party_profile = "interactive"
+
+[op."gpu/compute::submit"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"

@@ -44,6 +44,26 @@
 (def core/editor/task::cancel
   (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
 
+(def core/editor/task::fmt-coreform
+  (fn (path) ((core/caps::perform (quote editor/task::fmt-coreform)) {:path path})))
+
+(def core/editor/task::parse-module
+  (fn (path) ((core/caps::perform (quote editor/task::parse-module)) {:path path})))
+
+(def core/editor/task::lint-module
+  (fn (path)
+    (fn (input) ((core/caps::perform (quote editor/task::lint-module)) {:input input :path path}))))
+
+(def core/editor/task::optimize-module
+  (fn (path)
+    (fn (out) ((core/caps::perform (quote editor/task::optimize-module)) {:out out :path path}))))
+
+(def core/editor/task::typecheck-pkg
+  (fn (pkg) ((core/caps::perform (quote editor/task::typecheck-pkg)) {:pkg pkg})))
+
+(def core/editor/task::test-pkg
+  (fn (pkg) (fn (caps) ((core/caps::perform (quote editor/task::test-pkg)) {:caps caps :pkg pkg}))))
+
 (def core/editor/watch::subscribe
   (fn (root)
     (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
@@ -590,3 +610,13 @@
         (((core/editor/plugin::call plugin) (quote editor/plugin::command))
           {:command command :payload payload})))))
 
+(def core/editor/plugin::host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote editor/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))

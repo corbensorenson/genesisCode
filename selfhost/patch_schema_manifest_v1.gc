@@ -3,7 +3,7 @@
 
 (def selfhost/patch_schema::empty-vec (core/pair::as-proper-list nil))
 
-(def selfhost/patch_schema::err
+(def selfhost/patch_schema_manifest::err
   (fn (msg) ((core/error::make2 "core/patch-schema") msg)))
 
 (def selfhost/patch_schema::str?
@@ -39,7 +39,7 @@
     (fn (k)
       (fn (msg)
         (let ((v ((core/map::get m) k)))
-          (if (core/list::is-nil? v) (selfhost/patch_schema::err msg) v))))))
+          (if (core/list::is-nil? v) (selfhost/patch_schema_manifest::err msg) v))))))
 
 (def selfhost/patch_schema::vec-filter-modules-by-path
   (fn (mods)
@@ -163,9 +163,9 @@
             (if (selfhost/patch_schema::vec? mods)
               (let ((entry {"path" module-path "hash" ""}))
                 (((core/map::put manifest) "modules") ((core/vec::push mods) entry)))
-              (selfhost/patch_schema::err "manifest missing modules array")))
-        (selfhost/patch_schema::err "module-path must be string"))
-        (selfhost/patch_schema::err "manifest must be a map")))))
+              (selfhost/patch_schema_manifest::err "manifest missing modules array")))
+        (selfhost/patch_schema_manifest::err "module-path must be string"))
+        (selfhost/patch_schema_manifest::err "manifest must be a map")))))
 
 (def core/cli::manifest-apply-remove-module
   (fn (manifest)
@@ -176,9 +176,9 @@
             (if (selfhost/patch_schema::vec? mods)
               (let ((mods2 ((selfhost/patch_schema::vec-filter-modules-by-path mods) module-path)))
                 (((core/map::put manifest) "modules") mods2))
-              (selfhost/patch_schema::err "manifest missing modules array")))
-          (selfhost/patch_schema::err "module-path must be string"))
-        (selfhost/patch_schema::err "manifest must be a map")))))
+              (selfhost/patch_schema_manifest::err "manifest missing modules array")))
+          (selfhost/patch_schema_manifest::err "module-path must be string"))
+        (selfhost/patch_schema_manifest::err "manifest must be a map")))))
 
 (def selfhost/patch_schema::manifest-patch-string-vec-field
   (fn (manifest)
@@ -257,7 +257,7 @@
                      manifest
                      (if (selfhost/patch_schema::map? setv)
                        (selfhost/patch_schema::manifest-apply-set manifest setv)
-                       (selfhost/patch_schema::err ":set must be a map")))))
+                       (selfhost/patch_schema_manifest::err ":set must be a map")))))
               (if (core/error::is? manifest2)
                 manifest2
                 (let ((ob_add ((core/map::get op) (quote :obligations-add)))
@@ -289,9 +289,9 @@
                               m4
                               (if (selfhost/patch_schema::str? caps_policy)
                                 (((core/map::put m4) "caps_policy") caps_policy)
-                                (selfhost/patch_schema::err ":caps-policy must be string"))))))))))))
-          (selfhost/patch_schema::err "update-manifest op must be a map"))
-        (selfhost/patch_schema::err "manifest must be a map")))))
+                                (selfhost/patch_schema_manifest::err ":caps-policy must be string"))))))))))))
+          (selfhost/patch_schema_manifest::err "update-manifest op must be a map"))
+        (selfhost/patch_schema_manifest::err "manifest must be a map")))))
 
 (def selfhost/patch_schema::manifest-apply-set
   (fn (manifest)

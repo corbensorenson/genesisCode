@@ -10,7 +10,7 @@ from collections import defaultdict
 
 HOST_OP_RE = re.compile(r'"([A-Za-z0-9_./-]+::[A-Za-z0-9_./:-]+)"')
 PRELUDE_PERFORM_RE = re.compile(
-    r"core/caps::perform\s+\(quote\s+([A-Za-z0-9_./-]+::[A-Za-z0-9_./:-]+)\)"
+    r"core/(?:caps|effect)::perform\s+\(quote\s+([A-Za-z0-9_./-]+::[A-Za-z0-9_./:-]+)\)"
 )
 
 

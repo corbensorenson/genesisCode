@@ -505,6 +505,11 @@
     (((core/effect::perform (quote core/store::has)) {:hash hash})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/store::verify
+  (fn (hash)
+    (((core/effect::perform (quote core/store::verify)) {:hash hash})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/refs::get
   (fn (name)
     (((core/effect::perform (quote core/refs::get)) {:name name})
@@ -889,6 +894,247 @@
               :ttl-days ttl-days})
           (fn (resp) (core/effect::pure resp)))))))
 
+(def core/fs::read
+  (fn (path)
+    (((core/effect::perform (quote io/fs::read)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::write
+  (fn (path)
+    (fn (data)
+      (((core/effect::perform (quote io/fs::write))
+        {:data data :path path})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::stat
+  (fn (path)
+    (((core/effect::perform (quote io/fs::stat)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::list
+  (fn (path)
+    (((core/effect::perform (quote io/fs::list)) {:path path})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/fs::mkdir
+  (fn (path)
+    (fn (parents)
+      (((core/effect::perform (quote io/fs::mkdir))
+        {:parents parents :path path})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::remove
+  (fn (path)
+    (fn (recursive)
+      (((core/effect::perform (quote io/fs::remove))
+        {:path path :recursive recursive})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/fs::rename
+  (fn (from)
+    (fn (to)
+      (fn (overwrite)
+        (((core/effect::perform (quote io/fs::rename))
+          {
+            :from from
+            :overwrite overwrite
+            :to to})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/net::dns-resolve
+  (fn (name)
+    (((core/effect::perform (quote io/net::dns-resolve)) {:name name})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-open
+  (fn (remote)
+    (((core/effect::perform (quote io/net::tcp-open)) {:remote remote})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-send
+  (fn (stream-id)
+    (fn (data)
+      (((core/effect::perform (quote io/net::tcp-send))
+        {:data data :stream-id stream-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/net::tcp-recv
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::tcp-recv)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-close
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::tcp-close)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-bind
+  (fn (local)
+    (((core/effect::perform (quote io/net::udp-bind)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-send
+  (fn (socket-id)
+    (fn (remote)
+      (fn (data)
+        (((core/effect::perform (quote io/net::udp-send))
+          {
+            :data data
+            :remote remote
+            :socket-id socket-id})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/net::udp-recv
+  (fn (socket-id)
+    (((core/effect::perform (quote io/net::udp-recv)) {:socket-id socket-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::udp-close
+  (fn (socket-id)
+    (((core/effect::perform (quote io/net::udp-close)) {:socket-id socket-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-open
+  (fn (url)
+    (((core/effect::perform (quote io/net::ws-open)) {:url url})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-send
+  (fn (stream-id)
+    (fn (data)
+      (((core/effect::perform (quote io/net::ws-send))
+        {:data data :stream-id stream-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/net::ws-recv
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::ws-recv)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::ws-close
+  (fn (stream-id)
+    (((core/effect::perform (quote io/net::ws-close)) {:stream-id stream-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::exec
+  (fn (program)
+    (fn (args)
+      (fn (env)
+        (((core/effect::perform (quote sys/process::exec))
+          {
+            :args args
+            :env env
+            :program program})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/process::spawn
+  (fn (program)
+    (fn (args)
+      (fn (env)
+        (((core/effect::perform (quote sys/process::spawn))
+          {
+            :args args
+            :env env
+            :program program})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/process::wait
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::wait)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::kill
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::kill)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stdout-read
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::stdout-read)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stderr-read
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::stderr-read)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stdin-write
+  (fn (process-id)
+    (fn (data)
+      (((core/effect::perform (quote sys/process::stdin-write))
+        {:data data :process-id process-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/time::now
+  (fn (_)
+    (((core/effect::perform (quote sys/time::now)) {})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/plugin::command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote host/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/plugin::editor-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote editor/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/pkg::load-lock
+  (fn (lock)
+    (((core/effect::perform (quote core/pkg-low::load-lock)) {:lock lock})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::load-package
+  (fn (pkg)
+    (((core/effect::perform (quote core/pkg-low::load-package)) {:pkg pkg})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/pkg::save-lock
+  (fn (payload)
+    (((core/effect::perform (quote core/pkg-low::save-lock)) payload)
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/vcs::diff-terms
+  (fn (base-term)
+    (fn (to-term)
+      (((core/effect::perform (quote core/vcs-low::diff-terms))
+        {
+          :base-term base-term
+          :to-term to-term})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/vcs::apply-patch
+  (fn (base-term)
+    (fn (patch-term)
+      (((core/effect::perform (quote core/vcs-low::apply-patch))
+        {
+          :base-term base-term
+          :patch-term patch-term})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/vcs::merge3-contract-snapshots
+  (fn (base-term)
+    (fn (left-term)
+      (fn (right-term)
+        (((core/effect::perform (quote core/vcs-low::merge3-contract-snapshots))
+          {
+            :base-term base-term
+            :left-term left-term
+            :right-term right-term})
+          (fn (resp) (core/effect::pure resp)))))))
 
 ; -----------------------------------------------------------------------------
 ; VCS/GPK reachability helpers (pure planning helpers for host-bridge ops)
@@ -3101,7 +3347,8 @@
 (def core/gpu/compute::create-compute-pipeline
   (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
 
-(def core/gpu/compute::create-kernel core/gpu/compute::create-compute-pipeline)
+(def core/gpu/compute::create-kernel
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-kernel)) {:desc desc})))
 
 (def core/gpu/compute::destroy-resource
   (fn (id) ((core/caps::perform (quote gpu/compute::destroy-resource)) {:id id})))
@@ -3713,6 +3960,26 @@
 (def core/editor/task::cancel
   (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
 
+(def core/editor/task::fmt-coreform
+  (fn (path) ((core/caps::perform (quote editor/task::fmt-coreform)) {:path path})))
+
+(def core/editor/task::parse-module
+  (fn (path) ((core/caps::perform (quote editor/task::parse-module)) {:path path})))
+
+(def core/editor/task::lint-module
+  (fn (path)
+    (fn (input) ((core/caps::perform (quote editor/task::lint-module)) {:input input :path path}))))
+
+(def core/editor/task::optimize-module
+  (fn (path)
+    (fn (out) ((core/caps::perform (quote editor/task::optimize-module)) {:out out :path path}))))
+
+(def core/editor/task::typecheck-pkg
+  (fn (pkg) ((core/caps::perform (quote editor/task::typecheck-pkg)) {:pkg pkg})))
+
+(def core/editor/task::test-pkg
+  (fn (pkg) (fn (caps) ((core/caps::perform (quote editor/task::test-pkg)) {:caps caps :pkg pkg}))))
+
 (def core/editor/watch::subscribe
   (fn (root)
     (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
@@ -4259,6 +4526,16 @@
         (((core/editor/plugin::call plugin) (quote editor/plugin::command))
           {:command command :payload payload})))))
 
+(def core/editor/plugin::host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote editor/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))
 
 (def core/editor/agent::session-empty
   (fn (agent-id)

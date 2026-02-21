@@ -9,7 +9,7 @@ Generation + drift checks:
 - regenerate: `bash scripts/update_capability_indices.sh`
 - verify: `bash scripts/check_capability_indices.sh`
 
-The index is extracted from `core/caps::perform` wrappers in `prelude/modules/*.gc`.
+The index is extracted from `core/caps::perform` and `core/effect::perform` wrappers in `prelude/modules/*.gc`.
 
 ## Schema
 

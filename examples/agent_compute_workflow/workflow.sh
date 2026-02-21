@@ -15,6 +15,11 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 WORK_DIR="$TMP_DIR/work"
 cp -R "$EXAMPLE_DIR" "$WORK_DIR"
 chmod +x "$WORK_DIR/tools/host_bridge.sh"
+if [[ "${GENESIS_AGENT_GPU_REQUIRE_DEVICE:-0}" == "1" ]]; then
+  export GENESIS_AGENT_GPU_BACKEND="device-runtime"
+else
+  export GENESIS_AGENT_GPU_BACKEND="${GENESIS_AGENT_GPU_BACKEND:-deterministic-fallback}"
+fi
 
 ART="$TMP_DIR/selfhost_toolchain.gc"
 REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"

@@ -1,0 +1,27 @@
+allow = [
+  "sys/process::spawn",
+  "sys/process::stdout-read",
+  "sys/process::stdin-write",
+  "sys/process::wait",
+]
+
+[op."sys/process::spawn"]
+allow_programs = ["echo"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."sys/process::stdout-read"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."sys/process::stdin-write"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."sys/process::wait"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096

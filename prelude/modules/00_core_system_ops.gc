@@ -16,6 +16,11 @@
     (((core/effect::perform (quote core/store::has)) {:hash hash})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/store::verify
+  (fn (hash)
+    (((core/effect::perform (quote core/store::verify)) {:hash hash})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/refs::get
   (fn (name)
     (((core/effect::perform (quote core/refs::get)) {:name name})
@@ -399,4 +404,3 @@
               :quarantine-dir quarantine-dir
               :ttl-days ttl-days})
           (fn (resp) (core/effect::pure resp)))))))
-

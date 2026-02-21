@@ -8,4 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- None currently open.
+- None. Current unresolved backlog is in `P2.*` runtime breadth items in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.

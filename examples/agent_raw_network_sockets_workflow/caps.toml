@@ -1,0 +1,9 @@
+allow = [
+  "io/net::tcp-open",
+]
+
+[op."io/net::tcp-open"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+remote_allow = ["tcp://example.test:443"]

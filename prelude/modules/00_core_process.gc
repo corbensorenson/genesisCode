@@ -1,0 +1,48 @@
+(def core/process::exec
+  (fn (program)
+    (fn (args)
+      (fn (env)
+        (((core/effect::perform (quote sys/process::exec))
+          {
+            :args args
+            :env env
+            :program program})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/process::spawn
+  (fn (program)
+    (fn (args)
+      (fn (env)
+        (((core/effect::perform (quote sys/process::spawn))
+          {
+            :args args
+            :env env
+            :program program})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/process::wait
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::wait)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::kill
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::kill)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stdout-read
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::stdout-read)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stderr-read
+  (fn (process-id)
+    (((core/effect::perform (quote sys/process::stderr-read)) {:process-id process-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/process::stdin-write
+  (fn (process-id)
+    (fn (data)
+      (((core/effect::perform (quote sys/process::stdin-write))
+        {:data data :process-id process-id})
+        (fn (resp) (core/effect::pure resp))))))

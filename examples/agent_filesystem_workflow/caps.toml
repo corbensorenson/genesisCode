@@ -1,0 +1,11 @@
+allow = [
+  "io/fs::stat",
+  "io/fs::write",
+]
+
+[op."io/fs::write"]
+base_dir = "."
+create_dirs = true
+
+[op."io/fs::stat"]
+base_dir = "."

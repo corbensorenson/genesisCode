@@ -297,7 +297,10 @@ if [[ "$declared_open" -gt 0 ]]; then
       "bash scripts/check_selfhost_boundary.sh --strict"
       "bash scripts/check_selfhost_doc_runtime_parity.sh"
       "bash scripts/check_redteam_report.sh"
+      "bash scripts/check_selfhost_symbol_ownership.sh"
       "bash scripts/check_planning_docs_fresh.sh"
+      "bash scripts/check_task_concurrency_stress.sh"
+      "bash scripts/check_host_bridge_fault_injection.sh"
       "bash scripts/check_no_user_panics.sh"
       "bash scripts/check_no_production_rust_frontend_refs.sh"
     )
@@ -343,6 +346,7 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_selfhost_symbol_ownership.sh"
   "bash scripts/check_agent_authoring_bundle.sh"
   "bash scripts/check_genesiscode_authoring_skill.sh"
   "bash scripts/check_domain_kit_workflows.sh"
@@ -353,6 +357,8 @@ COMMON_GATES=(
   "bash scripts/check_redteam_report.sh"
   "bash scripts/check_feature_matrix_gap_hygiene.sh"
   "bash scripts/check_planning_docs_fresh.sh"
+  "bash scripts/check_task_concurrency_stress.sh"
+  "bash scripts/check_host_bridge_fault_injection.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
@@ -379,7 +385,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
-    PROFILE_GATES+=("bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
@@ -390,6 +396,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=(
+      "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
+    )
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")

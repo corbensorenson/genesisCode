@@ -1,0 +1,13 @@
+(def prog
+  ((core/effect::bind (core/time::now nil))
+    (fn (t0)
+      ((core/effect::bind (core/time::now nil))
+        (fn (t1)
+          (core/effect::pure
+            {
+              :delta-ms ((core/int::sub t1) t0)
+              :ok true
+              :nondecreasing (if ((core/int::lt? t1) t0) false true)
+            }))))))
+
+prog

@@ -1,0 +1,21 @@
+(def core/plugin::command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote host/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/plugin::editor-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/effect::perform (quote editor/plugin::command))
+          {
+            :command command
+            :payload payload
+            :plugin plugin})
+          (fn (resp) (core/effect::pure resp)))))))

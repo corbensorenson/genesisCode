@@ -8,6 +8,12 @@ Authoring source order + dependency edges live in:
 Authoring source modules:
 - `00_core.gc`
 - `00_core_system_ops.gc`
+- `00_core_fs.gc`
+- `00_core_net.gc`
+- `00_core_process.gc`
+- `00_core_time.gc`
+- `00_core_plugin.gc`
+- `00_core_pkg_vcs.gc`
 - `00_core_reachability.gc`
 - `10_gfx.gc`
 - `10_gfx_ui_runtime.gc`

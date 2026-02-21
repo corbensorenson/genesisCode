@@ -1,0 +1,14 @@
+(def prog
+  ((core/effect::bind
+     ((core/fs::write "scratch.txt") "hello-from-genesis"))
+    (fn (_)
+      ((core/effect::bind (core/fs::stat "scratch.txt"))
+        (fn (stat)
+          (core/effect::pure
+            {
+              :exists ((core/map::get stat) (quote :exists))
+              :kind ((core/map::get stat) (quote :kind))
+              :ok true
+            }))))))
+
+prog

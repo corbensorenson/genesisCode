@@ -363,7 +363,7 @@
       (fn (rule)
         (if (core/cli::map? rule)
           (let ((min ((core/map::get rule) (quote :min))) (ops ((core/map::get rule) (quote :ops))))
-            (if (if (core/cli::int? min) ((core/cli::arity-ge? arity) min) false)
+            (if (if (core/cli::reach-int? min) ((core/cli::arity-ge? arity) min) false)
               ((core/cli::infer-effects-add-ops st) ops)
               st))
           st)))))
@@ -420,12 +420,12 @@
                   ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out))
                 ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out)))))))))
 
-(def core/cli::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+(def core/cli::reach-str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
 
-(def core/cli::int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+(def core/cli::reach-int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
 
 (def core/cli::hash-hex?
-  (fn (x) (if (core/cli::str? x) ((core/int::eq? (core/str::len x)) 64) false)))
+  (fn (x) (if (core/cli::reach-str? x) ((core/int::eq? (core/str::len x)) 64) false)))
 
 (def core/cli::hash-vec?
   (fn (xs) (if (core/cli::vec? xs) ((((core/cli::hash-vec2 xs) (core/vec::len xs)) 0) true) false)))
@@ -495,7 +495,7 @@
           (attestations ((core/map::get commit) (quote :attestations))))
         (if
           (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
-            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
             false)
           (if (if (core/cli::hash-hex? patch) (core/cli::hash-hex? result) false)
             (if (if (core/list::is-nil? base) true (core/cli::hash-hex? base))
@@ -522,7 +522,7 @@
           (data ((core/map::get evidence) (quote :data))))
         (if
           (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
-            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
             false)
           (if (core/cli::sym? kind)
             (if (if (core/cli::hash-vec? inputs) (core/cli::hash-vec? outputs) false)
@@ -544,7 +544,7 @@
           (kind ((core/map::get snapshot) (quote :kind))))
         (if
           (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
-            (if (core/cli::int? v) ((core/int::eq? v) 1) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
             false)
           (if (core/cli::sym? kind)
             snapshot
@@ -555,7 +555,7 @@
 (def core/cli::str-starts-with?
   (fn (s)
     (fn (prefix)
-      (if (if (core/cli::str? s) (core/cli::str? prefix) false)
+      (if (if (core/cli::reach-str? s) (core/cli::reach-str? prefix) false)
         (let ((sb (core/str::to-utf8 s)))
           (let ((pb (core/str::to-utf8 prefix)))
             (let ((sn (core/bytes::len sb)))
@@ -565,7 +565,7 @@
 
 (def core/cli::lock-selector-kind
   (fn (selector)
-    (if (core/cli::str? selector)
+    (if (core/cli::reach-str? selector)
       (if ((core/cli::str-starts-with? selector) "commit:")
         (quote :commit)
         (if ((core/cli::str-starts-with? selector) "snapshot:")
@@ -611,4 +611,3 @@
           (let ((v ((core/map::get opts) k)))
             (if ((core/sym::eq? (core/data::tag v)) (quote :bool)) v fallback))
           fallback)))))
-

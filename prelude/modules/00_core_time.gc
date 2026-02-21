@@ -1,0 +1,4 @@
+(def core/time::now
+  (fn (_)
+    (((core/effect::perform (quote sys/time::now)) {})
+      (fn (resp) (core/effect::pure resp)))))

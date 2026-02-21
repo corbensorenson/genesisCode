@@ -43,6 +43,12 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         :gfx_resize (((core/gfx/window::resize-surface "main-surface") 1280) 720)
         :editor_clip_set ((core/editor/clipboard::set "text/plain") "hello")
         :editor_task_spawn (((core/editor/task::spawn 'editor/task::lint) {:path "a.gc"}) 50)
+        :editor_task_fmt_coreform (core/editor/task::fmt-coreform "a.gc")
+        :editor_task_parse_module (core/editor/task::parse-module "a.gc")
+        :editor_task_lint_module ((core/editor/task::lint-module "a.gc") {:changed-syms [pkg/a::x]})
+        :editor_task_optimize_module ((core/editor/task::optimize-module "a.gc") "a.opt.gc")
+        :editor_task_typecheck_pkg (core/editor/task::typecheck-pkg "package.toml")
+        :editor_task_test_pkg ((core/editor/task::test-pkg "package.toml") "caps.toml")
         :editor_watch_sub ((core/editor/watch::subscribe "/ws") ["*.gc" "*.gcpkg"])
         :editor_lint_panel_from_acceptance
           (core/editor/action::lint-panel-from-acceptance
@@ -389,6 +395,60 @@ fn prelude_capability_wrappers_construct_expected_requests() {
         ))),
         Some(&gc_coreform::Term::symbol("editor/task::lint"))
     );
+
+    let editor_task_fmt_coreform = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_fmt_coreform",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_fmt_coreform);
+    assert_eq!(req.op, "editor/task::fmt-coreform");
+
+    let editor_task_parse_module = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_parse_module",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_parse_module);
+    assert_eq!(req.op, "editor/task::parse-module");
+
+    let editor_task_lint_module = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_lint_module",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_lint_module);
+    assert_eq!(req.op, "editor/task::lint-module");
+
+    let editor_task_optimize_module = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_optimize_module",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_optimize_module);
+    assert_eq!(req.op, "editor/task::optimize-module");
+
+    let editor_task_typecheck_pkg = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_typecheck_pkg",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_typecheck_pkg);
+    assert_eq!(req.op, "editor/task::typecheck-pkg");
+
+    let editor_task_test_pkg = m
+        .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(
+            ":editor_task_test_pkg",
+        )))
+        .unwrap()
+        .clone();
+    let req = get_req(editor_task_test_pkg);
+    assert_eq!(req.op, "editor/task::test-pkg");
 
     let editor_watch_sub = m
         .get(&gc_coreform::TermOrdKey(gc_coreform::Term::symbol(

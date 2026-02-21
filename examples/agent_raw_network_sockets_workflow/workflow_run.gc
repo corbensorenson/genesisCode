@@ -1,0 +1,3 @@
+(def prog (core/net::tcp-open "tcp://example.test:443"))
+
+prog

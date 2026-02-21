@@ -16,7 +16,8 @@
 (def core/gpu/compute::create-compute-pipeline
   (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
 
-(def core/gpu/compute::create-kernel core/gpu/compute::create-compute-pipeline)
+(def core/gpu/compute::create-kernel
+  (fn (desc) ((core/caps::perform (quote gpu/compute::create-kernel)) {:desc desc})))
 
 (def core/gpu/compute::destroy-resource
   (fn (id) ((core/caps::perform (quote gpu/compute::destroy-resource)) {:id id})))

@@ -13,10 +13,15 @@ fi
 require_pattern() {
   local pattern="$1"
   local message="$2"
-  if ! rg -q --fixed-strings -- "$pattern" "$CI_FILE"; then
-    echo "gpu-conformance-lane-matrix: $message" >&2
-    exit 1
+  if command -v rg >/dev/null 2>&1; then
+    if rg -q --fixed-strings -- "$pattern" "$CI_FILE"; then
+      return 0
+    fi
+  elif grep -Fq -- "$pattern" "$CI_FILE"; then
+    return 0
   fi
+  echo "gpu-conformance-lane-matrix: $message" >&2
+  exit 1
 }
 
 require_pattern "gpu_device_microbench:" "missing primary self-hosted gpu conformance lane job"
