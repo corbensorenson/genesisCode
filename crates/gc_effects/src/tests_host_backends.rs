@@ -431,6 +431,80 @@ allow = [
 }
 
 #[test]
+fn gpu_compute_device_backend_require_device_fails_closed_without_feature() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gpu/compute::submit"]
+
+[op."gpu/compute::submit"]
+gpu_backend = "device-runtime"
+gpu_backend_policy = "require-device"
+"#,
+    )
+    .expect("parse caps");
+
+    let (forms, h) = mk_prog_for("gpu/compute::submit", "{:graph {:passes []}}");
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let out = run(&mut ctx, &pol, prog, h, "gc_effects-test".to_string()).expect("run");
+
+    match out.value {
+        Value::Sealed { token, .. } => {
+            assert_eq!(token, ctx.protocol.expect("protocol").error);
+        }
+        other => panic!(
+            "expected sealed error when device backend is required, got {}",
+            other.debug_repr()
+        ),
+    }
+}
+
+#[test]
+fn gpu_compute_device_backend_allow_fallback_is_replayable() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gpu/compute::submit"]
+
+[op."gpu/compute::submit"]
+gpu_backend = "device-runtime"
+gpu_backend_policy = "allow-fallback"
+"#,
+    )
+    .expect("parse caps");
+
+    let (forms, h) = mk_prog_for("gpu/compute::submit", "{:graph {:passes []}}");
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+    let out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    let Value::Data(Term::Map(map)) = &out.value else {
+        panic!(
+            "expected map response for fallback submit, got {}",
+            out.value.debug_repr()
+        );
+    };
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":backend-fallback-from"))),
+        Some(&Term::Str("device-runtime".to_string()))
+    );
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+    let replay_v = replay(&mut ctx2, prog2, &out.log).expect("replay");
+    assert_eq!(value_hash(&out.value), value_hash(&replay_v));
+}
+
+#[test]
 fn gpu_compute_first_party_lifecycle_ops_are_replayable_without_bridge() {
     let pol = CapsPolicy::from_toml_str(
         r#"
@@ -919,6 +993,38 @@ first_party_profile = "interactive"
     )
     .expect("interactive caps");
 
+    let desktop_pol = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gfx/window::create-surface",
+  "gfx/window::request-redraw",
+  "gfx/window::surface-info",
+  "gfx/input::poll-events",
+  "gfx/audio::set-master",
+  "gfx/audio::enqueue"
+]
+
+[op."gfx/window::create-surface"]
+first_party_profile = "desktop"
+
+[op."gfx/window::request-redraw"]
+first_party_profile = "desktop"
+
+[op."gfx/window::surface-info"]
+first_party_profile = "desktop"
+
+[op."gfx/input::poll-events"]
+first_party_profile = "desktop"
+
+[op."gfx/audio::set-master"]
+first_party_profile = "desktop"
+
+[op."gfx/audio::enqueue"]
+first_party_profile = "desktop"
+"#,
+    )
+    .expect("desktop caps");
+
     #[cfg(not(target_os = "wasi"))]
     let expected_interactive_backend = "terminal-host";
     #[cfg(target_os = "wasi")]
@@ -950,6 +1056,29 @@ first_party_profile = "interactive"
         Some(&Term::Str("headless-sim".to_string()))
     );
 
+    let desktop_create_v = run_once(&desktop_pol, create_src);
+    let Value::Data(Term::Map(desktop_create_resp)) = desktop_create_v else {
+        panic!("expected desktop create-surface map response");
+    };
+    assert_eq!(
+        desktop_create_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        desktop_create_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("desktop-host".to_string()))
+    );
+    #[cfg(feature = "gfx-desktop-backend")]
+    assert_eq!(
+        desktop_create_resp.get(&TermOrdKey(Term::symbol(":created"))),
+        Some(&Term::Bool(true))
+    );
+    #[cfg(not(feature = "gfx-desktop-backend"))]
+    assert_eq!(
+        desktop_create_resp.get(&TermOrdKey(Term::symbol(":created"))),
+        Some(&Term::Bool(false))
+    );
+
     let audio_src = r#"
         (def prog
           (core/effect::perform
@@ -969,6 +1098,19 @@ first_party_profile = "interactive"
     assert_eq!(
         audio_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
         Some(&Term::Str("headless-sim".to_string()))
+    );
+
+    let desktop_audio_v = run_once(&desktop_pol, audio_src);
+    let Value::Data(Term::Map(desktop_audio_resp)) = desktop_audio_v else {
+        panic!("expected desktop audio set-master map response");
+    };
+    assert_eq!(
+        desktop_audio_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        desktop_audio_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("desktop-host".to_string()))
     );
 
     let poll_src = r#"
@@ -993,12 +1135,16 @@ first_party_profile = "interactive"
 
     let headless_poll_v = run_once(&headless_pol, poll_src);
     let interactive_poll_v = run_once(&interactive_pol, poll_src);
+    let desktop_poll_v = run_once(&desktop_pol, poll_src);
 
     let Value::Data(Term::Map(headless_poll_resp)) = headless_poll_v else {
         panic!("expected headless poll map response");
     };
     let Value::Data(Term::Map(interactive_poll_resp)) = interactive_poll_v else {
         panic!("expected interactive poll map response");
+    };
+    let Value::Data(Term::Map(desktop_poll_resp)) = desktop_poll_v else {
+        panic!("expected desktop poll map response");
     };
     assert_eq!(
         headless_poll_resp.get(&TermOrdKey(Term::symbol(":backend"))),
@@ -1011,6 +1157,14 @@ first_party_profile = "interactive"
     assert_eq!(
         interactive_poll_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
         Some(&Term::Str(expected_interactive_adapter.to_string()))
+    );
+    assert_eq!(
+        desktop_poll_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        desktop_poll_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("desktop-host".to_string()))
     );
 
     let Some(Term::Vector(headless_events)) =
@@ -1040,6 +1194,16 @@ first_party_profile = "interactive"
     assert!(
         contains_redraw,
         "interactive first-party profile should include a redraw event after request-redraw"
+    );
+
+    let Some(Term::Vector(desktop_events)) =
+        desktop_poll_resp.get(&TermOrdKey(Term::symbol(":events")))
+    else {
+        panic!("desktop poll :events missing");
+    };
+    assert!(
+        !desktop_events.is_empty(),
+        "desktop first-party profile should include at least redraw event after request-redraw"
     );
 }
 

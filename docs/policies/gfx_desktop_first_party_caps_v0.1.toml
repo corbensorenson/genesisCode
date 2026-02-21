@@ -1,0 +1,41 @@
+# First-party non-terminal desktop window/input/audio profile.
+# Uses in-repo `desktop-host` adapter (feature-gated by gc_effects `gfx-desktop-backend`).
+
+allow = [
+  "gfx/window::create-surface",
+  "gfx/window::resize-surface",
+  "gfx/window::set-title",
+  "gfx/window::request-redraw",
+  "gfx/window::surface-info",
+  "gfx/input::poll-events",
+  "gfx/input::set-cursor-mode",
+  "gfx/audio::set-master",
+  "gfx/audio::enqueue",
+]
+
+[op."gfx/window::create-surface"]
+first_party_profile = "desktop"
+
+[op."gfx/window::resize-surface"]
+first_party_profile = "desktop"
+
+[op."gfx/window::set-title"]
+first_party_profile = "desktop"
+
+[op."gfx/window::request-redraw"]
+first_party_profile = "desktop"
+
+[op."gfx/window::surface-info"]
+first_party_profile = "desktop"
+
+[op."gfx/input::poll-events"]
+first_party_profile = "desktop"
+
+[op."gfx/input::set-cursor-mode"]
+first_party_profile = "desktop"
+
+[op."gfx/audio::set-master"]
+first_party_profile = "desktop"
+
+[op."gfx/audio::enqueue"]
+first_party_profile = "desktop"

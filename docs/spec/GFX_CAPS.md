@@ -90,9 +90,12 @@ First-party runtime profiles:
 - `interactive`: real host-integrated terminal adapter lane (`terminal-host`)
   for local interactive workflows (`title`, `cursor`, `input`, `audio bell`),
   with deterministic replay guaranteed by effect logs.
+- `desktop`: non-terminal desktop adapter lane (`desktop-host`) for native window/input
+  workflows, with deterministic replay guaranteed by effect logs.
 
 Profile selection:
 - Set per-op `first_party_profile = "interactive"` in `caps.toml`.
+- Set per-op `first_party_profile = "desktop"` in `caps.toml` for desktop-host.
 - If explicit bridge config is present (`bridge_cmd` or WASI bridge response keys),
   bridge execution takes precedence.
 

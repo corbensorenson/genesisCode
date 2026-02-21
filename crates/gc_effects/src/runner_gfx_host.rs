@@ -7,6 +7,8 @@ use num_traits::ToPrimitive;
 use crate::policy::OpPolicy;
 use crate::runner_host_bridge::{BridgeError, call_host_bridge};
 
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+mod desktop_adapter;
 #[cfg(not(target_os = "wasi"))]
 mod terminal_adapter;
 
@@ -46,6 +48,7 @@ impl SurfaceState {
 enum GfxFirstPartyProfile {
     Headless,
     Interactive,
+    Desktop,
 }
 
 impl GfxFirstPartyProfile {
@@ -53,6 +56,7 @@ impl GfxFirstPartyProfile {
         match self {
             Self::Headless => "headless",
             Self::Interactive => "interactive",
+            Self::Desktop => "desktop",
         }
     }
 }
@@ -118,6 +122,7 @@ fn first_party_profile(pol: Option<&OpPolicy>) -> GfxFirstPartyProfile {
         .to_ascii_lowercase();
     match profile.as_str() {
         "interactive" => GfxFirstPartyProfile::Interactive,
+        "desktop" => GfxFirstPartyProfile::Desktop,
         _ => GfxFirstPartyProfile::Headless,
     }
 }
@@ -154,6 +159,7 @@ fn backend_for_profile(profile: &GfxFirstPartyProfile) -> &'static str {
     match profile {
         GfxFirstPartyProfile::Headless => FIRST_PARTY_BACKEND,
         GfxFirstPartyProfile::Interactive => interactive_adapter_name(),
+        GfxFirstPartyProfile::Desktop => FIRST_PARTY_BACKEND,
     }
 }
 
@@ -161,6 +167,7 @@ fn adapter_for_profile(profile: &GfxFirstPartyProfile) -> &'static str {
     match profile {
         GfxFirstPartyProfile::Headless => HEADLESS_ADAPTER,
         GfxFirstPartyProfile::Interactive => interactive_adapter_name(),
+        GfxFirstPartyProfile::Desktop => desktop_adapter_name(),
     }
 }
 
@@ -172,6 +179,16 @@ fn interactive_adapter_name() -> &'static str {
 #[cfg(target_os = "wasi")]
 fn interactive_adapter_name() -> &'static str {
     NOOP_ADAPTER
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_adapter_name() -> &'static str {
+    desktop_adapter::DESKTOP_ADAPTER_NAME
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_adapter_name() -> &'static str {
+    "desktop-host"
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -224,6 +241,111 @@ fn interactive_poll_events(_surface: &str, _seq: &mut u64, _max_events: usize) -
     Vec::new()
 }
 
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_create_surface(surface: &str, width: i64, height: i64, title: &str) -> bool {
+    desktop_adapter::create_surface(surface, width, height, title)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_create_surface(_surface: &str, _width: i64, _height: i64, _title: &str) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_query_surface_size(surface: &str) -> Option<(i64, i64)> {
+    desktop_adapter::query_surface_size(surface)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_query_surface_size(_surface: &str) -> Option<(i64, i64)> {
+    None
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_apply_title(surface: &str, title: &str) -> bool {
+    desktop_adapter::apply_title(surface, title)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_apply_title(_surface: &str, _title: &str) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_apply_cursor_mode(surface: &str, mode: &str) -> bool {
+    desktop_adapter::apply_cursor_mode(surface, mode)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_apply_cursor_mode(_surface: &str, _mode: &str) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_request_redraw(surface: &str) -> bool {
+    desktop_adapter::request_redraw(surface)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_request_redraw(_surface: &str) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn desktop_poll_events(surface: &str, seq: &mut u64, max_events: usize) -> Vec<Term> {
+    desktop_adapter::poll_events(surface, seq, max_events)
+}
+
+#[cfg(any(target_os = "wasi", not(feature = "gfx-desktop-backend")))]
+fn desktop_poll_events(_surface: &str, _seq: &mut u64, _max_events: usize) -> Vec<Term> {
+    Vec::new()
+}
+
+fn desktop_enqueue_audio_bell() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        if std::process::Command::new("osascript")
+            .arg("-e")
+            .arg("beep")
+            .status()
+            .is_ok_and(|s| s.success())
+        {
+            return true;
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if std::process::Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg("[console]::beep(880,120)")
+            .status()
+            .is_ok_and(|s| s.success())
+        {
+            return true;
+        }
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        for (cmd, args) in [
+            ("canberra-gtk-play", vec!["-i", "bell"]),
+            (
+                "paplay",
+                vec!["/usr/share/sounds/freedesktop/stereo/bell.oga"],
+            ),
+        ] {
+            if std::process::Command::new(cmd)
+                .args(args)
+                .status()
+                .is_ok_and(|s| s.success())
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn first_party_create_surface(
     runtime: &mut GfxHostRuntime,
     payload: &Term,
@@ -241,18 +363,24 @@ fn first_party_create_surface(
     let title = opts
         .and_then(|m| map_get_string(m, ":title"))
         .unwrap_or_else(|| "surface".to_string());
+    runtime.next_surface = runtime.next_surface.saturating_add(1);
+    let adapter = adapter_for_profile(profile).to_string();
+    let sid = format!("surface-{}-{}", adapter, runtime.next_surface);
+    let mut created = true;
     let (resolved_width, resolved_height) = match profile {
         GfxFirstPartyProfile::Interactive => {
             interactive_query_surface_size().unwrap_or((width, height))
         }
+        GfxFirstPartyProfile::Desktop => {
+            created = desktop_create_surface(&sid, width, height, &title);
+            desktop_query_surface_size(&sid).unwrap_or((width, height))
+        }
         GfxFirstPartyProfile::Headless => (width, height),
     };
     let backend = backend_for_profile(profile).to_string();
-    let adapter = adapter_for_profile(profile).to_string();
-    runtime.next_surface = runtime.next_surface.saturating_add(1);
-    let sid = format!("surface-{}-{}", adapter, runtime.next_surface);
     let title_applied = match profile {
         GfxFirstPartyProfile::Interactive => interactive_apply_title(&title),
+        GfxFirstPartyProfile::Desktop => desktop_apply_title(&sid, &title),
         GfxFirstPartyProfile::Headless => true,
     };
     runtime.surfaces.insert(
@@ -275,6 +403,7 @@ fn first_party_create_surface(
         (":height", Term::Int(resolved_height.into())),
         (":title", Term::Str(title)),
         (":title-applied", Term::Bool(title_applied)),
+        (":created", Term::Bool(created)),
         (":pending-redraws", Term::Int(0_i64.into())),
     ])
 }
@@ -295,10 +424,14 @@ fn first_party_resize_surface(runtime: &mut GfxHostRuntime, payload: &Term) -> T
     if let Some(h) = size.and_then(|m| map_get_i64(m, ":height")) {
         surface.height = h;
     }
-    if let (true, Some((w, h))) = (
-        surface.adapter == interactive_adapter_name(),
-        interactive_query_surface_size(),
-    ) {
+    if surface.adapter == interactive_adapter_name() {
+        if let Some((w, h)) = interactive_query_surface_size() {
+            surface.width = w;
+            surface.height = h;
+        }
+    } else if surface.adapter == desktop_adapter_name()
+        && let Some((w, h)) = desktop_query_surface_size(&sid)
+    {
         surface.width = w;
         surface.height = h;
     }
@@ -323,6 +456,8 @@ fn first_party_set_title(runtime: &mut GfxHostRuntime, payload: &Term) -> Term {
     if let Some(title) = payload_map(payload).and_then(|m| map_get_string(m, ":title")) {
         if surface.adapter == interactive_adapter_name() {
             applied = interactive_apply_title(&title);
+        } else if surface.adapter == desktop_adapter_name() {
+            applied = desktop_apply_title(&sid, &title);
         }
         surface.title = title;
     }
@@ -344,11 +479,17 @@ fn first_party_request_redraw(runtime: &mut GfxHostRuntime, payload: &Term) -> T
         return unknown_surface_error("gfx/window::request-redraw", &sid);
     };
     surface.pending_redraws = surface.pending_redraws.saturating_add(1);
+    let applied = if surface.adapter == desktop_adapter_name() {
+        desktop_request_redraw(&sid)
+    } else {
+        true
+    };
     map_term(vec![
         (":ok", Term::Bool(true)),
         (":backend", Term::Str(surface.backend.clone())),
         (":adapter", Term::Str(surface.adapter.clone())),
         (":surface", Term::Str(sid)),
+        (":redraw-applied", Term::Bool(applied)),
         (
             ":pending-redraws",
             Term::Int((surface.pending_redraws as i64).into()),
@@ -360,9 +501,20 @@ fn first_party_surface_info(runtime: &mut GfxHostRuntime, payload: &Term) -> Ter
     let Some(sid) = payload_surface_id(payload) else {
         return missing_surface_error("gfx/window::surface-info");
     };
-    let Some(surface) = runtime.surfaces.get(&sid) else {
+    let Some(surface) = runtime.surfaces.get_mut(&sid) else {
         return unknown_surface_error("gfx/window::surface-info", &sid);
     };
+    if surface.adapter == interactive_adapter_name() {
+        if let Some((w, h)) = interactive_query_surface_size() {
+            surface.width = w;
+            surface.height = h;
+        }
+    } else if surface.adapter == desktop_adapter_name()
+        && let Some((w, h)) = desktop_query_surface_size(&sid)
+    {
+        surface.width = w;
+        surface.height = h;
+    }
     map_term(vec![
         (":ok", Term::Bool(true)),
         (":backend", Term::Str(surface.backend.clone())),
@@ -415,6 +567,24 @@ fn first_party_poll_events(
                 remaining_slots,
             ));
         }
+    } else if matches!(profile, GfxFirstPartyProfile::Desktop) {
+        if surface.pending_redraws > 0 {
+            surface.pending_redraws -= 1;
+            surface.poll_seq = surface.poll_seq.saturating_add(1);
+            events.push(map_term(vec![
+                (":kind", Term::symbol(":redraw")),
+                (":surface", Term::Str(sid.clone())),
+                (":seq", Term::Int((surface.poll_seq as i64).into())),
+            ]));
+        }
+        let remaining_slots = max_events.saturating_sub(events.len());
+        if remaining_slots > 0 {
+            events.extend(desktop_poll_events(
+                &sid,
+                &mut surface.poll_seq,
+                remaining_slots,
+            ));
+        }
     }
 
     map_term(vec![
@@ -437,6 +607,8 @@ fn first_party_set_cursor_mode(runtime: &mut GfxHostRuntime, payload: &Term) -> 
     if let Some(mode) = payload_map(payload).and_then(|m| map_get_string(m, ":mode")) {
         if surface.adapter == interactive_adapter_name() {
             applied = interactive_apply_cursor_mode(&mode);
+        } else if surface.adapter == desktop_adapter_name() {
+            applied = desktop_apply_cursor_mode(&sid, &mode);
         }
         surface.cursor_mode = mode;
     }
@@ -479,10 +651,10 @@ fn first_party_enqueue(
     profile: &GfxFirstPartyProfile,
 ) -> Term {
     runtime.audio_queued = runtime.audio_queued.saturating_add(1);
-    let bell_applied = if matches!(profile, GfxFirstPartyProfile::Interactive) {
-        interactive_enqueue_audio_bell()
-    } else {
-        false
+    let bell_applied = match profile {
+        GfxFirstPartyProfile::Interactive => interactive_enqueue_audio_bell(),
+        GfxFirstPartyProfile::Desktop => desktop_enqueue_audio_bell(),
+        GfxFirstPartyProfile::Headless => false,
     };
     map_term(vec![
         (":ok", Term::Bool(true)),

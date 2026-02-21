@@ -157,6 +157,16 @@ Supported keys:
   - supported values:
     - `headless` (default): deterministic no-event CI/runtime profile.
     - `interactive`: host-integrated terminal adapter profile (`terminal-host`) for local window/input/audio interactivity.
+    - `desktop`: non-terminal desktop adapter profile (`desktop-host`) for local window/input/audio workflows.
+- `gpu_backend` (string): optional backend selector for first-party GPU runtime domains (`gpu/compute::*`, `gfx/gpu::*`).
+  - supported values:
+    - `first-party-runtime` (default): deterministic in-memory runtime backend.
+    - `device-runtime`: in-repo device-backed backend (requires `gc_effects` `gpu-device-backend` feature at build time).
+  - applies only when no explicit bridge profile is configured for the op.
+- `gpu_backend_policy` (string): optional fail behavior for `gpu_backend = "device-runtime"`.
+  - supported values:
+    - `allow-fallback` (default): on device backend unavailability/error, fail open to `first-party-runtime` and annotate response with fallback metadata.
+    - `require-device`: fail closed with sealed error when device backend is unavailable/errors.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
 - `bridge_cmd_sha256` (string): optional executable digest pin (64 hex; optional `sha256:` prefix).

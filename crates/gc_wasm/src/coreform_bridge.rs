@@ -36,7 +36,7 @@ pub(crate) fn extract_protocol_error_string(ctx: &EvalCtx, v: &Value) -> Option<
     }
 }
 
-pub(crate) fn selfhost_parse_canonicalize_module(
+pub(crate) fn selfhost_parse_and_canon_forms(
     ctx: &mut EvalCtx,
     env: &Env,
     src: &str,

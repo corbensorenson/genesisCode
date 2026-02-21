@@ -77,7 +77,7 @@ fn eval_to_first_step_selfhost_with_artifact(
     bootstrap_selfhost(&mut rt.ctx, &mut rt.env, Some(artifact_src)).unwrap();
     rt.ctx.steps = 0;
     rt.ctx.step_limit = None;
-    let forms = selfhost_parse_canonicalize_module(&mut rt.ctx, &rt.env, src).unwrap();
+    let forms = selfhost_parse_and_canon_forms(&mut rt.ctx, &rt.env, src).unwrap();
     rt.module_h = Some(hash_module(&forms));
     rt.ctx.steps = 0;
     rt.ctx.step_limit = rt.step_limit;
@@ -329,7 +329,7 @@ fn wasm_runtime_selfhost_hashes_match_native_effect_runner_entry() {
     bootstrap_selfhost(&mut ctx, &mut env, Some(&artifact)).unwrap();
     ctx.steps = 0;
     ctx.step_limit = None;
-    let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src).unwrap();
+    let forms = selfhost_parse_and_canon_forms(&mut ctx, &env, src).unwrap();
     let program_hash = hash_module(&forms);
     ctx.steps = 0;
     ctx.step_limit = None;

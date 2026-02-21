@@ -60,6 +60,9 @@ bash scripts/test_shard_workspace.sh --total 4 --index 0 --runner nextest --excl
 
 ## Normative Spec
 
+Canonical docs entrypoint:
+- `docs/INDEX.md`
+
 Normative “lock-in” behavior lives in:
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`
 - `docs/spec/PATCH_SCHEMA.md`
@@ -70,6 +73,9 @@ Additional schemas:
 - `docs/spec/GCLOG_SCHEMA.md`
 - `docs/spec/TEST_SCHEMA.md`
 - `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+
+Capability comparison:
+- `feature_matrix.md`
 
 ## License
 

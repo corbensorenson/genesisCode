@@ -5,6 +5,12 @@ use gc_kernel::{SealId, Value};
 use num_traits::ToPrimitive;
 
 use crate::policy::OpPolicy;
+use crate::runner_gpu_backend_policy::{
+    GPU_BACKEND_DEVICE_RUNTIME, GpuBackendFallbackPolicy, GpuBackendKind,
+    gpu_backend_fallback_policy, gpu_backend_kind, gpu_op_prefers_device_backend,
+    inject_backend_fallback_metadata,
+};
+use crate::runner_gpu_device_backend::call_device_backend;
 use crate::runner_host_bridge::{BridgeError, call_host_bridge};
 
 const FIRST_PARTY_GPU_BUFFER_MAX_BYTES: usize = 8 * 1024 * 1024;
@@ -44,6 +50,32 @@ pub(crate) fn gpu_host_call(
         return None;
     }
     if !has_explicit_bridge_profile(pol) {
+        if gpu_backend_kind(pol) == GpuBackendKind::DeviceRuntime
+            && gpu_op_prefers_device_backend(op)
+        {
+            return Some(match call_device_backend(op, payload) {
+                Ok(resp) => Value::Data(resp),
+                Err(err) => match gpu_backend_fallback_policy(pol) {
+                    GpuBackendFallbackPolicy::RequireDevice => mk_error(
+                        error_tok,
+                        &BridgeError {
+                            code: err.code,
+                            message: err.message,
+                        },
+                        Some(op),
+                    ),
+                    GpuBackendFallbackPolicy::AllowFallback => {
+                        let fallback = first_party_gpu_response(runtime, op, payload);
+                        let decorated = inject_backend_fallback_metadata(
+                            fallback,
+                            GPU_BACKEND_DEVICE_RUNTIME,
+                            &err.message,
+                        );
+                        Value::Data(decorated)
+                    }
+                },
+            });
+        }
         return Some(Value::Data(first_party_gpu_response(runtime, op, payload)));
     }
     Some(match call_host_bridge("gpu", op, payload, pol) {

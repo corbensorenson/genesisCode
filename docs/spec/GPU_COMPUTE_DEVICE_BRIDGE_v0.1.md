@@ -2,6 +2,11 @@
 
 This spec defines the first-party in-repo device bridge path for `gpu/compute::*` host ops.
 
+Status:
+- Microbench/runtime-benchmark profile document.
+- Canonical runtime capability policy naming remains `device-runtime` (see `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`).
+- `device-bridge` naming in this file is retained for benchmark lane compatibility.
+
 For compute-only runtime productization and CI gating that is independent of graphics
 runtime lanes, see:
 

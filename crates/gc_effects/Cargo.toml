@@ -4,6 +4,11 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 
+[features]
+default = []
+gpu-device-backend = ["dep:bytemuck", "dep:pollster", "dep:wgpu"]
+gfx-desktop-backend = ["dep:minifb"]
+
 [dependencies]
 anyhow.workspace = true
 blake3.workspace = true
@@ -27,6 +32,10 @@ gc_opt = { path = "../gc_opt" }
 fs2 = "0.4"
 crossterm = "0.28"
 notify = "6"
+bytemuck = { version = "1", optional = true }
+pollster = { version = "0.3", optional = true }
+wgpu = { version = "0.20", optional = true }
+minifb = { version = "0.27", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -54,6 +54,13 @@ Optional environment knobs:
 - `GENESIS_PERF_CARGO_PROFILE`
   - Build profile for benchmark execution.
 
+Per-op `caps.toml` knobs for first-party runtime lanes:
+
+- `gpu_backend = "device-runtime"` selects in-repo device-backed execution for
+  `gpu/compute::*` and `gfx/gpu::*` submit/introspection ops.
+- `gpu_backend_policy = "require-device|allow-fallback"` defines fail-closed vs fail-open
+  behavior when a device backend is unavailable.
+
 ## CI Integration
 
 CI enforces this profile in standard/full lanes before strict selfhost suites:

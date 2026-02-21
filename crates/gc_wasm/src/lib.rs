@@ -21,7 +21,7 @@ mod coreform_bridge;
 
 use coreform_bridge::{
     bootstrap_selfhost, extract_protocol_error_string, gate_eval_forms, js_err,
-    selfhost_parse_canonicalize_module,
+    selfhost_parse_and_canon_forms,
 };
 
 #[wasm_bindgen]
@@ -300,7 +300,7 @@ pub fn eval_coreform_module_selfhost_with_gates(
     // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
     ctx.steps = 0;
     ctx.step_limit = None;
-    let mut forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    let mut forms = selfhost_parse_and_canon_forms(&mut ctx, &env, src)?;
     gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
 
     ctx.steps = 0;
@@ -353,7 +353,7 @@ pub fn eval_coreform_module_selfhost_with_artifact_and_gates(
 
     ctx.steps = 0;
     ctx.step_limit = None;
-    let mut forms = selfhost_parse_canonicalize_module(&mut ctx, &env, src)?;
+    let mut forms = selfhost_parse_and_canon_forms(&mut ctx, &env, src)?;
     gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
 
     ctx.steps = 0;
@@ -632,7 +632,7 @@ impl Runtime {
         // Keep parse/canonicalize out of user eval step budgets for parity with Rust frontend.
         self.ctx.steps = 0;
         self.ctx.step_limit = None;
-        let mut forms = selfhost_parse_canonicalize_module(&mut self.ctx, &self.env, src)?;
+        let mut forms = selfhost_parse_and_canon_forms(&mut self.ctx, &self.env, src)?;
         gate_eval_forms(&mut forms, stage1_pipeline, stage1_gate, stage2_gate)?;
         self.module_h = Some(hash_module(&forms));
 

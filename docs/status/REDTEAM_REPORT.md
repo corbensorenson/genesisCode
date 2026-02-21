@@ -1,6 +1,6 @@
 # GenesisCode Red-Team Report
 
-Last updated: 2026-02-20
+Last updated: 2026-02-21
 
 Scope:
 - Track unresolved `P0` and `P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
@@ -8,23 +8,21 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P0.1` Interactive gfx terminal adapter writes control bytes to stdout and breaks deterministic agent workflow outputs.
-  - Next action: isolate terminal side effects from command output channels and re-stabilize workflow hashes.
-- `P0.2` First-party GPU backend remains deterministic in-memory simulation; production device-backed runtime is not integrated in `gc_effects`.
-  - Next action: integrate in-repo device-backed backend path with replay-safe contract.
-- `P0.3` First-party interactive gfx backend is terminal-host only (no production desktop window/audio backend).
-  - Next action: add non-terminal window/input/audio adapter path while preserving deterministic headless mode.
-- `P0.4` Host ABI lacks network/process capability domains needed for general service/tool workloads.
-  - Next action: define and implement capability-gated `io/net::*` and `sys/process::*` surfaces.
-- `P1.1` Editor watch polling rescans full trees each poll (non-incremental).
-  - Next action: switch to incremental watcher/indexed-delta strategy with deterministic replay semantics.
-- `P1.2` Local `prepush-standard` health profile omits agent reference workflow gate present in CI.
-  - Next action: align local and CI gating for agent workflow regressions.
-- `P1.3` Selfhost cutover dashboard freshness contract is currently broken (`SELFHOST_CUTOVER.md` stale).
-  - Next action: regenerate and keep dashboard synchronized in standard update flow.
-- `P1.4` `gc_effects` currently fails strict clippy `-D warnings`.
-  - Next action: clear current warnings and keep lint-clean profile enforced.
-- `P1.5` WASI profile currently rejects HTTP(S) remotes, limiting registry workflows.
-  - Next action: add constrained policy-gated WASI networking profile for registry use.
-- `P1.6` Deterministic resource model remains intentionally incomplete for adversarial workloads.
-  - Next action: add stronger deterministic resource controls beyond current conservative limits.
+- `P0.1` Production binaries do not yet have explicit backend-capable feature profile wiring for first-party GPU/desktop lanes.
+  - Next action: define and enforce backend-capable vs headless production feature profiles.
+- `P0.2` `device-runtime` does not yet cover full canonical GPU lifecycle operations.
+  - Next action: implement full lifecycle coverage (or explicitly split semantics) and add replay tests for lifecycle ops.
+- `P0.3` GPU backend naming and policy vocabulary is split (`device-runtime` vs `device-bridge`) across runtime, microbench, docs, and CI.
+  - Next action: unify backend terminology and aliases across all surfaces.
+- `P0.4` `gcpm env` still depends on pre-populated local store artifacts and cannot hydrate missing locked deps in-place.
+  - Next action: add deterministic lock-hydration flow for missing env artifacts.
+- `P1.1` Local health gate default can skip all checks whenever upgrade backlog is non-zero.
+  - Next action: always run a minimum mandatory local gate set even during active backlog work.
+- `P1.2` Fast iteration loops remain slower than target envelopes (`test_changed_fast`/`dev-fast` wall time).
+  - Next action: reduce default wall time through targeted sharding/cache/warm-path improvements.
+- `P1.3` CI does not yet exercise all production backend feature combinations in `gc_effects`/`gc_cli`.
+  - Next action: add matrix coverage for headless/gpu/desktop/combined feature profiles.
+- `P1.4` Large production module hotspots still hinder AI-driven edits and review isolation.
+  - Next action: continue decomposition on highest-churn >1k-line modules.
+- `P1.5` Health profile auto-sharding defaults are limited to prepush profile.
+  - Next action: enable deterministic sharding defaults for dev-fast/release-full profiles where safe.

@@ -8,6 +8,8 @@ mod runner_editor_host;
 mod runner_gc_payload;
 mod runner_gfx_host;
 mod runner_gpk_payload;
+mod runner_gpu_backend_policy;
+mod runner_gpu_device_backend;
 mod runner_gpu_host;
 mod runner_host_bridge;
 mod runner_io_ops;
