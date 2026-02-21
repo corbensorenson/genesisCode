@@ -457,12 +457,17 @@ pub(super) fn cmd_selfhost_artifact(
         };
     let out = out_buf.as_path();
 
-    // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.
-    let step_limit = StepLimit::Unlimited;
-    let mem_limits = resolved_mem_limits(cli);
     let bootstrap_mode = maybe_embedded_bootstrap_mode();
     let bootstrap_artifact = if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly {
-        resolved_selfhost_artifact_for_frontend(cli)
+        resolved_explicit_selfhost_artifact(cli)
+            .or_else(|| {
+                if out.is_file() {
+                    Some(out.to_path_buf())
+                } else {
+                    None
+                }
+            })
+            .or_else(|| resolved_selfhost_artifact_for_frontend(cli))
     } else {
         None
     };
@@ -473,26 +478,24 @@ pub(super) fn cmd_selfhost_artifact(
             "selfhost-artifact requires an existing toolchain artifact when embedded bootstrap is unavailable; pass --selfhost-artifact or set GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
         ));
     }
-    let mut ctx = EvalCtx::with_step_limit(None);
-    ctx.set_mem_limits(mem_limits);
-    let prelude = build_prelude(&mut ctx);
-    let mut env = prelude.env;
-    load_selfhost_coreform_toolchain_v1_with_mode(
-        &mut ctx,
-        &mut env,
-        bootstrap_mode,
-        bootstrap_artifact.as_deref(),
-    )
-    .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
-    ctx.steps = 0;
-    ctx.step_limit = step_limit.resolve();
 
+    let toolchain_sources = selfhost_coreform_toolchain_v1_sources()
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?;
     let stage2_seed_index = bootstrap_artifact
         .as_deref()
         .and_then(load_stage2_seed_index);
     let reuse_seed_results = stage2_seed_index.as_ref().is_some_and(|idx| {
         idx.generated_by.as_deref() == Some(&format!("genesis {}", env!("CARGO_PKG_VERSION")))
     });
+    let full_seed_reuse = reuse_seed_results
+        && stage2_seed_index.as_ref().is_some_and(|idx| {
+            toolchain_sources.iter().all(|(path, src)| {
+                idx.modules
+                    .get(path)
+                    .is_some_and(|seed| seed.source == *src)
+            })
+        });
+
     let mut stage2_seed_hits = 0u64;
     let mut stage2_computed = 0u64;
 
@@ -502,141 +505,248 @@ pub(super) fn cmd_selfhost_artifact(
     let mut stage2_validated = 0u64;
     let mut gate_errors: Vec<String> = Vec::new();
 
-    let toolchain_sources = selfhost_coreform_toolchain_v1_sources()
-        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?;
-    for (path, src) in toolchain_sources {
-        let seed = if reuse_seed_results {
-            stage2_seed_index
-                .as_ref()
-                .and_then(|idx| idx.modules.get(&path))
-                .filter(|s| s.source == src)
-                .cloned()
-        } else {
-            None
+    if full_seed_reuse {
+        let Some(seed_index) = stage2_seed_index.as_ref() else {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/seed",
+                "stage2 seed index unexpectedly missing for full-reuse path",
+            ));
         };
-
-        let (forms, module_h, stage1_ok, stage1_errors, stage2) = if let Some(seed) = seed {
+        for (path, src) in &toolchain_sources {
+            let Some(seed) = seed_index.modules.get(path) else {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "selfhost/seed",
+                    format!("stage2 seed missing module entry for {}", path),
+                ));
+            };
             stage2_seed_hits = stage2_seed_hits.saturating_add(1);
-            (
-                seed.forms,
-                seed.module_hash,
-                seed.stage1_ok,
-                seed.stage1_errors,
-                Stage2Summary {
-                    module_hash: seed.stage2_module_hash,
-                    supported: seed.supported,
-                    ok: seed.ok,
-                    errors: seed.errors,
-                    wasm_hash: seed.wasm_hash,
-                    wasm_bytes_len: seed.wasm_bytes_len,
-                },
-            )
-        } else {
-            let forms = selfhost_parse_canonicalize_module(&mut ctx, &env, &src).map_err(|e| {
-                cli_err(
-                    e.exit_code,
-                    "selfhost/canon",
-                    format!("{path}: {}", e.json.message),
+            let stage2 = Stage2Summary {
+                module_hash: seed.stage2_module_hash,
+                supported: seed.supported,
+                ok: seed.ok,
+                errors: seed.errors.clone(),
+                wasm_hash: seed.wasm_hash,
+                wasm_bytes_len: seed.wasm_bytes_len,
+            };
+            if !seed.stage1_ok || (stage2.supported && !stage2.ok) {
+                all_ok = false;
+            }
+            if stage2.supported {
+                stage2_supported = stage2_supported.saturating_add(1);
+                if stage2.ok {
+                    stage2_validated = stage2_validated.saturating_add(1);
+                }
+            }
+            modules.push(Term::Map(
+                [
+                    (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
+                    (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
+                    (
+                        TermOrdKey(Term::symbol(":forms")),
+                        Term::Vector(seed.forms.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":module-h")),
+                        Term::Bytes(seed.module_hash.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage1-ok")),
+                        Term::Bool(seed.stage1_ok),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage1-errors")),
+                        Term::Vector(seed.stage1_errors.iter().cloned().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-supported")),
+                        Term::Bool(stage2.supported),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-ok")),
+                        Term::Bool(stage2.ok),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-errors")),
+                        Term::Vector(stage2.errors.iter().cloned().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-module-h")),
+                        Term::Bytes(stage2.module_hash.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-wasm-h")),
+                        stage2
+                            .wasm_hash
+                            .map(|h| Term::Bytes(h.to_vec().into()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-wasm-bytes")),
+                        stage2
+                            .wasm_bytes_len
+                            .map(|n| Term::Int((n as i64).into()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ));
+        }
+    } else {
+        // Artifact rebuild uses trusted bundled sources; do not charge user step limits here.
+        let step_limit = StepLimit::Unlimited;
+        let mem_limits = resolved_mem_limits(cli);
+        let mut ctx = EvalCtx::with_step_limit(None);
+        ctx.set_mem_limits(mem_limits);
+        let prelude = build_prelude(&mut ctx);
+        let mut env = prelude.env;
+        load_selfhost_coreform_toolchain_v1_with_mode(
+            &mut ctx,
+            &mut env,
+            bootstrap_mode,
+            bootstrap_artifact.as_deref(),
+        )
+        .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
+        ctx.steps = 0;
+        ctx.step_limit = step_limit.resolve();
+
+        for (path, src) in &toolchain_sources {
+            let seed = if reuse_seed_results {
+                stage2_seed_index
+                    .as_ref()
+                    .and_then(|idx| idx.modules.get(path))
+                    .filter(|s| s.source == *src)
+                    .cloned()
+            } else {
+                None
+            };
+
+            let (forms, module_h, stage1_ok, stage1_errors, stage2) = if let Some(seed) = seed {
+                stage2_seed_hits = stage2_seed_hits.saturating_add(1);
+                (
+                    seed.forms,
+                    seed.module_hash,
+                    seed.stage1_ok,
+                    seed.stage1_errors,
+                    Stage2Summary {
+                        module_hash: seed.stage2_module_hash,
+                        supported: seed.supported,
+                        ok: seed.ok,
+                        errors: seed.errors,
+                        wasm_hash: seed.wasm_hash,
+                        wasm_bytes_len: seed.wasm_bytes_len,
+                    },
                 )
-            })?;
-            let module_h = selfhost_hash_module_forms(&mut ctx, &env, &forms).map_err(|e| {
-                cli_err(
-                    e.exit_code,
-                    "selfhost/hash",
-                    format!("{path}: {}", e.json.message),
-                )
-            })?;
-            let stage1_forms =
-                selfhost_stage1_transform_module(&mut ctx, &env, &forms).map_err(|e| {
+            } else {
+                let forms =
+                    selfhost_parse_canonicalize_module(&mut ctx, &env, src).map_err(|e| {
+                        cli_err(
+                            e.exit_code,
+                            "selfhost/canon",
+                            format!("{path}: {}", e.json.message),
+                        )
+                    })?;
+                let module_h = selfhost_hash_module_forms(&mut ctx, &env, &forms).map_err(|e| {
                     cli_err(
                         e.exit_code,
-                        "selfhost/stage1",
+                        "selfhost/hash",
                         format!("{path}: {}", e.json.message),
                     )
                 })?;
-            let gate_report = gc_opt::stage1_validation_report(&forms, &stage1_forms);
-            stage2_computed = stage2_computed.saturating_add(1);
-            let report = gc_opt::stage2_validation_report(&stage1_forms);
-            (
-                forms,
-                module_h,
-                gate_report.ok,
-                gate_report.errors,
-                Stage2Summary {
-                    module_hash: report.module_hash,
-                    supported: report.supported,
-                    ok: report.ok,
-                    errors: report.errors,
-                    wasm_hash: report.wasm_hash,
-                    wasm_bytes_len: report.wasm_bytes_len,
-                },
-            )
-        };
+                let stage1_forms = selfhost_stage1_transform_module(&mut ctx, &env, &forms)
+                    .map_err(|e| {
+                        cli_err(
+                            e.exit_code,
+                            "selfhost/stage1",
+                            format!("{path}: {}", e.json.message),
+                        )
+                    })?;
+                let gate_report = gc_opt::stage1_validation_report(&forms, &stage1_forms);
+                stage2_computed = stage2_computed.saturating_add(1);
+                let report = gc_opt::stage2_validation_report(&stage1_forms);
+                (
+                    forms,
+                    module_h,
+                    gate_report.ok,
+                    gate_report.errors,
+                    Stage2Summary {
+                        module_hash: report.module_hash,
+                        supported: report.supported,
+                        ok: report.ok,
+                        errors: report.errors,
+                        wasm_hash: report.wasm_hash,
+                        wasm_bytes_len: report.wasm_bytes_len,
+                    },
+                )
+            };
 
-        if !stage1_ok || (stage2.supported && !stage2.ok) {
-            all_ok = false;
-        }
-        if stage2.supported {
-            stage2_supported = stage2_supported.saturating_add(1);
-            if stage2.ok {
-                stage2_validated = stage2_validated.saturating_add(1);
+            if !stage1_ok || (stage2.supported && !stage2.ok) {
+                all_ok = false;
             }
-        }
+            if stage2.supported {
+                stage2_supported = stage2_supported.saturating_add(1);
+                if stage2.ok {
+                    stage2_validated = stage2_validated.saturating_add(1);
+                }
+            }
 
-        modules.push(Term::Map(
-            [
-                (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
-                (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
-                (
-                    TermOrdKey(Term::symbol(":forms")),
-                    Term::Vector(forms.clone()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":module-h")),
-                    Term::Bytes(module_h.to_vec().into()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage1-ok")),
-                    Term::Bool(stage1_ok),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage1-errors")),
-                    Term::Vector(stage1_errors.into_iter().map(Term::Str).collect()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-supported")),
-                    Term::Bool(stage2.supported),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-ok")),
-                    Term::Bool(stage2.ok),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-errors")),
-                    Term::Vector(stage2.errors.iter().cloned().map(Term::Str).collect()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-module-h")),
-                    Term::Bytes(stage2.module_hash.to_vec().into()),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-wasm-h")),
-                    stage2
-                        .wasm_hash
-                        .map(|h| Term::Bytes(h.to_vec().into()))
-                        .unwrap_or(Term::Nil),
-                ),
-                (
-                    TermOrdKey(Term::symbol(":stage2-wasm-bytes")),
-                    stage2
-                        .wasm_bytes_len
-                        .map(|n| Term::Int((n as i64).into()))
-                        .unwrap_or(Term::Nil),
-                ),
-            ]
-            .into_iter()
-            .collect(),
-        ));
+            modules.push(Term::Map(
+                [
+                    (TermOrdKey(Term::symbol(":path")), Term::Str(path.clone())),
+                    (TermOrdKey(Term::symbol(":source")), Term::Str(src.clone())),
+                    (
+                        TermOrdKey(Term::symbol(":forms")),
+                        Term::Vector(forms.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":module-h")),
+                        Term::Bytes(module_h.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage1-ok")),
+                        Term::Bool(stage1_ok),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage1-errors")),
+                        Term::Vector(stage1_errors.into_iter().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-supported")),
+                        Term::Bool(stage2.supported),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-ok")),
+                        Term::Bool(stage2.ok),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-errors")),
+                        Term::Vector(stage2.errors.iter().cloned().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-module-h")),
+                        Term::Bytes(stage2.module_hash.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-wasm-h")),
+                        stage2
+                            .wasm_hash
+                            .map(|h| Term::Bytes(h.to_vec().into()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-wasm-bytes")),
+                        stage2
+                            .wasm_bytes_len
+                            .map(|n| Term::Int((n as i64).into()))
+                            .unwrap_or(Term::Nil),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ));
+        }
     }
 
     if stage2_supported < min_stage2_supported_modules {

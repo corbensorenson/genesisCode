@@ -24,8 +24,8 @@ Legend:
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (`release-full` health profile + dedicated GPU conformance lane require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ⚠️ (`io/fs::read`, `io/fs::write` only today) | ✅ | ✅ | ✅ | ✅ |
-| Process lifecycle + stdio streaming primitives | ⚠️ (`sys/process::exec` only today) | ✅ | ✅ | ✅ | ✅ |
+| Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Process lifecycle + stdio streaming primitives | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Raw socket/stream networking primitives | ✅ (`io/net::tcp-*`, `io/net::udp-*`, `io/net::dns-resolve`, `io/net::ws-*`, `io/net::http-request`) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Generic host extension/FFI capability ABI | ✅ (`host/plugin::command` + `editor/plugin::command` wrapper) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
@@ -52,10 +52,12 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates and qualification artifacts are in place; richer risk/coverage process mapping remains open).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.1` Selfhost artifact bootstrap path is over perf budget; incremental/cached artifact build is required for fast agent loops.
-- `P1.2` Filesystem capabilities are incomplete for general project orchestration (`io/fs::read|write` only).
-- `P1.3` Process capabilities are incomplete for long-running agent workflows (`sys/process::exec` only).
-- `P1.4` Host ABI indices lack machine-readable per-op payload/response schemas for strict agent prompting.
+- `P1.1` `release-full` hard-gate is not currently clippy-clean (`items_after_test_module` in obligations module layout).
+- `P2.1` Selfhost artifact freshness guard still defaults to rebuild-based slow-path verification in normal flows.
+- `P2.2` AI iteration SLO measurement is sensitive to host contention; perf-gate isolation/robustness needs hardening.
+- `P2.3` GPU backend policy defaults can still mask fallback in generic runtime profile execution; release intent should be explicit.
+- `P2.4` Documentation surface remains broad/overlapping for agent retrieval and needs canonical consolidation.
+- `P2.5` Regulated-assurance readiness remains partial; certification-grade process evidence packs are not yet complete.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
