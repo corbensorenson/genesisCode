@@ -205,6 +205,68 @@ enum PkgCmd {
         no_store: bool,
     },
 
+    /// Build a deterministic certification-oriented assurance pack artifact and optional audit bundle directory.
+    AssurancePack {
+        /// Path to package.toml used for obligation-link validation.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Target assurance profile contract.
+        #[arg(
+            long = "assurance-profile",
+            default_value = "custom",
+            value_parser = [
+                "custom",
+                "do178c-dal-a",
+                "do178c-dal-b",
+                "nasa-class-a",
+                "nasa-class-b",
+                "iec62304-class-c"
+            ]
+        )]
+        assurance_profile: String,
+
+        /// Optional release commit hash this pack binds to.
+        #[arg(long)]
+        commit: Option<String>,
+
+        /// Release snapshot hash this pack binds to.
+        #[arg(long)]
+        snapshot: String,
+
+        /// Optional policy hash this pack was verified against.
+        #[arg(long)]
+        policy: Option<String>,
+
+        /// Requirements-trace artifact path or store hash.
+        #[arg(long, default_value = ".genesis/assurance/requirements_trace.gc")]
+        trace: String,
+
+        /// Tool-qualification artifact path or store hash.
+        #[arg(long, default_value = ".genesis/assurance/tool_qualification.gc")]
+        qualification: String,
+
+        /// Coverage report artifact path or store hash (repeatable).
+        #[arg(long = "coverage")]
+        coverage: Vec<String>,
+
+        /// Independence attestation in `<left-role>:<right-role>@<attestor>` format (repeatable).
+        #[arg(long = "independence-attestation")]
+        independence_attestations: Vec<String>,
+
+        /// Output path for the generated assurance pack term.
+        #[arg(long, default_value = ".genesis/assurance/assurance_pack.gc")]
+        out: PathBuf,
+
+        /// Optional output directory for a deterministic audit bundle mirror.
+        #[arg(long)]
+        bundle_dir: Option<PathBuf>,
+
+        /// Do not import generated assurance pack into `.genesis/store`.
+        #[arg(long)]
+        no_store: bool,
+    },
+
     /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
     Install {
         /// Lock path (relative to the capability base_dir).

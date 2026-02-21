@@ -49,6 +49,7 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm test` -> `genesis/test-v0.2`
 - `gcpm trace` -> `genesis/pkg-requirements-trace-v0.1`
 - `gcpm qualify` -> `genesis/pkg-tool-qualification-v0.1`
+- `gcpm assurance-pack` -> `genesis/pkg-assurance-pack-v0.1`
 - `gcpm install` -> `genesis/pkg-install-v0.1`
 - `gcpm verify` -> `genesis/pkg-verify-v0.1`
 - `gcpm doctor` -> `genesis/pkg-doctor-v0.1`

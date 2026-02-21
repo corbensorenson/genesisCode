@@ -96,6 +96,7 @@ pub(super) fn cmd_pkg(
             | PkgCmd::SelfOptimize { .. }
             | PkgCmd::Trace { .. }
             | PkgCmd::Qualify { .. }
+            | PkgCmd::AssurancePack { .. }
             | PkgCmd::Env { .. } => extract_pkg_lock_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
@@ -499,6 +500,38 @@ fn cmd_pkg_local_workspace_ops(
                 },
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/qualify", e))?,
+        ),
+        PkgCmd::AssurancePack {
+            pkg,
+            assurance_profile,
+            commit,
+            snapshot,
+            policy,
+            trace,
+            qualification,
+            coverage,
+            independence_attestations,
+            out,
+            bundle_dir,
+            no_store,
+        } => Some(
+            pkg_assurance_pack_ops::handle_assurance_pack(
+                pkg_assurance_pack_ops::AssurancePackArgs {
+                    pkg,
+                    assurance_profile,
+                    commit: commit.as_deref(),
+                    snapshot,
+                    policy: policy.as_deref(),
+                    trace_spec: trace,
+                    qualification_spec: qualification,
+                    coverage_specs: coverage,
+                    independence_attestations,
+                    out,
+                    bundle_dir: bundle_dir.as_deref(),
+                    no_store: *no_store,
+                },
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/assurance-pack", e))?,
         ),
         PkgCmd::Env {
             profile,

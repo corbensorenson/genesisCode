@@ -66,6 +66,7 @@ mod kernel_exec;
 mod package_obligation_cmds;
 mod pkg_abi;
 mod pkg_assurance_ops;
+mod pkg_assurance_pack_ops;
 mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;

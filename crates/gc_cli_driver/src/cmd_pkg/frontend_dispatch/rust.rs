@@ -16,6 +16,7 @@ pub(super) fn build(
         | PkgCmd::Abi { .. }
         | PkgCmd::Trace { .. }
         | PkgCmd::Qualify { .. }
+        | PkgCmd::AssurancePack { .. }
         | PkgCmd::Env { .. } => {
             return Err(cli_err(
                 EX_INTERNAL,

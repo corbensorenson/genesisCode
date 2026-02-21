@@ -47,12 +47,12 @@ Notes:
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
-- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability, structural decision/MC/DC coverage, and tool qualification workflows are in place; formal process qualification and certification evidence packs remain open).
-- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, and structural decision/MC/DC coverage are strong; independent IV&V process controls remain open).
-- `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates and qualification artifacts are in place; richer risk/coverage process mapping remains open).
+- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability, structural decision/MC/DC coverage, tool qualification workflows, and deterministic assurance-pack bundles are in place; formal certification program execution remains external to the language runtime/toolchain).
+- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, structural coverage, and assurance-pack bundling are in place; independent mission IV&V process controls remain organizational responsibilities).
+- `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P2.5` Regulated-assurance readiness remains partial; certification-grade process evidence packs are not yet complete.
+- No unresolved checklist items are currently tracked in `upgrade_plan.md` from the latest red-team pass.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
