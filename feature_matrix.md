@@ -52,10 +52,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates and qualification artifacts are in place; richer risk/coverage process mapping remains open).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.1` `release-full` hard-gate is not currently clippy-clean (`items_after_test_module` in obligations module layout).
-- `P2.1` Selfhost artifact freshness guard still defaults to rebuild-based slow-path verification in normal flows.
 - `P2.2` AI iteration SLO measurement is sensitive to host contention; perf-gate isolation/robustness needs hardening.
-- `P2.3` GPU backend policy defaults can still mask fallback in generic runtime profile execution; release intent should be explicit.
 - `P2.4` Documentation surface remains broad/overlapping for agent retrieval and needs canonical consolidation.
 - `P2.5` Regulated-assurance readiness remains partial; certification-grade process evidence packs are not yet complete.
 

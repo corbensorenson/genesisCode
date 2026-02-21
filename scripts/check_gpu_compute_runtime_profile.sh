@@ -10,7 +10,23 @@ SKIP_RUN="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_SKIP_RUN:-0}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
 REQUIRED_BACKEND="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_REQUIRED_BACKEND:-}"
-GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-dev-allow-fallback}"
+GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-}"
+if [[ -z "$GPU_BACKEND_POLICY" ]]; then
+  case "$CARGO_PROFILE" in
+    selfhost-strict|release|release-*|production|prod)
+      GPU_BACKEND_POLICY="require-device"
+      ;;
+    *)
+      GPU_BACKEND_POLICY="dev-allow-fallback"
+      ;;
+  esac
+fi
+if [[ -z "$REQUIRED_BACKEND" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
+  REQUIRED_BACKEND="device-runtime"
+fi
+if [[ -z "$MICROBENCH_FEATURES" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
+  MICROBENCH_FEATURES="device-bridge"
+fi
 
 if [[ "$SKIP_RUN" == "1" ]]; then
   if [[ ! -f "$OUT" ]]; then

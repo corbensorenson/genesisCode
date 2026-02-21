@@ -8,4 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P1.1` `release-full` hard-gate currently fails at clippy (`items_after_test_module` in `crates/gc_obligations/src/obligation_exec.rs`).
+- None currently open.

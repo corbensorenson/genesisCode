@@ -13,7 +13,23 @@ GPU_BUDGET_FALLBACK_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK:-8
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
 MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
-GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-dev-allow-fallback}"
+GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-}"
+if [[ -z "$GPU_BACKEND_POLICY" ]]; then
+  case "$CARGO_PROFILE" in
+    selfhost-strict|release|release-*|production|prod)
+      GPU_BACKEND_POLICY="require-device"
+      ;;
+    *)
+      GPU_BACKEND_POLICY="dev-allow-fallback"
+      ;;
+  esac
+fi
+if [[ -z "$REQUIRED_GPU_BACKEND" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
+  REQUIRED_GPU_BACKEND="device-runtime"
+fi
+if [[ -z "$MICROBENCH_FEATURES" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
+  MICROBENCH_FEATURES="device-bridge"
+fi
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "runtime-microbench" --strict "$DISK_STRICT_MODE"
 

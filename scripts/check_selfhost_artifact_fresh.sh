@@ -111,5 +111,31 @@ if ! cmp -s "$REPO_ARTIFACT" "$REBUILT"; then
   exit 1
 fi
 
-echo "selfhost-artifact-fresh: ok (slow-path rebuild compare)"
-echo "selfhost-artifact-fresh: hint -> run scripts/update_selfhost_freshness_metadata.sh to enable fast-path"
+bash scripts/update_selfhost_freshness_metadata.sh >/dev/null
+if ! python3 - "$FRESHNESS_FILE" "$SOURCE_HASH" "$ART_HASH" <<'PY'
+import json
+import pathlib
+import sys
+
+meta_path = pathlib.Path(sys.argv[1])
+source_hash = sys.argv[2]
+artifact_hash = sys.argv[3]
+try:
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+ok = (
+    isinstance(meta, dict)
+    and meta.get("kind") == "genesis/selfhost-freshness-v0.1"
+    and meta.get("source_hash_sha256") == source_hash
+    and meta.get("artifact_hash_sha256") == artifact_hash
+)
+if not ok:
+    raise SystemExit(1)
+PY
+then
+  echo "selfhost-artifact-fresh: metadata refresh failed after slow-path compare" >&2
+  exit 1
+fi
+
+echo "selfhost-artifact-fresh: ok (slow-path rebuild compare; metadata refreshed)"
