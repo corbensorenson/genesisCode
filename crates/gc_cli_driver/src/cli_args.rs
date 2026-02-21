@@ -551,6 +551,43 @@ enum SemanticEditCmd {
         #[arg(long)]
         module_path: String,
     },
+
+    /// Export a deterministic workspace semantic symbol/dependency graph.
+    WorkspaceGraph {
+        /// Path to package.toml.
+        #[arg(long)]
+        pkg: PathBuf,
+    },
+
+    /// Build a deterministic multi-file refactor patch plan with conflict previews.
+    RefactorPlan {
+        /// Path to package.toml.
+        #[arg(long)]
+        pkg: PathBuf,
+
+        /// Refactor operation kind.
+        #[arg(long, value_enum)]
+        kind: RefactorKind,
+
+        /// Source symbol to rewrite (for example `my/pkg::foo`).
+        #[arg(long = "from")]
+        from_symbol: String,
+
+        /// Destination symbol to rewrite to (for example `my/pkg::foo_v2`).
+        #[arg(long = "to")]
+        to_symbol: String,
+
+        /// Required for `move` and `extract`: destination module path (relative to package dir).
+        #[arg(long)]
+        target_module_path: Option<String>,
+    },
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum RefactorKind {
+    Rename,
+    Move,
+    Extract,
 }
 
 #[derive(Subcommand)]

@@ -97,7 +97,8 @@ pub(super) fn cmd_pkg(
             | PkgCmd::Trace { .. }
             | PkgCmd::Qualify { .. }
             | PkgCmd::AssurancePack { .. }
-            | PkgCmd::Env { .. } => extract_pkg_lock_hash(&r.value)
+            | PkgCmd::Env { .. }
+            | PkgCmd::ProfileRuntime { .. } => extract_pkg_lock_hash(&r.value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             PkgCmd::Init { .. }
@@ -610,6 +611,36 @@ fn cmd_pkg_local_workspace_ops(
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?
         }),
+        PkgCmd::ProfileRuntime {
+            out,
+            history,
+            min_history,
+            max_regression_percent,
+            no_history_append,
+            task_budget_us,
+            io_budget_us,
+            memory_budget_us,
+        } => Some(
+            pkg_runtime_profile::handle_runtime_profile(
+                out,
+                history,
+                (*min_history).try_into().map_err(|_| {
+                    cli_err(
+                        EX_PARSE,
+                        "pkg/profile-runtime",
+                        format!("--min-history too large for this platform: {min_history}"),
+                    )
+                })?,
+                *max_regression_percent,
+                !*no_history_append,
+                pkg_runtime_profile::RuntimeProfileBudgets {
+                    task_budget_us: *task_budget_us,
+                    io_budget_us: *io_budget_us,
+                    memory_budget_us: *memory_budget_us,
+                },
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/profile-runtime", e))?,
+        ),
         _ => None,
     };
     let Some(local) = local else {

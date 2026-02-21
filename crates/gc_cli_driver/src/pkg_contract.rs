@@ -26,6 +26,7 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Publish { .. } => "genesis/pkg-publish-v0.1",
         PkgCmd::Migrate { .. } => "genesis/pkg-migrate-v0.1",
         PkgCmd::Env { .. } => "genesis/pkg-env-v0.1",
+        PkgCmd::ProfileRuntime { .. } => "genesis/pkg-runtime-profile-v0.1",
     }
 }
 
@@ -55,6 +56,7 @@ pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Publish { .. } => "pkg-publish",
         PkgCmd::Migrate { .. } => "pkg-migrate",
         PkgCmd::Env { .. } => "pkg-env",
+        PkgCmd::ProfileRuntime { .. } => "pkg-runtime-profile",
     }
 }
 
@@ -211,6 +213,16 @@ mod tests {
                 workspace_file: PathBuf::from("genesis.workspace.toml"),
                 out_dir: PathBuf::from(".genesis/env"),
                 hydrate: false,
+            },
+            PkgCmd::ProfileRuntime {
+                out: PathBuf::from(".genesis/perf/runtime_profile.gc"),
+                history: PathBuf::from(".genesis/perf/runtime_profile_history.jsonl"),
+                min_history: 5,
+                max_regression_percent: 100,
+                no_history_append: false,
+                task_budget_us: 10_000_000,
+                io_budget_us: 5_000_000,
+                memory_budget_us: 5_000_000,
             },
         ];
 

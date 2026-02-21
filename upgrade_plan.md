@@ -5,7 +5,7 @@ Last updated: 2026-02-21
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 12
+Open checklist items: 9
 
 ## Platform + Runtime Surface (P1)
 
@@ -52,27 +52,6 @@ Open checklist items: 12
     - Enforce release/full profile failure on missing domain successes.
 
 ## AI-First Authoring + Optimization (P2)
-
-- [ ] P2.1 Replace generic plugin payloads with typed plugin ABI schemas
-  - Evidence: extension surface is currently generic `host/plugin::command` / `editor/plugin::command` wrappers (`docs/spec/HOST_ABI.md`, `prelude/modules/00_core_plugin.gc`).
-  - Exit criteria:
-    - Add schema-id-based plugin request/response typing.
-    - Add preflight schema validation at runtime boundaries.
-    - Add policy contract updates and backward-compat adapters.
-
-- [ ] P2.2 Add workspace-wide semantic graph/refactor API for agents
-  - Evidence: CLI surface currently exposes `semantic-edit index` (module-level index) without a first-class workspace graph API (`docs/spec/CLI.md`).
-  - Exit criteria:
-    - Add deterministic workspace symbol graph and dependency-edge export.
-    - Add refactor-plan artifacts (rename/move/extract) with conflict previews.
-    - Add machine-mergeable patch planning for multi-file transformations.
-
-- [ ] P2.3 Add first-class deterministic runtime profiler for non-gfx workloads
-  - Evidence: current profiling is mostly benchmark/report scripts and gfx runtime trace artifacts (`docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`, `prelude/modules/10_gfx_runtime_trace.gc`).
-  - Exit criteria:
-    - Add runtime profile ops/contracts for task scheduler, IO, and memory pressure traces.
-    - Emit deterministic profile artifacts directly from CLI/gcpm workflows.
-    - Add SLO regression gates on profile artifacts (not only wall-time).
 
 - [ ] P2.4 Add media/asset pipeline contracts for AI-generated games/apps
   - Evidence: host ABI families currently include gfx/gpu/audio/input/window but no media asset decode/encode contract family (`docs/spec/HOST_ABI_INDEX_v0.1.json`).

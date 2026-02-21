@@ -10,7 +10,7 @@ This document is normative for the `genesis` CLI behavior in GenesisCode v0.2.
 - `--json`: emit exactly one JSON object on stdout for all subcommands.
   - In JSON mode, stderr is reserved for unexpected process-level failures (it should usually be empty).
 - `--step-limit <N>`: set the kernel evaluation step limit for commands that evaluate CoreForm.
-  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, `semantic-edit index`, `fmt --engine selfhost`, and `eval --engine selfhost`.
+  - Applies to: `eval`, `explain`, `run`, `replay`, `test`, `apply-patch`, `semantic-edit *`, `fmt --engine selfhost`, and `eval --engine selfhost`.
   - The step limit also applies to prelude initialization for that command.
   - Exception: for `fmt --engine selfhost` and `eval --engine selfhost`, toolchain bootstrap load is not charged against the step limit.
   - The v0.2 toolchain default is `5_000_000` steps.
@@ -147,6 +147,12 @@ CI strict selfhost gates:
 - `genesis semantic-edit index --pkg <package.toml> --module-path <path>`
   - emits a deterministic canonical AST node index with stable semantic node IDs.
   - output kind: `genesis/semantic-edit-index-v0.1`.
+- `genesis semantic-edit workspace-graph --pkg <package.toml>`
+  - emits a deterministic workspace symbol graph with cross-module dependency edges.
+  - output kind: `genesis/semantic-edit-workspace-graph-v0.1`.
+- `genesis semantic-edit refactor-plan --pkg <package.toml> --kind <rename|move|extract> --from <symbol> --to <symbol> [--target-module-path <path>]`
+  - emits conflict previews and a machine-mergeable multi-file semantic patch plan.
+  - output kind: `genesis/semantic-edit-refactor-plan-v0.1`.
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
   - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
@@ -169,6 +175,8 @@ CI strict selfhost gates:
     including profile/workspace/lock/caps/dependency/member state required for reproducible workspace execution.
     - `--hydrate` fetches missing locked artifacts deterministically through policy-gated `core/store::get` before materialization.
   - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
+  - `genesis gcpm profile-runtime [--out <path>] [--history <path>] [--min-history <n>] [--max-regression-percent <n>] [--no-history-append] [--task-budget-us <n>] [--io-budget-us <n>] [--memory-budget-us <n>]`
+    emits deterministic non-gfx runtime profile artifacts (`:task-scheduler`, `:io-store-cycle`, `:memory-pressure`) and enforces absolute + p95 regression budgets in fail-closed mode.
   - `genesis gcpm trace --pkg <package.toml> --requirements <requirements.gc> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--out <path>] [--no-store]`
     emits deterministic `:requirements-trace` evidence for protected release traceability gates.
     `--commit` is optional to support pre-commit evidence generation without commit/evidence hash cycles.

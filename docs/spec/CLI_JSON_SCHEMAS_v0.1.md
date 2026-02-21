@@ -45,6 +45,8 @@ Failure envelopes always use:
 - `typecheck` -> `genesis/typecheck-v0.2`
 - `optimize` -> `genesis/optimize-v0.2`
 - `semantic-edit index` -> `genesis/semantic-edit-index-v0.1`
+- `semantic-edit workspace-graph` -> `genesis/semantic-edit-workspace-graph-v0.1`
+- `semantic-edit refactor-plan` -> `genesis/semantic-edit-refactor-plan-v0.1`
 - `apply-patch` -> `genesis/apply-patch-v0.2`
 - `verify` -> `genesis/verify-v0.2`
 

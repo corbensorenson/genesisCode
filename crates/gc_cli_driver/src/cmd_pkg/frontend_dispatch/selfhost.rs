@@ -20,7 +20,8 @@ pub(super) fn build(
         | PkgCmd::Trace { .. }
         | PkgCmd::Qualify { .. }
         | PkgCmd::AssurancePack { .. }
-        | PkgCmd::Env { .. } => {
+        | PkgCmd::Env { .. }
+        | PkgCmd::ProfileRuntime { .. } => {
             return Err(cli_err(
                 EX_INTERNAL,
                 "pkg/dispatch-drift",

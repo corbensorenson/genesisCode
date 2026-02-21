@@ -38,6 +38,8 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/typecheck-v0.2",
         "genesis/optimize-v0.2",
         "genesis/semantic-edit-index-v0.1",
+        "genesis/semantic-edit-workspace-graph-v0.1",
+        "genesis/semantic-edit-refactor-plan-v0.1",
         "genesis/apply-patch-v0.2",
         "genesis/verify-v0.2",
         "genesis/selfhost-artifact-v0.2",
@@ -76,6 +78,59 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         assert!(
             schema_doc.contains(kind),
             "schema registry missing kind: {kind}"
+        );
+    }
+}
+
+#[test]
+fn gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
+    let root = repo_root();
+    let cli_doc = fs::read_to_string(root.join("docs/spec/CLI.md")).expect("read CLI.md");
+    let schema_doc = fs::read_to_string(root.join("docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"))
+        .expect("read GCPM_JSON_SCHEMAS_v0.1.md");
+
+    assert!(
+        cli_doc.contains("docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"),
+        "CLI.md must reference gcpm schema registry"
+    );
+
+    let expected_kinds = [
+        "genesis/pkg-init-v0.1",
+        "genesis/pkg-new-v0.1",
+        "genesis/pkg-add-v0.1",
+        "genesis/pkg-remove-v0.1",
+        "genesis/pkg-lock-v0.1",
+        "genesis/pkg-update-v0.1",
+        "genesis/test-v0.2",
+        "genesis/pack-v0.2",
+        "genesis/typecheck-v0.2",
+        "genesis/run-v0.2",
+        "genesis/eval-v0.2",
+        "genesis/fmt-v0.2",
+        "genesis/optimize-v0.2",
+        "genesis/pkg-self-optimize-v0.1",
+        "genesis/pkg-runtime-profile-v0.1",
+        "genesis/pkg-requirements-trace-v0.1",
+        "genesis/pkg-tool-qualification-v0.1",
+        "genesis/pkg-assurance-pack-v0.1",
+        "genesis/pkg-install-v0.1",
+        "genesis/pkg-verify-v0.1",
+        "genesis/pkg-doctor-v0.1",
+        "genesis/pkg-list-v0.1",
+        "genesis/pkg-info-v0.1",
+        "genesis/pkg-abi-v0.1",
+        "genesis/pkg-snapshot-v0.1",
+        "genesis/pkg-export-v0.1",
+        "genesis/pkg-import-v0.1",
+        "genesis/pkg-publish-v0.1",
+        "genesis/pkg-migrate-v0.1",
+        "genesis/pkg-env-v0.1",
+    ];
+
+    for kind in expected_kinds {
+        assert!(
+            schema_doc.contains(kind),
+            "gcpm schema registry missing kind: {kind}"
         );
     }
 }

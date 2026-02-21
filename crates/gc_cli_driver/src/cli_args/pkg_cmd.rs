@@ -457,4 +457,39 @@ enum PkgCmd {
         #[arg(long)]
         registry_default: Option<String>,
     },
+
+    /// Emit deterministic non-gfx runtime profile artifacts and enforce SLO regressions.
+    ProfileRuntime {
+        /// Output runtime profile artifact path.
+        #[arg(long, default_value = ".genesis/perf/runtime_profile.gc")]
+        out: PathBuf,
+
+        /// Runtime profile history JSONL path.
+        #[arg(long, default_value = ".genesis/perf/runtime_profile_history.jsonl")]
+        history: PathBuf,
+
+        /// Minimum history samples required before regression checks are enforced.
+        #[arg(long, default_value_t = 5)]
+        min_history: u64,
+
+        /// Allowed regression percentage over history p95 (for example `25` means +25%).
+        #[arg(long, default_value_t = 100)]
+        max_regression_percent: u64,
+
+        /// Skip appending this run to history.
+        #[arg(long)]
+        no_history_append: bool,
+
+        /// Absolute task scheduler budget in microseconds.
+        #[arg(long, default_value_t = 10_000_000)]
+        task_budget_us: u64,
+
+        /// Absolute IO store-cycle budget in microseconds.
+        #[arg(long, default_value_t = 5_000_000)]
+        io_budget_us: u64,
+
+        /// Absolute memory-pressure probe budget in microseconds.
+        #[arg(long, default_value_t = 5_000_000)]
+        memory_budget_us: u64,
+    },
 }

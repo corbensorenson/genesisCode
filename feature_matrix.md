@@ -36,11 +36,12 @@ Legend:
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
 | Deployment/bundle target pipeline in core toolchain | ⚠️ (`pack` exists; no first-class deterministic `web/desktop/service` target bundlers yet) | ⚠️ | ✅ | ⚠️ | ⚠️ |
-| Workspace semantic graph/refactor API for automation | ⚠️ (`semantic-edit index` is module-scoped; no first-class workspace graph API yet) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` provide deterministic dependency graph export and machine-mergeable multi-file patch planning) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `scripts/check_genesiscode_authoring_skill.sh` conformance gate) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| Deterministic non-gfx runtime profiling in core workflow | ✅ (`gcpm profile-runtime` emits task/IO/memory profile artifacts with history-aware p95 regression gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -65,8 +66,6 @@ Known GenesisCode gaps (current red-team focus):
 - P1.4 durable data capability family (`io/db::*`)
 - P1.5 deterministic deployment target bundling (`gcpm build --target`)
 - P1.6 gauntlet domain expansion for browser/xr/server/data/deploy
-- P2.2 workspace semantic graph/refactor API
-- P2.3 deterministic runtime profiling for non-gfx workloads
 - P2.4 media/asset pipeline contracts
 - P2.7 conformance lanes for new platform domains
 - P2.8 end-to-end agent workflow performance SLO gates

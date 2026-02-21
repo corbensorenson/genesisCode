@@ -395,6 +395,23 @@ pub(super) fn cmd_semantic_edit(cli: &Cli, cmd: &SemanticEditCmd) -> Result<CmdO
         SemanticEditCmd::Index { pkg, module_path } => {
             cmd_semantic_edit_index(cli, pkg, module_path)
         }
+        SemanticEditCmd::WorkspaceGraph { pkg } => {
+            super::semantic_workspace::cmd_semantic_edit_workspace_graph(cli, pkg)
+        }
+        SemanticEditCmd::RefactorPlan {
+            pkg,
+            kind,
+            from_symbol,
+            to_symbol,
+            target_module_path,
+        } => super::semantic_workspace::cmd_semantic_edit_refactor_plan(
+            cli,
+            pkg,
+            *kind,
+            from_symbol,
+            to_symbol,
+            target_module_path.as_deref(),
+        ),
     }
 }
 
