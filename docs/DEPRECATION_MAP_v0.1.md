@@ -8,12 +8,20 @@ Purpose: explicitly mark superseded/overlapping docs and point to canonical repl
 
 | Deprecated doc | Replacement (canonical) | Status |
 |---|---|---|
-| `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` | `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`, `docs/spec/GCPM_BUNDLE_v0.1.md`, `docs/spec/CLI.md` | Deprecated |
-| `docs/GENESISGRAPH_GENESISPKG_v0.2.md` | `docs/spec/GCPM_BUNDLE_v0.1.md`, `docs/spec/REGISTRY_POLICY.md`, `docs/spec/PATCH_SCHEMA.md` | Deprecated |
-| `docs/LOCK_GENERATOR_RULESET_v0.1.md` | `docs/spec/GCPM_WORKSPACE_v0.1.md`, `docs/spec/GCPM_CLI_CONTRACT_v0.1.md` | Deprecated |
-| `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/TRANSPARENCY_LOG.md` | Deprecated |
-| `docs/REACHABILITY_RULES_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/PATCH_SCHEMA.md` | Deprecated |
-| `docs/GARBAGE_COLLECTION_RULES_v0.1.md` | `docs/spec/CLI.md` (`gc/*` commands), `docs/spec/GCPM_BUNDLE_v0.1.md` | Deprecated |
+| `docs/CLI_SPEC_GENESISPKG_GENESISGRAPH_v0.1.md` | `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`, `docs/spec/GCPM_BUNDLE_v0.1.md`, `docs/spec/CLI.md` | Deprecated (stub redirect) |
+| `docs/GENESISGRAPH_GENESISPKG_v0.2.md` | `docs/spec/GCPM_BUNDLE_v0.1.md`, `docs/spec/REGISTRY_POLICY.md`, `docs/spec/PATCH_SCHEMA.md` | Deprecated (stub redirect) |
+| `docs/LOCK_GENERATOR_RULESET_v0.1.md` | `docs/spec/GCPM_WORKSPACE_v0.1.md`, `docs/spec/GCPM_CLI_CONTRACT_v0.1.md` | Deprecated (stub redirect) |
+| `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/TRANSPARENCY_LOG.md` | Deprecated (stub redirect) |
+| `docs/REACHABILITY_RULES_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/PATCH_SCHEMA.md` | Deprecated (stub redirect) |
+| `docs/GARBAGE_COLLECTION_RULES_v0.1.md` | `docs/spec/CLI.md` (`gc/*` commands), `docs/spec/GCPM_BUNDLE_v0.1.md` | Deprecated (stub redirect) |
+
+## Stub Contract (Deprecated Docs)
+
+Every deprecated top-level doc listed above must:
+
+- include `Bundle Entry:` and `Legacy Split Doc: true` markers,
+- include only redirect content (`Status`, `Canonical Replacements`, `Migration Guidance`),
+- avoid owning normative sections that belong to bundle/spec docs.
 
 ## Active Top-Level References (Not Deprecated)
 

@@ -37,7 +37,7 @@ Legend:
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
 | Deployment/bundle target pipeline in core toolchain | ⚠️ (`pack` exists; no first-class deterministic `web/desktop/service` target bundlers yet) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Workspace semantic graph/refactor API for automation | ⚠️ (`semantic-edit index` is module-scoped; no first-class workspace graph API yet) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Machine-consumable agent authoring contract | ⚠️ (skill guidance exists, but no schema-versioned conformance contract yet) | ❌ | ❌ | ❌ | ❌ |
+| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `scripts/check_genesiscode_authoring_skill.sh` conformance gate) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -69,8 +69,6 @@ Known GenesisCode gaps (current red-team focus):
 - P2.2 workspace semantic graph/refactor API
 - P2.3 deterministic runtime profiling for non-gfx workloads
 - P2.4 media/asset pipeline contracts
-- P2.5 documentation consolidation + drift reduction
-- P2.6 schema-versioned `write_genesisCode_skill` conformance
 - P2.7 conformance lanes for new platform domains
 - P2.8 end-to-end agent workflow performance SLO gates
 

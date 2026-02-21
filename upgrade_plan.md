@@ -5,7 +5,7 @@ Last updated: 2026-02-21
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 14
+Open checklist items: 12
 
 ## Platform + Runtime Surface (P1)
 
@@ -80,20 +80,6 @@ Open checklist items: 14
     - Add `core/media::*` / host ABI contracts for image/audio asset processing.
     - Add deterministic asset hashing/transcoding policies and constraints.
     - Add domain-kit workflows for asset import/build pipelines.
-
-- [ ] P2.5 Consolidate documentation to reduce retrieval overhead and drift
-  - Evidence: repository currently carries a large Markdown surface (`119` `.md` files), plus legacy split docs maintained beside bundles.
-  - Exit criteria:
-    - Collapse overlapping split docs into canonical bundles where possible.
-    - Keep deprecation map current with explicit replacements.
-    - Add doc-lint gates for duplicate normative sections and stale references.
-
-- [ ] P2.6 Promote `write_genesisCode_skill` into a versioned, machine-consumable authoring contract
-  - Evidence: `docs/write_genesisCode_skill.md` is currently a pointer document to `.agents/skills/genesiscode-authoring/SKILL.md`.
-  - Exit criteria:
-    - Add versioned schema/checklist artifact consumable by multiple agent runtimes.
-    - Add conformance tests verifying skill/bundle alignment with CLI/ABI indices.
-    - Add drift gate that fails when skill guidance contradicts current specs.
 
 - [ ] P2.7 Add full conformance lanes for browser/XR/server/data/deploy workflows
   - Evidence: current agent gauntlet + parity lanes cover 10 domains, none for browser/XR/durable-data/deployment.

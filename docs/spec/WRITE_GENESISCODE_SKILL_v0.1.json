@@ -1,0 +1,65 @@
+{
+  "bundle_entrypoint": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+  "kind": "genesis/write-genesiscode-skill-contract-v0.1",
+  "pointer_doc": "docs/write_genesisCode_skill.md",
+  "required_capability_indices": [
+    {
+      "kind": "genesis/host-abi-index-v0.1",
+      "path": "docs/spec/HOST_ABI_INDEX_v0.1.json"
+    },
+    {
+      "kind": "genesis/prelude-capability-index-v0.1",
+      "path": "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json"
+    }
+  ],
+  "required_contract_ids": [
+    "genesis/cli-schema-v0.1",
+    "genesis/error-v0.2",
+    "genesis/pkg-lock-v0.1",
+    "genesis/pkg-update-v0.1",
+    "genesis/pkg-publish-v0.1"
+  ],
+  "required_schema_docs": [
+    {
+      "kinds": [
+        "genesis/error-v0.2",
+        "genesis/cli-schema-v0.1"
+      ],
+      "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+    },
+    {
+      "kinds": [
+        "genesis/pkg-lock-v0.1",
+        "genesis/pkg-update-v0.1",
+        "genesis/pkg-publish-v0.1"
+      ],
+      "path": "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"
+    }
+  ],
+  "required_skill_sections": [
+    "## Mission",
+    "## Required references (must stay synchronized)",
+    "## Required contract IDs (must stay present)",
+    "## Ground rules (non-negotiable)",
+    "## Canonical workflow (agent prompt protocol)",
+    "## Effects, capabilities, and policies",
+    "## GenesisGraph / GenesisPkg expectations",
+    "## Self-hosting strategy",
+    "## Required output quality in reviews/PR notes",
+    "## AI-first authoring guidance"
+  ],
+  "required_spec_refs": [
+    "docs/spec/CLI.md",
+    "docs/spec/CLI_SCHEMA_v0.1.md",
+    "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+    "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+    "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md",
+    "docs/spec/HOST_ABI_INDEX_v0.1.json",
+    "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
+    "docs/spec/SELF_HOST_BOUNDARY.md",
+    "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+    "upgrade_plan.md"
+  ],
+  "skill_file": ".agents/skills/genesiscode-authoring/SKILL.md",
+  "version": "0.1"
+}

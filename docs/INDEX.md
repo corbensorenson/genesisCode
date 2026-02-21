@@ -27,6 +27,8 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
   - `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
   - `docs/spec/TESTING_BUNDLE_v0.1.md`
+  - `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`
 - Kernel/evaluator/contracts:
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`

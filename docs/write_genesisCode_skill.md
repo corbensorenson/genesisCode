@@ -8,6 +8,9 @@ Canonical retrieval bundle:
 Primary source of truth:
 - `/Users/corbensorenson/Documents/genesisCode/.agents/skills/genesiscode-authoring/SKILL.md`
 
+Machine-consumable contract:
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
+
 Use the skill file directly for operational guidance. This document exists as a stable project-facing pointer and onboarding entry.
 
 ## Scope

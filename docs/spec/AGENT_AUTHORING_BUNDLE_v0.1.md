@@ -12,6 +12,7 @@ Use this bundle first; open split specs only when a task requires field-level de
 - `docs/spec/TESTING_BUNDLE_v0.1.md`
 - `docs/spec/AGENT_INDEX_v0.1.md`
 - `docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`
+- `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`
 - `docs/write_genesisCode_skill.md`
 
 ## Legacy Split Docs (must stay marked)

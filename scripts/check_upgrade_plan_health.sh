@@ -300,6 +300,7 @@ if [[ "$declared_open" -gt 0 ]]; then
       "bash scripts/check_redteam_report.sh"
       "bash scripts/check_selfhost_symbol_ownership.sh"
       "bash scripts/check_planning_docs_fresh.sh"
+      "bash scripts/check_doc_hygiene.sh"
       "bash scripts/check_no_production_rust_frontend_refs.sh"
     )
     MANDATORY_LOCAL_CARGO_GATES=(
@@ -371,6 +372,7 @@ COMMON_GATES=(
   "bash scripts/check_redteam_report.sh"
   "bash scripts/check_feature_matrix_gap_hygiene.sh"
   "bash scripts/check_planning_docs_fresh.sh"
+  "bash scripts/check_doc_hygiene.sh"
   "bash scripts/check_task_concurrency_stress.sh"
   "bash scripts/check_host_bridge_fault_injection.sh"
   "bash scripts/check_no_user_panics.sh"
