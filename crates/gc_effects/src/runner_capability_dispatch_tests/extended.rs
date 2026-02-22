@@ -967,6 +967,91 @@ wasi_bridge_response = "{:ok true}"
 }
 
 #[test]
+fn host_plugin_policy_gate_requires_command_allowlist() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":plugin")),
+                Term::Str("demo".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":command")),
+                Term::Str("run".to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let out = call_capability(
+        "host/plugin::command",
+        &payload,
+        policy.op_policy("host/plugin::command"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(18),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
+fn host_plugin_bridge_transport_requires_digest_pin() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+base_dir = "."
+bridge_cmd = "bridge.sh"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":plugin")),
+                Term::Str("demo".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":command")),
+                Term::Str("run".to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let out = call_capability(
+        "host/plugin::command",
+        &payload,
+        policy.op_policy("host/plugin::command"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(19),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
 fn host_plugin_wasi_bridge_profile_returns_data() {
     let policy = CapsPolicy::from_toml_str(
         r#"

@@ -76,8 +76,18 @@ Strict/full profile runtime reports:
 - Prepush strict loop: `scripts/check_upgrade_plan_health.sh --profile prepush-standard`
   - defaults to deterministic gate sharding (`GENESIS_HEALTH_SHARDS`) derived from host parallelism
     for non-release loops (2-way on small hosts, 4-way on larger hosts)
+  - all cargo-backed gates share one cache target dir (`GENESIS_HEALTH_CARGO_TARGET_DIR`,
+    default `.genesis/build/health/<profile>`) to avoid cross-profile rebuild churn.
+  - gate scheduler partitions cargo-backed commands from non-cargo commands and runs cargo lanes
+    with dedicated shard control (`GENESIS_HEALTH_CARGO_GATE_SHARDS`, default `1`) to avoid
+    lock contention while preserving full gate coverage.
   - defaults profile gates to serial execution (`GENESIS_HEALTH_PROFILE_SHARDS=1`) to reduce
     cargo build-lock contention while preserving full gate coverage
+  - cargo prebuild orchestration is available via
+    `GENESIS_HEALTH_WARM_CARGO_CACHE=auto|1|0` (default `auto`:
+    `dev-fast=0`, `prepush-standard/release-full=1`) and reports to
+    `.genesis/perf/upgrade_plan_health_warmup_<profile>.json`
+    (`kind = genesis/upgrade-plan-health-cargo-warmup-v0.1`)
   - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
     `.genesis/perf/upgrade_plan_health_profile_report.json`
   - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `240000`)

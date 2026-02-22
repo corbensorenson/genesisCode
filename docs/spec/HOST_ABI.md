@@ -509,10 +509,12 @@ Determinism:
         schema-id contracts in `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`.
   - Required per-op policy controls:
     - `allow_plugins` (array<string>): explicit plugin allowlist.
-  - Optional per-op policy controls:
-    - `allow_commands` (array<string>): optional command allowlist.
-    - `allow_schema_ids` (array<string>): required when typed schema ids are used;
+    - `allow_commands` (array<string>): explicit command allowlist.
+  - `allow_schema_ids` (array<string>): required when typed schema ids are used;
       every request/response schema id must be allowlisted.
+  - Bridge hardening controls:
+    - when `bridge_cmd` transport is configured for plugin ops, `bridge_cmd_sha256` is required and enforced fail-closed.
+    - `wasi_bridge_profile` transport does not require bridge binary pinning because no host executable is spawned.
   - Bridge execution:
     - same deterministic bridge framing contract as other bridge-backed domains (`docs/spec/HOST_BRIDGE_PROTOCOL.md`).
     - supports `bridge_cmd` / `bridge_args` and WASI bridge profile response controls.

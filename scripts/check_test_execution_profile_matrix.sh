@@ -56,6 +56,10 @@ require_doc_pattern 'scripts/check_upgrade_plan_health.sh --profile prepush-stan
 require_doc_pattern 'genesis/upgrade-plan-health-profile-v0.1'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BUDGET_MS'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
+require_doc_pattern 'GENESIS_HEALTH_CARGO_TARGET_DIR'
+require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
+require_doc_pattern 'GENESIS_HEALTH_WARM_CARGO_CACHE=auto|1|0'
+require_doc_pattern 'genesis/upgrade-plan-health-cargo-warmup-v0.1'
 require_doc_pattern 'release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default'
 require_doc_pattern 'AI Iteration SLO Contention Policy'
 require_doc_pattern 'median-of-samples'
@@ -116,6 +120,21 @@ fi
 
 if ! grep -Fq 'PROFILE_SHARDS' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep dedicated profile shard control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_CARGO_GATE_SHARDS' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep dedicated cargo gate shard control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'export CARGO_TARGET_DIR="$HEALTH_CARGO_TARGET_DIR"' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must export shared CARGO_TARGET_DIR for health gates" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'partition_gate_commands' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must partition cargo vs non-cargo gate scheduling" >&2
   exit 1
 fi
 

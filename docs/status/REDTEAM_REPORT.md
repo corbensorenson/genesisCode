@@ -11,5 +11,3 @@ Scope:
 - `P1.4` XR runtime surface lacks advanced spatial primitives needed for full AR/VR workloads.
 - `P1.5` WebXR device lane lacks first-class browser-runtime conformance coverage.
 - `P1.6` typechecker inference remains conservative for complex agent-authored programs.
-- `P1.7` semantic patch schema lacks high-level refactor operations for autonomous edits.
-- `P1.8` repeated build/lock contention degrades health-check iteration throughput.

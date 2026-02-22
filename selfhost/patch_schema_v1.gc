@@ -12,6 +12,12 @@
 (def selfhost/patch_schema::is-sym?
   (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
 
+(def selfhost/patch_schema::is-sym-or-str?
+  (fn (x)
+    (if (selfhost/patch_schema::is-sym? x)
+      true
+      (selfhost/patch_schema::is-str? x))))
+
 (def selfhost/patch_schema::is-vec?
   (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
 
@@ -85,6 +91,25 @@
               r
               ((selfhost/patch_schema::validate-path-loop path len) ((core/int::add i) 1)))))))))
 
+(def selfhost/patch_schema::validate-sym-or-str-vec
+  (fn (v)
+    (fn (msg)
+      (if (selfhost/patch_schema::is-vec? v)
+        (let ((len (core/vec::len v)))
+          ((((selfhost/patch_schema::validate-sym-or-str-vec2 v) len) 0) msg))
+        (selfhost/patch_schema::err msg)))))
+
+(def selfhost/patch_schema::validate-sym-or-str-vec2
+  (fn (v len)
+    (fn (i)
+      (fn (msg)
+        (if ((core/int::eq? i) len)
+          true
+          (let ((x ((core/vec::get v) i)))
+            (if (selfhost/patch_schema::is-sym-or-str? x)
+              ((((selfhost/patch_schema::validate-sym-or-str-vec2 v) len) ((core/int::add i) 1)) msg)
+              (selfhost/patch_schema::err msg))))))))
+
 (def selfhost/patch_schema::validate-op-replace-node
   (fn (opm)
     (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "replace-node missing :module-path")))
@@ -151,24 +176,139 @@
           true
           (selfhost/patch_schema::err ":set must be a map"))))))
 
+(def selfhost/patch_schema::validate-op-rename-symbol
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "rename-symbol missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((fromv (selfhost/patch_schema::require-key opm (quote :from) "rename-symbol missing :from")))
+            (if (core/error::is? fromv)
+              fromv
+              (if (selfhost/patch_schema::is-sym-or-str? fromv)
+                (let ((tov (selfhost/patch_schema::require-key opm (quote :to) "rename-symbol missing :to")))
+                  (if (core/error::is? tov)
+                    tov
+                    (if (selfhost/patch_schema::is-sym-or-str? tov)
+                      true
+                      (selfhost/patch_schema::err "rename-symbol :to must be symbol|string"))))
+                (selfhost/patch_schema::err "rename-symbol :from must be symbol|string"))))
+          (selfhost/patch_schema::err "rename-symbol :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-move-module
+  (fn (opm)
+    (let ((fromp (selfhost/patch_schema::require-key opm (quote :from-module-path) "move-module missing :from-module-path")))
+      (if (core/error::is? fromp)
+        fromp
+        (if (selfhost/patch_schema::is-str? fromp)
+          (let ((top (selfhost/patch_schema::require-key opm (quote :to-module-path) "move-module missing :to-module-path")))
+            (if (core/error::is? top)
+              top
+              (if (selfhost/patch_schema::is-str? top)
+                true
+                (selfhost/patch_schema::err "move-module :to-module-path must be string"))))
+          (selfhost/patch_schema::err "move-module :from-module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-split-module
+  (fn (opm)
+    (let ((fromp (selfhost/patch_schema::require-key opm (quote :from-module-path) "split-module missing :from-module-path")))
+      (if (core/error::is? fromp)
+        fromp
+        (if (selfhost/patch_schema::is-str? fromp)
+          (let ((top (selfhost/patch_schema::require-key opm (quote :to-module-path) "split-module missing :to-module-path")))
+            (if (core/error::is? top)
+              top
+              (if (selfhost/patch_schema::is-str? top)
+                (let ((syms (selfhost/patch_schema::require-key opm (quote :symbols) "split-module missing :symbols")))
+                  (if (core/error::is? syms)
+                    syms
+                    (if (selfhost/patch_schema::is-vec? syms)
+                      (if ((core/int::lt? 0) (core/vec::len syms))
+                        ((selfhost/patch_schema::validate-sym-or-str-vec syms) "split-module :symbols entries must be symbol|string")
+                        (selfhost/patch_schema::err "split-module :symbols must be non-empty"))
+                      (selfhost/patch_schema::err "split-module :symbols must be vector"))))
+                (selfhost/patch_schema::err "split-module :to-module-path must be string"))))
+          (selfhost/patch_schema::err "split-module :from-module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-rewrite-meta-list
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "rewrite-meta missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((addv ((core/map::get opm) (quote :add))))
+            (let ((addr (if (core/list::is-nil? addv) true ((selfhost/patch_schema::validate-sym-or-str-vec addv) "rewrite-meta :add entries must be symbol|string"))))
+              (if (core/error::is? addr)
+                addr
+                (let ((removev ((core/map::get opm) (quote :remove))))
+                  (let ((remr (if (core/list::is-nil? removev) true ((selfhost/patch_schema::validate-sym-or-str-vec removev) "rewrite-meta :remove entries must be symbol|string"))))
+                    (if (core/error::is? remr)
+                      remr
+                      (let ((replacev ((core/map::get opm) (quote :replace))))
+                        (if (core/list::is-nil? replacev)
+                          true
+                          ((selfhost/patch_schema::validate-sym-or-str-vec replacev) "rewrite-meta :replace entries must be symbol|string")))))))))
+          (selfhost/patch_schema::err "rewrite-meta :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-migrate-contract-signature
+  (fn (opm)
+    (let ((mp (selfhost/patch_schema::require-key opm (quote :module-path) "migrate-contract-signature missing :module-path")))
+      (if (core/error::is? mp)
+        mp
+        (if (selfhost/patch_schema::is-str? mp)
+          (let ((cs (selfhost/patch_schema::require-key opm (quote :contract-symbol) "migrate-contract-signature missing :contract-symbol")))
+            (if (core/error::is? cs)
+              cs
+              (if (selfhost/patch_schema::is-sym-or-str? cs)
+                (let ((fromp (selfhost/patch_schema::require-key opm (quote :from-param) "migrate-contract-signature missing :from-param")))
+                  (if (core/error::is? fromp)
+                    fromp
+                    (if (selfhost/patch_schema::is-sym-or-str? fromp)
+                      (let ((top (selfhost/patch_schema::require-key opm (quote :to-param) "migrate-contract-signature missing :to-param")))
+                        (if (core/error::is? top)
+                          top
+                          (if (selfhost/patch_schema::is-sym-or-str? top)
+                            true
+                            (selfhost/patch_schema::err "migrate-contract-signature :to-param must be symbol|string"))))
+                      (selfhost/patch_schema::err "migrate-contract-signature :from-param must be symbol|string"))))
+                (selfhost/patch_schema::err "migrate-contract-signature :contract-symbol must be symbol|string"))))
+          (selfhost/patch_schema::err "migrate-contract-signature :module-path must be string"))))))
+
+(def selfhost/patch_schema::validate-op-known
+  (fn (op-sym)
+    (fn (op)
+      (if ((core/sym::eq? op-sym) (quote :replace-node))
+        (selfhost/patch_schema::validate-op-replace-node op)
+        (if ((core/sym::eq? op-sym) (quote :replace-node-id))
+          (selfhost/patch_schema::validate-op-replace-node-id op)
+          (if ((core/sym::eq? op-sym) (quote :add-module))
+            (selfhost/patch_schema::validate-op-add-module op)
+            (if ((core/sym::eq? op-sym) (quote :remove-module))
+              (selfhost/patch_schema::validate-op-remove-module op)
+              (if ((core/sym::eq? op-sym) (quote :update-manifest))
+                (selfhost/patch_schema::validate-op-update-manifest op)
+                (if ((core/sym::eq? op-sym) (quote :rename-symbol))
+                  (selfhost/patch_schema::validate-op-rename-symbol op)
+                  (if ((core/sym::eq? op-sym) (quote :move-module))
+                    (selfhost/patch_schema::validate-op-move-module op)
+                    (if ((core/sym::eq? op-sym) (quote :split-module))
+                      (selfhost/patch_schema::validate-op-split-module op)
+                      (if ((core/sym::eq? op-sym) (quote :rewrite-imports))
+                        (selfhost/patch_schema::validate-op-rewrite-meta-list op)
+                        (if ((core/sym::eq? op-sym) (quote :rewrite-exports))
+                          (selfhost/patch_schema::validate-op-rewrite-meta-list op)
+                          (if ((core/sym::eq? op-sym) (quote :migrate-contract-signature))
+                            (selfhost/patch_schema::validate-op-migrate-contract-signature op)
+                            (selfhost/patch_schema::err "unknown :op")))))))))))))))
+
 (def selfhost/patch_schema::validate-op
   (fn (op)
     (if (selfhost/patch_schema::is-map? op)
-      (let ((op_sym ((core/map::get op) (quote :op))))
-        (if (core/list::is-nil? op_sym)
+      (let ((op-sym ((core/map::get op) (quote :op))))
+        (if (core/list::is-nil? op-sym)
           (selfhost/patch_schema::err "missing :op")
-          (if (selfhost/patch_schema::is-sym? op_sym)
-            (if ((core/sym::eq? op_sym) (quote :replace-node))
-              (selfhost/patch_schema::validate-op-replace-node op)
-              (if ((core/sym::eq? op_sym) (quote :replace-node-id))
-                (selfhost/patch_schema::validate-op-replace-node-id op)
-                (if ((core/sym::eq? op_sym) (quote :add-module))
-                  (selfhost/patch_schema::validate-op-add-module op)
-                  (if ((core/sym::eq? op_sym) (quote :remove-module))
-                    (selfhost/patch_schema::validate-op-remove-module op)
-                    (if ((core/sym::eq? op_sym) (quote :update-manifest))
-                      (selfhost/patch_schema::validate-op-update-manifest op)
-                      (selfhost/patch_schema::err "unknown :op"))))))
+          (if (selfhost/patch_schema::is-sym? op-sym)
+            ((selfhost/patch_schema::validate-op-known op-sym) op)
             (selfhost/patch_schema::err ":op must be a symbol"))))
       (selfhost/patch_schema::err "op must be a map"))))
 

@@ -30,6 +30,7 @@ Legend:
 | Raw socket/stream networking primitives | ✅ (first-class `core/net::*` socket wrappers + required gauntlet domain coverage) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ✅ (first-class `core/net::*` inbound listener/accept/respond wrappers + policy-gated bind/request-size controls + gauntlet domain coverage) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| Plugin command surface hardening (command allowlists + bridge digest pinning) | ✅ (`host/plugin::command` and `editor/plugin::command` require `allow_commands`; bridge transport requires `bridge_cmd_sha256` and fails closed when missing/mismatched) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ✅ (first-party `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` families + `first_party_profile=\"browser\"` for gfx window/input/audio parity lanes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | WebXR runtime primitives (session/frame/input/haptics) | ✅ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts across first-party + `xr_backend=\"webxr-device\"` deterministic bridge envelopes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | Advanced XR spatial primitives (anchors/hands/mesh/layers) | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -48,6 +49,7 @@ Legend:
 | Generative workload regression gates with enforced historical baselines | ✅ (`agent_generative_workloads*` lanes are fail-closed with seeded baseline histories, per-case minimum-history enforcement, and active regression budgets in native/parity runs) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Perf/hot-path gate operability under constrained local disk headroom | ✅ (shared `GENESIS_PERF_DISK_STRICT_MODE=auto|1|0`; default `auto` keeps CI fail-closed while avoiding local precheck false negatives) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Health gate lock-aware cargo scheduling + shared build cache target | ✅ (`check_upgrade_plan_health.sh` partitions cargo/non-cargo gates, shares `CARGO_TARGET_DIR`, and supports profile-scoped cargo warmup orchestration) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` + `:tool-qualification` schema + fail-closed policy gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -69,11 +71,7 @@ Known GenesisCode gaps (current red-team focus):
 - `P1.4` - XR feature surface lacks advanced spatial primitives.
 - `P1.5` - WebXR device lane lacks first-class browser-runtime conformance coverage.
 - `P1.6` - typechecker inference remains conservative for complex agent-authored programs.
-- `P1.7` - semantic patch schema lacks high-level refactor operations.
-- `P1.8` - repeated build/lock contention degrades iteration throughput in health scripts.
-- `P2.1` - release defaults for plugin bridge hardening are not strict enough.
 - `P2.2` - GPU device conformance matrix does not yet cover broad real hardware/OS lanes.
-- `P2.3` - docs surface remains large with remaining deprecated redirect stubs.
 - `P2.4` - no first-class cryptography capability family in the canonical host ABI.
 
 Primary evidence paths:

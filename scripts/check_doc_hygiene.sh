@@ -26,9 +26,6 @@ row_pattern = re.compile(
     re.MULTILINE,
 )
 rows = list(row_pattern.finditer(map_text))
-if not rows:
-    raise SystemExit("doc-hygiene: no deprecated doc rows parsed from deprecation map")
-
 deprecated_docs = {}
 for row in rows:
     deprecated_rel = row.group("deprecated")

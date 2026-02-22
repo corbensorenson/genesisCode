@@ -19,7 +19,7 @@ HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_pl
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000}"
 HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
 HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-1}"
-HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-1}"
+HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-auto}"
 HEALTH_WARMUP_REPORT="${GENESIS_HEALTH_WARMUP_REPORT:-.genesis/perf/upgrade_plan_health_warmup_${PROFILE}.json}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
@@ -266,7 +266,7 @@ run_health_cargo_warmup() {
   local mode="$1"
 
   if [[ "$HEALTH_WARM_CARGO_CACHE" != "0" && "$HEALTH_WARM_CARGO_CACHE" != "1" ]]; then
-    echo "upgrade-plan-health: GENESIS_HEALTH_WARM_CARGO_CACHE must be 0 or 1" >&2
+    echo "upgrade-plan-health: GENESIS_HEALTH_WARM_CARGO_CACHE must be auto, 0, or 1" >&2
     exit 2
   fi
 
@@ -391,6 +391,12 @@ if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "prepush-standard" && "$PROFILE"
   echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|prepush-standard|release-full)" >&2
   exit 2
 fi
+if [[ -z "${GENESIS_HEALTH_CARGO_TARGET_DIR:-}" ]]; then
+  HEALTH_CARGO_TARGET_DIR="$ROOT_DIR/.genesis/build/health/$PROFILE"
+fi
+if [[ -z "${GENESIS_HEALTH_WARMUP_REPORT:-}" ]]; then
+  HEALTH_WARMUP_REPORT=".genesis/perf/upgrade_plan_health_warmup_${PROFILE}.json"
+fi
 if [[ -z "${GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE+x}" ]]; then
   if [[ "$PROFILE" == "release-full" ]]; then
     GPU_DEVICE_CONFORMANCE="1"
@@ -426,6 +432,13 @@ fi
 if [[ ! "$HEALTH_CARGO_GATE_SHARDS" =~ ^[0-9]+$ || "$HEALTH_CARGO_GATE_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_CARGO_GATE_SHARDS must be a positive integer" >&2
   exit 2
+fi
+if [[ "$HEALTH_WARM_CARGO_CACHE" == "auto" ]]; then
+  if [[ "$PROFILE" == "dev-fast" ]]; then
+    HEALTH_WARM_CARGO_CACHE="0"
+  else
+    HEALTH_WARM_CARGO_CACHE="1"
+  fi
 fi
 
 PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"

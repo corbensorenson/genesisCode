@@ -1,4 +1,6 @@
-use super::common::{allow_policy_for, documented_host_abi_ops, mk_single_effect_program, sealed_error_code};
+use super::common::{
+    allow_policy_for, documented_host_abi_ops, mk_single_effect_program, sealed_error_code,
+};
 use gc_effects::{CapsPolicy, Decision, EffectsError, run};
 use gc_kernel::{EvalCtx, eval_module};
 use gc_prelude::build_prelude;

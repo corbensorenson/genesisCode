@@ -24,6 +24,12 @@ Each op is a map and must include:
   - `:add-module`
   - `:remove-module`
   - `:update-manifest`
+  - `:rename-symbol`
+  - `:move-module`
+  - `:split-module`
+  - `:rewrite-imports`
+  - `:rewrite-exports`
+  - `:migrate-contract-signature`
 
 ### `:replace-node`
 
@@ -74,6 +80,76 @@ Supported keys:
 - `:tests-remove` (vector of symbols)
 - `:caps-policy` (string) convenience for setting the manifest `caps_policy` field
 
+### `:rename-symbol`
+
+Required keys:
+
+- `:module-path` (string)
+- `:from` (symbol or string)
+- `:to` (symbol or string)
+
+Semantics:
+
+- Applies deterministic symbol-level rewrite across the canonical module term tree.
+- Fails if no rewrite sites are found.
+
+### `:move-module`
+
+Required keys:
+
+- `:from-module-path` (string)
+- `:to-module-path` (string)
+
+Semantics:
+
+- Moves the module file and rewrites `package.toml` module path entry.
+- Fails if source is missing, target exists, or manifest does not contain source path.
+
+### `:split-module`
+
+Required keys:
+
+- `:from-module-path` (string)
+- `:to-module-path` (string)
+- `:symbols` (non-empty vector of symbols or strings)
+
+Semantics:
+
+- Extracts matching top-level `(def <symbol> ...)` forms from source module into new target module.
+- Rewrites source/target modules in canonical form and appends target path to manifest module list.
+
+### `:rewrite-imports` / `:rewrite-exports`
+
+Required keys:
+
+- `:module-path` (string)
+
+Optional keys:
+
+- `:add` (vector of symbols or strings)
+- `:remove` (vector of symbols or strings)
+- `:replace` (vector of symbols or strings)
+
+Semantics:
+
+- Rewrites `::meta` map list field (`:imports` or `:exports`) deterministically.
+- `:replace` seeds full list; `:remove` then `:add` are applied set-wise.
+
+### `:migrate-contract-signature`
+
+Required keys:
+
+- `:module-path` (string)
+- `:contract-symbol` (symbol or string)
+- `:from-param` (symbol or string)
+- `:to-param` (symbol or string)
+
+Semantics:
+
+- Targets `(def <contract-symbol> (fn (...) ...))`.
+- Renames first function parameter from `:from-param` to `:to-param` and rewrites in-scope body references with lexical shadowing respected for nested `fn`/`let`.
+- Fails if target contract/function shape is not found.
+
 ## Path encoding (for `:replace-node`)
 
 `:path` is a vector of steps; each step is a vector where the first element is a tag symbol:
@@ -88,6 +164,15 @@ Supported keys:
   - select the value at `key_term` in a map
 
 All patch application happens against the module’s canonicalized CoreForm, and the result is re-canonicalized before writing.
+
+## Replay-Aware Evidence
+
+Patch apply reports include deterministic per-op evidence entries. For high-level refactor ops, entries include:
+
+- operation symbol (`:op`)
+- target module path
+- before/after module hashes (`:before-module-h`, `:after-module-h`)
+- structured op-specific detail map (`:detail`)
 
 ## Stable Node IDs
 

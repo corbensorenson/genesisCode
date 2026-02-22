@@ -2,6 +2,7 @@ use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
 use gc_effects::{CapsPolicy, EffectLog, replay, run};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use tempfile::tempdir;
@@ -57,6 +58,22 @@ fn run_and_replay_code(src: &str, policy_toml: &str) -> (String, [u8; 32], [u8; 
     (code, run_hash, replay_hash)
 }
 
+fn file_sha256_hex(path: &std::path::Path) -> String {
+    use std::io::Read as _;
+
+    let mut file = std::fs::File::open(path).expect("open bridge for hash");
+    let mut hasher = Sha256::new();
+    let mut buf = [0_u8; 8 * 1024];
+    loop {
+        let n = file.read(&mut buf).expect("read bridge for hash");
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 #[test]
 fn host_bridge_fault_injection_matrix_is_deterministic() {
     let tmp = tempdir().expect("tempdir");
@@ -74,6 +91,7 @@ exit 42
     perms.set_mode(0o755);
     fs::set_permissions(&bridge_path, perms).expect("chmod bridge");
     let bridge = bridge_path.display().to_string();
+    let bridge_sha256 = file_sha256_hex(&bridge_path);
 
     let fs_source = "fault-fs-source.txt";
     fs::write(fs_source, "fault-source").expect("write fs source");
@@ -149,6 +167,7 @@ allow_plugins = ["demo"]
 allow_commands = ["run"]
 base_dir = "."
 bridge_cmd = "{bridge}"
+bridge_cmd_sha256 = "{bridge_sha256}"
 "#
     );
     let (code, run_hash, replay_hash) = run_and_replay_code(plugin_src, &plugin_policy);

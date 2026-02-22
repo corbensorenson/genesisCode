@@ -130,6 +130,88 @@ pub(super) fn parse_op(t: &Term) -> Result<PatchOp, PatchError> {
                 caps_policy,
             })
         }
+        ":rename-symbol" => {
+            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
+                PatchError::Validate("rename-symbol missing :module-path".to_string())
+            })?;
+            let from = req_sym_or_str(m, ":from", "rename-symbol")?;
+            let to = req_sym_or_str(m, ":to", "rename-symbol")?;
+            if from.trim().is_empty() || to.trim().is_empty() {
+                return Err(PatchError::Validate(
+                    "rename-symbol :from/:to must be non-empty".to_string(),
+                ));
+            }
+            Ok(PatchOp::RenameSymbol {
+                module_path,
+                from,
+                to,
+            })
+        }
+        ":move-module" => {
+            let from_module_path = get_str(m, ":from-module-path")?.ok_or_else(|| {
+                PatchError::Validate("move-module missing :from-module-path".to_string())
+            })?;
+            let to_module_path = get_str(m, ":to-module-path")?.ok_or_else(|| {
+                PatchError::Validate("move-module missing :to-module-path".to_string())
+            })?;
+            Ok(PatchOp::MoveModule {
+                from_module_path,
+                to_module_path,
+            })
+        }
+        ":split-module" => {
+            let from_module_path = get_str(m, ":from-module-path")?.ok_or_else(|| {
+                PatchError::Validate("split-module missing :from-module-path".to_string())
+            })?;
+            let to_module_path = get_str(m, ":to-module-path")?.ok_or_else(|| {
+                PatchError::Validate("split-module missing :to-module-path".to_string())
+            })?;
+            let symbols = get_sym_or_str_vec(m, ":symbols")?;
+            if symbols.is_empty() {
+                return Err(PatchError::Validate(
+                    "split-module :symbols must be non-empty vector".to_string(),
+                ));
+            }
+            Ok(PatchOp::SplitModule {
+                from_module_path,
+                to_module_path,
+                symbols,
+            })
+        }
+        ":rewrite-imports" | ":rewrite-exports" => {
+            let module_path = get_str(m, ":module-path")?
+                .ok_or_else(|| PatchError::Validate(format!("{op} missing :module-path")))?;
+            let add = get_sym_or_str_vec(m, ":add")?;
+            let remove = get_sym_or_str_vec(m, ":remove")?;
+            let replace = get_optional_sym_or_str_vec(m, ":replace")?;
+            let field = if op == ":rewrite-imports" {
+                MetaListField::Imports
+            } else {
+                MetaListField::Exports
+            };
+            Ok(PatchOp::RewriteMetaList {
+                module_path,
+                field,
+                add,
+                remove,
+                replace,
+            })
+        }
+        ":migrate-contract-signature" => {
+            let module_path = get_str(m, ":module-path")?.ok_or_else(|| {
+                PatchError::Validate("migrate-contract-signature missing :module-path".to_string())
+            })?;
+            let contract_symbol =
+                req_sym_or_str(m, ":contract-symbol", "migrate-contract-signature")?;
+            let from_param = req_sym_or_str(m, ":from-param", "migrate-contract-signature")?;
+            let to_param = req_sym_or_str(m, ":to-param", "migrate-contract-signature")?;
+            Ok(PatchOp::MigrateContractSignature {
+                module_path,
+                contract_symbol,
+                from_param,
+                to_param,
+            })
+        }
         other => Err(PatchError::Validate(format!("unknown op {other}"))),
     }
 }
@@ -241,4 +323,61 @@ pub(super) fn get_sym_vec(
             print_term(x)
         ))),
     }
+}
+
+pub(super) fn get_sym_or_str(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+) -> Result<Option<String>, PatchError> {
+    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
+        None => Ok(None),
+        Some(Term::Symbol(s)) => Ok(Some(s.clone())),
+        Some(Term::Str(s)) => Ok(Some(s.clone())),
+        Some(x) => Err(PatchError::Validate(format!(
+            "{k} must be symbol|string, got {}",
+            print_term(x)
+        ))),
+    }
+}
+
+pub(super) fn req_sym_or_str(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+    op: &str,
+) -> Result<String, PatchError> {
+    get_sym_or_str(m, k)?.ok_or_else(|| PatchError::Validate(format!("{op} missing {k}")))
+}
+
+pub(super) fn get_sym_or_str_vec(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+) -> Result<Vec<String>, PatchError> {
+    match m.get(&TermOrdKey(Term::Symbol(k.to_string()))) {
+        None => Ok(Vec::new()),
+        Some(Term::Vector(xs)) => xs
+            .iter()
+            .map(|t| match t {
+                Term::Symbol(s) => Ok(s.clone()),
+                Term::Str(s) => Ok(s.clone()),
+                other => Err(PatchError::Validate(format!(
+                    "{k} entries must be symbol|string, got {}",
+                    print_term(other)
+                ))),
+            })
+            .collect(),
+        Some(x) => Err(PatchError::Validate(format!(
+            "{k} must be vector, got {}",
+            print_term(x)
+        ))),
+    }
+}
+
+pub(super) fn get_optional_sym_or_str_vec(
+    m: &BTreeMap<TermOrdKey, Term>,
+    k: &str,
+) -> Result<Option<Vec<String>>, PatchError> {
+    if m.contains_key(&TermOrdKey(Term::Symbol(k.to_string()))) {
+        return Ok(Some(get_sym_or_str_vec(m, k)?));
+    }
+    Ok(None)
 }

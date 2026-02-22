@@ -2,6 +2,7 @@ use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
 use gc_effects::{CapsPolicy, replay, run};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use sha2::{Digest, Sha256};
 
 fn parse_and_eval(ctx: &mut EvalCtx, src: &str) -> (Value, [u8; 32]) {
     let forms = parse_module(src).expect("parse module");
@@ -14,6 +15,22 @@ fn parse_and_eval(ctx: &mut EvalCtx, src: &str) -> (Value, [u8; 32]) {
 
 fn toml_escape(input: &str) -> String {
     input.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn file_sha256_hex(path: &std::path::Path) -> String {
+    use std::io::Read as _;
+
+    let mut file = std::fs::File::open(path).expect("open bridge for hash");
+    let mut hasher = Sha256::new();
+    let mut buf = [0_u8; 8 * 1024];
+    loop {
+        let n = file.read(&mut buf).expect("read bridge for hash");
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    format!("{:x}", hasher.finalize())
 }
 
 fn map_get<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
@@ -141,6 +158,7 @@ printf '%s\n%s' "${#resp}" "$resp"
     std::fs::set_permissions(&bridge, perms).expect("chmod");
 
     let base = toml_escape(td.path().to_string_lossy().as_ref());
+    let bridge_sha256 = file_sha256_hex(&bridge);
     let policy = CapsPolicy::from_toml_str(&format!(
         r#"
 allow = ["editor/plugin::command"]
@@ -148,6 +166,7 @@ allow = ["editor/plugin::command"]
 [op."editor/plugin::command"]
 base_dir = "{base}"
 bridge_cmd = "bridge.sh"
+bridge_cmd_sha256 = "{bridge_sha256}"
 allow_plugins = ["demo"]
 allow_commands = ["run"]
 "#

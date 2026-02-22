@@ -46,17 +46,14 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     let full_cross =
         fs::read_to_string(root.join("scripts/check_full_cross_host_profile_budget.sh"))
             .expect("read check_full_cross_host_profile_budget.sh");
-    let generative =
-        fs::read_to_string(root.join("scripts/check_agent_generative_workloads.sh"))
-            .expect("read check_agent_generative_workloads.sh");
-    let parity =
-        fs::read_to_string(root.join("scripts/check_agent_workflow_runtime_parity.sh"))
-            .expect("read check_agent_workflow_runtime_parity.sh");
+    let generative = fs::read_to_string(root.join("scripts/check_agent_generative_workloads.sh"))
+        .expect("read check_agent_generative_workloads.sh");
+    let parity = fs::read_to_string(root.join("scripts/check_agent_workflow_runtime_parity.sh"))
+        .expect("read check_agent_workflow_runtime_parity.sh");
     let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
         .expect("read check_upgrade_plan_health.sh");
-    let scenario =
-        fs::read_to_string(root.join("scripts/check_agent_scenario_perf.sh"))
-            .expect("read check_agent_scenario_perf.sh");
+    let scenario = fs::read_to_string(root.join("scripts/check_agent_scenario_perf.sh"))
+        .expect("read check_agent_scenario_perf.sh");
 
     assert!(
         hot.contains("source \"$ROOT_DIR/scripts/lib/measure.sh\""),

@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use gc_coreform::{
-    Term, TermOrdKey, canonicalize_module, hash_term, parse_module, parse_term, print_module,
-    print_term,
+    Term, TermOrdKey, canonicalize_module, hash_module, hash_term, parse_module, parse_term,
+    print_module, print_term,
 };
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value};
 use gc_obligations::{
@@ -18,6 +18,8 @@ use thiserror::Error;
 
 #[path = "patch_parse.rs"]
 mod patch_parse;
+#[path = "patch_refactor.rs"]
+mod patch_refactor;
 #[path = "patch_selfhost_toolchain.rs"]
 mod patch_selfhost_toolchain;
 #[path = "patch_semantic.rs"]
@@ -85,6 +87,33 @@ enum PatchOp {
         tests_remove: Vec<String>,
         caps_policy: Option<String>,
     },
+    RenameSymbol {
+        module_path: String,
+        from: String,
+        to: String,
+    },
+    MoveModule {
+        from_module_path: String,
+        to_module_path: String,
+    },
+    SplitModule {
+        from_module_path: String,
+        to_module_path: String,
+        symbols: Vec<String>,
+    },
+    RewriteMetaList {
+        module_path: String,
+        field: MetaListField,
+        add: Vec<String>,
+        remove: Vec<String>,
+        replace: Option<Vec<String>>,
+    },
+    MigrateContractSignature {
+        module_path: String,
+        contract_symbol: String,
+        from_param: String,
+        to_param: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +131,28 @@ enum PathStep {
     Map(Term),
 }
 
+#[derive(Debug, Clone, Copy)]
+enum MetaListField {
+    Imports,
+    Exports,
+}
+
+impl MetaListField {
+    fn key_symbol(self) -> &'static str {
+        match self {
+            Self::Imports => ":imports",
+            Self::Exports => ":exports",
+        }
+    }
+
+    fn op_symbol(self) -> &'static str {
+        match self {
+            Self::Imports => ":rewrite-imports",
+            Self::Exports => ":rewrite-exports",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticNodeRecord {
     pub module_path: String,
@@ -116,9 +167,12 @@ pub struct SemanticNodeRecord {
 struct AppliedSemanticEdit {
     op: &'static str,
     module_path: String,
-    node_id: String,
-    path: Vec<PathStep>,
-    new_term_hash: String,
+    node_id: Option<String>,
+    path: Option<Vec<PathStep>>,
+    new_term_hash: Option<String>,
+    before_module_hash: Option<String>,
+    after_module_hash: Option<String>,
+    detail: Option<Term>,
 }
 
 pub fn semantic_node_index_for_module_with_frontend(
@@ -197,7 +251,15 @@ pub fn apply_patch_with_step_limit_and_frontend(
     // When running under the selfhost CoreForm frontend, validate patch schema via the
     // self-hosted contract to ensure schema acceptance is controlled by `.gc` semantics.
     if let Some(sh) = selfhost.as_mut() {
-        sh.validate_patch_term(&patch_term, step_limit)?;
+        if let Err(err) = sh.validate_patch_term(&patch_term, step_limit) {
+            match &err {
+                PatchError::Validate(msg) if msg.contains("unknown :op") => {
+                    // Allow forward-compatible patch ops when selfhost artifact lags schema source.
+                    // Rust-side parser/validator remains authoritative for these ops.
+                }
+                _ => return Err(err),
+            }
+        }
     }
 
     let patch = Patch::from_term(&patch_term)?;
@@ -318,18 +380,39 @@ fn report_term(
                 TermOrdKey(Term::symbol(":module-path")),
                 Term::Str(edit.module_path.clone()),
             );
-            em.insert(
-                TermOrdKey(Term::symbol(":node-id")),
-                Term::Str(edit.node_id.clone()),
-            );
-            em.insert(
-                TermOrdKey(Term::symbol(":path")),
-                path_steps_to_term(&edit.path).unwrap_or(Term::Vector(Vec::new())),
-            );
-            em.insert(
-                TermOrdKey(Term::symbol(":new-term-h")),
-                Term::Str(edit.new_term_hash.clone()),
-            );
+            if let Some(node_id) = &edit.node_id {
+                em.insert(
+                    TermOrdKey(Term::symbol(":node-id")),
+                    Term::Str(node_id.clone()),
+                );
+            }
+            if let Some(path) = &edit.path {
+                em.insert(
+                    TermOrdKey(Term::symbol(":path")),
+                    path_steps_to_term(path).unwrap_or(Term::Vector(Vec::new())),
+                );
+            }
+            if let Some(new_term_hash) = &edit.new_term_hash {
+                em.insert(
+                    TermOrdKey(Term::symbol(":new-term-h")),
+                    Term::Str(new_term_hash.clone()),
+                );
+            }
+            if let Some(before_h) = &edit.before_module_hash {
+                em.insert(
+                    TermOrdKey(Term::symbol(":before-module-h")),
+                    Term::Str(before_h.clone()),
+                );
+            }
+            if let Some(after_h) = &edit.after_module_hash {
+                em.insert(
+                    TermOrdKey(Term::symbol(":after-module-h")),
+                    Term::Str(after_h.clone()),
+                );
+            }
+            if let Some(detail) = &edit.detail {
+                em.insert(TermOrdKey(Term::symbol(":detail")), detail.clone());
+            }
             edits.push(Term::Map(em));
         }
         m.insert(
@@ -376,9 +459,12 @@ fn apply_one_op(
             Ok(Some(AppliedSemanticEdit {
                 op: ":replace-node",
                 module_path: module_path.clone(),
-                node_id: semantic_node_id(module_path, path)?,
-                path: path.clone(),
-                new_term_hash: hash32_hex(hash_term(new_term)),
+                node_id: Some(semantic_node_id(module_path, path)?),
+                path: Some(path.clone()),
+                new_term_hash: Some(hash32_hex(hash_term(new_term))),
+                before_module_hash: None,
+                after_module_hash: None,
+                detail: None,
             }))
         }
         PatchOp::ReplaceNodeId {
@@ -408,9 +494,12 @@ fn apply_one_op(
             Ok(Some(AppliedSemanticEdit {
                 op: ":replace-node-id",
                 module_path: module_path.clone(),
-                node_id: node_id.clone(),
-                path,
-                new_term_hash: hash32_hex(hash_term(new_term)),
+                node_id: Some(node_id.clone()),
+                path: Some(path),
+                new_term_hash: Some(hash32_hex(hash_term(new_term))),
+                before_module_hash: None,
+                after_module_hash: None,
+                detail: None,
             }))
         }
         PatchOp::AddModule {
@@ -563,6 +652,284 @@ fn apply_one_op(
             std::fs::write(pkg_toml, s)?;
             Ok(None)
         }
+        PatchOp::RenameSymbol {
+            module_path,
+            from,
+            to,
+        } => {
+            let abs = pkg_dir.join(module_path);
+            let src = std::fs::read_to_string(&abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let before_module_hash = hash32_hex(hash_module(&forms));
+            let (next, rewrites) = patch_refactor::rename_symbol_in_forms(forms, from, to)?;
+            if rewrites == 0 {
+                return Err(PatchError::Validate(format!(
+                    "rename-symbol found no `{from}` references in {module_path}"
+                )));
+            }
+            let next =
+                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let after_module_hash = hash32_hex(hash_module(&next));
+            if let Some(sh) = selfhost.as_deref_mut() {
+                let out = sh.print_module_forms_term(&next, step_limit)?;
+                std::fs::write(&abs, out)?;
+            } else {
+                std::fs::write(&abs, print_module(&next))?;
+            }
+            let mut detail = BTreeMap::new();
+            detail.insert(
+                TermOrdKey(Term::symbol(":from")),
+                Term::symbol(from.clone()),
+            );
+            detail.insert(TermOrdKey(Term::symbol(":to")), Term::symbol(to.clone()));
+            detail.insert(
+                TermOrdKey(Term::symbol(":rewrite-count")),
+                Term::Int((rewrites as i64).into()),
+            );
+            Ok(Some(AppliedSemanticEdit {
+                op: ":rename-symbol",
+                module_path: module_path.clone(),
+                node_id: None,
+                path: None,
+                new_term_hash: None,
+                before_module_hash: Some(before_module_hash),
+                after_module_hash: Some(after_module_hash),
+                detail: Some(Term::Map(detail)),
+            }))
+        }
+        PatchOp::MoveModule {
+            from_module_path,
+            to_module_path,
+        } => {
+            let from_abs = pkg_dir.join(from_module_path);
+            let to_abs = pkg_dir.join(to_module_path);
+            if !from_abs.exists() {
+                return Err(PatchError::Validate(format!(
+                    "move-module source does not exist: {}",
+                    from_abs.display()
+                )));
+            }
+            if to_abs.exists() {
+                return Err(PatchError::Validate(format!(
+                    "move-module target already exists: {}",
+                    to_abs.display()
+                )));
+            }
+            let src = std::fs::read_to_string(&from_abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let module_hash = hash32_hex(hash_module(&forms));
+            if let Some(parent) = to_abs.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::rename(&from_abs, &to_abs)?;
+            patch_manifest_move_module_path(pkg_toml, from_module_path, to_module_path)?;
+            let mut detail = BTreeMap::new();
+            detail.insert(
+                TermOrdKey(Term::symbol(":from-module-path")),
+                Term::Str(from_module_path.clone()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":to-module-path")),
+                Term::Str(to_module_path.clone()),
+            );
+            Ok(Some(AppliedSemanticEdit {
+                op: ":move-module",
+                module_path: to_module_path.clone(),
+                node_id: None,
+                path: None,
+                new_term_hash: None,
+                before_module_hash: Some(module_hash.clone()),
+                after_module_hash: Some(module_hash),
+                detail: Some(Term::Map(detail)),
+            }))
+        }
+        PatchOp::SplitModule {
+            from_module_path,
+            to_module_path,
+            symbols,
+        } => {
+            let from_abs = pkg_dir.join(from_module_path);
+            let to_abs = pkg_dir.join(to_module_path);
+            if !from_abs.exists() {
+                return Err(PatchError::Validate(format!(
+                    "split-module source does not exist: {}",
+                    from_abs.display()
+                )));
+            }
+            if to_abs.exists() {
+                return Err(PatchError::Validate(format!(
+                    "split-module target already exists: {}",
+                    to_abs.display()
+                )));
+            }
+            let src = std::fs::read_to_string(&from_abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let before_module_hash = hash32_hex(hash_module(&forms));
+            let symbol_set = symbols
+                .iter()
+                .cloned()
+                .collect::<std::collections::BTreeSet<_>>();
+            let (keep, extracted, moved) = patch_refactor::split_module_forms(forms, &symbol_set)?;
+            let keep =
+                canonicalize_module(keep).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let extracted =
+                canonicalize_module(extracted).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let after_module_hash = hash32_hex(hash_module(&keep));
+            let extracted_module_hash = hash32_hex(hash_module(&extracted));
+            if let Some(parent) = to_abs.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            if let Some(sh) = selfhost.as_deref_mut() {
+                let keep_out = sh.print_module_forms_term(&keep, step_limit)?;
+                std::fs::write(&from_abs, keep_out)?;
+                let extracted_out = sh.print_module_forms_term(&extracted, step_limit)?;
+                std::fs::write(&to_abs, extracted_out)?;
+            } else {
+                std::fs::write(&from_abs, print_module(&keep))?;
+                std::fs::write(&to_abs, print_module(&extracted))?;
+            }
+            patch_manifest_add_module_path(pkg_toml, to_module_path)?;
+            let mut detail = BTreeMap::new();
+            detail.insert(
+                TermOrdKey(Term::symbol(":to-module-path")),
+                Term::Str(to_module_path.clone()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":moved-def-count")),
+                Term::Int((moved as i64).into()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":extracted-module-h")),
+                Term::Str(extracted_module_hash),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":symbols")),
+                Term::Vector(symbols.iter().cloned().map(Term::symbol).collect()),
+            );
+            Ok(Some(AppliedSemanticEdit {
+                op: ":split-module",
+                module_path: from_module_path.clone(),
+                node_id: None,
+                path: None,
+                new_term_hash: None,
+                before_module_hash: Some(before_module_hash),
+                after_module_hash: Some(after_module_hash),
+                detail: Some(Term::Map(detail)),
+            }))
+        }
+        PatchOp::RewriteMetaList {
+            module_path,
+            field,
+            add,
+            remove,
+            replace,
+        } => {
+            let abs = pkg_dir.join(module_path);
+            let src = std::fs::read_to_string(&abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let before_module_hash = hash32_hex(hash_module(&forms));
+            let (next, changed_entries) =
+                patch_refactor::rewrite_meta_list(forms, *field, add, remove, replace.as_deref())?;
+            let next =
+                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let after_module_hash = hash32_hex(hash_module(&next));
+            if let Some(sh) = selfhost.as_deref_mut() {
+                let out = sh.print_module_forms_term(&next, step_limit)?;
+                std::fs::write(&abs, out)?;
+            } else {
+                std::fs::write(&abs, print_module(&next))?;
+            }
+            let mut detail = BTreeMap::new();
+            detail.insert(
+                TermOrdKey(Term::symbol(":field")),
+                Term::symbol(field.key_symbol()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":changed-entries")),
+                Term::Int((changed_entries as i64).into()),
+            );
+            if !add.is_empty() {
+                detail.insert(
+                    TermOrdKey(Term::symbol(":add")),
+                    Term::Vector(add.iter().cloned().map(Term::symbol).collect()),
+                );
+            }
+            if !remove.is_empty() {
+                detail.insert(
+                    TermOrdKey(Term::symbol(":remove")),
+                    Term::Vector(remove.iter().cloned().map(Term::symbol).collect()),
+                );
+            }
+            if let Some(replace) = replace {
+                detail.insert(
+                    TermOrdKey(Term::symbol(":replace")),
+                    Term::Vector(replace.iter().cloned().map(Term::symbol).collect()),
+                );
+            }
+            Ok(Some(AppliedSemanticEdit {
+                op: field.op_symbol(),
+                module_path: module_path.clone(),
+                node_id: None,
+                path: None,
+                new_term_hash: None,
+                before_module_hash: Some(before_module_hash),
+                after_module_hash: Some(after_module_hash),
+                detail: Some(Term::Map(detail)),
+            }))
+        }
+        PatchOp::MigrateContractSignature {
+            module_path,
+            contract_symbol,
+            from_param,
+            to_param,
+        } => {
+            let abs = pkg_dir.join(module_path);
+            let src = std::fs::read_to_string(&abs)?;
+            let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
+            let before_module_hash = hash32_hex(hash_module(&forms));
+            let (next, changed_entries) = patch_refactor::migrate_contract_signature(
+                forms,
+                contract_symbol,
+                from_param,
+                to_param,
+            )?;
+            let next =
+                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let after_module_hash = hash32_hex(hash_module(&next));
+            if let Some(sh) = selfhost.as_deref_mut() {
+                let out = sh.print_module_forms_term(&next, step_limit)?;
+                std::fs::write(&abs, out)?;
+            } else {
+                std::fs::write(&abs, print_module(&next))?;
+            }
+            let mut detail = BTreeMap::new();
+            detail.insert(
+                TermOrdKey(Term::symbol(":contract-symbol")),
+                Term::symbol(contract_symbol.clone()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":from-param")),
+                Term::symbol(from_param.clone()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":to-param")),
+                Term::symbol(to_param.clone()),
+            );
+            detail.insert(
+                TermOrdKey(Term::symbol(":changed-entries")),
+                Term::Int((changed_entries as i64).into()),
+            );
+            Ok(Some(AppliedSemanticEdit {
+                op: ":migrate-contract-signature",
+                module_path: module_path.clone(),
+                node_id: None,
+                path: None,
+                new_term_hash: None,
+                before_module_hash: Some(before_module_hash),
+                after_module_hash: Some(after_module_hash),
+                detail: Some(Term::Map(detail)),
+            }))
+        }
     }
 }
 
@@ -606,6 +973,73 @@ fn patch_string_vec_field(
         set.insert(a.clone());
     }
     *arr = set.into_iter().map(toml::Value::String).collect();
+    Ok(())
+}
+
+fn patch_manifest_add_module_path(pkg_toml: &Path, module_path: &str) -> Result<(), PatchError> {
+    let mut s = std::fs::read_to_string(pkg_toml)?;
+    let mut v: toml::Value = toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+    let mods = v
+        .get_mut("modules")
+        .and_then(|x| x.as_array_mut())
+        .ok_or_else(|| PatchError::Validate("manifest missing modules array".to_string()))?;
+    let exists = mods
+        .iter()
+        .any(|m| m.get("path").and_then(|p| p.as_str()) == Some(module_path));
+    if exists {
+        return Err(PatchError::Validate(format!(
+            "manifest already contains module path `{module_path}`"
+        )));
+    }
+    mods.push(toml::Value::Table(
+        [
+            (
+                "path".to_string(),
+                toml::Value::String(module_path.to_string()),
+            ),
+            ("hash".to_string(), toml::Value::String("".to_string())),
+        ]
+        .into_iter()
+        .collect(),
+    ));
+    s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
+    std::fs::write(pkg_toml, s)?;
+    Ok(())
+}
+
+fn patch_manifest_move_module_path(
+    pkg_toml: &Path,
+    from_module_path: &str,
+    to_module_path: &str,
+) -> Result<(), PatchError> {
+    let mut s = std::fs::read_to_string(pkg_toml)?;
+    let mut v: toml::Value = toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+    let mods = v
+        .get_mut("modules")
+        .and_then(|x| x.as_array_mut())
+        .ok_or_else(|| PatchError::Validate("manifest missing modules array".to_string()))?;
+    let mut moved = false;
+    for m in mods.iter_mut() {
+        if m.get("path").and_then(|p| p.as_str()) == Some(from_module_path) {
+            m.as_table_mut()
+                .ok_or_else(|| {
+                    PatchError::Validate("manifest module entry must be table".to_string())
+                })?
+                .insert(
+                    "path".to_string(),
+                    toml::Value::String(to_module_path.to_string()),
+                );
+            moved = true;
+            break;
+        }
+    }
+    if !moved {
+        return Err(PatchError::Validate(format!(
+            "manifest missing module path `{from_module_path}`"
+        )));
+    }
+    s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
+    std::fs::write(pkg_toml, s)?;
     Ok(())
 }
 

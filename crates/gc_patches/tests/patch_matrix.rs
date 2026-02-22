@@ -41,6 +41,50 @@ fn write_patch(dir: &Path, term_src: &str) -> PathBuf {
     p
 }
 
+fn write_refactor_pkg(dir: &Path) -> PathBuf {
+    fs::create_dir_all(dir).unwrap();
+
+    let module = dir.join("mod.gc");
+    fs::write(
+        &module,
+        r#"
+          (def ::meta
+            (quote
+              {
+                :module "pkg/refactor"
+                :exports [pkg/refactor::public pkg/refactor::contract pkg/refactor::tests]
+                :imports [pkg/dep::thing]
+              }))
+          (def pkg/refactor::public 1)
+          (def pkg/refactor::internal 2)
+          (def pkg/refactor::contract
+            (fn (msg)
+              (let ((x msg))
+                x)))
+          (def pkg/refactor::tests
+            {
+              "t1" { :body (fn (_) 1) :expect 1 }
+            })
+        "#,
+    )
+    .unwrap();
+
+    let pkg = dir.join("package.toml");
+    fs::write(
+        &pkg,
+        r#"
+name = "patch-refactor"
+version = "0.0.0"
+modules = [{ path = "mod.gc", hash = "" }]
+dependencies = []
+obligations = ["core/obligation::unit-tests"]
+tests = ["pkg/refactor::tests"]
+"#,
+    )
+    .unwrap();
+    pkg
+}
+
 fn patch_replace_form0(new_form_src: &str) -> String {
     // Replace the single top-level form ([:form 0]) with the provided CoreForm list.
     format!(
@@ -219,4 +263,190 @@ fn patch_replace_node_id_rejects_unknown_node_id() {
     );
     let err = gc_patches::apply_patch(&patch, &pkg, None).unwrap_err();
     assert!(matches!(err, gc_patches::PatchError::Validate(_)));
+}
+
+#[test]
+fn patch_rename_symbol_updates_module_and_report() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "rename symbol"
+            :provenance {}
+            :ops [
+              {
+                :op :rename-symbol
+                :module-path "mod.gc"
+                :from pkg/refactor::public
+                :to pkg/refactor::renamed
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(r.ok, "rename-symbol should keep obligations passing");
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    assert!(src.contains("pkg/refactor::renamed"));
+    assert!(!src.contains("pkg/refactor::public"));
+    let report = fs::read_to_string(td.path().join(".genesis/store").join(&r.report_artifact))
+        .expect("read report artifact");
+    assert!(report.contains(":rename-symbol"));
+    assert!(report.contains(":before-module-h"));
+    assert!(report.contains(":after-module-h"));
+}
+
+#[test]
+fn patch_move_module_updates_manifest_and_path() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "move module"
+            :provenance {}
+            :ops [
+              {
+                :op :move-module
+                :from-module-path "mod.gc"
+                :to-module-path "moved/mod.gc"
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(r.ok, "move-module should keep obligations passing");
+    assert!(!td.path().join("mod.gc").exists());
+    assert!(td.path().join("moved/mod.gc").exists());
+    let pkg_src = fs::read_to_string(&pkg).unwrap();
+    assert!(pkg_src.contains("moved/mod.gc"));
+}
+
+#[test]
+fn patch_split_module_extracts_requested_defs() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "split module"
+            :provenance {}
+            :ops [
+              {
+                :op :split-module
+                :from-module-path "mod.gc"
+                :to-module-path "split/internal.gc"
+                :symbols [pkg/refactor::internal]
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(r.ok, "split-module should keep obligations passing");
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    let split = fs::read_to_string(td.path().join("split/internal.gc")).unwrap();
+    assert!(!src.contains("pkg/refactor::internal"));
+    assert!(split.contains("pkg/refactor::internal"));
+    let pkg_src = fs::read_to_string(&pkg).unwrap();
+    assert!(pkg_src.contains("split/internal.gc"));
+}
+
+#[test]
+fn patch_rewrite_exports_updates_meta_lists() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "rewrite exports"
+            :provenance {}
+            :ops [
+              {
+                :op :rewrite-exports
+                :module-path "mod.gc"
+                :remove [pkg/refactor::public]
+                :add [pkg/refactor::internal]
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(r.ok, "rewrite-exports should keep obligations passing");
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    assert!(src.contains("pkg/refactor::internal"));
+    assert!(!src.contains(":exports [pkg/refactor::public"));
+}
+
+#[test]
+fn patch_rewrite_imports_replaces_meta_imports() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "rewrite imports"
+            :provenance {}
+            :ops [
+              {
+                :op :rewrite-imports
+                :module-path "mod.gc"
+                :replace [pkg/dep::new]
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(r.ok, "rewrite-imports should keep obligations passing");
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    assert!(src.contains(":imports [pkg/dep::new]"));
+    assert!(!src.contains("pkg/dep::thing"));
+}
+
+#[test]
+fn patch_migrate_contract_signature_renames_param_and_body_refs() {
+    let td = tempfile::tempdir().unwrap();
+    let pkg = write_refactor_pkg(td.path());
+    let patch = write_patch(
+        td.path(),
+        r#"
+          {
+            :version 1
+            :intent "migrate contract signature"
+            :provenance {}
+            :ops [
+              {
+                :op :migrate-contract-signature
+                :module-path "mod.gc"
+                :contract-symbol pkg/refactor::contract
+                :from-param msg
+                :to-param request
+              }
+            ]
+          }
+        "#,
+    );
+    let r = gc_patches::apply_patch(&patch, &pkg, None).unwrap();
+    assert!(
+        r.ok,
+        "migrate-contract-signature should keep obligations passing"
+    );
+    let src = fs::read_to_string(td.path().join("mod.gc")).unwrap();
+    assert!(src.contains("(fn (request)"));
+    assert!(src.contains("(let ((x request))"));
+    assert!(!src.contains("(fn (msg)"));
 }

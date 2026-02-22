@@ -179,7 +179,8 @@ Supported keys:
     - `require-device`: fail closed with sealed error when device backend is unavailable/errors.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
-- `bridge_cmd_sha256` (string): optional executable digest pin (64 hex; optional `sha256:` prefix).
+- `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).
+  - required for `host/plugin::command` and `editor/plugin::command` when `bridge_cmd` transport is configured.
   - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
 - `wasi_bridge_profile` (bool): when true, enables deterministic WASI bridge response mode for this op (also always enabled on actual WASI targets).
 - `wasi_bridge_response` (string): optional CoreForm term used as deterministic host response for bridge-backed ops under WASI bridge profile.
@@ -203,7 +204,7 @@ Supported keys:
 - `max_value_bytes` (int): required positive value-size bound for `io/db::kv-put`.
 - `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
-- `allow_commands` (array<string>): optional command allowlist for `host/plugin::command` and `editor/plugin::command`.
+- `allow_commands` (array<string>): required command allowlist for `host/plugin::command` and `editor/plugin::command`.
 - `allow_schema_ids` (array<string>): required when typed plugin schemas are used (`:request-schema-id` / `:response-schema-id`); every schema id must be allowlisted.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
@@ -227,6 +228,7 @@ create_dirs = true
 [op."host/plugin::command"]
 base_dir = "./workspace"
 bridge_cmd = "./tools/editor_bridge.sh"
+bridge_cmd_sha256 = "sha256:4f85c19e5f0f7e3fef58e31e0f4bb3ad73df0b1b2e27fe8f79c2fbe4f6f4cfd2"
 bridge_args = ["--mode", "stdio-coreform"]
 allow_plugins = ["demo-plugin"]
 allow_commands = ["run", "health"]
