@@ -4,8 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-NATIVE_BIN="${GENESIS_AGENT_PARITY_NATIVE_BIN:-$ROOT_DIR/target/debug/genesis}"
-WASI_BIN="${GENESIS_AGENT_PARITY_WASI_BIN:-$ROOT_DIR/target/debug/genesis_wasi}"
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-agent-workflow-runtime-parity" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_AGENT_WORKFLOW_RUNTIME_PARITY_CARGO_TARGET_DIR"
+
+DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+NATIVE_BIN="${GENESIS_AGENT_PARITY_NATIVE_BIN:-$DEFAULT_DEBUG_DIR/genesis}"
+WASI_BIN="${GENESIS_AGENT_PARITY_WASI_BIN:-$DEFAULT_DEBUG_DIR/genesis_wasi}"
 GAUNTLET_PROFILE="${GENESIS_AGENT_PARITY_GAUNTLET_PROFILE:-prepush-standard}"
 REPORT_PATH="${GENESIS_AGENT_PARITY_REPORT:-.genesis/perf/agent_workflow_runtime_parity_report.json}"
 HISTORY_PATH="${GENESIS_AGENT_PARITY_HISTORY:-.genesis/perf/agent_workflow_runtime_parity_history.jsonl}"

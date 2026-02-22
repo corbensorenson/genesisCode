@@ -1,0 +1,33 @@
+{
+  "bundle_entrypoint": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+  "kind": "genesis/write-genesiscode-skill-pack-v0.1",
+  "pack_doc": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
+  "pointer_doc": "docs/write_genesisCode_skill.md",
+  "required_gate_scripts": [
+    "scripts/check_genesiscode_authoring_skill.sh",
+    "scripts/check_write_genesiscode_skill_pack.sh",
+    "scripts/check_agent_authoring_bundle.sh",
+    "scripts/check_feature_matrix_evidence.sh",
+    "scripts/check_selfhost_toolchain_review_fresh.sh"
+  ],
+  "required_pack_sections": [
+    "## Canonical Artifacts",
+    "## Pack Objectives",
+    "## Distribution Layout (Normative)",
+    "## Prompt Templates",
+    "## Acceptance Profiles",
+    "## Anti-Patterns (Reject)",
+    "## Agent Output Contract",
+    "## Conformance"
+  ],
+  "required_spec_refs": [
+    "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+    "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
+    "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+    "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+    "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+    "upgrade_plan.md"
+  ],
+  "skill_file": ".agents/skills/genesiscode-authoring/SKILL.md",
+  "version": "0.1"
+}

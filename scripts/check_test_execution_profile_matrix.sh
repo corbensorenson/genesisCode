@@ -12,6 +12,7 @@ STRICT_GOLDEN_SCRIPT="scripts/selfhost_strict_golden.sh"
 WASM_CROSS_HOST_SCRIPT="scripts/wasm_cross_host_determinism.mjs"
 FULL_CROSS_HOST_BUDGET_SCRIPT="scripts/check_full_cross_host_profile_budget.sh"
 AGENT_GENERATIVE_SCRIPT="scripts/check_agent_generative_workloads.sh"
+CARGO_TARGET_POLICY_SCRIPT="scripts/check_cargo_target_dir_policy.sh"
 
 for path in \
   "$DOC" \
@@ -21,7 +22,8 @@ for path in \
   "$STRICT_GOLDEN_SCRIPT" \
   "$WASM_CROSS_HOST_SCRIPT" \
   "$FULL_CROSS_HOST_BUDGET_SCRIPT" \
-  "$AGENT_GENERATIVE_SCRIPT"; do
+  "$AGENT_GENERATIVE_SCRIPT" \
+  "$CARGO_TARGET_POLICY_SCRIPT"; do
   [[ -f "$path" ]] || {
     echo "test-execution-profile-matrix: missing required file: $path" >&2
     exit 1
@@ -77,6 +79,7 @@ require_doc_pattern 'policies/perf/agent_scenario_perf_seed_history.jsonl'
 require_doc_pattern 'scripts/check_full_cross_host_profile_budget.sh'
 require_doc_pattern 'scripts/check_agent_scenario_perf.sh'
 require_doc_pattern 'scripts/check_agent_generative_workloads.sh'
+require_doc_pattern 'scripts/check_cargo_target_dir_policy.sh'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
 require_ci_pattern 'Selfhost Refactor Guard'
@@ -125,6 +128,11 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_CARGO_GATE_SHARDS' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep dedicated cargo gate shard control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash scripts/check_cargo_target_dir_policy.sh' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must run cargo target-dir policy conformance gate" >&2
   exit 1
 fi
 

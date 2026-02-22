@@ -6,6 +6,7 @@ skill remains aligned with current CLI/ABI/spec surfaces.
 ## Canonical Artifact
 
 - `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
+- Distribution pack: `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
 
 ## Purpose
 
@@ -32,6 +33,7 @@ skill remains aligned with current CLI/ABI/spec surfaces.
 ## Drift Gate
 
 - Gate script: `scripts/check_genesiscode_authoring_skill.sh`
+- Pack conformance gate: `scripts/check_write_genesiscode_skill_pack.sh`
 - Health integration: `scripts/check_upgrade_plan_health.sh` common gates
 
 The gate fails closed when the pointer doc, skill file, required references, or

@@ -1,5 +1,4 @@
 > Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
-> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
 
 # Host ABI (v0.2)
 
@@ -264,6 +263,38 @@ Machine-readable indices for agent planning:
 CI drift check:
 
 - `scripts/check_capability_indices.sh`
+
+### Host ABI Index Metadata Contract
+
+Machine-readable host ABI index artifacts:
+
+- `docs/spec/HOST_ABI_INDEX_v0.1.json`
+- `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json`
+
+Generation and verification:
+
+- regenerate: `bash scripts/update_capability_indices.sh`
+- verify: `bash scripts/check_capability_indices.sh`
+
+`HOST_ABI_INDEX_v0.1.json` top-level keys:
+
+- `kind = "genesis/host-abi-index-v0.1"`
+- `generated_from` (`string[]` of Rust source paths)
+- `operations` (`string[]`, sorted unique)
+- `families` (`map<string, string[]>`, sorted keys and values)
+
+`HOST_ABI_SCHEMA_INDEX_v0.1.json` top-level keys:
+
+- `kind = "genesis/host-abi-schema-index-v0.1"`
+- `generated_from` (`string[]` of Rust/doc source paths)
+- `operations` (`map<string, schema-entry>`)
+  - `payload`:
+    - `type` (usually `"map"`)
+    - `required_fields` / `optional_fields` (`[{name,type,constraints?}]`)
+    - `constraints` (`string[]`)
+  - `response_envelope`:
+    - `success` (`value_kind`, `shape`)
+    - `error` (`sealed`, `code_field`, `code_prefix`)
 
 ## Browser Host Capability Contracts
 

@@ -8,6 +8,8 @@ Canonical template source:
 
 Related artifact contracts:
 - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
+- `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+- `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
 
 ## Crosswalk Matrix
 
@@ -44,3 +46,7 @@ When `--bundle-dir` is supplied, output is reproducible and must contain:
   toolchain posture and evidence export semantics.
 - Formal certification authority approval remains external to the language
   runtime and must be executed by the target program's governance process.
+- Objective-level posture (including unresolved/non-claim controls) is
+  normatively tracked in:
+  - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+  - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`

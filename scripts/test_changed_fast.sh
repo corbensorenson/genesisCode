@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "test-changed-fast" \
+  ".genesis/build/cargo" \
+  "GENESIS_TEST_CHANGED_FAST_CARGO_TARGET_DIR"
+
 BASE_REF="${GENESIS_CHANGED_BASE:-}"
 RUNNER="${GENESIS_TEST_CHANGED_RUNNER:-auto}" # auto|cargo|nextest
 REPORT_PATH="${GENESIS_TEST_CHANGED_REPORT:-.genesis/perf/test_changed_fast_metrics.json}"
@@ -12,6 +19,7 @@ BUDGET_MS="${GENESIS_TEST_CHANGED_BUDGET_MS:-120000}" # 2 minutes
 MIN_HISTORY="${GENESIS_TEST_CHANGED_MIN_HISTORY:-5}"
 FULL_MODE_THRESHOLD="${GENESIS_TEST_CHANGED_FULL_THRESHOLD:-120}"
 STRICT_DISK_MODE="${GENESIS_TEST_CHANGED_STRICT_DISK:-auto}"
+CHANGED_FILES_OVERRIDE="${GENESIS_TEST_CHANGED_FILES_OVERRIDE:-}"
 DRY_RUN=0
 
 usage() {
@@ -26,6 +34,9 @@ Options:
   --budget-ms <N>      max allowed elapsed ms for this run (default: 120000)
   --min-history <N>    samples required before enforcing history P95 (default: 5)
   --strict-disk <mode> pass through to check_disk_headroom strict mode (auto|0|1)
+  --changed-files-from <path>
+                       override changed-file detection using newline-delimited file list
+                       (test-only override; equivalent env: GENESIS_TEST_CHANGED_FILES_OVERRIDE)
   --dry-run            print selected commands without executing
   -h, --help           show this help
 EOF
@@ -59,6 +70,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --strict-disk)
       STRICT_DISK_MODE="${2:-}"
+      shift 2
+      ;;
+    --changed-files-from)
+      [[ -f "${2:-}" ]] || {
+        echo "test-changed-fast: --changed-files-from path not found: ${2:-}" >&2
+        exit 2
+      }
+      CHANGED_FILES_OVERRIDE="$(cat "${2:-}")"
       shift 2
       ;;
     --dry-run)
@@ -147,10 +166,17 @@ fi
 
 BASE="$(resolve_base_ref)"
 declare -a CHANGED_FILES=()
-while IFS= read -r line; do
-  [[ -n "$line" ]] || continue
-  CHANGED_FILES+=("$line")
-done < <(git diff --name-only "$BASE"...HEAD | sed '/^$/d')
+if [[ -n "$CHANGED_FILES_OVERRIDE" ]]; then
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    CHANGED_FILES+=("$line")
+  done <<<"$CHANGED_FILES_OVERRIDE"
+else
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    CHANGED_FILES+=("$line")
+  done < <(git diff --name-only "$BASE"...HEAD | sed '/^$/d')
+fi
 CHANGED_COUNT="${#CHANGED_FILES[@]}"
 
 MODE="targeted"
@@ -166,6 +192,8 @@ declare -a GC_CLI_TESTS=()
 declare -a GC_WASI_TESTS=()
 NEEDS_SELFHOST_CACHE=0
 NEEDS_FULL_FAST=0
+NEEDS_DOC_GATES=0
+NEEDS_SHELL_GATE=0
 
 for f in "${CHANGED_FILES[@]-}"; do
   case "$f" in
@@ -189,6 +217,18 @@ for f in "${CHANGED_FILES[@]-}"; do
   case "$f" in
     prelude/*|selfhost/*|tests/spec/*|docs/spec/*)
       NEEDS_SELFHOST_CACHE=1
+      ;;
+  esac
+
+  case "$f" in
+    docs/*|*.md)
+      NEEDS_DOC_GATES=1
+      ;;
+  esac
+
+  case "$f" in
+    scripts/*)
+      NEEDS_SHELL_GATE=1
       ;;
   esac
 
@@ -219,11 +259,26 @@ if [[ "$MODE" != "clean-tree" && "$MODE" != "full-threshold" && "$MODE" != "full
   done
 fi
 
+if [[ "$MODE" == "targeted" && "${#TARGET_CRATES[@]}" -eq 0 ]]; then
+  MODE="non-crate-targeted"
+fi
+
 COMMANDS=()
 if [[ "$MODE" == "clean-tree" ]]; then
   COMMANDS+=("cargo test -p gc_coreform -p gc_kernel --lib --quiet")
 elif [[ "$MODE" == "full-threshold" || "$MODE" == "full-global-change" ]]; then
   COMMANDS+=("bash scripts/test_fast_full.sh")
+elif [[ "$MODE" == "non-crate-targeted" ]]; then
+  if (( NEEDS_DOC_GATES == 1 )); then
+    COMMANDS+=("bash scripts/check_doc_hygiene.sh")
+    COMMANDS+=("bash scripts/check_planning_docs_fresh.sh")
+  fi
+  if (( NEEDS_SHELL_GATE == 1 )); then
+    COMMANDS+=("cargo test -p gc_cli --test shell_gate_regressions changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg -- --exact")
+  fi
+  if [[ "${#COMMANDS[@]}" -eq 0 ]]; then
+    COMMANDS+=("bash scripts/check_doc_hygiene.sh")
+  fi
 else
   # WASI integration suites are valuable but expensive; include them only when their crate or
   # WASI-facing specs changed. Full CI lanes still run complete WASI coverage.

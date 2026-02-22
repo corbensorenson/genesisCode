@@ -41,7 +41,7 @@ Legend:
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
 | Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service>` emits immutable deterministic bundles with build-manifest + provenance contracts) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` provide deterministic dependency graph export and machine-mergeable multi-file patch planning) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `scripts/check_genesiscode_authoring_skill.sh` conformance gate) | ❌ | ❌ | ❌ | ❌ |
+| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + conformance gates `scripts/check_genesiscode_authoring_skill.sh` and `scripts/check_write_genesiscode_skill_pack.sh`) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -68,19 +68,18 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P0.1` - health gate partitioning crashes on Bash 3 when a partition array is empty.
-- `P0.2` - release guard path lacks low-disk fail-fast and executable artifact sanity checks.
-- `P1.1` - committed selfhost artifact freshness gate is failing (`selfhost/toolchain.gc` stale).
-- `P1.2` - runtime backend matrix lane is not disk-aware and failed under storage pressure.
-- `P1.3` - cargo target-dir/cache policy is inconsistent across compile-heavy script fleet.
-- `P1.4` - compile-heavy non-health lanes lack consistent timing telemetry for optimization.
-- `P2.1` - docs remain fragmented for agent retrieval; bundle consolidation is still open.
+- P1.1 Documentation surface remains large/noisy for agent retrieval (`docs/*.md` + legacy split markers).
+- P1.2 Oversized production Rust modules need further decomposition for AI-first maintainability.
+- P1.3 Oversized selfhost `.gc` modules need decomposition for AI-first maintainability.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_BUILD_TARGETS_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CONCURRENCY_v0.1.md`
@@ -90,7 +89,6 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_SCENARIO_PERF_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASM.md`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

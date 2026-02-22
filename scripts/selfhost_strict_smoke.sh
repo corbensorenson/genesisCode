@@ -4,14 +4,22 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "selfhost-strict-smoke" \
+  ".genesis/build/cargo" \
+  "GENESIS_SELFHOST_STRICT_SMOKE_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/selfhost_artifact_cache.sh"
 
 cargo build -p gc_cli -p gc_wasi_cli >/dev/null
 
-GEN="$ROOT_DIR/target/debug/genesis"
-GEN_PARITY="$ROOT_DIR/target/debug/genesis_parity"
-GWASI="$ROOT_DIR/target/debug/genesis_wasi"
-GWASI_PARITY="$ROOT_DIR/target/debug/genesis_wasi_parity"
+DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+GEN="$DEFAULT_DEBUG_DIR/genesis"
+GEN_PARITY="$DEFAULT_DEBUG_DIR/genesis_parity"
+GWASI="$DEFAULT_DEBUG_DIR/genesis_wasi"
+GWASI_PARITY="$DEFAULT_DEBUG_DIR/genesis_wasi_parity"
 
 native() { "$GEN" "$@"; }
 native_parity() { "$GEN_PARITY" "$@"; }

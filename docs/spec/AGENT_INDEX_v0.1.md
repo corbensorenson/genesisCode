@@ -60,6 +60,8 @@ genesis --json agent-index
 - `docs`: canonical doc pointer map
   - includes `agent_authoring_bundle = "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md"` as the
     normative retrieval entrypoint for common authoring workflows.
+  - includes `write_genesiscode_skill_pack = "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md"`
+    as the versioned machine-distribution authoring artifact.
 
 ## Determinism
 

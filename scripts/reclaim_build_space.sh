@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "reclaim-build-space" \
+  ".genesis/build/cargo" \
+  "GENESIS_RECLAIM_BUILD_SPACE_CARGO_TARGET_DIR"
+
 MODE="safe"
 
 usage() {
@@ -41,7 +48,7 @@ done
 TARGET_KB_BEFORE="$(du -sk target 2>/dev/null | awk '{print $1}' || echo 0)"
 
 if [[ "$MODE" == "safe" ]]; then
-  rm -rf target/debug/incremental target/tmp
+  rm -rf "$CARGO_TARGET_DIR/debug/incremental" "$CARGO_TARGET_DIR/tmp"
 else
   cargo clean
 fi

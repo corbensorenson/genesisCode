@@ -4,6 +4,18 @@ Last updated: 2026-02-22
 
 Purpose: explicitly mark superseded/overlapping docs and point to canonical replacements.
 
+## Merged Split Specs (Removed)
+
+The following low-signal split docs were merged into canonical bundle-owned specs
+and removed from active retrieval paths:
+
+| Removed split doc | Canonical replacement |
+|---|---|
+| `docs/spec/CLI_SCHEMA_v0.1.md` | `docs/spec/CLI_JSON_SCHEMAS_v0.1.md` |
+| `docs/spec/HOST_ABI_INDEX_v0.1.md` | `docs/spec/HOST_ABI.md` |
+| `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.md` | `docs/spec/HOST_ABI.md` |
+| `docs/spec/GCPM_ABI_INDEX_v0.1.md` | `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md` |
+
 ## Deprecated Top-Level Docs
 
 | Deprecated doc | Replacement (canonical) | Status |

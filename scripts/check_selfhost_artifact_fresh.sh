@@ -5,6 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_SELFHOST_ARTIFACT_FRESH_REPORT:-.genesis/perf/selfhost_artifact_fresh_report.json}"
+HISTORY_PATH="${GENESIS_SELFHOST_ARTIFACT_FRESH_HISTORY:-.genesis/perf/selfhost_artifact_fresh_history.jsonl}"
+BUDGET_MS="${GENESIS_SELFHOST_ARTIFACT_FRESH_BUDGET_MS:-900000}"
 
 REPO_ARTIFACT="$ROOT_DIR/selfhost/toolchain.gc"
 MANIFEST_FILE="$ROOT_DIR/selfhost/toolchain_manifest.gc"
@@ -65,6 +71,16 @@ PY
 SOURCE_HASH="$(compute_source_hash)"
 ART_HASH="$(artifact_hash "$REPO_ARTIFACT")"
 
+emit_runtime_report() {
+  genesis_profile_gate_emit_runtime_report \
+    "selfhost-artifact-fresh" \
+    "genesis/selfhost-artifact-fresh-v0.1" \
+    "$REPORT_PATH" \
+    "$HISTORY_PATH" \
+    "$START_MS" \
+    "$BUDGET_MS"
+}
+
 if [[ -f "$FRESHNESS_FILE" ]]; then
   if python3 - "$FRESHNESS_FILE" "$SOURCE_HASH" "$ART_HASH" <<'PY'
 import json
@@ -88,6 +104,7 @@ if not ok:
     raise SystemExit(1)
 PY
   then
+    emit_runtime_report
     echo "selfhost-artifact-fresh: ok (fast-path metadata match)"
     exit 0
   fi
@@ -164,4 +181,5 @@ then
   exit 1
 fi
 
+emit_runtime_report
 echo "selfhost-artifact-fresh: ok (slow-path rebuild compare; metadata refreshed)"

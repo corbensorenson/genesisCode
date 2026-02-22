@@ -4,9 +4,19 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-hot-path-budgets" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_HOT_PATH_BUDGETS_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/measure.sh"
 source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
 source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
 
 # Conservative defaults for shared CI runners.
 BUDGET_FMT_CANON_MS="${GENESIS_BUDGET_FMT_CANON_MS:-15000}"
@@ -20,6 +30,10 @@ MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
+DISK_MIN_FREE_KB="${GENESIS_HOT_PATH_MIN_FREE_KB:-3145728}"
+RUNTIME_REPORT="${GENESIS_HOT_PATH_RUNTIME_REPORT_OUT:-.genesis/perf/hot_path_runtime_report.json}"
+RUNTIME_HISTORY="${GENESIS_HOT_PATH_RUNTIME_HISTORY_OUT:-.genesis/perf/hot_path_runtime_history.jsonl}"
+RUNTIME_BUDGET_MS="${GENESIS_HOT_PATH_RUNTIME_BUDGET_MS:-1200000}"
 
 fail() {
   echo "hot-path-budgets: $*" >&2
@@ -35,15 +49,19 @@ profile_target_dir() {
 }
 
 TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
-GENESIS_BIN="$ROOT_DIR/target/$TARGET_PROFILE_DIR/genesis"
+GENESIS_BIN="$CARGO_TARGET_DIR/$TARGET_PROFILE_DIR/genesis"
 
-bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "hot-path-budgets" --strict "$DISK_STRICT_MODE"
+bash scripts/check_disk_headroom.sh \
+  --path "$ROOT_DIR" \
+  --context "hot-path-budgets" \
+  --min-kb "$DISK_MIN_FREE_KB" \
+  --strict "$DISK_STRICT_MODE"
 
 echo "hot-path-budgets: preparing genesis binary"
 cargo build -p gc_cli --profile "$CARGO_PROFILE" >/dev/null
 cargo test -p gc_effects --test sync_registry --no-run --quiet --profile "$CARGO_PROFILE" >/dev/null
 SYNC_TEST_BIN="$(
-  find "$ROOT_DIR/target/$TARGET_PROFILE_DIR/deps" -maxdepth 1 -type f -name 'sync_registry-*' -perm -u+x \
+  find "$CARGO_TARGET_DIR/$TARGET_PROFILE_DIR/deps" -maxdepth 1 -type f -name 'sync_registry-*' -perm -u+x \
     | sort \
     | tail -n 1
 )"
@@ -182,5 +200,15 @@ EOF
 [[ "$GCPM_LOCK_MS" -le "$BUDGET_GCPM_LOCK_MS" ]] || fail "gcpm lock regression: $GCPM_LOCK_MS > $BUDGET_GCPM_LOCK_MS"
 [[ "$GCPM_INSTALL_MS" -le "$BUDGET_GCPM_INSTALL_MS" ]] || fail "gcpm install regression: $GCPM_INSTALL_MS > $BUDGET_GCPM_INSTALL_MS"
 [[ "$GCPM_UPDATE_MS" -le "$BUDGET_GCPM_UPDATE_MS" ]] || fail "gcpm update regression: $GCPM_UPDATE_MS > $BUDGET_GCPM_UPDATE_MS"
+
+genesis_profile_gate_emit_runtime_report \
+  "hot-path-budgets" \
+  "genesis/hot-path-runtime-v0.1" \
+  "$RUNTIME_REPORT" \
+  "$RUNTIME_HISTORY" \
+  "$START_MS" \
+  "$RUNTIME_BUDGET_MS" \
+  "1" \
+  "{\"metrics_report\":\"$ARTIFACT_JSON\",\"build_profile\":\"$CARGO_PROFILE\"}"
 
 echo "hot-path-budgets: ok"

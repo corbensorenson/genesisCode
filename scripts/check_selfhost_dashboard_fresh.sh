@@ -5,6 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_SELFHOST_DASHBOARD_FRESH_REPORT:-.genesis/perf/selfhost_dashboard_fresh_report.json}"
+HISTORY_PATH="${GENESIS_SELFHOST_DASHBOARD_FRESH_HISTORY:-.genesis/perf/selfhost_dashboard_fresh_history.jsonl}"
+BUDGET_MS="${GENESIS_SELFHOST_DASHBOARD_FRESH_BUDGET_MS:-600000}"
 
 DASHBOARD_MD="$ROOT_DIR/docs/status/SELFHOST_CUTOVER.md"
 [[ -f "$DASHBOARD_MD" ]] || {
@@ -60,5 +66,13 @@ if ! cmp -s "$DASHBOARD_MD" "$REBUILT_MD"; then
   echo "  fix: cargo run -p gc_cli -- --selfhost-artifact selfhost/toolchain.gc selfhost-dashboard --markdown docs/status/SELFHOST_CUTOVER.md" >&2
   exit 1
 fi
+
+genesis_profile_gate_emit_runtime_report \
+  "selfhost-dashboard-fresh" \
+  "genesis/selfhost-dashboard-fresh-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"
 
 echo "selfhost-dashboard-fresh: ok"

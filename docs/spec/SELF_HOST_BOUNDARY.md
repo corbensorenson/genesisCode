@@ -1,5 +1,4 @@
 > Bundle Entry: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
-> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
 
 # Self-Host Boundary (WASM-First) v0.2
 
@@ -40,7 +39,11 @@ and are no longer referenced by production code paths.
 
 Measurable retirement criteria:
 
-1. `scripts/check_bootstrap_retirement_gate.sh` passes with strict release checks enabled.
+1. `scripts/check_bootstrap_retirement_gate.sh` passes with strict release checks enabled in CI
+   (`GENESIS_BOOTSTRAP_RETIREMENT_STRICT_RELEASE=1`).
+   Local constrained-disk runs may return an explicit `degraded` status via
+   `GENESIS_BOOTSTRAP_RETIREMENT_LOCAL_DEGRADED_MODE=1`, but that status is non-release and does
+   not satisfy retirement sign-off criteria.
 2. `docs/spec/BOOTSTRAP_OLD.md` keeps retirement checklist fully checked and explicitly approved.
 3. `scripts/check_old_bootstrap_retirement.sh` reports zero production references to archived bootstrap semantics.
 4. `scripts/check_selfhost_boundary.sh --strict` passes after retirement move.

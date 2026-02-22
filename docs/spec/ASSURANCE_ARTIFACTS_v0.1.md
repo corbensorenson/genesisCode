@@ -2,6 +2,10 @@
 
 This document defines deterministic assurance evidence artifacts used by regulated-release policy gates.
 
+Objective-level standards posture mapping is tracked in:
+- `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+- `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
+
 ## 1. Requirements Trace Artifact
 
 Artifact kind:

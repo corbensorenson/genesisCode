@@ -4,6 +4,19 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-no-user-panics" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_NO_USER_PANICS_CARGO_TARGET_DIR"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_NO_USER_PANICS_REPORT:-.genesis/perf/no_user_panics_report.json}"
+HISTORY_PATH="${GENESIS_NO_USER_PANICS_HISTORY:-.genesis/perf/no_user_panics_history.jsonl}"
+BUDGET_MS="${GENESIS_NO_USER_PANICS_BUDGET_MS:-900000}"
+
 POLICY_FILE="${GENESIS_PANIC_GUARD_POLICY:-policies/panic_guard.toml}"
 if [[ ! -f "$POLICY_FILE" ]]; then
   echo "panic-guard: missing policy file: $POLICY_FILE" >&2
@@ -213,5 +226,13 @@ if [[ -n "$UNREACHABLE_HITS" ]]; then
   echo "$UNREACHABLE_HITS" >&2
   exit 1
 fi
+
+genesis_profile_gate_emit_runtime_report \
+  "no-user-panics" \
+  "genesis/no-user-panics-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"
 
 echo "panic-guard: ok"

@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-ai-stress-suite" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_AI_STRESS_SUITE_CARGO_TARGET_DIR"
+
 TOTAL_BUDGET_MS="${GENESIS_STRESS_BUDGET_MS:-900000}"
 REPORT_PATH="${GENESIS_STRESS_REPORT:-.genesis/perf/ai_stress_suite_metrics.json}"
 HISTORY_PATH="${GENESIS_STRESS_HISTORY:-.genesis/perf/ai_stress_suite_history.jsonl}"

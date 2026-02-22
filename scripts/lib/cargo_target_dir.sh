@@ -4,7 +4,8 @@
 # Precedence:
 #  1. script-specific env override passed via $4
 #  2. GENESIS_CARGO_TARGET_DIR
-#  3. "$root_dir/$default_rel"
+#  3. existing CARGO_TARGET_DIR (for nested script invocations)
+#  4. "$root_dir/$default_rel"
 genesis_configure_cargo_target_dir() {
   local root_dir="$1"
   local context="$2"
@@ -18,6 +19,9 @@ genesis_configure_cargo_target_dir() {
   fi
   if [[ -z "$target_dir" ]]; then
     target_dir="${GENESIS_CARGO_TARGET_DIR:-}"
+  fi
+  if [[ -z "$target_dir" ]]; then
+    target_dir="${CARGO_TARGET_DIR:-}"
   fi
   if [[ -z "$target_dir" ]]; then
     target_dir="$root_dir/$default_rel"

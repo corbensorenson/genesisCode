@@ -4,8 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-perf-budgets" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_PERF_BUDGETS_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/measure.sh"
 source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
 
 # Default budgets are intentionally conservative for shared CI runners.
 # Override with env vars to tighten over time.
@@ -16,7 +26,11 @@ MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
+DISK_MIN_FREE_KB="${GENESIS_PERF_BUDGET_MIN_FREE_KB:-3145728}"
 REPORT_OUT="${GENESIS_PERF_BUDGET_REPORT_OUT:-.genesis/perf/perf_budget_metrics.json}"
+HISTORY_OUT="${GENESIS_PERF_BUDGET_HISTORY_OUT:-.genesis/perf/perf_budget_metrics_history.jsonl}"
+RUNTIME_REPORT="${GENESIS_PERF_BUDGET_RUNTIME_REPORT_OUT:-.genesis/perf/perf_budget_runtime_report.json}"
+RUNTIME_BUDGET_MS="${GENESIS_PERF_BUDGET_RUNTIME_BUDGET_MS:-900000}"
 
 fail() {
   echo "perf-budgets: $*" >&2
@@ -32,16 +46,20 @@ profile_target_dir() {
 }
 
 TARGET_PROFILE_DIR="$(profile_target_dir "$CARGO_PROFILE")"
-GENESIS_BIN="$ROOT_DIR/target/$TARGET_PROFILE_DIR/genesis"
+GENESIS_BIN="$CARGO_TARGET_DIR/$TARGET_PROFILE_DIR/genesis"
 
-bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "perf-budgets" --strict "$DISK_STRICT_MODE"
+bash scripts/check_disk_headroom.sh \
+  --path "$ROOT_DIR" \
+  --context "perf-budgets" \
+  --min-kb "$DISK_MIN_FREE_KB" \
+  --strict "$DISK_STRICT_MODE"
 
 echo "perf-budgets: preparing genesis binary"
 cargo build -p gc_cli --profile "$CARGO_PROFILE" >/dev/null
 cargo test -p gc_cli --test cli_smoke --no-run --quiet --profile "$CARGO_PROFILE" >/dev/null
 
 CLI_SMOKE_BIN="$(
-  find "$ROOT_DIR/target/$TARGET_PROFILE_DIR/deps" -maxdepth 1 -type f -name 'cli_smoke-*' -perm -u+x \
+  find "$CARGO_TARGET_DIR/$TARGET_PROFILE_DIR/deps" -maxdepth 1 -type f -name 'cli_smoke-*' -perm -u+x \
     | sort \
     | tail -n 1
 )"
@@ -112,5 +130,15 @@ echo "perf-budgets: wrote report $REPORT_OUT"
 [[ "$TEST_WALL_MS" -le "$BUDGET_TEST_WALL_MS" ]] || fail "test wall-time regression: $TEST_WALL_MS > $BUDGET_TEST_WALL_MS"
 [[ "$SELFHOST_BOOTSTRAP_MS" -le "$BUDGET_SELFHOST_BOOTSTRAP_MS" ]] || fail "selfhost bootstrap regression: $SELFHOST_BOOTSTRAP_MS > $BUDGET_SELFHOST_BOOTSTRAP_MS"
 [[ "$OBLIGATION_RUNTIME_MS" -le "$BUDGET_OBLIGATION_RUNTIME_MS" ]] || fail "obligation runtime regression: $OBLIGATION_RUNTIME_MS > $BUDGET_OBLIGATION_RUNTIME_MS"
+
+genesis_profile_gate_emit_runtime_report \
+  "perf-budgets" \
+  "genesis/perf-budgets-runtime-v0.1" \
+  "$RUNTIME_REPORT" \
+  "$HISTORY_OUT" \
+  "$START_MS" \
+  "$RUNTIME_BUDGET_MS" \
+  "1" \
+  "{\"metrics_report\":\"$REPORT_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}"
 
 echo "perf-budgets: ok"

@@ -1,5 +1,4 @@
 > Bundle Entry: `docs/spec/TESTING_BUNDLE_v0.1.md`
-> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
 
 # Test Execution Profiles v0.1
 
@@ -133,6 +132,18 @@ Strict/full profile runtime reports:
 - To force strict local behavior, set:
   `GENESIS_PERF_DISK_STRICT_MODE=1`.
 
+### Bootstrap-Retirement Guard Disk Degraded Mode
+
+- `scripts/check_bootstrap_retirement_gate.sh` remains strict/fail-closed in CI.
+- Local constrained-disk environments can enable deterministic degraded mode:
+  - `GENESIS_BOOTSTRAP_RETIREMENT_LOCAL_DEGRADED_MODE=1`
+  - optional reclaim toggle: `GENESIS_BOOTSTRAP_RETIREMENT_DISK_AUTO_RECLAIM=0|1`
+- Degraded runs are explicitly labeled and reported as non-pass:
+  - report: `.genesis/perf/bootstrap_retirement_gate_report.json`
+  - kind: `genesis/bootstrap-retirement-gate-report-v0.1`
+  - status: `ok|degraded|fail`
+- Degraded status is for local operator continuity only and cannot be used as release sign-off.
+
 ## CI Profiles
 
 - `fast`: runs `scripts/test_changed_fast.sh` (default local/CI fast path)
@@ -164,6 +175,7 @@ Strict/full profile runtime reports:
 
 Profile/budget drift is blocked by:
 - `scripts/check_test_execution_profile_matrix.sh`
+- `scripts/check_cargo_target_dir_policy.sh` (compile-heavy cargo target-dir conformance)
 
 This guard enforces:
 - matrix rows for `smoke`, `changed-fast`, `strict-golden`, `full-cross-host`

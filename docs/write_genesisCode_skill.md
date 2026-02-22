@@ -11,6 +11,10 @@ Primary source of truth:
 Machine-consumable contract:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
 
+Versioned distribution pack:
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
+
 Use the skill file directly for operational guidance. This document exists as a stable project-facing pointer and onboarding entry.
 
 ## Scope

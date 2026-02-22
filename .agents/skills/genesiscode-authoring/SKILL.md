@@ -7,7 +7,6 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 
 ## Required references (must stay synchronized)
 - `docs/spec/CLI.md`
-- `docs/spec/CLI_SCHEMA_v0.1.md`
 - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`

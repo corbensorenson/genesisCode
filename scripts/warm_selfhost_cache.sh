@@ -4,7 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-GENESIS_BIN="$ROOT_DIR/target/debug/genesis"
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "warm-selfhost-cache" \
+  ".genesis/build/cargo" \
+  "GENESIS_WARM_SELFHOST_CACHE_CARGO_TARGET_DIR"
+
+DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+GENESIS_BIN="$DEFAULT_DEBUG_DIR/genesis"
 if [[ ! -x "$GENESIS_BIN" ]]; then
   cargo build -p gc_cli >/dev/null
 fi

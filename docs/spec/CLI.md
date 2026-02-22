@@ -1,5 +1,4 @@
 > Bundle Entry: `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
-> Legacy Split Doc: Prefer the bundle entrypoint for agent retrieval; this file retains detailed, topic-local semantics.
 
 # Genesis CLI v0.2 (Exit Codes + JSON)
 
@@ -66,7 +65,7 @@ Normative profile contract:
 against prior Rust semantics during the selfhost cutover.
 
 Normative boundary and enforcement details are defined in:
-- `docs/spec/PARITY_HARNESS.md`.
+- `docs/spec/SELF_HOST_BOUNDARY.md`.
 
 They are disabled by default and require explicit opt-in in development/debug profiles:
 - use dedicated parity binaries:
@@ -126,7 +125,7 @@ Dedicated compatibility harness entrypoints:
 - `genesis cli-schema`
   - emits machine-readable command/option schema for agent planning.
   - output kind: `genesis/cli-schema-v0.1`.
-  - schema contract: `docs/spec/CLI_SCHEMA_v0.1.md`.
+  - schema contract: `docs/spec/CLI_JSON_SCHEMAS_v0.1.md` (`CLI Schema Contract` section).
 - `genesis agent-index`
   - emits AI-facing planning index that bundles CLI schema, capability indices, default obligations, and reference workflow pointers.
   - output kind: `genesis/agent-index-v0.1`.
@@ -160,7 +159,7 @@ CI strict selfhost gates:
 - `genesis commit show <commit-hash>`
 - Non-gcpm command schema IDs are enumerated in `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`.
 - `genesis gcpm ...` is a first-class alias to `genesis pkg ...` and must preserve identical JSON `kind` contracts.
-  - See `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`.
+  - See `docs/spec/GCPM_BUNDLE_v0.1.md`.
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
 - Workspace lifecycle commands:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
@@ -186,20 +185,24 @@ CI strict selfhost gates:
     emits deterministic `:tool-qualification` evidence for protected release qualification gates.
   - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <custom|do178c-dal-a|do178c-dal-b|nasa-class-a|nasa-class-b|iec62304-class-c> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--independence-attestation <left:right@attestor> ...] [--bundle-dir <dir>] [--out <path>] [--no-store]`
     emits deterministic `:assurance-pack` evidence with profile-gated trace/tool/coverage/independence checks and optional reproducible audit-bundle mirror.
-    standards crosswalk and policy-pack templates are defined in `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md` and `policies/assurance/profile_packs.toml`.
-  - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
-  - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
-  - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
-  - Build target bundle schema: `docs/spec/GCPM_BUILD_TARGETS_v0.1.md`.
+    standards crosswalk and policy-pack templates are defined in
+    `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`,
+    `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`,
+    `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`, and
+    `policies/assurance/profile_packs.toml`.
+  - ABI/introspection schema: `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md` (`GCPM ABI Contract` section).
+  - Workspace/env/build target schemas are consolidated in:
+    - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
+    - `docs/spec/GCPM_BUNDLE_v0.1.md`
   - Assurance evidence schemas: `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`.
   - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.
-  - See `docs/spec/GCPM_TELEMETRY_v0.1.md`.
+  - See `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
 - `genesis gcpm doctor --caps <caps.toml> [--lock genesis.lock]`
   - emits `kind = "genesis/pkg-doctor-v0.1"` with deterministic `data.doctor` diagnostics.
-  - diagnostic schema is defined in `docs/spec/GCPM_DIAGNOSTICS_v0.1.md`.
+  - diagnostic schema is defined in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
 
 ## Exit Codes (Stable)
 

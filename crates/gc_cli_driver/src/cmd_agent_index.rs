@@ -361,10 +361,11 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 "cli": "docs/spec/CLI.md",
                 "schema_registry": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
                 "host_abi": "docs/spec/HOST_ABI.md",
-                "host_abi_schema": "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.md",
+                "host_abi_schema": "docs/spec/HOST_ABI.md",
                 "foundation_stdlib": "docs/FOUNDATION_STDLIB_v0.2.md",
                 "agent_index": "docs/spec/AGENT_INDEX_v0.1.md",
                 "agent_authoring_bundle": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+                "write_genesiscode_skill_pack": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
                 "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",
             }
         })),

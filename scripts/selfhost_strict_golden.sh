@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "selfhost-strict-golden" \
+  ".genesis/build/cargo" \
+  "GENESIS_SELFHOST_STRICT_GOLDEN_CARGO_TARGET_DIR"
+
 STRICT_GOLDEN_REPORT="${GENESIS_STRICT_GOLDEN_PROFILE_REPORT:-.genesis/perf/strict_golden_profile_report.json}"
 STRICT_GOLDEN_HISTORY="${GENESIS_STRICT_GOLDEN_PROFILE_HISTORY:-.genesis/perf/strict_golden_profile_history.jsonl}"
 STRICT_GOLDEN_BUDGET_MS="${GENESIS_STRICT_GOLDEN_BUDGET_MS:-480000}"
@@ -31,10 +38,11 @@ START_MS="$(now_ms)"
 
 cargo build -p gc_cli -p gc_wasi_cli >/dev/null
 
-GEN="$ROOT_DIR/target/debug/genesis"
-GEN_PARITY="$ROOT_DIR/target/debug/genesis_parity"
-GWASI="$ROOT_DIR/target/debug/genesis_wasi"
-GWASI_PARITY="$ROOT_DIR/target/debug/genesis_wasi_parity"
+DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+GEN="$DEFAULT_DEBUG_DIR/genesis"
+GEN_PARITY="$DEFAULT_DEBUG_DIR/genesis_parity"
+GWASI="$DEFAULT_DEBUG_DIR/genesis_wasi"
+GWASI_PARITY="$DEFAULT_DEBUG_DIR/genesis_wasi_parity"
 
 TMP_DIR="$(mktemp -d)"
 pids=()

@@ -81,7 +81,6 @@ Additional schemas:
 - `docs/spec/CAPS_TOML.md`
 - `docs/spec/PACKAGE_TOML.md`
 - `docs/spec/GCLOG_SCHEMA.md`
-- `docs/spec/TEST_SCHEMA.md`
 - `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 
 Capability comparison:

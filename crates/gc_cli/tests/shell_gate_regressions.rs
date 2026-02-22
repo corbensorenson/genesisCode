@@ -228,6 +228,109 @@ fn changed_fast_supports_explicit_strict_disk_mode() {
 }
 
 #[test]
+fn changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg() {
+    let root = repo_root();
+    let changed_fast = fs::read_to_string(root.join("scripts/test_changed_fast.sh"))
+        .expect("read test_changed_fast.sh");
+    assert!(
+        changed_fast.contains("GENESIS_TEST_CHANGED_FILES_OVERRIDE"),
+        "test-changed-fast must support deterministic changed-file override for regression tests"
+    );
+    assert!(
+        changed_fast.contains("MODE=\"non-crate-targeted\""),
+        "test-changed-fast must route script/docs-only diffs into non-crate targeted mode"
+    );
+
+    let output = Command::new("bash")
+        .arg("-lc")
+        .arg(
+            "GENESIS_CHANGED_BASE=HEAD \
+             GENESIS_TEST_CHANGED_FILES_OVERRIDE=$'scripts/check_doc_hygiene.sh\\ndocs/INDEX.md' \
+             bash scripts/test_changed_fast.sh --dry-run",
+        )
+        .current_dir(&root)
+        .output()
+        .expect("run test_changed_fast dry-run with non-crate override");
+    assert!(
+        output.status.success(),
+        "expected dry-run to succeed: stdout={}\nstderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("mode=non-crate-targeted"),
+        "expected non-crate-targeted mode, got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("cargo test -p \n") && !stdout.contains("cargo test -p \r"),
+        "dry-run must never emit empty cargo package args: {stdout}"
+    );
+    assert!(
+        stdout.contains("bash scripts/check_doc_hygiene.sh"),
+        "expected docs hygiene fast-path command for docs/script-only diffs: {stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "cargo test -p gc_cli --test shell_gate_regressions changed_fast_non_crate_targeted_mode_never_emits_empty_package_arg -- --exact"
+        ),
+        "expected shell-gate regression command for script-only diffs: {stdout}"
+    );
+}
+
+#[test]
+fn bootstrap_retirement_gate_has_explicit_local_degraded_mode() {
+    let root = repo_root();
+
+    let degraded = Command::new("bash")
+        .arg("-lc")
+        .arg(
+            "GENESIS_BOOTSTRAP_RETIREMENT_STRICT_RELEASE=1 \
+             GENESIS_BOOTSTRAP_RETIREMENT_LOCAL_DEGRADED_MODE=1 \
+             GENESIS_BOOTSTRAP_RETIREMENT_DISK_AUTO_RECLAIM=0 \
+             GENESIS_RELEASE_GUARD_MIN_FREE_KB=999999999 \
+             bash scripts/check_bootstrap_retirement_gate.sh",
+        )
+        .current_dir(&root)
+        .output()
+        .expect("run bootstrap retirement gate in local degraded mode");
+    assert!(
+        degraded.status.success(),
+        "bootstrap retirement gate should succeed in explicit local degraded mode\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&degraded.stdout),
+        String::from_utf8_lossy(&degraded.stderr)
+    );
+    let degraded_stdout = String::from_utf8_lossy(&degraded.stdout);
+    let degraded_stderr = String::from_utf8_lossy(&degraded.stderr);
+    assert!(
+        degraded_stdout.contains("bootstrap-retirement-gate: degraded")
+            || degraded_stderr.contains("bootstrap-retirement-gate: degraded"),
+        "degraded mode must be explicit in output\nstdout:\n{}\nstderr:\n{}",
+        degraded_stdout,
+        degraded_stderr
+    );
+
+    let strict_fail = Command::new("bash")
+        .arg("-lc")
+        .arg(
+            "GENESIS_BOOTSTRAP_RETIREMENT_STRICT_RELEASE=1 \
+             GENESIS_BOOTSTRAP_RETIREMENT_LOCAL_DEGRADED_MODE=0 \
+             GENESIS_BOOTSTRAP_RETIREMENT_DISK_AUTO_RECLAIM=0 \
+             GENESIS_RELEASE_GUARD_MIN_FREE_KB=999999999 \
+             bash scripts/check_bootstrap_retirement_gate.sh",
+        )
+        .current_dir(&root)
+        .output()
+        .expect("run bootstrap retirement gate in strict local mode");
+    assert!(
+        !strict_fail.status.success(),
+        "bootstrap retirement gate must fail without degraded local mode under constrained disk\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&strict_fail.stdout),
+        String::from_utf8_lossy(&strict_fail.stderr)
+    );
+}
+
+#[test]
 fn production_rust_frontend_guard_is_wired_and_passes() {
     let root = repo_root();
     let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))

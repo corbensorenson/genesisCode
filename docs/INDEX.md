@@ -29,6 +29,11 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/TESTING_BUNDLE_v0.1.md`
   - `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
   - `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
+- Consolidation note:
+  - low-signal split schema/index docs were merged into canonical specs; see
+    `docs/DEPRECATION_MAP_v0.1.md` for the merged mapping.
 - Kernel/evaluator/contracts:
   - `docs/spec/SEALS_DISPATCH_REPLAY.md`
   - `docs/spec/DETERMINISM.md`
@@ -37,33 +42,29 @@ This is the canonical entrypoint for project documentation.
 - Tooling/CLI/project manager:
   - `docs/spec/CLI.md`
   - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
-  - `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`
-  - `docs/spec/GCPM_WORKSPACE_v0.1.md`
-  - `docs/spec/GCPM_ENV_v0.1.md`
 - Effects/policies/runtime:
   - `docs/spec/CAPS_TOML.md`
   - `docs/spec/HOST_ABI.md`
   - `docs/spec/BROWSER_HOST_RUNTIME_v0.1.md`
   - `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`
-  - `docs/spec/LIMITS.md`
   - `docs/spec/DOMAIN_KITS_v0.1.md`
   - `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`
   - `docs/spec/WASI.md`
   - `docs/spec/WASM.md`
-  - `docs/spec/AGENT_SCENARIO_PERF_v0.1.md`
   - `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`
   - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
+  - `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
+  - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+  - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
   - `docs/spec/REGISTRY_POLICY.md`
   - `docs/spec/TRANSPARENCY_LOG.md`
 
 ## Graphics, GPU, Concurrency
 
-- `docs/spec/GFX_ARCH.md`
 - `docs/spec/GFX_CAPS.md`
 - `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
-- `docs/spec/GPU_COMPUTE_DEVICE_BRIDGE_v0.1.md`
 - `docs/spec/GPU_GFX_BUNDLE_v0.1.md` (`Demo Workloads` section for runnable `.gc` gfx demos)
 - `docs/spec/CONCURRENCY_v0.1.md`
 - `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`
@@ -80,5 +81,4 @@ This is the canonical entrypoint for project documentation.
 
 - `docs/DEPRECATION_MAP_v0.1.md` - explicit superseded/overlapping doc mapping.
 - `docs/spec/BOOTSTRAP_OLD.md` - bootstrap/parity historical reference only.
-- `docs/spec/PARITY_HARNESS.md` - parity binaries and migration boundaries.
 - `old_bootstrap/` - archived bootstrap artifacts and compatibility material.

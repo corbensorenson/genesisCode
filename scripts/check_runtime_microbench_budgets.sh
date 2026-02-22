@@ -4,7 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-runtime-microbench-budgets" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_RUNTIME_MICROBENCH_BUDGETS_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
 
 OUT="${GENESIS_RUNTIME_MICROBENCH_OUT:-.genesis/perf/runtime_microbench_metrics.json}"
 SLO_OUT="${GENESIS_CONCURRENCY_GPU_SLO_OUT:-.genesis/perf/concurrency_gpu_slo_report.json}"
@@ -14,8 +24,12 @@ GPU_BUDGET_DEVICE_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE:-5000}
 GPU_BUDGET_FALLBACK_MS="${GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK:-8000}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
+DISK_MIN_FREE_KB="${GENESIS_RUNTIME_MICROBENCH_MIN_FREE_KB:-3145728}"
 MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
 GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-}"
+RUNTIME_REPORT="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_REPORT_OUT:-.genesis/perf/runtime_microbench_runtime_report.json}"
+RUNTIME_HISTORY="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_HISTORY_OUT:-.genesis/perf/runtime_microbench_runtime_history.jsonl}"
+RUNTIME_BUDGET_MS="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_BUDGET_MS:-900000}"
 if [[ -z "$GPU_BACKEND_POLICY" ]]; then
   case "$CARGO_PROFILE" in
     selfhost-strict|release|release-*|production|prod)
@@ -33,7 +47,11 @@ if [[ -z "$MICROBENCH_FEATURES" && "$GPU_BACKEND_POLICY" == "require-device" ]];
   MICROBENCH_FEATURES="device-bridge"
 fi
 
-bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "runtime-microbench" --strict "$DISK_STRICT_MODE"
+bash scripts/check_disk_headroom.sh \
+  --path "$ROOT_DIR" \
+  --context "runtime-microbench" \
+  --min-kb "$DISK_MIN_FREE_KB" \
+  --strict "$DISK_STRICT_MODE"
 
 if [[ "$SKIP_RUN" == "1" ]]; then
   if [[ ! -f "$OUT" ]]; then
@@ -187,3 +205,13 @@ if not ok:
         f"(bridge={bridge_ms}/{bridge_budget}, gpu_compute_submit={gpu_compute_submit_ms}/{gpu_compute_submit_budget}, task={task_ms}/{task_budget}{backend_msg})"
     )
 PY
+
+genesis_profile_gate_emit_runtime_report \
+  "runtime-microbench-budgets" \
+  "genesis/runtime-microbench-runtime-v0.1" \
+  "$RUNTIME_REPORT" \
+  "$RUNTIME_HISTORY" \
+  "$START_MS" \
+  "$RUNTIME_BUDGET_MS" \
+  "1" \
+  "{\"metrics_report\":\"$OUT\",\"slo_report\":\"$SLO_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}"

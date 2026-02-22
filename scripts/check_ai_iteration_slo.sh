@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-ai-iteration-slo" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_AI_ITERATION_SLO_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
 source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
 
@@ -236,7 +243,7 @@ trap cleanup EXIT
 
 echo "ai-iteration-slo: preparing genesis binary"
 cargo build -p gc_cli --profile "$CARGO_PROFILE" >/dev/null
-GENESIS_BIN="$ROOT_DIR/target/$TARGET_PROFILE_DIR/genesis"
+GENESIS_BIN="$CARGO_TARGET_DIR/$TARGET_PROFILE_DIR/genesis"
 [[ -x "$GENESIS_BIN" ]] || fail "unable to locate genesis binary at $GENESIS_BIN"
 
 for name in basic.gc caps.toml package.toml pure.gcpatch; do

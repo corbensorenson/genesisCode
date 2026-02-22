@@ -19,13 +19,13 @@ All commands return:
   - `value_format`
 
 `gcpm doctor` additionally includes `data.doctor` with schema
-`genesis/pkg-doctor-report-v0.2` (see `docs/spec/GCPM_DIAGNOSTICS_v0.1.md`).
+`genesis/pkg-doctor-report-v0.2` (defined in this document).
 
 `gcpm lock/update/publish` additionally include `data.report` workflow artifacts
 (see `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`).
 
 All `gcpm` commands include prompt-safe deterministic telemetry under `data.telemetry`
-(see `docs/spec/GCPM_TELEMETRY_v0.1.md`).
+(contract defined in this document).
 
 `gcpm env` embeds runtime backend profile contract fields in canonical CoreForm `data.value`
 (`:runtime-backend-profile`, `:active-runtime-backend-profile`, `:runtime-backend-compatible`).
@@ -38,7 +38,7 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm remove` -> `genesis/pkg-remove-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-v0.1`
 - `gcpm update` -> `genesis/pkg-update-v0.1`
-- `gcpm build --target <web|desktop|service>` -> `genesis/pkg-build-v0.1` (schema: `docs/spec/GCPM_BUILD_TARGETS_v0.1.md`)
+- `gcpm build --target <web|desktop|service>` -> `genesis/pkg-build-v0.1`
 - `gcpm run <task>` -> forwards to task-target command `kind`:
   - `test` -> `genesis/test-v0.2`
   - `pack|build` -> `genesis/pack-v0.2`
@@ -58,13 +58,59 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm doctor` -> `genesis/pkg-doctor-v0.1`
 - `gcpm list` -> `genesis/pkg-list-v0.1`
 - `gcpm info` -> `genesis/pkg-info-v0.1`
-- `gcpm abi` -> `genesis/pkg-abi-v0.1` (schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`)
+- `gcpm abi` -> `genesis/pkg-abi-v0.1` (schema: this document, `GCPM ABI Contract` section)
 - `gcpm snapshot` -> `genesis/pkg-snapshot-v0.1`
 - `gcpm export` -> `genesis/pkg-export-v0.1`
 - `gcpm import` -> `genesis/pkg-import-v0.1`
 - `gcpm publish` -> `genesis/pkg-publish-v0.1`
 - `gcpm migrate` -> `genesis/pkg-migrate-v0.1`
 - `gcpm env` -> `genesis/pkg-env-v0.1`
+
+## GCPM ABI Contract (`genesis/pkg-abi-v0.1`)
+
+Normative schema for `genesis gcpm abi --pkg <package.toml>`.
+
+Purpose:
+
+- deterministic package introspection index for agent planning
+- contract op tables, declared/inferred type+effect signatures
+- required capabilities and manifest obligations
+
+The command is pure/local and emits `kind = "genesis/pkg-abi-v0.1"`.
+
+### CoreForm value schema
+
+Top-level map keys:
+
+- `:ok` (`bool`)
+- `:schema` (`"genesis/pkg-abi-v0.1"`)
+- `:package` (`map`)
+- `:obligations` (`vector` of obligation symbols)
+- `:required-caps` (`vector` of capability op symbols)
+- `:module-count` (`int`)
+- `:export-count` (`int`)
+- `:typecheck-ok` (`bool`)
+- `:typecheck-errors` (`vector` of strings)
+- `:typecheck-warnings` (`vector` of strings)
+- `:modules` (`vector` of per-module maps)
+- `:index` (`map` from exported symbol -> export ABI entry)
+
+Per-module ABI payload includes:
+
+- `:path`, `:hash`, `:intent`
+- `:exports`, `:declared-caps`, `:required-caps`, `:inferred-ops`
+- `:unknown-ops`
+- `:declared-types`
+- `:typecheck-ok`, `:typecheck-errors`, `:typecheck-warnings`
+- `:exports-abi`
+
+Export ABI entry keys:
+
+- `:name`, `:module`
+- `:declared-type`, `:inferred-type`
+- `:effect-signature-ops`, `:effect-signature-open`
+- `:required-caps`
+- `:contract-ops` (`:op`, `:type`, `:effect-signature-ops`, `:effect-signature-open`)
 
 ## Determinism
 

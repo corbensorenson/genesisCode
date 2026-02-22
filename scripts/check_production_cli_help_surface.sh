@@ -4,6 +4,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+source "$ROOT/scripts/lib/cargo_target_dir.sh"
+source "$ROOT/scripts/lib/profile_gate_timing.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT" \
+  "check-production-cli-help-surface" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_PRODUCTION_CLI_HELP_SURFACE_CARGO_TARGET_DIR"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT:-.genesis/perf/production_cli_help_surface_report.json}"
+HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY:-.genesis/perf/production_cli_help_surface_history.jsonl}"
+BUDGET_MS="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-300000}"
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -68,5 +81,13 @@ assert_contains "$GENESIS_PARITY_HELP" "Accepted values: selfhost, rust."
 assert_contains "$GENESIS_WASI_PARITY_HELP" "Accepted values: selfhost, rust."
 assert_contains "$GENESIS_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
 assert_contains "$GENESIS_WASI_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
+
+genesis_profile_gate_emit_runtime_report \
+  "production-cli-help-surface" \
+  "genesis/production-cli-help-surface-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"
 
 echo "help-surface: ok"

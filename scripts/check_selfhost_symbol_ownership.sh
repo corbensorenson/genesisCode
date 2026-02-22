@@ -5,6 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_REPORT:-.genesis/perf/selfhost_symbol_ownership_report.json}"
+HISTORY_PATH="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_HISTORY:-.genesis/perf/selfhost_symbol_ownership_history.jsonl}"
+BUDGET_MS="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_BUDGET_MS:-300000}"
 
 GENESIS_BIN_OVERRIDE="${GENESIS_BIN:-}"
 DEFAULT_DEBUG_DIR="$ROOT_DIR/target/debug"
@@ -73,3 +79,11 @@ print(
     f"(symbols={idx.get('symbol_count', 0)} required={idx.get('required_symbol_count', 0)})"
 )
 PY
+
+genesis_profile_gate_emit_runtime_report \
+  "selfhost-symbol-ownership" \
+  "genesis/selfhost-symbol-ownership-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"

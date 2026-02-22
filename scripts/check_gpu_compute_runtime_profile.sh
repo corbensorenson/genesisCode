@@ -4,6 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
+source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "check-gpu-compute-runtime-profile" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_GPU_COMPUTE_RUNTIME_PROFILE_CARGO_TARGET_DIR"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+
 OUT="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_OUT:-.genesis/perf/gpu_compute_runtime_profile.json}"
 SUMMARY_OUT="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_GUARD_OUT:-.genesis/perf/gpu_compute_runtime_profile_guard.json}"
 SKIP_RUN="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_SKIP_RUN:-0}"
@@ -11,6 +22,11 @@ CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
 MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
 REQUIRED_BACKEND="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_REQUIRED_BACKEND:-}"
 GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-}"
+DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
+DISK_MIN_FREE_KB="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_MIN_FREE_KB:-3145728}"
+RUNTIME_REPORT="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_RUNTIME_REPORT_OUT:-.genesis/perf/gpu_compute_runtime_profile_runtime_report.json}"
+RUNTIME_HISTORY="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_RUNTIME_HISTORY_OUT:-.genesis/perf/gpu_compute_runtime_profile_runtime_history.jsonl}"
+RUNTIME_BUDGET_MS="${GENESIS_GPU_COMPUTE_RUNTIME_PROFILE_RUNTIME_BUDGET_MS:-900000}"
 if [[ -z "$GPU_BACKEND_POLICY" ]]; then
   case "$CARGO_PROFILE" in
     selfhost-strict|release|release-*|production|prod)
@@ -27,6 +43,12 @@ fi
 if [[ -z "$MICROBENCH_FEATURES" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
   MICROBENCH_FEATURES="device-bridge"
 fi
+
+bash scripts/check_disk_headroom.sh \
+  --path "$ROOT_DIR" \
+  --context "gpu-compute-runtime-profile" \
+  --min-kb "$DISK_MIN_FREE_KB" \
+  --strict "$DISK_STRICT_MODE"
 
 if [[ "$SKIP_RUN" == "1" ]]; then
   if [[ ! -f "$OUT" ]]; then
@@ -153,5 +175,15 @@ if not ok:
         f"gpu_compute_submit={gpu_metric}/{gpu_budget}, non_compute_nonzero={non_compute_nonzero})"
     )
 PY
+
+genesis_profile_gate_emit_runtime_report \
+  "gpu-compute-runtime-profile" \
+  "genesis/gpu-compute-runtime-profile-runtime-v0.1" \
+  "$RUNTIME_REPORT" \
+  "$RUNTIME_HISTORY" \
+  "$START_MS" \
+  "$RUNTIME_BUDGET_MS" \
+  "1" \
+  "{\"metrics_report\":\"$OUT\",\"guard_report\":\"$SUMMARY_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}"
 
 echo "gpu-compute-runtime-profile: ok"

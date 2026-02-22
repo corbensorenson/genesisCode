@@ -967,3 +967,7 @@ wasi_bridge_response = "{:ok true :sent true}"
 
 #[path = "runner_capability_dispatch_tests/extended.rs"]
 mod extended;
+#[path = "runner_capability_dispatch_tests/extended_crypto.rs"]
+mod extended_crypto;
+#[path = "runner_capability_dispatch_tests/extended_plugin.rs"]
+mod extended_plugin;

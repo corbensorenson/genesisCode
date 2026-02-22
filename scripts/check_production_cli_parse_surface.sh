@@ -4,6 +4,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+source "$ROOT/scripts/lib/cargo_target_dir.sh"
+source "$ROOT/scripts/lib/profile_gate_timing.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT" \
+  "check-production-cli-parse-surface" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_PRODUCTION_CLI_PARSE_SURFACE_CARGO_TARGET_DIR"
+
+START_MS="$(genesis_profile_gate_now_ms)"
+REPORT_PATH="${GENESIS_PRODUCTION_CLI_PARSE_SURFACE_REPORT:-.genesis/perf/production_cli_parse_surface_report.json}"
+HISTORY_PATH="${GENESIS_PRODUCTION_CLI_PARSE_SURFACE_HISTORY:-.genesis/perf/production_cli_parse_surface_history.jsonl}"
+BUDGET_MS="${GENESIS_PRODUCTION_CLI_PARSE_SURFACE_BUDGET_MS:-300000}"
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -65,5 +78,13 @@ assert_rejects_rust genesis gc_cli
 assert_rejects_rust genesis_wasi gc_wasi_cli
 assert_accepts_rust_parity genesis_parity gc_cli
 assert_accepts_rust_parity genesis_wasi_parity gc_wasi_cli
+
+genesis_profile_gate_emit_runtime_report \
+  "production-cli-parse-surface" \
+  "genesis/production-cli-parse-surface-v0.1" \
+  "$REPORT_PATH" \
+  "$HISTORY_PATH" \
+  "$START_MS" \
+  "$BUDGET_MS"
 
 echo "parse-surface: ok"
