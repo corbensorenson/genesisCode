@@ -27,6 +27,9 @@ else
   ENFORCE_GATES_DEFAULT="0"
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
+HEALTH_AUTO_RECLAIM="${GENESIS_HEALTH_AUTO_RECLAIM:-1}"
+HEALTH_RECLAIM_MAX_BUILD_KB="${GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB:-8388608}"
+HEALTH_RECLAIM_MAX_AGE_DAYS="${GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS:-7}"
 GPU_DEVICE_CONFORMANCE=""
 NON_CARGO_PARTITION=()
 CARGO_PARTITION=()
@@ -363,6 +366,19 @@ run_gate_commands() {
   return 0
 }
 
+run_health_proactive_reclaim() {
+  if [[ "$HEALTH_AUTO_RECLAIM" != "1" ]]; then
+    echo "upgrade-plan-health: proactive reclaim disabled"
+    return 0
+  fi
+  echo "upgrade-plan-health: proactive reclaim (max_build_kb=${HEALTH_RECLAIM_MAX_BUILD_KB}, max_age_days=${HEALTH_RECLAIM_MAX_AGE_DAYS})"
+  bash scripts/reclaim_build_space.sh \
+    --safe \
+    --max-build-kb "$HEALTH_RECLAIM_MAX_BUILD_KB" \
+    --max-age-days "$HEALTH_RECLAIM_MAX_AGE_DAYS" \
+    --preserve-dir "$HEALTH_CARGO_TARGET_DIR"
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|prepush-standard|release-full>]
@@ -408,6 +424,18 @@ else
 fi
 if [[ "$ENFORCE_GATES" != "0" && "$ENFORCE_GATES" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_ENFORCE_GATES must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$HEALTH_AUTO_RECLAIM" != "0" && "$HEALTH_AUTO_RECLAIM" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_AUTO_RECLAIM must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$HEALTH_RECLAIM_MAX_BUILD_KB" =~ ^[0-9]+$ ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB must be numeric" >&2
+  exit 2
+fi
+if [[ ! "$HEALTH_RECLAIM_MAX_AGE_DAYS" =~ ^[0-9]+$ ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS must be numeric" >&2
   exit 2
 fi
 if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; then
@@ -460,6 +488,7 @@ fi
 mkdir -p "$HEALTH_CARGO_TARGET_DIR"
 export CARGO_TARGET_DIR="$HEALTH_CARGO_TARGET_DIR"
 echo "upgrade-plan-health: using shared cargo target dir: $CARGO_TARGET_DIR"
+run_health_proactive_reclaim
 
 declared_open="$(awk -F: '/^Open checklist items:/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$PLAN_FILE")"
 if [[ -z "$declared_open" || ! "$declared_open" =~ ^[0-9]+$ ]]; then
@@ -477,7 +506,7 @@ fi
 
 if [[ "$declared_open" -gt 0 ]]; then
   echo "upgrade-plan-health: backlog status: open checklist items = $declared_open"
-  if [[ "$ENFORCE_GATES" != "1" ]]; then
+  if [[ "$ENFORCE_GATES" != "1" && "$PROFILE" == "dev-fast" ]]; then
     echo "upgrade-plan-health: backlog open; running mandatory local guard gates."
     run_health_cargo_warmup "mandatory-local"
     MANDATORY_LOCAL_NON_CARGO_GATES=(
@@ -538,7 +567,11 @@ if [[ "$declared_open" -gt 0 ]]; then
     echo "upgrade-plan-health: ok"
     exit 0
   fi
-  echo "upgrade-plan-health: code health gates enforced despite backlog (profile=$PROFILE)"
+  if [[ "$ENFORCE_GATES" != "1" ]]; then
+    echo "upgrade-plan-health: backlog open; enforcing full profile gates for profile=$PROFILE (mandatory-local is dev-fast-only)."
+  else
+    echo "upgrade-plan-health: code health gates enforced despite backlog (profile=$PROFILE)"
+  fi
 else
   echo "upgrade-plan-health: backlog status: open checklist items = 0"
   echo "upgrade-plan-health: code health gates enforced (profile=$PROFILE)"

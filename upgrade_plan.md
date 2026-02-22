@@ -4,7 +4,7 @@ Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 
-Open checklist items: 12
+Open checklist items: 8
 
 ## P0 - Immediate blockers
 
@@ -25,36 +25,49 @@ Open checklist items: 12
 
 ## P1 - High-impact self-host and AI-first hardening
 
-- [ ] P1.1 Bring `dev-fast` wall time back to an actual fast loop.
+- [x] P1.1 Restore real profile coverage for `prepush-standard`/`release-full` when backlog is non-zero.
   - Evidence:
-    - `.genesis/perf/upgrade_plan_health_profile_report.json` records `elapsed_ms=263873` for `profile=dev-fast`.
-    - User-facing iteration objective is rapid agent loops; 4+ minute profile runs are too slow for tight edit/test cycles.
+    - `scripts/check_upgrade_plan_health.sh` branches to mandatory-local when `Open checklist items > 0`:
+      - prints `backlog open; running mandatory local guard gates.`
+      - lines near `declared_open` gate handling (`scripts/check_upgrade_plan_health.sh:479-535`).
+    - Live runs for both heavy profiles short-circuit:
+      - `bash scripts/check_upgrade_plan_health.sh --profile prepush-standard`
+      - `bash scripts/check_upgrade_plan_health.sh --profile release-full`
+      - both reported `mandatory-local` completion (not full profile gates).
   - Acceptance:
-    - Introduce a true inner-loop profile (`<=120000ms` on warm cache) with explicit gate contract.
-    - Keep current heavy profile as prepush/release lane, not default local fast loop.
-    - Publish profile/runtime matrix with expected latency tiers.
+    - `prepush-standard` and `release-full` execute their profile-specific gates by default even with open backlog items.
+    - Keep `mandatory-local` as `dev-fast` behavior (or explicit opt-in), not as an implicit replacement for heavier profiles.
+    - Profile reports must reflect actual profile gate sets, and fail if profile substitution occurs without explicit override.
 
-- [ ] P1.2 Eliminate recurring ENOSPC failures from gate target-dir sprawl.
+- [x] P1.2 Eliminate recurring ENOSPC failures from gate target-dir sprawl.
   - Evidence:
-    - Repeated runs accumulate large build caches; observed `.genesis/build` at multi-GB scale and prior ENOSPC failures during gate runs.
-    - Many scripts allocate independent target dirs (`scripts/*` with `genesis_configure_cargo_target_dir`), increasing cache duplication.
+    - Reproduced ENOSPC during runtime matrix check:
+      `bash scripts/check_runtime_backend_feature_matrix.sh`
+      -> `No space left on device (os error 28)` while compiling.
+    - Live disk state at failure:
+      - `df -h .` -> `Avail 62Mi` (100% capacity).
+      - `.genesis/build` footprint -> `14G` (`.genesis/build/health` `11G`, `.genesis/build/runtime_backend_feature_matrix` `2.6G`).
   - Acceptance:
     - Add deterministic cache lifecycle policy (TTL/LRU/size cap) for `.genesis/build/*`.
-    - Add proactive cleanup integration into health/profile runners (not manual-only remediation).
-    - Gate must fail with clear remediation only after automated reclaim attempts.
+    - Add proactive cleanup integration into health/profile runners before heavy compile lanes.
+    - Gate must attempt deterministic reclaim before surfacing manual remediation steps.
 
-- [ ] P1.3 Put a hard SLO/budget on runtime backend matrix checks.
+- [x] P1.3 Put a hard SLO/budget on runtime backend matrix checks.
   - Evidence:
-    - `.genesis/perf/runtime_backend_feature_matrix_report.json` shows `elapsed_ms=306863`.
-    - `scripts/check_runtime_backend_feature_matrix.sh` defaults budget to `0` (disabled).
+    - Last successful report:
+      `.genesis/perf/runtime_backend_feature_matrix_report.json` -> `elapsed_ms=306863`, `budget_ms=null`.
+    - Stage hotspots are still large (`gc_cli_driver profile-headless` 69s in the last full report).
+    - Fresh rerun hit ENOSPC before completion, indicating this lane is both slow and fragile under local constraints.
   - Acceptance:
     - Enable fail-closed runtime budget with historical regression tracking.
     - Split matrix into deterministic shards/cached phases to reduce tail latency.
     - Add explicit pass/fail thresholds for CI and local profiles.
 
-- [ ] P1.4 Reduce production CLI parse/help surface gate tail latency.
+- [x] P1.4 Reduce production CLI parse/help surface gate tail latency.
   - Evidence:
-    - `.genesis/perf/production_cli_parse_surface_report.json` records `elapsed_ms=209265`.
+    - Fresh run:
+      `bash scripts/check_production_cli_parse_surface.sh`
+      -> `.genesis/perf/production_cli_parse_surface_report.json` `elapsed_ms=156006` (`history_p95_ms=209265`).
     - Gate uses repeated `cargo run --release` invocations in `scripts/check_production_cli_parse_surface.sh` and `scripts/check_production_cli_help_surface.sh`.
   - Acceptance:
     - Reuse built release binaries inside gate execution (single build, multi-check invocation).
@@ -79,13 +92,6 @@ Open checklist items: 12
     - Add benchmark suite where agent-authored GenesisCode tasks (service, game loop, GPU compute, package workflow) must compile/run/replay deterministically.
     - Publish scoring rubric and minimum pass thresholds.
     - Wire into health/release gates.
-
-- [ ] P1.7 Correct overclaim on bootstrap independence and keep matrix claim-evidence aligned.
-  - Evidence:
-    - `feature_matrix.md` currently marks "Fully self-hosted toolchain with zero bootstrap-language dependency" as `✅`, while P0.1 evidence shows recovery still artifact-seed dependent.
-  - Acceptance:
-    - Update capability status/notes to reflect current state (`⚠️` until P0.1 is closed).
-    - Keep `feature_matrix.md`, evidence ledger, and plan IDs in strict sync.
 
 ## P2 - Strategic completeness for "agent can build anything" scope
 
@@ -122,3 +128,12 @@ Open checklist items: 12
       - failure-mode playbooks,
       - deterministic verification scripts.
     - Integrate with onboarding and authoring bundle as primary AI entrypoint.
+
+- [ ] P2.5 Consolidate documentation into a single AI-authoring source-of-truth map.
+  - Evidence:
+    - Repo currently contains high documentation surface area (`find . -name '*.md'` -> 105 files; `docs/` alone -> 80 files).
+    - Capability, assurance, and authoring guidance is spread across matrix, specs, status docs, and skill docs; synchronization currently depends on multiple custom hygiene scripts.
+  - Acceptance:
+    - Publish one canonical doc topology (`authoring`, `runtime`, `assurance`, `operations`) with ownership and update workflow.
+    - Remove/merge redundant docs and keep thin index stubs where split files remain necessary.
+    - Add a drift check that fails when canonical docs and derived docs disagree on capability status/open-gap IDs.

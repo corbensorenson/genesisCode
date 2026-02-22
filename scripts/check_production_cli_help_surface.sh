@@ -6,6 +6,7 @@ cd "$ROOT"
 
 source "$ROOT/scripts/lib/cargo_target_dir.sh"
 source "$ROOT/scripts/lib/profile_gate_timing.sh"
+source "$ROOT/scripts/lib/release_bin.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT" \
   "check-production-cli-help-surface" \
@@ -21,11 +22,10 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 run_help() {
-  local pkg="$1"
-  local bin="$2"
-  local out="$3"
-  shift 3
-  cargo run --release -q -p "$pkg" --bin "$bin" -- "$@" --help >"$out"
+  local bin_path="$1"
+  local out="$2"
+  shift 2
+  "$bin_path" "$@" --help >"$out"
 }
 
 assert_not_contains() {
@@ -55,14 +55,19 @@ GENESIS_WASI_FMT_HELP="$TMP/genesis_wasi_fmt.help"
 GENESIS_PARITY_FMT_HELP="$TMP/genesis_parity_fmt.help"
 GENESIS_WASI_PARITY_FMT_HELP="$TMP/genesis_wasi_parity_fmt.help"
 
-run_help gc_cli genesis "$GENESIS_HELP"
-run_help gc_wasi_cli genesis_wasi "$GENESIS_WASI_HELP"
-run_help gc_cli genesis_parity "$GENESIS_PARITY_HELP"
-run_help gc_wasi_cli genesis_wasi_parity "$GENESIS_WASI_PARITY_HELP"
-run_help gc_cli genesis "$GENESIS_FMT_HELP" fmt
-run_help gc_wasi_cli genesis_wasi "$GENESIS_WASI_FMT_HELP" fmt
-run_help gc_cli genesis_parity "$GENESIS_PARITY_FMT_HELP" fmt
-run_help gc_wasi_cli genesis_wasi_parity "$GENESIS_WASI_PARITY_FMT_HELP" fmt
+GENESIS_BIN="$(genesis_build_release_bin gc_cli genesis)"
+GENESIS_WASI_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi)"
+GENESIS_PARITY_BIN="$(genesis_build_release_bin gc_cli genesis_parity)"
+GENESIS_WASI_PARITY_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi_parity)"
+
+run_help "$GENESIS_BIN" "$GENESIS_HELP"
+run_help "$GENESIS_WASI_BIN" "$GENESIS_WASI_HELP"
+run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_HELP"
+run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_HELP"
+run_help "$GENESIS_BIN" "$GENESIS_FMT_HELP" fmt
+run_help "$GENESIS_WASI_BIN" "$GENESIS_WASI_FMT_HELP" fmt
+run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_FMT_HELP" fmt
+run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_FMT_HELP" fmt
 
 # Production binaries must advertise selfhost-only accepted values.
 assert_contains "$GENESIS_HELP" "Accepted value: selfhost."

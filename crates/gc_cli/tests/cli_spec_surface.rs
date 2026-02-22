@@ -123,6 +123,10 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("--min-stage2-validated-modules"),
         "selfhost-artifact --help output missing --min-stage2-validated-modules"
     );
+    assert!(
+        s.contains("--recover-missing-artifact"),
+        "selfhost-artifact --help output missing --recover-missing-artifact"
+    );
 
     let s = stdout_str(&["pkg", "--help"]);
     assert!(

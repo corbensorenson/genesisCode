@@ -369,6 +369,7 @@ pub(super) fn cmd_selfhost_artifact(
     out: &Path,
     min_stage2_supported_modules: u64,
     min_stage2_validated_modules: u64,
+    recover_missing_artifact: bool,
 ) -> Result<CmdOut, CliError> {
     #[derive(Debug, Clone)]
     struct Stage2Seed {
@@ -515,52 +516,88 @@ pub(super) fn cmd_selfhost_artifact(
         })
     }
 
-    let frontend = resolved_coreform_frontend(cli)?;
+    fn load_manifest_toolchain_sources_for_recovery() -> Result<Vec<(String, String)>, CliError> {
+        let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let manifest_path = workspace_root.join("selfhost/toolchain_manifest.gc");
+        let manifest_src = std::fs::read_to_string(&manifest_path)
+            .with_context(|| format!("read {}", manifest_path.display()))
+            .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+        let module_paths = extract_manifest_module_paths(&manifest_src);
+        if module_paths.is_empty() {
+            return Err(cli_err(
+                EX_PARSE,
+                "selfhost/recovery",
+                format!(
+                    "manifest did not declare recoverable selfhost module paths: {}",
+                    manifest_path.display()
+                ),
+            ));
+        }
+        let mut out = Vec::with_capacity(module_paths.len());
+        for rel in module_paths {
+            let path = workspace_root.join(&rel);
+            let src = std::fs::read_to_string(&path)
+                .with_context(|| format!("read {}", path.display()))
+                .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+            out.push((rel, src));
+        }
+        Ok(out)
+    }
+
     let (out_buf, min_stage2_supported_modules, min_stage2_validated_modules) =
-        if frontend_is_rust(&frontend) {
+        if recover_missing_artifact {
             (
                 out.to_path_buf(),
                 min_stage2_supported_modules,
                 min_stage2_validated_modules,
             )
         } else {
-            let req = Term::Map(
-                [
-                    (
-                        TermOrdKey(Term::symbol(":out")),
-                        Term::Str(out.display().to_string()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":min-stage2-supported-modules")),
-                        Term::Int((min_stage2_supported_modules as i64).into()),
-                    ),
-                    (
-                        TermOrdKey(Term::symbol(":min-stage2-validated-modules")),
-                        Term::Int((min_stage2_validated_modules as i64).into()),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            );
-            let planned = selfhost_plan_request_map(
-                cli,
-                "core/cli::selfhost-artifact-request",
-                req,
-                "selfhost-artifact",
-            )?;
-            (
-                PathBuf::from(planned_required_str(&planned, ":out", "selfhost-artifact")?),
-                planned_required_u64(
-                    &planned,
-                    ":min-stage2-supported-modules",
+            let frontend = resolved_coreform_frontend(cli)?;
+            if frontend_is_rust(&frontend) {
+                (
+                    out.to_path_buf(),
+                    min_stage2_supported_modules,
+                    min_stage2_validated_modules,
+                )
+            } else {
+                let req = Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":out")),
+                            Term::Str(out.display().to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":min-stage2-supported-modules")),
+                            Term::Int((min_stage2_supported_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":min-stage2-validated-modules")),
+                            Term::Int((min_stage2_validated_modules as i64).into()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                let planned = selfhost_plan_request_map(
+                    cli,
+                    "core/cli::selfhost-artifact-request",
+                    req,
                     "selfhost-artifact",
-                )?,
-                planned_required_u64(
-                    &planned,
-                    ":min-stage2-validated-modules",
-                    "selfhost-artifact",
-                )?,
-            )
+                )?;
+                (
+                    PathBuf::from(planned_required_str(&planned, ":out", "selfhost-artifact")?),
+                    planned_required_u64(
+                        &planned,
+                        ":min-stage2-supported-modules",
+                        "selfhost-artifact",
+                    )?,
+                    planned_required_u64(
+                        &planned,
+                        ":min-stage2-validated-modules",
+                        "selfhost-artifact",
+                    )?,
+                )
+            }
         };
     let out = out_buf.as_path();
 
@@ -578,19 +615,29 @@ pub(super) fn cmd_selfhost_artifact(
     } else {
         None
     };
-    if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly && bootstrap_artifact.is_none() {
-        return Err(cli_err(
-            EX_PARSE,
-            "selfhost/bootstrap",
-            "selfhost-artifact requires an existing toolchain artifact when embedded bootstrap is unavailable; pass --selfhost-artifact or set GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
-        ));
-    }
-
-    let toolchain_sources = selfhost_coreform_toolchain_v1_sources()
-        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?;
     let stage2_seed_index = bootstrap_artifact
         .as_deref()
         .and_then(load_stage2_seed_index);
+    let use_manifest_recovery = bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
+        && recover_missing_artifact
+        && (bootstrap_artifact.is_none() || stage2_seed_index.is_none());
+    if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
+        && bootstrap_artifact.is_none()
+        && !use_manifest_recovery
+    {
+        return Err(cli_err(
+            EX_PARSE,
+            "selfhost/bootstrap",
+            "selfhost-artifact requires an existing toolchain artifact when embedded bootstrap is unavailable; pass --selfhost-artifact or set GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT (or use --recover-missing-artifact to rebuild from manifest sources)",
+        ));
+    }
+
+    let toolchain_sources = if use_manifest_recovery {
+        load_manifest_toolchain_sources_for_recovery()?
+    } else {
+        selfhost_coreform_toolchain_v1_sources()
+            .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?
+    };
     let reuse_seed_results = stage2_seed_index.as_ref().is_some_and(|idx| {
         idx.generated_by.as_deref() == Some(&format!("genesis {}", env!("CARGO_PKG_VERSION")))
     });
@@ -709,15 +756,17 @@ pub(super) fn cmd_selfhost_artifact(
         ctx.set_mem_limits(mem_limits);
         let prelude = build_prelude(&mut ctx);
         let mut env = prelude.env;
-        load_selfhost_coreform_toolchain_v1_with_mode(
-            &mut ctx,
-            &mut env,
-            bootstrap_mode,
-            bootstrap_artifact.as_deref(),
-        )
-        .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
-        ctx.steps = 0;
-        ctx.step_limit = step_limit.resolve();
+        if !use_manifest_recovery {
+            load_selfhost_coreform_toolchain_v1_with_mode(
+                &mut ctx,
+                &mut env,
+                bootstrap_mode,
+                bootstrap_artifact.as_deref(),
+            )
+            .map_err(|e| cli_err(EX_PARSE, "selfhost/bootstrap", format!("{e}")))?;
+            ctx.steps = 0;
+            ctx.step_limit = step_limit.resolve();
+        }
 
         for (path, src) in &toolchain_sources {
             let seed = if reuse_seed_results {
@@ -744,6 +793,30 @@ pub(super) fn cmd_selfhost_artifact(
                         errors: seed.errors,
                         wasm_hash: seed.wasm_hash,
                         wasm_bytes_len: seed.wasm_bytes_len,
+                    },
+                )
+            } else if use_manifest_recovery {
+                let forms = canonicalize_module(parse_module(src).map_err(|e| {
+                    cli_err(EX_PARSE, "selfhost/parse", format!("{path}: {e}"))
+                })?)
+                .map_err(|e| cli_err(EX_PARSE, "selfhost/canon", format!("{path}: {e}")))?;
+                let module_h = hash_module(&forms);
+                let stage1 = gc_opt::stage1_pipeline(&forms)
+                    .map_err(|e| cli_err(EX_INTERNAL, "selfhost/stage1", format!("{path}: {e}")))?;
+                stage2_computed = stage2_computed.saturating_add(1);
+                let report = gc_opt::stage2_validation_report(&stage1.transformed_forms);
+                (
+                    forms,
+                    module_h,
+                    stage1.gate_report.ok,
+                    stage1.gate_report.errors,
+                    Stage2Summary {
+                        module_hash: report.module_hash,
+                        supported: report.supported,
+                        ok: report.ok,
+                        errors: report.errors,
+                        wasm_hash: report.wasm_hash,
+                        wasm_bytes_len: report.wasm_bytes_len,
                     },
                 )
             } else {
@@ -954,6 +1027,12 @@ pub(super) fn cmd_selfhost_artifact(
             "stage2_cache_hits": stage2_seed_hits,
             "stage2_computed_modules": stage2_computed,
             "stage2_seed_artifact": bootstrap_artifact.as_ref().map(|p| p.display().to_string()),
+            "bootstrap_recovery_used": use_manifest_recovery,
+            "bootstrap_recovery_mode": if use_manifest_recovery {
+                Some("manifest-sources-rust-canonical-v0.1")
+            } else {
+                None::<&str>
+            },
         })),
         error: None,
     };

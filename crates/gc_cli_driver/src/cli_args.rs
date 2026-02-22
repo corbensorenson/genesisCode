@@ -244,6 +244,14 @@ enum Cmd {
         /// Minimum number of modules that must be Stage-2 validated (`supported && ok`).
         #[arg(long, default_value_t = 0)]
         min_stage2_validated_modules: u64,
+        /// Explicitly recover from a missing/corrupt artifact seed by rebuilding from
+        /// `selfhost/toolchain_manifest.gc` module sources via deterministic Rust-side
+        /// parse/canonical/hash + stage validation.
+        ///
+        /// This flag is an auditable emergency path and is only consulted when artifact-only
+        /// bootstrap cannot find a usable seed artifact.
+        #[arg(long, default_value_t = false)]
+        recover_missing_artifact: bool,
     },
 
     /// Emit a selfhost cutover dashboard artifact and markdown mirror.

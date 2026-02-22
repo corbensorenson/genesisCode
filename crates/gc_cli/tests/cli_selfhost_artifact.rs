@@ -137,6 +137,102 @@ fn selfhost_artifact_is_byte_for_byte_deterministic_across_rebuilds() {
 }
 
 #[test]
+fn selfhost_artifact_missing_seed_fails_without_explicit_recovery() {
+    let td = tempdir().unwrap();
+    let missing = td.path().join("missing_seed.gc");
+    let out = td.path().join("out.gc");
+    assert!(!missing.exists(), "test precondition drift: missing seed exists");
+
+    cargo_bin_cmd!("genesis")
+        .args([
+            "--selfhost-artifact",
+            missing.to_str().unwrap(),
+            "selfhost-artifact",
+            "--out",
+            out.to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(10);
+}
+
+#[test]
+fn selfhost_artifact_missing_seed_recovery_rebuilds_from_manifest_sources() {
+    let td = tempdir().unwrap();
+    let missing = td.path().join("missing_seed.gc");
+    let out = td.path().join("out.gc");
+    assert!(!missing.exists(), "test precondition drift: missing seed exists");
+
+    let raw = cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "--selfhost-artifact",
+            missing.to_str().unwrap(),
+            "selfhost-artifact",
+            "--out",
+            out.to_str().unwrap(),
+            "--recover-missing-artifact",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&raw).unwrap();
+    assert!(v["ok"].as_bool().unwrap_or(false), "{v}");
+    assert!(
+        v["data"]["bootstrap_recovery_used"]
+            .as_bool()
+            .unwrap_or(false),
+        "{v}"
+    );
+    assert_eq!(
+        v["data"]["bootstrap_recovery_mode"].as_str(),
+        Some("manifest-sources-rust-canonical-v0.1"),
+        "{v}"
+    );
+    assert!(out.is_file(), "recovery must materialize output artifact");
+}
+
+#[test]
+fn selfhost_artifact_corrupt_seed_recovery_rebuilds_from_manifest_sources() {
+    let td = tempdir().unwrap();
+    let corrupt = td.path().join("corrupt_seed.gc");
+    let out = td.path().join("out.gc");
+    fs::write(&corrupt, "{:kind \"bad/artifact\" :v 1}\n").unwrap();
+
+    let raw = cargo_bin_cmd!("genesis")
+        .args([
+            "--json",
+            "--selfhost-artifact",
+            corrupt.to_str().unwrap(),
+            "selfhost-artifact",
+            "--out",
+            out.to_str().unwrap(),
+            "--recover-missing-artifact",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&raw).unwrap();
+    assert!(v["ok"].as_bool().unwrap_or(false), "{v}");
+    assert!(
+        v["data"]["bootstrap_recovery_used"]
+            .as_bool()
+            .unwrap_or(false),
+        "{v}"
+    );
+    assert_eq!(
+        v["data"]["bootstrap_recovery_mode"].as_str(),
+        Some("manifest-sources-rust-canonical-v0.1"),
+        "{v}"
+    );
+    assert!(out.is_file(), "recovery must materialize output artifact");
+}
+
+#[test]
 fn selfhost_artifact_can_be_built_and_used_for_selfhost_fmt() {
     let td = tempdir().unwrap();
     let artifact = td.path().join("selfhost_toolchain.gc");

@@ -343,11 +343,13 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             out,
             min_stage2_supported_modules,
             min_stage2_validated_modules,
+            recover_missing_artifact,
         } => cmd_selfhost_artifact(
             cli,
             out,
             *min_stage2_supported_modules,
             *min_stage2_validated_modules,
+            *recover_missing_artifact,
         ),
         Cmd::SelfhostDashboard { markdown, store } => {
             cmd_selfhost_dashboard(cli, markdown.as_deref(), store.as_deref())

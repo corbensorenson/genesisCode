@@ -23,7 +23,7 @@ Legend:
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Media/asset pipeline contracts for AI-generated build lanes | ✅ (first-class `core/media::*` hash/image/audio transcode ops + policy gates + `core/kit/media::*` build contracts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Device-backed GPU compute required in release profile | ✅ (`release-full` health profile and agent gauntlet release posture require `device-runtime`; CI includes multi-vendor matrix gate for `nvidia-linux`, `amd-linux`, `intel-windows`, `apple-macos` with adapter-scoped artifact retention) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Device-backed GPU compute required in release profile | ✅ (policy and lane contracts require `device-runtime`; release/profile health execution now enforces full profile lanes instead of backlog short-circuit, and device conformance remains wired via release lane checks) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
@@ -69,17 +69,13 @@ Regulated assurance readiness snapshot (indicative):
 
 Known GenesisCode gaps (current red-team focus):
 - P0.1 Artifact bootstrap deadlock in production selfhost flow.
-- P1.1 `dev-fast` wall-time remains too high for tight agent loops.
-- P1.2 Build cache/target-dir sprawl still risks ENOSPC under repeated gate runs.
-- P1.3 Runtime backend feature matrix check lacks enforced wall-time SLO.
-- P1.4 Production CLI parse/help surface checks remain high-latency release runs.
 - P1.5 GPU compute backend fallback defaults are too permissive for strict release lanes.
 - P1.6 Agent authoring skill lacks executable generation-quality conformance gates.
-- P1.7 Bootstrap-independence capability claim is ahead of current recovery behavior.
 - P2.1 `gcpm build` targets are limited to `web|desktop|service`.
 - P2.2 GPU compute and graphics stacks need clearer architectural decoupling.
 - P2.3 Remaining high-churn authoring modules still need deeper decomposition.
 - P2.4 `write_genesisCode_skill` needs executable v1 distribution for multi-agent use.
+- P2.5 Documentation surface still needs consolidation into a canonical AI-authoring map.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

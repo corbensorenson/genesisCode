@@ -8,22 +8,48 @@ source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 
 DISK_MIN_FREE_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB:-1572864}"
 DISK_STRICT_MODE="${GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE:-1}"
+AUTO_RECLAIM="${GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM:-1}"
+RECLAIM_MAX_BUILD_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_BUILD_KB:-8388608}"
+RECLAIM_MAX_AGE_DAYS="${GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_AGE_DAYS:-7}"
 REPORT_OUT="${GENESIS_RUNTIME_BACKEND_MATRIX_REPORT_OUT:-.genesis/perf/runtime_backend_feature_matrix_report.json}"
 HISTORY_OUT="${GENESIS_RUNTIME_BACKEND_MATRIX_HISTORY_OUT:-.genesis/perf/runtime_backend_feature_matrix_history.jsonl}"
-BUDGET_MS="${GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS:-0}"
+BUDGET_MS="${GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS:-360000}"
 TMP_DIR="$(mktemp -d)"
 STAGE_FILE="$TMP_DIR/stages.tsv"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ ]]; then
-  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS must be numeric" >&2
+if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS must be a positive integer" >&2
   exit 2
+fi
+if [[ "$AUTO_RECLAIM" != "0" && "$AUTO_RECLAIM" != "1" ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$RECLAIM_MAX_BUILD_KB" =~ ^[0-9]+$ ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_BUILD_KB must be numeric" >&2
+  exit 2
+fi
+if [[ ! "$RECLAIM_MAX_AGE_DAYS" =~ ^[0-9]+$ ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_AGE_DAYS must be numeric" >&2
+  exit 2
+fi
+
+RUNTIME_MATRIX_TARGET_DIR="${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix}"
+if [[ "$AUTO_RECLAIM" == "1" ]]; then
+  echo "runtime-backend-feature-matrix: proactive build-cache reclaim enabled"
+  bash scripts/reclaim_build_space.sh \
+    --safe \
+    --max-build-kb "$RECLAIM_MAX_BUILD_KB" \
+    --max-age-days "$RECLAIM_MAX_AGE_DAYS" \
+    --preserve-dir "$RUNTIME_MATRIX_TARGET_DIR"
 fi
 
 bash scripts/check_disk_headroom.sh \
   --path "$ROOT_DIR" \
   --context "runtime-backend-feature-matrix" \
   --min-kb "$DISK_MIN_FREE_KB" \
+  --auto-reclaim "$AUTO_RECLAIM" \
   --strict "$DISK_STRICT_MODE"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
@@ -107,8 +133,8 @@ doc = {
     "kind": "genesis/runtime-backend-feature-matrix-v0.1",
     "timestamp_unix_s": int(time.time()),
     "elapsed_ms": elapsed_ms,
-    "budget_ms": budget_ms if budget_ms > 0 else None,
-    "ok": (elapsed_ms <= budget_ms) if budget_ms > 0 else True,
+    "budget_ms": budget_ms,
+    "ok": elapsed_ms <= budget_ms,
     "stage_count": len(stages),
     "stages": stages,
 }
@@ -133,7 +159,7 @@ with history_path.open("a", encoding="utf-8") as fh:
     fh.write(json.dumps(doc, sort_keys=True) + "\n")
 
 print(f"runtime-backend-feature-matrix: wrote report {report_path}")
-if budget_ms > 0 and elapsed_ms > budget_ms:
+if elapsed_ms > budget_ms:
     raise SystemExit(
         f"runtime-backend-feature-matrix: budget exceeded ({elapsed_ms}ms > {budget_ms}ms)"
     )
