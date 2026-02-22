@@ -4525,9 +4525,6 @@
       (fn (commit-panel)
         (core/effect::pure (core/editor/vcs::evidence-list-panel-from-commit-panel commit-panel))))))
 
-(def core/editor/action::lint-panel-from-acceptance
-  (fn (acceptance) (core/editor/lint::load-panel-from-acceptance acceptance)))
-
 (def core/editor/vcs::field
   (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))
 
@@ -4582,6 +4579,53 @@
         :ok true
         :right (f (quote :right))
         :vcs-kind (f (quote :kind))})))
+(def core/editor/action::vcs-diff-panel
+  (fn (base)
+    (fn (to)
+      ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+        core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::vcs-apply-panel
+  (fn (base)
+    (fn (patch)
+      ((core/effect::map ((((core/vcs::apply base) patch) nil) true))
+        core/editor/vcs::apply-panel-from-response))))
+
+(def core/editor/action::vcs-merge3-panel
+  (fn (base)
+    (fn (left)
+      (fn (right)
+        ((core/effect::map (((((core/vcs::merge3 base) left) right) nil) true))
+          core/editor/vcs::merge-panel-from-response)))))
+
+(def core/editor/action::vcs-resolve-conflict-panel
+  (fn (conflict)
+    ((core/effect::map (((core/vcs::resolve-conflict conflict) nil) true))
+      core/editor/vcs::resolve-panel-from-response)))
+
+(def core/editor/action::vcs-resolve-conflict-with-panel
+  (fn (conflict)
+    (fn (strategy)
+      (fn (resolutions)
+        (
+          (core/effect::map
+            (
+              ((core/effect::perform (quote core/vcs-low::resolve-conflict))
+                {
+                  :conflict conflict
+                  :out nil
+                  :resolutions resolutions
+                  :store true
+                  :strategy strategy})
+              (fn (resp) (core/effect::pure resp))))
+          core/editor/vcs::resolve-panel-from-response)))))
+
+(def core/editor/action::vcs-conflict-panel
+  (fn (conflict-h)
+    ((core/effect::bind (core/store::get conflict-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure (core/editor/vcs::conflict-panel-from-artifact artifact)))))))
 
 (def core/editor/ast::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
 
@@ -4719,53 +4763,87 @@
         [
           (quote ::meta)]))))
 
-(def core/editor/action::vcs-diff-panel
-  (fn (base)
-    (fn (to)
-      ((core/effect::map ((((core/vcs::diff base) to) nil) true))
-        core/editor/vcs::diff-panel-from-response))))
+(def core/editor/plugin::contains-op?
+  (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
 
-(def core/editor/action::vcs-apply-panel
-  (fn (base)
-    (fn (patch)
-      ((core/effect::map ((((core/vcs::apply base) patch) nil) true))
-        core/editor/vcs::apply-panel-from-response))))
+(def core/editor/plugin::contains-op-loop
+  (fn (ops)
+    (fn (op)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len ops))
+          false
+          (let ((x ((core/vec::get ops) i)))
+            (if (core/editor/lint::sym? x)
+              (if ((core/sym::eq? x) op)
+                true
+                (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))
+              (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))))))))
 
-(def core/editor/action::vcs-merge3-panel
-  (fn (base)
-    (fn (left)
-      (fn (right)
-        ((core/effect::map (((((core/vcs::merge3 base) left) right) nil) true))
-          core/editor/vcs::merge-panel-from-response)))))
+(def core/editor/plugin::caps-allowed?
+  (fn (policy)
+    (fn (op)
+      (if (core/editor/lint::map? policy)
+        (let
+          ((allow (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :allow))))
+            (deny (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :deny)))))
+          (if ((core/editor/plugin::contains-op? deny) op)
+            false
+            (if ((core/int::eq? (core/vec::len allow)) 0)
+              false
+              ((core/editor/plugin::contains-op? allow) op))))
+        false))))
 
-(def core/editor/action::vcs-resolve-conflict-panel
-  (fn (conflict)
-    ((core/effect::map (((core/vcs::resolve-conflict conflict) nil) true))
-      core/editor/vcs::resolve-panel-from-response)))
+(def core/editor/plugin::perform
+  (fn (policy)
+    (fn (op)
+      (fn (payload)
+        (if ((core/editor/plugin::caps-allowed? policy) op)
+          ((core/caps::perform op) payload)
+          (core/effect::pure
+            (((core/error::make "editor/plugin/cap-denied") "plugin capability denied") {:op op})))))))
 
-(def core/editor/action::vcs-resolve-conflict-with-panel
-  (fn (conflict)
-    (fn (strategy)
-      (fn (resolutions)
-        (
-          (core/effect::map
-            (
-              ((core/effect::perform (quote core/vcs-low::resolve-conflict))
-                {
-                  :conflict conflict
-                  :out nil
-                  :resolutions resolutions
-                  :store true
-                  :strategy strategy})
-              (fn (resp) (core/effect::pure resp))))
-          core/editor/vcs::resolve-panel-from-response)))))
+(def core/editor/plugin::make
+  (fn (handler)
+    (fn (meta)
+      (fn (caps-policy)
+        (((core/contract::extend core/contract::genesis) handler)
+          {
+            :caps-policy caps-policy
+            :editor-plugin true
+            :meta meta})))))
 
-(def core/editor/action::vcs-conflict-panel
-  (fn (conflict-h)
-    ((core/effect::bind (core/store::get conflict-h))
-      (fn (resp)
-        (let ((artifact ((core/map::get resp) (quote :artifact))))
-          (core/effect::pure (core/editor/vcs::conflict-panel-from-artifact artifact)))))))
+(def core/editor/plugin::call core/contract::call)
+
+(def core/editor/plugin::command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/editor/plugin::call plugin) (quote editor/plugin::command))
+          {:command command :payload payload})))))
+
+(def core/editor/plugin::typed-host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote editor/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/editor/plugin::host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((((core/editor/plugin::typed-host-command plugin) command) nil) nil) payload)))))
+
+(def core/editor/action::lint-panel-from-acceptance
+  (fn (acceptance) (core/editor/lint::load-panel-from-acceptance acceptance)))
 
 (def core/editor/action::task
   (fn (task-kind)
@@ -4855,85 +4933,6 @@
                   ui-label)
                   ui-pipeline-id)
                   meta)))))))))
-
-(def core/editor/plugin::contains-op?
-  (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
-
-(def core/editor/plugin::contains-op-loop
-  (fn (ops)
-    (fn (op)
-      (fn (i)
-        (if ((core/int::eq? i) (core/vec::len ops))
-          false
-          (let ((x ((core/vec::get ops) i)))
-            (if (core/editor/lint::sym? x)
-              (if ((core/sym::eq? x) op)
-                true
-                (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))
-              (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))))))))
-
-(def core/editor/plugin::caps-allowed?
-  (fn (policy)
-    (fn (op)
-      (if (core/editor/lint::map? policy)
-        (let
-          ((allow (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :allow))))
-            (deny (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :deny)))))
-          (if ((core/editor/plugin::contains-op? deny) op)
-            false
-            (if ((core/int::eq? (core/vec::len allow)) 0)
-              false
-              ((core/editor/plugin::contains-op? allow) op))))
-        false))))
-
-(def core/editor/plugin::perform
-  (fn (policy)
-    (fn (op)
-      (fn (payload)
-        (if ((core/editor/plugin::caps-allowed? policy) op)
-          ((core/caps::perform op) payload)
-          (core/effect::pure
-            (((core/error::make "editor/plugin/cap-denied") "plugin capability denied") {:op op})))))))
-
-(def core/editor/plugin::make
-  (fn (handler)
-    (fn (meta)
-      (fn (caps-policy)
-        (((core/contract::extend core/contract::genesis) handler)
-          {
-            :caps-policy caps-policy
-            :editor-plugin true
-            :meta meta})))))
-
-(def core/editor/plugin::call core/contract::call)
-
-(def core/editor/plugin::command
-  (fn (plugin)
-    (fn (command)
-      (fn (payload)
-        (((core/editor/plugin::call plugin) (quote editor/plugin::command))
-          {:command command :payload payload})))))
-
-(def core/editor/plugin::typed-host-command
-  (fn (plugin)
-    (fn (command)
-      (fn (request-schema-id)
-        (fn (response-schema-id)
-          (fn (payload)
-            (((core/effect::perform (quote editor/plugin::command))
-              {
-                :command command
-                :payload payload
-                :plugin plugin
-                :request-schema-id request-schema-id
-                :response-schema-id response-schema-id})
-              (fn (resp) (core/effect::pure resp)))))))))
-
-(def core/editor/plugin::host-command
-  (fn (plugin)
-    (fn (command)
-      (fn (payload)
-        (((((core/editor/plugin::typed-host-command plugin) command) nil) nil) payload)))))
 
 (def core/editor/agent::session-empty
   (fn (agent-id)

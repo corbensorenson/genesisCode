@@ -1,0 +1,75 @@
+(def core/editor/clipboard::get (fn (_) ((core/caps::perform (quote editor/clipboard::get)) {})))
+
+(def core/editor/clipboard::set
+  (fn (mime)
+    (fn (data) ((core/caps::perform (quote editor/clipboard::set)) {:data data :mime mime}))))
+
+(def core/editor/dialog::open
+  (fn (title)
+    (fn (multi)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::open))
+            {
+              :filters filters
+              :multi multi
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/dialog::save
+  (fn (title)
+    (fn (default-name)
+      (fn (filters)
+        (fn (start-dir)
+          ((core/caps::perform (quote editor/dialog::save))
+            {
+              :default-name default-name
+              :filters filters
+              :start-dir start-dir
+              :title title}))))))
+
+(def core/editor/task::spawn
+  (fn (task-kind)
+    (fn (input)
+      (fn (budget-ms)
+        ((core/caps::perform (quote editor/task::spawn))
+          {
+            :budget-ms budget-ms
+            :input input
+            :task-kind task-kind})))))
+
+(def core/editor/task::poll
+  (fn (task-id) ((core/caps::perform (quote editor/task::poll)) {:task-id task-id})))
+
+(def core/editor/task::cancel
+  (fn (task-id) ((core/caps::perform (quote editor/task::cancel)) {:task-id task-id})))
+
+(def core/editor/task::fmt-coreform
+  (fn (path) ((core/caps::perform (quote editor/task::fmt-coreform)) {:path path})))
+
+(def core/editor/task::parse-module
+  (fn (path) ((core/caps::perform (quote editor/task::parse-module)) {:path path})))
+
+(def core/editor/task::lint-module
+  (fn (path)
+    (fn (input) ((core/caps::perform (quote editor/task::lint-module)) {:input input :path path}))))
+
+(def core/editor/task::optimize-module
+  (fn (path)
+    (fn (out) ((core/caps::perform (quote editor/task::optimize-module)) {:out out :path path}))))
+
+(def core/editor/task::typecheck-pkg
+  (fn (pkg) ((core/caps::perform (quote editor/task::typecheck-pkg)) {:pkg pkg})))
+
+(def core/editor/task::test-pkg
+  (fn (pkg) (fn (caps) ((core/caps::perform (quote editor/task::test-pkg)) {:caps caps :pkg pkg}))))
+
+(def core/editor/watch::subscribe
+  (fn (root)
+    (fn (globs) ((core/caps::perform (quote editor/watch::subscribe)) {:globs globs :root root}))))
+
+(def core/editor/watch::poll
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::poll)) {:watch-id watch-id})))
+
+(def core/editor/watch::unsubscribe
+  (fn (watch-id) ((core/caps::perform (quote editor/watch::unsubscribe)) {:watch-id watch-id})))

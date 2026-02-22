@@ -165,7 +165,7 @@ CI strict selfhost gates:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
-  - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service> [--out-dir <path>]`
+  - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service|ios|android|edge|service-runtime> [--out-dir <path>]`
     emits deterministic immutable deployment bundles with `build_manifest.gc` + `provenance.gc`.
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.

@@ -8,6 +8,12 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.1 - Artifact bootstrap deadlock: production selfhost artifact regeneration requires an existing artifact seed.
-- P1.5 - GPU compute backend policy defaults permit fallback in lanes that should be strict-device.
-- P1.6 - Agent authoring skill gates are mostly structural; executable quality conformance is missing.
+- `P0.1` Planning truthfulness drift (partial capability rows + zero-gap reporting mismatch).
+- `P0.2` `gcpm build` target support remains metadata-only for mobile/edge/service-runtime.
+- `P1.1` Missing executable conformance workflows for `ios|android|edge|service-runtime`.
+- `P1.2` Local AI authoring loop lacks bounded deterministic fast profile.
+- `P1.3` SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
+- `P1.4` Oversized high-churn Rust modules still impede AI-maintainable iteration.
+- `P1.5` `write_genesisCode_skill` distribution corpus breadth is below "make anything" needs.
+- `P1.6` Feature-matrix evidence ledger lags split GPU/GFX and deployment claims.
+- `P1.7` Semantic-edit workflow lacks first-class deterministic apply execution.

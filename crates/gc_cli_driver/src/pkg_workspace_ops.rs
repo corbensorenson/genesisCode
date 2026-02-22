@@ -730,8 +730,12 @@ fn normalize_build_target(target: &str) -> Result<&'static str, String> {
         "web" => Ok("web"),
         "desktop" => Ok("desktop"),
         "service" => Ok("service"),
+        "ios" => Ok("ios"),
+        "android" => Ok("android"),
+        "edge" => Ok("edge"),
+        "service-runtime" => Ok("service-runtime"),
         other => Err(format!(
-            "invalid build target `{other}`; expected one of web|desktop|service"
+            "invalid build target `{other}`; expected one of web|desktop|service|ios|android|edge|service-runtime"
         )),
     }
 }
@@ -753,8 +757,28 @@ fn build_target_profile(target: &str) -> Result<BuildTargetProfile, String> {
             host_profile: "headless",
             artifact_format: "service-bundle-v1",
         }),
+        "ios" => Ok(BuildTargetProfile {
+            runtime: "native",
+            host_profile: "mobile-ios",
+            artifact_format: "ios-app-bundle-v1",
+        }),
+        "android" => Ok(BuildTargetProfile {
+            runtime: "native",
+            host_profile: "mobile-android",
+            artifact_format: "android-app-bundle-v1",
+        }),
+        "edge" => Ok(BuildTargetProfile {
+            runtime: "wasm32-wasi-preview2",
+            host_profile: "edge-runtime",
+            artifact_format: "edge-wasi-bundle-v1",
+        }),
+        "service-runtime" => Ok(BuildTargetProfile {
+            runtime: "wasm32-wasi-preview2",
+            host_profile: "service-runtime",
+            artifact_format: "service-runtime-bundle-v1",
+        }),
         other => Err(format!(
-            "invalid build target `{other}`; expected one of web|desktop|service"
+            "invalid build target `{other}`; expected one of web|desktop|service|ios|android|edge|service-runtime"
         )),
     }
 }

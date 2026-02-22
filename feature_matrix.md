@@ -17,11 +17,11 @@ Legend:
 | Built-in package/project manager | ✅ (`gcpm/pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
 | Strict selfhost frontend default in production CLI | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explicit selfhost-only execution mode | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (production binaries are selfhost-first, but artifact regeneration/recovery still requires explicit bootstrap-seed handling; Rust parity remains isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (production binaries are selfhost-first with explicit deterministic artifact recovery from manifest sources; Rust parity remains isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Artifact-only bootstrap default across WASM host APIs | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute + graphics capability surfaces | ✅ (first-class split compute/gfx bundles with explicit cross-over primitives and independent compute-only + gfx-only conformance lanes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Media/asset pipeline contracts for AI-generated build lanes | ✅ (first-class `core/media::*` hash/image/audio transcode ops + policy gates + `core/kit/media::*` build contracts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (policy and lane contracts require `device-runtime`; release/profile health execution now enforces full profile lanes instead of backlog short-circuit, and device conformance remains wired via release lane checks) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -39,9 +39,9 @@ Legend:
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service>` emits immutable deterministic bundles with build-manifest + provenance contracts) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits immutable deterministic bundles with build-manifest + provenance contracts) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` provide deterministic dependency graph export and machine-mergeable multi-file patch planning) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + conformance gates `scripts/check_genesiscode_authoring_skill.sh` and `scripts/check_write_genesiscode_skill_pack.sh`) | ❌ | ❌ | ❌ | ❌ |
+| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + executable conformance gates `scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`, `scripts/check_write_genesiscode_skill_distribution.sh`, and `scripts/check_write_genesiscode_skill_conformance.sh`) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -68,14 +68,18 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- P0.1 Artifact bootstrap deadlock in production selfhost flow.
-- P1.5 GPU compute backend fallback defaults are too permissive for strict release lanes.
-- P1.6 Agent authoring skill lacks executable generation-quality conformance gates.
-- P2.1 `gcpm build` targets are limited to `web|desktop|service`.
-- P2.2 GPU compute and graphics stacks need clearer architectural decoupling.
-- P2.3 Remaining high-churn authoring modules still need deeper decomposition.
-- P2.4 `write_genesisCode_skill` needs executable v1 distribution for multi-agent use.
-- P2.5 Documentation surface still needs consolidation into a canonical AI-authoring map.
+- P0.1 Planning truthfulness drift between partial capability states and zero-gap reporting.
+- P0.2 `gcpm build` target support is metadata-only for mobile/edge/service-runtime targets.
+- P1.1 Missing end-to-end conformance workflows for `ios|android|edge|service-runtime`.
+- P1.2 Local AI authoring iteration loop still lacks a bounded, deterministic fast profile.
+- P1.3 SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
+- P1.4 Large high-churn Rust modules still need decomposition for AI maintainability.
+- P1.5 `write_genesisCode_skill` distribution corpus is too narrow for "make anything" scope.
+- P1.6 Feature-matrix evidence ledger is stale relative to split GPU/GFX and deployment claims.
+- P1.7 Semantic-edit flow lacks first-class deterministic apply command.
+- P2.1 No machine-readable selfhost completeness scorecard currently drives closure.
+- P2.2 Production WASM surface isolation for parity-only Rust frontend paths is incomplete.
+- P2.3 Documentation surface remains too large and needs consolidation phase 2.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

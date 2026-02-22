@@ -14,6 +14,8 @@ Machine-consumable contract:
 Versioned distribution pack:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
 
 Use the skill file directly for operational guidance. This document exists as a stable project-facing pointer and onboarding entry.
 

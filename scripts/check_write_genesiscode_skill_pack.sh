@@ -162,6 +162,21 @@ if pack_md_path.as_posix() not in index:
         "write-genesiscode-skill-pack: docs index must reference WRITE_GENESISCODE_SKILL_PACK_v0.1.md"
     )
 
+dist_spec_path = "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md"
+if dist_spec_path in required_spec_refs:
+    if dist_spec_path not in bundle:
+        raise SystemExit(
+            "write-genesiscode-skill-pack: AGENT_AUTHORING_BUNDLE must include WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md"
+        )
+    if dist_spec_path not in onboarding:
+        raise SystemExit(
+            "write-genesiscode-skill-pack: onboarding must reference WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md"
+        )
+    if dist_spec_path not in index:
+        raise SystemExit(
+            "write-genesiscode-skill-pack: docs index must reference WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md"
+        )
+
 print(
     "write-genesiscode-skill-pack: ok "
     f"(sections={len(required_sections)} gates={len(required_gates)} refs={len(required_spec_refs)})"

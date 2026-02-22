@@ -518,8 +518,10 @@ if [[ "$declared_open" -gt 0 ]]; then
       "bash scripts/check_assurance_standards_crosswalk.sh"
       "bash scripts/check_planning_docs_fresh.sh"
       "bash scripts/check_doc_hygiene.sh"
+      "bash scripts/check_doc_topology_drift.sh"
       "bash scripts/check_feature_matrix_evidence.sh"
       "bash scripts/check_write_genesiscode_skill_pack.sh"
+      "bash scripts/check_write_genesiscode_skill_distribution.sh"
       "bash scripts/check_no_production_rust_frontend_refs.sh"
     )
     MANDATORY_LOCAL_CARGO_GATES=(
@@ -601,7 +603,9 @@ COMMON_GATES=(
   "bash scripts/check_feature_matrix_evidence.sh"
   "bash scripts/check_planning_docs_fresh.sh"
   "bash scripts/check_doc_hygiene.sh"
+  "bash scripts/check_doc_topology_drift.sh"
   "bash scripts/check_write_genesiscode_skill_pack.sh"
+  "bash scripts/check_write_genesiscode_skill_distribution.sh"
   "bash scripts/check_task_concurrency_stress.sh"
   "bash scripts/check_host_bridge_fault_injection.sh"
   "bash scripts/check_no_user_panics.sh"
@@ -612,6 +616,7 @@ COMMON_GATES=(
   "bash scripts/check_fuzz_differential_hardening.sh"
   "bash scripts/check_test_execution_profile_matrix.sh"
   "bash scripts/check_gpu_conformance_lane_matrix.sh"
+  "bash scripts/check_gpu_stack_decoupling.sh"
   "bash scripts/check_webxr_browser_conformance_lane.sh"
   "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
@@ -631,25 +636,32 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
+    PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
+    PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
+    PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
+    PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
     ;;
   release-full)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
+    PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
     PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
+    PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full bash scripts/check_write_genesiscode_skill_conformance.sh")
+    PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
@@ -657,6 +669,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_hot_path_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
+    PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
     ;;
 esac
 

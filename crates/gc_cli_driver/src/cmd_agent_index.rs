@@ -366,6 +366,7 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 "agent_index": "docs/spec/AGENT_INDEX_v0.1.md",
                 "agent_authoring_bundle": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
                 "write_genesiscode_skill_pack": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
+                "write_genesiscode_skill_distribution": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
                 "selfhost_symbol_ownership": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",
             }
         })),

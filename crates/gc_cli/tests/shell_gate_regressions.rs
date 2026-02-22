@@ -39,6 +39,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read check_ai_iteration_slo.sh");
     let micro = fs::read_to_string(root.join("scripts/check_runtime_microbench_budgets.sh"))
         .expect("read check_runtime_microbench_budgets.sh");
+    let gpu_profile = fs::read_to_string(root.join("scripts/check_gpu_compute_runtime_profile.sh"))
+        .expect("read check_gpu_compute_runtime_profile.sh");
     let strict_golden = fs::read_to_string(root.join("scripts/selfhost_strict_golden.sh"))
         .expect("read selfhost_strict_golden.sh");
     let wasm_cross = fs::read_to_string(root.join("scripts/wasm_cross_host_determinism.mjs"))
@@ -104,20 +106,62 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "runtime microbench script must default to release-equivalent cargo profile"
     );
     assert!(
-        perf.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"perf-budgets\" --strict \"$DISK_STRICT_MODE\""),
-        "perf script must force strict disk mode"
+        micro.contains("selfhost-strict|release|release-*|production|prod"),
+        "runtime microbench script must map release/full profiles to strict GPU backend policy"
     );
     assert!(
-        hot.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"hot-path-budgets\" --strict \"$DISK_STRICT_MODE\""),
-        "hot-path script must force strict disk mode"
+        micro.contains("GPU_BACKEND_POLICY=\"require-device\"")
+            && micro.contains("GPU_BACKEND_POLICY=\"dev-allow-fallback\""),
+        "runtime microbench script must make require-device vs dev-allow-fallback policy split explicit"
     );
     assert!(
-        slo.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"ai-iteration-slo\" --strict \"$DISK_STRICT_MODE\""),
-        "ai-iteration slo script must force strict disk mode"
+        micro.contains("REQUIRED_GPU_BACKEND=\"device-runtime\""),
+        "runtime microbench script must require device-runtime backend when strict policy is active"
     );
     assert!(
-        micro.contains("check_disk_headroom.sh --path \"$ROOT_DIR\" --context \"runtime-microbench\" --strict \"$DISK_STRICT_MODE\""),
-        "runtime microbench script must force strict disk mode"
+        micro.contains("MICROBENCH_FEATURES=\"device-bridge\""),
+        "runtime microbench script must enable device-bridge features in strict policy mode"
+    );
+    assert!(
+        gpu_profile.contains("selfhost-strict|release|release-*|production|prod"),
+        "gpu runtime profile script must map release/full profiles to strict GPU backend policy"
+    );
+    assert!(
+        gpu_profile.contains("GPU_BACKEND_POLICY=\"require-device\"")
+            && gpu_profile.contains("GPU_BACKEND_POLICY=\"dev-allow-fallback\""),
+        "gpu runtime profile script must make require-device vs dev-allow-fallback policy split explicit"
+    );
+    assert!(
+        gpu_profile.contains("REQUIRED_BACKEND=\"device-runtime\""),
+        "gpu runtime profile script must require device-runtime backend when strict policy is active"
+    );
+    assert!(
+        gpu_profile.contains("MICROBENCH_FEATURES=\"device-bridge\""),
+        "gpu runtime profile script must enable device-bridge features in strict policy mode"
+    );
+    assert!(
+        perf.contains("check_disk_headroom.sh")
+            && perf.contains("--context \"perf-budgets\"")
+            && perf.contains("--strict \"$DISK_STRICT_MODE\""),
+        "perf script must enforce disk strict mode via check_disk_headroom"
+    );
+    assert!(
+        hot.contains("check_disk_headroom.sh")
+            && hot.contains("--context \"hot-path-budgets\"")
+            && hot.contains("--strict \"$DISK_STRICT_MODE\""),
+        "hot-path script must enforce disk strict mode via check_disk_headroom"
+    );
+    assert!(
+        slo.contains("check_disk_headroom.sh")
+            && slo.contains("--context \"ai-iteration-slo\"")
+            && slo.contains("--strict \"$DISK_STRICT_MODE\""),
+        "ai-iteration slo script must enforce disk strict mode via check_disk_headroom"
+    );
+    assert!(
+        micro.contains("check_disk_headroom.sh")
+            && micro.contains("--context \"runtime-microbench\"")
+            && micro.contains("--strict \"$DISK_STRICT_MODE\""),
+        "runtime microbench script must enforce disk strict mode via check_disk_headroom"
     );
     assert!(
         perf.contains("\"build_profile\": \"$CARGO_PROFILE\""),
@@ -198,6 +242,22 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         health.contains("check_agent_generative_workloads.sh"),
         "upgrade-plan health profiles must include generative workload validation beyond fixed workflow lists"
+    );
+    assert!(
+        health.contains("check_write_genesiscode_skill_conformance.sh"),
+        "upgrade-plan health profiles must include executable write_genesiscode_skill conformance validation"
+    );
+    assert!(
+        health.contains("check_write_genesiscode_skill_distribution.sh"),
+        "upgrade-plan health profiles must include write_genesiscode_skill distribution-kit validation"
+    );
+    assert!(
+        health.contains("check_gpu_stack_decoupling.sh"),
+        "upgrade-plan health profiles must include gpu/gfx stack decoupling topology validation"
+    );
+    assert!(
+        health.contains("check_gfx_runtime_profile.sh"),
+        "upgrade-plan health profiles must include gfx-only runtime profile lane validation"
     );
 }
 

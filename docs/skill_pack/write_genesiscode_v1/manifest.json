@@ -1,0 +1,56 @@
+{
+  "kind": "genesis/write-genesiscode-skill-distribution-v1",
+  "version": "1",
+  "prompts": [
+    {
+      "id": "backlog_slice",
+      "path": "prompts/backlog_slice.md"
+    },
+    {
+      "id": "capability_addition",
+      "path": "prompts/capability_addition.md"
+    },
+    {
+      "id": "selfhost_cutover",
+      "path": "prompts/selfhost_cutover.md"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "service_workflow",
+      "path": "recipes/service_workflow.md",
+      "workflow": "examples/agent_service_workflow/workflow.sh",
+      "domain": "service"
+    },
+    {
+      "id": "game_loop_workflow",
+      "path": "recipes/game_loop_workflow.md",
+      "workflow": "examples/agent_long_running_gfx_loop_workflow/workflow.sh",
+      "domain": "graphics"
+    },
+    {
+      "id": "gpu_compute_workflow",
+      "path": "recipes/gpu_compute_workflow.md",
+      "workflow": "examples/agent_gpu_compute_workflow/workflow.sh",
+      "domain": "gpu_compute"
+    },
+    {
+      "id": "package_workflow",
+      "path": "recipes/package_workflow.md",
+      "workflow": "examples/agent_multi_package_publish_workflow/workflow.sh",
+      "domain": "package_publish_sync"
+    }
+  ],
+  "expected_reports": [
+    {
+      "id": "skill_conformance",
+      "kind": "genesis/write-genesiscode-skill-conformance-v0.1",
+      "path": ".genesis/perf/write_genesiscode_skill_conformance_report.json",
+      "min_score": 100
+    }
+  ],
+  "verification_scripts": [
+    "scripts/check_write_genesiscode_skill_distribution.sh",
+    "scripts/check_write_genesiscode_skill_conformance.sh"
+  ]
+}

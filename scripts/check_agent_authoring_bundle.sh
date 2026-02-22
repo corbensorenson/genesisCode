@@ -48,6 +48,8 @@ required_included = [
     "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
     "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
     "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
+    "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
+    "docs/skill_pack/write_genesiscode_v1/manifest.json",
     "docs/write_genesisCode_skill.md",
 ]
 missing_required = [p for p in required_included if p not in included_paths]

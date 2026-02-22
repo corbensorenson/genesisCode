@@ -18,6 +18,7 @@ This is the canonical entrypoint for project documentation.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
 - `feature_matrix.md` - capability comparison vs common languages.
+- `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
 
 ## Core Specs (Normative)
 
@@ -26,11 +27,14 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/GCPM_BUNDLE_v0.1.md`
   - `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
   - `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+  - `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+  - `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
   - `docs/spec/TESTING_BUNDLE_v0.1.md`
   - `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
   - `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`
   - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
   - `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json`
+  - `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
 - Consolidation note:
   - low-signal split schema/index docs were merged into canonical specs; see
     `docs/DEPRECATION_MAP_v0.1.md` for the merged mapping.
@@ -64,6 +68,8 @@ This is the canonical entrypoint for project documentation.
 ## Graphics, GPU, Concurrency
 
 - `docs/spec/GFX_CAPS.md`
+- `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+- `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `docs/spec/GPU_GFX_BUNDLE_v0.1.md` (`Demo Workloads` section for runnable `.gc` gfx demos)
 - `docs/spec/CONCURRENCY_v0.1.md`

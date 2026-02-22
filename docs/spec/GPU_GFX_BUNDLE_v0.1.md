@@ -4,12 +4,16 @@ Canonical bundle for graphics and compute capability surfaces.
 
 ## Included Specs
 
+- `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+- `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - `docs/spec/GFX_CAPS.md`
 - `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 
 ## Agent Guidance
 
 - Start here for any GPU or graphics task.
+- Resolve compute-first policy/profile requirements in `GPU_COMPUTE_BUNDLE_v0.1.md`.
+- Resolve rendering/runtime-first requirements in `GFX_RUNTIME_BUNDLE_v0.1.md`.
 - Prefer canonical `gpu/compute::*` ops for compute workloads and use gfx wrappers only when needed.
 - Architecture/obligation/device-bridge specifics are consolidated into
   `docs/spec/GFX_CAPS.md` and `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`.

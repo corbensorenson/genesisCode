@@ -1,0 +1,248 @@
+(def core/editor/vcs::vec-or-empty (fn (x) (if (core/editor/lint::vec? x) x [])))
+
+(def core/editor/vcs::refs-panel-from-response
+  (fn (resp)
+    (let ((refs (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :refs)))))
+      {
+        :count (core/vec::len refs)
+        :kind (quote :editor/vcs-refs-panel)
+        :refs refs})))
+
+(def core/editor/vcs::log-panel-from-response
+  (fn (resp)
+    (let ((commits (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :commits)))))
+      {
+        :commits commits
+        :count (core/vec::len commits)
+        :kind (quote :editor/vcs-log-panel)
+        :root ((core/map::get resp) (quote :root))
+        :truncated ((core/map::get resp) (quote :truncated))})))
+
+(def core/editor/vcs::blame-panel-from-response
+  (fn (resp)
+    {
+      :commit ((core/map::get resp) (quote :commit))
+      :kind (quote :editor/vcs-blame-panel)
+      :path ((core/map::get resp) (quote :path))
+      :snapshot ((core/map::get resp) (quote :snapshot))
+      :sym ((core/map::get resp) (quote :sym))
+      :value ((core/map::get resp) (quote :value))}))
+
+(def core/editor/vcs::why-panel-from-response
+  (fn (resp)
+    {
+      :attestations (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :attestations)))
+      :commit ((core/map::get resp) (quote :commit))
+      :evidence (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :evidence)))
+      :kind (quote :editor/vcs-why-panel)
+      :message ((core/map::get resp) (quote :message))
+      :obligations (core/editor/vcs::vec-or-empty ((core/map::get resp) (quote :obligations)))
+      :op ((core/map::get resp) (quote :op))
+      :path ((core/map::get resp) (quote :path))
+      :snapshot ((core/map::get resp) (quote :snapshot))
+      :sym ((core/map::get resp) (quote :sym))
+      :value ((core/map::get resp) (quote :value))
+      :why ((core/map::get resp) (quote :why))}))
+
+(def core/editor/vcs::commit-panel-from-artifact
+  (fn (commit-h)
+    (fn (artifact)
+      (let ((f (core/editor/vcs::field artifact)))
+        {
+          :attestations (core/editor/vcs::vec-or-empty (f (quote :attestations)))
+          :author (f (quote :author))
+          :base (f (quote :base))
+          :evidence (core/editor/vcs::vec-or-empty (f (quote :evidence)))
+          :hash commit-h
+          :kind (quote :editor/vcs-commit-panel)
+          :message (f (quote :message))
+          :obligations (core/editor/vcs::vec-or-empty (f (quote :obligations)))
+          :parents (core/editor/vcs::vec-or-empty (f (quote :parents)))
+          :patch (f (quote :patch))
+          :result (f (quote :result))
+          :target (f (quote :target))}))))
+
+(def core/editor/vcs::evidence-panel-from-artifact
+  (fn (evidence-h)
+    (fn (artifact)
+      (let
+        ((f (core/editor/vcs::field artifact))
+          (inputs (core/editor/vcs::vec-or-empty (f (quote :inputs))))
+          (outputs (core/editor/vcs::vec-or-empty (f (quote :outputs)))))
+        {
+          :data (f (quote :data))
+          :hash evidence-h
+          :input-count (core/vec::len inputs)
+          :inputs inputs
+          :kind (quote :editor/vcs-evidence-panel)
+          :output-count (core/vec::len outputs)
+          :outputs outputs
+          :produced-by (f (quote :produced-by))
+          :vcs-kind (f (quote :kind))}))))
+
+(def core/editor/vcs::evidence-list-panel-from-commit-panel
+  (fn (commit-panel)
+    (let
+      ((evidence (core/editor/vcs::vec-or-empty ((core/map::get commit-panel) (quote :evidence)))))
+      {
+        :commit ((core/map::get commit-panel) (quote :hash))
+        :count (core/vec::len evidence)
+        :evidence evidence
+        :kind (quote :editor/vcs-evidence-list-panel)})))
+
+(def core/editor/action::vcs-refs-panel
+  (fn (prefix)
+    ((core/effect::map (core/refs::list prefix)) core/editor/vcs::refs-panel-from-response)))
+
+(def core/editor/action::vcs-log-panel
+  (fn (root)
+    (fn (max)
+      ((core/effect::map ((core/vcs::log root) max)) core/editor/vcs::log-panel-from-response))))
+
+(def core/editor/action::vcs-blame-panel
+  (fn (snapshot)
+    (fn (sym)
+      ((core/effect::map (((core/vcs::blame snapshot) sym) nil))
+        core/editor/vcs::blame-panel-from-response))))
+
+(def core/editor/action::vcs-blame-panel-with-path
+  (fn (snapshot)
+    (fn (sym)
+      (fn (path)
+        ((core/effect::map (((core/vcs::blame snapshot) sym) path))
+          core/editor/vcs::blame-panel-from-response)))))
+
+(def core/editor/action::vcs-why-panel
+  (fn (snapshot)
+    (fn (sym)
+      ((core/effect::map (((core/vcs::why snapshot) sym) nil))
+        core/editor/vcs::why-panel-from-response))))
+
+(def core/editor/action::vcs-why-panel-with-op
+  (fn (snapshot)
+    (fn (sym)
+      (fn (op)
+        ((core/effect::map (((core/vcs::why snapshot) sym) op))
+          core/editor/vcs::why-panel-from-response)))))
+
+(def core/editor/action::vcs-commit-panel
+  (fn (commit-h)
+    ((core/effect::bind (core/store::get commit-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure ((core/editor/vcs::commit-panel-from-artifact commit-h) artifact)))))))
+
+(def core/editor/action::vcs-evidence-panel
+  (fn (evidence-h)
+    ((core/effect::bind (core/store::get evidence-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure ((core/editor/vcs::evidence-panel-from-artifact evidence-h) artifact)))))))
+
+(def core/editor/action::vcs-evidence-list-panel
+  (fn (commit-h)
+    ((core/effect::bind (core/editor/action::vcs-commit-panel commit-h))
+      (fn (commit-panel)
+        (core/effect::pure (core/editor/vcs::evidence-list-panel-from-commit-panel commit-panel))))))
+
+(def core/editor/vcs::field
+  (fn (resp) (fn (k) (if (core/editor/lint::map? resp) ((core/map::get resp) k) nil))))
+
+(def core/editor/vcs::diff-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :kind (quote :editor/vcs-diff-panel)
+        :ok (f (quote :ok))
+        :patch (f (quote :patch))
+        :values (core/editor/vcs::vec-or-empty (f (quote :values)))})))
+
+(def core/editor/vcs::apply-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :kind (quote :editor/vcs-apply-panel)
+        :ok (f (quote :ok))
+        :snapshot (f (quote :snapshot))})))
+
+(def core/editor/vcs::merge-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :conflict (f (quote :conflict))
+        :kind (quote :editor/vcs-merge-panel)
+        :ok (f (quote :ok))
+        :snapshot (f (quote :snapshot))})))
+
+(def core/editor/vcs::resolve-panel-from-response
+  (fn (resp)
+    (let ((f (core/editor/vcs::field resp)))
+      {
+        :conflict (f (quote :conflict))
+        :kind (quote :editor/vcs-resolve-panel)
+        :ok (f (quote :ok))
+        :patch (f (quote :patch))
+        :snapshot (f (quote :snapshot))
+        :values (core/editor/vcs::vec-or-empty (f (quote :values)))})))
+
+(def core/editor/vcs::conflict-panel-from-artifact
+  (fn (conflict)
+    (let
+      ((f (core/editor/vcs::field conflict))
+        (items (core/editor/vcs::vec-or-empty (f (quote :conflicts)))))
+      {
+        :base (f (quote :base))
+        :conflicts items
+        :count (core/vec::len items)
+        :kind (quote :editor/vcs-conflict-panel)
+        :left (f (quote :left))
+        :ok true
+        :right (f (quote :right))
+        :vcs-kind (f (quote :kind))})))
+(def core/editor/action::vcs-diff-panel
+  (fn (base)
+    (fn (to)
+      ((core/effect::map ((((core/vcs::diff base) to) nil) true))
+        core/editor/vcs::diff-panel-from-response))))
+
+(def core/editor/action::vcs-apply-panel
+  (fn (base)
+    (fn (patch)
+      ((core/effect::map ((((core/vcs::apply base) patch) nil) true))
+        core/editor/vcs::apply-panel-from-response))))
+
+(def core/editor/action::vcs-merge3-panel
+  (fn (base)
+    (fn (left)
+      (fn (right)
+        ((core/effect::map (((((core/vcs::merge3 base) left) right) nil) true))
+          core/editor/vcs::merge-panel-from-response)))))
+
+(def core/editor/action::vcs-resolve-conflict-panel
+  (fn (conflict)
+    ((core/effect::map (((core/vcs::resolve-conflict conflict) nil) true))
+      core/editor/vcs::resolve-panel-from-response)))
+
+(def core/editor/action::vcs-resolve-conflict-with-panel
+  (fn (conflict)
+    (fn (strategy)
+      (fn (resolutions)
+        (
+          (core/effect::map
+            (
+              ((core/effect::perform (quote core/vcs-low::resolve-conflict))
+                {
+                  :conflict conflict
+                  :out nil
+                  :resolutions resolutions
+                  :store true
+                  :strategy strategy})
+              (fn (resp) (core/effect::pure resp))))
+          core/editor/vcs::resolve-panel-from-response)))))
+
+(def core/editor/action::vcs-conflict-panel
+  (fn (conflict-h)
+    ((core/effect::bind (core/store::get conflict-h))
+      (fn (resp)
+        (let ((artifact ((core/map::get resp) (quote :artifact))))
+          (core/effect::pure (core/editor/vcs::conflict-panel-from-artifact artifact)))))))

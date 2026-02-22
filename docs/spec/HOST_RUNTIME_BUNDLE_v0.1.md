@@ -10,6 +10,8 @@ Canonical bundle for host ABI, capability dispatch, and runtime boundary rules.
 - `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`
 - `docs/spec/HOST_BRIDGE_PROTOCOL.md`
 - `docs/spec/CAPS_TOML.md`
+- `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+- `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - `docs/spec/SELF_HOST_BOUNDARY.md`
 - `docs/spec/WASM.md`
 - `docs/spec/WASI.md`

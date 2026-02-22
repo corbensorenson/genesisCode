@@ -1,0 +1,78 @@
+(def core/editor/plugin::contains-op?
+  (fn (ops) (fn (op) (((core/editor/plugin::contains-op-loop ops) op) 0))))
+
+(def core/editor/plugin::contains-op-loop
+  (fn (ops)
+    (fn (op)
+      (fn (i)
+        (if ((core/int::eq? i) (core/vec::len ops))
+          false
+          (let ((x ((core/vec::get ops) i)))
+            (if (core/editor/lint::sym? x)
+              (if ((core/sym::eq? x) op)
+                true
+                (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))
+              (((core/editor/plugin::contains-op-loop ops) op) ((core/int::add i) 1)))))))))
+
+(def core/editor/plugin::caps-allowed?
+  (fn (policy)
+    (fn (op)
+      (if (core/editor/lint::map? policy)
+        (let
+          ((allow (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :allow))))
+            (deny (core/editor/lint::vec-or-empty ((core/map::get policy) (quote :deny)))))
+          (if ((core/editor/plugin::contains-op? deny) op)
+            false
+            (if ((core/int::eq? (core/vec::len allow)) 0)
+              false
+              ((core/editor/plugin::contains-op? allow) op))))
+        false))))
+
+(def core/editor/plugin::perform
+  (fn (policy)
+    (fn (op)
+      (fn (payload)
+        (if ((core/editor/plugin::caps-allowed? policy) op)
+          ((core/caps::perform op) payload)
+          (core/effect::pure
+            (((core/error::make "editor/plugin/cap-denied") "plugin capability denied") {:op op})))))))
+
+(def core/editor/plugin::make
+  (fn (handler)
+    (fn (meta)
+      (fn (caps-policy)
+        (((core/contract::extend core/contract::genesis) handler)
+          {
+            :caps-policy caps-policy
+            :editor-plugin true
+            :meta meta})))))
+
+(def core/editor/plugin::call core/contract::call)
+
+(def core/editor/plugin::command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((core/editor/plugin::call plugin) (quote editor/plugin::command))
+          {:command command :payload payload})))))
+
+(def core/editor/plugin::typed-host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote editor/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/editor/plugin::host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (payload)
+        (((((core/editor/plugin::typed-host-command plugin) command) nil) nil) payload)))))

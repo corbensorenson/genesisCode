@@ -13,7 +13,8 @@ Purpose: provide a minimal, stable retrieval path for AI coding agents.
 5. `docs/spec/TESTING_BUNDLE_v0.1.md`
 6. `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
 7. `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
-8. `upgrade_plan.md`
+8. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+9. `upgrade_plan.md`
 
 ## Canonical Domain Sources
 
@@ -21,9 +22,12 @@ Purpose: provide a minimal, stable retrieval path for AI coding agents.
 - Project/package manager contracts: `docs/spec/GCPM_BUNDLE_v0.1.md`
 - Runtime/capability/host contracts: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
 - GPU/gfx contracts: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+- GPU compute contracts: `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+- GFX runtime contracts: `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - Test/perf/release lanes: `docs/spec/TESTING_BUNDLE_v0.1.md`
 - Agent authoring entrypoint: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
 - Versioned skill pack: `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md`
+- Executable skill distribution kit: `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
 - Active risk backlog: `upgrade_plan.md`
 - Cross-language feature delta: `feature_matrix.md`
 

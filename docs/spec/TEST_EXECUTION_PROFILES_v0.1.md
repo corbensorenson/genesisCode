@@ -95,6 +95,9 @@ Strict/full profile runtime reports:
     - `release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default.
     - `dev-fast` and `prepush-standard` remain opt-in via
       `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
+  - GPU/GFX decoupled runtime lanes:
+    - compute-only lane: `scripts/check_gpu_compute_runtime_profile.sh`
+    - gfx-only lane: `scripts/check_gfx_runtime_profile.sh`
 
 ### AI Iteration SLO Contention Policy
 

@@ -56,6 +56,18 @@ fn map_string(map: &std::collections::BTreeMap<TermOrdKey, Term>, key: &str) -> 
         .unwrap_or_else(|| panic!("expected string at key `{key}`"))
 }
 
+fn map_map<'a>(
+    map: &'a std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+) -> &'a std::collections::BTreeMap<TermOrdKey, Term> {
+    map.get(&TermOrdKey(Term::symbol(key)))
+        .and_then(|t| match t {
+            Term::Map(m) => Some(m),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("expected map at key `{key}`"))
+}
+
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
     let td = tempfile::tempdir().unwrap();
@@ -259,6 +271,101 @@ path = "lib.gc"
         provenance_m.get(&TermOrdKey(Term::symbol(":bundle-h"))),
         Some(&Term::Str(bundle_h))
     );
+}
+
+#[test]
+fn gcpm_build_supports_mobile_and_edge_target_contracts() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("lib.gc"), "(def mini::x 1)\nmini::x\n").unwrap();
+    fs::write(
+        dir.join("package.toml"),
+        r#"
+name = "mini"
+version = "0.1.0"
+obligations = []
+dependencies = []
+
+[[modules]]
+path = "lib.gc"
+"#,
+    )
+    .unwrap();
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pack", "--pkg", "package.toml"])
+        .assert()
+        .success();
+
+    let targets = [
+        ("ios", "native", "mobile-ios", "ios-app-bundle-v1"),
+        (
+            "android",
+            "native",
+            "mobile-android",
+            "android-app-bundle-v1",
+        ),
+        ("edge", "wasm32-wasi-preview2", "edge-runtime", "edge-wasi-bundle-v1"),
+        (
+            "service-runtime",
+            "wasm32-wasi-preview2",
+            "service-runtime",
+            "service-runtime-bundle-v1",
+        ),
+    ];
+
+    for (target, expected_runtime, expected_host, expected_artifact_format) in targets {
+        let out = cargo_bin_cmd!("genesis")
+            .current_dir(dir)
+            .args(["--json", "gcpm", "--caps"])
+            .arg(&caps)
+            .args([
+                "build",
+                "--pkg",
+                "package.toml",
+                "--target",
+                target,
+                "--out-dir",
+                ".genesis/build-targets-ext",
+            ])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let map = parse_coreform_value_map(&out);
+        assert_eq!(map_string(&map, ":target"), target);
+        let bundle_root_raw = map_string(&map, ":bundle-root");
+        let bundle_root_rel = PathBuf::from(&bundle_root_raw);
+        let bundle_root = if bundle_root_rel.is_absolute() {
+            bundle_root_rel
+        } else {
+            dir.join(bundle_root_rel)
+        };
+        let build_manifest_src =
+            fs::read_to_string(bundle_root.join("build_manifest.gc")).expect("read build_manifest");
+        let build_manifest = gc_coreform::parse_term(&build_manifest_src).expect("parse build_manifest");
+        let Term::Map(build_manifest_map) = build_manifest else {
+            panic!("build_manifest must be map");
+        };
+        let profile = map_map(&build_manifest_map, ":target-profile");
+        assert_eq!(
+            map_string(profile, ":runtime"),
+            expected_runtime,
+            "target {target} runtime mismatch"
+        );
+        assert_eq!(
+            map_string(profile, ":host-profile"),
+            expected_host,
+            "target {target} host-profile mismatch"
+        );
+        assert_eq!(
+            map_string(profile, ":artifact-format"),
+            expected_artifact_format,
+            "target {target} artifact-format mismatch"
+        );
+    }
 }
 
 #[test]

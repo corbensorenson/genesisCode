@@ -62,6 +62,8 @@ genesis --json agent-index
     normative retrieval entrypoint for common authoring workflows.
   - includes `write_genesiscode_skill_pack = "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md"`
     as the versioned machine-distribution authoring artifact.
+  - includes `write_genesiscode_skill_distribution = "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md"`
+    as the executable skill-distribution kit contract entrypoint.
 
 ## Determinism
 

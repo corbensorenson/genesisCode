@@ -21,6 +21,10 @@ modules = [
   "10_gfx_runtime_trace.gc",
   "11_gpu_compute.gc",
   "20_editor_lint.gc",
+  "20_editor_host_ops.gc",
+  "20_editor_vcs.gc",
+  "20_editor_ast.gc",
+  "20_editor_plugin.gc",
   "20_editor.gc",
   "20_editor_agent_pkg.gc",
   "30_service_orchestration.gc",
@@ -52,7 +56,11 @@ modules = [
 "10_gfx_runtime_trace.gc" = ["10_gfx.gc", "10_gfx_ui_runtime.gc", "10_gfx_runtime_planner.gc"]
 "11_gpu_compute.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
 "20_editor_lint.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
-"20_editor.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_lint.gc"]
+"20_editor_host_ops.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
+"20_editor_vcs.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_lint.gc"]
+"20_editor_ast.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_lint.gc"]
+"20_editor_plugin.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_lint.gc"]
+"20_editor.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc", "20_editor_host_ops.gc", "20_editor_vcs.gc", "20_editor_ast.gc", "20_editor_lint.gc"]
 "20_editor_agent_pkg.gc" = ["20_editor.gc", "20_editor_lint.gc"]
 "30_service_orchestration.gc" = ["00_core.gc", "00_core_system_ops.gc", "00_core_reachability.gc"]
 "31_data_pipeline.gc" = ["00_core.gc", "00_core_system_ops.gc"]

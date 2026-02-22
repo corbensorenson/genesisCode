@@ -12,6 +12,9 @@ and tooling evolution code.
 - Pointer/onboarding doc: `docs/write_genesisCode_skill.md`
 - Bundle entrypoint: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
 - Skill contract JSON: `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json`
+- Executable conformance spec: `docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md`
+- Distribution kit spec: `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
+- Distribution manifest: `docs/skill_pack/write_genesiscode_v1/manifest.json`
 - Schema refs: `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`, `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - Test/profile refs: `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - Active backlog source: `upgrade_plan.md`
@@ -70,11 +73,18 @@ and tooling evolution code.
 ### `authoring_contract`
 - `bash scripts/check_genesiscode_authoring_skill.sh`
 - `bash scripts/check_write_genesiscode_skill_pack.sh`
+- `bash scripts/check_write_genesiscode_skill_distribution.sh`
 - `bash scripts/check_agent_authoring_bundle.sh`
 
 ### `feature_matrix_claims`
 - `bash scripts/check_feature_matrix_gap_hygiene.sh`
 - `bash scripts/check_feature_matrix_evidence.sh`
+
+### `skill_conformance_executable`
+- `bash scripts/check_agent_reference_workflows.sh`
+- `bash scripts/check_agent_generative_workloads.sh`
+- `bash scripts/check_write_genesiscode_skill_conformance.sh`
+- `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh`
 
 ### `selfhost_sidecar`
 - `bash scripts/check_selfhost_artifact_fresh.sh`
@@ -82,6 +92,55 @@ and tooling evolution code.
 
 ### `fast_iteration_non_crate`
 - `bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms 120000 --min-history 1`
+
+## Distribution Kit v1
+
+Canonical executable distribution kit root:
+
+- `docs/skill_pack/write_genesiscode_v1/manifest.json`
+
+Normative content:
+
+- prompt templates under `docs/skill_pack/write_genesiscode_v1/prompts/`
+- runnable domain recipes under `docs/skill_pack/write_genesiscode_v1/recipes/`
+- deterministic distribution verifier:
+  `scripts/check_write_genesiscode_skill_distribution.sh`
+
+## Benchmark Suite
+
+Required executable benchmark workloads for AI-authored GenesisCode quality:
+
+- Service workflow: `examples/agent_service_workflow/workflow.sh`
+- Game-loop workflow: `examples/agent_long_running_gfx_loop_workflow/workflow.sh`
+- GPU compute workflow: `examples/agent_gpu_compute_workflow/workflow.sh`
+- Package workflow: `examples/agent_multi_package_publish_workflow/workflow.sh`
+- Mutation workload suite: `scripts/check_agent_generative_workloads.sh`
+
+## Scoring Rubric
+
+- Conformance gate: `scripts/check_write_genesiscode_skill_conformance.sh`
+- Report kind: `genesis/write-genesiscode-skill-conformance-v0.1`
+- Default threshold: `100/100` (`GENESIS_WRITE_SKILL_CONFORMANCE_MIN_SCORE`)
+- Categories (20 points each):
+  - service workflow determinism + domain coverage
+  - game loop determinism + graphics coverage
+  - GPU compute determinism + compute coverage
+  - package workflow determinism + package/sync coverage
+  - generative mutation suite stability (min case count + no parity/history-min failures)
+
+## Failure-Mode Playbooks
+
+- Missing workflow/category:
+  - restore failing workflow script under `examples/agent_*_workflow/`
+  - rerun `scripts/check_agent_reference_workflows.sh`.
+- Replay mismatch:
+  - inspect workflow `run/replay` output deltas; reject nondeterministic effects first.
+- GPU backend contract failure:
+  - rerun strict device lane:
+    `GENESIS_AGENT_GPU_REQUIRE_DEVICE=1 bash scripts/check_agent_reference_workflows.sh`.
+- Generative regression or insufficient history:
+  - refresh baseline history seeds under `policies/perf/`
+  - rerun `scripts/check_agent_generative_workloads.sh` with explicit regression params.
 
 ## Anti-Patterns (Reject)
 
@@ -105,5 +164,7 @@ Every substantial turn should include:
 
 Gate:
 - `scripts/check_write_genesiscode_skill_pack.sh`
+- `scripts/check_write_genesiscode_skill_distribution.sh`
+- `scripts/check_write_genesiscode_skill_conformance.sh`
 
 The gate fails closed on contract drift, missing pack artifacts, or missing bundle/onboarding links.

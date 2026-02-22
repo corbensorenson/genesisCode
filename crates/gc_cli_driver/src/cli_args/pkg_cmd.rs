@@ -118,7 +118,10 @@ enum PkgCmd {
         pkg: PathBuf,
 
         /// Deployment target contract.
-        #[arg(long, value_parser = ["web", "desktop", "service"])]
+        #[arg(
+            long,
+            value_parser = ["web", "desktop", "service", "ios", "android", "edge", "service-runtime"]
+        )]
         target: String,
 
         /// Bundle output root directory.

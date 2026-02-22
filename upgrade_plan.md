@@ -4,136 +4,121 @@ Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 
-Open checklist items: 8
+Open checklist items: 12
 
 ## P0 - Immediate blockers
 
-- [ ] P0.1 Remove artifact bootstrap deadlock in production selfhost flow.
+- [ ] P0.1 Restore planning truthfulness between capability claims and open backlog state.
   - Evidence:
-    - Production selfhost artifact generation requires an existing artifact seed in `artifact-only` mode:
-      `crates/gc_cli_driver/src/cmd_selfhost.rs` (`selfhost-artifact requires an existing toolchain artifact ...`).
-    - Missing-artifact probe fails fast:
-      `target/debug/genesis --selfhost-artifact /tmp/genesis_missing_toolchain.gc selfhost-artifact --out /tmp/genesis_selfhost_artifact_probe.gc`
-      -> `coreform frontend: selfhost artifact file does not exist`.
-  - Why this blocks:
-    - A corrupted/missing committed artifact can stall local recovery and cutover confidence.
-    - "Selfhost-first" operation remains dependent on external bootstrap rescue paths.
+    - `feature_matrix.md` marks "Fully self-hosted toolchain with zero bootstrap-language dependency" as partial (`⚠️`) at `feature_matrix.md:20`.
+    - The same file reports `Known GenesisCode gaps` as `none` at `feature_matrix.md:70-72`.
+    - `docs/status/REDTEAM_REPORT.md` currently reports no active P0/P1 risks (`docs/status/REDTEAM_REPORT.md:11`) while major strategic gaps remain unresolved for selfhost v1 cutover.
   - Acceptance:
-    - Add deterministic, fail-closed recovery path to regenerate `selfhost/toolchain.gc` from manifest sources without requiring a pre-existing artifact file.
-    - Keep production runtime execution in `artifact-only`; recovery path must be explicit and auditable.
-    - Add regression tests covering missing/corrupt artifact recovery.
+    - Open-gap reporting must be derived from objective readiness signals (not manually zeroed).
+    - Add fail-closed check that forbids `Known GenesisCode gaps: none` unless all non-`✅` GenesisCode matrix rows have linked closure rationale and no unresolved plan IDs.
+    - Add a machine-readable selfhost readiness report consumed by `upgrade_plan.md`, `feature_matrix.md`, and `REDTEAM_REPORT.md`.
+
+- [ ] P0.2 Replace metadata-only `gcpm build` target support with executable build pipelines.
+  - Evidence:
+    - `gcpm build` currently materializes deterministic metadata bundle files (`build_manifest.gc`, `package.toml`, `package_artifact.txt`, `provenance.gc`) without compiling/running target-specific toolchains (`crates/gc_cli_driver/src/pkg_workspace_ops.rs:254-346` and `crates/gc_cli_driver/src/pkg_workspace_ops.rs:348-406`).
+    - Mobile/edge test coverage verifies profile metadata fields only (`crates/gc_cli/tests/cli_pkg_workspace.rs:277-360`), not executable target artifacts.
+  - Acceptance:
+    - `gcpm build --target ios|android|edge|service-runtime` must emit executable/runtime-bootable artifacts (or equivalent reproducible runner bundles), not metadata-only bundles.
+    - Add deterministic post-build verification sub-lanes per target (boot/smoke/contract).
+    - Fail `release-full` when target pipeline is metadata-only.
 
 ## P1 - High-impact self-host and AI-first hardening
 
-- [x] P1.1 Restore real profile coverage for `prepush-standard`/`release-full` when backlog is non-zero.
+- [ ] P1.1 Add end-to-end conformance workflows for mobile/edge/service-runtime targets.
   - Evidence:
-    - `scripts/check_upgrade_plan_health.sh` branches to mandatory-local when `Open checklist items > 0`:
-      - prints `backlog open; running mandatory local guard gates.`
-      - lines near `declared_open` gate handling (`scripts/check_upgrade_plan_health.sh:479-535`).
-    - Live runs for both heavy profiles short-circuit:
-      - `bash scripts/check_upgrade_plan_health.sh --profile prepush-standard`
-      - `bash scripts/check_upgrade_plan_health.sh --profile release-full`
-      - both reported `mandatory-local` completion (not full profile gates).
+    - Current agent deployment workflow validates only `web|desktop|service` (`examples/agent_deploy_bundle_workflow/workflow.sh`).
+    - Gauntlet workflow set does not include `ios`, `android`, `edge`, or `service-runtime` domains (`scripts/check_agent_reference_workflows.sh` workflow table).
   - Acceptance:
-    - `prepush-standard` and `release-full` execute their profile-specific gates by default even with open backlog items.
-    - Keep `mandatory-local` as `dev-fast` behavior (or explicit opt-in), not as an implicit replacement for heavier profiles.
-    - Profile reports must reflect actual profile gate sets, and fail if profile substitution occurs without explicit override.
+    - Add first-party workflows for `ios`, `android`, `edge`, `service-runtime`.
+    - Extend gauntlet required domain set and parity profile checks to include new targets.
+    - Add deterministic replay/hash assertions for each new deployment lane.
 
-- [x] P1.2 Eliminate recurring ENOSPC failures from gate target-dir sprawl.
+- [ ] P1.2 Reduce local iteration latency to a deterministic AI-authoring inner loop budget.
   - Evidence:
-    - Reproduced ENOSPC during runtime matrix check:
-      `bash scripts/check_runtime_backend_feature_matrix.sh`
-      -> `No space left on device (os error 28)` while compiling.
-    - Live disk state at failure:
-      - `df -h .` -> `Avail 62Mi` (100% capacity).
-      - `.genesis/build` footprint -> `14G` (`.genesis/build/health` `11G`, `.genesis/build/runtime_backend_feature_matrix` `2.6G`).
+    - `dev-fast` health path currently executes a large non-cargo gate set (31 common non-cargo gates observed in live run output) before cargo shards.
+    - Runtime parity lane currently costs ~157s (`.genesis/perf/agent_workflow_runtime_parity_report.json:5`) and gauntlet lane ~105s (`.genesis/perf/agent_capability_gauntlet_report.json:1-5` + `elapsed_ms`).
   - Acceptance:
-    - Add deterministic cache lifecycle policy (TTL/LRU/size cap) for `.genesis/build/*`.
-    - Add proactive cleanup integration into health/profile runners before heavy compile lanes.
-    - Gate must attempt deterministic reclaim before surfacing manual remediation steps.
+    - Add `agent-inner-loop` profile with strict deterministic contract checks but bounded wall-time target (`<= 300000 ms`) on warm cache.
+    - Persist and enforce p95 history for inner-loop profile duration.
+    - Remove redundant repeated process startups for high-frequency local workflows.
 
-- [x] P1.3 Put a hard SLO/budget on runtime backend matrix checks.
+- [ ] P1.3 Enforce explicit SLO fields and fail-closed budgets across all major gauntlet/parity reports.
   - Evidence:
-    - Last successful report:
-      `.genesis/perf/runtime_backend_feature_matrix_report.json` -> `elapsed_ms=306863`, `budget_ms=null`.
-    - Stage hotspots are still large (`gc_cli_driver profile-headless` 69s in the last full report).
-    - Fresh rerun hit ENOSPC before completion, indicating this lane is both slow and fragile under local constraints.
+    - `agent_capability_gauntlet_report.json` has `default_max_ms` but no top-level `budget_ms` field (`.genesis/perf/agent_capability_gauntlet_report.json:1-5`).
+    - Large lanes exist (`elapsed_ms=104921` gauntlet, `elapsed_ms=157748` parity) but budget semantics are not uniformly normalized across report families.
   - Acceptance:
-    - Enable fail-closed runtime budget with historical regression tracking.
-    - Split matrix into deterministic shards/cached phases to reduce tail latency.
-    - Add explicit pass/fail thresholds for CI and local profiles.
+    - Standardize report schema on `elapsed_ms`, `budget_ms`, `history_p95_ms`, `ok`, and fail reason keys for all major performance/conformance reports.
+    - Fail health profiles when required SLO fields are absent.
+    - Add regression checks that guard both absolute and p95 budgets.
 
-- [x] P1.4 Reduce production CLI parse/help surface gate tail latency.
+- [ ] P1.4 Decompose oversized high-churn Rust modules for AI maintainability.
   - Evidence:
-    - Fresh run:
-      `bash scripts/check_production_cli_parse_surface.sh`
-      -> `.genesis/perf/production_cli_parse_surface_report.json` `elapsed_ms=156006` (`history_p95_ms=209265`).
-    - Gate uses repeated `cargo run --release` invocations in `scripts/check_production_cli_parse_surface.sh` and `scripts/check_production_cli_help_surface.sh`.
+    - Source-size audit still shows very large production modules:
+      - `crates/gc_cli_driver/src/cmd_selfhost.rs` (1048 lines),
+      - `crates/gc_cli_driver/src/pkg_workspace_ops.rs` (995 lines),
+      - `crates/gc_obligations/src/obligation_exec.rs` (977 lines),
+      - `crates/gc_gfx/src/lib.rs` (972 lines),
+      - `crates/gc_prelude/src/prelude.rs` (949 lines),
+      - `crates/gc_cli_driver/src/semantic_workspace.rs` (949 lines),
+      from `scripts/check_source_size_budget.sh` output.
   - Acceptance:
-    - Reuse built release binaries inside gate execution (single build, multi-check invocation).
-    - Preserve parse/help surface strictness while cutting steady-state runtime.
-    - Add timing budget guard with regression history.
+    - Split high-churn modules into bounded domain units with stable interfaces.
+    - Keep source-size debt allowlists empty.
+    - Add decomposition progress checks for production modules over target thresholds.
 
-- [ ] P1.5 Make device-runtime requirement explicit for GPU compute release lanes.
+- [ ] P1.5 Expand `write_genesisCode_skill` executable distribution breadth for "make anything" scope.
   - Evidence:
-    - Default GPU backend fallback policy is `allow-fallback` in `crates/gc_effects/src/runner_gpu_backend_policy.rs`.
-    - This permits silent fallback away from requested device backends.
-  - Why this matters:
-    - AI-generated high-performance compute workloads need predictable backend semantics, not opportunistic fallback.
+    - Current distribution manifest validates at low corpus size (`prompts=3`, `recipes=4`, `reports=1`) from `scripts/check_write_genesiscode_skill_distribution.sh`.
   - Acceptance:
-    - Release/full profiles default to `require-device` for compute-critical ops.
-    - Fallback must be opt-in and explicitly surfaced in policy/evidence artifacts.
-    - Add tests proving fail-closed behavior in strict release profiles.
+    - Expand skill corpus with broader domain recipes (deployment targets, failure recovery, performance triage, assurance workflows, plugin/FFI, XR, data).
+    - Add negative/fault-injection recipe coverage and scored rubric thresholds.
+    - Require minimum corpus breadth thresholds in distribution gate.
 
-- [ ] P1.6 Add executable conformance for `write_genesisCode_skill` quality.
+- [ ] P1.6 Repair feature-matrix evidence ledger drift for split GPU/GFX and deployment claims.
   - Evidence:
-    - Current skill gates (`scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`) validate structure/references, not generated-code competence.
+    - Matrix states split compute/gfx bundles + independent lanes (`feature_matrix.md:24`), but evidence ledger still maps that capability only to `GPU_GFX_BUNDLE` + `check_gpu_compute_runtime_profile.sh` (`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md:25`).
+    - Deployment claim is broad (`feature_matrix.md:42`) while evidence ledger maps only generic CLI + health script without target-specific conformance references (`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md:43`).
   - Acceptance:
-    - Add benchmark suite where agent-authored GenesisCode tasks (service, game loop, GPU compute, package workflow) must compile/run/replay deterministically.
-    - Publish scoring rubric and minimum pass thresholds.
-    - Wire into health/release gates.
+    - Upgrade evidence-generation logic to require claim-specific references for split bundles and target-specific conformance gates.
+    - Fail when capability claims include surfaces not represented in evidence/check mappings.
+    - Regenerate evidence ledger and keep it synchronized with feature matrix semantics.
+
+- [ ] P1.7 Add executable semantic refactor application workflow (not just planning output).
+  - Evidence:
+    - CLI currently exposes `semantic-edit index`, `workspace-graph`, and `refactor-plan` only (`docs/spec/CLI.md:146-154`).
+    - There is no first-class command that applies semantic refactor plans deterministically end-to-end.
+  - Acceptance:
+    - Add `semantic-edit apply-plan` (or equivalent) with deterministic patch emission, conflict diagnostics, and obligation-gated verification.
+    - Add tests for deterministic re-application/idempotence and workspace-wide conflict reporting.
+    - Add agent workflow example using plan+apply+verify loop.
 
 ## P2 - Strategic completeness for "agent can build anything" scope
 
-- [ ] P2.1 Expand `gcpm build` target model beyond `web|desktop|service`.
+- [ ] P2.1 Publish machine-readable selfhost completeness scorecard and closure criteria.
   - Evidence:
-    - Build target parsing is hard-coded to `web|desktop|service` in `crates/gc_cli_driver/src/pkg_workspace_ops.rs`.
-    - Specs mirror this limit (`docs/spec/CLI.md`, `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`).
+    - Selfhost status is currently distributed across docs/scripts and partial matrix rows; no canonical machine report currently drives closure readiness.
   - Acceptance:
-    - Add first-class mobile targets (at minimum iOS/Android profile contracts) and edge/service-runtime variants.
-    - Extend schema/evidence docs and CI coverage accordingly.
+    - Emit a deterministic `genesis/selfhost-readiness-v0.1` report with scored dimensions:
+      runtime routing coverage, parity-only surface isolation, bootstrap mode strictness, and deprecated bootstrap reference count.
+    - Wire report into `selfhost-dashboard`, `upgrade_plan`, and `feature_matrix` drift checks.
 
-- [ ] P2.2 Decouple GPU compute and graphics architecture while preserving shared primitives.
+- [ ] P2.2 Harden production WASM artifact boundary to exclude parity-only Rust frontend surfaces.
   - Evidence:
-    - Dispatch path co-routes `gpu/compute::*` and `gfx/gpu::*` in shared backend and policy handling (`crates/gc_effects/src/runner_capability_dispatch.rs`, `crates/gc_effects/src/runner_gpu_host.rs`).
+    - `gc_wasm` still includes explicit Rust frontend parity/eval pathways in the same crate surface (`crates/gc_wasm/src/lib.rs` comments and methods describing parity-only Rust frontend paths).
   - Acceptance:
-    - Define separate high-level compute and graphics policy bundles with explicit cross-over points.
-    - Keep shared resource primitives but split operational surfaces and profile gates.
-    - Add independent conformance lanes for compute-only and gfx-only stacks.
+    - Gate parity-only APIs behind explicit non-production feature/profile boundaries.
+    - Add exported-symbol and API-surface checks proving production WASM artifacts expose only allowed selfhost paths.
+    - Fail release lanes when parity-only WASM surfaces leak into production builds.
 
-- [ ] P2.3 Continue AI-maintainable decomposition for high-churn authoring modules.
+- [ ] P2.3 Complete documentation consolidation phase 2 with measurable reduction and stronger ownership boundaries.
   - Evidence:
-    - Top remaining GC authoring files still include large, high-churn modules (e.g. `prelude/modules/20_editor.gc` at 632 lines from source-size reports).
+    - Documentation surface remains large (`docs_md=92`, `total_md=117` from live repo count), increasing retrieval ambiguity for agents.
   - Acceptance:
-    - Split major agent-touched modules into narrower domain units with stable interfaces.
-    - Keep source-size debt allowlists empty and preserve deterministic assembly ordering.
-
-- [ ] P2.4 Ship `write_genesisCode_skill` v1 as a multi-agent, executable distribution kit.
-  - Evidence:
-    - Skill docs/contracts exist, but no shipped executable "starter corpus + expected outputs" pack for Codex/Claude/other agents.
-  - Acceptance:
-    - Publish detailed v1 skill pack with:
-      - canonical prompts/task recipes,
-      - runnable examples across core domains,
-      - failure-mode playbooks,
-      - deterministic verification scripts.
-    - Integrate with onboarding and authoring bundle as primary AI entrypoint.
-
-- [ ] P2.5 Consolidate documentation into a single AI-authoring source-of-truth map.
-  - Evidence:
-    - Repo currently contains high documentation surface area (`find . -name '*.md'` -> 105 files; `docs/` alone -> 80 files).
-    - Capability, assurance, and authoring guidance is spread across matrix, specs, status docs, and skill docs; synchronization currently depends on multiple custom hygiene scripts.
-  - Acceptance:
-    - Publish one canonical doc topology (`authoring`, `runtime`, `assurance`, `operations`) with ownership and update workflow.
-    - Remove/merge redundant docs and keep thin index stubs where split files remain necessary.
-    - Add a drift check that fails when canonical docs and derived docs disagree on capability status/open-gap IDs.
+    - Merge low-signal/redundant docs into canonical bundle roots while preserving thin stubs only where necessary.
+    - Add numeric documentation complexity targets (file count + average retrieval fan-out per capability).
+    - Enforce topology ownership + canonical source links for all retained leaf docs.
