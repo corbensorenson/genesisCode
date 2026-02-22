@@ -22,6 +22,9 @@ The parity runner executes `scripts/check_agent_reference_workflows.sh` twice:
 1. native lane (`runtime_profile = "native"`)
 2. wasi lane (`runtime_profile = "wasi-wasm-host-bridge"`)
 
+Reference workflow set includes browser-runtime and deployment lanes, so parity checks
+cover both domain additions automatically via shared gauntlet inputs.
+
 Each lane emits a gauntlet report with per-workflow:
 
 - `replay_hash` (raw workflow replay payload hash)

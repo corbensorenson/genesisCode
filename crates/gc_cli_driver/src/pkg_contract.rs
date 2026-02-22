@@ -9,6 +9,7 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Lock { .. } => "genesis/pkg-lock-v0.1",
         PkgCmd::Update { .. } => "genesis/pkg-update-v0.1",
         PkgCmd::Run { .. } => "genesis/pkg-run-v0.1",
+        PkgCmd::Build { .. } => "genesis/pkg-build-v0.1",
         PkgCmd::Test { .. } => "genesis/pkg-test-v0.1",
         PkgCmd::SelfOptimize { .. } => "genesis/pkg-self-optimize-v0.1",
         PkgCmd::Trace { .. } => "genesis/pkg-requirements-trace-v0.1",
@@ -39,6 +40,7 @@ pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
         PkgCmd::Lock { .. } => "pkg-lock",
         PkgCmd::Update { .. } => "pkg-update",
         PkgCmd::Run { .. } => "pkg-run",
+        PkgCmd::Build { .. } => "pkg-build",
         PkgCmd::Test { .. } => "pkg-test",
         PkgCmd::SelfOptimize { .. } => "pkg-self-optimize",
         PkgCmd::Trace { .. } => "pkg-requirements-trace",
@@ -107,6 +109,11 @@ mod tests {
             PkgCmd::Run {
                 task: "test".to_string(),
                 workspace_file: PathBuf::from("genesis.workspace.toml"),
+            },
+            PkgCmd::Build {
+                pkg: PathBuf::from("package.toml"),
+                target: "web".to_string(),
+                out_dir: PathBuf::from(".genesis/build"),
             },
             PkgCmd::Test {
                 pkg: PathBuf::from("package.toml"),

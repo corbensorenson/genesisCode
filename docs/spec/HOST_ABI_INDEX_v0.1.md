@@ -72,6 +72,16 @@ These examples define stable payload/response map shapes used by agent workflows
   - payload: `{:scope "<scope>" :label "<label>" :payload <datum>}`
   - response: `{:task-id "<id>" :state "<queued|running|done|...>"}`
 
+- `browser/storage::*`
+  - `browser/storage::get`
+  - payload: `{:key "scene"}`
+  - response: `{:ok true :found true|false :value <term|nil>}`
+
+- `browser/input::*`
+  - `browser/input::poll`
+  - payload: `{:window-id "<id>" :max-events <int>?}`
+  - response: `{:ok true :events [..]}`
+
 - `gfx/gpu::*`
   - `gfx/gpu::create-buffer`
   - payload: `{:desc {...}}`

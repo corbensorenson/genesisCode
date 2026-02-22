@@ -1,5 +1,22 @@
 {
   "families": {
+    "browser/audio": [
+      "browser/audio::enqueue",
+      "browser/audio::set-master"
+    ],
+    "browser/input": [
+      "browser/input::poll"
+    ],
+    "browser/storage": [
+      "browser/storage::delete",
+      "browser/storage::get",
+      "browser/storage::set"
+    ],
+    "browser/window": [
+      "browser/window::close",
+      "browser/window::info",
+      "browser/window::open"
+    ],
     "core/gc-low": [
       "core/gc-low::pin",
       "core/gc-low::plan",
@@ -205,6 +222,15 @@
   "generated_from_glob": "prelude/modules/*.gc",
   "kind": "genesis/prelude-capability-index-v0.1",
   "operations": [
+    "browser/audio::enqueue",
+    "browser/audio::set-master",
+    "browser/input::poll",
+    "browser/storage::delete",
+    "browser/storage::get",
+    "browser/storage::set",
+    "browser/window::close",
+    "browser/window::info",
+    "browser/window::open",
     "core/gc-low::pin",
     "core/gc-low::plan",
     "core/gc-low::purge",

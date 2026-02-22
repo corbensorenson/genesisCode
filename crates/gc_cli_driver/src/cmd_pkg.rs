@@ -92,6 +92,7 @@ pub(super) fn cmd_pkg(
             | PkgCmd::Remove { .. }
             | PkgCmd::Migrate { .. }
             | PkgCmd::Run { .. }
+            | PkgCmd::Build { .. }
             | PkgCmd::Test { .. }
             | PkgCmd::SelfOptimize { .. }
             | PkgCmd::Trace { .. }
@@ -429,6 +430,14 @@ fn cmd_pkg_local_workspace_ops(
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/new", e))?,
         ),
+        PkgCmd::Build {
+            pkg,
+            target,
+            out_dir,
+        } => Some(
+            pkg_workspace_ops::handle_build(pkg, target, out_dir, frontend.clone())
+                .map_err(|e| cli_err(EX_PARSE, "pkg/build", e))?,
+        ),
         PkgCmd::Remove { name, lock } => Some(
             pkg_workspace_ops::handle_remove(name, lock)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/remove", e))?,
@@ -693,6 +702,7 @@ fn cmd_pkg_local_workspace_ops(
         String::new()
     } else {
         extract_pkg_lock_hash(&value_v)
+            .or_else(|| extract_pkg_export_bundle_hash(&value_v))
             .map(|h| format!("{h}\n"))
             .unwrap_or_else(|| format!("{value}\n"))
     };

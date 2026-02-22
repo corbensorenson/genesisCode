@@ -262,6 +262,160 @@ wasi_bridge_response = "{:ok true :status \"ok\" :bridge-op \"host/plugin::comma
 }
 
 #[test]
+fn browser_host_ops_are_replay_deterministic_without_bridge() {
+    let src = r#"
+        (def prog
+          (core/effect::bind
+            (core/effect::perform
+              'browser/window::open
+              {:opts {:height 720 :title "agent-browser" :width 1280}}
+              (fn (open-resp) (core/effect::pure open-resp)))
+            (fn (open-resp)
+              (let ((wid ((core/map::get open-resp) ':window-id)))
+                (core/effect::bind
+                  (core/effect::perform
+                    'browser/storage::set
+                    {:key "scene" :value {:name "intro"}}
+                    (fn (set-resp) (core/effect::pure set-resp)))
+                  (fn (_)
+                    (core/effect::bind
+                      (core/effect::perform
+                        'browser/input::poll
+                        {:max-events 4 :window-id wid}
+                        (fn (poll-resp) (core/effect::pure poll-resp)))
+                      (fn (poll-resp)
+                        (core/effect::bind
+                          (core/effect::perform
+                            'browser/storage::get
+                            {:key "scene"}
+                            (fn (get-resp) (core/effect::pure get-resp)))
+                          (fn (get-resp)
+                            (core/effect::pure
+                              {:get get-resp :open open-resp :poll poll-resp})))))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "browser/window::open",
+  "browser/storage::set",
+  "browser/input::poll",
+  "browser/storage::get"
+]
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 4);
+    assert_eq!(run_out.log.entries[0].op, "browser/window::open");
+    assert_eq!(run_out.log.entries[1].op, "browser/storage::set");
+    assert_eq!(run_out.log.entries[2].op, "browser/input::poll");
+    assert_eq!(run_out.log.entries[3].op, "browser/storage::get");
+
+    let Value::Map(top) = &run_out.value else {
+        panic!("expected run output map");
+    };
+    let Some(Value::Data(Term::Map(open_map))) = top.get(&TermOrdKey(Term::symbol(":open"))) else {
+        panic!("expected :open map");
+    };
+    assert_eq!(
+        open_map.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("browser-first-party-runtime".to_string()))
+    );
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}
+
+#[test]
+fn browser_host_ops_are_replay_deterministic_with_wasi_bridge_profile() {
+    let src = r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform
+               'browser/window::open
+               {:opts {:height 720 :title "bridge-browser" :width 1280}}
+               (fn (x) (core/effect::pure x))))
+            (fn (_open)
+              ((core/effect::bind
+                 (core/effect::perform
+                   'browser/storage::set
+                   {:key "scene" :value {:name "bridge"}}
+                   (fn (x) (core/effect::pure x))))
+               (fn (_set)
+                 (core/effect::perform
+                   'browser/storage::get
+                   {:key "scene"}
+                   (fn (x) (core/effect::pure x))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "browser/window::open",
+  "browser/storage::set",
+  "browser/storage::get"
+]
+
+[op."browser/window::open"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :backend \"bridge-browser\" :window-id \"w-1\"}"
+
+[op."browser/storage::set"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stored true}"
+
+[op."browser/storage::get"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :found true :value {:name \"bridge\"}}"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 3);
+    assert_eq!(run_out.log.entries[0].op, "browser/window::open");
+    assert_eq!(run_out.log.entries[1].op, "browser/storage::set");
+    assert_eq!(run_out.log.entries[2].op, "browser/storage::get");
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}
+
+#[test]
 fn net_and_process_ops_are_replay_deterministic_with_wasi_bridge_profile() {
     let src = r#"
         (def prog

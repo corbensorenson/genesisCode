@@ -166,6 +166,8 @@ CI strict selfhost gates:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
+  - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service> [--out-dir <path>]`
+    emits deterministic immutable deployment bundles with `build_manifest.gc` + `provenance.gc`.
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
@@ -187,6 +189,7 @@ CI strict selfhost gates:
   - ABI/introspection schema: `docs/spec/GCPM_ABI_INDEX_v0.1.md`.
   - Workspace descriptor schema: `docs/spec/GCPM_WORKSPACE_v0.1.md`.
   - Environment realization schema: `docs/spec/GCPM_ENV_v0.1.md`.
+  - Build target bundle schema: `docs/spec/GCPM_BUILD_TARGETS_v0.1.md`.
   - Assurance evidence schemas: `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`.
   - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
 - `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.

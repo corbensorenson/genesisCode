@@ -9,6 +9,280 @@
   ],
   "kind": "genesis/host-abi-schema-index-v0.1",
   "operations": {
+    "browser/audio::enqueue": {
+      "operation": "browser/audio::enqueue",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :queued int ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/audio::set-master": {
+      "operation": "browser/audio::set-master",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":gain",
+            "type": "int"
+          }
+        ],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :gain int ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/input::poll": {
+      "operation": "browser/input::poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":max-events",
+            "type": "int"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":window-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :window-id string :events vector ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/storage::delete": {
+      "operation": "browser/storage::delete",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":key",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :key string :deleted bool ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/storage::get": {
+      "operation": "browser/storage::get",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":key",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :key string :found bool :value term|nil ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/storage::set": {
+      "operation": "browser/storage::set",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":key",
+            "type": "string"
+          },
+          {
+            "name": ":value",
+            "type": "term"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :key string :stored bool ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/window::close": {
+      "operation": "browser/window::close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":window-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :window-id string :closed bool ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/window::info": {
+      "operation": "browser/window::info",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":window-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :window-id string :width int :height int :title string :visible bool :open bool ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "browser/window::open": {
+      "operation": "browser/window::open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":opts",
+            "type": "map"
+          }
+        ],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :window-id string :width int :height int :title string :visible bool ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "core/gc-low::pin": {
       "operation": "core/gc-low::pin",
       "payload": {

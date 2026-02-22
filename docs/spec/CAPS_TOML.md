@@ -162,6 +162,7 @@ Supported keys:
     - `headless` (default): deterministic no-event CI/runtime profile.
     - `interactive`: host-integrated terminal adapter profile (`terminal-host`) for local window/input/audio interactivity.
     - `desktop`: non-terminal desktop adapter profile (`desktop-host`) for local window/input/audio workflows.
+    - `browser`: deterministic browser-host profile (`browser-host`) for wasm/browser-aligned window/input/audio behavior.
 - `gpu_backend` (string): optional backend selector for first-party GPU runtime domains (`gpu/compute::*`, `gfx/gpu::*`).
   - supported values:
     - `first-party-runtime` (default): deterministic in-memory runtime backend.

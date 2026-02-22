@@ -1,0 +1,36 @@
+(def core/browser/window::open
+  (fn (opts) ((core/caps::perform (quote browser/window::open)) {:opts opts})))
+
+(def core/browser/window::close
+  (fn (window-id)
+    ((core/caps::perform (quote browser/window::close))
+      {:window-id window-id})))
+
+(def core/browser/window::info
+  (fn (window-id)
+    ((core/caps::perform (quote browser/window::info))
+      {:window-id window-id})))
+
+(def core/browser/input::poll
+  (fn (window-id)
+    (fn (max-events)
+      ((core/caps::perform (quote browser/input::poll))
+        {:window-id window-id :max-events max-events}))))
+
+(def core/browser/audio::set-master
+  (fn (gain) ((core/caps::perform (quote browser/audio::set-master)) {:gain gain})))
+
+(def core/browser/audio::enqueue
+  (fn (payload) ((core/caps::perform (quote browser/audio::enqueue)) payload)))
+
+(def core/browser/storage::get
+  (fn (key) ((core/caps::perform (quote browser/storage::get)) {:key key})))
+
+(def core/browser/storage::set
+  (fn (key)
+    (fn (value)
+      ((core/caps::perform (quote browser/storage::set))
+        {:key key :value value}))))
+
+(def core/browser/storage::delete
+  (fn (key) ((core/caps::perform (quote browser/storage::delete)) {:key key})))

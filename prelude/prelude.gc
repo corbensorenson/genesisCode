@@ -941,6 +941,79 @@
             :to to})
           (fn (resp) (core/effect::pure resp)))))))
 
+(def core/db::connect
+  (fn (target)
+    (((core/effect::perform (quote io/db::connect)) {:target target})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::tx-begin
+  (fn (connection-id)
+    (((core/effect::perform (quote io/db::tx-begin)) {:connection-id connection-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::query
+  (fn (connection-id)
+    (fn (query-class)
+      (fn (query)
+        (fn (params)
+          (((core/effect::perform (quote io/db::query))
+            {
+              :connection-id connection-id
+              :params params
+              :query query
+              :query-class query-class})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/db::exec
+  (fn (connection-id)
+    (fn (query-class)
+      (fn (statement)
+        (fn (params)
+          (((core/effect::perform (quote io/db::exec))
+            {
+              :connection-id connection-id
+              :params params
+              :query-class query-class
+              :statement statement})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/db::tx-commit
+  (fn (tx-id)
+    (((core/effect::perform (quote io/db::tx-commit)) {:tx-id tx-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::tx-rollback
+  (fn (tx-id)
+    (((core/effect::perform (quote io/db::tx-rollback)) {:tx-id tx-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::kv-open
+  (fn (target)
+    (((core/effect::perform (quote io/db::kv-open)) {:target target})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::kv-get
+  (fn (store-id)
+    (fn (key)
+      (((core/effect::perform (quote io/db::kv-get))
+        {:key key :store-id store-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/db::kv-put
+  (fn (store-id)
+    (fn (key)
+      (fn (value)
+        (((core/effect::perform (quote io/db::kv-put))
+          {:key key :store-id store-id :value value})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/db::kv-delete
+  (fn (store-id)
+    (fn (key)
+      (((core/effect::perform (quote io/db::kv-delete))
+        {:key key :store-id store-id})
+        (fn (resp) (core/effect::pure resp))))))
+
 (def core/net::dns-resolve
   (fn (name)
     (((core/effect::perform (quote io/net::dns-resolve)) {:name name})
@@ -949,6 +1022,16 @@
 (def core/net::tcp-open
   (fn (remote)
     (((core/effect::perform (quote io/net::tcp-open)) {:remote remote})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-listen
+  (fn (local)
+    (((core/effect::perform (quote io/net::tcp-listen)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-accept
+  (fn (listener-id)
+    (((core/effect::perform (quote io/net::tcp-accept)) {:listener-id listener-id})
       (fn (resp) (core/effect::pure resp)))))
 
 (def core/net::tcp-send
@@ -998,6 +1081,31 @@
   (fn (url)
     (((core/effect::perform (quote io/net::ws-open)) {:url url})
       (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::http-listen
+  (fn (local)
+    (((core/effect::perform (quote io/net::http-listen)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::http-respond
+  (fn (listener-id)
+    (fn (request-id)
+      (fn (status)
+        (fn (body)
+          (((core/effect::perform (quote io/net::http-respond))
+            {
+              :body body
+              :listener-id listener-id
+              :request-id request-id
+              :status status})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/net::ws-accept
+  (fn (listener-id)
+    (fn (request-id)
+      (((core/effect::perform (quote io/net::ws-accept))
+        {:listener-id listener-id :request-id request-id})
+        (fn (resp) (core/effect::pure resp))))))
 
 (def core/net::ws-send
   (fn (stream-id)
@@ -1070,27 +1178,47 @@
     (((core/effect::perform (quote sys/time::now)) {})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/plugin::typed-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote host/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
+
 (def core/plugin::command
   (fn (plugin)
     (fn (command)
       (fn (payload)
-        (((core/effect::perform (quote host/plugin::command))
-          {
-            :command command
-            :payload payload
-            :plugin plugin})
-          (fn (resp) (core/effect::pure resp)))))))
+        (((((core/plugin::typed-command plugin) command) nil) nil) payload)))))
+
+(def core/plugin::typed-editor-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote editor/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
 
 (def core/plugin::editor-command
   (fn (plugin)
     (fn (command)
       (fn (payload)
-        (((core/effect::perform (quote editor/plugin::command))
-          {
-            :command command
-            :payload payload
-            :plugin plugin})
-          (fn (resp) (core/effect::pure resp)))))))
+        (((((core/plugin::typed-editor-command plugin) command) nil) nil) payload)))))
 
 (def core/pkg::load-lock
   (fn (lock)
@@ -2203,6 +2331,43 @@
 
 (def core/gfx/audio::set-master
   (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))
+
+(def core/browser/window::open
+  (fn (opts) ((core/caps::perform (quote browser/window::open)) {:opts opts})))
+
+(def core/browser/window::close
+  (fn (window-id)
+    ((core/caps::perform (quote browser/window::close))
+      {:window-id window-id})))
+
+(def core/browser/window::info
+  (fn (window-id)
+    ((core/caps::perform (quote browser/window::info))
+      {:window-id window-id})))
+
+(def core/browser/input::poll
+  (fn (window-id)
+    (fn (max-events)
+      ((core/caps::perform (quote browser/input::poll))
+        {:window-id window-id :max-events max-events}))))
+
+(def core/browser/audio::set-master
+  (fn (gain) ((core/caps::perform (quote browser/audio::set-master)) {:gain gain})))
+
+(def core/browser/audio::enqueue
+  (fn (payload) ((core/caps::perform (quote browser/audio::enqueue)) payload)))
+
+(def core/browser/storage::get
+  (fn (key) ((core/caps::perform (quote browser/storage::get)) {:key key})))
+
+(def core/browser/storage::set
+  (fn (key)
+    (fn (value)
+      ((core/caps::perform (quote browser/storage::set))
+        {:key key :value value}))))
+
+(def core/browser/storage::delete
+  (fn (key) ((core/caps::perform (quote browser/storage::delete)) {:key key})))
 
 (def core/gfx/ui::node
   (fn (kind)
@@ -4526,16 +4691,26 @@
         (((core/editor/plugin::call plugin) (quote editor/plugin::command))
           {:command command :payload payload})))))
 
+(def core/editor/plugin::typed-host-command
+  (fn (plugin)
+    (fn (command)
+      (fn (request-schema-id)
+        (fn (response-schema-id)
+          (fn (payload)
+            (((core/effect::perform (quote editor/plugin::command))
+              {
+                :command command
+                :payload payload
+                :plugin plugin
+                :request-schema-id request-schema-id
+                :response-schema-id response-schema-id})
+              (fn (resp) (core/effect::pure resp)))))))))
+
 (def core/editor/plugin::host-command
   (fn (plugin)
     (fn (command)
       (fn (payload)
-        (((core/effect::perform (quote editor/plugin::command))
-          {
-            :command command
-            :payload payload
-            :plugin plugin})
-          (fn (resp) (core/effect::pure resp)))))))
+        (((((core/editor/plugin::typed-host-command plugin) command) nil) nil) payload)))))
 
 (def core/editor/agent::session-empty
   (fn (agent-id)

@@ -11,6 +11,7 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 required_modules=(
+  "10_browser_host.gc"
   "30_service_orchestration.gc"
   "31_data_pipeline.gc"
   "32_network_workflow.gc"
@@ -60,5 +61,7 @@ check_ref "examples/agent_gpu_compute_workflow/workflow_run.gc" "core/kit/pipeli
 check_ref "examples/agent_network_process_workflow/workflow_run.gc" "core/kit/network::run-http-process"
 check_ref "examples/agent_long_running_gfx_loop_workflow/workflow_run.gc" "core/kit/game::run-fixed-loop"
 check_ref "examples/agent_service_workflow/workflow.sh" "core/kit/service::status-v1"
+check_ref "examples/agent_browser_runtime_workflow/workflow_run.gc" "browser/window::open"
+check_ref "examples/agent_deploy_bundle_workflow/workflow.sh" "gcpm --caps"
 
 echo "domain-kit-workflows: ok"

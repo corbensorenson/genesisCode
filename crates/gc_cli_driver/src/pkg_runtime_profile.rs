@@ -262,7 +262,10 @@ fn runtime_probe_term(op: &str, probe: RuntimeProbeTrace, budget_us: u64, budget
                 TermOrdKey(Term::symbol(":budget-us")),
                 Term::Int((budget_us as i64).into()),
             ),
-            (TermOrdKey(Term::symbol(":budget-ok")), Term::Bool(budget_ok)),
+            (
+                TermOrdKey(Term::symbol(":budget-ok")),
+                Term::Bool(budget_ok),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -288,7 +291,10 @@ fn io_probe_term(probe: IoProbeTrace, budget_us: u64, budget_ok: bool) -> Term {
                 TermOrdKey(Term::symbol(":budget-us")),
                 Term::Int((budget_us as i64).into()),
             ),
-            (TermOrdKey(Term::symbol(":budget-ok")), Term::Bool(budget_ok)),
+            (
+                TermOrdKey(Term::symbol(":budget-ok")),
+                Term::Bool(budget_ok),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -335,8 +341,14 @@ fn regression_term(regression: &RuntimeRegressionSummary) -> Term {
                     .map(|v| Term::Int((v as i64).into()))
                     .unwrap_or(Term::symbol(":none")),
             ),
-            (TermOrdKey(Term::symbol(":task-ok")), Term::Bool(regression.task_ok)),
-            (TermOrdKey(Term::symbol(":io-ok")), Term::Bool(regression.io_ok)),
+            (
+                TermOrdKey(Term::symbol(":task-ok")),
+                Term::Bool(regression.task_ok),
+            ),
+            (
+                TermOrdKey(Term::symbol(":io-ok")),
+                Term::Bool(regression.io_ok),
+            ),
             (
                 TermOrdKey(Term::symbol(":memory-ok")),
                 Term::Bool(regression.memory_ok),
@@ -349,8 +361,7 @@ fn regression_term(regression: &RuntimeRegressionSummary) -> Term {
 
 fn write_profile_term(path: &Path, profile_term: &Term) -> Result<(), String> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("create {}: {e}", parent.display()))?;
+        std::fs::create_dir_all(parent).map_err(|e| format!("create {}: {e}", parent.display()))?;
     }
     std::fs::write(path, format!("{}\n", gc_coreform::print_term(profile_term)))
         .map_err(|e| format!("write {}: {e}", path.display()))
@@ -358,8 +369,7 @@ fn write_profile_term(path: &Path, profile_term: &Term) -> Result<(), String> {
 
 fn append_runtime_history(path: &Path, entry: RuntimeProfileHistoryEntry) -> Result<(), String> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("create {}: {e}", parent.display()))?;
+        std::fs::create_dir_all(parent).map_err(|e| format!("create {}: {e}", parent.display()))?;
     }
     let json =
         serde_json::to_string(&entry).map_err(|e| format!("serialize runtime history: {e}"))?;
@@ -397,10 +407,14 @@ fn evaluate_runtime_regression(
     let task_p95 = p95_us(history.iter().map(|x| x.task_elapsed_us).collect());
     let io_p95 = p95_us(history.iter().map(|x| x.io_elapsed_us).collect());
     let memory_p95 = p95_us(history.iter().map(|x| x.memory_elapsed_us).collect());
-    let task_ok = within_regression_budget(current.task_elapsed_us, task_p95, max_regression_percent);
+    let task_ok =
+        within_regression_budget(current.task_elapsed_us, task_p95, max_regression_percent);
     let io_ok = within_regression_budget(current.io_elapsed_us, io_p95, max_regression_percent);
-    let memory_ok =
-        within_regression_budget(current.memory_elapsed_us, memory_p95, max_regression_percent);
+    let memory_ok = within_regression_budget(
+        current.memory_elapsed_us,
+        memory_p95,
+        max_regression_percent,
+    );
 
     Ok(RuntimeRegressionSummary {
         history_samples: history.len(),
@@ -538,7 +552,10 @@ fn run_io_store_cycle_probe() -> Result<IoProbeTrace, String> {
 fn io_probe_store_root() -> PathBuf {
     static NEXT_ID: AtomicU64 = AtomicU64::new(0);
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("genesis-runtime-profile-store-{}-{id}", std::process::id()))
+    std::env::temp_dir().join(format!(
+        "genesis-runtime-profile-store-{}-{id}",
+        std::process::id()
+    ))
 }
 
 fn run_memory_pressure_probe() -> Result<RuntimeProbeTrace, String> {

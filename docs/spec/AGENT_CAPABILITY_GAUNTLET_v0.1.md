@@ -51,6 +51,8 @@ The gate requires at least one successful workflow for each:
 - `process_lifecycle`
 - `plugin_runtime`
 - `time_control`
+- `browser_runtime`
+- `deployment`
 
 If any required domain misses its minimum success threshold, the script exits non-zero.
 

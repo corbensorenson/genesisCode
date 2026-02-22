@@ -32,6 +32,9 @@ fn parse_optional_string_or_symbol_field(
     let Some(value) = mm.get(&TermOrdKey(Term::symbol(key))) else {
         return Ok(None);
     };
+    if matches!(value, Term::Nil) {
+        return Ok(None);
+    }
     let trimmed = match value {
         Term::Str(s) | Term::Symbol(s) => s.trim(),
         _ => {
@@ -70,7 +73,8 @@ pub(crate) fn parse_plugin_schema_ids(
     payload: &Term,
     op: &str,
 ) -> Result<PluginSchemaIds, EffectsError> {
-    let request_schema_id = parse_schema_alias(payload, op, ":request-schema-id", ":request-schema")?;
+    let request_schema_id =
+        parse_schema_alias(payload, op, ":request-schema-id", ":request-schema")?;
     let response_schema_id =
         parse_schema_alias(payload, op, ":response-schema-id", ":response-schema")?;
     Ok(PluginSchemaIds {
@@ -95,12 +99,18 @@ fn term_is_string_keyed_map(value: &Term) -> bool {
         .all(|(k, v)| matches!(&k.0, Term::Str(_)) && matches!(v, Term::Str(_)))
 }
 
-fn required_map_field<'a>(map: &'a std::collections::BTreeMap<TermOrdKey, Term>, key: &str) -> Result<&'a Term, String> {
+fn required_map_field<'a>(
+    map: &'a std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+) -> Result<&'a Term, String> {
     map.get(&TermOrdKey(Term::symbol(key)))
         .ok_or_else(|| format!("missing required field `{key}`"))
 }
 
-fn optional_map_field<'a>(map: &'a std::collections::BTreeMap<TermOrdKey, Term>, key: &str) -> Option<&'a Term> {
+fn optional_map_field<'a>(
+    map: &'a std::collections::BTreeMap<TermOrdKey, Term>,
+    key: &str,
+) -> Option<&'a Term> {
     map.get(&TermOrdKey(Term::symbol(key)))
 }
 
@@ -187,7 +197,9 @@ fn validate_result_error_map(error_value: &Term) -> Result<(), String> {
 
 fn validate_result_response(response: &Term) -> Result<(), String> {
     let Term::Map(mm) = response else {
-        return Err(format!("schema {PLUGIN_RESPONSE_RESULT_V1} requires map response"));
+        return Err(format!(
+            "schema {PLUGIN_RESPONSE_RESULT_V1} requires map response"
+        ));
     };
     let ok_term = required_map_field(mm, ":ok")?;
     let Term::Bool(ok) = ok_term else {
@@ -206,7 +218,9 @@ fn validate_result_response(response: &Term) -> Result<(), String> {
 
 fn validate_bytes_response(response: &Term) -> Result<(), String> {
     let Term::Map(mm) = response else {
-        return Err(format!("schema {PLUGIN_RESPONSE_BYTES_V1} requires map response"));
+        return Err(format!(
+            "schema {PLUGIN_RESPONSE_BYTES_V1} requires map response"
+        ));
     };
     let ok_term = required_map_field(mm, ":ok")?;
     let Term::Bool(ok) = ok_term else {
@@ -224,7 +238,10 @@ fn validate_bytes_response(response: &Term) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn validate_plugin_response_schema(schema_id: &str, response: &Term) -> Result<(), String> {
+pub(crate) fn validate_plugin_response_schema(
+    schema_id: &str,
+    response: &Term,
+) -> Result<(), String> {
     match schema_id {
         PLUGIN_RESPONSE_RESULT_V1 => validate_result_response(response),
         PLUGIN_RESPONSE_BYTES_V1 => validate_bytes_response(response),

@@ -1,0 +1,6 @@
+(def prog
+  (core/effect::perform
+    'browser/window::open
+    {:opts {:height 720 :title "agent-browser" :width 1280}}
+    (fn (open-resp) (core/effect::pure open-resp))))
+prog

@@ -13,6 +13,7 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, LoggedResp};
 use crate::policy::{CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
+use crate::runner_browser_host::{BrowserHostRuntime, browser_host_call};
 use crate::runner_editor_host::{EditorHostRuntime, editor_host_call};
 use crate::runner_gc_payload::{
     payload_gc_depth, payload_gc_include_lock, payload_gc_include_refs, payload_gc_lock,
@@ -169,6 +170,7 @@ pub fn run(
     let mut task_budget_state = TaskBudgetState::default();
     let mut task_runtime = TaskRuntime::default();
     let mut gfx_runtime = GfxHostRuntime::default();
+    let mut browser_runtime = BrowserHostRuntime::default();
     let mut gpu_runtime = GpuHostRuntime::default();
     let mut editor_runtime = EditorHostRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
@@ -233,6 +235,14 @@ pub fn run(
                         gfx_host_call(&mut gfx_runtime, &req.op, &req.payload, pol, proto.error)
                     {
                         gfx_resp
+                    } else if let Some(browser_resp) = browser_host_call(
+                        &mut browser_runtime,
+                        &req.op,
+                        &req.payload,
+                        pol,
+                        proto.error,
+                    ) {
+                        browser_resp
                     } else if let Some(gpu_resp) =
                         gpu_host_call(&mut gpu_runtime, &req.op, &req.payload, pol, proto.error)
                     {

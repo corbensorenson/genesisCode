@@ -22,7 +22,8 @@ Compatibility notes:
 - Host-integrated runtime domains now support first-party backends by default:
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
-  - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile)
+  - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
+  - `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` (deterministic browser host runtime baseline; explicit bridge policy may override)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
   - `io/db::connect`, `io/db::tx-begin`, `io/db::query`, `io/db::exec`, `io/db::tx-commit`, `io/db::tx-rollback`
@@ -59,6 +60,15 @@ Compatibility notes:
 ## Stable Operation Surface (v0.2)
 
 <!-- HOST_ABI_OPS_BEGIN -->
+- `browser/audio::enqueue`
+- `browser/audio::set-master`
+- `browser/input::poll`
+- `browser/storage::delete`
+- `browser/storage::get`
+- `browser/storage::set`
+- `browser/window::close`
+- `browser/window::info`
+- `browser/window::open`
 - `core/gc-low::pin`
 - `core/gc-low::plan`
 - `core/gc-low::purge`
@@ -225,6 +235,32 @@ Machine-readable indices for agent planning:
 CI drift check:
 
 - `scripts/check_capability_indices.sh`
+
+## Browser Host Capability Contracts
+
+- `browser/window::open`
+  - Optional payload: `:opts` map (`:width` int, `:height` int, `:title` string, `:visible` bool).
+  - First-party runtime returns deterministic `:window-id` plus window metadata.
+- `browser/window::close`
+  - Required payload field: `:window-id` (string).
+- `browser/window::info`
+  - Required payload field: `:window-id` (string).
+- `browser/input::poll`
+  - Required payload field: `:window-id` (string).
+  - Optional payload field: `:max-events` (int).
+  - First-party runtime emits deterministic browser event envelopes (`:animation-frame`).
+- `browser/audio::set-master`
+  - Optional payload field: `:gain` (int, defaults to `1`).
+- `browser/audio::enqueue`
+  - Payload map accepted; first-party runtime increments deterministic queue counters.
+- `browser/storage::set`
+  - Required payload fields: `:key` (string), `:value` (term).
+- `browser/storage::get`
+  - Required payload field: `:key` (string).
+  - Response map includes `:found` bool and `:value` term|nil.
+- `browser/storage::delete`
+  - Required payload field: `:key` (string).
+  - Response map includes `:deleted` bool.
 
 ## Network/Process Capability Contracts
 

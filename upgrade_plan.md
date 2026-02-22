@@ -1,20 +1,13 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-02-21
+Last updated: 2026-02-22
 
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 7
+Open checklist items: 4
 
 ## Platform + Runtime Surface (P1)
-
-- [ ] P1.1 Add browser runtime host profile + ABI family for wasm-host execution
-  - Evidence: runtime profiles are currently `headless|interactive|desktop` (`docs/spec/CAPS_TOML.md`, `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`).
-  - Exit criteria:
-    - Add `browser` first-party profile with deterministic policy contract.
-    - Add browser host ABI families (window/input/audio/storage baseline).
-    - Add native/WASM bridge parity tests and schema index entries.
 
 - [ ] P1.2 Add first-class WebXR support (`gfx/xr::*`) with deterministic bridge semantics
   - Evidence: host ABI index has no XR family (`docs/spec/HOST_ABI_INDEX_v0.1.json` contains no `gfx/xr::*` operations).
@@ -22,20 +15,6 @@ Open checklist items: 7
     - Introduce `gfx/xr::session-open|frame-poll|input-poll|submit-frame|session-close` contracts.
     - Add prelude wrappers + domain kit for XR render loop/state contracts.
     - Add deterministic replay/parity checks for XR frame/input streams.
-
-- [ ] P1.5 Add deterministic deployment/bundle targets to `gcpm`
-  - Evidence: CLI/gcpm command surface focuses on build/test/pack/run/env/assurance but not targeted web/desktop/service deployment bundles (`docs/spec/CLI.md`).
-  - Exit criteria:
-    - Add `gcpm build --target <web|desktop|service>` with stable manifest schema.
-    - Emit reproducible target bundles + provenance metadata.
-    - Add CI validation for bundle reproducibility and schema contracts.
-
-- [ ] P1.6 Expand agent capability gauntlet domain coverage for missing product surfaces
-  - Evidence: required gauntlet domains now include inbound-server and durable-data coverage but still omit browser runtime, XR, and deployment (`docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`).
-  - Exit criteria:
-    - Extend gauntlet required domains and reference workflows for new families.
-    - Keep native/WASI parity gate coverage for all added domains.
-    - Enforce release/full profile failure on missing domain successes.
 
 ## AI-First Authoring + Optimization (P2)
 
@@ -47,7 +26,7 @@ Open checklist items: 7
     - Add domain-kit workflows for asset import/build pipelines.
 
 - [ ] P2.7 Add full conformance lanes for browser/XR/server/data/deploy workflows
-  - Evidence: current agent gauntlet + parity lanes cover 12 domains, with no browser/XR/deployment domain lanes yet.
+  - Evidence: current gauntlet/parity lanes now cover browser + deployment + server/data domains, but XR workflow/parity lanes and domain-specific runtime-budget reports are still missing.
   - Exit criteria:
     - Add new workflow suites and report contracts for each new domain.
     - Integrate into `prepush-standard` and `release-full` profile gates.

@@ -346,6 +346,38 @@ first_party_profile = "desktop"
     )
     .expect("desktop caps");
 
+    let browser_pol = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gfx/window::create-surface",
+  "gfx/window::request-redraw",
+  "gfx/window::surface-info",
+  "gfx/input::poll-events",
+  "gfx/audio::set-master",
+  "gfx/audio::enqueue"
+]
+
+[op."gfx/window::create-surface"]
+first_party_profile = "browser"
+
+[op."gfx/window::request-redraw"]
+first_party_profile = "browser"
+
+[op."gfx/window::surface-info"]
+first_party_profile = "browser"
+
+[op."gfx/input::poll-events"]
+first_party_profile = "browser"
+
+[op."gfx/audio::set-master"]
+first_party_profile = "browser"
+
+[op."gfx/audio::enqueue"]
+first_party_profile = "browser"
+"#,
+    )
+    .expect("browser caps");
+
     #[cfg(not(target_os = "wasi"))]
     let expected_interactive_backend = "terminal-host";
     #[cfg(target_os = "wasi")]
@@ -400,6 +432,23 @@ first_party_profile = "desktop"
         Some(&Term::Bool(false))
     );
 
+    let browser_create_v = run_once(&browser_pol, create_src);
+    let Value::Data(Term::Map(browser_create_resp)) = browser_create_v else {
+        panic!("expected browser create-surface map response");
+    };
+    assert_eq!(
+        browser_create_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("browser-first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        browser_create_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("browser-host".to_string()))
+    );
+    assert_eq!(
+        browser_create_resp.get(&TermOrdKey(Term::symbol(":created"))),
+        Some(&Term::Bool(true))
+    );
+
     let audio_src = r#"
         (def prog
           (core/effect::perform
@@ -434,6 +483,19 @@ first_party_profile = "desktop"
         Some(&Term::Str("desktop-host".to_string()))
     );
 
+    let browser_audio_v = run_once(&browser_pol, audio_src);
+    let Value::Data(Term::Map(browser_audio_resp)) = browser_audio_v else {
+        panic!("expected browser audio set-master map response");
+    };
+    assert_eq!(
+        browser_audio_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("browser-first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        browser_audio_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("browser-host".to_string()))
+    );
+
     let poll_src = r#"
         (def prog
           ((core/effect::bind (core/effect::perform
@@ -457,6 +519,7 @@ first_party_profile = "desktop"
     let headless_poll_v = run_once(&headless_pol, poll_src);
     let interactive_poll_v = run_once(&interactive_pol, poll_src);
     let desktop_poll_v = run_once(&desktop_pol, poll_src);
+    let browser_poll_v = run_once(&browser_pol, poll_src);
 
     let Value::Data(Term::Map(headless_poll_resp)) = headless_poll_v else {
         panic!("expected headless poll map response");
@@ -466,6 +529,9 @@ first_party_profile = "desktop"
     };
     let Value::Data(Term::Map(desktop_poll_resp)) = desktop_poll_v else {
         panic!("expected desktop poll map response");
+    };
+    let Value::Data(Term::Map(browser_poll_resp)) = browser_poll_v else {
+        panic!("expected browser poll map response");
     };
     assert_eq!(
         headless_poll_resp.get(&TermOrdKey(Term::symbol(":backend"))),
@@ -486,6 +552,14 @@ first_party_profile = "desktop"
     assert_eq!(
         desktop_poll_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
         Some(&Term::Str("desktop-host".to_string()))
+    );
+    assert_eq!(
+        browser_poll_resp.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("browser-first-party-runtime".to_string()))
+    );
+    assert_eq!(
+        browser_poll_resp.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("browser-host".to_string()))
     );
 
     let Some(Term::Vector(headless_events)) =
@@ -525,6 +599,16 @@ first_party_profile = "desktop"
     assert!(
         !desktop_events.is_empty(),
         "desktop first-party profile should include at least redraw event after request-redraw"
+    );
+
+    let Some(Term::Vector(browser_events)) =
+        browser_poll_resp.get(&TermOrdKey(Term::symbol(":events")))
+    else {
+        panic!("browser poll :events missing");
+    };
+    assert!(
+        !browser_events.is_empty(),
+        "browser first-party profile should include at least redraw event after request-redraw"
     );
 }
 

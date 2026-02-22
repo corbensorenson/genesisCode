@@ -18,6 +18,7 @@ This document freezes the first AI-agent-facing contract for GenesisCode project
 - workspace lock lifecycle (`init`, `add`, `lock`, `update`, `install`)
 - lock hygiene (`remove`, `doctor`, `verify`)
 - dependency inspection (`list`, `info`)
+- deterministic deployment bundles (`build --target <web|desktop|service>`)
 - ABI/introspection export for autonomous planning (`abi`)
 - deterministic diagnostics (`doctor`)
 - workspace task execution (`run`)
@@ -44,6 +45,12 @@ Workflow-level `data.report` artifacts for lock/update/publish are frozen in
 - `pkg` and `gcpm` command aliases MUST produce byte-equivalent lockfile output for identical inputs.
 - Effectful operations must keep deterministic `.gclog` ordering and replay behavior unchanged across aliases.
 - `gcpm run` `cmd="contract"` tasks MUST be hash-pinned (`--contract-h <hex64>`) and fail closed on file hash mismatch before execution.
+- `gcpm build --target <web|desktop|service>` MUST emit immutable bundle artifacts:
+  - `<out-dir>/<target>/<bundle-h>/build_manifest.gc`
+  - `<out-dir>/<target>/<bundle-h>/provenance.gc`
+  - `<out-dir>/<target>/<bundle-h>/package.toml`
+  - `<out-dir>/<target>/<bundle-h>/package_artifact.txt`
+  where `bundle-h` is BLAKE3 over canonical `build_manifest.gc` bytes.
 
 ## Acceptance
 

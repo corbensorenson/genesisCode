@@ -7,6 +7,7 @@ Canonical bundle for GenesisCode project/package manager (`gcpm`) contracts.
 - `docs/spec/GCPM_CLI_CONTRACT_v0.1.md`
 - `docs/spec/GCPM_WORKSPACE_v0.1.md`
 - `docs/spec/GCPM_ENV_v0.1.md`
+- `docs/spec/GCPM_BUILD_TARGETS_v0.1.md`
 - `docs/spec/GCPM_DIAGNOSTICS_v0.1.md`
 - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`
 - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`

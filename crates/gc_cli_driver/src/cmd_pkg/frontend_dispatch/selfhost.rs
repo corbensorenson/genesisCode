@@ -14,6 +14,7 @@ pub(super) fn build(
         | PkgCmd::Remove { .. }
         | PkgCmd::Migrate { .. }
         | PkgCmd::Run { .. }
+        | PkgCmd::Build { .. }
         | PkgCmd::Test { .. }
         | PkgCmd::SelfOptimize { .. }
         | PkgCmd::Abi { .. }

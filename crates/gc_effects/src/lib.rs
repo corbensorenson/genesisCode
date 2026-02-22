@@ -4,6 +4,7 @@ mod log;
 mod policy;
 mod refs;
 mod runner;
+mod runner_browser_host;
 mod runner_editor_host;
 mod runner_gc_payload;
 mod runner_gfx_host;

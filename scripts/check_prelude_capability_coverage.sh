@@ -7,11 +7,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PRELUDE_FILES=(
+  "prelude/modules/10_browser_host.gc"
   "prelude/modules/10_gfx.gc"
   "prelude/modules/11_gpu_compute.gc"
   "prelude/modules/20_editor.gc"
 )
-RUNNER_FILE="crates/gc_effects/src/runner_capability_dispatch.rs"
+RUNNER_FILES=(
+  "crates/gc_effects/src/runner_capability_dispatch.rs"
+  "crates/gc_effects/src/runner_browser_host.rs"
+)
 
 for f in "${PRELUDE_FILES[@]}"; do
   if [[ ! -f "$f" ]]; then
@@ -19,10 +23,12 @@ for f in "${PRELUDE_FILES[@]}"; do
     exit 1
   fi
 done
-if [[ ! -f "$RUNNER_FILE" ]]; then
-  echo "prelude-capability-coverage: missing runner file: $RUNNER_FILE"
-  exit 1
-fi
+for f in "${RUNNER_FILES[@]}"; do
+  if [[ ! -f "$f" ]]; then
+    echo "prelude-capability-coverage: missing runner file: $f"
+    exit 1
+  fi
+done
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -33,17 +39,17 @@ MISSING="$TMP_DIR/missing.txt"
 
 extract_wrapper_ops() {
   if command -v rg >/dev/null 2>&1; then
-    rg -o --no-filename --pcre2 '\(quote\s+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
+    rg -o --no-filename --pcre2 '\(quote\s+(browser/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
   else
-    grep -Eho '\(quote[[:space:]]+(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
+    grep -Eho '\(quote[[:space:]]+(browser/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)\)' "${PRELUDE_FILES[@]}"
   fi
 }
 
 extract_runner_ops() {
   if command -v rg >/dev/null 2>&1; then
-    rg -o --no-filename --pcre2 '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "$RUNNER_FILE"
+    rg -o --no-filename --pcre2 '"(browser/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "${RUNNER_FILES[@]}"
   else
-    grep -Eho '"(gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "$RUNNER_FILE"
+    grep -Eho '"(browser/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gfx/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+|gpu/compute::[[:alnum:]_.:/-]+|editor/[[:alnum:]_.:/-]+::[[:alnum:]_.:/-]+)"' "${RUNNER_FILES[@]}"
   fi
 }
 
@@ -52,7 +58,7 @@ extract_wrapper_ops \
   | sort -u >"$WRAPPER_OPS"
 
 if [[ ! -s "$WRAPPER_OPS" ]]; then
-  echo "prelude-capability-coverage: no gfx/gpu-compute/editor capability wrapper ops found"
+  echo "prelude-capability-coverage: no browser/gfx/gpu-compute/editor capability wrapper ops found"
   exit 1
 fi
 
@@ -61,7 +67,7 @@ extract_runner_ops \
   | sort -u >"$RUNNER_OPS"
 
 if [[ ! -s "$RUNNER_OPS" ]]; then
-  echo "prelude-capability-coverage: no gfx/gpu-compute/editor ops found in capability dispatch"
+  echo "prelude-capability-coverage: no browser/gfx/gpu-compute/editor ops found in runtime dispatch"
   exit 1
 fi
 

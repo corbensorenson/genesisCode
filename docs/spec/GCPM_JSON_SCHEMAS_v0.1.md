@@ -38,6 +38,7 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 - `gcpm remove` -> `genesis/pkg-remove-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-v0.1`
 - `gcpm update` -> `genesis/pkg-update-v0.1`
+- `gcpm build --target <web|desktop|service>` -> `genesis/pkg-build-v0.1` (schema: `docs/spec/GCPM_BUILD_TARGETS_v0.1.md`)
 - `gcpm run <task>` -> forwards to task-target command `kind`:
   - `test` -> `genesis/test-v0.2`
   - `pack|build` -> `genesis/pack-v0.2`

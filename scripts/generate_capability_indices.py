@@ -25,6 +25,7 @@ def stable_ops_by_family(ops: list[str]) -> dict[str, list[str]]:
 def extract_host_ops(root: pathlib.Path) -> list[str]:
     files = [
         root / "crates/gc_effects/src/runner_capability_dispatch.rs",
+        root / "crates/gc_effects/src/runner_browser_host.rs",
         root / "crates/gc_effects/src/runner_task.rs",
         root / "crates/gc_effects/src/runner_cap_pkg_low.rs",
         root / "crates/gc_effects/src/runner_cap_vcs_low.rs",
@@ -95,6 +96,93 @@ def apply_schema_override(entry: dict[str, object], override: dict[str, object])
 
 def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
     return {
+        "browser/window::open": {
+            "payload": {
+                "required_fields": [],
+                "optional_fields": [field(":opts", "map")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :window-id string :width int :height int :title string :visible bool ...}",
+                }
+            },
+        },
+        "browser/window::close": {
+            "payload": {
+                "required_fields": [field(":window-id", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :window-id string :closed bool ...}"}
+            },
+        },
+        "browser/window::info": {
+            "payload": {
+                "required_fields": [field(":window-id", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :window-id string :width int :height int :title string :visible bool :open bool ...}",
+                }
+            },
+        },
+        "browser/input::poll": {
+            "payload": {
+                "required_fields": [field(":window-id", "string", ["non-empty"])],
+                "optional_fields": [field(":max-events", "int")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :window-id string :events vector ...}"}
+            },
+        },
+        "browser/audio::set-master": {
+            "payload": {
+                "required_fields": [],
+                "optional_fields": [field(":gain", "int")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :gain int ...}"}
+            },
+        },
+        "browser/audio::enqueue": {
+            "payload": {
+                "required_fields": [],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :queued int ...}"}
+            },
+        },
+        "browser/storage::set": {
+            "payload": {
+                "required_fields": [field(":key", "string", ["non-empty"]), field(":value", "term")],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :key string :stored bool ...}"}
+            },
+        },
+        "browser/storage::get": {
+            "payload": {
+                "required_fields": [field(":key", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :key string :found bool :value term|nil ...}"}
+            },
+        },
+        "browser/storage::delete": {
+            "payload": {
+                "required_fields": [field(":key", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :key string :deleted bool ...}"}
+            },
+        },
         "io/fs::read": {
             "payload": {
                 "required_fields": [

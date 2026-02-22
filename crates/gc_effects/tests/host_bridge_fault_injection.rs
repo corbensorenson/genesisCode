@@ -40,8 +40,12 @@ fn run_and_replay_code(src: &str, policy_toml: &str) -> (String, [u8; 32], [u8; 
     )
     .expect("run");
     let run_hash = value_hash(&run_out.value);
-    let code = sealed_error_code(&run_out.value, error_tok)
-        .unwrap_or_else(|| panic!("expected sealed error code, got {}", run_out.value.debug_repr()));
+    let code = sealed_error_code(&run_out.value, error_tok).unwrap_or_else(|| {
+        panic!(
+            "expected sealed error code, got {}",
+            run_out.value.debug_repr()
+        )
+    });
 
     let replay_log = EffectLog::from_term(&run_out.log.to_term()).expect("decode log");
     let mut replay_ctx = EvalCtx::new();
@@ -64,7 +68,9 @@ dd bs=1 count="$req_len" status=none >/dev/null 2>/dev/null || true
 exit 42
 "#;
     fs::write(&bridge_path, bridge_src).expect("write bridge script");
-    let mut perms = fs::metadata(&bridge_path).expect("stat bridge").permissions();
+    let mut perms = fs::metadata(&bridge_path)
+        .expect("stat bridge")
+        .permissions();
     perms.set_mode(0o755);
     fs::set_permissions(&bridge_path, perms).expect("chmod bridge");
     let bridge = bridge_path.display().to_string();
@@ -102,7 +108,10 @@ remote_allow = ["tcp://example.test:443"]
 "#
     );
     let (code, run_hash, replay_hash) = run_and_replay_code(net_src, &net_policy);
-    assert!(code.starts_with("net/bridge-"), "unexpected net code: {code}");
+    assert!(
+        code.starts_with("net/bridge-"),
+        "unexpected net code: {code}"
+    );
     assert_eq!(run_hash, replay_hash, "net fault injection replay mismatch");
 
     let process_src = r#"
@@ -123,7 +132,10 @@ bridge_cmd = "{bridge}"
         code.starts_with("process/bridge-"),
         "unexpected process code: {code}"
     );
-    assert_eq!(run_hash, replay_hash, "process fault injection replay mismatch");
+    assert_eq!(
+        run_hash, replay_hash,
+        "process fault injection replay mismatch"
+    );
 
     let plugin_src = r#"
       (def prog (((core/plugin::command "demo") "run") {:x 1}))
@@ -144,5 +156,8 @@ bridge_cmd = "{bridge}"
         code.starts_with("host/plugin/bridge-"),
         "unexpected plugin code: {code}"
     );
-    assert_eq!(run_hash, replay_hash, "plugin fault injection replay mismatch");
+    assert_eq!(
+        run_hash, replay_hash,
+        "plugin fault injection replay mismatch"
+    );
 }

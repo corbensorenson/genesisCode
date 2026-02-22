@@ -47,6 +47,15 @@ fn parse_coreform_value_map(stdout: &[u8]) -> std::collections::BTreeMap<TermOrd
     m
 }
 
+fn map_string(map: &std::collections::BTreeMap<TermOrdKey, Term>, key: &str) -> String {
+    map.get(&TermOrdKey(Term::symbol(key)))
+        .and_then(|t| match t {
+            Term::Str(s) => Some(s.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("expected string at key `{key}`"))
+}
+
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
     let td = tempfile::tempdir().unwrap();
@@ -131,6 +140,125 @@ policy = "policy:default-v0.1"
     );
     let lock_src = fs::read_to_string(dir.join("genesis.lock")).unwrap();
     assert!(!lock_src.contains("\"dep\" ="));
+}
+
+#[test]
+fn gcpm_build_target_is_reproducible_and_emits_provenance_bundle() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("lib.gc"), "(def mini::x 1)\nmini::x\n").unwrap();
+    fs::write(
+        dir.join("package.toml"),
+        r#"
+name = "mini"
+version = "0.1.0"
+obligations = []
+dependencies = []
+
+[[modules]]
+path = "lib.gc"
+"#,
+    )
+    .unwrap();
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["pack", "--pkg", "package.toml"])
+        .assert()
+        .success();
+
+    let out_a = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "web",
+            "--out-dir",
+            ".genesis/build-targets",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json_a: serde_json::Value = serde_json::from_slice(&out_a).unwrap();
+    assert_eq!(
+        json_a.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/pkg-build-v0.1")
+    );
+    let map_a = parse_coreform_value_map(&out_a);
+    let bundle_root_raw = map_string(&map_a, ":bundle-root");
+    let bundle_root_rel = PathBuf::from(&bundle_root_raw);
+    let bundle_root = if bundle_root_rel.is_absolute() {
+        bundle_root_rel
+    } else {
+        dir.join(bundle_root_rel)
+    };
+    let bundle_h = map_string(&map_a, ":bundle-h");
+    assert_eq!(map_string(&map_a, ":target"), "web".to_string());
+    assert!(bundle_root.join("build_manifest.gc").is_file());
+    assert!(bundle_root.join("provenance.gc").is_file());
+    assert!(bundle_root.join("package.toml").is_file());
+    assert!(bundle_root.join("package_artifact.txt").is_file());
+    let manifest_before = fs::read_to_string(bundle_root.join("build_manifest.gc")).unwrap();
+    let provenance_before = fs::read_to_string(bundle_root.join("provenance.gc")).unwrap();
+
+    let out_b = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "build",
+            "--pkg",
+            "package.toml",
+            "--target",
+            "web",
+            "--out-dir",
+            ".genesis/build-targets",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let map_b = parse_coreform_value_map(&out_b);
+    assert_eq!(map_string(&map_b, ":bundle-h"), bundle_h);
+    assert_eq!(map_string(&map_b, ":bundle-root"), bundle_root_raw);
+
+    let manifest_after = fs::read_to_string(bundle_root.join("build_manifest.gc")).unwrap();
+    let provenance_after = fs::read_to_string(bundle_root.join("provenance.gc")).unwrap();
+    assert_eq!(manifest_before, manifest_after);
+    assert_eq!(provenance_before, provenance_after);
+
+    let manifest_t = gc_coreform::parse_term(&manifest_before).unwrap();
+    let Term::Map(manifest_m) = manifest_t else {
+        panic!("build manifest must be map");
+    };
+    assert_eq!(
+        manifest_m.get(&TermOrdKey(Term::symbol(":type"))),
+        Some(&Term::symbol(":gcpm/build-manifest"))
+    );
+    assert_eq!(
+        manifest_m.get(&TermOrdKey(Term::symbol(":target"))),
+        Some(&Term::Str("web".to_string()))
+    );
+
+    let provenance_t = gc_coreform::parse_term(&provenance_before).unwrap();
+    let Term::Map(provenance_m) = provenance_t else {
+        panic!("provenance must be map");
+    };
+    assert_eq!(
+        provenance_m.get(&TermOrdKey(Term::symbol(":type"))),
+        Some(&Term::symbol(":gcpm/build-provenance"))
+    );
+    assert_eq!(
+        provenance_m.get(&TermOrdKey(Term::symbol(":bundle-h"))),
+        Some(&Term::Str(bundle_h))
+    );
 }
 
 #[test]
@@ -669,7 +797,10 @@ fn gcpm_profile_runtime_emits_profile_artifact_and_history() {
     assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(true));
 
     let map = parse_coreform_value_map(&out);
-    assert_eq!(map.get(&TermOrdKey(Term::symbol(":ok"))), Some(&Term::Bool(true)));
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
     assert!(map.contains_key(&TermOrdKey(Term::symbol(":task-elapsed-us"))));
     assert!(map.contains_key(&TermOrdKey(Term::symbol(":io-elapsed-us"))));
     assert!(map.contains_key(&TermOrdKey(Term::symbol(":memory-elapsed-us"))));

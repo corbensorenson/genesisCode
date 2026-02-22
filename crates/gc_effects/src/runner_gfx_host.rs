@@ -49,6 +49,7 @@ enum GfxFirstPartyProfile {
     Headless,
     Interactive,
     Desktop,
+    Browser,
 }
 
 impl GfxFirstPartyProfile {
@@ -57,6 +58,7 @@ impl GfxFirstPartyProfile {
             Self::Headless => "headless",
             Self::Interactive => "interactive",
             Self::Desktop => "desktop",
+            Self::Browser => "browser",
         }
     }
 }
@@ -123,6 +125,7 @@ fn first_party_profile(pol: Option<&OpPolicy>) -> GfxFirstPartyProfile {
     match profile.as_str() {
         "interactive" => GfxFirstPartyProfile::Interactive,
         "desktop" => GfxFirstPartyProfile::Desktop,
+        "browser" => GfxFirstPartyProfile::Browser,
         _ => GfxFirstPartyProfile::Headless,
     }
 }
@@ -160,6 +163,7 @@ fn backend_for_profile(profile: &GfxFirstPartyProfile) -> &'static str {
         GfxFirstPartyProfile::Headless => FIRST_PARTY_BACKEND,
         GfxFirstPartyProfile::Interactive => interactive_adapter_name(),
         GfxFirstPartyProfile::Desktop => FIRST_PARTY_BACKEND,
+        GfxFirstPartyProfile::Browser => "browser-first-party-runtime",
     }
 }
 
@@ -168,6 +172,7 @@ fn adapter_for_profile(profile: &GfxFirstPartyProfile) -> &'static str {
         GfxFirstPartyProfile::Headless => HEADLESS_ADAPTER,
         GfxFirstPartyProfile::Interactive => interactive_adapter_name(),
         GfxFirstPartyProfile::Desktop => desktop_adapter_name(),
+        GfxFirstPartyProfile::Browser => "browser-host",
     }
 }
 
@@ -375,12 +380,14 @@ fn first_party_create_surface(
             created = desktop_create_surface(&sid, width, height, &title);
             desktop_query_surface_size(&sid).unwrap_or((width, height))
         }
+        GfxFirstPartyProfile::Browser => (width, height),
         GfxFirstPartyProfile::Headless => (width, height),
     };
     let backend = backend_for_profile(profile).to_string();
     let title_applied = match profile {
         GfxFirstPartyProfile::Interactive => interactive_apply_title(&title),
         GfxFirstPartyProfile::Desktop => desktop_apply_title(&sid, &title),
+        GfxFirstPartyProfile::Browser => true,
         GfxFirstPartyProfile::Headless => true,
     };
     runtime.surfaces.insert(
@@ -567,7 +574,10 @@ fn first_party_poll_events(
                 remaining_slots,
             ));
         }
-    } else if matches!(profile, GfxFirstPartyProfile::Desktop) {
+    } else if matches!(
+        profile,
+        GfxFirstPartyProfile::Desktop | GfxFirstPartyProfile::Browser
+    ) {
         if surface.pending_redraws > 0 {
             surface.pending_redraws -= 1;
             surface.poll_seq = surface.poll_seq.saturating_add(1);
@@ -578,7 +588,7 @@ fn first_party_poll_events(
             ]));
         }
         let remaining_slots = max_events.saturating_sub(events.len());
-        if remaining_slots > 0 {
+        if matches!(profile, GfxFirstPartyProfile::Desktop) && remaining_slots > 0 {
             events.extend(desktop_poll_events(
                 &sid,
                 &mut surface.poll_seq,
@@ -654,6 +664,7 @@ fn first_party_enqueue(
     let bell_applied = match profile {
         GfxFirstPartyProfile::Interactive => interactive_enqueue_audio_bell(),
         GfxFirstPartyProfile::Desktop => desktop_enqueue_audio_bell(),
+        GfxFirstPartyProfile::Browser => false,
         GfxFirstPartyProfile::Headless => false,
     };
     map_term(vec![

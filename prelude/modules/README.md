@@ -16,6 +16,7 @@ Authoring source modules:
 - `00_core_pkg_vcs.gc`
 - `00_core_reachability.gc`
 - `10_gfx.gc`
+- `10_browser_host.gc`
 - `10_gfx_ui_runtime.gc`
 - `10_gfx_runtime_planner.gc`
 - `10_gfx_runtime_trace.gc`

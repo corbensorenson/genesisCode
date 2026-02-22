@@ -12,7 +12,14 @@ fn run_and_replay_hash(src: &str, policy_toml: &str) -> ([u8; 32], [u8; 32], Val
     let mut run_ctx = EvalCtx::new();
     let mut run_env = build_prelude(&mut run_ctx).env;
     let run_prog = eval_module(&mut run_ctx, &mut run_env, &forms).expect("eval run");
-    let run_out = run(&mut run_ctx, &policy, run_prog, h, "task-stress".to_string()).expect("run");
+    let run_out = run(
+        &mut run_ctx,
+        &policy,
+        run_prog,
+        h,
+        "task-stress".to_string(),
+    )
+    .expect("run");
     let run_hash = value_hash(&run_out.value);
     let replay_log = EffectLog::from_term(&run_out.log.to_term()).expect("decode log");
 
@@ -131,8 +138,16 @@ fn task_concurrency_stress_matrix_is_replay_deterministic_under_budget() {
                 _ => None,
             }
         };
-        assert_eq!(read_has(":r1"), Some(true), "channel-path r1 must carry value");
-        assert_eq!(read_has(":r2"), Some(true), "channel-path r2 must carry value");
+        assert_eq!(
+            read_has(":r1"),
+            Some(true),
+            "channel-path r1 must carry value"
+        );
+        assert_eq!(
+            read_has(":r2"),
+            Some(true),
+            "channel-path r2 must carry value"
+        );
         assert_eq!(
             read_has(":r3"),
             Some(false),

@@ -101,6 +101,7 @@ fn gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/pkg-remove-v0.1",
         "genesis/pkg-lock-v0.1",
         "genesis/pkg-update-v0.1",
+        "genesis/pkg-build-v0.1",
         "genesis/test-v0.2",
         "genesis/pack-v0.2",
         "genesis/typecheck-v0.2",

@@ -65,6 +65,16 @@ workflows = [
         "domains": ["graphics"],
     },
     {
+        "name": "agent_browser_runtime_workflow",
+        "path": "examples/agent_browser_runtime_workflow/workflow.sh",
+        "domains": ["browser_runtime"],
+    },
+    {
+        "name": "agent_deploy_bundle_workflow",
+        "path": "examples/agent_deploy_bundle_workflow/workflow.sh",
+        "domains": ["deployment"],
+    },
+    {
         "name": "agent_service_workflow",
         "path": "examples/agent_service_workflow/workflow.sh",
         "domains": ["service", "package_publish_sync"],
@@ -124,6 +134,8 @@ required_domains = {
     "process_lifecycle": 1,
     "plugin_runtime": 1,
     "time_control": 1,
+    "browser_runtime": 1,
+    "deployment": 1,
 }
 
 env = dict(os.environ)
