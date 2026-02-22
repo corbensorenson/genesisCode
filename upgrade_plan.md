@@ -5,6 +5,8 @@ Last updated: 2026-02-22
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 1
+Open checklist items: 0
 
-- [ ] P3.1 Break up oversized `gc_effects` dispatch sources below source-size policy limits: split `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch.rs` (2892 lines) and `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch_tests.rs` (2173 lines) into maintainable modules so `scripts/check_source_size_budget.sh` passes without policy carve-outs.
+All unresolved backlog items from the latest red-team pass are currently closed.
+
+Next red-team refresh should repopulate this file only when new unresolved gaps are found.

@@ -61,7 +61,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P3.1` Split oversized `gc_effects` dispatch and dispatch-test files into smaller modules so source-size policy gates pass with no debt carve-outs.
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

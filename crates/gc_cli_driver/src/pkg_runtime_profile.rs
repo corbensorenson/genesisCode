@@ -497,8 +497,8 @@ bench/prog
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let program =
-        eval_module_default_value(&mut ctx, &mut env, &forms).map_err(|e| format!("task eval: {e}"))?;
+    let program = eval_module_default_value(&mut ctx, &mut env, &forms)
+        .map_err(|e| format!("task eval: {e}"))?;
     let run_out = gc_effects::run(
         &mut ctx,
         &policy,
