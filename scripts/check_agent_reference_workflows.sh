@@ -5,11 +5,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+source "$ROOT_DIR/scripts/lib/heavy_gate_preflight.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "check-agent-reference-workflows" \
   ".genesis/build/cargo" \
   "GENESIS_CHECK_AGENT_REFERENCE_WORKFLOWS_CARGO_TARGET_DIR"
+
+DISK_MIN_FREE_KB="${GENESIS_AGENT_REFERENCE_WORKFLOWS_MIN_FREE_KB:-3145728}"
+DISK_AUTO_RECLAIM="${GENESIS_AGENT_REFERENCE_WORKFLOWS_DISK_AUTO_RECLAIM:-1}"
+TMP_ROOT="${GENESIS_AGENT_REFERENCE_WORKFLOWS_TMPDIR:-$ROOT_DIR/.genesis/tmp/check-agent-reference-workflows}"
+genesis_heavy_gate_preflight \
+  "$ROOT_DIR" \
+  "agent-capability-gauntlet" \
+  "$DISK_MIN_FREE_KB" \
+  "$TMP_ROOT" \
+  "$DISK_AUTO_RECLAIM"
 
 DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_DEBUG_DIR/genesis}"

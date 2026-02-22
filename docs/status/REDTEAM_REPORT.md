@@ -10,4 +10,12 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-No active P0/P1 risks.
+- `P0.2`: Agent GPU/GFX workflows fail under constrained temp/disk conditions, blocking reliable AI iteration loops.
+- `P0.3`: Target deployment pipeline remains runtime-runner contract based, not platform-native executable artifact based.
+- `P1.2`: Tool qualification evidence accepts caller-provided test hashes without mandatory executed-run lineage binding.
+- `P1.3`: `gcpm` dependency solver/range semantics are still local-only and below mature package-manager expectations.
+- `P1.4`: Production CLI help-surface gate remains above budget and needs release-build reuse optimization.
+- `P1.5`: Heavy gate suites need shared disk-headroom preflight/recovery to prevent infra-driven red runs.
+- `P1.6`: High-churn Rust modules remain near threshold and still slow agent-first language evolution loops.
+- `P1.7`: Documentation consolidation for agent-first authoring is incomplete and still fragmented across many markdown leaves.
+- `P1.8`: Bootstrap retirement and fallback-removal enforcement is not yet fully closed for production-only pathways.

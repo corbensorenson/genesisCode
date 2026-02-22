@@ -2,8 +2,9 @@ use super::*;
 #[path = "cmd_selfhost_helpers.rs"]
 mod cmd_selfhost_helpers;
 use cmd_selfhost_helpers::{
-    extract_manifest_module_paths, maybe_update_selfhost_freshness_metadata, percent_basis_points,
-    percent_string_from_bps, write_content_addressed_artifact,
+    build_selfhost_cutover_rows_from_cli, extract_manifest_module_paths,
+    maybe_update_selfhost_freshness_metadata, percent_basis_points, percent_string_from_bps,
+    write_content_addressed_artifact,
 };
 
 pub(super) fn cmd_selfhost_dashboard(
@@ -15,35 +16,36 @@ pub(super) fn cmd_selfhost_dashboard(
     let artifact_path = artifact.as_ref().map(|p| p.display().to_string());
     let artifact_exists = artifact.as_ref().is_some_and(|p| p.is_file());
     let strict = selfhost_only_enabled(cli);
+    let rows = build_selfhost_cutover_rows_from_cli()?;
 
-    let total_commands = SELFHOST_CUTOVER_ROWS.len();
-    let routed_count = SELFHOST_CUTOVER_ROWS
+    let total_commands = rows.len();
+    let routed_count = rows
         .iter()
         .filter(|r| r.selfhost_routed)
         .count();
-    let default_selfhost_count = SELFHOST_CUTOVER_ROWS
+    let default_selfhost_count = rows
         .iter()
         .filter(|r| r.default_selfhost)
         .count();
-    let fast_path_total = SELFHOST_CUTOVER_ROWS
+    let fast_path_total = rows
         .iter()
         .filter(|r| r.fast_path_required)
         .count();
-    let fast_path_default_ok = SELFHOST_CUTOVER_ROWS
+    let fast_path_default_ok = rows
         .iter()
         .filter(|r| r.fast_path_required)
         .all(|r| r.default_selfhost && r.selfhost_routed);
     let routed_bps = percent_basis_points(routed_count, total_commands);
     let default_bps = percent_basis_points(default_selfhost_count, total_commands);
 
-    let rows_term: Vec<Term> = SELFHOST_CUTOVER_ROWS
+    let rows_term: Vec<Term> = rows
         .iter()
         .map(|row| {
             Term::Map(
                 [
                     (
                         TermOrdKey(Term::symbol(":cmd")),
-                        Term::Str(row.cmd.to_string()),
+                        Term::Str(row.cmd.clone()),
                     ),
                     (
                         TermOrdKey(Term::symbol(":fast-path-required")),
@@ -176,7 +178,7 @@ pub(super) fn cmd_selfhost_dashboard(
             "| Command | Fast Path | Selfhost Routed | Default Selfhost |".to_string(),
             "| --- | --- | --- | --- |".to_string(),
         ];
-        for row in SELFHOST_CUTOVER_ROWS {
+        for row in &rows {
             lines.push(format!(
                 "| `{}` | {} | {} | {} |",
                 row.cmd, row.fast_path_required, row.selfhost_routed, row.default_selfhost

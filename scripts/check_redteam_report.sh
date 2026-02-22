@@ -76,6 +76,40 @@ if unresolved_ids != readiness_ids:
         f"plan={unresolved_ids} readiness={readiness_ids}"
     )
 
+critical_specs = [
+    (
+        "agent-capability-gauntlet",
+        pathlib.Path(".genesis/perf/agent_capability_gauntlet_report.json"),
+        "genesis/agent-capability-gauntlet-v0.1",
+    ),
+    (
+        "production-cli-help-surface",
+        pathlib.Path(".genesis/perf/production_cli_help_surface_report.json"),
+        "genesis/production-cli-help-surface-v0.1",
+    ),
+]
+critical_failures = []
+for label, report_path, expected_kind in critical_specs:
+    if not report_path.is_file():
+        critical_failures.append(f"{label}:missing")
+        continue
+    try:
+        doc = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        critical_failures.append(f"{label}:json-decode")
+        continue
+    if doc.get("kind") != expected_kind:
+        critical_failures.append(f"{label}:kind-mismatch")
+        continue
+    if not bool(doc.get("ok", False)):
+        critical_failures.append(f"{label}:report-not-ok")
+
+if not unresolved_ids and critical_failures:
+    raise SystemExit(
+        "redteam-report: unresolved P0/P1 risk set cannot be empty while critical reports are failing: "
+        + ", ".join(critical_failures)
+    )
+
 report_ids = sorted(set(re.findall(r"\bP[01]\.\d+\b", report_text)))
 
 missing = sorted(set(unresolved_ids) - set(report_ids))

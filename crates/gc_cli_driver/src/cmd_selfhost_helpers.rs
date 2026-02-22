@@ -1,4 +1,5 @@
 use super::*;
+use clap::CommandFactory;
 use sha2::{Digest, Sha256};
 
 pub(super) fn percent_basis_points(part: usize, total: usize) -> u64 {
@@ -10,6 +11,230 @@ pub(super) fn percent_basis_points(part: usize, total: usize) -> u64 {
 
 pub(super) fn percent_string_from_bps(bps: u64) -> String {
     format!("{}.{:02}%", bps / 100, bps % 100)
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct SelfhostCutoverRow {
+    pub(super) cmd: String,
+    pub(super) fast_path_required: bool,
+    pub(super) selfhost_routed: bool,
+    pub(super) default_selfhost: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SelfhostCutoverMetadata {
+    cli_name: &'static str,
+    dashboard_cmd: &'static str,
+    fast_path_required: bool,
+}
+
+const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
+    SelfhostCutoverMetadata {
+        cli_name: "fmt",
+        dashboard_cmd: "fmt",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "eval",
+        dashboard_cmd: "eval",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "explain",
+        dashboard_cmd: "explain",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "run",
+        dashboard_cmd: "run",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "replay",
+        dashboard_cmd: "replay",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "test",
+        dashboard_cmd: "test",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "pack",
+        dashboard_cmd: "pack",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "selfhost-artifact",
+        dashboard_cmd: "selfhost-artifact",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "selfhost-dashboard",
+        dashboard_cmd: "selfhost-dashboard",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "warm",
+        dashboard_cmd: "warm",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "cli-schema",
+        dashboard_cmd: "cli-schema",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "agent-index",
+        dashboard_cmd: "agent-index",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "keygen",
+        dashboard_cmd: "keygen",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "sign",
+        dashboard_cmd: "sign",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "transparency-verify",
+        dashboard_cmd: "transparency-verify",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "typecheck",
+        dashboard_cmd: "typecheck",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "optimize",
+        dashboard_cmd: "optimize",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "apply-patch",
+        dashboard_cmd: "apply-patch",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "semantic-edit",
+        dashboard_cmd: "semantic-edit",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "verify",
+        dashboard_cmd: "verify",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "store",
+        dashboard_cmd: "store/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "refs",
+        dashboard_cmd: "refs/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "commit",
+        dashboard_cmd: "commit/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "pkg",
+        dashboard_cmd: "pkg/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "policy",
+        dashboard_cmd: "policy/*",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "sync",
+        dashboard_cmd: "sync/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "registry",
+        dashboard_cmd: "registry/*",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "gc",
+        dashboard_cmd: "gc/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
+        cli_name: "vcs",
+        dashboard_cmd: "vcs/*",
+        fast_path_required: true,
+    },
+];
+
+pub(super) fn build_selfhost_cutover_rows_from_cli() -> Result<Vec<SelfhostCutoverRow>, CliError> {
+    let mut metadata_by_name = std::collections::BTreeMap::new();
+    for meta in SELFHOST_CUTOVER_METADATA {
+        if metadata_by_name.insert(meta.cli_name, *meta).is_some() {
+            return Err(cli_err(
+                EX_INTERNAL,
+                "selfhost/dashboard",
+                format!("duplicate selfhost cutover metadata entry for `{}`", meta.cli_name),
+            ));
+        }
+    }
+
+    let mut names: Vec<String> = Cli::command()
+        .get_subcommands()
+        .filter(|sub| !sub.is_hide_set())
+        .map(|sub| sub.get_name().to_string())
+        .collect();
+    names.sort();
+    names.dedup();
+
+    let mut rows = Vec::with_capacity(names.len());
+    let mut seen_names = std::collections::BTreeSet::new();
+    for cli_name in names {
+        seen_names.insert(cli_name.clone());
+        let meta = metadata_by_name.get(cli_name.as_str()).ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "selfhost/dashboard",
+                format!(
+                    "missing selfhost cutover metadata for CLI command `{cli_name}`; update SELFHOST_CUTOVER_METADATA"
+                ),
+            )
+        })?;
+        rows.push(SelfhostCutoverRow {
+            cmd: meta.dashboard_cmd.to_string(),
+            fast_path_required: meta.fast_path_required,
+            selfhost_routed: true,
+            default_selfhost: true,
+        });
+    }
+
+    let stale: Vec<&str> = metadata_by_name
+        .keys()
+        .copied()
+        .filter(|name| !seen_names.contains(*name))
+        .collect();
+    if !stale.is_empty() {
+        return Err(cli_err(
+            EX_INTERNAL,
+            "selfhost/dashboard",
+            format!(
+                "stale selfhost cutover metadata entries not present in CLI: {}",
+                stale.join(", ")
+            ),
+        ));
+    }
+
+    rows.sort_by(|a, b| a.cmd.cmp(&b.cmd));
+    Ok(rows)
 }
 
 pub(super) fn write_content_addressed_artifact(

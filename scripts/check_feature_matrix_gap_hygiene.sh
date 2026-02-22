@@ -90,6 +90,40 @@ if open_ids_sorted != readiness_ids_sorted:
         f"plan={open_ids_sorted} readiness={readiness_ids_sorted}"
     )
 
+critical_specs = [
+    (
+        "agent-capability-gauntlet",
+        pathlib.Path(".genesis/perf/agent_capability_gauntlet_report.json"),
+        "genesis/agent-capability-gauntlet-v0.1",
+    ),
+    (
+        "production-cli-help-surface",
+        pathlib.Path(".genesis/perf/production_cli_help_surface_report.json"),
+        "genesis/production-cli-help-surface-v0.1",
+    ),
+]
+critical_failures = []
+for label, report_path, expected_kind in critical_specs:
+    if not report_path.is_file():
+        critical_failures.append(f"{label}:missing")
+        continue
+    try:
+        doc = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        critical_failures.append(f"{label}:json-decode")
+        continue
+    if doc.get("kind") != expected_kind:
+        critical_failures.append(f"{label}:kind-mismatch")
+        continue
+    if not bool(doc.get("ok", False)):
+        critical_failures.append(f"{label}:report-not-ok")
+
+if not open_ids_sorted and critical_failures:
+    raise SystemExit(
+        "feature-matrix-gap-hygiene: zero-gap state forbidden while critical reports are failing: "
+        + ", ".join(critical_failures)
+    )
+
 if open_ids_sorted and re.search(r"^-\s+none\b", section_text, flags=re.MULTILINE):
     raise SystemExit(
         "feature-matrix-gap-hygiene: '- none' is forbidden while unresolved upgrade plan IDs exist"

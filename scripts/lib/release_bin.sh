@@ -22,3 +22,21 @@ genesis_build_release_bin() {
   fi
   echo "$bin_path"
 }
+
+genesis_build_release_bins() {
+  if [[ "$#" -eq 0 ]]; then
+    return 0
+  fi
+  cargo build --release -q "$@"
+}
+
+genesis_assert_release_bin() {
+  local bin="$1"
+  local bin_path
+  bin_path="$(genesis_release_bin_path "$bin")"
+  if [[ ! -x "$bin_path" ]]; then
+    echo "release-bin: expected executable missing after build: $bin_path" >&2
+    return 1
+  fi
+  echo "$bin_path"
+}

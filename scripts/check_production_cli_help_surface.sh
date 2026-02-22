@@ -7,11 +7,22 @@ cd "$ROOT"
 source "$ROOT/scripts/lib/cargo_target_dir.sh"
 source "$ROOT/scripts/lib/profile_gate_timing.sh"
 source "$ROOT/scripts/lib/release_bin.sh"
+source "$ROOT/scripts/lib/heavy_gate_preflight.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT" \
   "check-production-cli-help-surface" \
   ".genesis/build/cargo" \
   "GENESIS_CHECK_PRODUCTION_CLI_HELP_SURFACE_CARGO_TARGET_DIR"
+
+DISK_MIN_FREE_KB="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_MIN_FREE_KB:-2097152}"
+DISK_AUTO_RECLAIM="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_DISK_AUTO_RECLAIM:-1}"
+TMP_ROOT="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_TMPDIR:-$ROOT/.genesis/tmp/check-production-cli-help-surface}"
+genesis_heavy_gate_preflight \
+  "$ROOT" \
+  "production-cli-help-surface" \
+  "$DISK_MIN_FREE_KB" \
+  "$TMP_ROOT" \
+  "$DISK_AUTO_RECLAIM"
 
 START_MS="$(genesis_profile_gate_now_ms)"
 REPORT_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT:-.genesis/perf/production_cli_help_surface_report.json}"
@@ -55,10 +66,15 @@ GENESIS_WASI_FMT_HELP="$TMP/genesis_wasi_fmt.help"
 GENESIS_PARITY_FMT_HELP="$TMP/genesis_parity_fmt.help"
 GENESIS_WASI_PARITY_FMT_HELP="$TMP/genesis_wasi_parity_fmt.help"
 
-GENESIS_BIN="$(genesis_build_release_bin gc_cli genesis)"
-GENESIS_WASI_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi)"
-GENESIS_PARITY_BIN="$(genesis_build_release_bin gc_cli genesis_parity)"
-GENESIS_WASI_PARITY_BIN="$(genesis_build_release_bin gc_wasi_cli genesis_wasi_parity)"
+# Build all required release binaries in one cargo invocation so incremental reuse is effective.
+genesis_build_release_bins \
+  -p gc_cli --bin genesis --bin genesis_parity \
+  -p gc_wasi_cli --bin genesis_wasi --bin genesis_wasi_parity
+
+GENESIS_BIN="$(genesis_assert_release_bin genesis)"
+GENESIS_WASI_BIN="$(genesis_assert_release_bin genesis_wasi)"
+GENESIS_PARITY_BIN="$(genesis_assert_release_bin genesis_parity)"
+GENESIS_WASI_PARITY_BIN="$(genesis_assert_release_bin genesis_wasi_parity)"
 
 run_help "$GENESIS_BIN" "$GENESIS_HELP"
 run_help "$GENESIS_WASI_BIN" "$GENESIS_WASI_HELP"

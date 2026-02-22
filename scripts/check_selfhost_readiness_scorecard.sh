@@ -53,7 +53,7 @@ import re
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import Any, Optional
 
 root = pathlib.Path(sys.argv[1])
 report_path = pathlib.Path(sys.argv[2])
@@ -221,6 +221,106 @@ def dim_deprecated_bootstrap_refs() -> dict[str, Any]:
         "deprecated_reference_files": files[:20],
     }
 
+def tail_text(raw: str, max_chars: int = 320) -> str:
+    text = (raw or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+def read_critical_report(
+    report_rel: str,
+    expected_kind: str,
+    label: str,
+) -> tuple[bool, dict[str, Any], Optional[str]]:
+    report_path = root / report_rel
+    if not report_path.is_file():
+        return False, {"path": report_rel, "ok": False, "missing": True}, f"{label}:missing"
+    try:
+        doc = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return (
+            False,
+            {"path": report_rel, "ok": False, "decode_error": True},
+            f"{label}:json-decode",
+        )
+    if doc.get("kind") != expected_kind:
+        return (
+            False,
+            {
+                "path": report_rel,
+                "ok": False,
+                "kind": doc.get("kind"),
+                "expected_kind": expected_kind,
+            },
+            f"{label}:kind-mismatch",
+        )
+    report_ok = bool(doc.get("ok", False))
+    detail = {
+        "path": report_rel,
+        "ok": report_ok,
+        "kind": doc.get("kind"),
+    }
+    if not report_ok:
+        detail["fail_reasons"] = doc.get("fail_reasons")
+        return False, detail, f"{label}:report-not-ok"
+    return True, detail, None
+
+def dim_critical_gate_truth() -> dict[str, Any]:
+    checks: list[str] = []
+    errors: list[str] = []
+    reports: dict[str, Any] = {}
+    critical_specs = [
+        (
+            "agent_capability_gauntlet",
+            ".genesis/perf/agent_capability_gauntlet_report.json",
+            "genesis/agent-capability-gauntlet-v0.1",
+            "agent-capability-gauntlet",
+        ),
+        (
+            "production_cli_help_surface",
+            ".genesis/perf/production_cli_help_surface_report.json",
+            "genesis/production-cli-help-surface-v0.1",
+            "production-cli-help-surface",
+        ),
+    ]
+    for key, report_rel, expected_kind, label in critical_specs:
+        checks.append(label)
+        ok, detail, error = read_critical_report(report_rel, expected_kind, label)
+        reports[key] = detail
+        if not ok and error is not None:
+            errors.append(error)
+
+    runtime_pipeline_cmd = [
+        "bash",
+        str(root / "scripts/check_gcpm_target_runtime_pipelines.sh"),
+    ]
+    checks.append("gcpm-target-runtime-pipelines")
+    runtime_proc = subprocess.run(
+        runtime_pipeline_cmd,
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    runtime_ok = runtime_proc.returncode == 0
+    reports["gcpm_target_runtime_pipelines"] = {
+        "ok": runtime_ok,
+        "exit_code": runtime_proc.returncode,
+        "stdout_tail": tail_text(runtime_proc.stdout),
+        "stderr_tail": tail_text(runtime_proc.stderr),
+    }
+    if not runtime_ok:
+        errors.append("gcpm-target-runtime-pipelines:check-failed")
+
+    ok = not errors
+    return {
+        "ok": ok,
+        "score": 100 if ok else 0,
+        "max_score": 100,
+        "checks": checks,
+        "errors": errors,
+        "reports": reports,
+    }
+
 open_upgrade_ids = sorted(
     set(
         re.findall(
@@ -236,6 +336,7 @@ dimensions = {
     "parity_only_surface_isolation": dim_parity_isolation(),
     "bootstrap_mode_strictness": dim_bootstrap_mode_strictness(),
     "deprecated_bootstrap_reference_count": dim_deprecated_bootstrap_refs(),
+    "critical_gate_truth": dim_critical_gate_truth(),
 }
 dimension_ok = all(bool(row.get("ok")) for row in dimensions.values())
 score = int(round(sum(int(row["score"]) for row in dimensions.values()) / len(dimensions)))
