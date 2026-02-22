@@ -5,20 +5,6 @@ Last updated: 2026-02-22
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 2
+Open checklist items: 1
 
-## AI-First Authoring + Optimization (P2)
-
-- [ ] P2.4 Add media/asset pipeline contracts for AI-generated games/apps
-  - Evidence: host ABI families currently include gfx/gpu/audio/input/window but no media asset decode/encode contract family (`docs/spec/HOST_ABI_INDEX_v0.1.json`).
-  - Exit criteria:
-    - Add `core/media::*` / host ABI contracts for image/audio asset processing.
-    - Add deterministic asset hashing/transcoding policies and constraints.
-    - Add domain-kit workflows for asset import/build pipelines.
-
-- [ ] P2.8 Tighten deterministic performance budgets for end-to-end agent workflows
-  - Evidence: existing perf gates track core loops and selected suites, but not full user-facing multi-domain scenario latency budgets.
-  - Exit criteria:
-    - Add end-to-end scenario benchmarks (service + data + gfx + network).
-    - Enforce median + p95 budgets with contention-aware sampling.
-    - Fail release profiles when scenario budgets regress beyond configured thresholds.
+- [ ] P3.1 Break up oversized `gc_effects` dispatch sources below source-size policy limits: split `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch.rs` (2892 lines) and `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch_tests.rs` (2173 lines) into maintainable modules so `scripts/check_source_size_budget.sh` passes without policy carve-outs.

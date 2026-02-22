@@ -10,7 +10,7 @@
 
 (def build/spec
   ((core/kit/media::build-spec-v1 "agent_media_asset_workflow")
-    [image/asset audio/asset]))
+    ((core/vec::push ((core/vec::push []) image/asset)) audio/asset)))
 
 (def prog (core/kit/media::run-build build/spec))
 

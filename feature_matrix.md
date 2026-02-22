@@ -22,6 +22,7 @@ Legend:
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | GPU compute + graphics capability surfaces | ⚠️ (implemented, feature/profile-gated) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Media/asset pipeline contracts for AI-generated build lanes | ✅ (first-class `core/media::*` hash/image/audio transcode ops + policy gates + `core/kit/media::*` build contracts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (`release-full` health profile and agent gauntlet release posture require `device-runtime`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
@@ -60,8 +61,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- P2.4 media/asset pipeline contracts
-- P2.8 end-to-end agent workflow performance SLO gates
+- `P3.1` Split oversized `gc_effects` dispatch and dispatch-test files into smaller modules so source-size policy gates pass with no debt carve-outs.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
@@ -76,6 +76,7 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_SCENARIO_PERF_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASM.md`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

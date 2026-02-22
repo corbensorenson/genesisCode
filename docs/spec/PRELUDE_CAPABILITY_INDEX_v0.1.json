@@ -28,6 +28,11 @@
       "core/gpk-low::export",
       "core/gpk-low::import"
     ],
+    "core/media": [
+      "core/media::asset-hash",
+      "core/media::audio-transcode",
+      "core/media::image-transcode"
+    ],
     "core/pkg-low": [
       "core/pkg-low::add",
       "core/pkg-low::info",
@@ -245,6 +250,9 @@
     "core/gc-low::unpin",
     "core/gpk-low::export",
     "core/gpk-low::import",
+    "core/media::asset-hash",
+    "core/media::audio-transcode",
+    "core/media::image-transcode",
     "core/pkg-low::add",
     "core/pkg-low::info",
     "core/pkg-low::init",

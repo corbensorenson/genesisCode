@@ -623,7 +623,7 @@ fn validate_net_bind_policy(
             "bind host `{bind_host}` is not in allow_bind_hosts policy"
         ));
     }
-    if !allow_ports.iter().any(|candidate| *candidate == bind_port) {
+    if !allow_ports.contains(&bind_port) {
         return Err(format!(
             "bind port `{bind_port}` is not in allow_bind_ports policy"
         ));

@@ -16,12 +16,7 @@ WORK_DIR="$TMP_DIR/work"
 cp -R "$EXAMPLE_DIR" "$WORK_DIR"
 
 ART="$TMP_DIR/selfhost_toolchain.gc"
-REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"
-if [[ -f "$REPO_ART" ]]; then
-  cp "$REPO_ART" "$ART"
-else
-  "$GENESIS_BIN" selfhost-artifact --out "$ART" >/dev/null
-fi
+"$GENESIS_BIN" selfhost-artifact --out "$ART" >/dev/null
 
 run_log="$WORK_DIR/workflow_run.gclog"
 run_out="$("$GENESIS_BIN" \

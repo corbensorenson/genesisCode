@@ -672,7 +672,7 @@ fn patch_term_from_plan(
 ) -> Result<Term, CliError> {
     let mut op_terms = Vec::new();
     let mut sorted_ops = ops.to_vec();
-    sorted_ops.sort_by(|a, b| op_sort_key(a).cmp(&op_sort_key(b)));
+    sorted_ops.sort_by_key(op_sort_key);
     for op in sorted_ops {
         match op {
             PlannedOp::AddModule { module_path, forms } => {

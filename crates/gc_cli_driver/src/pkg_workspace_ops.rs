@@ -253,7 +253,7 @@ pub(crate) fn handle_build(
     _frontend: gc_obligations::CoreformFrontend,
 ) -> Result<LocalPkgResult, String> {
     let target_label = normalize_build_target(target)?;
-    let target_profile = build_target_profile(target_label);
+    let target_profile = build_target_profile(target_label)?;
     let (manifest, _) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
     let package_src = std::fs::read(pkg).map_err(|e| e.to_string())?;
     let package_h = blake3::hash(&package_src).to_hex().to_string();
@@ -731,24 +731,26 @@ fn normalize_build_target(target: &str) -> Result<&'static str, String> {
     }
 }
 
-fn build_target_profile(target: &str) -> BuildTargetProfile {
+fn build_target_profile(target: &str) -> Result<BuildTargetProfile, String> {
     match target {
-        "web" => BuildTargetProfile {
+        "web" => Ok(BuildTargetProfile {
             runtime: "wasm32-unknown-unknown",
             host_profile: "browser",
             artifact_format: "wasm-bundle-v1",
-        },
-        "desktop" => BuildTargetProfile {
+        }),
+        "desktop" => Ok(BuildTargetProfile {
             runtime: "native",
             host_profile: "desktop",
             artifact_format: "native-bundle-v1",
-        },
-        "service" => BuildTargetProfile {
+        }),
+        "service" => Ok(BuildTargetProfile {
             runtime: "native",
             host_profile: "headless",
             artifact_format: "service-bundle-v1",
-        },
-        _ => unreachable!("target normalized before profile lookup"),
+        }),
+        other => Err(format!(
+            "invalid build target `{other}`; expected one of web|desktop|service"
+        )),
     }
 }
 

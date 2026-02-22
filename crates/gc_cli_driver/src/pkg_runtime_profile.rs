@@ -3,11 +3,12 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_term, parse_module};
+use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::{ArtifactStore, CapsPolicy};
-use gc_kernel::{EvalCtx, EvalObservedCounters, eval_module};
+use gc_kernel::{EvalCtx, EvalObservedCounters};
 use gc_prelude::build_prelude;
 
+use super::kernel_exec::{eval_module_default_value, parse_canonicalize_hash_module_source};
 use super::pkg_workspace_ops::LocalPkgResult;
 
 #[derive(Clone, Copy, Debug)]
@@ -488,16 +489,16 @@ fn run_task_scheduler_probe() -> Result<RuntimeProbeTrace, String> {
       (core/task::await ((core/map::get spawn-resp) (quote :task-id))))))
 bench/prog
 "#;
-    let forms = canonicalize_module(parse_module(src).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
-    let program_hash = gc_coreform::hash_module(&forms);
+    let (forms, program_hash) =
+        parse_canonicalize_hash_module_source(src).map_err(|e| format!("task source: {e}"))?;
     let policy = CapsPolicy::from_toml_str("allow = [\"core/task::spawn\", \"core/task::await\"]")
         .map_err(|e| format!("task profile policy: {e}"))?;
     let start = Instant::now();
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let program = eval_module(&mut ctx, &mut env, &forms).map_err(|e| format!("task eval: {e}"))?;
+    let program =
+        eval_module_default_value(&mut ctx, &mut env, &forms).map_err(|e| format!("task eval: {e}"))?;
     let run_out = gc_effects::run(
         &mut ctx,
         &policy,
@@ -569,14 +570,14 @@ fn run_memory_pressure_probe() -> Result<RuntimeProbeTrace, String> {
     [v m s]))
 bench/memory
 "#;
-    let forms = canonicalize_module(parse_module(src).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
+    let (forms, _program_hash) =
+        parse_canonicalize_hash_module_source(src).map_err(|e| format!("memory source: {e}"))?;
     let start = Instant::now();
     let mut ctx = EvalCtx::with_step_limit(None);
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let _value =
-        eval_module(&mut ctx, &mut env, &forms).map_err(|e| format!("memory profile eval: {e}"))?;
+    let _value = eval_module_default_value(&mut ctx, &mut env, &forms)
+        .map_err(|e| format!("memory profile eval: {e}"))?;
     let elapsed_us = saturating_u64(start.elapsed().as_micros());
     Ok(RuntimeProbeTrace {
         elapsed_us,

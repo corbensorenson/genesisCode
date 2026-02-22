@@ -444,6 +444,149 @@
         }
       }
     },
+    "core/media::asset-hash": {
+      "operation": "core/media::asset-hash",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "constraints": [
+              "currently blake3-only"
+            ],
+            "name": ":algorithm",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":kind",
+            "type": "string|symbol"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :algorithm string :hash hex64 :bytes int :kind string? ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/media::audio-transcode": {
+      "operation": "core/media::audio-transcode",
+      "payload": {
+        "constraints": [
+          "allow_source_formats / allow_target_formats policy gates apply",
+          "max_input_bytes / max_output_bytes / max_frames policy bounds apply",
+          "min_sample_rate / max_sample_rate policy bounds apply",
+          "supported formats: pcm-s16le, pcm-f32le"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          },
+          {
+            "name": ":source-format",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":target-format",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "> 0"
+            ],
+            "name": ":channels",
+            "type": "int"
+          },
+          {
+            "constraints": [
+              "> 0"
+            ],
+            "name": ":sample-rate",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :kind \"audio\" :source-format string :target-format string :channels int :sample-rate int :frames int :input-bytes int :output-bytes int :hash hex64 :data bytes ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/media::image-transcode": {
+      "operation": "core/media::image-transcode",
+      "payload": {
+        "constraints": [
+          "allow_source_formats / allow_target_formats policy gates apply",
+          "max_input_bytes / max_output_bytes / max_pixels policy bounds apply",
+          "supported formats: rgba8, gray8"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":data",
+            "type": "bytes|string"
+          },
+          {
+            "name": ":source-format",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":target-format",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "> 0"
+            ],
+            "name": ":width",
+            "type": "int"
+          },
+          {
+            "constraints": [
+              "> 0"
+            ],
+            "name": ":height",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :kind \"image\" :source-format string :target-format string :width int :height int :input-bytes int :output-bytes int :hash hex64 :data bytes ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "core/pkg-low::add": {
       "operation": "core/pkg-low::add",
       "payload": {
