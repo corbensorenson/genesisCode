@@ -62,7 +62,9 @@ require_doc_pattern 'GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT'
 require_doc_pattern '.genesis/perf/strict_golden_profile_report.json'
 require_doc_pattern '.genesis/perf/wasm_cross_host_profile_report.json'
 require_doc_pattern '.genesis/perf/full_cross_host_profile_report.json'
+require_doc_pattern '.genesis/perf/agent_scenario_perf_report.json'
 require_doc_pattern 'scripts/check_full_cross_host_profile_budget.sh'
+require_doc_pattern 'scripts/check_agent_scenario_perf.sh'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
 require_ci_pattern 'Selfhost Refactor Guard'
@@ -71,6 +73,7 @@ require_ci_pattern 'Selfhost Strict Golden (Native + WASI CLI)'
 require_ci_pattern 'WASM Cross-Host Determinism (Native vs Node)'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate (PR Required)'
+require_ci_pattern 'Agent End-to-End Scenario Perf Gate'
 
 if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; then
   echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
@@ -109,6 +112,11 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep explicit gpu device conformance lane toggle" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash scripts/check_agent_scenario_perf.sh' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must run agent scenario perf gate" >&2
   exit 1
 fi
 

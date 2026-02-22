@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-EXAMPLE_DIR="$ROOT_DIR/examples/agent_xr_runtime_workflow"
+EXAMPLE_DIR="$ROOT_DIR/examples/agent_media_asset_workflow"
 GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
 
 if [[ ! -x "$GENESIS_BIN" ]]; then
@@ -40,13 +40,13 @@ replay_out="$("$GENESIS_BIN" \
   | tr -d '\n')"
 
 if [[ "$run_out" != "$replay_out" ]]; then
-  echo "agent-xr-runtime-workflow: run/replay mismatch: run=$run_out replay=$replay_out" >&2
+  echo "agent-media-asset-workflow: run/replay mismatch: run=$run_out replay=$replay_out" >&2
   exit 1
 fi
 
-if [[ "$run_out" != *"xr-first-party-runtime"* || "$run_out" != *":session-id"* ]]; then
-  echo "agent-xr-runtime-workflow: expected xr runtime evidence fields, got=$run_out" >&2
+if [[ "$run_out" != *":core/kit/media-build-result.v1"* || "$run_out" != *":count 2"* ]]; then
+  echo "agent-media-asset-workflow: expected media build result with count=2, got=$run_out" >&2
   exit 1
 fi
 
-echo "agent-xr-runtime-workflow: ok replay=$run_out"
+echo "agent-media-asset-workflow: ok replay=$run_out"

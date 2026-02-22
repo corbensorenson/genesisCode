@@ -417,6 +417,7 @@ case "$PROFILE" in
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
+    PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")

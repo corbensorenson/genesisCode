@@ -20,6 +20,8 @@ Compatibility notes:
 - `core/sync::*` is part of the ABI surface and is enforced by explicit WASI remote profiles (`none|local|preview2`), deny-by-default.
 - Adding or removing an op is a versioned ABI change and must be reflected in release notes.
 - Host-integrated runtime domains now support first-party backends by default:
+  - `core/media::*` deterministic in-process asset hashing + image/audio transcode lanes
+    (`asset-hash`, `image-transcode`, `audio-transcode`) with explicit policy bounds
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
@@ -77,6 +79,9 @@ Compatibility notes:
 - `core/gc-low::unpin`
 - `core/gpk-low::export`
 - `core/gpk-low::import`
+- `core/media::asset-hash`
+- `core/media::audio-transcode`
+- `core/media::image-transcode`
 - `core/pkg-low::add`
 - `core/pkg-low::info`
 - `core/pkg-low::init`
@@ -455,6 +460,29 @@ CI drift check:
   - Optional payload field: `:overwrite` (bool, default `false`).
   - Optional per-op policy controls: `base_dir`, `create_dirs`.
   - Deterministic semantics: returns `nil` on success.
+
+## Media Capability Contracts
+
+- `core/media::asset-hash`
+  - Required payload field: `:data` (bytes|string).
+  - Optional payload fields: `:algorithm` (string/symbol, currently `blake3` only), `:kind` (string/symbol metadata).
+  - Optional per-op policy controls: `max_input_bytes`.
+  - Deterministic semantics: returns stable hash envelope `{:ok true :algorithm "blake3" :hash <hex64> :bytes <int> ...}`.
+- `core/media::image-transcode`
+  - Required payload fields: `:data` (bytes|string), `:source-format` (string/symbol), `:target-format` (string/symbol), `:width` (int), `:height` (int).
+  - Supported formats: `rgba8`, `gray8`.
+  - Optional per-op policy controls:
+    - `allow_source_formats`, `allow_target_formats` (string arrays)
+    - `max_input_bytes`, `max_output_bytes`, `max_pixels` (positive integers)
+  - Deterministic semantics: policy-gated format conversion with stable grayscale coefficients and deterministic hash/byte metadata in response.
+- `core/media::audio-transcode`
+  - Required payload fields: `:data` (bytes|string), `:source-format` (string/symbol), `:target-format` (string/symbol), `:channels` (int), `:sample-rate` (int).
+  - Supported formats: `pcm-s16le`, `pcm-f32le`.
+  - Optional per-op policy controls:
+    - `allow_source_formats`, `allow_target_formats` (string arrays)
+    - `max_input_bytes`, `max_output_bytes`, `max_frames` (positive integers)
+    - `min_sample_rate`, `max_sample_rate` (positive integers)
+  - Deterministic semantics: stable numeric conversion + clamp rules, bounded frame/sample-rate policy checks, and stable hash/byte metadata in response.
 
 Determinism:
 - Run-time responses for these ops are effect-logged as normal capability outcomes.

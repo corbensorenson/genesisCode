@@ -9,6 +9,7 @@ Authoring source modules:
 - `00_core.gc`
 - `00_core_system_ops.gc`
 - `00_core_fs.gc`
+- `00_core_media.gc`
 - `00_core_net.gc`
 - `00_core_process.gc`
 - `00_core_time.gc`
@@ -30,6 +31,7 @@ Authoring source modules:
 - `32_network_workflow.gc`
 - `33_game_loop.gc`
 - `34_xr_workflow.gc`
+- `35_media_pipeline.gc`
 
 To rebuild the assembled prelude:
 

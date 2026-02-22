@@ -941,6 +941,48 @@
             :to to})
           (fn (resp) (core/effect::pure resp)))))))
 
+(def core/media::asset-hash
+  (fn (data)
+    (((core/effect::perform (quote core/media::asset-hash)) {:data data})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/media::asset-hash-kind
+  (fn (kind)
+    (fn (data)
+      (((core/effect::perform (quote core/media::asset-hash))
+        {:kind kind :data data})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/media::image-transcode
+  (fn (source-format)
+    (fn (target-format)
+      (fn (width)
+        (fn (height)
+          (fn (data)
+            (((core/effect::perform (quote core/media::image-transcode))
+              {
+                :source-format source-format
+                :target-format target-format
+                :width width
+                :height height
+                :data data})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/media::audio-transcode
+  (fn (source-format)
+    (fn (target-format)
+      (fn (channels)
+        (fn (sample-rate)
+          (fn (data)
+            (((core/effect::perform (quote core/media::audio-transcode))
+              {
+                :source-format source-format
+                :target-format target-format
+                :channels channels
+                :sample-rate sample-rate
+                :data data})
+              (fn (resp) (core/effect::pure resp)))))))))
+
 (def core/db::connect
   (fn (target)
     (((core/effect::perform (quote io/db::connect)) {:target target})
@@ -5416,4 +5458,127 @@
                            :input input-resp
                            :submit submit-resp
                            :close close-resp})))))))))))))))
+
+(def core/kit/media::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/media::asset-v1
+  (fn (asset-id)
+    (fn (kind)
+      (fn (source-format)
+        (fn (target-format)
+          (fn (metadata)
+            (fn (data)
+              {
+                :schema (quote :core/kit/media-asset.v1)
+                :id asset-id
+                :kind kind
+                :source-format source-format
+                :target-format target-format
+                :metadata metadata
+                :data data})))))))
+
+(def core/kit/media::build-spec-v1
+  (fn (name)
+    (fn (assets)
+      {
+        :schema (quote :core/kit/media-build-spec.v1)
+        :name name
+        :assets assets})))
+
+(def core/kit/media::asset-result-v1
+  (fn (asset-id)
+    (fn (kind)
+      (fn (transcode)
+        (fn (hash)
+          {
+            :schema (quote :core/kit/media-asset-result.v1)
+            :id asset-id
+            :kind kind
+            :transcode transcode
+            :hash hash})))))
+
+(def core/kit/media::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/media-invalid-spec") message))))
+
+(def core/kit/media::asset-kind-image?
+  (fn (kind)
+    (if ((core/eq? kind) (quote :image))
+      true
+      ((core/eq? kind) "image"))))
+
+(def core/kit/media::asset-kind-audio?
+  (fn (kind)
+    (if ((core/eq? kind) (quote :audio))
+      true
+      ((core/eq? kind) "audio"))))
+
+(def core/kit/media::transcode-asset
+  (fn (asset)
+    (let ((asset-id ((core/map::get asset) (quote :id))))
+      (let ((kind ((core/map::get asset) (quote :kind))))
+        (let ((source-format ((core/map::get asset) (quote :source-format))))
+          (let ((target-format ((core/map::get asset) (quote :target-format))))
+            (let ((metadata ((core/map::get asset) (quote :metadata))))
+              (let ((data ((core/map::get asset) (quote :data))))
+                (if (core/kit/media::asset-kind-image? kind)
+                  ((core/effect::bind
+                     (((((core/media::image-transcode source-format)
+                         target-format)
+                        ((core/map::get metadata) (quote :width)))
+                       ((core/map::get metadata) (quote :height)))
+                      data))
+                    (fn (transcode-resp)
+                      ((core/effect::bind
+                         ((core/media::asset-hash-kind (quote :image))
+                          ((core/map::get transcode-resp) (quote :data))))
+                        (fn (hash-resp)
+                          (core/effect::pure
+                            ((((core/kit/media::asset-result-v1 asset-id) kind) transcode-resp)
+                              hash-resp))))))
+                  (if (core/kit/media::asset-kind-audio? kind)
+                    ((core/effect::bind
+                       (((((core/media::audio-transcode source-format)
+                           target-format)
+                          ((core/map::get metadata) (quote :channels)))
+                         ((core/map::get metadata) (quote :sample-rate)))
+                        data))
+                      (fn (transcode-resp)
+                        ((core/effect::bind
+                           ((core/media::asset-hash-kind (quote :audio))
+                            ((core/map::get transcode-resp) (quote :data))))
+                          (fn (hash-resp)
+                            (core/effect::pure
+                              ((((core/kit/media::asset-result-v1 asset-id) kind) transcode-resp)
+                                hash-resp))))))
+                    (core/kit/media::invalid-spec
+                      "core/kit/media::transcode-asset expects :kind image/audio"))))))))))))
+
+(def core/kit/media::run-build-loop
+  (fn (assets)
+    (fn (n)
+      (fn (i)
+        (fn (acc)
+          (if ((core/int::eq? i) n)
+            (core/effect::pure acc)
+            ((core/effect::bind (core/kit/media::transcode-asset ((core/vec::get assets) i)))
+              (fn (asset-result)
+                ((((core/kit/media::run-build-loop assets) n) ((core/int::add i) 1))
+                  ((core/vec::push acc) asset-result))))))))))
+
+(def core/kit/media::run-build
+  (fn (spec)
+    (let ((assets ((core/map::get spec) (quote :assets))))
+      (if (core/kit/media::vec? assets)
+        ((core/effect::bind
+           ((((core/kit/media::run-build-loop assets) (core/vec::len assets)) 0) []))
+          (fn (asset-results)
+            (core/effect::pure
+              {
+                :schema (quote :core/kit/media-build-result.v1)
+                :ok true
+                :name ((core/map::get spec) (quote :name))
+                :count (core/vec::len asset-results)
+                :assets asset-results})))
+        (core/kit/media::invalid-spec "core/kit/media::run-build expects :assets vec")))))
 

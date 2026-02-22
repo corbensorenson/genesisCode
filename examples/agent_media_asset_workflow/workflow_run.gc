@@ -1,0 +1,17 @@
+(def image/asset
+  ((((((core/kit/media::asset-v1 "sprite-sheet") (quote :image)) "rgba8") "gray8")
+    {:width 2 :height 1})
+   "ABCDEFGH"))
+
+(def audio/asset
+  ((((((core/kit/media::asset-v1 "ambient-loop") (quote :audio)) "pcm-s16le") "pcm-f32le")
+    {:channels 1 :sample-rate 44100})
+   "abcdefgh"))
+
+(def build/spec
+  ((core/kit/media::build-spec-v1 "agent_media_asset_workflow")
+    [image/asset audio/asset]))
+
+(def prog (core/kit/media::run-build build/spec))
+
+prog

@@ -47,6 +47,9 @@ fn low_level_caps_wrappers_emit_expected_ops() {
         :fs_mkdir ((core/fs::mkdir "tmp/nested") true)
         :fs_remove ((core/fs::remove "tmp/old") true)
         :fs_rename (((core/fs::rename "tmp/from.txt") "tmp/to.txt") true)
+        :media_hash (core/media::asset-hash "asset-bytes")
+        :media_image_transcode ((((core/media::image-transcode "rgba8") "gray8") 2) 1 "ABCDEFGH")
+        :media_audio_transcode ((((core/media::audio-transcode "pcm-s16le") "pcm-f32le") 1) 44100 "abcdefgh")
         :db_connect (core/db::connect "sqlite://data/app.db")
         :db_tx_begin (core/db::tx-begin "db-1")
         :db_query ((((core/db::query "db-1") (quote read-only)) "select 1") {})
@@ -140,6 +143,9 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":fs_mkdir", "io/fs::mkdir");
     expect_op(":fs_remove", "io/fs::remove");
     expect_op(":fs_rename", "io/fs::rename");
+    expect_op(":media_hash", "core/media::asset-hash");
+    expect_op(":media_image_transcode", "core/media::image-transcode");
+    expect_op(":media_audio_transcode", "core/media::audio-transcode");
     expect_op(":db_connect", "io/db::connect");
     expect_op(":db_tx_begin", "io/db::tx-begin");
     expect_op(":db_query", "io/db::query");

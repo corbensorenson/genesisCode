@@ -1,7 +1,7 @@
-(def spec
-  (((core/kit/xr::session-spec-v1 "immersive-vr") "local-floor") "agent-xr-workflow"))
-
 (def prog
-  ((core/kit/xr::run-single-frame-cycle spec) 2))
+  (core/effect::perform
+    'gfx/xr::session-open
+    {:opts {:app "agent-xr-workflow" :mode "immersive-vr" :reference-space "local-floor"}}
+    (fn (open-resp) (core/effect::pure open-resp))))
 
 prog

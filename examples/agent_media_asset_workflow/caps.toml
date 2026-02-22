@@ -1,0 +1,24 @@
+allow = [
+  "core/media::asset-hash",
+  "core/media::image-transcode",
+  "core/media::audio-transcode"
+]
+
+[op."core/media::asset-hash"]
+max_input_bytes = 4096
+
+[op."core/media::image-transcode"]
+max_input_bytes = 4096
+max_output_bytes = 4096
+max_pixels = 2048
+allow_source_formats = ["rgba8", "gray8"]
+allow_target_formats = ["rgba8", "gray8"]
+
+[op."core/media::audio-transcode"]
+max_input_bytes = 4096
+max_output_bytes = 8192
+max_frames = 4096
+min_sample_rate = 8000
+max_sample_rate = 96000
+allow_source_formats = ["pcm-s16le", "pcm-f32le"]
+allow_target_formats = ["pcm-s16le", "pcm-f32le"]

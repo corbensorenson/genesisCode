@@ -687,6 +687,68 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
             "payload": {"required_fields": [field(":hash", "hex64")], "optional_fields": []},
             "response_envelope": {"success": {"value_kind": "map", "shape": "{:present bool}"}},
         },
+        "core/media::asset-hash": {
+            "payload": {
+                "required_fields": [field(":data", "bytes|string")],
+                "optional_fields": [
+                    field(":algorithm", "string|symbol", ["currently blake3-only"]),
+                    field(":kind", "string|symbol"),
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :algorithm string :hash hex64 :bytes int :kind string? ...}",
+                }
+            },
+        },
+        "core/media::image-transcode": {
+            "payload": {
+                "required_fields": [
+                    field(":data", "bytes|string"),
+                    field(":source-format", "string|symbol"),
+                    field(":target-format", "string|symbol"),
+                    field(":width", "int", ["> 0"]),
+                    field(":height", "int", ["> 0"]),
+                ],
+                "optional_fields": [],
+                "constraints": [
+                    "allow_source_formats / allow_target_formats policy gates apply",
+                    "max_input_bytes / max_output_bytes / max_pixels policy bounds apply",
+                    "supported formats: rgba8, gray8",
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :kind \"image\" :source-format string :target-format string :width int :height int :input-bytes int :output-bytes int :hash hex64 :data bytes ...}",
+                }
+            },
+        },
+        "core/media::audio-transcode": {
+            "payload": {
+                "required_fields": [
+                    field(":data", "bytes|string"),
+                    field(":source-format", "string|symbol"),
+                    field(":target-format", "string|symbol"),
+                    field(":channels", "int", ["> 0"]),
+                    field(":sample-rate", "int", ["> 0"]),
+                ],
+                "optional_fields": [],
+                "constraints": [
+                    "allow_source_formats / allow_target_formats policy gates apply",
+                    "max_input_bytes / max_output_bytes / max_frames policy bounds apply",
+                    "min_sample_rate / max_sample_rate policy bounds apply",
+                    "supported formats: pcm-s16le, pcm-f32le",
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :kind \"audio\" :source-format string :target-format string :channels int :sample-rate int :frames int :input-bytes int :output-bytes int :hash hex64 :data bytes ...}",
+                }
+            },
+        },
         "core/refs::get": {
             "payload": {"required_fields": [field(":name", "string")], "optional_fields": []}
         },

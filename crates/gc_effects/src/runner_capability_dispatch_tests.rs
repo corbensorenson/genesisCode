@@ -1552,6 +1552,178 @@ timeout_ms = 5
 }
 
 #[test]
+fn core_media_asset_hash_and_transcode_ops_are_deterministic_and_policy_gated() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["core/media::asset-hash", "core/media::image-transcode", "core/media::audio-transcode"]
+
+[op."core/media::asset-hash"]
+max_input_bytes = 16
+
+[op."core/media::image-transcode"]
+max_input_bytes = 16
+max_output_bytes = 16
+max_pixels = 16
+allow_source_formats = ["rgba8", "gray8"]
+allow_target_formats = ["rgba8", "gray8"]
+
+[op."core/media::audio-transcode"]
+max_input_bytes = 16
+max_output_bytes = 32
+max_frames = 16
+min_sample_rate = 8000
+max_sample_rate = 96000
+allow_source_formats = ["pcm-s16le", "pcm-f32le"]
+allow_target_formats = ["pcm-s16le", "pcm-f32le"]
+"#,
+    )
+    .expect("caps");
+
+    let mut budget = ArtifactBudgetState::default();
+
+    let hash_out = call_capability(
+        "core/media::asset-hash",
+        &term_map([(Term::symbol(":data"), Term::Bytes(b"hello".to_vec().into()))]),
+        policy.op_policy("core/media::asset-hash"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(200),
+    )
+    .expect("hash op");
+    let Value::Data(Term::Map(hash_map)) = hash_out else {
+        panic!("expected hash map");
+    };
+    assert_eq!(
+        hash_map.get(&TermOrdKey(Term::symbol(":algorithm"))),
+        Some(&Term::Str("blake3".to_string()))
+    );
+    assert_eq!(
+        hash_map.get(&TermOrdKey(Term::symbol(":bytes"))),
+        Some(&Term::Int(5_i64.into()))
+    );
+
+    let image_payload = term_map([
+        (
+            Term::symbol(":data"),
+            Term::Bytes(vec![0, 128, 255, 255, 255, 0, 0, 255].into()),
+        ),
+        (
+            Term::symbol(":source-format"),
+            Term::Str("rgba8".to_string()),
+        ),
+        (
+            Term::symbol(":target-format"),
+            Term::Str("gray8".to_string()),
+        ),
+        (Term::symbol(":width"), Term::Int(2_i64.into())),
+        (Term::symbol(":height"), Term::Int(1_i64.into())),
+    ]);
+    let image_out = call_capability(
+        "core/media::image-transcode",
+        &image_payload,
+        policy.op_policy("core/media::image-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(201),
+    )
+    .expect("image transcode");
+    let Value::Data(Term::Map(image_map)) = image_out else {
+        panic!("expected image map");
+    };
+    assert_eq!(
+        image_map.get(&TermOrdKey(Term::symbol(":output-bytes"))),
+        Some(&Term::Int(2_i64.into()))
+    );
+    let Some(Term::Bytes(image_bytes)) = image_map.get(&TermOrdKey(Term::symbol(":data"))) else {
+        panic!("expected image output :data bytes");
+    };
+    assert_eq!(image_bytes.as_ref(), &[104, 77]);
+
+    let audio_payload = term_map([
+        (
+            Term::symbol(":data"),
+            Term::Bytes(vec![0, 0, 255, 127, 0, 128, 16, 0].into()),
+        ),
+        (
+            Term::symbol(":source-format"),
+            Term::Str("pcm-s16le".to_string()),
+        ),
+        (
+            Term::symbol(":target-format"),
+            Term::Str("pcm-f32le".to_string()),
+        ),
+        (Term::symbol(":channels"), Term::Int(1_i64.into())),
+        (Term::symbol(":sample-rate"), Term::Int(44100_i64.into())),
+    ]);
+    let audio_out = call_capability(
+        "core/media::audio-transcode",
+        &audio_payload,
+        policy.op_policy("core/media::audio-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(202),
+    )
+    .expect("audio transcode");
+    let Value::Data(Term::Map(audio_map)) = audio_out else {
+        panic!("expected audio map");
+    };
+    assert_eq!(
+        audio_map.get(&TermOrdKey(Term::symbol(":frames"))),
+        Some(&Term::Int(4_i64.into()))
+    );
+    assert_eq!(
+        audio_map.get(&TermOrdKey(Term::symbol(":output-bytes"))),
+        Some(&Term::Int(16_i64.into()))
+    );
+}
+
+#[test]
+fn core_media_transcode_rejects_disallowed_format() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["core/media::image-transcode"]
+
+[op."core/media::image-transcode"]
+allow_source_formats = ["gray8"]
+allow_target_formats = ["gray8"]
+max_pixels = 16
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let out = call_capability(
+        "core/media::image-transcode",
+        &term_map([
+            (Term::symbol(":data"), Term::Bytes(vec![0, 0, 0, 255].into())),
+            (
+                Term::symbol(":source-format"),
+                Term::Str("rgba8".to_string()),
+            ),
+            (
+                Term::symbol(":target-format"),
+                Term::Str("gray8".to_string()),
+            ),
+            (Term::symbol(":width"), Term::Int(1_i64.into())),
+            (Term::symbol(":height"), Term::Int(1_i64.into())),
+        ]),
+        policy.op_policy("core/media::image-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(203),
+    )
+    .expect("image transcode");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
 fn sys_process_spawn_and_stream_ops_use_bridge_contracts() {
     let policy = CapsPolicy::from_toml_str(
         r#"

@@ -30,7 +30,7 @@ Legend:
 | Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ✅ (first-class `core/net::*` inbound listener/accept/respond wrappers + policy-gated bind/request-size controls + gauntlet domain coverage) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ✅ (first-party `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` families + `first_party_profile=\"browser\"` for gfx window/input/audio parity lanes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
-| WebXR runtime primitives (session/frame/input/haptics) | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| WebXR runtime primitives (session/frame/input/haptics) | ⚠️ (first-class `gfx/xr::*` session/frame/input/submit/close contracts; haptics lane not yet implemented) | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | Durable data capability family (`io/db::*`) | ✅ (first-class SQL + KV bridge-backed contracts with policy-gated target/query/row/byte bounds and replay-stable envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
@@ -51,7 +51,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current red-team backlog spans unresolved P1 platform blockers and P2 breadth/optimization items.
+- Current red-team backlog is concentrated in P2 breadth/optimization items.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -60,9 +60,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- P1.2 WebXR runtime (`gfx/xr::*`) support
 - P2.4 media/asset pipeline contracts
-- P2.7 conformance lanes for new platform domains
 - P2.8 end-to-end agent workflow performance SLO gates
 
 Primary evidence paths:

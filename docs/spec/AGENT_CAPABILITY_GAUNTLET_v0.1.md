@@ -72,3 +72,4 @@ If any required domain misses its minimum success threshold, the script exits no
 - `standard` and `full` CI profiles run this gate.
 - Failures in workflow checks or domain thresholds fail CI.
 - Release/full profile also runs `scripts/check_agent_workflow_runtime_parity.sh` to enforce native vs WASI/wasm-host bridge parity hash equivalence for the same workflows.
+- `scripts/check_agent_scenario_perf.sh` consumes this gate's workflow durations to enforce aggregated multi-domain median+p95 scenario latency SLOs.

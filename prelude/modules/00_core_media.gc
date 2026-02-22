@@ -1,0 +1,41 @@
+(def core/media::asset-hash
+  (fn (data)
+    (((core/effect::perform (quote core/media::asset-hash)) {:data data})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/media::asset-hash-kind
+  (fn (kind)
+    (fn (data)
+      (((core/effect::perform (quote core/media::asset-hash))
+        {:kind kind :data data})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/media::image-transcode
+  (fn (source-format)
+    (fn (target-format)
+      (fn (width)
+        (fn (height)
+          (fn (data)
+            (((core/effect::perform (quote core/media::image-transcode))
+              {
+                :source-format source-format
+                :target-format target-format
+                :width width
+                :height height
+                :data data})
+              (fn (resp) (core/effect::pure resp)))))))))
+
+(def core/media::audio-transcode
+  (fn (source-format)
+    (fn (target-format)
+      (fn (channels)
+        (fn (sample-rate)
+          (fn (data)
+            (((core/effect::perform (quote core/media::audio-transcode))
+              {
+                :source-format source-format
+                :target-format target-format
+                :channels channels
+                :sample-rate sample-rate
+                :data data})
+              (fn (resp) (core/effect::pure resp)))))))))

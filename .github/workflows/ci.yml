@@ -247,6 +247,10 @@ jobs:
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_agent_reference_workflows.sh
 
+      - name: Agent End-to-End Scenario Perf Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_agent_scenario_perf.sh
+
       - name: Selfhost Strict Golden (Native + WASI CLI)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}
         run: bash scripts/selfhost_strict_golden.sh

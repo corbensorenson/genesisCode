@@ -11,6 +11,7 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 required_modules=(
+  "00_core_media.gc"
   "10_browser_host.gc"
   "10_xr_host.gc"
   "30_service_orchestration.gc"
@@ -18,6 +19,7 @@ required_modules=(
   "32_network_workflow.gc"
   "33_game_loop.gc"
   "34_xr_workflow.gc"
+  "35_media_pipeline.gc"
 )
 
 for module in "${required_modules[@]}"; do
@@ -64,7 +66,8 @@ check_ref "examples/agent_network_process_workflow/workflow_run.gc" "core/kit/ne
 check_ref "examples/agent_long_running_gfx_loop_workflow/workflow_run.gc" "core/kit/game::run-fixed-loop"
 check_ref "examples/agent_service_workflow/workflow.sh" "core/kit/service::status-v1"
 check_ref "examples/agent_browser_runtime_workflow/workflow_run.gc" "browser/window::open"
-check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "core/kit/xr::run-single-frame-cycle"
+check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "gfx/xr::session-open"
+check_ref "examples/agent_media_asset_workflow/workflow_run.gc" "core/kit/media::run-build"
 check_ref "examples/agent_deploy_bundle_workflow/workflow.sh" "gcpm --caps"
 
 echo "domain-kit-workflows: ok"

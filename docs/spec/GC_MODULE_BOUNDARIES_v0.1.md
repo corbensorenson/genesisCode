@@ -26,7 +26,7 @@ Notes:
   - `prelude/modules/00_*` for core data/effect/protocol helpers
   - `prelude/modules/10_*` for gfx/compute wrappers and runtime traces
   - `prelude/modules/20_*` for editor/tasking surfaces
-  - `prelude/modules/30_*` for reusable high-level domain kits (service orchestration, data pipelines, network workflows, game-loop scaffolding)
+  - `prelude/modules/30_*` for reusable high-level domain kits (service orchestration, data pipelines, network workflows, game-loop scaffolding, XR runtime orchestration, media asset pipelines)
   - `selfhost/cli_*` for CLI/runtime orchestration
   - `selfhost/{parse,canon,printer,hash}` for frontend core
   - `selfhost/stage1_*` and patch schema modules for optimization/rewrites

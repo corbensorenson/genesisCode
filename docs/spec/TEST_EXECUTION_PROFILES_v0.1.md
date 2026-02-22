@@ -35,6 +35,10 @@ Strict/full profile runtime reports:
   - report: `.genesis/perf/full_cross_host_profile_report.json`
   - history: `.genesis/perf/full_cross_host_profile_history.jsonl`
   - enforced by `scripts/check_full_cross_host_profile_budget.sh` as strict-golden + wasm-cross-host elapsed sum with history p95 gate.
+- `agent-scenario-perf` aggregate lane
+  - report: `.genesis/perf/agent_scenario_perf_report.json`
+  - history: `.genesis/perf/agent_scenario_perf_history.jsonl`
+  - enforced by `scripts/check_agent_scenario_perf.sh` from gauntlet component durations (service + durable-data + gfx-loop + network-process) with median + p95 + regression gates.
 
 ## Runners
 
@@ -101,6 +105,8 @@ Strict/full profile runtime reports:
     required domain thresholds for service, network/process, raw-network,
     inbound-server, durable-data, package-publish/sync, graphics, gpu/compute, filesystem,
     process-lifecycle, plugin-runtime, and time-control workflows.
+  - runs `scripts/check_agent_scenario_perf.sh` for aggregated end-to-end scenario latency SLOs
+    (median + p95 + regression policy) derived from gauntlet workflow durations.
   - full release-profile workflows also require dual GPU conformance lanes
     (`gpu_device_microbench` + `gpu_device_microbench_deterministic`) and
     lane-contract parity via `scripts/check_gpu_device_conformance_lane_parity.sh`.
