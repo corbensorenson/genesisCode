@@ -17,6 +17,7 @@ Authoring source modules:
 - `00_core_reachability.gc`
 - `10_gfx.gc`
 - `10_browser_host.gc`
+- `10_xr_host.gc`
 - `10_gfx_ui_runtime.gc`
 - `10_gfx_runtime_planner.gc`
 - `10_gfx_runtime_trace.gc`
@@ -28,6 +29,7 @@ Authoring source modules:
 - `31_data_pipeline.gc`
 - `32_network_workflow.gc`
 - `33_game_loop.gc`
+- `34_xr_workflow.gc`
 
 To rebuild the assembled prelude:
 

@@ -2493,6 +2493,167 @@
         }
       }
     },
+    "gfx/xr::frame-poll": {
+      "operation": "gfx/xr::frame-poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :frame {:frame-index int :predicted-display-time-ms int :views vector} :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::input-poll": {
+      "operation": "gfx/xr::input-poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":max-inputs",
+            "type": "int"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :inputs vector :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::session-close": {
+      "operation": "gfx/xr::session-close",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :closed bool :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::session-open": {
+      "operation": "gfx/xr::session-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":opts",
+            "type": "map"
+          }
+        ],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :mode string :reference-space string :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::submit-frame": {
+      "operation": "gfx/xr::submit-frame",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "name": ":frame",
+            "type": "map"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :accepted bool :frame-index int :submitted-frames int :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "gpu/compute::create-bind-group": {
       "operation": "gpu/compute::create-bind-group",
       "payload": {

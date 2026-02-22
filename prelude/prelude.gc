@@ -2369,6 +2369,31 @@
 (def core/browser/storage::delete
   (fn (key) ((core/caps::perform (quote browser/storage::delete)) {:key key})))
 
+(def core/gfx/xr::session-open
+  (fn (opts) ((core/caps::perform (quote gfx/xr::session-open)) {:opts opts})))
+
+(def core/gfx/xr::frame-poll
+  (fn (session-id)
+    ((core/caps::perform (quote gfx/xr::frame-poll))
+      {:session-id session-id})))
+
+(def core/gfx/xr::input-poll
+  (fn (session-id)
+    (fn (max-inputs)
+      ((core/caps::perform (quote gfx/xr::input-poll))
+        {:session-id session-id :max-inputs max-inputs}))))
+
+(def core/gfx/xr::submit-frame
+  (fn (session-id)
+    (fn (frame)
+      ((core/caps::perform (quote gfx/xr::submit-frame))
+        {:session-id session-id :frame frame}))))
+
+(def core/gfx/xr::session-close
+  (fn (session-id)
+    ((core/caps::perform (quote gfx/xr::session-close))
+      {:session-id session-id})))
+
 (def core/gfx/ui::node
   (fn (kind)
     (fn (id)
@@ -5329,4 +5354,66 @@
        ((core/map::get spec) (quote :scope)))
       ((core/map::get spec) (quote :frames)))
       0)))
+
+(def core/kit/xr::session-spec-v1
+  (fn (mode)
+    (fn (reference-space)
+      (fn (app)
+        {
+          :schema (quote :core/kit/xr-session.v1)
+          :mode mode
+          :reference-space reference-space
+          :app app}))))
+
+(def core/kit/xr::open-session
+  (fn (spec)
+    (core/gfx/xr::session-open
+      {
+        :mode ((core/map::get spec) (quote :mode))
+        :reference-space ((core/map::get spec) (quote :reference-space))
+        :app ((core/map::get spec) (quote :app))})))
+
+(def core/kit/xr::frame-poll
+  (fn (session-id)
+    (core/gfx/xr::frame-poll session-id)))
+
+(def core/kit/xr::input-poll
+  (fn (session-id)
+    (fn (max-inputs)
+      ((core/gfx/xr::input-poll session-id) max-inputs))))
+
+(def core/kit/xr::submit-frame
+  (fn (session-id)
+    (fn (frame)
+      ((core/gfx/xr::submit-frame session-id) frame))))
+
+(def core/kit/xr::session-close
+  (fn (session-id)
+    (core/gfx/xr::session-close session-id)))
+
+(def core/kit/xr::run-single-frame-cycle
+  (fn (spec)
+    (fn (max-inputs)
+      ((core/effect::bind (core/kit/xr::open-session spec))
+       (fn (open-resp)
+         (let ((session-id ((core/map::get open-resp) (quote :session-id))))
+           ((core/effect::bind (core/kit/xr::frame-poll session-id))
+            (fn (frame-resp)
+              ((core/effect::bind ((core/kit/xr::input-poll session-id) max-inputs))
+               (fn (input-resp)
+                 ((core/effect::bind
+                    ((core/kit/xr::submit-frame session-id)
+                     ((core/map::get frame-resp) (quote :frame))))
+                  (fn (submit-resp)
+                    ((core/effect::bind (core/kit/xr::session-close session-id))
+                     (fn (close-resp)
+                       (core/effect::pure
+                         {
+                           :schema (quote :core/kit/xr-frame-cycle-result.v1)
+                           :ok true
+                           :session open-resp
+                           :frame frame-resp
+                           :input input-resp
+                           :submit submit-resp
+                           :close close-resp})))))))))))))))
 

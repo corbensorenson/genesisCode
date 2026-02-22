@@ -21,6 +21,7 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `workflow_count`, `workflow_successes`, `score_percent`
 - `domain_count`, `domain_successes`
 - `elapsed_ms`, `default_max_ms`
+- `p95_default_max_ms`, `p95_min_samples`, `p95_failures`
 - `profile`, `runtime_profile`, `genesis_bin`
 - `domains`:
   - `domain`
@@ -33,6 +34,7 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
   - `replay_signal`, `replay_value`, `replay_hash`
   - `replay_value_normalized`, `replay_hash_normalized`
   - `duration_ms`, `max_ms`, `duration_ok`
+  - `p95_duration_ms`, `p95_budget_ms`, `p95_sample_count`, `p95_enforced`, `p95_ok`
   - `ok`
 
 ## Required Domains
@@ -52,6 +54,7 @@ The gate requires at least one successful workflow for each:
 - `plugin_runtime`
 - `time_control`
 - `browser_runtime`
+- `xr_runtime`
 - `deployment`
 
 If any required domain misses its minimum success threshold, the script exits non-zero.
@@ -60,6 +63,9 @@ If any required domain misses its minimum success threshold, the script exits no
 
 - `GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS` (default `300000`)
 - `GENESIS_AGENT_GAUNTLET_MAX_MS_<WORKFLOW_NAME_UPPER>` per-workflow override
+- `GENESIS_AGENT_GAUNTLET_P95_DEFAULT_MAX_MS` (defaults to `GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS`)
+- `GENESIS_AGENT_GAUNTLET_P95_MAX_MS_<WORKFLOW_NAME_UPPER>` per-workflow p95 override
+- `GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES` minimum history samples before p95 enforcement (default `8`)
 
 ## CI Expectations
 

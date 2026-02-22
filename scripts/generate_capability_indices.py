@@ -26,6 +26,7 @@ def extract_host_ops(root: pathlib.Path) -> list[str]:
     files = [
         root / "crates/gc_effects/src/runner_capability_dispatch.rs",
         root / "crates/gc_effects/src/runner_browser_host.rs",
+        root / "crates/gc_effects/src/runner_xr_host.rs",
         root / "crates/gc_effects/src/runner_task.rs",
         root / "crates/gc_effects/src/runner_cap_pkg_low.rs",
         root / "crates/gc_effects/src/runner_cap_vcs_low.rs",
@@ -181,6 +182,66 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
             },
             "response_envelope": {
                 "success": {"value_kind": "map", "shape": "{:ok bool :key string :deleted bool ...}"}
+            },
+        },
+        "gfx/xr::session-open": {
+            "payload": {
+                "required_fields": [],
+                "optional_fields": [field(":opts", "map")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :mode string :reference-space string :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::frame-poll": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :frame {:frame-index int :predicted-display-time-ms int :views vector} :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::input-poll": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [field(":max-inputs", "int")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :inputs vector :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::submit-frame": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":frame", "map"),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :accepted bool :frame-index int :submitted-frames int :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::session-close": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :session-id string :closed bool :backend string :adapter string ...}"}
             },
         },
         "io/fs::read": {

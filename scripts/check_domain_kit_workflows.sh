@@ -12,10 +12,12 @@ fi
 
 required_modules=(
   "10_browser_host.gc"
+  "10_xr_host.gc"
   "30_service_orchestration.gc"
   "31_data_pipeline.gc"
   "32_network_workflow.gc"
   "33_game_loop.gc"
+  "34_xr_workflow.gc"
 )
 
 for module in "${required_modules[@]}"; do
@@ -62,6 +64,7 @@ check_ref "examples/agent_network_process_workflow/workflow_run.gc" "core/kit/ne
 check_ref "examples/agent_long_running_gfx_loop_workflow/workflow_run.gc" "core/kit/game::run-fixed-loop"
 check_ref "examples/agent_service_workflow/workflow.sh" "core/kit/service::status-v1"
 check_ref "examples/agent_browser_runtime_workflow/workflow_run.gc" "browser/window::open"
+check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "core/kit/xr::run-single-frame-cycle"
 check_ref "examples/agent_deploy_bundle_workflow/workflow.sh" "gcpm --caps"
 
 echo "domain-kit-workflows: ok"

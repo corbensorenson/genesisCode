@@ -1,0 +1,24 @@
+(def core/gfx/xr::session-open
+  (fn (opts) ((core/caps::perform (quote gfx/xr::session-open)) {:opts opts})))
+
+(def core/gfx/xr::frame-poll
+  (fn (session-id)
+    ((core/caps::perform (quote gfx/xr::frame-poll))
+      {:session-id session-id})))
+
+(def core/gfx/xr::input-poll
+  (fn (session-id)
+    (fn (max-inputs)
+      ((core/caps::perform (quote gfx/xr::input-poll))
+        {:session-id session-id :max-inputs max-inputs}))))
+
+(def core/gfx/xr::submit-frame
+  (fn (session-id)
+    (fn (frame)
+      ((core/caps::perform (quote gfx/xr::submit-frame))
+        {:session-id session-id :frame frame}))))
+
+(def core/gfx/xr::session-close
+  (fn (session-id)
+    ((core/caps::perform (quote gfx/xr::session-close))
+      {:session-id session-id})))

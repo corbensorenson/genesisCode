@@ -61,6 +61,7 @@ use crate::runner_vcs_payload::{
     payload_vcs_hash, payload_vcs_max, payload_vcs_opt_hash, payload_vcs_opt_sym_or_str,
     payload_vcs_out, payload_vcs_patch, payload_vcs_root, payload_vcs_store, payload_vcs_sym,
 };
+use crate::runner_xr_host::{XrHostRuntime, xr_host_call};
 use crate::store::ArtifactStore;
 
 #[path = "runner_cap_gc_gpk_low.rs"]
@@ -172,6 +173,7 @@ pub fn run(
     let mut gfx_runtime = GfxHostRuntime::default();
     let mut browser_runtime = BrowserHostRuntime::default();
     let mut gpu_runtime = GpuHostRuntime::default();
+    let mut xr_runtime = XrHostRuntime::default();
     let mut editor_runtime = EditorHostRuntime::default();
     let mut artifact_budget_state = ArtifactBudgetState::default();
     let mut runtime_budget_state = RuntimeBudgetState::default();
@@ -247,6 +249,10 @@ pub fn run(
                         gpu_host_call(&mut gpu_runtime, &req.op, &req.payload, pol, proto.error)
                     {
                         gpu_resp
+                    } else if let Some(xr_resp) =
+                        xr_host_call(&mut xr_runtime, &req.op, &req.payload, pol, proto.error)
+                    {
+                        xr_resp
                     } else if let Some(editor_resp) = editor_host_call(
                         &mut editor_runtime,
                         &req.op,

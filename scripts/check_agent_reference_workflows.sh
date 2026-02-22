@@ -70,6 +70,11 @@ workflows = [
         "domains": ["browser_runtime"],
     },
     {
+        "name": "agent_xr_runtime_workflow",
+        "path": "examples/agent_xr_runtime_workflow/workflow.sh",
+        "domains": ["xr_runtime"],
+    },
+    {
         "name": "agent_deploy_bundle_workflow",
         "path": "examples/agent_deploy_bundle_workflow/workflow.sh",
         "domains": ["deployment"],
@@ -135,6 +140,7 @@ required_domains = {
     "plugin_runtime": 1,
     "time_control": 1,
     "browser_runtime": 1,
+    "xr_runtime": 1,
     "deployment": 1,
 }
 
@@ -149,6 +155,12 @@ else:
     require_gpu_device = require_gpu_device_raw.strip().lower() in {"1", "true", "yes", "on"}
 if require_gpu_device:
     env["GENESIS_AGENT_GPU_REQUIRE_DEVICE"] = "1"
+p95_default_max_ms = int(
+    env.get("GENESIS_AGENT_GAUNTLET_P95_DEFAULT_MAX_MS", str(default_max_ms))
+)
+p95_min_samples = int(env.get("GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES", "8"))
+if p95_min_samples < 1:
+    raise SystemExit("agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES must be >= 1")
 
 backend_pattern = re.compile(r':backend\s+"([^"]+)"')
 replay_pattern = re.compile(r"replay=([^\r\n]+)")
@@ -161,11 +173,48 @@ def normalize_replay_value(workflow_name: str, replay_value: Optional[str]) -> O
         normalized = re.sub(r":delta-ms\s+\d+", ":delta-ms <normalized>", normalized)
     return normalized
 
+def p95(values: list[int]) -> int:
+    if not values:
+        return 0
+    sorted_values = sorted(values)
+    index = int(round(0.95 * (len(sorted_values) - 1)))
+    return sorted_values[index]
+
+def load_workflow_duration_history(path: pathlib.Path, current_runtime_profile: str) -> dict[str, list[int]]:
+    durations: dict[str, list[int]] = {}
+    if not path.exists():
+        return durations
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("runtime_profile") != current_runtime_profile:
+            continue
+        wf_durations = entry.get("workflow_durations_ms")
+        if not isinstance(wf_durations, dict):
+            continue
+        for name, value in wf_durations.items():
+            if not isinstance(name, str) or not isinstance(value, int):
+                continue
+            durations.setdefault(name, []).append(value)
+    return durations
+
 started = time.time()
 workflow_reports = []
+history_durations = load_workflow_duration_history(history_path, runtime_profile)
 
 for wf in workflows:
     max_ms = int(env.get(f"GENESIS_AGENT_GAUNTLET_MAX_MS_{wf['name'].upper()}", default_max_ms))
+    p95_budget_ms = int(
+        env.get(
+            f"GENESIS_AGENT_GAUNTLET_P95_MAX_MS_{wf['name'].upper()}",
+            str(p95_default_max_ms),
+        )
+    )
     cmd = ["bash", str(root / wf["path"])]
     print(f"agent-capability-gauntlet: running {wf['name']}")
     wf_start = time.time()
@@ -194,8 +243,12 @@ for wf in workflows:
     gpu_backend_ok = (not gpu_backend_required) or (reported_backend == "device-runtime")
     replay_signal = replay_value is not None
     duration_ok = duration_ms <= max_ms
+    wf_samples = history_durations.get(wf["name"], []) + [duration_ms]
+    p95_duration_ms = p95(wf_samples)
+    p95_enforced = len(wf_samples) >= p95_min_samples
+    p95_ok = (not p95_enforced) or (p95_duration_ms <= p95_budget_ms)
     exit_ok = proc.returncode == 0
-    ok = exit_ok and replay_signal and duration_ok and gpu_backend_ok
+    ok = exit_ok and replay_signal and duration_ok and gpu_backend_ok and p95_ok
     workflow_reports.append(
         {
             "name": wf["name"],
@@ -211,6 +264,12 @@ for wf in workflows:
             "duration_ms": duration_ms,
             "max_ms": max_ms,
             "duration_ok": duration_ok,
+            "p95_budget_ms": p95_budget_ms,
+            "p95_duration_ms": p95_duration_ms,
+            "p95_enforced": p95_enforced,
+            "p95_min_samples": p95_min_samples,
+            "p95_sample_count": len(wf_samples),
+            "p95_ok": p95_ok,
             "gpu_backend_required": gpu_backend_required,
             "gpu_backend": reported_backend,
             "gpu_backend_ok": gpu_backend_ok,
@@ -239,6 +298,7 @@ score_percent = round((workflow_successes / workflow_count) * 100.0, 2) if workf
 domain_ok = all(d["ok"] for d in domain_reports)
 all_workflows_ok = workflow_successes == workflow_count
 ok = domain_ok and all_workflows_ok
+p95_failures = [wf["name"] for wf in workflow_reports if not wf["p95_ok"]]
 
 report = {
     "kind": "genesis/agent-capability-gauntlet-v0.1",
@@ -250,6 +310,9 @@ report = {
     "domain_successes": sum(1 for d in domain_reports if d["ok"]),
     "elapsed_ms": int((time.time() - started) * 1000),
     "default_max_ms": default_max_ms,
+    "p95_default_max_ms": p95_default_max_ms,
+    "p95_min_samples": p95_min_samples,
+    "p95_failures": p95_failures,
     "profile": profile,
     "runtime_profile": runtime_profile,
     "require_gpu_device_backend": require_gpu_device,
@@ -273,6 +336,9 @@ history_entry = {
     "domain_count": report["domain_count"],
     "elapsed_ms": report["elapsed_ms"],
     "runtime_profile": runtime_profile,
+    "workflow_durations_ms": {
+        wf["name"]: wf["duration_ms"] for wf in workflow_reports
+    },
     "timestamp_utc": report["timestamp_utc"],
 }
 with history_path.open("a", encoding="utf-8") as f:
@@ -290,6 +356,7 @@ if not ok:
     failing_gpu_backend = [
         wf["name"] for wf in workflow_reports if wf.get("gpu_backend_required") and not wf.get("gpu_backend_ok")
     ]
+    failing_p95 = [wf["name"] for wf in workflow_reports if not wf.get("p95_ok")]
     failing_domains = [d["domain"] for d in domain_reports if not d["ok"]]
     if failing_workflows:
         print(
@@ -301,6 +368,12 @@ if not ok:
         print(
             "agent-capability-gauntlet: gpu backend contract failures: "
             + ", ".join(failing_gpu_backend),
+            file=sys.stderr,
+        )
+    if failing_p95:
+        print(
+            "agent-capability-gauntlet: p95 lane budget failures: "
+            + ", ".join(failing_p95),
             file=sys.stderr,
         )
     if failing_domains:

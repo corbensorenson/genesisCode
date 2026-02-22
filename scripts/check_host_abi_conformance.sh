@@ -9,6 +9,7 @@ cd "$ROOT_DIR"
 RUNNER_FILES=(
   "crates/gc_effects/src/runner_capability_dispatch.rs"
   "crates/gc_effects/src/runner_browser_host.rs"
+  "crates/gc_effects/src/runner_xr_host.rs"
   "crates/gc_effects/src/runner_task.rs"
   "crates/gc_effects/src/runner_cap_pkg_low.rs"
   "crates/gc_effects/src/runner_cap_vcs_low.rs"

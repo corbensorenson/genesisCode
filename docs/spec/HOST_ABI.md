@@ -23,6 +23,7 @@ Compatibility notes:
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
+  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `submit-frame`, `session-close`) with deterministic first-party session/frame/input semantics and optional explicit bridge override
   - `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` (deterministic browser host runtime baseline; explicit bridge policy may override)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
@@ -162,6 +163,11 @@ Compatibility notes:
 - `gfx/window::resize-surface`
 - `gfx/window::set-title`
 - `gfx/window::surface-info`
+- `gfx/xr::frame-poll`
+- `gfx/xr::input-poll`
+- `gfx/xr::session-close`
+- `gfx/xr::session-open`
+- `gfx/xr::submit-frame`
 - `gpu/compute::create-bind-group`
 - `gpu/compute::create-bind-group-layout`
 - `gpu/compute::create-buffer`
@@ -261,6 +267,25 @@ CI drift check:
 - `browser/storage::delete`
   - Required payload field: `:key` (string).
   - Response map includes `:deleted` bool.
+
+## XR Host Capability Contracts
+
+- `gfx/xr::session-open`
+  - Optional payload field: `:opts` map (`:mode` string/symbol, `:reference-space` string/symbol, `:app` string/symbol).
+  - First-party runtime returns deterministic `:session-id` with normalized mode/reference-space metadata.
+- `gfx/xr::frame-poll`
+  - Required payload field: `:session-id` (string).
+  - Response map includes deterministic frame envelopes (`:frame-index`, `:predicted-display-time-ms`, stereo `:views`).
+- `gfx/xr::input-poll`
+  - Required payload field: `:session-id` (string).
+  - Optional payload field: `:max-inputs` (int).
+  - Response map includes deterministic bounded input/controller vector under `:inputs`.
+- `gfx/xr::submit-frame`
+  - Required payload fields: `:session-id` (string), `:frame` (map).
+  - Response map includes deterministic submit acceptance metadata and cumulative `:submitted-frames`.
+- `gfx/xr::session-close`
+  - Required payload field: `:session-id` (string).
+  - Response map includes deterministic `:closed` flag; subsequent use is rejected via stable XR error codes.
 
 ## Network/Process Capability Contracts
 

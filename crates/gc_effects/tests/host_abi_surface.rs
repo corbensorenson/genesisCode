@@ -416,6 +416,184 @@ wasi_bridge_response = "{:ok true :found true :value {:name \"bridge\"}}"
 }
 
 #[test]
+fn xr_host_ops_are_replay_deterministic_without_bridge() {
+    let src = r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform
+               'gfx/xr::session-open
+               {:opts {:app "agent-xr" :mode "immersive-vr" :reference-space "local-floor"}}
+               (fn (open-resp) (core/effect::pure open-resp))))
+           (fn (open-resp)
+             (let ((sid ((core/map::get open-resp) ':session-id)))
+               ((core/effect::bind
+                  (core/effect::perform
+                    'gfx/xr::frame-poll
+                    {:session-id sid}
+                    (fn (frame-resp) (core/effect::pure frame-resp))))
+                (fn (frame-resp)
+                  ((core/effect::bind
+                     (core/effect::perform
+                       'gfx/xr::input-poll
+                       {:max-inputs 2 :session-id sid}
+                       (fn (input-resp) (core/effect::pure input-resp))))
+                   (fn (input-resp)
+                     ((core/effect::bind
+                        (core/effect::perform
+                          'gfx/xr::submit-frame
+                          {:session-id sid :frame ((core/map::get frame-resp) ':frame)}
+                          (fn (submit-resp) (core/effect::pure submit-resp))))
+                      (fn (submit-resp)
+                        ((core/effect::bind
+                           (core/effect::perform
+                             'gfx/xr::session-close
+                             {:session-id sid}
+                             (fn (close-resp) (core/effect::pure close-resp))))
+                         (fn (close-resp)
+                           (core/effect::pure
+                             {:close close-resp
+                              :frame frame-resp
+                              :input input-resp
+                              :open open-resp
+                              :submit submit-resp})))))))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gfx/xr::session-open",
+  "gfx/xr::frame-poll",
+  "gfx/xr::input-poll",
+  "gfx/xr::submit-frame",
+  "gfx/xr::session-close"
+]
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 5);
+    assert_eq!(run_out.log.entries[0].op, "gfx/xr::session-open");
+    assert_eq!(run_out.log.entries[1].op, "gfx/xr::frame-poll");
+    assert_eq!(run_out.log.entries[2].op, "gfx/xr::input-poll");
+    assert_eq!(run_out.log.entries[3].op, "gfx/xr::submit-frame");
+    assert_eq!(run_out.log.entries[4].op, "gfx/xr::session-close");
+
+    let Value::Map(top) = &run_out.value else {
+        panic!("expected run output map");
+    };
+    let Some(Value::Data(Term::Map(open_map))) = top.get(&TermOrdKey(Term::symbol(":open"))) else {
+        panic!("expected :open map");
+    };
+    assert_eq!(
+        open_map.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("xr-first-party-runtime".to_string()))
+    );
+    let Some(Value::Data(Term::Map(input_map))) = top.get(&TermOrdKey(Term::symbol(":input")))
+    else {
+        panic!("expected :input map");
+    };
+    let Some(Term::Vector(inputs)) = input_map.get(&TermOrdKey(Term::symbol(":inputs"))) else {
+        panic!("expected :input :inputs vector");
+    };
+    assert_eq!(inputs.len(), 2);
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}
+
+#[test]
+fn xr_host_ops_are_replay_deterministic_with_wasi_bridge_profile() {
+    let src = r#"
+        (def prog
+          ((core/effect::bind
+             (core/effect::perform
+               'gfx/xr::session-open
+               {:opts {:app "bridge-xr" :mode "immersive-vr" :reference-space "local-floor"}}
+               (fn (open-resp) (core/effect::pure open-resp))))
+           (fn (open-resp)
+             (let ((sid ((core/map::get open-resp) ':session-id)))
+               ((core/effect::bind
+                  (core/effect::perform
+                    'gfx/xr::frame-poll
+                    {:session-id sid}
+                    (fn (frame-resp) (core/effect::pure frame-resp))))
+                (fn (frame-resp)
+                  ((core/effect::bind
+                     (core/effect::perform
+                       'gfx/xr::session-close
+                       {:session-id sid}
+                       (fn (close-resp) (core/effect::pure close-resp))))
+                   (fn (close-resp)
+                     (core/effect::pure {:close close-resp :frame frame-resp :open open-resp})))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gfx/xr::session-open",
+  "gfx/xr::frame-poll",
+  "gfx/xr::session-close"
+]
+
+[op."gfx/xr::session-open"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :backend \"bridge-xr\" :adapter \"bridge\" :session-id \"xr-bridge-1\"}"
+
+[op."gfx/xr::frame-poll"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :backend \"bridge-xr\" :adapter \"bridge\" :session-id \"xr-bridge-1\" :frame {:frame-index 3 :predicted-display-time-ms 33 :views []}}"
+
+[op."gfx/xr::session-close"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :backend \"bridge-xr\" :adapter \"bridge\" :session-id \"xr-bridge-1\" :closed true}"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 3);
+    assert_eq!(run_out.log.entries[0].op, "gfx/xr::session-open");
+    assert_eq!(run_out.log.entries[1].op, "gfx/xr::frame-poll");
+    assert_eq!(run_out.log.entries[2].op, "gfx/xr::session-close");
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}
+
+#[test]
 fn net_and_process_ops_are_replay_deterministic_with_wasi_bridge_profile() {
     let src = r#"
         (def prog

@@ -9,12 +9,14 @@ cd "$ROOT_DIR"
 PRELUDE_FILES=(
   "prelude/modules/10_browser_host.gc"
   "prelude/modules/10_gfx.gc"
+  "prelude/modules/10_xr_host.gc"
   "prelude/modules/11_gpu_compute.gc"
   "prelude/modules/20_editor.gc"
 )
 RUNNER_FILES=(
   "crates/gc_effects/src/runner_capability_dispatch.rs"
   "crates/gc_effects/src/runner_browser_host.rs"
+  "crates/gc_effects/src/runner_xr_host.rs"
 )
 
 for f in "${PRELUDE_FILES[@]}"; do

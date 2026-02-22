@@ -1,0 +1,7 @@
+allow = [
+  "gfx/xr::session-open",
+  "gfx/xr::frame-poll",
+  "gfx/xr::input-poll",
+  "gfx/xr::submit-frame",
+  "gfx/xr::session-close"
+]

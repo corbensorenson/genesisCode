@@ -23,6 +23,7 @@ mod runner_task;
 mod runner_task_exec;
 mod runner_timeout;
 mod runner_vcs_payload;
+mod runner_xr_host;
 mod store;
 
 pub use crate::error::EffectsError;
