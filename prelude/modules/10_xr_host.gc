@@ -12,6 +12,90 @@
       ((core/caps::perform (quote gfx/xr::input-poll))
         {:session-id session-id :max-inputs max-inputs}))))
 
+(def core/gfx/xr::hands-poll
+  (fn (session-id)
+    (fn (max-joints)
+      ((core/caps::perform (quote gfx/xr::hands-poll))
+        {:session-id session-id :max-joints max-joints}))))
+
+(def core/gfx/xr::hit-test
+  (fn (session-id)
+    (fn (ray)
+      (fn (max-hits)
+        ((core/caps::perform (quote gfx/xr::hit-test))
+          {:session-id session-id :ray ray :max-hits max-hits})))))
+
+(def core/gfx/xr::spatial-mesh-poll
+  (fn (session-id)
+    (fn (max-meshes)
+      (fn (lod)
+        ((core/caps::perform (quote gfx/xr::spatial-mesh-poll))
+          {:session-id session-id :max-meshes max-meshes :lod lod})))))
+
+(def core/gfx/xr::anchor-create
+  (fn (session-id)
+    (fn (space)
+      (fn (label)
+        (fn (pose)
+          ((core/caps::perform (quote gfx/xr::anchor-create))
+            {:session-id session-id :space space :label label :pose pose}))))))
+
+(def core/gfx/xr::anchor-update
+  (fn (session-id)
+    (fn (anchor-id)
+      (fn (space)
+        (fn (label)
+          (fn (pose)
+            ((core/caps::perform (quote gfx/xr::anchor-update))
+              {
+                :session-id session-id
+                :anchor-id anchor-id
+                :space space
+                :label label
+                :pose pose})))))))
+
+(def core/gfx/xr::anchor-destroy
+  (fn (session-id)
+    (fn (anchor-id)
+      ((core/caps::perform (quote gfx/xr::anchor-destroy))
+        {:session-id session-id :anchor-id anchor-id}))))
+
+(def core/gfx/xr::layer-create
+  (fn (session-id)
+    (fn (layer-type)
+      (fn (layout)
+        (fn (opacity)
+          (fn (transform)
+            ((core/caps::perform (quote gfx/xr::layer-create))
+              {
+                :session-id session-id
+                :type layer-type
+                :layout layout
+                :opacity opacity
+                :transform transform})))))))
+
+(def core/gfx/xr::layer-update
+  (fn (session-id)
+    (fn (layer-id)
+      (fn (layer-type)
+        (fn (layout)
+          (fn (opacity)
+            (fn (transform)
+              ((core/caps::perform (quote gfx/xr::layer-update))
+                {
+                  :session-id session-id
+                  :layer-id layer-id
+                  :type layer-type
+                  :layout layout
+                  :opacity opacity
+                  :transform transform}))))))))
+
+(def core/gfx/xr::layer-destroy
+  (fn (session-id)
+    (fn (layer-id)
+      ((core/caps::perform (quote gfx/xr::layer-destroy))
+        {:session-id session-id :layer-id layer-id}))))
+
 (def core/gfx/xr::haptics-pulse
   (fn (session-id)
     (fn (input-id)

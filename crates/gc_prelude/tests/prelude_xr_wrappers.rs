@@ -31,6 +31,15 @@ fn prelude_xr_wrappers_construct_expected_requests() {
         :open (core/gfx/xr::session-open {:mode "immersive-vr" :reference-space "local-floor" :app "xr-agent"})
         :frame (core/gfx/xr::frame-poll "session-1")
         :input ((core/gfx/xr::input-poll "session-1") 4)
+        :hands ((core/gfx/xr::hands-poll "session-1") 25)
+        :hit (((core/gfx/xr::hit-test "session-1") {:origin [0 0 0] :direction [0 0 -1]}) 4)
+        :mesh (((core/gfx/xr::spatial-mesh-poll "session-1") 2) "medium")
+        :anchor-create ((((core/gfx/xr::anchor-create "session-1") "local-floor") "root") {:position [0 1 0]})
+        :anchor-update (((((core/gfx/xr::anchor-update "session-1") "anchor-1") "local-floor") "root") {:position [1 1 0]})
+        :anchor-destroy ((core/gfx/xr::anchor-destroy "session-1") "anchor-1")
+        :layer-create (((((core/gfx/xr::layer-create "session-1") "quad") "stereo") 1000) {:position [0 1 -2]})
+        :layer-update ((((((core/gfx/xr::layer-update "session-1") "layer-1") "quad") "stereo") 900) {:position [0 1 -1]})
+        :layer-destroy ((core/gfx/xr::layer-destroy "session-1") "layer-1")
         :haptics ((((core/gfx/xr::haptics-pulse "session-1") "right-controller") 800) 24)
         :submit ((core/gfx/xr::submit-frame "session-1") {:frame-index 3 :views []})
         :close (core/gfx/xr::session-close "session-1")
@@ -68,6 +77,69 @@ fn prelude_xr_wrappers_construct_expected_requests() {
             .clone(),
     );
     assert_eq!(input_req.op, "gfx/xr::input-poll");
+
+    let hands_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":hands")))
+            .expect("missing :hands")
+            .clone(),
+    );
+    assert_eq!(hands_req.op, "gfx/xr::hands-poll");
+
+    let hit_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":hit")))
+            .expect("missing :hit")
+            .clone(),
+    );
+    assert_eq!(hit_req.op, "gfx/xr::hit-test");
+
+    let mesh_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":mesh")))
+            .expect("missing :mesh")
+            .clone(),
+    );
+    assert_eq!(mesh_req.op, "gfx/xr::spatial-mesh-poll");
+
+    let anchor_create_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":anchor-create")))
+            .expect("missing :anchor-create")
+            .clone(),
+    );
+    assert_eq!(anchor_create_req.op, "gfx/xr::anchor-create");
+
+    let anchor_update_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":anchor-update")))
+            .expect("missing :anchor-update")
+            .clone(),
+    );
+    assert_eq!(anchor_update_req.op, "gfx/xr::anchor-update");
+
+    let anchor_destroy_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":anchor-destroy")))
+            .expect("missing :anchor-destroy")
+            .clone(),
+    );
+    assert_eq!(anchor_destroy_req.op, "gfx/xr::anchor-destroy");
+
+    let layer_create_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":layer-create")))
+            .expect("missing :layer-create")
+            .clone(),
+    );
+    assert_eq!(layer_create_req.op, "gfx/xr::layer-create");
+
+    let layer_update_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":layer-update")))
+            .expect("missing :layer-update")
+            .clone(),
+    );
+    assert_eq!(layer_update_req.op, "gfx/xr::layer-update");
+
+    let layer_destroy_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":layer-destroy")))
+            .expect("missing :layer-destroy")
+            .clone(),
+    );
+    assert_eq!(layer_destroy_req.op, "gfx/xr::layer-destroy");
 
     let submit_req = get_req(
         m.get(&TermOrdKey(Term::symbol(":submit")))

@@ -1,0 +1,21 @@
+kind = "genesis/gpu-device-conformance-matrix-config-v0.1"
+
+[[lane]]
+id = "nvidia-linux"
+vendor = "nvidia"
+os = "linux"
+
+[[lane]]
+id = "amd-linux"
+vendor = "amd"
+os = "linux"
+
+[[lane]]
+id = "intel-windows"
+vendor = "intel"
+os = "windows"
+
+[[lane]]
+id = "apple-macos"
+vendor = "apple"
+os = "macos"

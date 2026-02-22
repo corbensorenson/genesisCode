@@ -220,6 +220,144 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                 }
             },
         },
+        "gfx/xr::hands-poll": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [field(":max-joints", "int")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :hands vector :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::hit-test": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [field(":ray", "map"), field(":max-hits", "int")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :hits vector :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::spatial-mesh-poll": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [field(":max-meshes", "int"), field(":lod", "symbol|string")],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :meshes vector :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::anchor-create": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [
+                    field(":space", "symbol|string"),
+                    field(":label", "string"),
+                    field(":pose", "map"),
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :anchor-id string :space string :pose map :tracking-state symbol :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::anchor-update": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":anchor-id", "string", ["non-empty"]),
+                ],
+                "optional_fields": [
+                    field(":space", "symbol|string"),
+                    field(":label", "string"),
+                    field(":pose", "map"),
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :anchor-id string :space string :pose map :tracking-state symbol :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::anchor-destroy": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":anchor-id", "string", ["non-empty"]),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :anchor-id string :destroyed bool :anchor-count int :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::layer-create": {
+            "payload": {
+                "required_fields": [field(":session-id", "string", ["non-empty"])],
+                "optional_fields": [
+                    field(":type", "symbol|string"),
+                    field(":layout", "symbol|string"),
+                    field(":opacity", "int"),
+                    field(":transform", "map"),
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :layer-id string :type string :layout string :opacity int :transform map :layer-count int :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::layer-update": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":layer-id", "string", ["non-empty"]),
+                ],
+                "optional_fields": [
+                    field(":type", "symbol|string"),
+                    field(":layout", "symbol|string"),
+                    field(":opacity", "int"),
+                    field(":transform", "map"),
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :layer-id string :type string :layout string :opacity int :transform map :backend string :adapter string ...}",
+                }
+            },
+        },
+        "gfx/xr::layer-destroy": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":layer-id", "string", ["non-empty"]),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :layer-id string :destroyed bool :layer-count int :backend string :adapter string ...}",
+                }
+            },
+        },
         "gfx/xr::haptics-pulse": {
             "payload": {
                 "required_fields": [
@@ -339,6 +477,92 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                 "optional_fields": [field(":overwrite", "bool")],
             },
             "response_envelope": {"success": {"value_kind": "nil", "shape": "nil"}},
+        },
+        "core/crypto::hash": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":data", "bytes|string", ["max_input_bytes policy required"]),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto hash response map"}
+            },
+        },
+        "core/crypto::sign": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":key-id", "string", ["allow_key_ids policy required"]),
+                    field(":message", "bytes|string", ["max_message_bytes policy required"]),
+                ],
+                "optional_fields": [field(":context", "bytes|string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto sign response map"}
+            },
+        },
+        "core/crypto::verify": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":key-id", "string", ["allow_key_ids policy required"]),
+                    field(":message", "bytes|string", ["max_message_bytes policy required"]),
+                    field(":signature", "bytes|string", ["max_signature_bytes policy required"]),
+                ],
+                "optional_fields": [field(":context", "bytes|string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto verify response map"}
+            },
+        },
+        "core/crypto::kdf": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":key-id", "string", ["allow_key_ids policy required"]),
+                    field(":info", "bytes|string", ["max_info_bytes policy required"]),
+                    field(":length", "int", ["max_output_bytes policy required"]),
+                ],
+                "optional_fields": [field(":salt", "bytes|string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto kdf response map"}
+            },
+        },
+        "core/crypto::aead-seal": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":key-id", "string", ["allow_key_ids policy required"]),
+                    field(":plaintext", "bytes|string", ["max_plaintext_bytes policy required"]),
+                ],
+                "optional_fields": [
+                    field(":aad", "bytes|string"),
+                    field(":nonce", "bytes|string"),
+                ],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto aead-seal response map"}
+            },
+        },
+        "core/crypto::aead-open": {
+            "payload": {
+                "required_fields": [
+                    field(":algorithm", "symbol|string", ["allow_algorithms policy required"]),
+                    field(":key-id", "string", ["allow_key_ids policy required"]),
+                    field(":ciphertext", "bytes|string", ["max_ciphertext_bytes policy required"]),
+                ],
+                "optional_fields": [
+                    field(":aad", "bytes|string"),
+                    field(":nonce", "bytes|string"),
+                    field(":tag", "bytes|string"),
+                ],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "bridge crypto aead-open response map"}
+            },
         },
         "io/db::connect": {
             "payload": {

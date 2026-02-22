@@ -1,0 +1,38 @@
+(def ::meta
+  '{
+      :caps []
+      :exports [pkg/typecheck-infer::pipeline pkg/typecheck-infer::dispatch-result pkg/typecheck-infer::tests]
+      :types {
+        pkg/typecheck-infer::pipeline (Prog Int (Eff [] nil))
+        pkg/typecheck-infer::dispatch-result Int
+        pkg/typecheck-infer::tests ?}})
+
+(def pkg/typecheck-infer::contract
+  (core/contract::extend
+    core/contract::genesis
+    {pkg/typecheck-infer::read (fn (m) 7)}
+    {}))
+
+(def pkg/typecheck-infer::dispatch-result
+  (core/contract::dispatch
+    pkg/typecheck-infer::contract
+    (core/msg::make 'pkg/typecheck-infer::read 7)))
+
+(def pkg/typecheck-infer::pipeline
+  ((core/effect::bind
+     (core/effect::pure
+       (prim map/merge
+         (prim map/put {:seed 40} ':value 41)
+         {:ok true}))
+     )
+    (fn (row)
+      (core/effect::pure (prim map/get row ':value)))))
+
+(def pkg/typecheck-infer::tests
+  {
+    "effect-bind-row-inference"
+      {:body (fn (_) pkg/typecheck-infer::pipeline) :expect 41}
+    "contract-dispatch-inference"
+      {:body (fn (_) (core/effect::pure pkg/typecheck-infer::dispatch-result)) :expect 7}})
+
+pkg/typecheck-infer::tests

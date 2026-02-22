@@ -50,6 +50,12 @@ fn low_level_caps_wrappers_emit_expected_ops() {
         :media_hash (core/media::asset-hash "asset-bytes")
         :media_image_transcode ((((core/media::image-transcode "rgba8") "gray8") 2) 1 "ABCDEFGH")
         :media_audio_transcode ((((core/media::audio-transcode "pcm-s16le") "pcm-f32le") 1) 44100 "abcdefgh")
+        :crypto_hash ((core/crypto::hash "blake3") b"abc")
+        :crypto_sign (((core/crypto::sign "ed25519") "key-main") b"msg")
+        :crypto_verify ((((core/crypto::verify "ed25519") "key-main") b"msg") b"sig")
+        :crypto_kdf ((((core/crypto::kdf "hkdf-sha256") "key-main") b"context") 32)
+        :crypto_aead_seal (((core/crypto::aead-seal "aes-256-gcm") "key-main") b"plaintext")
+        :crypto_aead_open (((core/crypto::aead-open "aes-256-gcm") "key-main") b"ciphertext")
         :db_connect (core/db::connect "sqlite://data/app.db")
         :db_tx_begin (core/db::tx-begin "db-1")
         :db_query ((((core/db::query "db-1") (quote read-only)) "select 1") {})
@@ -146,6 +152,12 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":media_hash", "core/media::asset-hash");
     expect_op(":media_image_transcode", "core/media::image-transcode");
     expect_op(":media_audio_transcode", "core/media::audio-transcode");
+    expect_op(":crypto_hash", "core/crypto::hash");
+    expect_op(":crypto_sign", "core/crypto::sign");
+    expect_op(":crypto_verify", "core/crypto::verify");
+    expect_op(":crypto_kdf", "core/crypto::kdf");
+    expect_op(":crypto_aead_seal", "core/crypto::aead-seal");
+    expect_op(":crypto_aead_open", "core/crypto::aead-open");
     expect_op(":db_connect", "io/db::connect");
     expect_op(":db_tx_begin", "io/db::tx-begin");
     expect_op(":db_query", "io/db::query");

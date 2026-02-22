@@ -349,74 +349,61 @@ fn rename_bound_symbol(t: Term, from: &str, to: &str, in_scope: bool) -> Term {
         }
         Term::Pair(a, d) => {
             let list_view = Term::Pair(a.clone(), d.clone());
-            if let Some(items) = list_view.as_proper_list() {
-                if !items.is_empty() {
-                    if let Term::Symbol(head) = items[0] {
-                        if head == "fn" && items.len() >= 3 {
-                            if let Some(params) = items[1].as_proper_list() {
-                                let shadows = params
-                                    .iter()
-                                    .any(|p| matches!(p, Term::Symbol(s) if s == from));
-                                let body_scope = in_scope && !shadows;
-                                let mut next = Vec::with_capacity(items.len());
-                                next.push(Term::symbol("fn"));
-                                next.push(items[1].clone());
-                                for body in items.iter().skip(2) {
-                                    next.push(rename_bound_symbol(
-                                        (*body).clone(),
-                                        from,
-                                        to,
-                                        body_scope,
-                                    ));
-                                }
-                                return Term::list(next);
-                            }
-                        }
-                        if head == "let" && items.len() >= 3 {
-                            if let Some(bindings) = items[1].as_proper_list() {
-                                let mut shadows = false;
-                                let mut next_bindings = Vec::with_capacity(bindings.len());
-                                for b in bindings {
-                                    let Some(binding_items) = b.as_proper_list() else {
-                                        return Term::Pair(
-                                            Box::new(rename_bound_symbol(*a, from, to, in_scope)),
-                                            Box::new(rename_bound_symbol(*d, from, to, in_scope)),
-                                        );
-                                    };
-                                    if binding_items.len() != 2 {
-                                        return Term::Pair(
-                                            Box::new(rename_bound_symbol(*a, from, to, in_scope)),
-                                            Box::new(rename_bound_symbol(*d, from, to, in_scope)),
-                                        );
-                                    }
-                                    let binding_name = binding_items[0].clone();
-                                    let binding_rhs = rename_bound_symbol(
-                                        binding_items[1].clone(),
-                                        from,
-                                        to,
-                                        in_scope,
-                                    );
-                                    if matches!(binding_name, Term::Symbol(ref s) if s == from) {
-                                        shadows = true;
-                                    }
-                                    next_bindings.push(Term::list(vec![binding_name, binding_rhs]));
-                                }
-                                let body_scope = in_scope && !shadows;
-                                let mut next = Vec::with_capacity(items.len());
-                                next.push(Term::symbol("let"));
-                                next.push(Term::list(next_bindings));
-                                for body in items.iter().skip(2) {
-                                    next.push(rename_bound_symbol(
-                                        (*body).clone(),
-                                        from,
-                                        to,
-                                        body_scope,
-                                    ));
-                                }
-                                return Term::list(next);
-                            }
-                        }
+            if let Some(items) = list_view.as_proper_list()
+                && !items.is_empty()
+                && let Term::Symbol(head) = items[0]
+            {
+                if head == "fn"
+                    && items.len() >= 3
+                    && let Some(params) = items[1].as_proper_list()
+                {
+                    let shadows = params
+                        .iter()
+                        .any(|p| matches!(p, Term::Symbol(s) if s == from));
+                    let body_scope = in_scope && !shadows;
+                    let mut next = Vec::with_capacity(items.len());
+                    next.push(Term::symbol("fn"));
+                    next.push(items[1].clone());
+                    for body in items.iter().skip(2) {
+                        next.push(rename_bound_symbol((*body).clone(), from, to, body_scope));
                     }
+                    return Term::list(next);
+                }
+                if head == "let"
+                    && items.len() >= 3
+                    && let Some(bindings) = items[1].as_proper_list()
+                {
+                    let mut shadows = false;
+                    let mut next_bindings = Vec::with_capacity(bindings.len());
+                    for b in bindings {
+                        let Some(binding_items) = b.as_proper_list() else {
+                            return Term::Pair(
+                                Box::new(rename_bound_symbol(*a, from, to, in_scope)),
+                                Box::new(rename_bound_symbol(*d, from, to, in_scope)),
+                            );
+                        };
+                        if binding_items.len() != 2 {
+                            return Term::Pair(
+                                Box::new(rename_bound_symbol(*a, from, to, in_scope)),
+                                Box::new(rename_bound_symbol(*d, from, to, in_scope)),
+                            );
+                        }
+                        let binding_name = binding_items[0].clone();
+                        let binding_rhs =
+                            rename_bound_symbol(binding_items[1].clone(), from, to, in_scope);
+                        if matches!(binding_name, Term::Symbol(ref s) if s == from) {
+                            shadows = true;
+                        }
+                        next_bindings.push(Term::list(vec![binding_name, binding_rhs]));
+                    }
+                    let body_scope = in_scope && !shadows;
+                    let mut next = Vec::with_capacity(items.len());
+                    next.push(Term::symbol("let"));
+                    next.push(Term::list(next_bindings));
+                    for body in items.iter().skip(2) {
+                        next.push(rename_bound_symbol((*body).clone(), from, to, body_scope));
+                    }
+                    return Term::list(next);
                 }
             }
             Term::Pair(

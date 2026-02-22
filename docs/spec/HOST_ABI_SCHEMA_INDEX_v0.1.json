@@ -283,6 +283,320 @@
         }
       }
     },
+    "core/crypto::aead-open": {
+      "operation": "core/crypto::aead-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":aad",
+            "type": "bytes|string"
+          },
+          {
+            "name": ":nonce",
+            "type": "bytes|string"
+          },
+          {
+            "name": ":tag",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "allow_key_ids policy required"
+            ],
+            "name": ":key-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "max_ciphertext_bytes policy required"
+            ],
+            "name": ":ciphertext",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto aead-open response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/crypto::aead-seal": {
+      "operation": "core/crypto::aead-seal",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":aad",
+            "type": "bytes|string"
+          },
+          {
+            "name": ":nonce",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "allow_key_ids policy required"
+            ],
+            "name": ":key-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "max_plaintext_bytes policy required"
+            ],
+            "name": ":plaintext",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto aead-seal response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/crypto::hash": {
+      "operation": "core/crypto::hash",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "max_input_bytes policy required"
+            ],
+            "name": ":data",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto hash response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/crypto::kdf": {
+      "operation": "core/crypto::kdf",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":salt",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "allow_key_ids policy required"
+            ],
+            "name": ":key-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "max_info_bytes policy required"
+            ],
+            "name": ":info",
+            "type": "bytes|string"
+          },
+          {
+            "constraints": [
+              "max_output_bytes policy required"
+            ],
+            "name": ":length",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto kdf response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/crypto::sign": {
+      "operation": "core/crypto::sign",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":context",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "allow_key_ids policy required"
+            ],
+            "name": ":key-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "max_message_bytes policy required"
+            ],
+            "name": ":message",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto sign response map",
+          "value_kind": "map"
+        }
+      }
+    },
+    "core/crypto::verify": {
+      "operation": "core/crypto::verify",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":context",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_algorithms policy required"
+            ],
+            "name": ":algorithm",
+            "type": "symbol|string"
+          },
+          {
+            "constraints": [
+              "allow_key_ids policy required"
+            ],
+            "name": ":key-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "max_message_bytes policy required"
+            ],
+            "name": ":message",
+            "type": "bytes|string"
+          },
+          {
+            "constraints": [
+              "max_signature_bytes policy required"
+            ],
+            "name": ":signature",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "bridge crypto verify response map",
+          "value_kind": "map"
+        }
+      }
+    },
     "core/gc-low::pin": {
       "operation": "core/gc-low::pin",
       "payload": {
@@ -2636,6 +2950,139 @@
         }
       }
     },
+    "gfx/xr::anchor-create": {
+      "operation": "gfx/xr::anchor-create",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":space",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":label",
+            "type": "string"
+          },
+          {
+            "name": ":pose",
+            "type": "map"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :anchor-id string :space string :pose map :tracking-state symbol :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::anchor-destroy": {
+      "operation": "gfx/xr::anchor-destroy",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":anchor-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :anchor-id string :destroyed bool :anchor-count int :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::anchor-update": {
+      "operation": "gfx/xr::anchor-update",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":space",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":label",
+            "type": "string"
+          },
+          {
+            "name": ":pose",
+            "type": "map"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":anchor-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :anchor-id string :space string :pose map :tracking-state symbol :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "gfx/xr::frame-poll": {
       "operation": "gfx/xr::frame-poll",
       "payload": {
@@ -2663,6 +3110,42 @@
         },
         "success": {
           "shape": "{:ok bool :session-id string :frame {:frame-index int :predicted-display-time-ms int :views vector} :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::hands-poll": {
+      "operation": "gfx/xr::hands-poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":max-joints",
+            "type": "int"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :hands vector :backend string :adapter string ...}",
           "value_kind": "map"
         }
       }
@@ -2721,6 +3204,46 @@
         }
       }
     },
+    "gfx/xr::hit-test": {
+      "operation": "gfx/xr::hit-test",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":ray",
+            "type": "map"
+          },
+          {
+            "name": ":max-hits",
+            "type": "int"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :hits vector :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "gfx/xr::input-poll": {
       "operation": "gfx/xr::input-poll",
       "payload": {
@@ -2753,6 +3276,147 @@
         },
         "success": {
           "shape": "{:ok bool :session-id string :inputs vector :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::layer-create": {
+      "operation": "gfx/xr::layer-create",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":type",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":layout",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":opacity",
+            "type": "int"
+          },
+          {
+            "name": ":transform",
+            "type": "map"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :layer-id string :type string :layout string :opacity int :transform map :layer-count int :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::layer-destroy": {
+      "operation": "gfx/xr::layer-destroy",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":layer-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :layer-id string :destroyed bool :layer-count int :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::layer-update": {
+      "operation": "gfx/xr::layer-update",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":type",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":layout",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":opacity",
+            "type": "int"
+          },
+          {
+            "name": ":transform",
+            "type": "map"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":layer-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :layer-id string :type string :layout string :opacity int :transform map :backend string :adapter string ...}",
           "value_kind": "map"
         }
       }
@@ -2812,6 +3476,46 @@
         },
         "success": {
           "shape": "{:ok bool :session-id string :mode string :reference-space string :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "gfx/xr::spatial-mesh-poll": {
+      "operation": "gfx/xr::spatial-mesh-poll",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":max-meshes",
+            "type": "int"
+          },
+          {
+            "name": ":lod",
+            "type": "symbol|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :meshes vector :backend string :adapter string ...}",
           "value_kind": "map"
         }
       }

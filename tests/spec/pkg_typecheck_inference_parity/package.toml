@@ -1,0 +1,13 @@
+dependencies = []
+name = "pkg_typecheck_inference_parity"
+obligations = [
+    "core/obligation::unit-tests",
+    "core/obligation::determinism",
+    "core/obligation::typecheck",
+]
+tests = ["pkg/typecheck-infer::tests"]
+version = "0.0.1"
+
+[[modules]]
+hash = "1db1181e0e32a44a3ab1731007fb125f10c53ed030bfc2aa7a38552b5bddf51b"
+path = "inference.gc"

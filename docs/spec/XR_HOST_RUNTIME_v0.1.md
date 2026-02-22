@@ -19,6 +19,15 @@ Baseline families:
 - `gfx/xr::session-open`
 - `gfx/xr::frame-poll`
 - `gfx/xr::input-poll`
+- `gfx/xr::hands-poll`
+- `gfx/xr::hit-test`
+- `gfx/xr::spatial-mesh-poll`
+- `gfx/xr::anchor-create`
+- `gfx/xr::anchor-update`
+- `gfx/xr::anchor-destroy`
+- `gfx/xr::layer-create`
+- `gfx/xr::layer-update`
+- `gfx/xr::layer-destroy`
 - `gfx/xr::haptics-pulse`
 - `gfx/xr::submit-frame`
 - `gfx/xr::session-close`
@@ -56,6 +65,11 @@ Session lifecycle contract:
 - `session-open` returns a deterministic session id and normalized mode/reference-space metadata.
 - `frame-poll` increments deterministic frame index and emits deterministic frame envelopes.
 - `input-poll` emits deterministic controller/input envelopes with bounded `:max-inputs`.
+- `hands-poll` emits deterministic left/right hand joint envelopes with policy-bounded joint counts.
+- `hit-test` emits deterministic hit vectors and pose envelopes with policy-bounded result counts.
+- `spatial-mesh-poll` emits deterministic mesh metadata envelopes with policy-bounded mesh/vertex counts.
+- `anchor-create` / `anchor-update` / `anchor-destroy` maintain deterministic anchor lifecycle state per session.
+- `layer-create` / `layer-update` / `layer-destroy` maintain deterministic compositor layer lifecycle state per session.
 - `haptics-pulse` applies deterministic bounded haptic intents for a session/input lane.
 - `submit-frame` records deterministic accepted/submitted counters.
 - `session-close` seals the session and deterministically rejects further use via stable error codes.
@@ -66,6 +80,27 @@ Haptics policy gate contract (`gfx/xr::haptics-pulse`):
 - optional per-op `max_haptics_amplitude` integer (`1..1000`, default `1000`).
 - optional per-op `max_haptics_duration_ms` integer (`>0`, default `250`).
 - requests outside policy bounds fail closed with deterministic `core/caps/policy-error` envelopes.
+
+Advanced XR policy gate contract:
+
+- `gfx/xr::hands-poll`
+  - optional per-op `allow_hand_tracking` (bool, default `true`)
+  - optional per-op `max_hand_joints` (int > 0, default `25`)
+- `gfx/xr::hit-test`
+  - optional per-op `allow_hit_test` (bool, default `true`)
+  - optional per-op `max_hit_results` (int > 0, default `8`)
+- `gfx/xr::spatial-mesh-poll`
+  - optional per-op `allow_spatial_mesh` (bool, default `true`)
+  - optional per-op `max_meshes` (int > 0, default `4`)
+  - optional per-op `max_mesh_vertices` (int > 0, default `4096`)
+- `gfx/xr::anchor-create`
+  - optional per-op `allow_anchor_spaces` (array<string>, default `["local","local-floor","bounded-floor","viewer"]`)
+  - optional per-op `max_anchors` (int > 0, default `64`)
+- `gfx/xr::layer-create` / `gfx/xr::layer-update`
+  - optional per-op `allow_layer_types` (array<string>, default `["quad","cylinder","equirect"]`)
+  - optional per-op `max_layers` (int > 0, default `16`)
+  - optional per-op `max_layer_opacity` (int > 0, default `1000`)
+- requests outside these policy bounds fail closed with deterministic `core/caps/policy-error` envelopes.
 
 ## Determinism + Replay
 

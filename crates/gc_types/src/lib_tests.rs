@@ -2,7 +2,7 @@ use gc_coreform::{Term, canonicalize_module, parse_module};
 
 use super::*;
 use crate::infer::infer_module_types;
-use crate::ty::RowTail;
+use crate::ty::{EffRow, RowTail};
 
 fn extract_meta(forms: &[Term]) -> Option<Term> {
     forms.iter().find_map(|t| {
@@ -225,6 +225,67 @@ fn infer_contract_extend_preserves_row_tail_var() {
         }
         other => panic!("expected Contract, got {}", print_term(&other.to_term())),
     }
+}
+
+#[test]
+fn infer_effect_bind_with_map_rows_returns_precise_prog_type() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [] :types {}})
+          (def m::prog
+            ((core/effect::bind
+               (core/effect::pure
+                 (prim map/merge
+                   (prim map/put {:seed 40} ':value 41)
+                   {:ok true})))
+              (fn (row)
+                (core/effect::pure (prim map/get row ':value)))))
+          m::prog
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut sess = InferSession::default();
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &BTreeMap::new());
+    assert!(
+        sess.errors.is_empty(),
+        "unexpected infer errors: {:?}",
+        sess.errors
+    );
+    let ty = defs.get("m::prog").cloned().unwrap_or(Ty::Any);
+    match ty {
+        Ty::Prog { ret, eff } => {
+            assert_eq!(*ret, Ty::Int);
+            assert!(eff.ops.is_empty());
+            assert!(matches!(eff.tail, RowTail::Closed));
+        }
+        other => panic!("expected Prog Int, got {}", print_term(&other.to_term())),
+    }
+}
+
+#[test]
+fn infer_application_uses_declared_function_types() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [] :types {}})
+          (def m::out (m::id 7))
+          m::out
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let mut sess = InferSession::default();
+    let mut declared = BTreeMap::new();
+    declared.insert(
+        "m::id".to_string(),
+        Ty::Fn {
+            param: Box::new(Ty::Int),
+            ret: Box::new(Ty::Int),
+            eff: EffRow::empty(),
+        },
+    );
+    let (_env, defs) = infer_module_types(&forms, &mut sess, &declared);
+    assert!(
+        sess.errors.is_empty(),
+        "unexpected infer errors: {:?}",
+        sess.errors
+    );
+    let ty = defs.get("m::out").cloned().unwrap_or(Ty::Any);
+    assert_eq!(ty, Ty::Int);
 }
 
 #[test]

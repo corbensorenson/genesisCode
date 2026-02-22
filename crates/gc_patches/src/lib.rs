@@ -250,15 +250,15 @@ pub fn apply_patch_with_step_limit_and_frontend(
 
     // When running under the selfhost CoreForm frontend, validate patch schema via the
     // self-hosted contract to ensure schema acceptance is controlled by `.gc` semantics.
-    if let Some(sh) = selfhost.as_mut() {
-        if let Err(err) = sh.validate_patch_term(&patch_term, step_limit) {
-            match &err {
-                PatchError::Validate(msg) if msg.contains("unknown :op") => {
-                    // Allow forward-compatible patch ops when selfhost artifact lags schema source.
-                    // Rust-side parser/validator remains authoritative for these ops.
-                }
-                _ => return Err(err),
+    if let Some(sh) = selfhost.as_mut()
+        && let Err(err) = sh.validate_patch_term(&patch_term, step_limit)
+    {
+        match &err {
+            PatchError::Validate(msg) if msg.contains("unknown :op") => {
+                // Allow forward-compatible patch ops when selfhost artifact lags schema source.
+                // Rust-side parser/validator remains authoritative for these ops.
             }
+            _ => return Err(err),
         }
     }
 
@@ -442,7 +442,7 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
 
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let path_term = path_steps_to_term(path)?;
                 let next_forms =
                     sh.apply_replace_node_term(&forms, &path_term, new_term, step_limit)?;
@@ -477,7 +477,7 @@ fn apply_one_op(
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
             let path = resolve_node_id_path(module_path, &forms, node_id)?;
 
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let path_term = path_steps_to_term(&path)?;
                 let next_forms =
                     sh.apply_replace_node_term(&forms, &path_term, new_term, step_limit)?;
@@ -516,7 +516,7 @@ fn apply_one_op(
             if let Some(parent) = abs.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            let out = if let Some(sh) = selfhost.as_deref_mut() {
+            let out = if let Some(sh) = selfhost.as_mut() {
                 let content_term = match content {
                     ModuleContent::Source(s) => Term::Str(s.clone()),
                     ModuleContent::Forms(fs) => Term::Vector(fs.clone()),
@@ -538,7 +538,7 @@ fn apply_one_op(
             let mut s = std::fs::read_to_string(pkg_toml)?;
             let v0: toml::Value =
                 toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let v = if let Some(sh) = selfhost.as_deref_mut() {
+            let v = if let Some(sh) = selfhost.as_mut() {
                 let manifest_term = toml_to_coreform(&v0)?;
                 let out_term =
                     sh.manifest_apply_add_module_term(&manifest_term, module_path, step_limit)?;
@@ -574,7 +574,7 @@ fn apply_one_op(
             let mut s = std::fs::read_to_string(pkg_toml)?;
             let v0: toml::Value =
                 toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
-            let v = if let Some(sh) = selfhost.as_deref_mut() {
+            let v = if let Some(sh) = selfhost.as_mut() {
                 let manifest_term = toml_to_coreform(&v0)?;
                 let out_term =
                     sh.manifest_apply_remove_module_term(&manifest_term, module_path, step_limit)?;
@@ -670,7 +670,7 @@ fn apply_one_op(
             let next =
                 canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
             let after_module_hash = hash32_hex(hash_module(&next));
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
                 std::fs::write(&abs, out)?;
             } else {
@@ -779,7 +779,7 @@ fn apply_one_op(
             if let Some(parent) = to_abs.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let keep_out = sh.print_module_forms_term(&keep, step_limit)?;
                 std::fs::write(&from_abs, keep_out)?;
                 let extracted_out = sh.print_module_forms_term(&extracted, step_limit)?;
@@ -833,7 +833,7 @@ fn apply_one_op(
             let next =
                 canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
             let after_module_hash = hash32_hex(hash_module(&next));
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
                 std::fs::write(&abs, out)?;
             } else {
@@ -896,7 +896,7 @@ fn apply_one_op(
             let next =
                 canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
             let after_module_hash = hash32_hex(hash_module(&next));
-            if let Some(sh) = selfhost.as_deref_mut() {
+            if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
                 std::fs::write(&abs, out)?;
             } else {

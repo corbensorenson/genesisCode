@@ -4,6 +4,8 @@ use crate::runner_plugin_schema::{
     parse_plugin_schema_ids, validate_plugin_request_schema, validate_plugin_response_schema,
 };
 
+#[path = "runner_capability_dispatch/crypto.rs"]
+mod crypto;
 #[path = "runner_capability_dispatch/db.rs"]
 mod db;
 #[path = "runner_capability_dispatch/fs.rs"]
@@ -17,6 +19,7 @@ mod plugin;
 #[path = "runner_capability_dispatch/process.rs"]
 mod process;
 
+use crypto::*;
 use db::*;
 use fs::*;
 use media::*;
@@ -62,6 +65,12 @@ and requires explicit per-op bridge policy"
         return format!(
             "capability backend unavailable for {op}; configure per-op bridge policy \
 (bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and durable-data policy gates"
+        );
+    }
+    if op.starts_with("core/crypto::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and cryptography policy gates"
         );
     }
     if op.starts_with("sys/process::") {
@@ -365,6 +374,12 @@ pub(super) fn call_capability(
         "io/db::kv-get" => capability_io_db_kv_get(op, payload, pol, error_tok),
         "io/db::kv-put" => capability_io_db_kv_put(op, payload, pol, error_tok),
         "io/db::kv-delete" => capability_io_db_kv_delete(op, payload, pol, error_tok),
+        "core/crypto::hash" => capability_core_crypto_hash(op, payload, pol, error_tok),
+        "core/crypto::sign" => capability_core_crypto_sign(op, payload, pol, error_tok),
+        "core/crypto::verify" => capability_core_crypto_verify(op, payload, pol, error_tok),
+        "core/crypto::kdf" => capability_core_crypto_kdf(op, payload, pol, error_tok),
+        "core/crypto::aead-seal" => capability_core_crypto_aead_seal(op, payload, pol, error_tok),
+        "core/crypto::aead-open" => capability_core_crypto_aead_open(op, payload, pol, error_tok),
         "sys/process::exec" | "sys/process::spawn" => {
             capability_sys_process_spawn_or_exec(op, payload, pol, error_tok)
         }

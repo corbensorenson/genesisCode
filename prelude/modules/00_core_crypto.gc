@@ -1,0 +1,65 @@
+(def core/crypto::hash
+  (fn (algorithm)
+    (fn (data)
+      (((core/effect::perform (quote core/crypto::hash))
+        {:algorithm algorithm :data data})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/crypto::sign
+  (fn (algorithm)
+    (fn (key-id)
+      (fn (message)
+        (((core/effect::perform (quote core/crypto::sign))
+          {
+            :algorithm algorithm
+            :key-id key-id
+            :message message})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/crypto::verify
+  (fn (algorithm)
+    (fn (key-id)
+      (fn (message)
+        (fn (signature)
+          (((core/effect::perform (quote core/crypto::verify))
+            {
+              :algorithm algorithm
+              :key-id key-id
+              :message message
+              :signature signature})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/crypto::kdf
+  (fn (algorithm)
+    (fn (key-id)
+      (fn (info)
+        (fn (length)
+          (((core/effect::perform (quote core/crypto::kdf))
+            {
+              :algorithm algorithm
+              :info info
+              :key-id key-id
+              :length length})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/crypto::aead-seal
+  (fn (algorithm)
+    (fn (key-id)
+      (fn (plaintext)
+        (((core/effect::perform (quote core/crypto::aead-seal))
+          {
+            :algorithm algorithm
+            :key-id key-id
+            :plaintext plaintext})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/crypto::aead-open
+  (fn (algorithm)
+    (fn (key-id)
+      (fn (ciphertext)
+        (((core/effect::perform (quote core/crypto::aead-open))
+          {
+            :algorithm algorithm
+            :ciphertext ciphertext
+            :key-id key-id})
+          (fn (resp) (core/effect::pure resp)))))))

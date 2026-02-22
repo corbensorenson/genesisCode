@@ -11,6 +11,15 @@ allow = [
   "gfx/xr::session-open",
   "gfx/xr::frame-poll",
   "gfx/xr::input-poll",
+  "gfx/xr::hands-poll",
+  "gfx/xr::hit-test",
+  "gfx/xr::spatial-mesh-poll",
+  "gfx/xr::anchor-create",
+  "gfx/xr::anchor-update",
+  "gfx/xr::anchor-destroy",
+  "gfx/xr::layer-create",
+  "gfx/xr::layer-update",
+  "gfx/xr::layer-destroy",
   "gfx/xr::haptics-pulse",
   "gfx/xr::submit-frame",
   "gfx/xr::session-close",
@@ -30,6 +39,51 @@ wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :frame {:frame-inde
 xr_backend = "webxr-device"
 wasi_bridge_profile = true
 wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :inputs [{:id \"right-controller\" :kind :controller :select true}]}"
+
+[op."gfx/xr::hands-poll"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :hands [{:hand :left :joints []} {:hand :right :joints []}]}"
+
+[op."gfx/xr::hit-test"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :hits [{:hit-id \"hit-1\" :distance-mm 1200}]}"
+
+[op."gfx/xr::spatial-mesh-poll"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :meshes [{:mesh-id \"mesh-1\" :lod \"medium\" :vertex-count 512 :triangle-count 170}]}"
+
+[op."gfx/xr::anchor-create"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :anchor-id \"anchor-1\" :space \"local-floor\" :tracking-state :tracked}"
+
+[op."gfx/xr::anchor-update"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :anchor-id \"anchor-1\" :space \"local-floor\" :tracking-state :tracked}"
+
+[op."gfx/xr::anchor-destroy"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :anchor-id \"anchor-1\" :destroyed true}"
+
+[op."gfx/xr::layer-create"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :layer-id \"layer-1\" :type \"quad\" :layout \"stereo\" :opacity 1000}"
+
+[op."gfx/xr::layer-update"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :layer-id \"layer-1\" :type \"quad\" :layout \"stereo\" :opacity 900}"
+
+[op."gfx/xr::layer-destroy"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :layer-id \"layer-1\" :destroyed true}"
 
 [op."gfx/xr::haptics-pulse"]
 xr_backend = "webxr-device"

@@ -7,6 +7,11 @@ use num_traits::ToPrimitive;
 use crate::policy::OpPolicy;
 use crate::runner_host_bridge::{BridgeError, call_host_bridge};
 
+#[path = "runner_xr_host/advanced.rs"]
+mod advanced;
+
+use advanced::*;
+
 const XR_FIRST_PARTY_BACKEND: &str = "xr-first-party-runtime";
 const XR_FIRST_PARTY_ADAPTER: &str = "xr-headless-sim";
 const XR_WEBXR_DEVICE_BACKEND: &str = "xr-webxr-device-runtime";
@@ -19,6 +24,21 @@ enum XrBackendKind {
 }
 
 #[derive(Debug, Clone)]
+struct XrAnchorState {
+    space: String,
+    label: String,
+    pose: Term,
+}
+
+#[derive(Debug, Clone)]
+struct XrLayerState {
+    layer_type: String,
+    layout: String,
+    opacity: i64,
+    transform: Term,
+}
+
+#[derive(Debug, Clone)]
 struct XrSessionState {
     mode: String,
     reference_space: String,
@@ -28,6 +48,10 @@ struct XrSessionState {
     submitted_frames: u64,
     haptics_seq: u64,
     submitted_haptics: u64,
+    anchor_seq: u64,
+    anchors: BTreeMap<String, XrAnchorState>,
+    layer_seq: u64,
+    layers: BTreeMap<String, XrLayerState>,
 }
 
 impl XrSessionState {
@@ -41,6 +65,10 @@ impl XrSessionState {
             submitted_frames: 0,
             haptics_seq: 0,
             submitted_haptics: 0,
+            anchor_seq: 0,
+            anchors: BTreeMap::new(),
+            layer_seq: 0,
+            layers: BTreeMap::new(),
         }
     }
 }
@@ -108,7 +136,9 @@ pub(crate) fn xr_host_call(
         });
     }
     if !has_explicit_bridge_profile(pol) {
-        return Some(Value::Data(first_party_xr_response(runtime, op, payload)));
+        return Some(Value::Data(first_party_xr_response(
+            runtime, op, payload, pol,
+        )));
     }
     Some(match call_host_bridge("gfx-xr", op, payload, pol) {
         Ok(resp) => Value::Data(resp),
@@ -227,11 +257,25 @@ fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {
             .unwrap_or(false)
 }
 
-fn first_party_xr_response(runtime: &mut XrHostRuntime, op: &str, payload: &Term) -> Term {
+fn first_party_xr_response(
+    runtime: &mut XrHostRuntime,
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+) -> Term {
     match op {
         "gfx/xr::session-open" => first_party_session_open(runtime, payload),
         "gfx/xr::frame-poll" => first_party_frame_poll(runtime, payload),
         "gfx/xr::input-poll" => first_party_input_poll(runtime, payload),
+        "gfx/xr::hands-poll" => first_party_hands_poll(runtime, payload, pol),
+        "gfx/xr::hit-test" => first_party_hit_test(runtime, payload, pol),
+        "gfx/xr::spatial-mesh-poll" => first_party_spatial_mesh_poll(runtime, payload, pol),
+        "gfx/xr::anchor-create" => first_party_anchor_create(runtime, payload, pol),
+        "gfx/xr::anchor-update" => first_party_anchor_update(runtime, payload, pol),
+        "gfx/xr::anchor-destroy" => first_party_anchor_destroy(runtime, payload),
+        "gfx/xr::layer-create" => first_party_layer_create(runtime, payload, pol),
+        "gfx/xr::layer-update" => first_party_layer_update(runtime, payload, pol),
+        "gfx/xr::layer-destroy" => first_party_layer_destroy(runtime, payload),
         "gfx/xr::submit-frame" => first_party_submit_frame(runtime, payload),
         "gfx/xr::session-close" => first_party_session_close(runtime, payload),
         _ => map_term(vec![
@@ -703,6 +747,15 @@ fn is_xr_host_op(op: &str) -> bool {
         "gfx/xr::session-open"
             | "gfx/xr::frame-poll"
             | "gfx/xr::input-poll"
+            | "gfx/xr::hands-poll"
+            | "gfx/xr::hit-test"
+            | "gfx/xr::spatial-mesh-poll"
+            | "gfx/xr::anchor-create"
+            | "gfx/xr::anchor-update"
+            | "gfx/xr::anchor-destroy"
+            | "gfx/xr::layer-create"
+            | "gfx/xr::layer-update"
+            | "gfx/xr::layer-destroy"
             | "gfx/xr::haptics-pulse"
             | "gfx/xr::submit-frame"
             | "gfx/xr::session-close"

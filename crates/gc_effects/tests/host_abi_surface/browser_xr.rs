@@ -530,3 +530,146 @@ wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :closed true}"
 
     assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
 }
+
+#[test]
+fn xr_advanced_ops_are_replay_deterministic_without_bridge() {
+    let src = r#"
+        (def prog
+          (core/effect::bind
+            (core/effect::perform
+              'gfx/xr::session-open
+              {:opts {:app "advanced-xr" :mode "immersive-ar" :reference-space "local-floor"}}
+              (fn (open-resp) (core/effect::pure open-resp)))
+            (fn (open-resp)
+              (let ((sid ((core/map::get open-resp) ':session-id)))
+                (core/effect::bind
+                  (core/effect::perform
+                    'gfx/xr::hands-poll
+                    {:session-id sid :max-joints 21}
+                    (fn (hands-resp) (core/effect::pure hands-resp)))
+                  (fn (hands-resp)
+                    (core/effect::bind
+                      (core/effect::perform
+                        'gfx/xr::hit-test
+                        {:session-id sid :ray {:origin [0 1 0] :direction [0 0 -1]} :max-hits 2}
+                        (fn (hit-resp) (core/effect::pure hit-resp)))
+                      (fn (hit-resp)
+                        (core/effect::bind
+                          (core/effect::perform
+                            'gfx/xr::spatial-mesh-poll
+                            {:session-id sid :max-meshes 2 :lod "medium"}
+                            (fn (mesh-resp) (core/effect::pure mesh-resp)))
+                          (fn (mesh-resp)
+                            (core/effect::bind
+                              (core/effect::perform
+                                'gfx/xr::anchor-create
+                                {:session-id sid :space "local-floor" :label "root-anchor" :pose {:position [0 1 -1]}}
+                                (fn (anchor-create-resp) (core/effect::pure anchor-create-resp)))
+                              (fn (anchor-create-resp)
+                                (let ((aid ((core/map::get anchor-create-resp) ':anchor-id)))
+                                  (core/effect::bind
+                                    (core/effect::perform
+                                      'gfx/xr::layer-create
+                                      {:session-id sid :type "quad" :layout "stereo" :opacity 1000 :transform {:position [0 1 -2]}}
+                                      (fn (layer-create-resp) (core/effect::pure layer-create-resp)))
+                                    (fn (layer-create-resp)
+                                      (let ((lid ((core/map::get layer-create-resp) ':layer-id)))
+                                        (core/effect::bind
+                                          (core/effect::perform
+                                            'gfx/xr::anchor-destroy
+                                            {:session-id sid :anchor-id aid}
+                                            (fn (anchor-destroy-resp) (core/effect::pure anchor-destroy-resp)))
+                                          (fn (anchor-destroy-resp)
+                                            (core/effect::bind
+                                              (core/effect::perform
+                                                'gfx/xr::layer-destroy
+                                                {:session-id sid :layer-id lid}
+                                                (fn (layer-destroy-resp) (core/effect::pure layer-destroy-resp)))
+                                              (fn (layer-destroy-resp)
+                                                (core/effect::bind
+                                                  (core/effect::perform
+                                                    'gfx/xr::session-close
+                                                    {:session-id sid}
+                                                    (fn (close-resp) (core/effect::pure close-resp)))
+                                                  (fn (close-resp)
+                                                    (core/effect::pure
+                                                      {
+                                                        :open open-resp
+                                                        :hands hands-resp
+                                                        :hit hit-resp
+                                                        :mesh mesh-resp
+                                                        :anchor-create anchor-create-resp
+                                                        :anchor-destroy anchor-destroy-resp
+                                                        :layer-create layer-create-resp
+                                                        :layer-destroy layer-destroy-resp
+                                                        :close close-resp
+                                                      })))))))))))))))))))))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "gfx/xr::session-open",
+  "gfx/xr::hands-poll",
+  "gfx/xr::hit-test",
+  "gfx/xr::spatial-mesh-poll",
+  "gfx/xr::anchor-create",
+  "gfx/xr::anchor-update",
+  "gfx/xr::anchor-destroy",
+  "gfx/xr::layer-create",
+  "gfx/xr::layer-update",
+  "gfx/xr::layer-destroy",
+  "gfx/xr::session-close"
+]
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 9);
+    assert_eq!(run_out.log.entries[0].op, "gfx/xr::session-open");
+    assert_eq!(run_out.log.entries[1].op, "gfx/xr::hands-poll");
+    assert_eq!(run_out.log.entries[2].op, "gfx/xr::hit-test");
+    assert_eq!(run_out.log.entries[3].op, "gfx/xr::spatial-mesh-poll");
+    assert_eq!(run_out.log.entries[4].op, "gfx/xr::anchor-create");
+    assert_eq!(run_out.log.entries[5].op, "gfx/xr::layer-create");
+    assert_eq!(run_out.log.entries[6].op, "gfx/xr::anchor-destroy");
+    assert_eq!(run_out.log.entries[7].op, "gfx/xr::layer-destroy");
+    assert_eq!(run_out.log.entries[8].op, "gfx/xr::session-close");
+
+    let Value::Map(top) = &run_out.value else {
+        panic!("expected run output map");
+    };
+    let Some(Value::Data(Term::Map(anchor_create_map))) =
+        top.get(&TermOrdKey(Term::symbol(":anchor-create")))
+    else {
+        panic!("expected :anchor-create map");
+    };
+    assert!(anchor_create_map.contains_key(&TermOrdKey(Term::symbol(":anchor-id"))));
+
+    let Some(Value::Data(Term::Map(layer_create_map))) =
+        top.get(&TermOrdKey(Term::symbol(":layer-create")))
+    else {
+        panic!("expected :layer-create map");
+    };
+    assert!(layer_create_map.contains_key(&TermOrdKey(Term::symbol(":layer-id"))));
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let run_hash = value_hash(&run_out.value);
+
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    let replay_hash = value_hash(&replay_value);
+
+    assert_eq!(run_hash, replay_hash, "run/replay hash mismatch");
+}

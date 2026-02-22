@@ -78,9 +78,20 @@ CI enforces this profile in standard/full lanes before strict selfhost suites:
   - `gpu_device_microbench` (`self-hosted, linux, x64, gpu`)
   - `gpu_device_microbench_deterministic` (`ubuntu-latest` deterministic runtime command)
   Both lanes enforce `require-device` backend policy and persist adapter-specific artifacts.
+- `.github/workflows/ci.yml` defines an expanded real-hardware matrix gate (enabled with
+  `GENESIS_GPU_MATRIX_ENABLED=1`) with explicit lane metadata:
+  - `gpu_device_microbench_nvidia_linux`
+  - `gpu_device_microbench_amd_linux`
+  - `gpu_device_microbench_intel_windows`
+  - `gpu_device_microbench_apple_macos`
+  Each lane emits adapter-suffixed retention artifacts plus lane-scoped summary reports with
+  `lane_id`, `gpu_vendor`, and `os_family`.
 - `.github/workflows/ci.yml` runs `bash scripts/check_gpu_device_conformance_lane_parity.sh`
   in `gpu_device_conformance_release_gate` and fails release-profile runs when lane contracts
   are unavailable or mismatched.
+- `.github/workflows/ci.yml` runs `bash scripts/check_gpu_device_conformance_matrix.sh`
+  in `gpu_device_conformance_matrix_gate` to enforce representative NVIDIA/AMD/Intel +
+  Linux/macOS/Windows lane coverage against `policies/perf/gpu_device_conformance_matrix.toml`.
 - `scripts/check_upgrade_plan_health.sh` includes the same guard for prepush/release profiles.
   `release-full` requires device conformance by default; `dev-fast`/`prepush-standard`
   opt in with `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.

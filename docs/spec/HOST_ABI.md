@@ -25,10 +25,13 @@ Compatibility notes:
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
-  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `haptics-pulse`, `submit-frame`, `session-close`) with deterministic first-party session/frame/input/haptics semantics plus dedicated `xr_backend = "webxr-device"` bridge lane for device capture envelopes
+  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `hands-poll`, `hit-test`, `spatial-mesh-poll`, `anchor-create`, `anchor-update`, `anchor-destroy`, `layer-create`, `layer-update`, `layer-destroy`, `haptics-pulse`, `submit-frame`, `session-close`) with deterministic first-party XR lifecycle/spatial/compositor semantics plus dedicated `xr_backend = "webxr-device"` bridge lane for device capture envelopes
   - `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` (deterministic browser host runtime baseline; explicit bridge policy may override)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
+  - `core/crypto::hash`, `core/crypto::sign`, `core/crypto::verify`, `core/crypto::kdf`,
+    `core/crypto::aead-seal`, `core/crypto::aead-open`
+    (policy-gated cryptography envelopes + bridge-backed execution)
   - `io/db::connect`, `io/db::tx-begin`, `io/db::query`, `io/db::exec`, `io/db::tx-commit`, `io/db::tx-rollback`
     (policy-gated durable SQL lifecycle/query execution + bridge-backed execution)
   - `io/db::kv-open`, `io/db::kv-get`, `io/db::kv-put`, `io/db::kv-delete`
@@ -71,6 +74,12 @@ Compatibility notes:
 - `browser/window::close`
 - `browser/window::info`
 - `browser/window::open`
+- `core/crypto::aead-open`
+- `core/crypto::aead-seal`
+- `core/crypto::hash`
+- `core/crypto::kdf`
+- `core/crypto::sign`
+- `core/crypto::verify`
 - `core/gc-low::pin`
 - `core/gc-low::plan`
 - `core/gc-low::purge`
@@ -167,11 +176,20 @@ Compatibility notes:
 - `gfx/window::resize-surface`
 - `gfx/window::set-title`
 - `gfx/window::surface-info`
+- `gfx/xr::anchor-create`
+- `gfx/xr::anchor-destroy`
+- `gfx/xr::anchor-update`
 - `gfx/xr::frame-poll`
+- `gfx/xr::hands-poll`
 - `gfx/xr::haptics-pulse`
+- `gfx/xr::hit-test`
 - `gfx/xr::input-poll`
+- `gfx/xr::layer-create`
+- `gfx/xr::layer-destroy`
+- `gfx/xr::layer-update`
 - `gfx/xr::session-close`
 - `gfx/xr::session-open`
+- `gfx/xr::spatial-mesh-poll`
 - `gfx/xr::submit-frame`
 - `gpu/compute::create-bind-group`
 - `gpu/compute::create-bind-group-layout`
@@ -286,6 +304,46 @@ CI drift check:
   - Required payload field: `:session-id` (string).
   - Optional payload field: `:max-inputs` (int).
   - Response map includes deterministic bounded input/controller vector under `:inputs`.
+- `gfx/xr::hands-poll`
+  - Required payload field: `:session-id` (string).
+  - Optional payload field: `:max-joints` (int).
+  - Policy-gated by optional `allow_hand_tracking` (bool) and optional `max_hand_joints` (int) controls.
+  - Response map includes deterministic hand-joint envelopes under `:hands`.
+- `gfx/xr::hit-test`
+  - Required payload field: `:session-id` (string).
+  - Optional payload fields: `:ray` (map), `:max-hits` (int).
+  - Policy-gated by optional `allow_hit_test` (bool) and optional `max_hit_results` (int) controls.
+  - Response map includes deterministic hit envelopes under `:hits`.
+- `gfx/xr::spatial-mesh-poll`
+  - Required payload field: `:session-id` (string).
+  - Optional payload fields: `:max-meshes` (int), `:lod` (string/symbol).
+  - Policy-gated by optional `allow_spatial_mesh` (bool), optional `max_meshes` (int), and optional `max_mesh_vertices` (int) controls.
+  - Response map includes deterministic mesh metadata under `:meshes`.
+- `gfx/xr::anchor-create`
+  - Required payload field: `:session-id` (string).
+  - Optional payload fields: `:space` (string/symbol), `:label` (string), `:pose` (map).
+  - Policy-gated by optional `allow_anchor_spaces` (array<string>) and optional `max_anchors` (int).
+  - Response map includes deterministic anchor lifecycle envelope (`:anchor-id`, `:space`, `:tracking-state`).
+- `gfx/xr::anchor-update`
+  - Required payload fields: `:session-id` (string), `:anchor-id` (string).
+  - Optional payload fields: `:space` (string/symbol), `:label` (string), `:pose` (map).
+  - Response map includes deterministic updated anchor envelope.
+- `gfx/xr::anchor-destroy`
+  - Required payload fields: `:session-id` (string), `:anchor-id` (string).
+  - Response map includes deterministic destroy envelope (`:destroyed`, `:anchor-count`).
+- `gfx/xr::layer-create`
+  - Required payload field: `:session-id` (string).
+  - Optional payload fields: `:type` (string/symbol), `:layout` (string/symbol), `:opacity` (int), `:transform` (map).
+  - Policy-gated by optional `allow_layer_types` (array<string>), optional `max_layers` (int), and optional `max_layer_opacity` (int).
+  - Response map includes deterministic layer lifecycle envelope (`:layer-id`, `:type`, `:layout`, `:opacity`).
+- `gfx/xr::layer-update`
+  - Required payload fields: `:session-id` (string), `:layer-id` (string).
+  - Optional payload fields: `:type` (string/symbol), `:layout` (string/symbol), `:opacity` (int), `:transform` (map).
+  - Policy-gated by optional `max_layer_opacity` (int).
+  - Response map includes deterministic updated layer envelope.
+- `gfx/xr::layer-destroy`
+  - Required payload fields: `:session-id` (string), `:layer-id` (string).
+  - Response map includes deterministic destroy envelope (`:destroyed`, `:layer-count`).
 - `gfx/xr::haptics-pulse`
   - Required payload fields: `:session-id` (string), `:input-id` (string), `:amplitude` (int), `:duration-ms` (int).
   - Policy-gated by per-op XR haptics controls (`allow_haptics_inputs`, optional `max_haptics_amplitude`, optional `max_haptics_duration_ms`).
@@ -299,7 +357,41 @@ CI drift check:
   - Required payload field: `:session-id` (string).
   - Response map includes deterministic `:closed` flag; subsequent use is rejected via stable XR error codes.
 
-## Network/Process Capability Contracts
+## Crypto/Network/Process Capability Contracts
+
+- `core/crypto::hash`
+  - Required payload fields: `:algorithm` (string/symbol), `:data` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `max_input_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `core/crypto::sign`
+  - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:message` (bytes|string).
+  - Optional payload field: `:context` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_message_bytes`, `max_context_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `core/crypto::verify`
+  - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:message` (bytes|string), `:signature` (bytes|string).
+  - Optional payload field: `:context` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_message_bytes`, `max_signature_bytes`, `max_context_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `core/crypto::kdf`
+  - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:info` (bytes|string), `:length` (int).
+  - Optional payload field: `:salt` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_info_bytes`, `max_salt_bytes`, `max_output_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `core/crypto::aead-seal`
+  - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:plaintext` (bytes|string).
+  - Optional payload fields: `:aad` (bytes|string), `:nonce` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_plaintext_bytes`, `max_aad_bytes`, `max_nonce_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `core/crypto::aead-open`
+  - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:ciphertext` (bytes|string).
+  - Optional payload fields: `:aad` (bytes|string), `:nonce` (bytes|string), `:tag` (bytes|string).
+  - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_ciphertext_bytes`, `max_aad_bytes`, `max_nonce_bytes`, `max_tag_bytes`.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- Safety guidance:
+  - Keep private key material in host key stores; pass only policy-gated `:key-id` references through capability payloads.
+  - Prefer explicit nonce management and authenticated associated data contracts in agent-authored protocols.
+  - Treat algorithm/key allowlists and byte bounds as mandatory release-hardening controls, not optional defaults.
 
 - `io/db::connect`
   - Required payload field: `:target` (string DSN/path-like target).

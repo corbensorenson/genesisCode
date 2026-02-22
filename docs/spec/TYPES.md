@@ -50,10 +50,10 @@ The typechecker infers types most precisely for:
 
 - literals (`Int`, `Bool`, `Nil`, `Str`, `Bytes`)
 - `fn`, `if`, `begin`, `let`
-- `(prim ...)` for the core integer primitives and a small set of other primitives
+- `(prim ...)` for core integer primitives and row-aware map operations (`map/get`, `map/put`, `map/merge`)
 - `core/msg::*`
 - `core/contract::*` (including contract-row extraction from override map literals)
-- `core/effect::*` (returns a `Prog` type with an effect row)
+- `core/effect::*` including `core/effect::bind` sequencing (returns a `Prog` type with merged effect rows)
+- typed fallback function application for declared/known `Fn` values (including curried application chains)
 
-Unknown applications are treated conservatively as `?` (but still walked for effect inference).
-
+Applications with unknown/non-function heads are treated conservatively as `?` (but still walked for effect inference).

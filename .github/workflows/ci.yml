@@ -461,3 +461,187 @@ jobs:
           name: gpu-device-conformance-lane-parity
           path: .genesis/perf/gpu_device_lane_parity_report.json
           if-no-files-found: warn
+
+  gpu_device_microbench_nvidia_linux:
+    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    runs-on: [self-hosted, linux, x64, gpu, nvidia]
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_GPU_DEVICE_CONFORMANCE_LANE_ID: "nvidia-linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_VENDOR: "nvidia"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OS: "linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_nvidia_linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_nvidia_linux_report.json"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU Device Conformance Lane (NVIDIA Linux)
+        run: bash scripts/check_gpu_compute_device_conformance.sh
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-nvidia-linux
+          path: |
+            .genesis/perf/gpu_device_conformance_nvidia_linux/
+            .genesis/perf/gpu_device_conformance_nvidia_linux_report.json
+          if-no-files-found: warn
+
+  gpu_device_microbench_amd_linux:
+    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    runs-on: [self-hosted, linux, x64, gpu, amd]
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_GPU_DEVICE_CONFORMANCE_LANE_ID: "amd-linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_VENDOR: "amd"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OS: "linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_amd_linux"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_amd_linux_report.json"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU Device Conformance Lane (AMD Linux)
+        run: bash scripts/check_gpu_compute_device_conformance.sh
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-amd-linux
+          path: |
+            .genesis/perf/gpu_device_conformance_amd_linux/
+            .genesis/perf/gpu_device_conformance_amd_linux_report.json
+          if-no-files-found: warn
+
+  gpu_device_microbench_intel_windows:
+    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    runs-on: [self-hosted, windows, x64, gpu, intel]
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_GPU_DEVICE_CONFORMANCE_LANE_ID: "intel-windows"
+      GENESIS_GPU_DEVICE_CONFORMANCE_VENDOR: "intel"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OS: "windows"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_intel_windows"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_intel_windows_report.json"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU Device Conformance Lane (Intel Windows)
+        shell: bash
+        run: bash scripts/check_gpu_compute_device_conformance.sh
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-intel-windows
+          path: |
+            .genesis/perf/gpu_device_conformance_intel_windows/
+            .genesis/perf/gpu_device_conformance_intel_windows_report.json
+          if-no-files-found: warn
+
+  gpu_device_microbench_apple_macos:
+    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    runs-on: [self-hosted, macOS, arm64, gpu, apple]
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+      GENESIS_RUNTIME_MICROBENCH_FEATURES: "device-bridge"
+      GENESIS_GPU_COMPUTE_BACKEND_POLICY: "require-device"
+      GENESIS_RUNTIME_MICROBENCH_REQUIRED_GPU_BACKEND: "device-runtime"
+      GENESIS_GPU_DEVICE_CONFORMANCE_LANE_ID: "apple-macos"
+      GENESIS_GPU_DEVICE_CONFORMANCE_VENDOR: "apple"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OS: "macos"
+      GENESIS_GPU_DEVICE_CONFORMANCE_OUT_DIR: ".genesis/perf/gpu_device_conformance_apple_macos"
+      GENESIS_GPU_DEVICE_CONFORMANCE_REPORT_OUT: ".genesis/perf/gpu_device_conformance_apple_macos_report.json"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_DEVICE: "5000"
+      GENESIS_BUDGET_MICRO_GPU_COMPUTE_SUBMIT_MS_FALLBACK: "8000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.90.0
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU Device Conformance Lane (Apple macOS)
+        run: bash scripts/check_gpu_compute_device_conformance.sh
+      - name: Upload GPU Perf Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-apple-macos
+          path: |
+            .genesis/perf/gpu_device_conformance_apple_macos/
+            .genesis/perf/gpu_device_conformance_apple_macos_report.json
+          if-no-files-found: warn
+
+  gpu_device_conformance_matrix_gate:
+    if: ${{ vars.GENESIS_GPU_MATRIX_ENABLED == '1' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'full')) }}
+    needs:
+      - gpu_device_microbench_nvidia_linux
+      - gpu_device_microbench_amd_linux
+      - gpu_device_microbench_intel_windows
+      - gpu_device_microbench_apple_macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download NVIDIA Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-nvidia-linux
+          path: .genesis/perf/gpu_matrix/nvidia_linux
+      - name: Download AMD Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-amd-linux
+          path: .genesis/perf/gpu_matrix/amd_linux
+      - name: Download Intel Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-intel-windows
+          path: .genesis/perf/gpu_matrix/intel_windows
+      - name: Download Apple macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-device-conformance-artifacts-apple-macos
+          path: .genesis/perf/gpu_matrix/apple_macos
+      - name: GPU Device Conformance Matrix Gate
+        run: |
+          bash scripts/check_gpu_device_conformance_matrix.sh \
+            --config policies/perf/gpu_device_conformance_matrix.toml \
+            --lane nvidia-linux=.genesis/perf/gpu_matrix/nvidia_linux/gpu_device_conformance_nvidia_linux_report.json \
+            --lane amd-linux=.genesis/perf/gpu_matrix/amd_linux/gpu_device_conformance_amd_linux_report.json \
+            --lane intel-windows=.genesis/perf/gpu_matrix/intel_windows/gpu_device_conformance_intel_windows_report.json \
+            --lane apple-macos=.genesis/perf/gpu_matrix/apple_macos/gpu_device_conformance_apple_macos_report.json \
+            --out .genesis/perf/gpu_device_conformance_matrix_report.json
+      - name: Upload GPU Matrix Artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-device-conformance-matrix
+          path: .genesis/perf/gpu_device_conformance_matrix_report.json
+          if-no-files-found: warn

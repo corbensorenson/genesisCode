@@ -303,15 +303,12 @@ fn infer_prim(items: Vec<&Term>, env: &TypeEnv, sess: &mut InferSession) -> Ty {
         ));
         return Ty::Any;
     };
-    let args: Vec<Ty> = items
-        .iter()
-        .skip(2)
-        .map(|a| infer_term(a, env, sess))
-        .collect();
-    prim_type(op.as_str(), &args, sess)
+    let arg_terms: Vec<&Term> = items.iter().skip(2).copied().collect();
+    let args: Vec<Ty> = arg_terms.iter().map(|a| infer_term(a, env, sess)).collect();
+    prim_type(op.as_str(), &args, &arg_terms, sess)
 }
 
-fn prim_type(op: &str, args: &[Ty], sess: &mut InferSession) -> Ty {
+fn prim_type(op: &str, args: &[Ty], arg_terms: &[&Term], sess: &mut InferSession) -> Ty {
     match op {
         "int/add" | "int/sub" | "int/mul" => {
             if args.len() != 2 {
@@ -342,7 +339,100 @@ fn prim_type(op: &str, args: &[Ty], sess: &mut InferSession) -> Ty {
         "bytes/len" => Ty::Int,
         "bytes/concat" => Ty::Bytes,
         "pair/cons" | "pair/car" | "pair/cdr" | "list/is-nil?" => Ty::Any,
-        "map/get" | "map/put" | "map/merge" => Ty::Any,
+        "map/get" => {
+            if args.len() != 2 {
+                sess.errors
+                    .push(format!("prim {op} expects 2 args, got {}", args.len()));
+                return Ty::Any;
+            }
+            match &args[0] {
+                Ty::Rec { fields, tail } => {
+                    let Some(key) = literal_map_key(arg_terms[1]) else {
+                        return Ty::Any;
+                    };
+                    if let Some(found) = fields.get(&key) {
+                        return found.clone();
+                    }
+                    if !tail.is_open() {
+                        sess.warnings
+                            .push(format!("prim map/get missing closed-row key {key}"));
+                    }
+                    Ty::Any
+                }
+                Ty::Any => Ty::Any,
+                _ => {
+                    sess.errors
+                        .push("prim map/get expects Rec, key".to_string());
+                    Ty::Any
+                }
+            }
+        }
+        "map/put" => {
+            if args.len() != 3 {
+                sess.errors
+                    .push(format!("prim {op} expects 3 args, got {}", args.len()));
+                return Ty::Any;
+            }
+            match &args[0] {
+                Ty::Rec { fields, tail } => {
+                    let mut next_fields = fields.clone();
+                    if let Some(key) = literal_map_key(arg_terms[1]) {
+                        next_fields.insert(key, args[2].clone());
+                        Ty::Rec {
+                            fields: next_fields,
+                            tail: tail.clone(),
+                        }
+                    } else {
+                        Ty::Rec {
+                            fields: next_fields,
+                            tail: RowTail::Any,
+                        }
+                    }
+                }
+                Ty::Any => Ty::Any,
+                _ => {
+                    sess.errors
+                        .push("prim map/put expects Rec, key, value".to_string());
+                    Ty::Any
+                }
+            }
+        }
+        "map/merge" => {
+            if args.len() != 2 {
+                sess.errors
+                    .push(format!("prim {op} expects 2 args, got {}", args.len()));
+                return Ty::Any;
+            }
+            match (&args[0], &args[1]) {
+                (
+                    Ty::Rec {
+                        fields: lf,
+                        tail: lt,
+                    },
+                    Ty::Rec {
+                        fields: rf,
+                        tail: rt,
+                    },
+                ) => {
+                    let mut fields = lf.clone();
+                    for (k, v) in rf {
+                        fields.insert(k.clone(), v.clone());
+                    }
+                    let tail = if matches!(lt, RowTail::Closed) && matches!(rt, RowTail::Closed) {
+                        RowTail::Closed
+                    } else {
+                        RowTail::Any
+                    };
+                    Ty::Rec { fields, tail }
+                }
+                (Ty::Any, _) | (_, Ty::Any) => Ty::Any,
+                _ => {
+                    sess.errors
+                        .push("prim map/merge expects Rec, Rec".to_string());
+                    Ty::Any
+                }
+            }
+        }
         "vec/get" | "vec/push" => Ty::Any,
         _ => Ty::Any,
     }
@@ -363,16 +453,20 @@ fn infer_app(head: &Term, args: &[Term], env: &TypeEnv, sess: &mut InferSession)
             "core/contract::extend" => return infer_core_contract_extend(args, env, sess),
             "core/contract::dispatch" => return infer_core_contract_dispatch(args, env, sess),
             "core/effect::pure" => return infer_core_effect_pure(args, env, sess),
+            "core/effect::bind" => return infer_core_effect_bind(args, env, sess),
             "core/effect::perform" => return infer_core_effect_perform(args, env, sess),
             _ => {}
         }
     }
 
-    // Unknown application: still traverse children for side constraints but be gradual.
-    let _ = infer_term(head, env, sess);
-    for a in args {
-        let _ = infer_term(a, env, sess);
+    // Fallback typed application: preserve precision for let-bound/curried function values.
+    let head_ty = infer_term(head, env, sess);
+    let arg_tys: Vec<Ty> = args.iter().map(|a| infer_term(a, env, sess)).collect();
+    if let Some(applied) = infer_apply_types(head_ty, &arg_tys, sess) {
+        return applied;
     }
+
+    // Unknown application: children were traversed above; stay gradual.
     Ty::Any
 }
 
@@ -589,6 +683,137 @@ fn infer_core_effect_pure(args: &[Term], env: &TypeEnv, sess: &mut InferSession)
     }
 }
 
+fn infer_core_effect_bind(args: &[Term], env: &TypeEnv, sess: &mut InferSession) -> Ty {
+    if args.len() != 2 {
+        sess.errors.push(format!(
+            "core/effect::bind expects 2 args (prog k), got {}",
+            args.len()
+        ));
+        return Ty::Any;
+    }
+    let p_ty = infer_term(&args[0], env, sess);
+
+    let (p_ret, mut p_eff) = match p_ty {
+        Ty::Prog { ret, eff } => (ret, eff),
+        Ty::Any => {
+            return Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Any,
+                },
+            };
+        }
+        _ => {
+            sess.errors
+                .push("core/effect::bind first arg must be a Prog".to_string());
+            return Ty::Any;
+        }
+    };
+
+    let k_ty = infer_bind_continuation_with_param(&args[1], &p_ret, env, sess);
+    let (k_param, k_ret, k_fn_eff) = match k_ty {
+        Ty::Fn { param, ret, eff } => (param, ret, eff),
+        Ty::Any => {
+            return Ty::Prog {
+                ret: Box::new(Ty::Any),
+                eff: EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Any,
+                },
+            };
+        }
+        _ => {
+            sess.errors
+                .push("core/effect::bind continuation must be a function".to_string());
+            return Ty::Any;
+        }
+    };
+
+    if !arg_type_compatible(&p_ret, &k_param) {
+        sess.errors.push(format!(
+            "core/effect::bind continuation param mismatch; prog returns {}, continuation expects {}",
+            print_term(&p_ret.to_term()),
+            print_term(&k_param.to_term())
+        ));
+    }
+
+    let (ret, k_prog_eff) = match *k_ret {
+        Ty::Prog { ret, eff } => (ret, eff),
+        Ty::Any => (
+            Box::new(Ty::Any),
+            EffRow {
+                ops: BTreeSet::new(),
+                tail: RowTail::Any,
+            },
+        ),
+        other => {
+            sess.errors.push(format!(
+                "core/effect::bind continuation must return Prog, got {}",
+                print_term(&other.to_term())
+            ));
+            (
+                Box::new(Ty::Any),
+                EffRow {
+                    ops: BTreeSet::new(),
+                    tail: RowTail::Any,
+                },
+            )
+        }
+    };
+
+    p_eff = merge_eff_rows(p_eff, &k_fn_eff);
+    p_eff = merge_eff_rows(p_eff, &k_prog_eff);
+    Ty::Prog { ret, eff: p_eff }
+}
+
+fn infer_bind_continuation_with_param(
+    continuation: &Term,
+    param_ty: &Ty,
+    env: &TypeEnv,
+    sess: &mut InferSession,
+) -> Ty {
+    let Some(items) = continuation.as_proper_list() else {
+        return infer_term(continuation, env, sess);
+    };
+    if items.len() < 3 || !matches!(items[0], Term::Symbol(s) if s == "fn") {
+        return infer_term(continuation, env, sess);
+    }
+    let Some(params) = items[1].as_proper_list() else {
+        return infer_term(continuation, env, sess);
+    };
+    if params.len() != 1 {
+        return infer_term(continuation, env, sess);
+    }
+    let Term::Symbol(param_name) = params[0] else {
+        return infer_term(continuation, env, sess);
+    };
+    let body = if items.len() == 3 {
+        items[2].clone()
+    } else {
+        let mut xs = Vec::new();
+        xs.push(Term::Symbol("begin".to_string()));
+        for b in items.iter().skip(2) {
+            xs.push((*b).clone());
+        }
+        Term::list(xs)
+    };
+    let mut env2 = env.clone();
+    env2.set(param_name.clone(), param_ty.clone());
+    let ret = infer_term(&body, &env2, sess);
+    let inf = crate::infer_effects_in_term(&body);
+    let tail = if inf.unknown {
+        RowTail::Any
+    } else {
+        RowTail::Closed
+    };
+    Ty::Fn {
+        param: Box::new(param_ty.clone()),
+        ret: Box::new(ret),
+        eff: EffRow { ops: inf.ops, tail },
+    }
+}
+
 fn infer_core_effect_perform(args: &[Term], env: &TypeEnv, sess: &mut InferSession) -> Ty {
     if args.len() != 3 {
         sess.errors.push(format!(
@@ -662,6 +887,109 @@ fn infer_core_effect_perform(args: &[Term], env: &TypeEnv, sess: &mut InferSessi
     Ty::Prog { ret, eff }
 }
 
+fn infer_apply_types(head: Ty, args: &[Ty], sess: &mut InferSession) -> Option<Ty> {
+    let mut cur = head;
+    for arg in args {
+        cur = apply_once(cur, arg, sess)?;
+    }
+    Some(cur)
+}
+
+fn apply_once(f_ty: Ty, arg_ty: &Ty, sess: &mut InferSession) -> Option<Ty> {
+    match f_ty {
+        Ty::Fn { param, ret, eff: _ } => {
+            if !arg_type_compatible(arg_ty, &param) {
+                sess.errors.push(format!(
+                    "application arg type mismatch: expected {}, got {}",
+                    print_term(&param.to_term()),
+                    print_term(&arg_ty.to_term())
+                ));
+                return Some(Ty::Any);
+            }
+            Some(*ret)
+        }
+        Ty::Any => Some(Ty::Any),
+        _ => None,
+    }
+}
+
+fn arg_type_compatible(inferred: &Ty, declared: &Ty) -> bool {
+    if matches!(declared, Ty::Any) || matches!(inferred, Ty::Any) {
+        return true;
+    }
+    match (inferred, declared) {
+        (Ty::Int, Ty::Int)
+        | (Ty::Bool, Ty::Bool)
+        | (Ty::Nil, Ty::Nil)
+        | (Ty::Str, Ty::Str)
+        | (Ty::Bytes, Ty::Bytes)
+        | (Ty::Symbol, Ty::Symbol) => true,
+        (
+            Ty::Msg {
+                op: iop,
+                payload: ip,
+            },
+            Ty::Msg {
+                op: dop,
+                payload: dp,
+            },
+        ) => {
+            if let Some(d) = dop
+                && iop.as_deref() != Some(d.as_str())
+            {
+                return false;
+            }
+            arg_type_compatible(ip, dp)
+        }
+        (
+            Ty::Fn {
+                param: ip,
+                ret: ir,
+                eff: _,
+            },
+            Ty::Fn {
+                param: dp,
+                ret: dr,
+                eff: _,
+            },
+        ) => arg_type_compatible(ip, dp) && arg_type_compatible(ir, dr),
+        (Ty::Prog { ret: ir, eff: _ }, Ty::Prog { ret: dr, eff: _ }) => arg_type_compatible(ir, dr),
+        (
+            Ty::Rec {
+                fields: ifs,
+                tail: _,
+            },
+            Ty::Rec {
+                fields: dfs,
+                tail: _,
+            },
+        ) => dfs
+            .iter()
+            .all(|(k, dt)| ifs.get(k).is_some_and(|it| arg_type_compatible(it, dt))),
+        (
+            Ty::Contract {
+                methods: ims,
+                tail: _,
+            },
+            Ty::Contract {
+                methods: dms,
+                tail: _,
+            },
+        ) => dms
+            .iter()
+            .all(|(k, dt)| ims.get(k).is_some_and(|it| arg_type_compatible(it, dt))),
+        _ => false,
+    }
+}
+
+fn merge_eff_rows(mut left: EffRow, right: &EffRow) -> EffRow {
+    left.ops.extend(right.ops.iter().cloned());
+    if right.tail.is_open() {
+        left.tail = right.tail.clone();
+    }
+    left
+}
+
 fn join_types(a: Ty, b: Ty) -> Ty {
     if a == b {
         return a;
@@ -700,4 +1028,23 @@ fn literal_op_symbol(t: &Term) -> Option<String> {
         return Some(s.clone());
     }
     None
+}
+
+fn literal_map_key(t: &Term) -> Option<String> {
+    match t {
+        Term::Symbol(s) => Some(s.clone()),
+        Term::Str(s) => Some(s.clone()),
+        _ => {
+            let items = t.as_proper_list()?;
+            if items.len() == 2 && matches!(items[0], Term::Symbol(s) if s == "quote") {
+                match items[1] {
+                    Term::Symbol(s) => Some(s.clone()),
+                    Term::Str(s) => Some(s.clone()),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        }
+    }
 }
