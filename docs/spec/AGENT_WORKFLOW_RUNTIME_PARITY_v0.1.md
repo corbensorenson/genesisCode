@@ -53,6 +53,11 @@ Each lane emits a gauntlet report with per-workflow:
 - `native_report`, `wasi_report`
 - `workflow_count`, `domain_count`
 - `elapsed_ms`, `budget_ms`
+- `history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`
+- `p95_min_samples`
+- `fail_reasons` (string list)
 - `missing_native_workflows`, `missing_wasi_workflows`
 - `workflow_mismatches` (includes raw replay hash, parity hash, and lane ok states)
 - `domain_mismatches`
+
+The SLO schema contract is validated by `scripts/check_slo_report_contracts.sh`.

@@ -40,6 +40,20 @@ plan = plan_path.read_text(encoding="utf-8")
 matrix = matrix_path.read_text(encoding="utf-8")
 redteam = redteam_path.read_text(encoding="utf-8")
 
+readiness_ref = ".genesis/perf/selfhost_readiness_report.json"
+if readiness_ref not in plan:
+    raise SystemExit(
+        "doc-topology-drift: upgrade_plan.md must reference "
+        + readiness_ref
+        + " as the machine-readable selfhost readiness source"
+    )
+if readiness_ref not in matrix:
+    raise SystemExit(
+        "doc-topology-drift: feature_matrix.md must reference "
+        + readiness_ref
+        + " as a primary evidence path"
+    )
+
 for header in (
     "## Authoring",
     "## Runtime",

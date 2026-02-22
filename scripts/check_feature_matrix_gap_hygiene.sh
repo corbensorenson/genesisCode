@@ -53,6 +53,11 @@ section_text = "\n".join(section_lines)
 section_ids = sorted(set(re.findall(r"\bP\d+\.\d+\b", section_text)))
 open_ids_sorted = sorted(set(open_ids))
 
+if open_ids_sorted and re.search(r"^-\s+none\b", section_text, flags=re.MULTILINE):
+    raise SystemExit(
+        "feature-matrix-gap-hygiene: '- none' is forbidden while unresolved upgrade plan IDs exist"
+    )
+
 missing = sorted(set(open_ids_sorted) - set(section_ids))
 extra = sorted(set(section_ids) - set(open_ids_sorted))
 if missing:

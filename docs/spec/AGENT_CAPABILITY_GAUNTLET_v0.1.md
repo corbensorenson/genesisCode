@@ -21,7 +21,10 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `ok` boolean
 - `workflow_count`, `workflow_successes`, `score_percent`
 - `domain_count`, `domain_successes`
-- `elapsed_ms`, `default_max_ms`
+- `elapsed_ms`, `budget_ms`
+- `history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`
+- `fail_reasons` (string list)
+- `default_max_ms` (legacy compatibility alias for budget defaults)
 - `p95_default_max_ms`, `p95_min_samples`, `p95_failures`
 - `baseline_history_path`, `require_min_history`
 - `regression_percent`, `regression_failures`, `history_min_failures`
@@ -61,6 +64,10 @@ The gate requires at least one successful workflow for each:
 - `browser_runtime`
 - `xr_runtime`
 - `deployment`
+- `deploy_ios`
+- `deploy_android`
+- `deploy_edge`
+- `deploy_service_runtime`
 
 If any required domain misses its minimum success threshold, the script exits non-zero.
 
@@ -79,5 +86,7 @@ If any required domain misses its minimum success threshold, the script exits no
 
 - `standard` and `full` CI profiles run this gate.
 - Failures in workflow checks or domain thresholds fail CI.
+- `scripts/check_slo_report_contracts.sh` enforces required SLO fields and
+  fail-closed elapsed/p95 budget semantics on the emitted report.
 - Release/full profile also runs `scripts/check_agent_workflow_runtime_parity.sh` to enforce native vs WASI/wasm-host bridge parity hash equivalence for the same workflows.
 - `scripts/check_agent_scenario_perf.sh` consumes this gate's workflow durations to enforce aggregated multi-domain median+p95 scenario latency SLOs.

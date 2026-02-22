@@ -17,6 +17,7 @@ This is the canonical entrypoint for project documentation.
 - `upgrade_plan.md` - unresolved red-team backlog only.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
+- `.genesis/perf/selfhost_readiness_report.json` - machine-readable selfhost readiness scorecard.
 - `feature_matrix.md` - capability comparison vs common languages.
 - `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
 
@@ -56,6 +57,7 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/WASI.md`
   - `docs/spec/WASM.md`
   - `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
+  - `docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`
   - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`

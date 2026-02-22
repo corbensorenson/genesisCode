@@ -512,6 +512,7 @@ if [[ "$declared_open" -gt 0 ]]; then
     MANDATORY_LOCAL_NON_CARGO_GATES=(
       "bash scripts/check_selfhost_boundary.sh --strict"
       "bash scripts/check_selfhost_doc_runtime_parity.sh"
+      "bash scripts/check_selfhost_readiness_scorecard.sh"
       "bash scripts/check_redteam_report.sh"
       "bash scripts/check_selfhost_symbol_ownership.sh"
       "bash scripts/check_selfhost_toolchain_review_fresh.sh"
@@ -597,6 +598,7 @@ COMMON_GATES=(
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_toolchain_review_fresh.sh"
   "bash scripts/check_selfhost_dashboard_fresh.sh"
+  "bash scripts/check_selfhost_readiness_scorecard.sh"
   "bash scripts/check_selfhost_doc_runtime_parity.sh"
   "bash scripts/check_redteam_report.sh"
   "bash scripts/check_feature_matrix_gap_hygiene.sh"
@@ -639,6 +641,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
@@ -658,11 +661,13 @@ case "$PROFILE" in
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
+    PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
+    PROFILE_GATES+=("GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")

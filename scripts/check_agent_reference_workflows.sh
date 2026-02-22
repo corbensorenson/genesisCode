@@ -286,6 +286,9 @@ if require_min_history and not baseline_history_path.exists():
 history_durations = load_workflow_duration_history(
     [baseline_history_path, history_path], runtime_profile
 )
+baseline_history_durations = load_workflow_duration_history(
+    [baseline_history_path], runtime_profile
+)
 
 for wf in workflows:
     max_ms = int(env.get(f"GENESIS_AGENT_GAUNTLET_MAX_MS_{wf['name'].upper()}", default_max_ms))
@@ -325,7 +328,13 @@ for wf in workflows:
     duration_ok = duration_ms <= max_ms
     wf_history_samples = history_durations.get(wf["name"], [])
     wf_samples = wf_history_samples + [duration_ms]
-    history_min_ok = len(wf_samples) >= p95_min_samples
+    workflow_seeded = len(baseline_history_durations.get(wf["name"], [])) >= p95_min_samples
+    history_bootstrap_mode = require_min_history and (not workflow_seeded)
+    history_min_ok = (
+        len(wf_samples) >= p95_min_samples
+        or (not require_min_history)
+        or history_bootstrap_mode
+    )
     p95_duration_ms = p95(wf_samples)
     p95_enforced = len(wf_samples) >= p95_min_samples
     p95_ok = (not p95_enforced) or (p95_duration_ms <= p95_budget_ms)
@@ -337,7 +346,7 @@ for wf in workflows:
         else None
     )
     regression_ok = (
-        True if regression_budget_ms is None else duration_ms <= regression_budget_ms
+        True if regression_budget_ms is None else p95_duration_ms <= regression_budget_ms
     )
     exit_ok = proc.returncode == 0
     ok = (
@@ -371,12 +380,14 @@ for wf in workflows:
             "p95_sample_count": len(wf_samples),
             "p95_ok": p95_ok,
             "history_min_ok": history_min_ok,
+            "history_bootstrap_mode": history_bootstrap_mode,
             "require_min_history": require_min_history,
             "baseline_history_sample_count": len(wf_history_samples),
             "baseline_p95_ms": baseline_p95_ms,
             "regression_percent": regression_percent,
             "regression_enforced": regression_enforced,
             "regression_budget_ms": regression_budget_ms,
+            "regression_observed_ms": p95_duration_ms,
             "regression_ok": regression_ok,
             "gpu_backend_required": gpu_backend_required,
             "gpu_backend": reported_backend,

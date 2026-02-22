@@ -34,6 +34,7 @@ Owner: Assurance + release maintainers.
 - Live backlog: `upgrade_plan.md`
 - Active risk rollup: `docs/status/REDTEAM_REPORT.md`
 - Capability comparison ledger: `feature_matrix.md`
+- Machine-readable selfhost readiness scorecard: `.genesis/perf/selfhost_readiness_report.json`
 - Canonical docs index: `docs/INDEX.md`
 
 Owner: Release ops maintainers.

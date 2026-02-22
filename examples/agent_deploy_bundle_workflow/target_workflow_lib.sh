@@ -30,7 +30,7 @@ run_target_deploy_workflow() {
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap "rm -rf '$tmp_dir'" EXIT
 
   local work_dir="$tmp_dir/work"
   cp -R "$EXAMPLE_DIR" "$work_dir"

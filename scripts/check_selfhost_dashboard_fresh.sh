@@ -75,4 +75,6 @@ genesis_profile_gate_emit_runtime_report \
   "$START_MS" \
   "$BUDGET_MS"
 
+GENESIS_BIN="$GENESIS_BIN" bash scripts/check_selfhost_readiness_scorecard.sh
+
 echo "selfhost-dashboard-fresh: ok"
