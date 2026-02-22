@@ -4,6 +4,7 @@ modules = [
   "00_core.gc",
   "00_core_system_ops.gc",
   "00_core_fs.gc",
+  "00_core_db.gc",
   "00_core_net.gc",
   "00_core_process.gc",
   "00_core_time.gc",
@@ -28,6 +29,7 @@ modules = [
 "00_core.gc" = []
 "00_core_system_ops.gc" = ["00_core.gc"]
 "00_core_fs.gc" = ["00_core.gc"]
+"00_core_db.gc" = ["00_core.gc"]
 "00_core_net.gc" = ["00_core.gc"]
 "00_core_process.gc" = ["00_core.gc"]
 "00_core_time.gc" = ["00_core.gc"]

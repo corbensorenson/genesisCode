@@ -98,8 +98,9 @@ Strict/full profile runtime reports:
     coverage for tasks + bridge + gpu/compute + replay integrity.
   - runs `scripts/check_agent_reference_workflows.sh` as the scored
     agent-capability gauntlet (`genesis/agent-capability-gauntlet-v0.1`) with
-    required domain thresholds for service, network/process,
-    package-publish/sync, graphics, and gpu/compute workflows.
+    required domain thresholds for service, network/process, raw-network,
+    inbound-server, durable-data, package-publish/sync, graphics, gpu/compute, filesystem,
+    process-lifecycle, plugin-runtime, and time-control workflows.
   - full release-profile workflows also require dual GPU conformance lanes
     (`gpu_device_microbench` + `gpu_device_microbench_deterministic`) and
     lane-contract parity via `scripts/check_gpu_device_conformance_lane_parity.sh`.

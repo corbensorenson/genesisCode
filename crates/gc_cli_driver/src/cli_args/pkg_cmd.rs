@@ -111,6 +111,21 @@ enum PkgCmd {
         workspace_file: PathBuf,
     },
 
+    /// Build a deterministic deployment bundle target from a package manifest.
+    Build {
+        /// Path to package.toml.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Deployment target contract.
+        #[arg(long, value_parser = ["web", "desktop", "service"])]
+        target: String,
+
+        /// Bundle output root directory.
+        #[arg(long, default_value = ".genesis/build")]
+        out_dir: PathBuf,
+    },
+
     /// Run package obligations (gcpm alias for `genesis test`).
     Test {
         /// Path to package.toml.

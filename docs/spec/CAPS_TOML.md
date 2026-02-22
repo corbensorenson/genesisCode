@@ -145,7 +145,7 @@ Supported keys:
   - used by host-integrated ops such as `host/plugin::command`,
     `editor/plugin::command`,
     `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`, `gfx/gpu::*`,
-    `gpu/compute::*`, `io/net::http-request`, `io/net::ws-*`, and `sys/process::*`.
+    `gpu/compute::*`, `io/net::*`, `io/db::*`, and `sys/process::*`.
   - first-party runtime domains (canonical `gpu/compute::*`,
     `gfx/gpu::*`, `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`,
     `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`,
@@ -189,9 +189,17 @@ Supported keys:
   - bridge-backed ops (`editor/*`, `gfx/*`, `gpu/compute::*`): maximum bytes for both framed
     request payload and framed response payload.
 - `remote_allow` (array of strings): allowlist of remote base URL prefixes for `core/sync::*` and `core/pkg-low::publish` (see below).
-- `url_allow` (array of strings): URL prefix allowlist for `io/net::http-request` and `io/net::ws-open`.
-- `allow_http` (bool): if true, `http://` URLs are permitted for `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-request` (default is false).
-- `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, `io/net::http-request`, and `io/net::ws-open`.
+- `url_allow` (array of strings): URL prefix allowlist for network target ops (`io/net::http-request`, `io/net::ws-open`, `io/net::tcp-open`, `io/net::tcp-listen`, `io/net::udp-bind`, `io/net::udp-send`, `io/net::dns-resolve`, `io/net::http-listen`).
+- `allow_http` (bool): if true, `http://` URLs are permitted for `core/sync::*`, `core/pkg-low::publish`, and `io/net::http-*` (default is false).
+- `wasi_network_profile` (string): optional WASI network scope (`none|local|preview2`) for remote/network ops such as `core/sync::*`, `core/pkg-low::publish`, and `io/net::*`.
+- `allow_bind_hosts` (array<string>): required bind-host allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
+- `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
+- `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
+- `db_target_allow` (array<string>): allowlist of durable-data targets (DSN/path prefixes) for `io/db::connect` and `io/db::kv-open`.
+- `allow_query_classes` (array<string>): required query/statement class allowlist for SQL-like durable-data ops (`io/db::query`, `io/db::exec`).
+- `max_row_count` (int): required positive row-count bound for `io/db::query`.
+- `max_result_bytes` (int): required positive result envelope byte bound for `io/db::query`, `io/db::exec`, and `io/db::kv-get`.
+- `max_value_bytes` (int): required positive value-size bound for `io/db::kv-put`.
 - `allow_programs` (array<string>): required allowlist for process launch ops (`sys/process::exec`, `sys/process::spawn`) program names.
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): optional command allowlist for `host/plugin::command` and `editor/plugin::command`.
@@ -251,6 +259,73 @@ bridge_cmd = "./tools/host_bridge.sh"
 bridge_cmd = "./tools/host_bridge.sh"
 
 [op."io/net::ws-close"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::tcp-listen"]
+url_allow = ["tcp://127.0.0.1:9000"]
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [9000]
+wasi_network_profile = "preview2"
+max_request_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::tcp-accept"]
+max_request_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::http-listen"]
+url_allow = ["http://127.0.0.1:8080"]
+allow_http = true
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [8080]
+wasi_network_profile = "preview2"
+max_request_bytes = 8192
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::http-respond"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/net::ws-accept"]
+max_request_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::connect"]
+db_target_allow = ["sqlite://data/app.db"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::tx-begin"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::query"]
+allow_query_classes = ["read-only", "analytics"]
+max_row_count = 500
+max_result_bytes = 8192
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::exec"]
+allow_query_classes = ["write", "ddl"]
+max_result_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::tx-commit"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::tx-rollback"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::kv-open"]
+db_target_allow = ["kv://state/main"]
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::kv-get"]
+max_result_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::kv-put"]
+max_value_bytes = 4096
+bridge_cmd = "./tools/host_bridge.sh"
+
+[op."io/db::kv-delete"]
 bridge_cmd = "./tools/host_bridge.sh"
 
 [op."sys/process::exec"]

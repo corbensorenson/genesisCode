@@ -80,6 +80,16 @@ workflows = [
         "domains": ["raw_network_sockets"],
     },
     {
+        "name": "agent_inbound_server_workflow",
+        "path": "examples/agent_inbound_server_workflow/workflow.sh",
+        "domains": ["inbound_server"],
+    },
+    {
+        "name": "agent_durable_data_workflow",
+        "path": "examples/agent_durable_data_workflow/workflow.sh",
+        "domains": ["durable_data"],
+    },
+    {
         "name": "agent_process_lifecycle_workflow",
         "path": "examples/agent_process_lifecycle_workflow/workflow.sh",
         "domains": ["process_lifecycle"],
@@ -109,6 +119,8 @@ required_domains = {
     "gpu_compute": 1,
     "filesystem": 1,
     "raw_network_sockets": 1,
+    "inbound_server": 1,
+    "durable_data": 1,
     "process_lifecycle": 1,
     "plugin_runtime": 1,
     "time_control": 1,

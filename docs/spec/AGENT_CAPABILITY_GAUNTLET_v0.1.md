@@ -46,6 +46,8 @@ The gate requires at least one successful workflow for each:
 - `gpu_compute`
 - `filesystem`
 - `raw_network_sockets`
+- `inbound_server`
+- `durable_data`
 - `process_lifecycle`
 - `plugin_runtime`
 - `time_control`

@@ -27,11 +27,11 @@ Legend:
 | Filesystem management capability surface (`stat/list/mkdir/rename/remove`) | ✅ (first-class `core/fs::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Process lifecycle + stdio streaming primitives | ✅ (first-class `core/process::*` wrappers + required gauntlet domain coverage) | ✅ | ✅ | ✅ | ✅ |
 | Raw socket/stream networking primitives | ✅ (first-class `core/net::*` socket wrappers + required gauntlet domain coverage) | ⚠️ | ✅ | ⚠️ | ⚠️ |
-| Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ⚠️ (client-centric `io/net::*` today; no first-class listen/accept server contracts yet) | ⚠️ | ✅ | ✅ | ✅ |
+| Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ✅ (first-class `core/net::*` inbound listener/accept/respond wrappers + policy-gated bind/request-size controls + gauntlet domain coverage) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | WebXR runtime primitives (session/frame/input/haptics) | ❌ | ⚠️ | ⚠️ | ✅ | ⚠️ |
-| Durable data capability family (`io/db::*`) | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Durable data capability family (`io/db::*`) | ✅ (first-class SQL + KV bridge-backed contracts with policy-gated target/query/row/byte bounds and replay-stable envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
@@ -62,8 +62,6 @@ Regulated assurance readiness snapshot (indicative):
 Known GenesisCode gaps (current red-team focus):
 - P1.1 browser runtime host profile + ABI family
 - P1.2 WebXR runtime (`gfx/xr::*`) support
-- P1.3 inbound/server networking primitives
-- P1.4 durable data capability family (`io/db::*`)
 - P1.5 deterministic deployment target bundling (`gcpm build --target`)
 - P1.6 gauntlet domain expansion for browser/xr/server/data/deploy
 - P2.4 media/asset pipeline contracts

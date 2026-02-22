@@ -1,0 +1,22 @@
+(def prog
+  ((core/effect::bind (core/net::tcp-listen "tcp://127.0.0.1:9010"))
+    (fn (tcp-listener)
+      ((core/effect::bind (core/net::tcp-accept "tcp-listener-1"))
+        (fn (tcp-accept)
+          ((core/effect::bind (core/net::http-listen "http://127.0.0.1:8088"))
+            (fn (http-listener)
+              ((core/effect::bind ((((core/net::http-respond "http-listener-1") "req-1") 200) "ok"))
+                (fn (http-respond)
+                  ((core/effect::bind ((core/net::ws-accept "http-listener-1") "req-1"))
+                    (fn (ws-accept)
+                      (core/effect::pure
+                        {
+                          :http-listener http-listener
+                          :http-respond http-respond
+                          :ok true
+                          :tcp-accept tcp-accept
+                          :tcp-listener tcp-listener
+                          :ws-accept ws-accept
+                        }))))))))))))
+
+prog

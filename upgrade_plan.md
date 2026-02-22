@@ -5,7 +5,7 @@ Last updated: 2026-02-21
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 9
+Open checklist items: 7
 
 ## Platform + Runtime Surface (P1)
 
@@ -23,20 +23,6 @@ Open checklist items: 9
     - Add prelude wrappers + domain kit for XR render loop/state contracts.
     - Add deterministic replay/parity checks for XR frame/input streams.
 
-- [ ] P1.3 Add inbound/server networking primitives (not just client flows)
-  - Evidence: `io/net` currently provides `http-request`, `tcp-open/send/recv/close`, `udp-*`, `ws-open/send/recv/close` only (`docs/spec/HOST_ABI_INDEX_v0.1.json`).
-  - Exit criteria:
-    - Add listener/acceptor ops (`tcp-listen`, `tcp-accept`, `http-listen`, `http-respond`, `ws-accept`).
-    - Add policy gates for bind addresses, ports, and request-size bounds.
-    - Add deterministic service workflow examples and gauntlet coverage.
-
-- [ ] P1.4 Add durable data capability family for real application state
-  - Evidence: host ABI operations currently have no `io/db::*` family (`docs/spec/HOST_ABI_INDEX_v0.1.json`).
-  - Exit criteria:
-    - Add deterministic `io/db::*` contract family (transactional KV/SQL minimum slice).
-    - Add policy controls for DSN/paths/query classes and row/bytes limits.
-    - Add replay-stable result envelopes and migration-safe schema docs.
-
 - [ ] P1.5 Add deterministic deployment/bundle targets to `gcpm`
   - Evidence: CLI/gcpm command surface focuses on build/test/pack/run/env/assurance but not targeted web/desktop/service deployment bundles (`docs/spec/CLI.md`).
   - Exit criteria:
@@ -45,7 +31,7 @@ Open checklist items: 9
     - Add CI validation for bundle reproducibility and schema contracts.
 
 - [ ] P1.6 Expand agent capability gauntlet domain coverage for missing product surfaces
-  - Evidence: required gauntlet domains currently omit browser runtime, XR, durable data, inbound servers, and deployment (`docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`).
+  - Evidence: required gauntlet domains now include inbound-server and durable-data coverage but still omit browser runtime, XR, and deployment (`docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`).
   - Exit criteria:
     - Extend gauntlet required domains and reference workflows for new families.
     - Keep native/WASI parity gate coverage for all added domains.
@@ -61,7 +47,7 @@ Open checklist items: 9
     - Add domain-kit workflows for asset import/build pipelines.
 
 - [ ] P2.7 Add full conformance lanes for browser/XR/server/data/deploy workflows
-  - Evidence: current agent gauntlet + parity lanes cover 10 domains, none for browser/XR/durable-data/deployment.
+  - Evidence: current agent gauntlet + parity lanes cover 12 domains, with no browser/XR/deployment domain lanes yet.
   - Exit criteria:
     - Add new workflow suites and report contracts for each new domain.
     - Integrate into `prepush-standard` and `release-full` profile gates.

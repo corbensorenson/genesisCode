@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+EXAMPLE_DIR="$ROOT_DIR/examples/agent_inbound_server_workflow"
+GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
+
+cargo build -p gc_cli >/dev/null
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+WORK_DIR="$TMP_DIR/work"
+cp -R "$EXAMPLE_DIR" "$WORK_DIR"
+chmod +x "$WORK_DIR/tools/host_bridge.sh"
+
+ART="$TMP_DIR/selfhost_toolchain.gc"
+"$GENESIS_BIN" selfhost-artifact --out "$ART" >/dev/null
+
+run_log="$WORK_DIR/workflow_run.gclog"
+run_out="$("$GENESIS_BIN" \
+  --selfhost-only \
+  --selfhost-artifact "$ART" \
+  run "$WORK_DIR/workflow_run.gc" \
+  --caps "$WORK_DIR/caps.toml" \
+  --log "$run_log" \
+  | tr -d '\n')"
+
+replay_out="$("$GENESIS_BIN" \
+  --selfhost-only \
+  --selfhost-artifact "$ART" \
+  replay "$WORK_DIR/workflow_run.gc" \
+  --log "$run_log" \
+  | tr -d '\n')"
+
+if [[ "$run_out" != "$replay_out" ]]; then
+  echo "agent-inbound-server-workflow: run/replay mismatch: run=$run_out replay=$replay_out" >&2
+  exit 1
+fi
+
+if [[ "$run_out" != *":sent true"* || "$run_out" != *"ws-accepted-1"* || "$run_out" != *"tcp-listener-1"* ]]; then
+  echo "agent-inbound-server-workflow: expected sent=true, ws stream, and tcp listener ids, got=$run_out" >&2
+  exit 1
+fi
+
+echo "agent-inbound-server-workflow: ok replay=$run_out"

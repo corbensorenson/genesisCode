@@ -174,6 +174,120 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
             },
             "response_envelope": {"success": {"value_kind": "nil", "shape": "nil"}},
         },
+        "io/db::connect": {
+            "payload": {
+                "required_fields": [
+                    field(":target", "string", ["non-empty", "db_target_allow policy required"])
+                ],
+                "optional_fields": [field(":mode", "symbol|string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :connection-id string ...}"}
+            },
+        },
+        "io/db::tx-begin": {
+            "payload": {
+                "required_fields": [field(":connection-id", "string")],
+                "optional_fields": [field(":isolation", "symbol|string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :tx-id string ...}"}
+            },
+        },
+        "io/db::query": {
+            "payload": {
+                "required_fields": [
+                    field(":connection-id", "string"),
+                    field(":query-class", "symbol|string", ["allow_query_classes policy required"]),
+                    field(":query", "string"),
+                    field(":max-row-count", "int", ["injected from max_row_count policy bound"]),
+                    field(
+                        ":max-result-bytes",
+                        "int",
+                        ["injected from max_result_bytes policy bound"],
+                    ),
+                ],
+                "optional_fields": [field(":params", "term"), field(":tx-id", "string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :rows vector :row-count int ...}"}
+            },
+        },
+        "io/db::exec": {
+            "payload": {
+                "required_fields": [
+                    field(":connection-id", "string"),
+                    field(":query-class", "symbol|string", ["allow_query_classes policy required"]),
+                    field(":statement", "string"),
+                    field(
+                        ":max-result-bytes",
+                        "int",
+                        ["injected from max_result_bytes policy bound"],
+                    ),
+                ],
+                "optional_fields": [field(":params", "term"), field(":tx-id", "string")],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :affected-rows int ...}"}
+            },
+        },
+        "io/db::tx-commit": {
+            "payload": {
+                "required_fields": [field(":tx-id", "string")],
+                "optional_fields": [],
+            }
+        },
+        "io/db::tx-rollback": {
+            "payload": {
+                "required_fields": [field(":tx-id", "string")],
+                "optional_fields": [],
+            }
+        },
+        "io/db::kv-open": {
+            "payload": {
+                "required_fields": [
+                    field(":target", "string", ["non-empty", "db_target_allow policy required"])
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :store-id string ...}"}
+            },
+        },
+        "io/db::kv-get": {
+            "payload": {
+                "required_fields": [
+                    field(":store-id", "string"),
+                    field(":key", "string"),
+                    field(
+                        ":max-result-bytes",
+                        "int",
+                        ["injected from max_result_bytes policy bound"],
+                    ),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {"value_kind": "map", "shape": "{:ok bool :found bool :value term ...}"}
+            },
+        },
+        "io/db::kv-put": {
+            "payload": {
+                "required_fields": [
+                    field(":store-id", "string"),
+                    field(":key", "string"),
+                    field(":value", "term"),
+                    field(":max-value-bytes", "int", ["injected from max_value_bytes policy bound"]),
+                ],
+                "optional_fields": [],
+            }
+        },
+        "io/db::kv-delete": {
+            "payload": {
+                "required_fields": [field(":store-id", "string"), field(":key", "string")],
+                "optional_fields": [],
+            }
+        },
         "io/net::http-request": {
             "payload": {
                 "required_fields": [field(":url", "string", ["non-empty", "allowlisted-prefix"])],
@@ -198,6 +312,37 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
             "payload": {
                 "required_fields": [
                     field(":remote", "string", ["tcp://host:port", "allowlisted-prefix"])
+                ],
+                "optional_fields": [],
+            }
+        },
+        "io/net::tcp-listen": {
+            "payload": {
+                "required_fields": [
+                    field(
+                        ":local",
+                        "string",
+                        [
+                            "tcp://host:port",
+                            "allowlisted-prefix",
+                            "allow_bind_hosts policy required",
+                            "allow_bind_ports policy required",
+                        ],
+                    )
+                ],
+                "optional_fields": [],
+                "constraints": ["policy-injected :max-request-bytes is not applicable"],
+            }
+        },
+        "io/net::tcp-accept": {
+            "payload": {
+                "required_fields": [
+                    field(":listener-id", "string"),
+                    field(
+                        ":max-request-bytes",
+                        "int",
+                        ["injected from max_request_bytes policy bound"],
+                    ),
                 ],
                 "optional_fields": [],
             }
@@ -239,6 +384,55 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
         "io/net::ws-open": {
             "payload": {
                 "required_fields": [field(":url", "string", ["ws:// or wss://", "allowlisted-prefix"])],
+                "optional_fields": [],
+            }
+        },
+        "io/net::http-listen": {
+            "payload": {
+                "required_fields": [
+                    field(
+                        ":local",
+                        "string",
+                        [
+                            "http://host:port or https://host:port",
+                            "allowlisted-prefix",
+                            "allow_bind_hosts policy required",
+                            "allow_bind_ports policy required",
+                        ],
+                    ),
+                    field(
+                        ":max-request-bytes",
+                        "int",
+                        ["injected from max_request_bytes policy bound"],
+                    ),
+                ],
+                "optional_fields": [],
+            }
+        },
+        "io/net::http-respond": {
+            "payload": {
+                "required_fields": [
+                    field(":listener-id", "string"),
+                    field(":request-id", "string"),
+                    field(":status", "int"),
+                ],
+                "optional_fields": [
+                    field(":headers", "map|vector"),
+                    field(":body", "bytes|string"),
+                ],
+            }
+        },
+        "io/net::ws-accept": {
+            "payload": {
+                "required_fields": [
+                    field(":listener-id", "string"),
+                    field(":request-id", "string"),
+                    field(
+                        ":max-request-bytes",
+                        "int",
+                        ["injected from max_request_bytes policy bound"],
+                    ),
+                ],
                 "optional_fields": [],
             }
         },

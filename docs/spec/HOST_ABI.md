@@ -25,13 +25,19 @@ Compatibility notes:
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
+  - `io/db::connect`, `io/db::tx-begin`, `io/db::query`, `io/db::exec`, `io/db::tx-commit`, `io/db::tx-rollback`
+    (policy-gated durable SQL lifecycle/query execution + bridge-backed execution)
+  - `io/db::kv-open`, `io/db::kv-get`, `io/db::kv-put`, `io/db::kv-delete`
+    (policy-gated durable key/value lifecycle + bridge-backed execution)
   - `io/net::dns-resolve` (policy-gated DNS lookup + bridge-backed execution)
+  - `io/net::http-listen` (policy-gated inbound HTTP listener bind + request-size bounds + bridge-backed execution)
   - `io/net::http-request` (policy-gated remote allowlist + bridge-backed execution)
-  - `io/net::tcp-open`, `io/net::tcp-send`, `io/net::tcp-recv`, `io/net::tcp-close`
+  - `io/net::http-respond` (bridge-backed HTTP response emit for inbound listener flows)
+  - `io/net::tcp-listen`, `io/net::tcp-accept`, `io/net::tcp-open`, `io/net::tcp-send`, `io/net::tcp-recv`, `io/net::tcp-close`
     (policy-gated TCP stream lifecycle + bridge-backed execution)
   - `io/net::udp-bind`, `io/net::udp-send`, `io/net::udp-recv`, `io/net::udp-close`
     (policy-gated UDP socket lifecycle + bridge-backed execution)
-  - `io/net::ws-open`, `io/net::ws-send`, `io/net::ws-recv`, `io/net::ws-close`
+  - `io/net::ws-open`, `io/net::ws-accept`, `io/net::ws-send`, `io/net::ws-recv`, `io/net::ws-close`
     (policy-gated WebSocket stream lifecycle + bridge-backed execution)
   - `sys/process::*` (`exec|spawn|wait|kill|stdin-write|stdout-read|stderr-read`,
     policy-gated with program allowlists for launch ops and bridge-backed execution)
@@ -160,6 +166,16 @@ Compatibility notes:
 - `gpu/compute::submit`
 - `gpu/compute::write-buffer`
 - `host/plugin::command`
+- `io/db::connect`
+- `io/db::exec`
+- `io/db::kv-delete`
+- `io/db::kv-get`
+- `io/db::kv-open`
+- `io/db::kv-put`
+- `io/db::query`
+- `io/db::tx-begin`
+- `io/db::tx-commit`
+- `io/db::tx-rollback`
 - `io/fs::list`
 - `io/fs::mkdir`
 - `io/fs::read`
@@ -168,8 +184,12 @@ Compatibility notes:
 - `io/fs::stat`
 - `io/fs::write`
 - `io/net::dns-resolve`
+- `io/net::http-listen`
 - `io/net::http-request`
+- `io/net::http-respond`
+- `io/net::tcp-accept`
 - `io/net::tcp-close`
+- `io/net::tcp-listen`
 - `io/net::tcp-open`
 - `io/net::tcp-recv`
 - `io/net::tcp-send`
@@ -177,6 +197,7 @@ Compatibility notes:
 - `io/net::udp-close`
 - `io/net::udp-recv`
 - `io/net::udp-send`
+- `io/net::ws-accept`
 - `io/net::ws-close`
 - `io/net::ws-open`
 - `io/net::ws-recv`
@@ -207,9 +228,66 @@ CI drift check:
 
 ## Network/Process Capability Contracts
 
+- `io/db::connect`
+  - Required payload field: `:target` (string DSN/path-like target).
+  - Policy-gated by per-op durable-data controls (`db_target_allow`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::tx-begin`
+  - Required payload field: `:connection-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::query`
+  - Required payload fields: `:connection-id` (string), `:query-class` (string/symbol), `:query` (string).
+  - Policy-gated by query controls (`allow_query_classes`, `max_row_count`, `max_result_bytes`).
+  - Runner injects `:max-row-count` and `:max-result-bytes` into the bridge payload from policy.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::exec`
+  - Required payload fields: `:connection-id` (string), `:query-class` (string/symbol), `:statement` (string).
+  - Policy-gated by query controls (`allow_query_classes`, `max_result_bytes`).
+  - Runner injects `:max-result-bytes` into the bridge payload from policy.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::tx-commit`
+  - Required payload field: `:tx-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::tx-rollback`
+  - Required payload field: `:tx-id` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::kv-open`
+  - Required payload field: `:target` (string DSN/path-like target).
+  - Policy-gated by per-op durable-data controls (`db_target_allow`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::kv-get`
+  - Required payload fields: `:store-id` (string), `:key` (string).
+  - Policy-gated by per-op result bound (`max_result_bytes`).
+  - Runner injects `:max-result-bytes` into the bridge payload from policy.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::kv-put`
+  - Required payload fields: `:store-id` (string), `:key` (string), `:value` (term).
+  - Policy-gated by per-op value bound (`max_value_bytes`).
+  - Runner injects `:max-value-bytes` into the bridge payload from policy.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/db::kv-delete`
+  - Required payload fields: `:store-id` (string), `:key` (string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::http-request`
   - Required payload field: `:url` (string).
   - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::http-listen`
+  - Required payload field: `:local` (string URL-like target, e.g. `http://127.0.0.1:8080`).
+  - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`) plus inbound bind controls (`allow_bind_hosts`, `allow_bind_ports`) and request-size bound (`max_request_bytes`).
+  - Runner injects `:max-request-bytes` into the bridge payload from policy.
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::http-respond`
+  - Required payload fields: `:listener-id` (string), `:request-id` (string), `:status` (int).
+  - Optional payload fields: `:headers` (map/vector), `:body` (bytes/string).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-listen`
+  - Required payload field: `:local` (string URL-like target, e.g. `tcp://127.0.0.1:9000`).
+  - Policy-gated by per-op network controls (`url_allow`, optional `wasi_network_profile`) plus inbound bind controls (`allow_bind_hosts`, `allow_bind_ports`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::tcp-accept`
+  - Required payload field: `:listener-id` (string).
+  - Policy requires `max_request_bytes`; runner injects `:max-request-bytes` into the bridge payload from policy.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::tcp-open`
   - Required payload field: `:remote` (string URL-like target, e.g. `tcp://host:port`).
@@ -245,6 +323,10 @@ CI drift check:
 - `io/net::ws-open`
   - Required payload field: `:url` (string, typically `wss://...`).
   - Policy-gated by per-op network controls (`url_allow`, `allow_http`, optional `wasi_network_profile`).
+  - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+- `io/net::ws-accept`
+  - Required payload fields: `:listener-id` (string), `:request-id` (string).
+  - Policy requires `max_request_bytes`; runner injects `:max-request-bytes` into the bridge payload from policy.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
 - `io/net::ws-send`
   - Required payload fields: `:stream-id` (string), `:data` (term; typically bytes/string).

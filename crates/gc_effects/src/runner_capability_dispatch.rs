@@ -38,6 +38,12 @@ and requires explicit per-op bridge policy"
 (bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and remote allowlist policy"
         );
     }
+    if op.starts_with("io/db::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and durable-data policy gates"
+        );
+    }
     if op.starts_with("sys/process::") {
         return format!(
             "capability backend unavailable for {op}; configure per-op bridge policy \
@@ -144,6 +150,18 @@ fn payload_optional_bool_field(
     Ok(*flag)
 }
 
+fn payload_required_map_field(
+    payload: &Term,
+    op: &str,
+) -> Result<BTreeMap<TermOrdKey, Term>, EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    Ok(mm.clone())
+}
+
 fn payload_required_string_or_symbol_field(
     payload: &Term,
     op: &str,
@@ -230,7 +248,9 @@ fn plugin_command_allowlist_from_policy(
     .map(Some)
 }
 
-fn plugin_schema_allowlist_from_policy(pol: Option<&OpPolicy>) -> Result<Option<Vec<String>>, String> {
+fn plugin_schema_allowlist_from_policy(
+    pol: Option<&OpPolicy>,
+) -> Result<Option<Vec<String>>, String> {
     let Some(pol) = pol else {
         return Ok(None);
     };
@@ -330,7 +350,8 @@ fn capability_host_plugin_command(
     }
     let plugin_payload = payload_optional_field(payload, op, ":payload")?.unwrap_or(Term::Nil);
     if let Some(schema_id) = schema_ids.request_schema_id.as_deref()
-        && let Err(err) = validate_plugin_request_schema(schema_id, &plugin_payload, &plugin, &command)
+        && let Err(err) =
+            validate_plugin_request_schema(schema_id, &plugin_payload, &plugin, &command)
     {
         return Ok(mk_error(
             error_tok,
@@ -427,6 +448,75 @@ fn net_wasi_network_profile_from_policy(pol: Option<&OpPolicy>) -> Result<Option
     Ok(Some(trimmed.to_string()))
 }
 
+fn net_bind_hosts_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<String>, String> {
+    parse_nonempty_string_array(
+        pol,
+        "allow_bind_hosts",
+        &format!("{op} requires per-op allow_bind_hosts allowlist in caps.toml"),
+    )
+}
+
+fn parse_nonempty_u16_array(
+    pol: Option<&OpPolicy>,
+    key: &str,
+    missing_msg: &str,
+) -> Result<Vec<u16>, String> {
+    let Some(pol) = pol else {
+        return Err(missing_msg.to_string());
+    };
+    let Some(v) = pol.extra.get(key) else {
+        return Err(missing_msg.to_string());
+    };
+    let Some(arr) = v.as_array() else {
+        return Err(format!("{key} must be an array of integers"));
+    };
+    let mut out = Vec::with_capacity(arr.len());
+    for x in arr {
+        let Some(raw) = x.as_integer() else {
+            return Err(format!("{key} entries must be integers"));
+        };
+        if !(1..=65535).contains(&raw) {
+            return Err(format!("{key} entries must be between 1 and 65535"));
+        }
+        out.push(raw as u16);
+    }
+    if out.is_empty() {
+        return Err(format!("{key} must contain at least one entry"));
+    }
+    Ok(out)
+}
+
+fn net_bind_ports_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<u16>, String> {
+    parse_nonempty_u16_array(
+        pol,
+        "allow_bind_ports",
+        &format!("{op} requires per-op allow_bind_ports allowlist in caps.toml"),
+    )
+}
+
+fn net_max_request_bytes_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<usize, String> {
+    let Some(pol) = pol else {
+        return Err(format!(
+            "{op} requires per-op max_request_bytes bound in caps.toml"
+        ));
+    };
+    let Some(v) = pol.extra.get("max_request_bytes") else {
+        return Err(format!(
+            "{op} requires per-op max_request_bytes bound in caps.toml"
+        ));
+    };
+    let Some(raw) = v.as_integer() else {
+        return Err("max_request_bytes must be an integer".to_string());
+    };
+    if raw <= 0 {
+        return Err("max_request_bytes must be greater than zero".to_string());
+    }
+    let Ok(bound) = usize::try_from(raw) else {
+        return Err("max_request_bytes exceeds platform usize range".to_string());
+    };
+    Ok(bound)
+}
+
 fn parse_url_scheme<'a>(url: &'a str, op: &str, field: &str) -> Result<&'a str, String> {
     let Some((scheme, _rest)) = url.split_once("://") else {
         return Err(format!(
@@ -466,6 +556,81 @@ fn validate_net_wasi_profile(profile: Option<&str>, scheme: &str) -> Result<(), 
     }
 }
 
+fn parse_bind_host_port(target: &str, op: &str, field: &str) -> Result<(String, u16), String> {
+    let Some((_scheme, rest)) = target.split_once("://") else {
+        return Err(format!(
+            "{op} payload field `{field}` must include scheme:// (got `{target}`)"
+        ));
+    };
+    let authority = rest.split('/').next().unwrap_or_default().trim();
+    if authority.is_empty() {
+        return Err(format!(
+            "{op} payload field `{field}` must include bind host:port"
+        ));
+    }
+    if let Some(stripped) = authority.strip_prefix('[') {
+        let Some((host, port_part)) = stripped.split_once(']') else {
+            return Err(format!(
+                "{op} payload field `{field}` has invalid IPv6 bind authority `{authority}`"
+            ));
+        };
+        let Some(port_raw) = port_part.strip_prefix(':') else {
+            return Err(format!(
+                "{op} payload field `{field}` must include bind port in authority `{authority}`"
+            ));
+        };
+        let port = port_raw.parse::<u16>().map_err(|_| {
+            format!("{op} payload field `{field}` has invalid bind port `{port_raw}`")
+        })?;
+        if host.trim().is_empty() {
+            return Err(format!(
+                "{op} payload field `{field}` has empty bind host in authority `{authority}`"
+            ));
+        }
+        return Ok((host.trim().to_lowercase(), port));
+    }
+    let Some((host_raw, port_raw)) = authority.rsplit_once(':') else {
+        return Err(format!(
+            "{op} payload field `{field}` must include bind host:port in authority `{authority}`"
+        ));
+    };
+    let host = host_raw.trim();
+    if host.is_empty() {
+        return Err(format!(
+            "{op} payload field `{field}` has empty bind host in authority `{authority}`"
+        ));
+    }
+    let port = port_raw
+        .parse::<u16>()
+        .map_err(|_| format!("{op} payload field `{field}` has invalid bind port `{port_raw}`"))?;
+    Ok((host.to_lowercase(), port))
+}
+
+fn validate_net_bind_policy(
+    pol: Option<&OpPolicy>,
+    target: &str,
+    op: &str,
+    field: &str,
+) -> Result<(), String> {
+    let (bind_host, bind_port) = parse_bind_host_port(target, op, field)?;
+    let allow_hosts = net_bind_hosts_from_policy(pol, op)?;
+    let allow_ports = net_bind_ports_from_policy(pol, op)?;
+    let host_ok = allow_hosts
+        .iter()
+        .any(|candidate| candidate.trim().eq_ignore_ascii_case(&bind_host));
+    if !host_ok {
+        return Err(format!(
+            "bind host `{bind_host}` is not in allow_bind_hosts policy"
+        ));
+    }
+    if !allow_ports.iter().any(|candidate| *candidate == bind_port) {
+        return Err(format!(
+            "bind port `{bind_port}` is not in allow_bind_ports policy"
+        ));
+    }
+    Ok(())
+}
+
 fn url_matches_allowlist(url: &str, allow: &str, scheme: &str) -> bool {
     let rule = allow.trim();
     if rule.ends_with("://") {
@@ -495,6 +660,505 @@ fn validate_net_target_policy(
         return Ok(());
     }
     Err("target is not in policy url_allow allowlist".to_string())
+}
+
+fn capability_io_net_tcp_listen(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let local = payload_required_string_field(payload, op, ":local")?;
+    if let Err(e) = validate_net_target_policy(pol, &local, op, ":local") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} bind denied: {e}"),
+            Some(op),
+        ));
+    }
+    if let Err(e) = validate_net_bind_policy(pol, &local, op, ":local") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} bind denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_tcp_accept(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _listener_id = payload_required_string_field(payload, op, ":listener-id")?;
+    let max_request_bytes = match net_max_request_bytes_from_policy(pol, op) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-request-bytes")),
+        Term::Int((max_request_bytes as i64).into()),
+    );
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_http_listen(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let local = payload_required_string_field(payload, op, ":local")?;
+    if let Err(e) = validate_net_target_policy(pol, &local, op, ":local") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} bind denied: {e}"),
+            Some(op),
+        ));
+    }
+    if let Err(e) = validate_net_bind_policy(pol, &local, op, ":local") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} bind denied: {e}"),
+            Some(op),
+        ));
+    }
+    let max_request_bytes = match net_max_request_bytes_from_policy(pol, op) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-request-bytes")),
+        Term::Int((max_request_bytes as i64).into()),
+    );
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_http_respond(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _listener_id = payload_required_string_field(payload, op, ":listener-id")?;
+    let _request_id = payload_required_string_field(payload, op, ":request-id")?;
+    let status = payload_required_field(payload, op, ":status")?;
+    if !matches!(status, Term::Int(_)) {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload field `:status` must be an integer"
+        )));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_net_ws_accept(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _listener_id = payload_required_string_field(payload, op, ":listener-id")?;
+    let _request_id = payload_required_string_field(payload, op, ":request-id")?;
+    let max_request_bytes = match net_max_request_bytes_from_policy(pol, op) {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-request-bytes")),
+        Term::Int((max_request_bytes as i64).into()),
+    );
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("net", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn db_target_allowlist_from_policy(
+    pol: Option<&OpPolicy>,
+    op: &str,
+) -> Result<Vec<String>, String> {
+    parse_nonempty_string_array(
+        pol,
+        "db_target_allow",
+        &format!("{op} requires per-op db_target_allow allowlist in caps.toml"),
+    )
+}
+
+fn db_query_class_allowlist_from_policy(
+    pol: Option<&OpPolicy>,
+    op: &str,
+) -> Result<Vec<String>, String> {
+    parse_nonempty_string_array(
+        pol,
+        "allow_query_classes",
+        &format!("{op} requires per-op allow_query_classes allowlist in caps.toml"),
+    )
+}
+
+fn db_positive_usize_from_policy(
+    pol: Option<&OpPolicy>,
+    op: &str,
+    key: &str,
+) -> Result<usize, String> {
+    let Some(pol) = pol else {
+        return Err(format!("{op} requires per-op {key} bound in caps.toml"));
+    };
+    let Some(v) = pol.extra.get(key) else {
+        return Err(format!("{op} requires per-op {key} bound in caps.toml"));
+    };
+    let Some(raw) = v.as_integer() else {
+        return Err(format!("{key} must be an integer"));
+    };
+    if raw <= 0 {
+        return Err(format!("{key} must be greater than zero"));
+    }
+    usize::try_from(raw).map_err(|_| format!("{key} exceeds platform usize range"))
+}
+
+fn validate_db_target_policy(
+    pol: Option<&OpPolicy>,
+    target: &str,
+    op: &str,
+    field: &str,
+) -> Result<(), String> {
+    let _scheme = parse_url_scheme(target, op, field)?;
+    let allowlist = db_target_allowlist_from_policy(pol, op)?;
+    if allowlist.iter().any(|rule| target.starts_with(rule.trim())) {
+        return Ok(());
+    }
+    Err("target is not in policy db_target_allow allowlist".to_string())
+}
+
+fn validate_db_query_class_policy(
+    pol: Option<&OpPolicy>,
+    op: &str,
+    query_class: &str,
+) -> Result<(), String> {
+    let allowlist = db_query_class_allowlist_from_policy(pol, op)?;
+    if allowlist
+        .iter()
+        .any(|allowed| allowed.trim().eq_ignore_ascii_case(query_class))
+    {
+        return Ok(());
+    }
+    Err(format!(
+        "query class `{query_class}` is not in allow_query_classes policy"
+    ))
+}
+
+fn capability_io_db_connect(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let target = payload_required_string_field(payload, op, ":target")?;
+    if let Err(e) = validate_db_target_policy(pol, &target, op, ":target") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} target denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_tx_begin(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _connection_id = payload_required_string_field(payload, op, ":connection-id")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_query_or_exec(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _connection_id = payload_required_string_field(payload, op, ":connection-id")?;
+    let query_class = payload_required_string_or_symbol_field(payload, op, ":query-class")?;
+    if let Err(e) = validate_db_query_class_policy(pol, op, &query_class) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} denied: {e}"),
+            Some(op),
+        ));
+    }
+    let max_result_bytes = match db_positive_usize_from_policy(pol, op, "max_result_bytes") {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-result-bytes")),
+        Term::Int((max_result_bytes as i64).into()),
+    );
+    if op == "io/db::query" {
+        let max_row_count = match db_positive_usize_from_policy(pol, op, "max_row_count") {
+            Ok(v) => v,
+            Err(e) => {
+                return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+            }
+        };
+        payload_map.insert(
+            TermOrdKey(Term::symbol(":max-row-count")),
+            Term::Int((max_row_count as i64).into()),
+        );
+    }
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_tx_finish(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _tx_id = payload_required_string_field(payload, op, ":tx-id")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_kv_open(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let target = payload_required_string_field(payload, op, ":target")?;
+    if let Err(e) = validate_db_target_policy(pol, &target, op, ":target") {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} target denied: {e}"),
+            Some(op),
+        ));
+    }
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_kv_get(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _store_id = payload_required_string_field(payload, op, ":store-id")?;
+    let _key = payload_required_string_field(payload, op, ":key")?;
+    let max_result_bytes = match db_positive_usize_from_policy(pol, op, "max_result_bytes") {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-result-bytes")),
+        Term::Int((max_result_bytes as i64).into()),
+    );
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_kv_put(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _store_id = payload_required_string_field(payload, op, ":store-id")?;
+    let _key = payload_required_string_field(payload, op, ":key")?;
+    let _value = payload_required_field(payload, op, ":value")?;
+    let max_value_bytes = match db_positive_usize_from_policy(pol, op, "max_value_bytes") {
+        Ok(v) => v,
+        Err(e) => {
+            return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
+        }
+    };
+    let mut payload_map = payload_required_map_field(payload, op)?;
+    payload_map.insert(
+        TermOrdKey(Term::symbol(":max-value-bytes")),
+        Term::Int((max_value_bytes as i64).into()),
+    );
+    let effective_payload = Term::Map(payload_map);
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, &effective_payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+fn capability_io_db_kv_delete(
+    op: &str,
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<Value, EffectsError> {
+    let _store_id = payload_required_string_field(payload, op, ":store-id")?;
+    let _key = payload_required_string_field(payload, op, ":key")?;
+    if !has_explicit_bridge_profile(pol) {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/backend-unavailable",
+            backend_unavailable_message(op),
+            Some(op),
+        ));
+    }
+    match call_host_bridge("db", op, payload, pol) {
+        Ok(resp) => Ok(Value::Data(resp)),
+        Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
 }
 
 fn capability_io_net_http_request(
@@ -1229,21 +1893,38 @@ pub(super) fn call_capability(
         }
         "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
         "io/net::dns-resolve" => capability_io_net_dns_resolve(op, payload, pol, error_tok),
+        "io/net::tcp-listen" => capability_io_net_tcp_listen(op, payload, pol, error_tok),
+        "io/net::tcp-accept" => capability_io_net_tcp_accept(op, payload, pol, error_tok),
         "io/net::tcp-open" => capability_io_net_tcp_open(op, payload, pol, error_tok),
         "io/net::tcp-send" => capability_io_net_tcp_send(op, payload, pol, error_tok),
         "io/net::tcp-recv" | "io/net::tcp-close" => {
             capability_io_net_tcp_recv_or_close(op, payload, pol, error_tok)
         }
+        "io/net::http-listen" => capability_io_net_http_listen(op, payload, pol, error_tok),
+        "io/net::http-respond" => capability_io_net_http_respond(op, payload, pol, error_tok),
         "io/net::udp-bind" => capability_io_net_udp_bind(op, payload, pol, error_tok),
         "io/net::udp-send" => capability_io_net_udp_send(op, payload, pol, error_tok),
         "io/net::udp-recv" | "io/net::udp-close" => {
             capability_io_net_udp_recv_or_close(op, payload, pol, error_tok)
         }
         "io/net::ws-open" => capability_io_net_ws_open(op, payload, pol, error_tok),
+        "io/net::ws-accept" => capability_io_net_ws_accept(op, payload, pol, error_tok),
         "io/net::ws-send" => capability_io_net_ws_send(op, payload, pol, error_tok),
         "io/net::ws-recv" | "io/net::ws-close" => {
             capability_io_net_ws_recv_or_close(op, payload, pol, error_tok)
         }
+        "io/db::connect" => capability_io_db_connect(op, payload, pol, error_tok),
+        "io/db::tx-begin" => capability_io_db_tx_begin(op, payload, pol, error_tok),
+        "io/db::query" | "io/db::exec" => {
+            capability_io_db_query_or_exec(op, payload, pol, error_tok)
+        }
+        "io/db::tx-commit" | "io/db::tx-rollback" => {
+            capability_io_db_tx_finish(op, payload, pol, error_tok)
+        }
+        "io/db::kv-open" => capability_io_db_kv_open(op, payload, pol, error_tok),
+        "io/db::kv-get" => capability_io_db_kv_get(op, payload, pol, error_tok),
+        "io/db::kv-put" => capability_io_db_kv_put(op, payload, pol, error_tok),
+        "io/db::kv-delete" => capability_io_db_kv_delete(op, payload, pol, error_tok),
         "sys/process::exec" | "sys/process::spawn" => {
             capability_sys_process_spawn_or_exec(op, payload, pol, error_tok)
         }

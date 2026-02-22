@@ -1,0 +1,44 @@
+allow = [
+  "io/net::tcp-listen",
+  "io/net::tcp-accept",
+  "io/net::http-listen",
+  "io/net::http-respond",
+  "io/net::ws-accept",
+]
+
+[op."io/net::tcp-listen"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+url_allow = ["tcp://127.0.0.1:9010"]
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [9010]
+wasi_network_profile = "preview2"
+
+[op."io/net::tcp-accept"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+max_request_bytes = 2048
+
+[op."io/net::http-listen"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+url_allow = ["http://127.0.0.1:8088"]
+allow_http = true
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [8088]
+wasi_network_profile = "preview2"
+max_request_bytes = 4096
+
+[op."io/net::http-respond"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."io/net::ws-accept"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+max_request_bytes = 4096

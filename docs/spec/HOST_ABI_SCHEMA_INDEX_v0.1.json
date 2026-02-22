@@ -2574,6 +2574,395 @@
         }
       }
     },
+    "io/db::connect": {
+      "operation": "io/db::connect",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":mode",
+            "type": "symbol|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "db_target_allow policy required"
+            ],
+            "name": ":target",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :connection-id string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::exec": {
+      "operation": "io/db::exec",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":params",
+            "type": "term"
+          },
+          {
+            "name": ":tx-id",
+            "type": "string"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":connection-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "allow_query_classes policy required"
+            ],
+            "name": ":query-class",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":statement",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_result_bytes policy bound"
+            ],
+            "name": ":max-result-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :affected-rows int ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::kv-delete": {
+      "operation": "io/db::kv-delete",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":store-id",
+            "type": "string"
+          },
+          {
+            "name": ":key",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/db::kv-get": {
+      "operation": "io/db::kv-get",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":store-id",
+            "type": "string"
+          },
+          {
+            "name": ":key",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_result_bytes policy bound"
+            ],
+            "name": ":max-result-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :found bool :value term ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::kv-open": {
+      "operation": "io/db::kv-open",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty",
+              "db_target_allow policy required"
+            ],
+            "name": ":target",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :store-id string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::kv-put": {
+      "operation": "io/db::kv-put",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":store-id",
+            "type": "string"
+          },
+          {
+            "name": ":key",
+            "type": "string"
+          },
+          {
+            "name": ":value",
+            "type": "term"
+          },
+          {
+            "constraints": [
+              "injected from max_value_bytes policy bound"
+            ],
+            "name": ":max-value-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/db::query": {
+      "operation": "io/db::query",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":params",
+            "type": "term"
+          },
+          {
+            "name": ":tx-id",
+            "type": "string"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":connection-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "allow_query_classes policy required"
+            ],
+            "name": ":query-class",
+            "type": "symbol|string"
+          },
+          {
+            "name": ":query",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_row_count policy bound"
+            ],
+            "name": ":max-row-count",
+            "type": "int"
+          },
+          {
+            "constraints": [
+              "injected from max_result_bytes policy bound"
+            ],
+            "name": ":max-result-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :rows vector :row-count int ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::tx-begin": {
+      "operation": "io/db::tx-begin",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":isolation",
+            "type": "symbol|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":connection-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :tx-id string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "io/db::tx-commit": {
+      "operation": "io/db::tx-commit",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":tx-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/db::tx-rollback": {
+      "operation": "io/db::tx-rollback",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":tx-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
     "io/fs::list": {
       "operation": "io/fs::list",
       "payload": {
@@ -2856,6 +3245,47 @@
         }
       }
     },
+    "io/net::http-listen": {
+      "operation": "io/net::http-listen",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "http://host:port or https://host:port",
+              "allowlisted-prefix",
+              "allow_bind_hosts policy required",
+              "allow_bind_ports policy required"
+            ],
+            "name": ":local",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_request_bytes policy bound"
+            ],
+            "name": ":max-request-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
     "io/net::http-request": {
       "operation": "io/net::http-request",
       "payload": {
@@ -2901,6 +3331,86 @@
         }
       }
     },
+    "io/net::http-respond": {
+      "operation": "io/net::http-respond",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [
+          {
+            "name": ":headers",
+            "type": "map|vector"
+          },
+          {
+            "name": ":body",
+            "type": "bytes|string"
+          }
+        ],
+        "required_fields": [
+          {
+            "name": ":listener-id",
+            "type": "string"
+          },
+          {
+            "name": ":request-id",
+            "type": "string"
+          },
+          {
+            "name": ":status",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::tcp-accept": {
+      "operation": "io/net::tcp-accept",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":listener-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_request_bytes policy bound"
+            ],
+            "name": ":max-request-bytes",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
     "io/net::tcp-close": {
       "operation": "io/net::tcp-close",
       "payload": {
@@ -2912,6 +3422,39 @@
         "required_fields": [
           {
             "name": ":stream-id",
+            "type": "string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::tcp-listen": {
+      "operation": "io/net::tcp-listen",
+      "payload": {
+        "constraints": [
+          "policy-injected :max-request-bytes is not applicable"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "tcp://host:port",
+              "allowlisted-prefix",
+              "allow_bind_hosts policy required",
+              "allow_bind_ports policy required"
+            ],
+            "name": ":local",
             "type": "string"
           }
         ],
@@ -3131,6 +3674,45 @@
           {
             "name": ":data",
             "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
+    "io/net::ws-accept": {
+      "operation": "io/net::ws-accept",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "name": ":listener-id",
+            "type": "string"
+          },
+          {
+            "name": ":request-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "injected from max_request_bytes policy bound"
+            ],
+            "name": ":max-request-bytes",
+            "type": "int"
           }
         ],
         "type": "map"

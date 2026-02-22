@@ -47,8 +47,20 @@ fn low_level_caps_wrappers_emit_expected_ops() {
         :fs_mkdir ((core/fs::mkdir "tmp/nested") true)
         :fs_remove ((core/fs::remove "tmp/old") true)
         :fs_rename (((core/fs::rename "tmp/from.txt") "tmp/to.txt") true)
+        :db_connect (core/db::connect "sqlite://data/app.db")
+        :db_tx_begin (core/db::tx-begin "db-1")
+        :db_query ((((core/db::query "db-1") (quote read-only)) "select 1") {})
+        :db_exec ((((core/db::exec "db-1") (quote write)) "update kv set v=1 where k='a'") {})
+        :db_tx_commit (core/db::tx-commit "tx-1")
+        :db_tx_rollback (core/db::tx-rollback "tx-1")
+        :db_kv_open (core/db::kv-open "kv://state/main")
+        :db_kv_get ((core/db::kv-get "kv-1") "alpha")
+        :db_kv_put (((core/db::kv-put "kv-1") "alpha") "v1")
+        :db_kv_delete ((core/db::kv-delete "kv-1") "alpha")
         :net_dns_resolve (core/net::dns-resolve "example.test")
         :net_tcp_open (core/net::tcp-open "tcp://example.test:443")
+        :net_tcp_listen (core/net::tcp-listen "tcp://127.0.0.1:9000")
+        :net_tcp_accept (core/net::tcp-accept "listener-1")
         :net_tcp_send ((core/net::tcp-send "stream-1") "ping")
         :net_tcp_recv (core/net::tcp-recv "stream-1")
         :net_tcp_close (core/net::tcp-close "stream-1")
@@ -57,6 +69,9 @@ fn low_level_caps_wrappers_emit_expected_ops() {
         :net_udp_recv (core/net::udp-recv "socket-1")
         :net_udp_close (core/net::udp-close "socket-1")
         :net_ws_open (core/net::ws-open "wss://example.test/ws")
+        :net_http_listen (core/net::http-listen "http://127.0.0.1:8080")
+        :net_http_respond ((((core/net::http-respond "listener-1") "request-1") 200) "ok")
+        :net_ws_accept ((core/net::ws-accept "listener-1") "request-1")
         :net_ws_send ((core/net::ws-send "ws-1") "frame")
         :net_ws_recv (core/net::ws-recv "ws-1")
         :net_ws_close (core/net::ws-close "ws-1")
@@ -125,8 +140,20 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":fs_mkdir", "io/fs::mkdir");
     expect_op(":fs_remove", "io/fs::remove");
     expect_op(":fs_rename", "io/fs::rename");
+    expect_op(":db_connect", "io/db::connect");
+    expect_op(":db_tx_begin", "io/db::tx-begin");
+    expect_op(":db_query", "io/db::query");
+    expect_op(":db_exec", "io/db::exec");
+    expect_op(":db_tx_commit", "io/db::tx-commit");
+    expect_op(":db_tx_rollback", "io/db::tx-rollback");
+    expect_op(":db_kv_open", "io/db::kv-open");
+    expect_op(":db_kv_get", "io/db::kv-get");
+    expect_op(":db_kv_put", "io/db::kv-put");
+    expect_op(":db_kv_delete", "io/db::kv-delete");
     expect_op(":net_dns_resolve", "io/net::dns-resolve");
     expect_op(":net_tcp_open", "io/net::tcp-open");
+    expect_op(":net_tcp_listen", "io/net::tcp-listen");
+    expect_op(":net_tcp_accept", "io/net::tcp-accept");
     expect_op(":net_tcp_send", "io/net::tcp-send");
     expect_op(":net_tcp_recv", "io/net::tcp-recv");
     expect_op(":net_tcp_close", "io/net::tcp-close");
@@ -135,6 +162,9 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":net_udp_recv", "io/net::udp-recv");
     expect_op(":net_udp_close", "io/net::udp-close");
     expect_op(":net_ws_open", "io/net::ws-open");
+    expect_op(":net_http_listen", "io/net::http-listen");
+    expect_op(":net_http_respond", "io/net::http-respond");
+    expect_op(":net_ws_accept", "io/net::ws-accept");
     expect_op(":net_ws_send", "io/net::ws-send");
     expect_op(":net_ws_recv", "io/net::ws-recv");
     expect_op(":net_ws_close", "io/net::ws-close");
@@ -150,7 +180,10 @@ fn low_level_caps_wrappers_emit_expected_ops() {
     expect_op(":plugin_editor_command", "editor/plugin::command");
     expect_op(":plugin_editor_typed_command", "editor/plugin::command");
     expect_op(":editor_plugin_host_command", "editor/plugin::command");
-    expect_op(":editor_plugin_host_typed_command", "editor/plugin::command");
+    expect_op(
+        ":editor_plugin_host_typed_command",
+        "editor/plugin::command",
+    );
     expect_op(":gpu_create_kernel", "gpu/compute::create-kernel");
 }
 

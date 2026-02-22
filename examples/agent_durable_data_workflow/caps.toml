@@ -1,0 +1,71 @@
+allow = [
+  "io/db::connect",
+  "io/db::tx-begin",
+  "io/db::query",
+  "io/db::exec",
+  "io/db::tx-commit",
+  "io/db::tx-rollback",
+  "io/db::kv-open",
+  "io/db::kv-get",
+  "io/db::kv-put",
+  "io/db::kv-delete",
+]
+
+[op."io/db::connect"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+db_target_allow = ["sqlite://data/app.db"]
+
+[op."io/db::tx-begin"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."io/db::query"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+allow_query_classes = ["read-only", "write"]
+max_row_count = 500
+max_result_bytes = 8192
+
+[op."io/db::exec"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+allow_query_classes = ["write"]
+max_result_bytes = 4096
+
+[op."io/db::tx-commit"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."io/db::tx-rollback"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+
+[op."io/db::kv-open"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+db_target_allow = ["kv://state/main"]
+
+[op."io/db::kv-get"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+max_result_bytes = 4096
+
+[op."io/db::kv-put"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096
+max_value_bytes = 4096
+
+[op."io/db::kv-delete"]
+base_dir = "."
+bridge_cmd = "tools/host_bridge.sh"
+max_bytes = 4096

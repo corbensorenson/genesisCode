@@ -1,0 +1,72 @@
+(def core/db::connect
+  (fn (target)
+    (((core/effect::perform (quote io/db::connect)) {:target target})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::tx-begin
+  (fn (connection-id)
+    (((core/effect::perform (quote io/db::tx-begin)) {:connection-id connection-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::query
+  (fn (connection-id)
+    (fn (query-class)
+      (fn (query)
+        (fn (params)
+          (((core/effect::perform (quote io/db::query))
+            {
+              :connection-id connection-id
+              :params params
+              :query query
+              :query-class query-class})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/db::exec
+  (fn (connection-id)
+    (fn (query-class)
+      (fn (statement)
+        (fn (params)
+          (((core/effect::perform (quote io/db::exec))
+            {
+              :connection-id connection-id
+              :params params
+              :query-class query-class
+              :statement statement})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/db::tx-commit
+  (fn (tx-id)
+    (((core/effect::perform (quote io/db::tx-commit)) {:tx-id tx-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::tx-rollback
+  (fn (tx-id)
+    (((core/effect::perform (quote io/db::tx-rollback)) {:tx-id tx-id})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::kv-open
+  (fn (target)
+    (((core/effect::perform (quote io/db::kv-open)) {:target target})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/db::kv-get
+  (fn (store-id)
+    (fn (key)
+      (((core/effect::perform (quote io/db::kv-get))
+        {:key key :store-id store-id})
+        (fn (resp) (core/effect::pure resp))))))
+
+(def core/db::kv-put
+  (fn (store-id)
+    (fn (key)
+      (fn (value)
+        (((core/effect::perform (quote io/db::kv-put))
+          {:key key :store-id store-id :value value})
+          (fn (resp) (core/effect::pure resp)))))))
+
+(def core/db::kv-delete
+  (fn (store-id)
+    (fn (key)
+      (((core/effect::perform (quote io/db::kv-delete))
+        {:key key :store-id store-id})
+        (fn (resp) (core/effect::pure resp))))))

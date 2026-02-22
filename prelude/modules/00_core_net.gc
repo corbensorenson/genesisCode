@@ -8,6 +8,16 @@
     (((core/effect::perform (quote io/net::tcp-open)) {:remote remote})
       (fn (resp) (core/effect::pure resp)))))
 
+(def core/net::tcp-listen
+  (fn (local)
+    (((core/effect::perform (quote io/net::tcp-listen)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::tcp-accept
+  (fn (listener-id)
+    (((core/effect::perform (quote io/net::tcp-accept)) {:listener-id listener-id})
+      (fn (resp) (core/effect::pure resp)))))
+
 (def core/net::tcp-send
   (fn (stream-id)
     (fn (data)
@@ -55,6 +65,31 @@
   (fn (url)
     (((core/effect::perform (quote io/net::ws-open)) {:url url})
       (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::http-listen
+  (fn (local)
+    (((core/effect::perform (quote io/net::http-listen)) {:local local})
+      (fn (resp) (core/effect::pure resp)))))
+
+(def core/net::http-respond
+  (fn (listener-id)
+    (fn (request-id)
+      (fn (status)
+        (fn (body)
+          (((core/effect::perform (quote io/net::http-respond))
+            {
+              :body body
+              :listener-id listener-id
+              :request-id request-id
+              :status status})
+            (fn (resp) (core/effect::pure resp))))))))
+
+(def core/net::ws-accept
+  (fn (listener-id)
+    (fn (request-id)
+      (((core/effect::perform (quote io/net::ws-accept))
+        {:listener-id listener-id :request-id request-id})
+        (fn (resp) (core/effect::pure resp))))))
 
 (def core/net::ws-send
   (fn (stream-id)

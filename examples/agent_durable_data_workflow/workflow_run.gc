@@ -1,0 +1,35 @@
+(def prog
+  ((core/effect::bind (core/db::connect "sqlite://data/app.db"))
+    (fn (conn)
+      ((core/effect::bind (core/db::tx-begin "db-1"))
+        (fn (tx)
+          ((core/effect::bind ((((core/db::query "db-1") (quote read-only)) "select id from users") {}))
+            (fn (rows)
+              ((core/effect::bind
+                 ((((core/db::exec "db-1") (quote write)) "update users set active=1 where id=1") {}))
+                (fn (exec)
+                  ((core/effect::bind (core/db::tx-commit "tx-1"))
+                    (fn (commit)
+                      ((core/effect::bind (core/db::kv-open "kv://state/main"))
+                        (fn (store)
+                          ((core/effect::bind (((core/db::kv-put "kv-1") "alpha") "v1"))
+                            (fn (put)
+                              ((core/effect::bind ((core/db::kv-get "kv-1") "alpha"))
+                                (fn (get)
+                                  ((core/effect::bind ((core/db::kv-delete "kv-1") "alpha"))
+                                    (fn (deleted)
+                                      (core/effect::pure
+                                        {
+                                          :commit commit
+                                          :connect conn
+                                          :delete deleted
+                                          :exec exec
+                                          :get get
+                                          :ok true
+                                          :put put
+                                          :query rows
+                                          :store store
+                                          :tx tx
+                                        }))))))))))))))))))))
+
+prog

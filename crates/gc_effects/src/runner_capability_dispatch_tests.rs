@@ -763,6 +763,507 @@ wasi_bridge_response = "{:ok true :records [{:type \"A\" :value \"127.0.0.1\"}]}
 }
 
 #[test]
+fn io_net_tcp_listen_policy_gate_enforces_bind_host_port_allowlists() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::tcp-listen"]
+
+[op."io/net::tcp-listen"]
+url_allow = ["tcp://127.0.0.1:9000"]
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [9000]
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :listener-id \"tcp-listener-1\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([(
+        Term::symbol(":local"),
+        Term::Str("tcp://0.0.0.0:9000".to_string()),
+    )]);
+    let out = call_capability(
+        "io/net::tcp-listen",
+        &payload,
+        policy.op_policy("io/net::tcp-listen"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(56),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
+fn io_net_tcp_accept_policy_requires_max_request_bytes() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::tcp-accept"]
+
+[op."io/net::tcp-accept"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :request-id \"req-1\" :data b\"ping\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([(
+        Term::symbol(":listener-id"),
+        Term::Str("tcp-listener-1".to_string()),
+    )]);
+    let out = call_capability(
+        "io/net::tcp-accept",
+        &payload,
+        policy.op_policy("io/net::tcp-accept"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(57),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
+fn io_net_http_listen_and_ws_accept_wasi_bridge_profile_returns_data() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::http-listen", "io/net::ws-accept"]
+
+[op."io/net::http-listen"]
+url_allow = ["http://127.0.0.1:8080"]
+allow_http = true
+allow_bind_hosts = ["127.0.0.1"]
+allow_bind_ports = [8080]
+max_request_bytes = 8192
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :listener-id \"http-listener-1\"}"
+
+[op."io/net::ws-accept"]
+max_request_bytes = 4096
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :stream-id \"ws-accepted-1\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let listen_out = call_capability(
+        "io/net::http-listen",
+        &term_map([(
+            Term::symbol(":local"),
+            Term::Str("http://127.0.0.1:8080".to_string()),
+        )]),
+        policy.op_policy("io/net::http-listen"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(58),
+    )
+    .expect("http-listen");
+    let Value::Data(Term::Map(listen_map)) = listen_out else {
+        panic!("expected http-listen data map");
+    };
+    assert_eq!(
+        listen_map.get(&TermOrdKey(Term::symbol(":listener-id"))),
+        Some(&Term::Str("http-listener-1".to_string()))
+    );
+
+    let ws_accept_out = call_capability(
+        "io/net::ws-accept",
+        &term_map([
+            (
+                Term::symbol(":listener-id"),
+                Term::Str("http-listener-1".to_string()),
+            ),
+            (Term::symbol(":request-id"), Term::Str("req-1".to_string())),
+        ]),
+        policy.op_policy("io/net::ws-accept"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(59),
+    )
+    .expect("ws-accept");
+    let Value::Data(Term::Map(ws_accept_map)) = ws_accept_out else {
+        panic!("expected ws-accept data map");
+    };
+    assert_eq!(
+        ws_accept_map.get(&TermOrdKey(Term::symbol(":stream-id"))),
+        Some(&Term::Str("ws-accepted-1".to_string()))
+    );
+}
+
+#[test]
+fn io_net_http_respond_requires_integer_status() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::http-respond"]
+
+[op."io/net::http-respond"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :sent true}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let bad_payload = term_map([
+        (
+            Term::symbol(":listener-id"),
+            Term::Str("http-listener-1".to_string()),
+        ),
+        (Term::symbol(":request-id"), Term::Str("req-1".to_string())),
+        (Term::symbol(":status"), Term::Str("200".to_string())),
+    ]);
+    let err = call_capability(
+        "io/net::http-respond",
+        &bad_payload,
+        policy.op_policy("io/net::http-respond"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(60),
+    )
+    .expect_err("bad payload should fail");
+    assert!(
+        err.to_string().contains(":status"),
+        "expected :status payload error, got {err}"
+    );
+
+    let good_out = call_capability(
+        "io/net::http-respond",
+        &term_map([
+            (
+                Term::symbol(":listener-id"),
+                Term::Str("http-listener-1".to_string()),
+            ),
+            (Term::symbol(":request-id"), Term::Str("req-1".to_string())),
+            (Term::symbol(":status"), Term::Int(200_i64.into())),
+            (Term::symbol(":body"), Term::Bytes(b"ok".to_vec().into())),
+        ]),
+        policy.op_policy("io/net::http-respond"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(61),
+    )
+    .expect("http-respond");
+    let Value::Data(Term::Map(mm)) = good_out else {
+        panic!("expected http-respond data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":sent"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
+fn io_db_connect_policy_gate_enforces_target_allowlist() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/db::connect"]
+
+[op."io/db::connect"]
+db_target_allow = ["sqlite://data/app.db"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :connection-id \"db-1\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([(
+        Term::symbol(":target"),
+        Term::Str("sqlite://data/other.db".to_string()),
+    )]);
+    let out = call_capability(
+        "io/db::connect",
+        &payload,
+        policy.op_policy("io/db::connect"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(62),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
+fn io_db_query_policy_requires_query_class_allowlist_and_limits() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/db::query"]
+
+[op."io/db::query"]
+allow_query_classes = ["read-only"]
+max_row_count = 500
+max_result_bytes = 8192
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :rows [{:id 1 :name \"alice\"}] :row-count 1}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let denied = call_capability(
+        "io/db::query",
+        &term_map([
+            (
+                Term::symbol(":connection-id"),
+                Term::Str("db-1".to_string()),
+            ),
+            (
+                Term::symbol(":query-class"),
+                Term::Symbol("write".to_string()),
+            ),
+            (
+                Term::symbol(":query"),
+                Term::Str("update users set name='x'".to_string()),
+            ),
+        ]),
+        policy.op_policy("io/db::query"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(63),
+    )
+    .expect("query");
+    assert_eq!(code_from_error(denied), "core/caps/policy-error");
+
+    let allowed = call_capability(
+        "io/db::query",
+        &term_map([
+            (
+                Term::symbol(":connection-id"),
+                Term::Str("db-1".to_string()),
+            ),
+            (
+                Term::symbol(":query-class"),
+                Term::Symbol("read-only".to_string()),
+            ),
+            (
+                Term::symbol(":query"),
+                Term::Str("select id, name from users".to_string()),
+            ),
+        ]),
+        policy.op_policy("io/db::query"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(64),
+    )
+    .expect("query");
+    let Value::Data(Term::Map(mm)) = allowed else {
+        panic!("expected query data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":row-count"))),
+        Some(&Term::Int(1_i64.into()))
+    );
+}
+
+#[test]
+fn io_db_sql_and_kv_family_wasi_bridge_profile_returns_data() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = [
+  "io/db::connect",
+  "io/db::tx-begin",
+  "io/db::query",
+  "io/db::exec",
+  "io/db::tx-commit",
+  "io/db::tx-rollback",
+  "io/db::kv-open",
+  "io/db::kv-get",
+  "io/db::kv-put",
+  "io/db::kv-delete"
+]
+
+[op."io/db::connect"]
+db_target_allow = ["sqlite://data/app.db"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :connection-id \"db-1\"}"
+
+[op."io/db::tx-begin"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :tx-id \"tx-1\"}"
+
+[op."io/db::query"]
+allow_query_classes = ["read-only", "write"]
+max_row_count = 500
+max_result_bytes = 8192
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :rows [{:id 1}] :row-count 1}"
+
+[op."io/db::exec"]
+allow_query_classes = ["write"]
+max_result_bytes = 4096
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :affected-rows 1}"
+
+[op."io/db::tx-commit"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :committed true}"
+
+[op."io/db::tx-rollback"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :rolled-back true}"
+
+[op."io/db::kv-open"]
+db_target_allow = ["kv://state/main"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :store-id \"kv-1\"}"
+
+[op."io/db::kv-get"]
+max_result_bytes = 4096
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :found true :value \"v1\"}"
+
+[op."io/db::kv-put"]
+max_value_bytes = 4096
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :written true}"
+
+[op."io/db::kv-delete"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :deleted true}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+
+    let connect = call_capability(
+        "io/db::connect",
+        &term_map([(
+            Term::symbol(":target"),
+            Term::Str("sqlite://data/app.db".to_string()),
+        )]),
+        policy.op_policy("io/db::connect"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(65),
+    )
+    .expect("connect");
+    let Value::Data(Term::Map(connect_mm)) = connect else {
+        panic!("expected connect map");
+    };
+    assert_eq!(
+        connect_mm.get(&TermOrdKey(Term::symbol(":connection-id"))),
+        Some(&Term::Str("db-1".to_string()))
+    );
+
+    let begin = call_capability(
+        "io/db::tx-begin",
+        &term_map([(
+            Term::symbol(":connection-id"),
+            Term::Str("db-1".to_string()),
+        )]),
+        policy.op_policy("io/db::tx-begin"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(66),
+    )
+    .expect("tx-begin");
+    let Value::Data(Term::Map(begin_mm)) = begin else {
+        panic!("expected tx-begin map");
+    };
+    assert_eq!(
+        begin_mm.get(&TermOrdKey(Term::symbol(":tx-id"))),
+        Some(&Term::Str("tx-1".to_string()))
+    );
+
+    let exec = call_capability(
+        "io/db::exec",
+        &term_map([
+            (
+                Term::symbol(":connection-id"),
+                Term::Str("db-1".to_string()),
+            ),
+            (
+                Term::symbol(":query-class"),
+                Term::Symbol("write".to_string()),
+            ),
+            (
+                Term::symbol(":statement"),
+                Term::Str("update users set name='bob' where id=1".to_string()),
+            ),
+        ]),
+        policy.op_policy("io/db::exec"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(67),
+    )
+    .expect("exec");
+    let Value::Data(Term::Map(exec_mm)) = exec else {
+        panic!("expected exec map");
+    };
+    assert_eq!(
+        exec_mm.get(&TermOrdKey(Term::symbol(":affected-rows"))),
+        Some(&Term::Int(1_i64.into()))
+    );
+
+    let kv_open = call_capability(
+        "io/db::kv-open",
+        &term_map([(
+            Term::symbol(":target"),
+            Term::Str("kv://state/main".to_string()),
+        )]),
+        policy.op_policy("io/db::kv-open"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(68),
+    )
+    .expect("kv-open");
+    let Value::Data(Term::Map(kv_open_mm)) = kv_open else {
+        panic!("expected kv-open map");
+    };
+    assert_eq!(
+        kv_open_mm.get(&TermOrdKey(Term::symbol(":store-id"))),
+        Some(&Term::Str("kv-1".to_string()))
+    );
+
+    let kv_get = call_capability(
+        "io/db::kv-get",
+        &term_map([
+            (Term::symbol(":store-id"), Term::Str("kv-1".to_string())),
+            (Term::symbol(":key"), Term::Str("alpha".to_string())),
+        ]),
+        policy.op_policy("io/db::kv-get"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(69),
+    )
+    .expect("kv-get");
+    let Value::Data(Term::Map(kv_get_mm)) = kv_get else {
+        panic!("expected kv-get map");
+    };
+    assert_eq!(
+        kv_get_mm.get(&TermOrdKey(Term::symbol(":found"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
 fn sys_process_exec_policy_gate_requires_allowlisted_program() {
     let policy = CapsPolicy::from_toml_str(
         r#"
@@ -1471,7 +1972,10 @@ wasi_bridge_response = "{:ok true :result {:exit-code 0}}"
         (
             Term::symbol(":payload"),
             term_map([
-                (Term::symbol(":args"), Term::Vector(vec![Term::Str("--help".to_string())])),
+                (
+                    Term::symbol(":args"),
+                    Term::Vector(vec![Term::Str("--help".to_string())]),
+                ),
                 (Term::symbol(":cwd"), Term::Str("/tmp".to_string())),
             ]),
         ),
