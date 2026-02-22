@@ -48,14 +48,23 @@ require_ci_pattern() {
 
 require_doc_pattern '| `smoke` |'
 require_doc_pattern '| `changed-fast` |'
+require_doc_pattern '| `agent-inner-loop` |'
 require_doc_pattern '| `strict-golden` |'
 require_doc_pattern '| `full-cross-host` |'
 require_doc_pattern '`<= 2m`'
+require_doc_pattern '`<= 5m`'
 require_doc_pattern '`<= 3m`'
 require_doc_pattern '`<= 8m`'
 require_doc_pattern '`<= 12m`'
+require_doc_pattern 'scripts/check_upgrade_plan_health.sh --profile agent-inner-loop'
 require_doc_pattern 'scripts/check_upgrade_plan_health.sh --profile prepush-standard'
 require_doc_pattern 'genesis/upgrade-plan-health-profile-v0.1'
+require_doc_pattern '.genesis/perf/upgrade_plan_health_agent_inner_loop_report.json'
+require_doc_pattern 'policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl'
+require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS'
+require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BUDGET_MS'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_TARGET_DIR'
@@ -80,6 +89,7 @@ require_doc_pattern 'scripts/check_full_cross_host_profile_budget.sh'
 require_doc_pattern 'scripts/check_agent_scenario_perf.sh'
 require_doc_pattern 'scripts/check_agent_generative_workloads.sh'
 require_doc_pattern 'scripts/check_cargo_target_dir_policy.sh'
+require_doc_pattern 'scripts/check_wasm_production_surface.sh'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
 require_ci_pattern 'Selfhost Refactor Guard'
@@ -113,6 +123,16 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 240000ms (4m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS:-300000' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: agent-inner-loop budget must remain pinned at default 300000ms (5m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'agent-inner-loop' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must support agent-inner-loop profile" >&2
   exit 1
 fi
 
@@ -153,6 +173,11 @@ fi
 
 if ! grep -Fq 'bash scripts/check_agent_scenario_perf.sh' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: release-full profile must run agent scenario perf gate" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash scripts/check_wasm_production_surface.sh' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must run wasm production surface isolation gate" >&2
   exit 1
 fi
 

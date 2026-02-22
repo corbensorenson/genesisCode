@@ -141,7 +141,10 @@ fn selfhost_artifact_missing_seed_fails_without_explicit_recovery() {
     let td = tempdir().unwrap();
     let missing = td.path().join("missing_seed.gc");
     let out = td.path().join("out.gc");
-    assert!(!missing.exists(), "test precondition drift: missing seed exists");
+    assert!(
+        !missing.exists(),
+        "test precondition drift: missing seed exists"
+    );
 
     cargo_bin_cmd!("genesis")
         .args([
@@ -161,7 +164,10 @@ fn selfhost_artifact_missing_seed_recovery_rebuilds_from_manifest_sources() {
     let td = tempdir().unwrap();
     let missing = td.path().join("missing_seed.gc");
     let out = td.path().join("out.gc");
-    assert!(!missing.exists(), "test precondition drift: missing seed exists");
+    assert!(
+        !missing.exists(),
+        "test precondition drift: missing seed exists"
+    );
 
     let raw = cargo_bin_cmd!("genesis")
         .args([

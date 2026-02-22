@@ -4,28 +4,46 @@ Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 
-Open checklist items: 7
+Open checklist items: 0
 
 ## P0 - Immediate blockers
 
-- [ ] P0.1 Restore planning truthfulness between capability claims and open backlog state.
-  - Evidence:
-    - `feature_matrix.md` marks "Fully self-hosted toolchain with zero bootstrap-language dependency" as partial (`⚠️`) at `feature_matrix.md:20`.
-    - The same file reports `Known GenesisCode gaps` as `none` at `feature_matrix.md:70-72`.
-    - `docs/status/REDTEAM_REPORT.md` currently reports no active P0/P1 risks (`docs/status/REDTEAM_REPORT.md:11`) while major strategic gaps remain unresolved for selfhost v1 cutover.
-  - Acceptance:
-    - Open-gap reporting must be derived from objective readiness signals (not manually zeroed).
-    - Add fail-closed check that forbids `Known GenesisCode gaps: none` unless all non-`✅` GenesisCode matrix rows have linked closure rationale and no unresolved plan IDs.
-    - Add a machine-readable selfhost readiness report consumed by `upgrade_plan.md`, `feature_matrix.md`, and `REDTEAM_REPORT.md`.
+- [x] P0.1 Restore planning truthfulness between capability claims and open backlog state.
+  - Completion:
+    - Upgraded planning drift checks so gap/risk IDs are fail-closed against machine-readable readiness output:
+      `scripts/check_feature_matrix_gap_hygiene.sh` and `scripts/check_redteam_report.sh`
+      now require unresolved IDs to match `.genesis/perf/selfhost_readiness_report.json`
+      (`kind = genesis/selfhost-readiness-v0.1`, `unresolved_upgrade_plan_ids`).
+    - Added explicit zero-gap safeguard in `scripts/check_feature_matrix_gap_hygiene.sh`:
+      `Known GenesisCode gaps: none` is only allowed when no unresolved IDs remain and non-`✅`
+      GenesisCode rows carry explicit inline rationale.
+    - Updated planning docs to explicitly document readiness-derived synchronization:
+      `feature_matrix.md` and `docs/status/REDTEAM_REPORT.md`.
 
-- [ ] P0.2 Replace metadata-only `gcpm build` target support with executable build pipelines.
-  - Evidence:
-    - `gcpm build` currently materializes deterministic metadata bundle files (`build_manifest.gc`, `package.toml`, `package_artifact.txt`, `provenance.gc`) without compiling/running target-specific toolchains (`crates/gc_cli_driver/src/pkg_workspace_ops.rs:254-346` and `crates/gc_cli_driver/src/pkg_workspace_ops.rs:348-406`).
-    - Mobile/edge test coverage verifies profile metadata fields only (`crates/gc_cli/tests/cli_pkg_workspace.rs:277-360`), not executable target artifacts.
-  - Acceptance:
-    - `gcpm build --target ios|android|edge|service-runtime` must emit executable/runtime-bootable artifacts (or equivalent reproducible runner bundles), not metadata-only bundles.
-    - Add deterministic post-build verification sub-lanes per target (boot/smoke/contract).
-    - Fail `release-full` when target pipeline is metadata-only.
+- [x] P0.2 Replace metadata-only `gcpm build` target support with executable build pipelines.
+  - Completion:
+    - Refactored target build pipeline implementation into a dedicated domain module:
+      `crates/gc_cli_driver/src/pkg_workspace_ops_build.rs`,
+      keeping the public `gcpm build` interface stable through
+      `crates/gc_cli_driver/src/pkg_workspace_ops.rs`.
+    - Upgraded bundle contract from metadata-only output to deterministic runtime-runner bundles:
+      `build_manifest.gc` now stamps `:pipeline-kind = "runtime-runner-bundle-v1"` and
+      verification lanes (`:contract`, `:boot`, `:smoke`).
+    - `gcpm build --target ios|android|edge|service-runtime` now emits runtime-bootable lane artifacts:
+      `runtime/runtime_contract.gc`,
+      `runtime/boot.sh`,
+      `runtime/smoke.sh`,
+      plus executable mode enforcement for runner scripts.
+    - Added deterministic lane execution checks in command-level tests:
+      `crates/gc_cli/tests/cli_pkg_workspace.rs`
+      (`gcpm_build_supports_mobile_and_edge_target_contracts`) now validates
+      contract/boot/smoke outputs against target + bundle hash.
+    - Added release-enforced runtime-pipeline gate:
+      `scripts/check_gcpm_target_runtime_pipelines.sh`,
+      wired into `prepush-standard` and `release-full` in
+      `scripts/check_upgrade_plan_health.sh` so metadata-only regressions fail the release profile.
+    - Upgraded agent deployment workflows to run runtime verification lanes:
+      `examples/agent_deploy_bundle_workflow/target_workflow_lib.sh`.
 
 ## P1 - High-impact self-host and AI-first hardening
 
@@ -46,14 +64,21 @@ Open checklist items: 7
       in `scripts/check_agent_reference_workflows.sh`, which is consumed by both
       native and runtime-parity lanes.
 
-- [ ] P1.2 Reduce local iteration latency to a deterministic AI-authoring inner loop budget.
-  - Evidence:
-    - `dev-fast` health path currently executes a large non-cargo gate set (31 common non-cargo gates observed in live run output) before cargo shards.
-    - Runtime parity lane currently costs ~157s (`.genesis/perf/agent_workflow_runtime_parity_report.json:5`) and gauntlet lane ~105s (`.genesis/perf/agent_capability_gauntlet_report.json:1-5` + `elapsed_ms`).
-  - Acceptance:
-    - Add `agent-inner-loop` profile with strict deterministic contract checks but bounded wall-time target (`<= 300000 ms`) on warm cache.
-    - Persist and enforce p95 history for inner-loop profile duration.
-    - Remove redundant repeated process startups for high-frequency local workflows.
+- [x] P1.2 Reduce local iteration latency to a deterministic AI-authoring inner loop budget.
+  - Completion:
+    - Added `agent-inner-loop` health profile in `scripts/check_upgrade_plan_health.sh`
+      with bounded wall-time budget (`GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS`, default `300000`)
+      and a narrowed deterministic contract set for fast local authoring loops.
+    - Added persisted history + p95 enforcement for profile duration using
+      `scripts/lib/profile_runtime_budget.py` with deterministic seed baseline:
+      `policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl`,
+      report `.genesis/perf/upgrade_plan_health_agent_inner_loop_report.json`,
+      history `.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl`.
+    - Reduced repeated startup overhead by avoiding full common-gate execution for this profile
+      while retaining strict selfhost/planning/diagnostic contract checks + `cli_smoke` + changed-fast.
+    - Updated profile documentation and drift guard:
+      `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md` and
+      `scripts/check_test_execution_profile_matrix.sh`.
 
 - [x] P1.3 Enforce explicit SLO fields and fail-closed budgets across all major gauntlet/parity reports.
   - Evidence:
@@ -70,20 +95,28 @@ Open checklist items: 7
     - Upgraded gauntlet regression semantics to enforce p95-based regression budgets
       (not single-sample spikes) and added bootstrap-history mode for newly introduced workflows.
 
-- [ ] P1.4 Decompose oversized high-churn Rust modules for AI maintainability.
-  - Evidence:
-    - Source-size audit still shows very large production modules:
-      - `crates/gc_cli_driver/src/cmd_selfhost.rs` (1048 lines),
-      - `crates/gc_cli_driver/src/pkg_workspace_ops.rs` (995 lines),
-      - `crates/gc_obligations/src/obligation_exec.rs` (977 lines),
-      - `crates/gc_gfx/src/lib.rs` (972 lines),
-      - `crates/gc_prelude/src/prelude.rs` (949 lines),
-      - `crates/gc_cli_driver/src/semantic_workspace.rs` (949 lines),
-      from `scripts/check_source_size_budget.sh` output.
-  - Acceptance:
-    - Split high-churn modules into bounded domain units with stable interfaces.
-    - Keep source-size debt allowlists empty.
-    - Add decomposition progress checks for production modules over target thresholds.
+- [x] P1.4 Decompose oversized high-churn Rust modules for AI maintainability.
+  - Completion:
+    - Split high-churn CLI driver domains into bounded modules with stable interfaces:
+      - Selfhost helper extraction:
+        `crates/gc_cli_driver/src/cmd_selfhost_helpers.rs`,
+        reducing `crates/gc_cli_driver/src/cmd_selfhost.rs` to focused command orchestration.
+      - Semantic workspace type + misc extraction:
+        `crates/gc_cli_driver/src/semantic_workspace_types.rs`,
+        `crates/gc_cli_driver/src/semantic_workspace_misc.rs`,
+        reducing `crates/gc_cli_driver/src/semantic_workspace.rs` below the decomposition threshold.
+      - Target build extraction:
+        `crates/gc_cli_driver/src/pkg_workspace_ops_build.rs`,
+        reducing `crates/gc_cli_driver/src/pkg_workspace_ops.rs`.
+    - Added fail-closed decomposition progress policy + gate:
+      - Policy: `policies/source_decomposition_progress.toml`
+      - Gate: `scripts/check_source_decomposition_progress.sh`
+      - Report: `.genesis/perf/source_decomposition_progress_report.json`
+      (`kind = genesis/source-decomposition-progress-v0.1`).
+    - Wired decomposition gate into health profile execution in
+      `scripts/check_upgrade_plan_health.sh` (including `agent-inner-loop` and strict profiles).
+    - Kept source-size debt allowlists empty in
+      `policies/source_size_budget.toml` (`rust_target_exclude_paths = []`, `gc_target_exclude_paths = []`).
 
 - [x] P1.5 Expand `write_genesisCode_skill` executable distribution breadth for "make anything" scope.
   - Evidence:
@@ -110,14 +143,23 @@ Open checklist items: 7
       `docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json` and
       `docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`.
 
-- [ ] P1.7 Add executable semantic refactor application workflow (not just planning output).
-  - Evidence:
-    - CLI currently exposes `semantic-edit index`, `workspace-graph`, and `refactor-plan` only (`docs/spec/CLI.md:146-154`).
-    - There is no first-class command that applies semantic refactor plans deterministically end-to-end.
-  - Acceptance:
-    - Add `semantic-edit apply-plan` (or equivalent) with deterministic patch emission, conflict diagnostics, and obligation-gated verification.
-    - Add tests for deterministic re-application/idempotence and workspace-wide conflict reporting.
-    - Add agent workflow example using plan+apply+verify loop.
+- [x] P1.7 Add executable semantic refactor application workflow (not just planning output).
+  - Completion:
+    - Added `semantic-edit apply-plan` command surface with deterministic plan+apply flow in:
+      `crates/gc_cli_driver/src/cli_args.rs`,
+      `crates/gc_cli_driver/src/cmd_security_ops.rs`,
+      `crates/gc_cli_driver/src/semantic_workspace.rs`.
+    - `apply-plan` now emits deterministic patch payload (`patch_hash` + `patch_coreform`), returns workspace-wide conflict diagnostics in `plan-conflicts` mode, and executes obligation-gated patch application when safe.
+    - Added deterministic re-application/conflict tests:
+      `crates/gc_cli/tests/cli_semantic_edit.rs`
+      (`semantic_edit_apply_plan_rename_is_deterministic_on_reapply_conflict`,
+      `semantic_edit_apply_plan_reports_workspace_ambiguous_definition_conflict`).
+    - Added agent workflow example for plan+apply+verify loop:
+      `examples/agent_semantic_refactor_apply_workflow/workflow.sh`.
+    - Updated CLI contracts/docs:
+      `docs/spec/CLI.md`,
+      `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`,
+      `crates/gc_cli/tests/cli_json_schema_registry.rs`.
 
 ## P2 - Strategic completeness for "agent can build anything" scope
 
@@ -137,18 +179,41 @@ Open checklist items: 7
       `.genesis/perf/selfhost_readiness_report.json` references in `upgrade_plan.md`
       and `feature_matrix.md`.
 
-- [ ] P2.2 Harden production WASM artifact boundary to exclude parity-only Rust frontend surfaces.
-  - Evidence:
-    - `gc_wasm` still includes explicit Rust frontend parity/eval pathways in the same crate surface (`crates/gc_wasm/src/lib.rs` comments and methods describing parity-only Rust frontend paths).
-  - Acceptance:
-    - Gate parity-only APIs behind explicit non-production feature/profile boundaries.
-    - Add exported-symbol and API-surface checks proving production WASM artifacts expose only allowed selfhost paths.
-    - Fail release lanes when parity-only WASM surfaces leak into production builds.
+- [x] P2.2 Harden production WASM artifact boundary to exclude parity-only Rust frontend surfaces.
+  - Completion:
+    - Gated parity-only WASM API exports behind explicit non-production feature boundaries:
+      `crates/gc_wasm/src/lib.rs` now conditionally exports `*_rust` entrypoints and runtime rust-only methods only under `feature = "parity-harness"`.
+    - Added explicit crate-level parity harness feature switch:
+      `crates/gc_wasm/Cargo.toml`.
+    - Added production WASM exported-surface conformance gate:
+      `scripts/check_wasm_production_surface.sh` with machine-readable report
+      `.genesis/perf/wasm_production_surface_report.json`
+      (`kind = genesis/wasm-production-surface-v0.1`), forbidding parity-only symbol leaks and requiring selfhost artifact APIs.
+    - Wired fail-closed enforcement into release profile lanes:
+      `scripts/check_upgrade_plan_health.sh` (`release-full` profile).
+    - Updated profile docs + drift guard:
+      `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`,
+      `scripts/check_test_execution_profile_matrix.sh`.
 
-- [ ] P2.3 Complete documentation consolidation phase 2 with measurable reduction and stronger ownership boundaries.
-  - Evidence:
-    - Documentation surface remains large (`docs_md=92`, `total_md=117` from live repo count), increasing retrieval ambiguity for agents.
-  - Acceptance:
-    - Merge low-signal/redundant docs into canonical bundle roots while preserving thin stubs only where necessary.
-    - Add numeric documentation complexity targets (file count + average retrieval fan-out per capability).
-    - Enforce topology ownership + canonical source links for all retained leaf docs.
+- [x] P2.3 Complete documentation consolidation phase 2 with measurable reduction and stronger ownership boundaries.
+  - Completion:
+    - Consolidated low-signal top-level docs into canonical roots and converted replaced docs to strict redirect stubs:
+      `docs/POLICY_DEFAULTS_v0.1.md`,
+      `docs/STACKS_v0.2.md`,
+      `docs/STYLE_GUIDE_v0.2.md`,
+      with canonical mappings tracked in `docs/DEPRECATION_MAP_v0.1.md`.
+    - Added explicit retained-leaf ownership and canonical source registry:
+      `docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md`.
+    - Added numeric documentation complexity targets and fail-closed policy:
+      `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md`,
+      `policies/docs/doc_complexity_budget.toml`.
+    - Added deterministic complexity/ownership enforcement gate + report:
+      `scripts/check_doc_complexity_budget.sh` ->
+      `.genesis/perf/doc_complexity_report.json`
+      (`kind = genesis/doc-complexity-v0.1`).
+    - Wired topology/planning/health gate enforcement updates:
+      `scripts/check_doc_topology_drift.sh`,
+      `scripts/check_planning_docs_fresh.sh`,
+      `scripts/check_upgrade_plan_health.sh`,
+      `docs/spec/DOC_TOPOLOGY_v0.1.md`,
+      `docs/INDEX.md`.

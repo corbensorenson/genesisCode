@@ -10,6 +10,10 @@ Related artifact contracts:
 - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
 - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
 - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
+- `docs/spec/REGISTRY_POLICY.md`
+
+Consolidated source:
+- legacy top-level policy defaults guidance (redirected through the deprecation map)
 
 ## Crosswalk Matrix
 

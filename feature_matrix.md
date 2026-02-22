@@ -39,8 +39,8 @@ Legend:
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits immutable deterministic bundles with build-manifest + provenance contracts) | ⚠️ | ✅ | ⚠️ | ⚠️ |
-| Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` provide deterministic dependency graph export and machine-mergeable multi-file patch planning) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits immutable deterministic runtime-runner bundles with build-manifest/provenance contracts and executable `contract/boot/smoke` verification lanes) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` + `semantic-edit apply-plan` provide deterministic dependency graph export, machine-mergeable patch planning, and obligation-gated plan application with conflict diagnostics) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + executable conformance gates `scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`, `scripts/check_write_genesiscode_skill_distribution.sh`, and `scripts/check_write_genesiscode_skill_conformance.sh`) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -67,14 +67,8 @@ Regulated assurance readiness snapshot (indicative):
 - `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, structural coverage, and assurance-pack bundling are in place; independent mission IV&V process controls remain organizational responsibilities).
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
-Known GenesisCode gaps (current red-team focus):
-- P0.1 Planning truthfulness drift between partial capability states and zero-gap reporting.
-- P0.2 `gcpm build` target support is metadata-only for mobile/edge/service-runtime targets.
-- P1.2 Local AI authoring iteration loop still lacks a bounded, deterministic fast profile.
-- P1.4 Large high-churn Rust modules still need decomposition for AI maintainability.
-- P1.7 Semantic-edit flow lacks first-class deterministic apply command.
-- P2.2 Production WASM surface isolation for parity-only Rust frontend paths is incomplete.
-- P2.3 Documentation surface remains too large and needs consolidation phase 2.
+Known GenesisCode gaps:
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
@@ -92,6 +86,8 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/doc_complexity_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/source_decomposition_progress_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`

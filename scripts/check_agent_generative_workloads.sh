@@ -189,6 +189,7 @@ primary_cases = [evaluate_case(case, primary["workflows"]) for case in cases]
 secondary_cases = [evaluate_case(case, secondary["workflows"]) for case in cases] if secondary else []
 secondary_by_id = {case["id"]: case for case in secondary_cases}
 
+baseline_history_rows = []
 history_rows = []
 for candidate in [baseline_history_file, history_file]:
     if not candidate.exists():
@@ -211,6 +212,8 @@ for candidate in [baseline_history_file, history_file]:
             continue
         durations = row.get("case_durations_ms")
         if isinstance(durations, dict):
+            if candidate == baseline_history_file:
+                baseline_history_rows.append(durations)
             history_rows.append(durations)
 
 if require_min_history and not baseline_history_file.exists():
@@ -225,15 +228,27 @@ def p95(values: list[int]) -> int:
 
 case_regressions = []
 for case in primary_cases:
+    baseline_prior = []
+    for row in baseline_history_rows:
+        value = row.get(case["id"])
+        if isinstance(value, int):
+            baseline_prior.append(value)
     prior = []
     for row in history_rows:
         value = row.get(case["id"])
         if isinstance(value, int):
             prior.append(value)
+    case_seeded = len(baseline_prior) >= p95_min_samples
+    history_bootstrap_mode = require_min_history and (not case_seeded)
     case["history_samples"] = len(prior) + 1
-    case["history_min_ok"] = case["history_samples"] >= p95_min_samples
+    case["history_bootstrap_mode"] = history_bootstrap_mode
+    case["history_min_ok"] = (
+        case["history_samples"] >= p95_min_samples
+        or (not require_min_history)
+        or history_bootstrap_mode
+    )
     case["history_p95_ms"] = p95(prior) if prior else None
-    case["regression_enforced"] = len(prior) >= p95_min_samples and bool(prior)
+    case["regression_enforced"] = case_seeded and len(prior) >= p95_min_samples and bool(prior)
     case["regression_budget_ms"] = (
         int(math.ceil(case["history_p95_ms"] * (1.0 + regression_percent / 100.0)))
         if case["regression_enforced"]

@@ -35,7 +35,10 @@ Owner: Assurance + release maintainers.
 - Active risk rollup: `docs/status/REDTEAM_REPORT.md`
 - Capability comparison ledger: `feature_matrix.md`
 - Machine-readable selfhost readiness scorecard: `.genesis/perf/selfhost_readiness_report.json`
+- Machine-readable doc complexity report: `.genesis/perf/doc_complexity_report.json`
 - Canonical docs index: `docs/INDEX.md`
+- Leaf ownership registry: `docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md`
+- Complexity targets: `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md`
 
 Owner: Release ops maintainers.
 
@@ -45,6 +48,7 @@ Owner: Release ops maintainers.
 2. Update derived docs (`feature_matrix.md`, status docs, skill pointers) in the same change.
 3. Run drift checks:
    - `bash scripts/check_doc_topology_drift.sh`
+   - `bash scripts/check_doc_complexity_budget.sh`
    - `bash scripts/check_feature_matrix_gap_hygiene.sh`
    - `bash scripts/check_redteam_report.sh`
 4. Only then mark backlog items complete in `upgrade_plan.md`.

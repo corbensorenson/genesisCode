@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey};
@@ -306,7 +307,12 @@ path = "lib.gc"
             "mobile-android",
             "android-app-bundle-v1",
         ),
-        ("edge", "wasm32-wasi-preview2", "edge-runtime", "edge-wasi-bundle-v1"),
+        (
+            "edge",
+            "wasm32-wasi-preview2",
+            "edge-runtime",
+            "edge-wasi-bundle-v1",
+        ),
         (
             "service-runtime",
             "wasm32-wasi-preview2",
@@ -345,10 +351,15 @@ path = "lib.gc"
         };
         let build_manifest_src =
             fs::read_to_string(bundle_root.join("build_manifest.gc")).expect("read build_manifest");
-        let build_manifest = gc_coreform::parse_term(&build_manifest_src).expect("parse build_manifest");
+        let build_manifest =
+            gc_coreform::parse_term(&build_manifest_src).expect("parse build_manifest");
         let Term::Map(build_manifest_map) = build_manifest else {
             panic!("build_manifest must be map");
         };
+        assert_eq!(
+            map_string(&build_manifest_map, ":pipeline-kind"),
+            "runtime-runner-bundle-v1"
+        );
         let profile = map_map(&build_manifest_map, ":target-profile");
         assert_eq!(
             map_string(profile, ":runtime"),
@@ -364,6 +375,82 @@ path = "lib.gc"
             map_string(profile, ":artifact-format"),
             expected_artifact_format,
             "target {target} artifact-format mismatch"
+        );
+
+        let runtime_dir = bundle_root.join("runtime");
+        let contract_path = runtime_dir.join("runtime_contract.gc");
+        let boot_script = runtime_dir.join("boot.sh");
+        let smoke_script = runtime_dir.join("smoke.sh");
+        assert!(
+            contract_path.is_file(),
+            "target {target} missing runtime contract"
+        );
+        assert!(boot_script.is_file(), "target {target} missing boot script");
+        assert!(
+            smoke_script.is_file(),
+            "target {target} missing smoke script"
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let boot_mode = fs::metadata(&boot_script).unwrap().permissions().mode();
+            let smoke_mode = fs::metadata(&smoke_script).unwrap().permissions().mode();
+            assert_ne!(
+                boot_mode & 0o111,
+                0,
+                "target {target} boot script not executable"
+            );
+            assert_ne!(
+                smoke_mode & 0o111,
+                0,
+                "target {target} smoke script not executable"
+            );
+        }
+
+        let bundle_h = map_string(&map, ":bundle-h");
+        let contract_out = Command::new("bash")
+            .arg(&boot_script)
+            .arg("--contract")
+            .output()
+            .expect("run contract lane");
+        assert!(
+            contract_out.status.success(),
+            "target {target} contract lane failed: {:?}",
+            contract_out
+        );
+        assert_eq!(
+            String::from_utf8(contract_out.stdout).unwrap().trim(),
+            format!("contract-ok:{target}:{bundle_h}")
+        );
+
+        let boot_out = Command::new("bash")
+            .arg(&boot_script)
+            .arg("--boot")
+            .output()
+            .expect("run boot lane");
+        assert!(
+            boot_out.status.success(),
+            "target {target} boot lane failed: {:?}",
+            boot_out
+        );
+        assert_eq!(
+            String::from_utf8(boot_out.stdout).unwrap().trim(),
+            format!("boot-ok:{target}:{bundle_h}")
+        );
+
+        let smoke_out = Command::new("bash")
+            .arg(&smoke_script)
+            .output()
+            .expect("run smoke lane");
+        assert!(
+            smoke_out.status.success(),
+            "target {target} smoke lane failed: {:?}",
+            smoke_out
+        );
+        assert_eq!(
+            String::from_utf8(smoke_out.stdout).unwrap().trim(),
+            format!("smoke-ok:{target}:{bundle_h}")
         );
     }
 }

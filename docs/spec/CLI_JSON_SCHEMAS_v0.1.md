@@ -47,6 +47,7 @@ Failure envelopes always use:
 - `semantic-edit index` -> `genesis/semantic-edit-index-v0.1`
 - `semantic-edit workspace-graph` -> `genesis/semantic-edit-workspace-graph-v0.1`
 - `semantic-edit refactor-plan` -> `genesis/semantic-edit-refactor-plan-v0.1`
+- `semantic-edit apply-plan` -> `genesis/semantic-edit-apply-plan-v0.1`
 - `apply-patch` -> `genesis/apply-patch-v0.2`
 - `verify` -> `genesis/verify-v0.2`
 

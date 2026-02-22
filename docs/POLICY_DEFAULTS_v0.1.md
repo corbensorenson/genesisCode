@@ -1,166 +1,26 @@
 # Policy Defaults v0.1
 
-Default ref protection rules, required obligations, and enforcement strategy.
+Deprecated Top-Level Doc: true  
+Bundle Entry: `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`  
+Legacy Split Doc: true
 
-## 1.0 Policy model overview
+## Status
 
-A policy is a content-addressed artifact defining:
+This top-level policy defaults reference is deprecated and retained only as a
+redirect stub. Normative assurance and policy-gating defaults were consolidated
+into canonical spec-owned docs.
 
-- which refs are protected
-- which obligations are required to advance each ref class
-- which evidence kinds are required
-- optional signature/attestation requirements
-- optional signer-role requirements and role-separation constraints
+## Canonical Replacements
 
-Enforcement occurs at:
+- `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
+- `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
+- `docs/spec/REGISTRY_POLICY.md`
 
-- `refs set`
-- `pkg publish`
-- optionally `pkg install` (verification strictness)
+## Migration Guidance
 
-## 2.0 Ref classes (normative defaults)
-
-- Development branches: `refs/**/heads/*` except main
-- Mainline branches: `refs/**/heads/main`
-- Release tags: `refs/**/tags/*`
-- Frozen refs: `refs/frozen/*` (cannot advance by default)
-
-## 3.0 Default obligations by ref class
-
-### 3.1 Dev branches
-
-Required obligations:
-
-- `core/obligation::unit-tests`
-- `core/obligation::capabilities-declared`
-
-Signatures: not required.
-
-### 3.2 Mainline
-
-Required obligations:
-
-- `core/obligation::unit-tests`
-- `core/obligation::replayable-tests`
-- `core/obligation::capabilities-declared`
-- `core/obligation::determinism` (for declared-pure packages/modules)
-- `core/obligation::coverage-decision` (structural statement+decision coverage gate)
-
-Signatures: optional.
-
-### 3.3 Release tags
-
-Required obligations:
-
-- all mainline obligations
-- `core/obligation::coverage-mcdc` (upgrade structural gate from decision to MC/DC)
-- `core/obligation::no-unknown-deps`
-- `core/obligation::signed-provenance` (default ON)
-
-Recommended required evidence kinds for regulated release profiles:
-
-- `:requirements-trace`
-- `:tool-qualification`
-
-Signatures: required by default.
-
-Role separation (default for protected release profiles):
-
-- required attestation roles: `:reviewer`, `:verifier`
-- minimum per-role signatures: `:reviewer >= 1`, `:verifier >= 1`
-- independence pair: `(:reviewer, :verifier)` must be signed by distinct keys
-
-### 3.4 Frozen refs
-
-Cannot be advanced.
-
-## 4.0 Determinism rules
-
-If `:caps` is empty for a package/module, enforce no effects (no sealed EFFECT observed).
-
-## 5.0 Install-time verification strictness
-
-Policy defines `install.verify = off|basic|strict`.
-
-- basic: verify presence of obligations/evidence hashes
-- strict: verify integrity, replay logs, optionally re-run tests
-
-## 6.0 Policy artifact schema (recommended)
-
-Example TOML:
-
-```toml
-version = 1
-name = "policy:default-v0.1"
-
-[refs]
-frozen_prefixes = ["refs/frozen/"]
-
-[classes.dev]
-patterns = ["refs/**/heads/*"]
-exclude = ["refs/**/heads/main"]
-required_obligations = ["core/obligation::unit-tests", "core/obligation::capabilities-declared"]
-require_signatures = false
-
-[classes.main]
-patterns = ["refs/**/heads/main"]
-required_obligations = [
-  "core/obligation::unit-tests",
-  "core/obligation::replayable-tests",
-  "core/obligation::capabilities-declared",
-  "core/obligation::determinism",
-  "core/obligation::coverage-decision"
-]
-require_signatures = false
-
-[classes.tags]
-patterns = ["refs/**/tags/*"]
-required_obligations = [
-  "core/obligation::unit-tests",
-  "core/obligation::replayable-tests",
-  "core/obligation::capabilities-declared",
-  "core/obligation::determinism",
-  "core/obligation::coverage-mcdc",
-  "core/obligation::no-unknown-deps",
-  "core/obligation::signed-provenance"
-]
-required_evidence_kinds = [":requirements-trace", ":tool-qualification"]
-require_signatures = true
-required_attestation_roles = [":reviewer", ":verifier"]
-
-[classes.tags.role_min_signatures]
-":reviewer" = 1
-":verifier" = 1
-
-[[classes.tags.independent_role_pairs]]
-left = ":reviewer"
-right = ":verifier"
-
-[install]
-verify = "basic"
-```
-
-## 7.0 Enforcement points
-
-### 7.1 `refs set`
-
-- determine ref class
-- verify commit obligations and evidence presence
-- verify attestations if required
-- enforce role requirements (`required_attestation_roles`, `role_min_signatures`)
-- enforce separation-of-duty (`independent_role_pairs`)
-- only then advance ref
-
-### 7.2 `pkg publish`
-
-Same checks as `refs set`, plus push required artifacts.
-
-### 7.4 Role-aware attestation artifact fields
-
-` :vcs/attestation` may include an optional `:role` field (`symbol|string`) such as
-`:reviewer` or `:verifier`. Policies evaluate role gates only on cryptographically valid
-attestations.
-
-### 7.3 Optional `pkg install`
-
-Verify according to `install.verify`.
+- Use `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md` for standards/profile-driven
+  default assurance requirements.
+- Use `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md` for required artifact schema and
+  policy/hash binding semantics.
+- Use `docs/spec/REGISTRY_POLICY.md` for local policy file semantics used by
+  deterministic verification and release workflows.

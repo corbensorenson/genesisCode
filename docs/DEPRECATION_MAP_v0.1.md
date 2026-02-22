@@ -20,12 +20,13 @@ and removed from active retrieval paths:
 
 | Deprecated doc | Replacement (canonical) | Status |
 |---|---|---|
-| _none_ | _none_ | Deprecated stub surface eliminated (canonical bundle/spec docs only) |
+| `docs/POLICY_DEFAULTS_v0.1.md` | `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`, `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`, `docs/spec/REGISTRY_POLICY.md` | Redirect stub only |
+| `docs/STACKS_v0.2.md` | `docs/PAPER_v0.2.md`, `docs/FOUNDATION_STDLIB_v0.2.md`, `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` | Redirect stub only |
+| `docs/STYLE_GUIDE_v0.2.md` | `docs/spec/AI_STYLE.md`, `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`, `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md` | Redirect stub only |
 
 ## Stub Contract (Deprecated Docs)
 
-There are currently no deprecated top-level redirect stubs.
-If new temporary redirects are introduced, they must:
+Deprecated top-level redirect stubs must:
 
 - include `Bundle Entry:` and `Legacy Split Doc: true` markers,
 - include only redirect content (`Status`, `Canonical Replacements`, `Migration Guidance`),
@@ -33,12 +34,15 @@ If new temporary redirects are introduced, they must:
 
 ## Active Top-Level References (Not Deprecated)
 
+- `docs/AGENT_ONBOARDING_v0.1.md` (agent retrieval entrypoint)
 - `docs/PAPER_v0.2.md` (architecture thesis)
 - `docs/TECH_HANDOFF.md` (implementation handoff context)
 - `docs/GETTING_STARTED.md` (local setup quickstart)
 - `docs/FOUNDATION_STDLIB_v0.2.md` (language-level stdlib contract)
-- `docs/STACKS_v0.2.md` (design layering reference)
-- `docs/STYLE_GUIDE_v0.2.md` (authoring style reference)
-- `docs/POLICY_DEFAULTS_v0.1.md` (policy defaults reference)
+- `docs/write_genesisCode_skill.md` (agent skill authoring handbook)
 
-When an active top-level reference is replaced by a bundle/spec equivalent, this file must be updated in the same change.
+Ownership and canonical source links for this retained leaf-doc set are tracked in:
+`docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md`.
+
+When an active top-level reference is replaced by a bundle/spec equivalent, this
+file must be updated in the same change.

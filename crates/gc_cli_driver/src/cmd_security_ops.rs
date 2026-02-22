@@ -412,6 +412,22 @@ pub(super) fn cmd_semantic_edit(cli: &Cli, cmd: &SemanticEditCmd) -> Result<CmdO
             to_symbol,
             target_module_path.as_deref(),
         ),
+        SemanticEditCmd::ApplyPlan {
+            pkg,
+            kind,
+            from_symbol,
+            to_symbol,
+            target_module_path,
+            caps,
+        } => super::semantic_workspace::cmd_semantic_edit_apply_plan(
+            cli,
+            pkg,
+            *kind,
+            from_symbol,
+            to_symbol,
+            target_module_path.as_deref(),
+            caps.as_deref(),
+        ),
     }
 }
 

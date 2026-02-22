@@ -152,6 +152,9 @@ CI strict selfhost gates:
 - `genesis semantic-edit refactor-plan --pkg <package.toml> --kind <rename|move|extract> --from <symbol> --to <symbol> [--target-module-path <path>]`
   - emits conflict previews and a machine-mergeable multi-file semantic patch plan.
   - output kind: `genesis/semantic-edit-refactor-plan-v0.1`.
+- `genesis semantic-edit apply-plan --pkg <package.toml> --kind <rename|move|extract> --from <symbol> --to <symbol> [--target-module-path <path>] [--caps <caps.toml>]`
+  - executes deterministic plan+apply in one command, returning workspace-wide conflict diagnostics when unsafe and obligation-gated apply artifacts when safe.
+  - output kind: `genesis/semantic-edit-apply-plan-v0.1`.
 - `genesis vcs hash --in <file> [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost` (same rule as `fmt`).
   - JSON output includes `data.selfhost_artifact` (`null` for rust engine, otherwise `{path,hash,source}`).
@@ -166,7 +169,8 @@ CI strict selfhost gates:
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
   - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service|ios|android|edge|service-runtime> [--out-dir <path>]`
-    emits deterministic immutable deployment bundles with `build_manifest.gc` + `provenance.gc`.
+    emits deterministic immutable runtime runner bundles with `build_manifest.gc`, `provenance.gc`,
+    and target runtime verification lanes (`runtime/boot.sh`, `runtime/smoke.sh`, `runtime/runtime_contract.gc`).
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).

@@ -18,8 +18,11 @@ This is the canonical entrypoint for project documentation.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
 - `.genesis/perf/selfhost_readiness_report.json` - machine-readable selfhost readiness scorecard.
+- `.genesis/perf/doc_complexity_report.json` - machine-readable docs complexity budget report.
 - `feature_matrix.md` - capability comparison vs common languages.
 - `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
+- `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md` - numeric docs complexity targets.
+- `docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md` - ownership + canonical source registry for retained top-level leaf docs.
 
 ## Core Specs (Normative)
 

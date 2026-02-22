@@ -589,6 +589,33 @@ enum SemanticEditCmd {
         #[arg(long)]
         target_module_path: Option<String>,
     },
+
+    /// Plan and apply a deterministic multi-file refactor patch in one obligation-gated command.
+    ApplyPlan {
+        /// Path to package.toml.
+        #[arg(long)]
+        pkg: PathBuf,
+
+        /// Refactor operation kind.
+        #[arg(long, value_enum)]
+        kind: RefactorKind,
+
+        /// Source symbol to rewrite (for example `my/pkg::foo`).
+        #[arg(long = "from")]
+        from_symbol: String,
+
+        /// Destination symbol to rewrite to (for example `my/pkg::foo_v2`).
+        #[arg(long = "to")]
+        to_symbol: String,
+
+        /// Required for `move` and `extract`: destination module path (relative to package dir).
+        #[arg(long)]
+        target_module_path: Option<String>,
+
+        /// Optional capability policy path used when applying the generated patch.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]

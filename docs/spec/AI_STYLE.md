@@ -2,6 +2,9 @@
 
 This document defines the normative behavior of the AI-oriented style obligation used as a quality gate for AI-authored Genesis modules.
 
+Consolidated source:
+- legacy top-level style guidance (redirected through the deprecation map)
+
 ## Purpose
 
 `core/obligation::ai-style` enforces:

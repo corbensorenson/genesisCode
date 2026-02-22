@@ -14,6 +14,11 @@ fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
 DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-300000}"
+AGENT_INNER_LOOP_BUDGET_MS="${GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS:-300000}"
+AGENT_INNER_LOOP_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_HISTORY:-.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl}"
+AGENT_INNER_LOOP_BASELINE_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY:-policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl}"
+AGENT_INNER_LOOP_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY:-3}"
+AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY:-1}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000}"
@@ -56,6 +61,15 @@ default_health_shards_for_profile() {
   local cpu_count
   cpu_count="$(detect_parallelism)"
   case "$profile" in
+    agent-inner-loop)
+      if (( cpu_count >= 8 )); then
+        echo "3"
+      elif (( cpu_count >= 4 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
     dev-fast)
       if (( cpu_count >= 8 )); then
         echo "3"
@@ -89,6 +103,26 @@ default_health_shards_for_profile() {
       echo "1"
       ;;
   esac
+}
+
+enforce_inner_loop_history_budget() {
+  local elapsed_ms="$1"
+  local gate_count="$2"
+  local require_min_history=()
+  if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" == "1" ]]; then
+    require_min_history+=(--require-min-history)
+  fi
+  python3 scripts/lib/profile_runtime_budget.py \
+    --profile "$PROFILE" \
+    --kind "genesis/upgrade-plan-health-profile-v0.1" \
+    --report "$HEALTH_PROFILE_REPORT" \
+    --history "$AGENT_INNER_LOOP_HISTORY" \
+    --elapsed-ms "$elapsed_ms" \
+    --budget-ms "$AGENT_INNER_LOOP_BUDGET_MS" \
+    --min-history "$AGENT_INNER_LOOP_MIN_HISTORY" \
+    --baseline-history "$AGENT_INNER_LOOP_BASELINE_HISTORY" \
+    "${require_min_history[@]}" \
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"gate_count\":$gate_count,\"wall_budget_ms\":$AGENT_INNER_LOOP_BUDGET_MS}"
 }
 
 write_health_profile_report() {
@@ -247,6 +281,9 @@ build_cargo_warmup_commands() {
     profile:dev-fast)
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
       ;;
+    profile:agent-inner-loop)
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
+      ;;
     profile:prepush-standard)
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --no-run --quiet")
@@ -381,7 +418,7 @@ run_health_proactive_reclaim() {
 
 usage() {
   cat <<'EOF'
-Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|prepush-standard|release-full>]
+Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|agent-inner-loop|prepush-standard|release-full>]
 EOF
 }
 
@@ -403,9 +440,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "prepush-standard" && "$PROFILE" != "release-full" ]]; then
-  echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|prepush-standard|release-full)" >&2
+if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "agent-inner-loop" && "$PROFILE" != "prepush-standard" && "$PROFILE" != "release-full" ]]; then
+  echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|agent-inner-loop|prepush-standard|release-full)" >&2
   exit 2
+fi
+if [[ -z "${GENESIS_HEALTH_PROFILE_REPORT:-}" && "$PROFILE" == "agent-inner-loop" ]]; then
+  HEALTH_PROFILE_REPORT=".genesis/perf/upgrade_plan_health_agent_inner_loop_report.json"
 fi
 if [[ -z "${GENESIS_HEALTH_CARGO_TARGET_DIR:-}" ]]; then
   HEALTH_CARGO_TARGET_DIR="$ROOT_DIR/.genesis/build/health/$PROFILE"
@@ -448,6 +488,18 @@ if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0
 fi
 if [[ ! "$DEV_FAST_PROFILE_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$DEV_FAST_PROFILE_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
+if [[ ! "$AGENT_INNER_LOOP_BUDGET_MS" =~ ^[0-9]+$ || "$AGENT_INNER_LOOP_BUDGET_MS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
+if [[ ! "$AGENT_INNER_LOOP_MIN_HISTORY" =~ ^[0-9]+$ || "$AGENT_INNER_LOOP_MIN_HISTORY" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" != "0" && "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
   exit 2
 fi
 
@@ -606,6 +658,7 @@ COMMON_GATES=(
   "bash scripts/check_planning_docs_fresh.sh"
   "bash scripts/check_doc_hygiene.sh"
   "bash scripts/check_doc_topology_drift.sh"
+  "bash scripts/check_doc_complexity_budget.sh"
   "bash scripts/check_write_genesiscode_skill_pack.sh"
   "bash scripts/check_write_genesiscode_skill_distribution.sh"
   "bash scripts/check_task_concurrency_stress.sh"
@@ -622,8 +675,25 @@ COMMON_GATES=(
   "bash scripts/check_webxr_browser_conformance_lane.sh"
   "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
+  "bash scripts/check_source_decomposition_progress.sh"
   "bash scripts/check_test_size_budget.sh"
 )
+
+if [[ "$PROFILE" == "agent-inner-loop" ]]; then
+  # Inner-loop profile intentionally runs a narrow, high-signal deterministic contract set.
+  # This avoids repeating heavyweight process startups while preserving selfhost/agent safety invariants.
+  COMMON_GATES=(
+    "bash scripts/check_selfhost_boundary.sh --strict"
+    "bash scripts/check_selfhost_doc_runtime_parity.sh"
+    "bash scripts/check_selfhost_readiness_scorecard.sh"
+    "bash scripts/check_feature_matrix_gap_hygiene.sh"
+    "bash scripts/check_redteam_report.sh"
+    "bash scripts/check_doc_complexity_budget.sh"
+    "bash scripts/check_source_decomposition_progress.sh"
+    "bash scripts/check_cli_diagnostics_contract.sh"
+    "bash scripts/check_no_production_rust_frontend_refs.sh"
+  )
+fi
 
 PROFILE_GATES=()
 case "$PROFILE" in
@@ -633,12 +703,19 @@ case "$PROFILE" in
       "bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/upgrade_plan_dev_fast_metrics.json --history .genesis/perf/upgrade_plan_dev_fast_history.jsonl"
     )
     ;;
+  agent-inner-loop)
+    PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
+    PROFILE_GATES+=(
+      "bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/agent_inner_loop_changed_fast_metrics.json --history .genesis/perf/agent_inner_loop_changed_fast_history.jsonl"
+    )
+    ;;
   prepush-standard)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
+    PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
@@ -657,6 +734,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
+    PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
@@ -675,6 +753,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
+    PROFILE_GATES+=("bash scripts/check_wasm_production_surface.sh")
     ;;
 esac
 
@@ -742,6 +821,11 @@ if [[ "$PROFILE" == "dev-fast" ]]; then
   if (( elapsed_ms > DEV_FAST_PROFILE_WALL_BUDGET_MS )); then
     profile_ok=0
   fi
+elif [[ "$PROFILE" == "agent-inner-loop" ]]; then
+  profile_budget="$AGENT_INNER_LOOP_BUDGET_MS"
+  if (( elapsed_ms > AGENT_INNER_LOOP_BUDGET_MS )); then
+    profile_ok=0
+  fi
 elif [[ "$PROFILE" == "prepush-standard" ]]; then
   profile_budget="$PREPUSH_WALL_BUDGET_MS"
   if (( elapsed_ms > PREPUSH_WALL_BUDGET_MS )); then
@@ -749,18 +833,24 @@ elif [[ "$PROFILE" == "prepush-standard" ]]; then
   fi
 fi
 
-write_health_profile_report \
-  "$PROFILE" \
-  "$HEALTH_SHARDS" \
-  "$gate_count" \
-  "$elapsed_ms" \
-  "$profile_budget" \
-  "$profile_ok" \
-  "$HEALTH_PROFILE_REPORT"
+if [[ "$PROFILE" == "agent-inner-loop" ]]; then
+  enforce_inner_loop_history_budget "$elapsed_ms" "$gate_count"
+else
+  write_health_profile_report \
+    "$PROFILE" \
+    "$HEALTH_SHARDS" \
+    "$gate_count" \
+    "$elapsed_ms" \
+    "$profile_budget" \
+    "$profile_ok" \
+    "$HEALTH_PROFILE_REPORT"
+fi
 
 if (( profile_ok == 0 )); then
   if [[ "$PROFILE" == "dev-fast" ]]; then
     echo "upgrade-plan-health: dev-fast wall-time exceeded budget (${elapsed_ms}ms > ${DEV_FAST_PROFILE_WALL_BUDGET_MS}ms)" >&2
+  elif [[ "$PROFILE" == "agent-inner-loop" ]]; then
+    echo "upgrade-plan-health: agent-inner-loop wall-time exceeded budget (${elapsed_ms}ms > ${AGENT_INNER_LOOP_BUDGET_MS}ms)" >&2
   elif [[ "$PROFILE" == "prepush-standard" ]]; then
     echo "upgrade-plan-health: prepush wall-time exceeded budget (${elapsed_ms}ms > ${PREPUSH_WALL_BUDGET_MS}ms)" >&2
   else

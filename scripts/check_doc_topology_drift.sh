@@ -69,6 +69,8 @@ for required_ref in (
     "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
     "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
     "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
+    "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
+    "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
     "upgrade_plan.md",
     "feature_matrix.md",
     "docs/status/REDTEAM_REPORT.md",
@@ -81,6 +83,10 @@ for required_ref in (
 
 if "docs/spec/DOC_TOPOLOGY_v0.1.md" not in index:
     raise SystemExit("doc-topology-drift: docs/INDEX.md must reference docs/spec/DOC_TOPOLOGY_v0.1.md")
+if "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md" not in index:
+    raise SystemExit("doc-topology-drift: docs/INDEX.md must reference docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md")
+if "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md" not in index:
+    raise SystemExit("doc-topology-drift: docs/INDEX.md must reference docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md")
 
 open_ids = sorted(
     set(

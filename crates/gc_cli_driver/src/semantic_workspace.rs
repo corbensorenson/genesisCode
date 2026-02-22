@@ -1,71 +1,17 @@
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum PathStep {
-    Form(usize),
-    PairCar,
-    PairCdr,
-    Vec(usize),
-    Map(Term),
-}
-
-#[derive(Clone, Debug)]
-struct SymbolOccurrence {
-    module_path: String,
-    symbol: String,
-    path: Vec<PathStep>,
-    path_repr: String,
-}
-
-#[derive(Clone, Debug)]
-struct DefinitionSite {
-    module_path: String,
-    symbol: String,
-    expr: Term,
-    form_path: Vec<PathStep>,
-    form_path_repr: String,
-    symbol_path_repr: String,
-    node_id: Option<String>,
-    term_hash: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-struct ModuleAnalysis {
-    module_path: String,
-    defs: BTreeMap<String, DefinitionSite>,
-    occurrences: Vec<SymbolOccurrence>,
-    node_count: usize,
-}
-
-#[derive(Clone, Debug)]
-struct WorkspaceAnalysis {
-    pkg_dir: PathBuf,
-    modules: Vec<ModuleAnalysis>,
-    owners: BTreeMap<String, Vec<String>>,
-}
-
-#[derive(Clone, Debug)]
-struct RefactorConflict {
-    code: &'static str,
-    message: String,
-    module_path: Option<String>,
-    path_repr: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-enum PlannedOp {
-    AddModule {
-        module_path: String,
-        forms: Vec<Term>,
-    },
-    ReplaceNode {
-        module_path: String,
-        path: Vec<PathStep>,
-        path_repr: String,
-        new_term: Term,
-    },
-}
+#[path = "semantic_workspace_misc.rs"]
+mod semantic_workspace_misc;
+#[path = "semantic_workspace_types.rs"]
+mod semantic_workspace_types;
+use semantic_workspace_misc::{
+    looks_like_scoped_symbol, refactor_kind_symbol, refactor_kind_token, term_tag,
+};
+use semantic_workspace_types::{
+    DefinitionSite, ModuleAnalysis, PathStep, PlannedOp, RefactorConflict, SymbolOccurrence,
+    WorkspaceAnalysis,
+};
 
 pub(super) fn cmd_semantic_edit_workspace_graph(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
@@ -438,6 +384,128 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
             EX_VERIFY
         },
         stdout,
+        json: json_envelope_value(env)?,
+    })
+}
+
+pub(super) fn cmd_semantic_edit_apply_plan(
+    cli: &Cli,
+    pkg: &Path,
+    kind: RefactorKind,
+    from_symbol: &str,
+    to_symbol: &str,
+    target_module_path: Option<&str>,
+    caps: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let plan_out = cmd_semantic_edit_refactor_plan(
+        cli,
+        pkg,
+        kind,
+        from_symbol,
+        to_symbol,
+        target_module_path,
+    )?;
+    let plan_json = plan_out.json.clone();
+    let plan_data = plan_json
+        .get("data")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let safe_to_apply = plan_data
+        .get("safe_to_apply")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let conflicts = plan_data
+        .get("conflicts")
+        .cloned()
+        .unwrap_or_else(|| serde_json::Value::Array(vec![]));
+    let patch_coreform = plan_data
+        .get("patch_coreform")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let patch_hash = plan_data
+        .get("patch_hash")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let frontend = resolved_coreform_frontend(cli)?;
+    let frontend_info = coreform_frontend_json(&frontend);
+
+    if !safe_to_apply || patch_coreform.trim().is_empty() {
+        let env = JsonEnvelope {
+            ok: false,
+            kind: "genesis/semantic-edit-apply-plan-v0.1",
+            data: Some(serde_json::json!({
+                "pkg": pkg.display().to_string(),
+                "coreform_frontend": frontend_info,
+                "safe_to_apply": false,
+                "apply_status": "plan-conflicts",
+                "patch_hash": patch_hash,
+                "patch_coreform": patch_coreform,
+                "conflicts": conflicts,
+                "plan": plan_data,
+            })),
+            error: None,
+        };
+        return Ok(CmdOut {
+            exit_code: EX_VERIFY,
+            stdout: if cli.json {
+                String::new()
+            } else {
+                plan_out.stdout
+            },
+            json: json_envelope_value(env)?,
+        });
+    }
+
+    let patch_path = std::env::temp_dir().join(format!(
+        "genesis-semantic-edit-apply-plan-{}-{}.gcpatch",
+        std::process::id(),
+        patch_hash
+    ));
+    std::fs::write(&patch_path, format!("{patch_coreform}\n"))
+        .with_context(|| format!("write {}", patch_path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+
+    let apply_result = gc_patches::apply_patch_with_step_limit_and_frontend(
+        &patch_path,
+        pkg,
+        caps,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+        frontend,
+    )
+    .map_err(map_patch_error);
+    let _ = std::fs::remove_file(&patch_path);
+    let r = apply_result?;
+
+    let exit_code = if r.ok { EX_OK } else { EX_OBLIGATIONS };
+    let env = JsonEnvelope {
+        ok: r.ok,
+        kind: "genesis/semantic-edit-apply-plan-v0.1",
+        data: Some(serde_json::json!({
+            "pkg": pkg.display().to_string(),
+            "coreform_frontend": frontend_info,
+            "safe_to_apply": true,
+            "apply_status": if r.ok { "applied" } else { "obligations-failed" },
+            "caps": caps.map(|p| p.display().to_string()),
+            "patch_hash": patch_hash,
+            "patch_coreform": patch_coreform,
+            "patch_artifact": r.patch_artifact,
+            "report_artifact": r.report_artifact,
+            "acceptance_artifact": r.acceptance_artifact,
+            "package_artifact": r.package_artifact,
+            "plan": plan_data,
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{}\n", r.report_artifact)
+        },
         json: json_envelope_value(env)?,
     })
 }
@@ -873,22 +941,6 @@ fn map_patch_error(err: gc_patches::PatchError) -> CliError {
     }
 }
 
-fn refactor_kind_symbol(kind: RefactorKind) -> &'static str {
-    match kind {
-        RefactorKind::Rename => ":rename",
-        RefactorKind::Move => ":move",
-        RefactorKind::Extract => ":extract",
-    }
-}
-
-fn refactor_kind_token(kind: RefactorKind) -> &'static str {
-    match kind {
-        RefactorKind::Rename => "rename",
-        RefactorKind::Move => "move",
-        RefactorKind::Extract => "extract",
-    }
-}
-
 fn path_to_term(path: &[PathStep]) -> Result<Term, CliError> {
     let mut steps = Vec::with_capacity(path.len());
     for step in path {
@@ -928,22 +980,4 @@ fn path_to_term(path: &[PathStep]) -> Result<Term, CliError> {
         steps.push(term);
     }
     Ok(Term::Vector(steps))
-}
-
-fn looks_like_scoped_symbol(symbol: &str) -> bool {
-    symbol.contains("::") || symbol.contains('/')
-}
-
-fn term_tag(term: &Term) -> &'static str {
-    match term {
-        Term::Nil => "nil",
-        Term::Bool(_) => "bool",
-        Term::Int(_) => "int",
-        Term::Str(_) => "str",
-        Term::Bytes(_) => "bytes",
-        Term::Symbol(_) => "sym",
-        Term::Pair(_, _) => "pair",
-        Term::Vector(_) => "vec",
-        Term::Map(_) => "map",
-    }
 }

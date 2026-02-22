@@ -16,6 +16,7 @@ Deterministic test execution policy for local iteration and CI.
 |---|---|---|
 | `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
 | `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 120000` | `<= 2m` |
+| `agent-inner-loop` | `bash scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` | `<= 5m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
 | `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 12m` |
 
@@ -50,6 +51,11 @@ Strict/full profile runtime reports:
   - history: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
   - baseline seed history: `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
   - enforced by `scripts/check_agent_reference_workflows.sh` with per-workflow fail-closed minimum-history + p95/regression budgets (native and parity wasi lanes).
+- `agent-inner-loop` health lane
+  - report: `.genesis/perf/upgrade_plan_health_agent_inner_loop_report.json`
+  - history: `.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl`
+  - baseline seed history: `policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl`
+  - enforced by `scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` via elapsed + history p95 wall-time gates.
 
 ## Runners
 
@@ -98,6 +104,21 @@ Strict/full profile runtime reports:
   - GPU/GFX decoupled runtime lanes:
     - compute-only lane: `scripts/check_gpu_compute_runtime_profile.sh`
     - gfx-only lane: `scripts/check_gfx_runtime_profile.sh`
+  - release/full deployment target runtime lanes are fail-closed via:
+    - `scripts/check_gcpm_target_runtime_pipelines.sh`
+      (requires deterministic runtime runner bundle artifacts + `contract/boot/smoke` lane outputs
+      for `ios|android|edge|service-runtime` targets).
+  - release-full profile also enforces production WASM surface isolation:
+    - `scripts/check_wasm_production_surface.sh` (forbids parity-only Rust frontend exports in default-feature wasm-bindgen artifacts).
+  - high-churn Rust decomposition progress is fail-closed via:
+    - `scripts/check_source_decomposition_progress.sh`
+      (enforces target line budgets for tracked production modules).
+- Agent authoring inner-loop: `scripts/check_upgrade_plan_health.sh --profile agent-inner-loop`
+  - runs a narrowed deterministic contract set plus `cli_smoke` and changed-fast loop checks to reduce repeated process startup overhead.
+  - enforces warm-cache budget `GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS` (default `300000`) with history p95/min-history controls:
+    - `GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY`
+    - `GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY`
+    - `GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY`
 
 ### AI Iteration SLO Contention Policy
 

@@ -65,6 +65,43 @@ tests = ["my/pkg::tests"]
     .unwrap();
 }
 
+fn write_workspace_pkg_with_duplicate_symbol(dir: &Path) {
+    fs::write(
+        dir.join("package.toml"),
+        r#"
+name = "semantic-workspace-conflict-test"
+version = "0.0.1"
+dependencies = []
+obligations = ["core/obligation::unit-tests"]
+modules = [
+  { path = "a.gc", hash = "" },
+  { path = "b.gc", hash = "" }
+]
+tests = ["my/pkg::tests"]
+"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.join("a.gc"),
+        r#"
+(def my/pkg::foo 41)
+(def my/pkg::tests
+  {
+    "t1" { :body (fn (_) my/pkg::foo) :expect 41 }
+  })
+"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.join("b.gc"),
+        r#"
+(def my/pkg::foo (fn (_) 7))
+(def my/pkg::use-foo (fn (_) my/pkg::foo))
+"#,
+    )
+    .unwrap();
+}
+
 #[test]
 fn semantic_edit_index_emits_stable_node_inventory() {
     let td = tempfile::tempdir().unwrap();
@@ -218,5 +255,162 @@ fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
     assert!(
         patch.contains("a.gc") && patch.contains("b.gc"),
         "refactor patch should contain multi-file edits"
+    );
+}
+
+#[test]
+fn semantic_edit_apply_plan_rename_is_deterministic_on_reapply_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let apply_once = || {
+        cargo_bin_cmd!("genesis_parity")
+            .current_dir(dir)
+            .args([
+                "--json",
+                "--coreform-frontend",
+                "rust",
+                "semantic-edit",
+                "apply-plan",
+                "--pkg",
+                "package.toml",
+                "--kind",
+                "rename",
+                "--from",
+                "my/pkg::foo",
+                "--to",
+                "my/pkg::foo_v2",
+            ])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone()
+    };
+
+    let first = apply_once();
+    let first_env: serde_json::Value = serde_json::from_slice(&first).unwrap();
+    assert_eq!(
+        first_env.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-apply-plan-v0.1")
+    );
+    assert_eq!(first_env.get("ok").and_then(|x| x.as_bool()), Some(true));
+    assert_eq!(
+        first_env
+            .pointer("/data/apply_status")
+            .and_then(|v| v.as_str()),
+        Some("applied")
+    );
+
+    let src_a = fs::read_to_string(dir.join("a.gc")).unwrap();
+    let src_b = fs::read_to_string(dir.join("b.gc")).unwrap();
+    assert!(src_a.contains("my/pkg::foo_v2"));
+    assert!(src_b.contains("my/pkg::foo_v2"));
+    assert!(!src_a.contains("my/pkg::foo "));
+    assert!(!src_b.contains("my/pkg::foo "));
+
+    let reapply = || {
+        cargo_bin_cmd!("genesis_parity")
+            .current_dir(dir)
+            .args([
+                "--json",
+                "--coreform-frontend",
+                "rust",
+                "semantic-edit",
+                "apply-plan",
+                "--pkg",
+                "package.toml",
+                "--kind",
+                "rename",
+                "--from",
+                "my/pkg::foo",
+                "--to",
+                "my/pkg::foo_v2",
+            ])
+            .assert()
+            .failure()
+            .get_output()
+            .stdout
+            .clone()
+    };
+
+    let reapply_a = reapply();
+    let reapply_b = reapply();
+    assert_eq!(
+        reapply_a, reapply_b,
+        "reapply conflict diagnostics must be deterministic"
+    );
+
+    let reapply_env: serde_json::Value = serde_json::from_slice(&reapply_a).unwrap();
+    assert_eq!(
+        reapply_env.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-apply-plan-v0.1")
+    );
+    assert_eq!(reapply_env.get("ok").and_then(|x| x.as_bool()), Some(false));
+    assert_eq!(
+        reapply_env
+            .pointer("/data/apply_status")
+            .and_then(|v| v.as_str()),
+        Some("plan-conflicts")
+    );
+    let conflicts = reapply_env
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts.iter().any(|c| {
+            c.get("code").and_then(|v| v.as_str()) == Some("refactor/source-symbol-missing")
+        }),
+        "reapply should deterministically report source missing conflict"
+    );
+}
+
+#[test]
+fn semantic_edit_apply_plan_reports_workspace_ambiguous_definition_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg_with_duplicate_symbol(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "apply-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "rename",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo_v2",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-apply-plan-v0.1")
+    );
+    assert_eq!(envelope.get("ok").and_then(|x| x.as_bool()), Some(false));
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts.iter().any(|c| {
+            c.get("code").and_then(|v| v.as_str()) == Some("refactor/source-symbol-ambiguous")
+        }),
+        "workspace conflict set must include source ambiguity diagnostics"
     );
 }

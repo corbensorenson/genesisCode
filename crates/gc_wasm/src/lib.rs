@@ -38,26 +38,36 @@ fn require_wasm_selfhost_artifact(api: &str) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub fn fmt_coreform_module(src: &str) -> Result<String, JsValue> {
-    fmt_coreform_module_rust(src)
+    fmt_coreform_module_native(src)
 }
 
-#[wasm_bindgen]
-pub fn fmt_coreform_module_rust(src: &str) -> Result<String, JsValue> {
+fn fmt_coreform_module_native(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     Ok(print_module(&forms))
 }
 
+#[cfg(feature = "parity-harness")]
 #[wasm_bindgen]
-pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
-    hash_coreform_module_rust(src)
+pub fn fmt_coreform_module_rust(src: &str) -> Result<String, JsValue> {
+    fmt_coreform_module_native(src)
 }
 
 #[wasm_bindgen]
-pub fn hash_coreform_module_rust(src: &str) -> Result<String, JsValue> {
+pub fn hash_coreform_module(src: &str) -> Result<String, JsValue> {
+    hash_coreform_module_native(src)
+}
+
+fn hash_coreform_module_native(src: &str) -> Result<String, JsValue> {
     let forms = parse_module(src).map_err(|e| js_err("parse", e))?;
     let forms = canonicalize_module(forms).map_err(|e| js_err("canon", e))?;
     Ok(hex::encode(hash_module(&forms)))
+}
+
+#[cfg(feature = "parity-harness")]
+#[wasm_bindgen]
+pub fn hash_coreform_module_rust(src: &str) -> Result<String, JsValue> {
+    hash_coreform_module_native(src)
 }
 
 #[wasm_bindgen]
@@ -227,16 +237,16 @@ pub fn eval_coreform_module_with_gates(
     stage1_gate: bool,
     stage2_gate: bool,
 ) -> Result<String, JsValue> {
-    eval_coreform_module_with_gates_rust(src, step_limit, stage1_pipeline, stage1_gate, stage2_gate)
+    eval_coreform_module_with_gates_native(
+        src,
+        step_limit,
+        stage1_pipeline,
+        stage1_gate,
+        stage2_gate,
+    )
 }
 
-#[wasm_bindgen]
-pub fn eval_coreform_module_rust(src: &str, step_limit: u32) -> Result<String, JsValue> {
-    eval_coreform_module_with_gates_rust(src, step_limit, false, false, false)
-}
-
-#[wasm_bindgen]
-pub fn eval_coreform_module_with_gates_rust(
+fn eval_coreform_module_with_gates_native(
     src: &str,
     step_limit: u32,
     stage1_pipeline: bool,
@@ -265,6 +275,30 @@ pub fn eval_coreform_module_with_gates_rust(
 
     let protocol_error = ctx.protocol.map(|p| p.error);
     Ok(print_term(&v.to_term_for_log(protocol_error)) + "\n")
+}
+
+#[cfg(feature = "parity-harness")]
+#[wasm_bindgen]
+pub fn eval_coreform_module_rust(src: &str, step_limit: u32) -> Result<String, JsValue> {
+    eval_coreform_module_with_gates_native(src, step_limit, false, false, false)
+}
+
+#[cfg(feature = "parity-harness")]
+#[wasm_bindgen]
+pub fn eval_coreform_module_with_gates_rust(
+    src: &str,
+    step_limit: u32,
+    stage1_pipeline: bool,
+    stage1_gate: bool,
+    stage2_gate: bool,
+) -> Result<String, JsValue> {
+    eval_coreform_module_with_gates_native(
+        src,
+        step_limit,
+        stage1_pipeline,
+        stage1_gate,
+        stage2_gate,
+    )
 }
 
 #[wasm_bindgen]
@@ -443,11 +477,13 @@ impl Runtime {
     }
 
     /// Rust frontend parity-only path: parse + canonicalize outside the kernel, then step.
+    #[cfg(feature = "parity-harness")]
     pub fn eval_module_rust(&mut self, src: &str) -> Result<JsValue, JsValue> {
-        self.eval_module_with_gates_rust(src, false, false, false)
+        self.eval_module_with_gates(src, false, false, false)
     }
 
     /// Rust frontend parity-only path with optional Stage-1/Stage-2 gate enforcement.
+    #[cfg(feature = "parity-harness")]
     pub fn eval_module_with_gates_rust(
         &mut self,
         src: &str,

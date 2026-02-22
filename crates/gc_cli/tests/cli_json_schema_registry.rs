@@ -40,6 +40,7 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/semantic-edit-index-v0.1",
         "genesis/semantic-edit-workspace-graph-v0.1",
         "genesis/semantic-edit-refactor-plan-v0.1",
+        "genesis/semantic-edit-apply-plan-v0.1",
         "genesis/apply-patch-v0.2",
         "genesis/verify-v0.2",
         "genesis/selfhost-artifact-v0.2",

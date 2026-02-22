@@ -61,6 +61,9 @@ run_target_deploy_workflow() {
     "$target_bundle_dir/provenance.gc"
     "$target_bundle_dir/package.toml"
     "$target_bundle_dir/package_artifact.txt"
+    "$target_bundle_dir/runtime/runtime_contract.gc"
+    "$target_bundle_dir/runtime/boot.sh"
+    "$target_bundle_dir/runtime/smoke.sh"
   )
   local missing=()
   local f
@@ -84,7 +87,26 @@ run_target_deploy_workflow() {
     return 1
   fi
 
+  local contract_out
+  local boot_out
+  local smoke_out
+  contract_out="$(bash "$target_bundle_dir/runtime/boot.sh" --contract | tr -d '\n')"
+  boot_out="$(bash "$target_bundle_dir/runtime/boot.sh" --boot | tr -d '\n')"
+  smoke_out="$(bash "$target_bundle_dir/runtime/smoke.sh" | tr -d '\n')"
+  if [[ "$contract_out" != "contract-ok:$target:$hash_a" ]]; then
+    echo "agent-deploy-${lane_label}-workflow: contract lane mismatch for '$target': $contract_out" >&2
+    return 1
+  fi
+  if [[ "$boot_out" != "boot-ok:$target:$hash_a" ]]; then
+    echo "agent-deploy-${lane_label}-workflow: boot lane mismatch for '$target': $boot_out" >&2
+    return 1
+  fi
+  if [[ "$smoke_out" != "smoke-ok:$target:$hash_a" ]]; then
+    echo "agent-deploy-${lane_label}-workflow: smoke lane mismatch for '$target': $smoke_out" >&2
+    return 1
+  fi
+
   local replay
-  replay="$(printf '%s|%s|%s|%s' "$target" "$hash_a" "$manifest_count" "$provenance_count")"
+  replay="$(printf '%s|%s|%s|%s|%s|%s|%s' "$target" "$hash_a" "$manifest_count" "$provenance_count" "$contract_out" "$boot_out" "$smoke_out")"
   echo "agent-deploy-${lane_label}-workflow: ok replay=$replay"
 }

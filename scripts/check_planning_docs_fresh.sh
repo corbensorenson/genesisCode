@@ -60,6 +60,10 @@ if "AGENT_ONBOARDING_v0.1.md" not in index_text:
     raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/AGENT_ONBOARDING_v0.1.md")
 if "DEPRECATION_MAP_v0.1.md" not in index_text:
     raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/DEPRECATION_MAP_v0.1.md")
+if "DOC_COMPLEXITY_TARGETS_v0.1.md" not in index_text:
+    raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md")
+if "DOC_LEAF_OWNERSHIP_v0.1.md" not in index_text:
+    raise SystemExit("planning-docs-fresh: docs/INDEX.md must reference docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md")
 
 if "/upgrade_plan.md" not in feature_text:
     raise SystemExit("planning-docs-fresh: feature_matrix.md evidence list must reference upgrade_plan.md")

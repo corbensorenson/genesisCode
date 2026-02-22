@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 PLAN_FILE="${GENESIS_UPGRADE_PLAN_FILE:-$ROOT_DIR/upgrade_plan.md}"
 REPORT_FILE="${GENESIS_REDTEAM_REPORT_FILE:-$ROOT_DIR/docs/status/REDTEAM_REPORT.md}"
+READINESS_FILE="${GENESIS_SELFHOST_READINESS_REPORT:-$ROOT_DIR/.genesis/perf/selfhost_readiness_report.json}"
+REFRESH_READINESS="${GENESIS_PLANNING_REFRESH_READINESS:-1}"
 
 [[ -f "$PLAN_FILE" ]] || {
   echo "redteam-report: missing plan file at $PLAN_FILE" >&2
@@ -15,17 +17,40 @@ REPORT_FILE="${GENESIS_REDTEAM_REPORT_FILE:-$ROOT_DIR/docs/status/REDTEAM_REPORT
   echo "redteam-report: missing report file at $REPORT_FILE" >&2
   exit 1
 }
+if [[ "$REFRESH_READINESS" != "0" && "$REFRESH_READINESS" != "1" ]]; then
+  echo "redteam-report: GENESIS_PLANNING_REFRESH_READINESS must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$REFRESH_READINESS" == "1" ]]; then
+  echo "redteam-report: refreshing readiness report via check_selfhost_readiness_scorecard.sh"
+  bash scripts/check_selfhost_readiness_scorecard.sh >/dev/null
+elif [[ ! -f "$READINESS_FILE" ]]; then
+  echo "redteam-report: readiness report missing; generating via check_selfhost_readiness_scorecard.sh"
+  bash scripts/check_selfhost_readiness_scorecard.sh >/dev/null
+fi
+[[ -f "$READINESS_FILE" ]] || {
+  echo "redteam-report: missing readiness report after generation at $READINESS_FILE" >&2
+  exit 1
+}
 
-python3 - "$PLAN_FILE" "$REPORT_FILE" <<'PY'
+python3 - "$PLAN_FILE" "$REPORT_FILE" "$READINESS_FILE" <<'PY'
+import json
 import pathlib
 import re
 import sys
 
 plan_path = pathlib.Path(sys.argv[1])
 report_path = pathlib.Path(sys.argv[2])
+readiness_path = pathlib.Path(sys.argv[3])
 
 plan_text = plan_path.read_text(encoding="utf-8")
 report_text = report_path.read_text(encoding="utf-8")
+readiness_doc = json.loads(readiness_path.read_text(encoding="utf-8"))
+
+if readiness_doc.get("kind") != "genesis/selfhost-readiness-v0.1":
+    raise SystemExit(
+        "redteam-report: readiness report kind mismatch (expected genesis/selfhost-readiness-v0.1)"
+    )
 
 if not re.search(r"^Last updated:\s+\d{4}-\d{2}-\d{2}$", report_text, re.MULTILINE):
     raise SystemExit(
@@ -38,6 +63,18 @@ for line in plan_text.splitlines():
     if m:
         unresolved_ids.append(m.group(1))
 unresolved_ids = sorted(set(unresolved_ids))
+readiness_ids = sorted(
+    set(
+        str(x)
+        for x in readiness_doc.get("unresolved_upgrade_plan_ids", [])
+        if re.fullmatch(r"P[01]\.\d+", str(x))
+    )
+)
+if unresolved_ids != readiness_ids:
+    raise SystemExit(
+        "redteam-report: unresolved P0/P1 IDs must match readiness report: "
+        f"plan={unresolved_ids} readiness={readiness_ids}"
+    )
 
 report_ids = sorted(set(re.findall(r"\bP[01]\.\d+\b", report_text)))
 

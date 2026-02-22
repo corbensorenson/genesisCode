@@ -5,6 +5,9 @@
 
 **Draft Paper / Technical Specification (v0.2)**
 
+Consolidated source:
+- legacy top-level stacks guidance (redirected through the deprecation map)
+
 ---
 
 ## **Abstract**
@@ -637,4 +640,3 @@ A conforming GenesisCode v0.2 system provides:
 ---
 
 If you want, I can also produce **(1)** a formal-ish small-step semantics appendix for Gλ \+ seals, **(2)** a concrete CoreForm schema for effect logs \+ patch artifacts, and **(3)** a minimal “GenesisCode Registry Policy” spec that reads like something serious organizations would actually adopt.
-
