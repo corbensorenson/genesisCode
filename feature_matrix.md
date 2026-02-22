@@ -31,8 +31,10 @@ Legend:
 | Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ✅ (first-class `core/net::*` inbound listener/accept/respond wrappers + policy-gated bind/request-size controls + gauntlet domain coverage) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ✅ (first-party `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` families + `first_party_profile=\"browser\"` for gfx window/input/audio parity lanes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
-| WebXR runtime primitives (session/frame/input/haptics) | ⚠️ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts with policy gates; device backend lane still pending) | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| WebXR runtime primitives (session/frame/input/haptics) | ✅ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts across first-party + `xr_backend=\"webxr-device\"` deterministic bridge envelopes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| Advanced XR spatial primitives (anchors/hands/mesh/layers) | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Durable data capability family (`io/db::*`) | ✅ (first-class SQL + KV bridge-backed contracts with policy-gated target/query/row/byte bounds and replay-stable envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| First-class cryptography capability family | ❌ (no canonical `core/crypto::*` capability surface yet) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
@@ -43,7 +45,9 @@ Legend:
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | Deterministic non-gfx runtime profiling in core workflow | ✅ (`gcpm profile-runtime` emits task/IO/memory profile artifacts with history-aware p95 regression gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Generative workload regression gates with enforced historical baselines | ⚠️ (`agent_generative_workloads*` lanes run, but reports still show `history_samples=1`/`regression_enforced=false`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Perf/hot-path gate operability under constrained local disk headroom | ✅ (shared `GENESIS_PERF_DISK_STRICT_MODE=auto|1|0`; default `auto` keeps CI fail-closed while avoiding local precheck false negatives) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` + `:tool-qualification` schema + fail-closed policy gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -53,7 +57,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current red-team backlog is concentrated in productization blockers (P1).
+- Red-team backlog currently contains active P1 blockers and P2 hardening work; see `upgrade_plan.md`.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -62,8 +66,16 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.2` XR runtime is simulator-first and still lacks a real WebXR device backend lane with deterministic replay envelopes.
-- `P1.3` Compute/graphics decoupling is incomplete while `gfx/gpu::*` compute compatibility aliases remain in production paths.
+- `P1.3` - generative/per-workflow regression statistics are not yet enforceable.
+- `P1.4` - XR feature surface lacks advanced spatial primitives.
+- `P1.5` - WebXR device lane lacks first-class browser-runtime conformance coverage.
+- `P1.6` - typechecker inference remains conservative for complex agent-authored programs.
+- `P1.7` - semantic patch schema lacks high-level refactor operations.
+- `P1.8` - repeated build/lock contention degrades iteration throughput in health scripts.
+- `P2.1` - release defaults for plugin bridge hardening are not strict enough.
+- `P2.2` - GPU device conformance matrix does not yet cover broad real hardware/OS lanes.
+- `P2.3` - docs surface remains large with remaining deprecated redirect stubs.
+- `P2.4` - no first-class cryptography capability family in the canonical host ABI.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

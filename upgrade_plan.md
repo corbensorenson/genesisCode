@@ -5,58 +5,48 @@ Last updated: 2026-02-22
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 0
+Open checklist items: 10
 
-## P1 - Productization blockers for the "agent can build anything" target
+## P1 - Productization blockers for "agent can build anything" readiness
 
-- [x] P1.1 Add first-class XR haptics capability lane.
-  - Evidence: no `haptic*` operations exist in `/Users/corbensorenson/Documents/genesisCode/docs/spec/XR_HOST_RUNTIME_v0.1.md`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`, or capability index artifacts.
-  - Exit criteria: canonical `gfx/xr::haptics-*` ABI/schema/index entries, prelude wrappers, runtime dispatch, policy gates, replay parity tests, and gauntlet coverage.
-  - Completed 2026-02-22: added canonical `gfx/xr::haptics-pulse` dispatch + policy gates in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_xr_host.rs`, prelude/domain-kit wrappers in `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_xr_host.gc` and `/Users/corbensorenson/Documents/genesisCode/prelude/modules/34_xr_workflow.gc`, workflow gauntlet updates under `/Users/corbensorenson/Documents/genesisCode/examples/agent_xr_runtime_workflow/`, schema/index regeneration via `/Users/corbensorenson/Documents/genesisCode/scripts/generate_capability_indices.py`, and replay parity coverage in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/tests/host_abi_surface.rs` + `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/tests/prelude_xr_wrappers.rs`.
+- [ ] P1.3 Enforce statistically meaningful regression gates for generative agent workloads and per-workflow gauntlet lanes.
+  - Evidence: `.genesis/perf/agent_generative_workloads_report.json` and `.genesis/perf/agent_generative_workloads_parity_report.json` show `history_samples = 1` and `regression_enforced = false`; gauntlet workflow entries still report `p95_enforced = false`.
+  - Exit criteria: seed and enforce per-workflow history minima with fail-closed p95/regression gates (native + wasi parity lanes), not just aggregate scenario metrics.
 
-- [x] P1.2 Add real WebXR device backend path (not simulator-only) with deterministic replay envelopes.
-  - Evidence: current XR runtime contract is explicitly simulator-backed (`:adapter = "xr-headless-sim"` in `/Users/corbensorenson/Documents/genesisCode/docs/spec/XR_HOST_RUNTIME_v0.1.md`).
-  - Exit criteria: browser/device-backed XR backend lane with deterministic event capture/replay, policy profiles, and native-vs-wasi parity checks.
-  - Completed 2026-02-22: added explicit `xr_backend = "webxr-device"` lane in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_xr_host.rs` with fail-closed bridge requirements and deterministic per-op `:replay-envelope` capture metadata, added canonical policy template `/Users/corbensorenson/Documents/genesisCode/docs/policies/xr_webxr_device_caps_v0.1.toml`, updated XR runtime/ABI docs in `/Users/corbensorenson/Documents/genesisCode/docs/spec/XR_HOST_RUNTIME_v0.1.md` and `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`, and validated replay + cross-runtime parity via `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/tests/host_abi_surface.rs` (`xr_webxr_device_backend_ops_are_replay_deterministic_with_wasi_bridge_profile`) plus native-vs-wasi workflow parity check for `/Users/corbensorenson/Documents/genesisCode/examples/agent_xr_runtime_workflow/workflow.sh`.
+- [ ] P1.4 Expand XR runtime surface beyond session/frame/input/haptics to production-grade AR/VR primitives.
+  - Evidence: `docs/spec/XR_HOST_RUNTIME_v0.1.md` currently standardizes only six ops (`session-open`, `frame-poll`, `input-poll`, `haptics-pulse`, `submit-frame`, `session-close`).
+  - Exit criteria: add canonical contracts/policies/wrappers/tests for anchors, hand tracking, hit-test/spatial mesh, and compositor/layer primitives with replay-stable envelopes.
 
-- [x] P1.3 Complete compute/graphics surface decoupling and retire graphics-namespaced compute compatibility aliases.
-  - Evidence: compatibility alias path still active (`legacy gfx/gpu compute aliases` in `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md` and alias normalization in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_response_budget.rs`).
-  - Exit criteria: `gpu/compute::*` is the only compute canonical surface in production paths; compatibility wrappers removed or hard-gated to parity harness only.
-  - Completed 2026-02-22: removed compute alias normalization from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_response_budget.rs`, retired `gfx/gpu` compute alias handling in `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_host.rs`, `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_backend_policy.rs`, and `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_device_backend.rs`, removed compatibility wrapper symbols from `/Users/corbensorenson/Documents/genesisCode/prelude/modules/10_gfx.gc`, updated policy/docs in `/Users/corbensorenson/Documents/genesisCode/docs/policies/gpu_device_runtime_caps_v0.1.toml`, `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`, and `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`, and validated with host ABI/prelude/gpu backend conformance tests.
+- [ ] P1.5 Add browser-native WebXR device conformance lane (real runtime behavior), not bridge-envelope conformance alone.
+  - Evidence: XR contract still identifies first-party adapter as `"xr-headless-sim"` and treats `"webxr-device"` as a bridge-routed lane (`docs/spec/XR_HOST_RUNTIME_v0.1.md`).
+  - Exit criteria: add first-class browser runtime conformance fixture(s) exercising real WebXR session/frame/input/haptics behavior under deterministic capture/replay rules.
 
-- [x] P1.4 Add standards-oriented assurance profile packs for regulated delivery programs.
-  - Evidence: no dedicated DO-178C/NASA NPR 7150.2/IEC 62304 profile or crosswalk artifacts currently exist in `/Users/corbensorenson/Documents/genesisCode/docs/spec`.
-  - Exit criteria: explicit policy/profile templates, evidence export contracts, and reproducible assurance-pack mapping docs for those standards families.
-  - Completed 2026-02-22: added canonical profile templates in `/Users/corbensorenson/Documents/genesisCode/policies/assurance/profile_packs.toml`, standards crosswalk + deterministic export contract documentation in `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`, bundle/CLI wiring in `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_BUNDLE_v0.1.md` and `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`, and fail-closed drift guard coverage via `/Users/corbensorenson/Documents/genesisCode/scripts/check_assurance_profile_packs.sh` wired into CI and upgrade-plan health gates.
+- [ ] P1.6 Expand typechecker inference/verification coverage for complex agent-authored programs.
+  - Evidence: `docs/spec/TYPES.md` states v0.2 checker is conservative and treats unknown applications as `?`, reducing strong conformance guarantees.
+  - Exit criteria: broaden inference coverage (collection/contract/effect-heavy patterns), reduce unknown leakage, and add parity tests proving stable behavior across rust/selfhost paths.
 
-## P2 - Hardening, optimization, and AI-authoring scale
+- [ ] P1.7 Expand semantic patch schema from node-replacement primitives to high-level refactor ops needed by autonomous agents.
+  - Evidence: `docs/spec/PATCH_SCHEMA.md` currently supports `:replace-node`, `:replace-node-id`, `:add-module`, `:remove-module`, `:update-manifest` only.
+  - Exit criteria: add canonical ops for symbol rename, module move/split, import/export rewrites, and contract signature migration with deterministic validation and replay-aware evidence.
 
-- [x] P2.1 Make red-team status guards bidirectional so stale active-risk entries fail CI.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/scripts/check_redteam_report.sh` only checks for missing unresolved P0/P1 IDs, not extra stale IDs in `/Users/corbensorenson/Documents/genesisCode/docs/status/REDTEAM_REPORT.md`.
-  - Exit criteria: guard fails on missing-or-extra risk IDs and enforces a canonical "no active risks" state when backlog has no P0/P1 items.
-  - Completed 2026-02-22: guard now fails on stale extra IDs, supports canonical no-risk state validation, and includes fixture-path overrides for deterministic self-tests.
+- [ ] P1.8 Cut repeated Cargo rebuild/lock contention across health scripts to improve iteration throughput.
+  - Evidence: health runs repeatedly emit `Blocking waiting for file lock on build directory/package cache` while recompiling overlapping crates in multiple scripts.
+  - Exit criteria: introduce shared prebuild/cache orchestration for health profiles (dev-fast/prepush/release-full) and demonstrate reduced end-to-end wall time without weakening gates.
 
-- [x] P2.2 Enforce scenario/cross-host perf regression gates with statistically meaningful history depth.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_scenario_perf_report.json` shows `p95_enforced=false` (sample_count=1); `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/full_cross_host_profile_report.json` has only 2 history samples.
-  - Exit criteria: seeded baseline history + CI minimum-sample enforcement so p95/regression budgets are always active in release-facing lanes.
-  - Completed 2026-02-22: added baseline seed histories under `/Users/corbensorenson/Documents/genesisCode/policies/perf/` plus fail-closed minimum-history enforcement in both scenario and full-cross-host runtime budget gates.
+## P2 - Hardening, security posture, and ecosystem completeness
 
-- [x] P2.3 Reduce lock-path variance in AI iteration loop to keep perf gates stable.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/ai_iteration_slo_metrics.json` reports lock-path spread warning (`gcpm_lock_ms sample spread 76.94%`).
-  - Exit criteria: lock/env loop variance below contention warning threshold across baseline runs without relaxing budgets.
-  - Completed 2026-02-22: added deterministic warm-up + stabilization retry windows for `gcpm lock/env` measurements in `/Users/corbensorenson/Documents/genesisCode/scripts/check_ai_iteration_slo.sh`; current report shows no contention warnings and lock/env spread ~2.5%.
+- [ ] P2.1 Tighten release-profile plugin/bridge execution defaults (allowlists + binary pinning).
+  - Evidence: host/plugin bridge controls like `allow_commands` and `bridge_cmd_sha256` are optional in current policy docs (`docs/spec/HOST_ABI.md`, `docs/spec/CAPS_TOML.md`).
+  - Exit criteria: release/full profiles require explicit command allowlists and bridge binary digest pinning for plugin command surfaces, with fail-closed enforcement and conformance tests.
 
-- [x] P2.4 Continue splitting large production modules to improve maintainability and agent edit locality.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/scripts/check_source_size_budget.sh` reports large files (`runner_capability_dispatch.rs` and related hot files still among top line counts).
-  - Exit criteria: capability dispatch and adjacent runtime modules are further decomposed into focused units with unchanged behavior and passing conformance/perf gates.
-  - Completed 2026-02-22: extracted `io/net::*` policy and handler surface from `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch.rs` into `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch/net.rs`, reducing primary dispatcher size (1358 -> 631 LOC) while keeping behavior stable (`cargo test -p gc_effects runner_capability_dispatch`, source-size gate, and doc-hygiene gate all pass).
+- [ ] P2.2 Expand GPU device conformance matrix across real hardware/OS combinations.
+  - Evidence: current conformance artifacts show Apple M1 and deterministic CI adapter lanes, but not broad vendor/OS coverage in the tracked reports under `.genesis/perf/`.
+  - Exit criteria: add enforced lane matrix for representative NVIDIA/AMD/Intel and Linux/macOS/Windows targets with parity contracts and adapter-specific artifact retention.
 
-- [x] P2.5 Consolidate documentation further around bundle entrypoints and reduce long-tail doc surface.
-  - Evidence: repository currently has 100+ markdown docs and deprecated redirect stubs remain (`doc-hygiene: deprecated_docs=6`).
-  - Exit criteria: more split docs folded into canonical bundles, duplicate guidance removed, index/deprecation map updated, and doc-hygiene remains green.
-  - Completed 2026-02-22: consolidated graphics demo guidance into `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_GFX_BUNDLE_v0.1.md` (`Demo Workloads`), converted `/Users/corbensorenson/Documents/genesisCode/docs/GFX_DEMOS.md` into a strict redirect stub, and updated `/Users/corbensorenson/Documents/genesisCode/docs/DEPRECATION_MAP_v0.1.md`, `/Users/corbensorenson/Documents/genesisCode/docs/INDEX.md`, `/Users/corbensorenson/Documents/genesisCode/docs/GETTING_STARTED.md`, and `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_ARCH.md`; doc-hygiene remains green.
+- [ ] P2.3 Continue documentation consolidation and reduce long-tail markdown surface.
+  - Evidence: repository currently has `127` markdown files (`103` under `docs/`), and doc hygiene still tracks `deprecated_docs=7`.
+  - Exit criteria: fold remaining split docs into canonical bundles/index entries, shrink redirect-stub surface, and keep doc-hygiene + planning-doc freshness green.
 
-- [x] P2.6 Expand from fixed reference workflows to generative agent workload validation.
-  - Evidence: `/Users/corbensorenson/Documents/genesisCode/scripts/check_agent_reference_workflows.sh` validates a fixed list of 17 scripted workflows.
-  - Exit criteria: property-based/generative workload suite that mutates workflow shapes/contracts and feeds parity/perf gates beyond the static scenario list.
-  - Completed 2026-02-22: added `/Users/corbensorenson/Documents/genesisCode/scripts/check_agent_generative_workloads.sh` with deterministic mutation-based workload generation, duration/domain/replay invariants, parity-mode comparisons, CI gate wiring, and release/parity health-profile integration.
+- [ ] P2.4 Add first-class cryptography capability family for secure agent-built applications.
+  - Evidence: canonical host ABI op list in `docs/spec/HOST_ABI.md` has no `core/crypto::*` capability family.
+  - Exit criteria: define deterministic crypto contracts (hash/sign/verify/KDF/AEAD envelopes as policy-gated host effects), add prelude wrappers, schema indices, replay tests, and safety guidance.

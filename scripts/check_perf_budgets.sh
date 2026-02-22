@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/measure.sh"
+source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
 
 # Default budgets are intentionally conservative for shared CI runners.
 # Override with env vars to tighten over time.
@@ -14,7 +15,7 @@ BUDGET_OBLIGATION_RUNTIME_MS="${GENESIS_BUDGET_OBLIGATION_RUNTIME_MS:-30000}"
 MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
-DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
+DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
 REPORT_OUT="${GENESIS_PERF_BUDGET_REPORT_OUT:-.genesis/perf/perf_budget_metrics.json}"
 
 fail() {

@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/measure.sh"
 source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
+source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
 
 # Conservative defaults for shared CI runners.
 BUDGET_FMT_CANON_MS="${GENESIS_BUDGET_FMT_CANON_MS:-15000}"
@@ -18,7 +19,7 @@ BUDGET_GCPM_UPDATE_MS="${GENESIS_BUDGET_GCPM_UPDATE_MS:-15000}"
 MEASURE_WARMUPS="${GENESIS_BUDGET_WARMUPS:-1}"
 MEASURE_REPEATS="${GENESIS_BUDGET_REPEATS:-3}"
 CARGO_PROFILE="${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}"
-DISK_STRICT_MODE="${GENESIS_PERF_DISK_STRICT_MODE:-1}"
+DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
 
 fail() {
   echo "hot-path-budgets: $*" >&2

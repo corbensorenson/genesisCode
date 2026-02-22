@@ -102,6 +102,21 @@ Strict/full profile runtime reports:
 - Baseline regression gates continue to use history p95, but compare against
   median-per-run metrics to reduce host contention noise.
 
+### Perf Gate Disk-Headroom Strictness
+
+- Perf-oriented gates now share one strictness selector:
+  `GENESIS_PERF_DISK_STRICT_MODE=auto|1|0`.
+- Default is `auto`, which delegates to `scripts/check_disk_headroom.sh`:
+  - `CI=true` => strict fail-closed behavior.
+  - local (`CI!=true`) => non-strict continuation after deterministic diagnostics.
+- Affected gates:
+  - `scripts/check_perf_budgets.sh`
+  - `scripts/check_hot_path_budgets.sh`
+  - `scripts/check_ai_iteration_slo.sh`
+  - `scripts/check_runtime_microbench_budgets.sh`
+- To force strict local behavior, set:
+  `GENESIS_PERF_DISK_STRICT_MODE=1`.
+
 ## CI Profiles
 
 - `fast`: runs `scripts/test_changed_fast.sh` (default local/CI fast path)

@@ -8,6 +8,7 @@ PRIMARY_REPORT="${GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT:-.genesis/perf/agent_c
 SECONDARY_REPORT="${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT:-}"
 REPORT_PATH="${GENESIS_AGENT_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_report.json}"
 HISTORY_PATH="${GENESIS_AGENT_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_history.jsonl}"
+BASELINE_HISTORY_PATH="${GENESIS_AGENT_GENERATIVE_BASELINE_HISTORY:-policies/perf/agent_generative_workloads_seed_history.jsonl}"
 CASE_COUNT="${GENESIS_AGENT_GENERATIVE_CASE_COUNT:-12}"
 MIN_WORKFLOWS="${GENESIS_AGENT_GENERATIVE_MIN_WORKFLOWS:-3}"
 MAX_WORKFLOWS="${GENESIS_AGENT_GENERATIVE_MAX_WORKFLOWS:-6}"
@@ -15,9 +16,10 @@ MIN_DOMAIN_COUNT="${GENESIS_AGENT_GENERATIVE_MIN_DOMAIN_COUNT:-2}"
 MAX_CASE_DURATION_MS="${GENESIS_AGENT_GENERATIVE_MAX_CASE_DURATION_MS:-600000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_GENERATIVE_P95_MIN_SAMPLES:-8}"
 REGRESSION_PERCENT="${GENESIS_AGENT_GENERATIVE_REGRESSION_PERCENT:-25}"
+REQUIRE_MIN_HISTORY="${GENESIS_AGENT_GENERATIVE_REQUIRE_MIN_HISTORY:-1}"
 SEED="${GENESIS_AGENT_GENERATIVE_SEED:-genesis-agent-generative-v1}"
 
-python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$SEED" <<'PY'
+python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$BASELINE_HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$REQUIRE_MIN_HISTORY" "$SEED" <<'PY'
 import datetime as dt
 import hashlib
 import json
@@ -32,6 +34,7 @@ import sys
     secondary_report_path,
     report_path,
     history_path,
+    baseline_history_path,
     case_count_s,
     min_workflows_s,
     max_workflows_s,
@@ -39,6 +42,7 @@ import sys
     max_case_duration_ms_s,
     p95_min_samples_s,
     regression_percent_s,
+    require_min_history_raw,
     seed,
 ) = sys.argv[1:]
 
@@ -49,6 +53,7 @@ min_domain_count = int(min_domain_count_s)
 max_case_duration_ms = int(max_case_duration_ms_s)
 p95_min_samples = int(p95_min_samples_s)
 regression_percent = float(regression_percent_s)
+require_min_history = require_min_history_raw.strip().lower() not in {"0", "false", "no", "off"}
 
 if case_count <= 0:
     raise SystemExit("agent-generative-workloads: case count must be positive")
@@ -69,6 +74,7 @@ primary_path = pathlib.Path(primary_report_path)
 secondary_path = pathlib.Path(secondary_report_path) if secondary_report_path.strip() else None
 report_file = pathlib.Path(report_path)
 history_file = pathlib.Path(history_path)
+baseline_history_file = pathlib.Path(baseline_history_path)
 
 def load_gauntlet(path: pathlib.Path) -> dict:
     if not path.exists():
@@ -184,8 +190,10 @@ secondary_cases = [evaluate_case(case, secondary["workflows"]) for case in cases
 secondary_by_id = {case["id"]: case for case in secondary_cases}
 
 history_rows = []
-if history_file.exists():
-    for raw in history_file.read_text(encoding="utf-8").splitlines():
+for candidate in [baseline_history_file, history_file]:
+    if not candidate.exists():
+        continue
+    for raw in candidate.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line:
             continue
@@ -199,9 +207,16 @@ if history_file.exists():
             continue
         if row.get("runtime_profile") != primary["runtime_profile"]:
             continue
+        if row.get("seed") != seed:
+            continue
         durations = row.get("case_durations_ms")
         if isinstance(durations, dict):
             history_rows.append(durations)
+
+if require_min_history and not baseline_history_file.exists():
+    raise SystemExit(
+        f"agent-generative-workloads: baseline history file missing: {baseline_history_file}"
+    )
 
 def p95(values: list[int]) -> int:
     ordered = sorted(values)
@@ -216,6 +231,7 @@ for case in primary_cases:
         if isinstance(value, int):
             prior.append(value)
     case["history_samples"] = len(prior) + 1
+    case["history_min_ok"] = case["history_samples"] >= p95_min_samples
     case["history_p95_ms"] = p95(prior) if prior else None
     case["regression_enforced"] = len(prior) >= p95_min_samples and bool(prior)
     case["regression_budget_ms"] = (
@@ -228,6 +244,8 @@ for case in primary_cases:
         if case["regression_budget_ms"] is None
         else case["duration_ms"] <= case["regression_budget_ms"]
     )
+    if require_min_history and not case["history_min_ok"]:
+        case["regression_ok"] = False
     if not case["regression_ok"]:
         case_regressions.append(
             f"{case['id']} duration {case['duration_ms']} > regression budget {case['regression_budget_ms']}"
@@ -253,8 +271,19 @@ else:
 duration_failures = [case["id"] for case in primary_cases if not case["duration_ok"]]
 domain_failures = [case["id"] for case in primary_cases if not case["domain_ok"]]
 regression_failures = [case["id"] for case in primary_cases if not case["regression_ok"]]
+history_min_failures = [
+    case["id"]
+    for case in primary_cases
+    if require_min_history and not case["history_min_ok"]
+]
 
-ok = not (duration_failures or domain_failures or regression_failures or parity_mismatches)
+ok = not (
+    duration_failures
+    or domain_failures
+    or regression_failures
+    or parity_mismatches
+    or history_min_failures
+)
 
 durations = [case["duration_ms"] for case in primary_cases]
 summary = {
@@ -275,6 +304,8 @@ report = {
     "primary_report": str(primary_path),
     "secondary_report": str(secondary_path) if secondary_path else None,
     "history_path": str(history_file),
+    "baseline_history_path": str(baseline_history_file),
+    "require_min_history": require_min_history,
     "case_count": len(primary_cases),
     "min_workflows": min_workflows,
     "max_workflows": max_workflows,
@@ -286,6 +317,7 @@ report = {
     "duration_failures": duration_failures,
     "domain_failures": domain_failures,
     "regression_failures": regression_failures,
+    "history_min_failures": history_min_failures,
     "parity_mismatches": parity_mismatches,
     "cases": primary_cases,
     "timestamp_utc": timestamp,
@@ -324,6 +356,8 @@ if not ok:
         reasons.append("domain-failures=" + ",".join(domain_failures))
     if regression_failures:
         reasons.append("regression-failures=" + ",".join(regression_failures))
+    if history_min_failures:
+        reasons.append("history-min-failures=" + ",".join(history_min_failures))
     if parity_mismatches:
         reasons.append("parity-mismatches=" + ",".join(parity_mismatches))
     raise SystemExit("agent-generative-workloads: " + "; ".join(reasons))

@@ -18,12 +18,24 @@ fi
 
 GAUNTLET_REPORT="${GENESIS_AGENT_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
 GAUNTLET_HISTORY="${GENESIS_AGENT_GAUNTLET_HISTORY:-.genesis/perf/agent_capability_gauntlet_history.jsonl}"
+GAUNTLET_BASELINE_HISTORY="${GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY:-policies/perf/agent_capability_gauntlet_seed_history.jsonl}"
 GAUNTLET_DEFAULT_MAX_MS="${GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS:-300000}"
+GAUNTLET_REQUIRE_MIN_HISTORY="${GENESIS_AGENT_GAUNTLET_REQUIRE_MIN_HISTORY:-1}"
+GAUNTLET_REGRESSION_PERCENT="${GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT:-25}"
 
-python3 - "$ROOT_DIR" "$GENESIS_BIN" "$GAUNTLET_REPORT" "$GAUNTLET_HISTORY" "$GAUNTLET_DEFAULT_MAX_MS" <<'PY'
+python3 - \
+  "$ROOT_DIR" \
+  "$GENESIS_BIN" \
+  "$GAUNTLET_REPORT" \
+  "$GAUNTLET_HISTORY" \
+  "$GAUNTLET_BASELINE_HISTORY" \
+  "$GAUNTLET_DEFAULT_MAX_MS" \
+  "$GAUNTLET_REQUIRE_MIN_HISTORY" \
+  "$GAUNTLET_REGRESSION_PERCENT" <<'PY'
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 import pathlib
 import re
@@ -36,7 +48,10 @@ root = pathlib.Path(sys.argv[1])
 genesis_bin = sys.argv[2]
 report_path = pathlib.Path(sys.argv[3])
 history_path = pathlib.Path(sys.argv[4])
-default_max_ms = int(sys.argv[5])
+baseline_history_path = pathlib.Path(sys.argv[5])
+default_max_ms = int(sys.argv[6])
+require_min_history = sys.argv[7].strip().lower() not in {"0", "false", "no", "off"}
+regression_percent = float(sys.argv[8])
 
 workflows = [
     {
@@ -161,6 +176,8 @@ p95_default_max_ms = int(
 p95_min_samples = int(env.get("GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES", "8"))
 if p95_min_samples < 1:
     raise SystemExit("agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES must be >= 1")
+if regression_percent < 0:
+    raise SystemExit("agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT must be >= 0")
 
 backend_pattern = re.compile(r':backend\s+"([^"]+)"')
 replay_pattern = re.compile(r"replay=([^\r\n]+)")
@@ -180,32 +197,41 @@ def p95(values: list[int]) -> int:
     index = int(round(0.95 * (len(sorted_values) - 1)))
     return sorted_values[index]
 
-def load_workflow_duration_history(path: pathlib.Path, current_runtime_profile: str) -> dict[str, list[int]]:
+def load_workflow_duration_history(
+    paths: list[pathlib.Path], current_runtime_profile: str
+) -> dict[str, list[int]]:
     durations: dict[str, list[int]] = {}
-    if not path.exists():
-        return durations
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line:
+    for path in paths:
+        if not path.exists():
             continue
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if entry.get("runtime_profile") != current_runtime_profile:
-            continue
-        wf_durations = entry.get("workflow_durations_ms")
-        if not isinstance(wf_durations, dict):
-            continue
-        for name, value in wf_durations.items():
-            if not isinstance(name, str) or not isinstance(value, int):
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line:
                 continue
-            durations.setdefault(name, []).append(value)
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("runtime_profile") != current_runtime_profile:
+                continue
+            wf_durations = entry.get("workflow_durations_ms")
+            if not isinstance(wf_durations, dict):
+                continue
+            for name, value in wf_durations.items():
+                if not isinstance(name, str) or not isinstance(value, int):
+                    continue
+                durations.setdefault(name, []).append(value)
     return durations
 
 started = time.time()
 workflow_reports = []
-history_durations = load_workflow_duration_history(history_path, runtime_profile)
+if require_min_history and not baseline_history_path.exists():
+    raise SystemExit(
+        f"agent-capability-gauntlet: baseline history file missing: {baseline_history_path}"
+    )
+history_durations = load_workflow_duration_history(
+    [baseline_history_path, history_path], runtime_profile
+)
 
 for wf in workflows:
     max_ms = int(env.get(f"GENESIS_AGENT_GAUNTLET_MAX_MS_{wf['name'].upper()}", default_max_ms))
@@ -243,12 +269,32 @@ for wf in workflows:
     gpu_backend_ok = (not gpu_backend_required) or (reported_backend == "device-runtime")
     replay_signal = replay_value is not None
     duration_ok = duration_ms <= max_ms
-    wf_samples = history_durations.get(wf["name"], []) + [duration_ms]
+    wf_history_samples = history_durations.get(wf["name"], [])
+    wf_samples = wf_history_samples + [duration_ms]
+    history_min_ok = len(wf_samples) >= p95_min_samples
     p95_duration_ms = p95(wf_samples)
     p95_enforced = len(wf_samples) >= p95_min_samples
     p95_ok = (not p95_enforced) or (p95_duration_ms <= p95_budget_ms)
+    baseline_p95_ms = p95(wf_history_samples) if wf_history_samples else None
+    regression_enforced = baseline_p95_ms is not None and len(wf_history_samples) >= p95_min_samples
+    regression_budget_ms = (
+        int(math.ceil(baseline_p95_ms * (1.0 + regression_percent / 100.0)))
+        if regression_enforced and baseline_p95_ms is not None
+        else None
+    )
+    regression_ok = (
+        True if regression_budget_ms is None else duration_ms <= regression_budget_ms
+    )
     exit_ok = proc.returncode == 0
-    ok = exit_ok and replay_signal and duration_ok and gpu_backend_ok and p95_ok
+    ok = (
+        exit_ok
+        and replay_signal
+        and duration_ok
+        and gpu_backend_ok
+        and p95_ok
+        and regression_ok
+        and (history_min_ok or (not require_min_history))
+    )
     workflow_reports.append(
         {
             "name": wf["name"],
@@ -270,6 +316,14 @@ for wf in workflows:
             "p95_min_samples": p95_min_samples,
             "p95_sample_count": len(wf_samples),
             "p95_ok": p95_ok,
+            "history_min_ok": history_min_ok,
+            "require_min_history": require_min_history,
+            "baseline_history_sample_count": len(wf_history_samples),
+            "baseline_p95_ms": baseline_p95_ms,
+            "regression_percent": regression_percent,
+            "regression_enforced": regression_enforced,
+            "regression_budget_ms": regression_budget_ms,
+            "regression_ok": regression_ok,
             "gpu_backend_required": gpu_backend_required,
             "gpu_backend": reported_backend,
             "gpu_backend_ok": gpu_backend_ok,
@@ -299,6 +353,12 @@ domain_ok = all(d["ok"] for d in domain_reports)
 all_workflows_ok = workflow_successes == workflow_count
 ok = domain_ok and all_workflows_ok
 p95_failures = [wf["name"] for wf in workflow_reports if not wf["p95_ok"]]
+regression_failures = [wf["name"] for wf in workflow_reports if not wf["regression_ok"]]
+history_min_failures = [
+    wf["name"]
+    for wf in workflow_reports
+    if wf["require_min_history"] and not wf["history_min_ok"]
+]
 
 report = {
     "kind": "genesis/agent-capability-gauntlet-v0.1",
@@ -313,6 +373,11 @@ report = {
     "p95_default_max_ms": p95_default_max_ms,
     "p95_min_samples": p95_min_samples,
     "p95_failures": p95_failures,
+    "baseline_history_path": str(baseline_history_path),
+    "require_min_history": require_min_history,
+    "regression_percent": regression_percent,
+    "regression_failures": regression_failures,
+    "history_min_failures": history_min_failures,
     "profile": profile,
     "runtime_profile": runtime_profile,
     "require_gpu_device_backend": require_gpu_device,
@@ -357,6 +422,12 @@ if not ok:
         wf["name"] for wf in workflow_reports if wf.get("gpu_backend_required") and not wf.get("gpu_backend_ok")
     ]
     failing_p95 = [wf["name"] for wf in workflow_reports if not wf.get("p95_ok")]
+    failing_regression = [wf["name"] for wf in workflow_reports if not wf.get("regression_ok")]
+    failing_history_min = [
+        wf["name"]
+        for wf in workflow_reports
+        if wf.get("require_min_history") and not wf.get("history_min_ok")
+    ]
     failing_domains = [d["domain"] for d in domain_reports if not d["ok"]]
     if failing_workflows:
         print(
@@ -374,6 +445,18 @@ if not ok:
         print(
             "agent-capability-gauntlet: p95 lane budget failures: "
             + ", ".join(failing_p95),
+            file=sys.stderr,
+        )
+    if failing_regression:
+        print(
+            "agent-capability-gauntlet: regression budget failures: "
+            + ", ".join(failing_regression),
+            file=sys.stderr,
+        )
+    if failing_history_min:
+        print(
+            "agent-capability-gauntlet: insufficient per-workflow history for enforcement: "
+            + ", ".join(failing_history_min),
             file=sys.stderr,
         )
     if failing_domains:
