@@ -282,6 +282,12 @@ def dim_critical_gate_truth() -> dict[str, Any]:
             "genesis/production-cli-help-surface-v0.1",
             "production-cli-help-surface",
         ),
+        (
+            "gpu_gfx_headroom_conformance",
+            ".genesis/perf/gpu_gfx_headroom_conformance_report.json",
+            "genesis/gpu-gfx-headroom-conformance-v0.1",
+            "gpu-gfx-headroom-conformance",
+        ),
     ]
     for key, report_rel, expected_kind, label in critical_specs:
         checks.append(label)

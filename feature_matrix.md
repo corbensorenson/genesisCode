@@ -21,7 +21,7 @@ Legend:
 | Artifact-only bootstrap default across WASM host APIs | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| GPU compute + graphics capability surfaces | ✅ (first-class split compute/gfx bundles with explicit cross-over primitives and independent compute-only + gfx-only conformance lanes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute + graphics capability surfaces | ✅ (first-class split compute/gfx bundles with explicit cross-over primitives, independent compute-only + gfx-only conformance lanes, and dedicated non-gfx GPU + XR productization kit contracts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Media/asset pipeline contracts for AI-generated build lanes | ✅ (first-class `core/media::*` hash/image/audio transcode ops + policy gates + `core/kit/media::*` build contracts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Device-backed GPU compute required in release profile | ✅ (policy and lane contracts require `device-runtime`; release/profile health execution now enforces full profile lanes instead of backlog short-circuit, and device conformance remains wired via release lane checks) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Network + process execution as policy-gated capabilities | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -41,20 +41,20 @@ Legend:
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
 | Deployment/bundle target pipeline in core toolchain | ⚠️ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits deterministic runtime-runner bundles today (`runtime_contract/boot/smoke`); platform-native executable packaging/signing lanes remain open in P0.3) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` + `semantic-edit apply-plan` provide deterministic dependency graph export, machine-mergeable patch planning, and obligation-gated plan application with conflict diagnostics) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + executable conformance gates `scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`, `scripts/check_write_genesiscode_skill_distribution.sh`, and `scripts/check_write_genesiscode_skill_conformance.sh`) | ❌ | ❌ | ❌ | ❌ |
+| Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + canonical handbook `docs/write_genesisCode_skill.md` + executable conformance gates `scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`, `scripts/check_write_genesiscode_skill_guide.sh`, `scripts/check_write_genesiscode_skill_distribution.sh`, and `scripts/check_write_genesiscode_skill_conformance.sh`) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | Deterministic non-gfx runtime profiling in core workflow | ✅ (`gcpm profile-runtime` emits task/IO/memory profile artifacts with history-aware p95 regression gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Generative workload regression gates with enforced historical baselines | ✅ (`agent_generative_workloads*` lanes are fail-closed with seeded baseline histories, per-case minimum-history enforcement, and active regression budgets in native/parity runs) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Perf/hot-path gate operability under constrained local disk headroom | ⚠️ (shared `GENESIS_PERF_DISK_STRICT_MODE=auto|1|0` exists, but recent gauntlet/help-surface runs still failed from temp/disk exhaustion; closure tracked in P0.2 + P1.5) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Perf/hot-path gate operability under constrained local disk headroom | ✅ (shared strict-mode + heavy-gate preflight contracts and dedicated `gpu/gfx` low-headroom conformance lanes are enforced in strict profiles) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Health gate lock-aware cargo scheduling + shared build cache target | ✅ (`check_upgrade_plan_health.sh` partitions cargo/non-cargo gates, shares `CARGO_TARGET_DIR`, and supports profile-scoped cargo warmup orchestration) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Qualified-tool evidence bundles for regulated release | ⚠️ (`gcpm qualify` emits tool-qualification artifacts, but caller-supplied `--test-artifact` hashes are not yet hard-bound to executed run lineage; closure tracked in P1.2) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` enforces snapshot-bound run-manifest lineage from local store (`--test-artifact id=run-manifest-hex64`), validates canonical manifest/artifact integrity, and fails closed on lineage/policy/profile mismatches) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Independent verifier role-separation policy enforcement | ✅ (ref/publish policy classes support required roles + per-role minimums + independence pairs enforced on valid attestations) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Standards-oriented assurance profile packs (DO-178C/NASA/IEC) | ⚠️ (`gcpm assurance-pack` profile lanes and deterministic crosswalk contracts exist, but high-assurance lineage/independence closure remains open in P1.2 + P2.2) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Standards-oriented assurance profile packs (DO-178C/NASA/IEC) | ⚠️ (`gcpm assurance-pack` profile lanes and deterministic crosswalk contracts exist, but high-assurance object-equivalence and independent-verifier closure remain open in P2.2) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
@@ -68,18 +68,9 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P0.2`: GPU/GFX gauntlet workflows are not robust under constrained temp/disk headroom.
 - `P0.3`: `gcpm build --target` emits runtime-runner contracts, not platform-native executable artifacts.
-- `P1.2`: Tool qualification test artifacts are not cryptographically bound to executed test lineage.
 - `P1.3`: `gcpm` dependency resolution remains local-only v0.1 without semver/range solving.
-- `P1.4`: Production CLI help-surface gate p95 remains over budget without sufficient release-build reuse.
-- `P1.5`: Heavy gate execution lacks shared disk-headroom preflight/recovery contracts.
-- `P1.6`: High-churn Rust surfaces remain too large for optimal agent-first maintenance loops.
-- `P1.7`: Documentation/peripheral guidance still needs consolidation into a tighter agent-first spine.
-- `P1.8`: Bootstrap retirement and fallback removal policy is not fully closed for production enforcement.
-- `P2.1`: Canonical `write_genesisCode_skill.md` + cross-agent conformance pack is not yet published.
 - `P2.2`: Assurance packs require stronger object/lineage/independence closure for high-assurance programs.
-- `P2.3`: Non-graphics GPU and XR/WebXR productization templates are not fully closed end-to-end.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

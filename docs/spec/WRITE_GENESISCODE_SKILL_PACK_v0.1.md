@@ -103,8 +103,11 @@ Normative content:
 
 - prompt templates under `docs/skill_pack/write_genesiscode_v1/prompts/`
 - runnable domain recipes under `docs/skill_pack/write_genesiscode_v1/recipes/`
+- project templates under `docs/skill_pack/write_genesiscode_v1/templates/`
 - deterministic distribution verifier:
   `scripts/check_write_genesiscode_skill_distribution.sh`
+- gpu/xr productization verifier:
+  `scripts/check_gpu_xr_productization_kits.sh`
 
 ## Benchmark Suite
 
@@ -113,6 +116,9 @@ Required executable benchmark workloads for AI-authored GenesisCode quality:
 - Service workflow: `examples/agent_service_workflow/workflow.sh`
 - Game-loop workflow: `examples/agent_long_running_gfx_loop_workflow/workflow.sh`
 - GPU compute workflow: `examples/agent_gpu_compute_workflow/workflow.sh`
+- GPU non-graphics workflow: `examples/agent_compute_workflow/workflow.sh`
+- XR runtime workflow: `examples/agent_xr_runtime_workflow/workflow.sh`
+- XR browser conformance workflow: `scripts/check_webxr_browser_conformance.sh`
 - Package workflow: `examples/agent_multi_package_publish_workflow/workflow.sh`
 - Mutation workload suite: `scripts/check_agent_generative_workloads.sh`
 
@@ -164,7 +170,9 @@ Every substantial turn should include:
 
 Gate:
 - `scripts/check_write_genesiscode_skill_pack.sh`
+- `scripts/check_write_genesiscode_skill_guide.sh`
 - `scripts/check_write_genesiscode_skill_distribution.sh`
 - `scripts/check_write_genesiscode_skill_conformance.sh`
+- `scripts/check_gpu_xr_productization_kits.sh`
 
 The gate fails closed on contract drift, missing pack artifacts, or missing bundle/onboarding links.

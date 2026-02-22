@@ -1,7 +1,7 @@
 version = 1
 
 # Fail-closed decomposition progress budget for high-churn Rust production modules.
-target_max_lines = 1000
+target_max_lines = 990
 
 module_paths = [
   "crates/gc_cli_driver/src/cmd_selfhost.rs",
@@ -10,4 +10,8 @@ module_paths = [
   "crates/gc_gfx/src/lib.rs",
   "crates/gc_prelude/src/prelude.rs",
   "crates/gc_cli_driver/src/semantic_workspace.rs",
+  "crates/gc_patches/src/lib.rs",
+  "crates/gc_kernel/src/eval.rs",
+  "crates/gc_cli_driver/src/cmd_vcs.rs",
+  "crates/gc_effects/src/runner_host_bridge.rs",
 ]

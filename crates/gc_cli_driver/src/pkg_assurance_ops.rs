@@ -7,9 +7,12 @@ use gc_pkg::PackageManifest;
 use gc_vcs::validate_hex_hash;
 
 use crate::pkg_workspace_ops::LocalPkgResult;
+#[path = "pkg_assurance_ops_qualification.rs"]
+mod pkg_assurance_ops_qualification;
 
 pub(crate) struct ToolQualificationArgs<'a> {
     pub commit: Option<&'a str>,
+    pub snapshot: &'a str,
     pub policy: Option<&'a str>,
     pub profile: &'a str,
     pub requirement_ids: &'a [String],
@@ -239,11 +242,22 @@ pub(crate) fn handle_tool_qualification(
     if let Some(c) = args.commit {
         validate_hex_hash(c).map_err(|e| format!("invalid --commit hash: {e}"))?;
     }
+    validate_hex_hash(args.snapshot).map_err(|e| format!("invalid --snapshot hash: {e}"))?;
     if let Some(p) = args.policy {
         validate_hex_hash(p).map_err(|e| format!("invalid --policy hash: {e}"))?;
     }
     let reqs = normalize_requirement_ids(args.requirement_ids)?;
-    let tests = parse_test_artifacts(args.test_artifacts)?;
+    let cwd = std::env::current_dir().map_err(|e| format!("current_dir: {e}"))?;
+    let tests = pkg_assurance_ops_qualification::resolve_qualification_tests(
+        args.test_artifacts,
+        pkg_assurance_ops_qualification::QualificationLineageContext {
+            commit: args.commit,
+            snapshot: args.snapshot,
+            policy: args.policy,
+            profile: args.profile,
+            store_dir: &cwd.join(".genesis").join("store"),
+        },
+    )?;
     let tool_specs = parse_tools(args.tools)?;
 
     let mut tools_term: Vec<Term> = Vec::new();
@@ -273,13 +287,37 @@ pub(crate) fn handle_tool_qualification(
 
     let tests_term: Vec<Term> = tests
         .iter()
-        .map(|(id, artifact)| {
+        .map(|test| {
             Term::Map(
                 [
-                    (TermOrdKey(Term::symbol(":id")), Term::Str(id.clone())),
+                    (TermOrdKey(Term::symbol(":id")), Term::Str(test.id.clone())),
                     (
                         TermOrdKey(Term::symbol(":artifact")),
-                        Term::Str(artifact.clone()),
+                        Term::Str(test.artifact.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":manifest")),
+                        Term::Str(test.manifest_hash.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":run-id")),
+                        Term::Str(test.run_id.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":runner")),
+                        Term::Str(test.runner.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":profile")),
+                        Term::Str(args.profile.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":snapshot")),
+                        Term::Str(test.snapshot.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":policy")),
+                        test.policy.clone().map(Term::Str).unwrap_or(Term::Nil),
                     ),
                     (TermOrdKey(Term::symbol(":result")), Term::symbol(":pass")),
                 ]
@@ -332,6 +370,10 @@ pub(crate) fn handle_tool_qualification(
                                 .unwrap_or(Term::Nil),
                         ),
                         (
+                            TermOrdKey(Term::symbol(":snapshot")),
+                            Term::Str(args.snapshot.to_string()),
+                        ),
+                        (
                             TermOrdKey(Term::symbol(":policy")),
                             args.policy
                                 .map(|s| Term::Str(s.to_string()))
@@ -368,7 +410,6 @@ pub(crate) fn handle_tool_qualification(
         .map_err(|e| format!("write {}: {e}", args.out.display()))?;
     let evidence_h = blake3::hash(evidence_src.as_bytes()).to_hex().to_string();
     if !args.no_store {
-        let cwd = std::env::current_dir().map_err(|e| format!("current_dir: {e}"))?;
         let store = ArtifactStore::open(&cwd.join(".genesis").join("store"))
             .map_err(|e| format!("open store: {e}"))?;
         let _ = store
@@ -666,31 +707,6 @@ fn normalize_requirement_ids(ids: &[String]) -> Result<Vec<String>, String> {
     };
     if out.iter().any(|s| s.is_empty()) {
         return Err("empty requirement id in --requirement".to_string());
-    }
-    out.sort();
-    out.dedup();
-    Ok(out)
-}
-
-fn parse_test_artifacts(xs: &[String]) -> Result<Vec<(String, String)>, String> {
-    if xs.is_empty() {
-        return Err(
-            "at least one --test-artifact id=<64-hex> is required for tool qualification"
-                .to_string(),
-        );
-    }
-    let mut out = Vec::new();
-    for raw in xs {
-        let (id, h) = raw
-            .split_once('=')
-            .ok_or_else(|| format!("invalid --test-artifact `{raw}`; expected id=<64-hex>"))?;
-        let id = id.trim();
-        let h = h.trim();
-        if id.is_empty() {
-            return Err(format!("invalid --test-artifact `{raw}`: empty id"));
-        }
-        validate_hex_hash(h).map_err(|e| format!("invalid --test-artifact `{raw}` hash: {e}"))?;
-        out.push((id.to_string(), h.to_string()));
     }
     out.sort();
     out.dedup();

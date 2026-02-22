@@ -2,12 +2,53 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
 fn write_caps(dir: &Path) -> PathBuf {
     let caps = dir.join("caps.toml");
     fs::write(&caps, "allow = []\n").unwrap();
     caps
+}
+
+fn put_store_term(dir: &Path, src: &str) -> String {
+    let term = parse_term(src).unwrap();
+    let canonical = print_term(&term) + "\n";
+    let hash = blake3::hash(canonical.as_bytes()).to_hex().to_string();
+    let store_dir = dir.join(".genesis").join("store");
+    fs::create_dir_all(&store_dir).unwrap();
+    fs::write(store_dir.join(&hash), canonical.as_bytes()).unwrap();
+    hash
+}
+
+fn write_run_manifest(
+    dir: &Path,
+    test_id: &str,
+    profile: &str,
+    snapshot_h: &str,
+    policy_h: &str,
+    artifact_h: &str,
+) -> String {
+    put_store_term(
+        dir,
+        &format!(
+            r#"
+{{
+  :kind "genesis/qualification-test-run-manifest-v0.1"
+  :test-id "{test_id}"
+  :artifact "{artifact_h}"
+  :result :pass
+  :profile "{profile}"
+  :run-id "lineage-pack-01"
+  :runner "gcpm-assurance-pack-tests"
+  :release {{
+    :commit nil
+    :snapshot "{snapshot_h}"
+    :policy "{policy_h}"
+  }}
+}}
+"#
+        ),
+    )
 }
 
 fn write_minimal_package(dir: &Path) {
@@ -73,18 +114,27 @@ fn emit_trace(dir: &Path, caps: &Path, snapshot_h: &str, policy_h: &str, out: &s
 fn emit_qualification(
     dir: &Path,
     caps: &Path,
+    snapshot_h: &str,
     policy_h: &str,
-    test_artifact_h: &str,
+    run_manifest_h: &str,
     tool_path: &Path,
     out: &str,
 ) {
-    let test_artifact = format!("selfhost-boundary={test_artifact_h}");
+    let test_artifact = format!("selfhost-boundary={run_manifest_h}");
     let tool = format!("genesis={}", tool_path.display());
     cargo_bin_cmd!("genesis")
         .current_dir(dir)
         .args(["--json", "gcpm", "--caps"])
         .arg(caps)
-        .args(["qualify", "--policy", policy_h, "--profile", "dal-a"])
+        .args([
+            "qualify",
+            "--snapshot",
+            snapshot_h,
+            "--policy",
+            policy_h,
+            "--profile",
+            "dal-a",
+        ])
         .args(["--requirement", "TQ-1", "--test-artifact"])
         .arg(&test_artifact)
         .args(["--tool"])
@@ -106,14 +156,33 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
 
     let snapshot_h = "a".repeat(64);
     let policy_h = "b".repeat(64);
-    let test_artifact_h = "c".repeat(64);
+    let test_artifact_h = put_store_term(
+        dir,
+        r#"
+{
+  :kind "genesis/unit-tests-v0.2"
+  :ok true
+  :package "mini"
+  :tests []
+}
+"#,
+    );
+    let run_manifest_h = write_run_manifest(
+        dir,
+        "selfhost-boundary",
+        "dal-a",
+        &snapshot_h,
+        &policy_h,
+        &test_artifact_h,
+    );
 
     emit_trace(dir, &caps, &snapshot_h, &policy_h, "trace.gc");
     emit_qualification(
         dir,
         &caps,
+        &snapshot_h,
         &policy_h,
-        &test_artifact_h,
+        &run_manifest_h,
         &tool_path,
         "qualification.gc",
     );
@@ -243,14 +312,33 @@ fn gcpm_assurance_pack_rejects_insufficient_profile_coverage() {
 
     let snapshot_h = "a".repeat(64);
     let policy_h = "b".repeat(64);
-    let test_artifact_h = "c".repeat(64);
+    let test_artifact_h = put_store_term(
+        dir,
+        r#"
+{
+  :kind "genesis/unit-tests-v0.2"
+  :ok true
+  :package "mini"
+  :tests []
+}
+"#,
+    );
+    let run_manifest_h = write_run_manifest(
+        dir,
+        "selfhost-boundary",
+        "dal-a",
+        &snapshot_h,
+        &policy_h,
+        &test_artifact_h,
+    );
 
     emit_trace(dir, &caps, &snapshot_h, &policy_h, "trace.gc");
     emit_qualification(
         dir,
         &caps,
+        &snapshot_h,
         &policy_h,
-        &test_artifact_h,
+        &run_manifest_h,
         &tool_path,
         "qualification.gc",
     );

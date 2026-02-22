@@ -36,6 +36,8 @@ This package is the runnable companion to:
   - `docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md`
   - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md`
   - `docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md`
+  - `docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md` (also used for non-graphics `gpu_data_simulation_workflow`)
+  - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md` (also used for `xr_deploy_test_workflow`)
 - Deterministic verification entrypoint:
   - `scripts/check_write_genesiscode_skill_distribution.sh`
 
@@ -50,6 +52,7 @@ When `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1`, the verification script must e
   - service
   - game-loop/graphics
   - gpu-compute
+  - gpu non-graphics compute
   - package publish/sync
   - deployment targets
   - failure recovery
@@ -57,6 +60,7 @@ When `GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1`, the verification script must e
   - assurance
   - plugin/ffi
   - xr runtime
+  - xr productization/deploy-test
   - durable data
 - At least one fault-injection recipe (`mode = "fault-injection"`).
 

@@ -6,7 +6,7 @@ This is the canonical entrypoint for project documentation.
 
 ## Start Here
 
-- `docs/AGENT_ONBOARDING_v0.1.md` - minimal stable retrieval path for AI coding agents.
+- `docs/AGENT_ONBOARDING_v0.1.md` - single agent-first onboarding spine (semantics, runtime, packaging, assurance, deployment).
 - `docs/GETTING_STARTED.md` - local setup and first workflows.
 - `docs/PAPER_v0.2.md` - language thesis and architecture.
 - `docs/TECH_HANDOFF.md` - implementation handoff details.
@@ -19,6 +19,7 @@ This is the canonical entrypoint for project documentation.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
 - `.genesis/perf/selfhost_readiness_report.json` - machine-readable selfhost readiness scorecard.
 - `.genesis/perf/doc_complexity_report.json` - machine-readable docs complexity budget report.
+- `.genesis/perf/selfhost_gc_migration_plan_report.json` - machine-readable migration-plan drift report for high-churn selfhost surfaces.
 - `feature_matrix.md` - capability comparison vs common languages.
 - `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
 - `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md` - numeric docs complexity targets.
@@ -61,6 +62,7 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/WASM.md`
   - `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
   - `docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md`
+  - `docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`
   - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
@@ -77,6 +79,7 @@ This is the canonical entrypoint for project documentation.
 - `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `docs/spec/GPU_GFX_BUNDLE_v0.1.md` (`Demo Workloads` section for runnable `.gc` gfx demos)
+- `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md` (`Productization Kits (Non-Gfx + XR)` section)
 - `docs/spec/CONCURRENCY_v0.1.md`
 - `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`
 

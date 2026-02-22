@@ -2,12 +2,53 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
 fn write_caps(dir: &Path) -> PathBuf {
     let caps = dir.join("caps.toml");
     fs::write(&caps, "allow = []\n").unwrap();
     caps
+}
+
+fn put_store_term(dir: &Path, src: &str) -> String {
+    let term = parse_term(src).unwrap();
+    let canonical = print_term(&term) + "\n";
+    let hash = blake3::hash(canonical.as_bytes()).to_hex().to_string();
+    let store_dir = dir.join(".genesis").join("store");
+    fs::create_dir_all(&store_dir).unwrap();
+    fs::write(store_dir.join(&hash), canonical.as_bytes()).unwrap();
+    hash
+}
+
+fn write_run_manifest(
+    dir: &Path,
+    test_id: &str,
+    profile: &str,
+    snapshot_h: &str,
+    policy_h: &str,
+    artifact_h: &str,
+) -> String {
+    put_store_term(
+        dir,
+        &format!(
+            r#"
+{{
+  :kind "genesis/qualification-test-run-manifest-v0.1"
+  :test-id "{test_id}"
+  :artifact "{artifact_h}"
+  :result :pass
+  :profile "{profile}"
+  :run-id "lineage-run-01"
+  :runner "gcpm-assurance-e2e"
+  :release {{
+    :commit nil
+    :snapshot "{snapshot_h}"
+    :policy "{policy_h}"
+  }}
+}}
+"#
+        ),
+    )
 }
 
 #[test]
@@ -139,8 +180,27 @@ fn gcpm_qualify_emits_deterministic_tool_qualification_evidence() {
     let tool_bytes = b"genesis-toolchain-binary";
     fs::write(&tool_path, tool_bytes).unwrap();
     let expected_tool_hash = blake3::hash(tool_bytes).to_hex().to_string();
+    let snapshot_h = "e".repeat(64);
     let policy_h = "c".repeat(64);
-    let test_artifact_h = "d".repeat(64);
+    let test_artifact_h = put_store_term(
+        dir,
+        r#"
+{
+  :kind "genesis/unit-tests-v0.2"
+  :ok true
+  :package "mini"
+  :tests []
+}
+"#,
+    );
+    let run_manifest_h = write_run_manifest(
+        dir,
+        "selfhost-boundary",
+        "dal-a",
+        &snapshot_h,
+        &policy_h,
+        &test_artifact_h,
+    );
     let out_path = dir.join("qualification.gc");
 
     let out = cargo_bin_cmd!("genesis")
@@ -149,6 +209,8 @@ fn gcpm_qualify_emits_deterministic_tool_qualification_evidence() {
         .arg(&caps)
         .args([
             "qualify",
+            "--snapshot",
+            &snapshot_h,
             "--policy",
             &policy_h,
             "--profile",
@@ -156,7 +218,7 @@ fn gcpm_qualify_emits_deterministic_tool_qualification_evidence() {
             "--requirement",
             "TQ-1",
             "--test-artifact",
-            &format!("selfhost-boundary={test_artifact_h}"),
+            &format!("selfhost-boundary={run_manifest_h}"),
             "--tool",
             &format!("genesis={}", tool_path.display()),
             "--out",
@@ -214,6 +276,8 @@ fn gcpm_qualify_emits_deterministic_tool_qualification_evidence() {
         .arg(&caps)
         .args([
             "qualify",
+            "--snapshot",
+            &snapshot_h,
             "--policy",
             &policy_h,
             "--profile",
@@ -221,7 +285,7 @@ fn gcpm_qualify_emits_deterministic_tool_qualification_evidence() {
             "--requirement",
             "TQ-1",
             "--test-artifact",
-            &format!("selfhost-boundary={test_artifact_h}"),
+            &format!("selfhost-boundary={run_manifest_h}"),
             "--tool",
             &format!("genesis={}", tool_path.display()),
             "--out",

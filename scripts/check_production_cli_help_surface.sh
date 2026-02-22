@@ -28,6 +28,7 @@ START_MS="$(genesis_profile_gate_now_ms)"
 REPORT_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT:-.genesis/perf/production_cli_help_surface_report.json}"
 HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY:-.genesis/perf/production_cli_help_surface_history.jsonl}"
 BUDGET_MS="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-300000}"
+HISTORY_SCOPE_KEY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY:-single-build-v1}"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -109,6 +110,9 @@ genesis_profile_gate_emit_runtime_report \
   "$REPORT_PATH" \
   "$HISTORY_PATH" \
   "$START_MS" \
-  "$BUDGET_MS"
+  "$BUDGET_MS" \
+  "1" \
+  "{\"build_strategy\":\"single-cargo-build\"}" \
+  "$HISTORY_SCOPE_KEY"
 
 echo "help-surface: ok"

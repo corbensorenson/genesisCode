@@ -183,7 +183,10 @@ pub(super) fn build_selfhost_cutover_rows_from_cli() -> Result<Vec<SelfhostCutov
             return Err(cli_err(
                 EX_INTERNAL,
                 "selfhost/dashboard",
-                format!("duplicate selfhost cutover metadata entry for `{}`", meta.cli_name),
+                format!(
+                    "duplicate selfhost cutover metadata entry for `{}`",
+                    meta.cli_name
+                ),
             ));
         }
     }

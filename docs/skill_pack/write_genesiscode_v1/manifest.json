@@ -3,11 +3,12 @@
   "version": "1",
   "distribution_requirements": {
     "min_prompts": 10,
-    "min_recipes": 11,
+    "min_recipes": 13,
     "required_recipe_domains": [
       "service",
       "graphics",
       "gpu_compute",
+      "gpu_non_graphics",
       "package_publish_sync",
       "deployment_targets",
       "failure_recovery",
@@ -15,6 +16,7 @@
       "assurance",
       "plugin_ffi",
       "xr_runtime",
+      "xr_productization",
       "durable_data"
     ],
     "require_fault_injection_recipe": true,
@@ -138,6 +140,20 @@
       "path": "recipes/data_workflow.md",
       "workflow": "examples/agent_durable_data_workflow/workflow.sh",
       "domain": "durable_data",
+      "mode": "standard"
+    },
+    {
+      "id": "gpu_data_simulation_workflow",
+      "path": "recipes/gpu_compute_workflow.md",
+      "workflow": "examples/agent_compute_workflow/workflow.sh",
+      "domain": "gpu_non_graphics",
+      "mode": "standard"
+    },
+    {
+      "id": "xr_deploy_test_workflow",
+      "path": "recipes/xr_workflow.md",
+      "workflow": "scripts/check_gpu_xr_productization_kits.sh",
+      "domain": "xr_productization",
       "mode": "standard"
     }
   ],

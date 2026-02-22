@@ -49,6 +49,7 @@ Required fields:
 - `:status :qualified`
 - `:release`
   - `:commit <hex64>|nil` optional commit hash binding
+  - `:snapshot <hex64>` required release snapshot binding
   - `:policy <hex64>|nil` optional policy hash binding
 - `:requirements [<string> ...]` non-empty
 - `:tools` non-empty vector of maps:
@@ -59,12 +60,34 @@ Required fields:
 - `:qualification-tests` non-empty vector of maps:
   - `:id <string>`
   - `:artifact <hex64>`
+  - `:manifest <hex64>` run-manifest artifact hash
+  - `:run-id <string>`
+  - `:runner <string>`
+  - `:profile <string>`
+  - `:snapshot <hex64>` (must match `:release/:snapshot`)
+  - `:policy <hex64>|nil`
   - `:result :pass`
+
+Qualification run-manifest linkage requirements:
+- Each `--test-artifact id=<run-manifest-hex64>` must resolve from local `.genesis/store`.
+- Run manifest `:kind` must be `genesis/qualification-test-run-manifest-v0.1`.
+- Run manifest must bind:
+  - `:test-id` (must equal CLI `<id>`),
+  - `:artifact` (must exist in local store),
+  - `:result :pass`,
+  - `:profile` (must equal qualification profile),
+  - `:release/:snapshot` (must equal qualification `--snapshot`),
+  - `:release/:policy` (must equal qualification `--policy` when provided),
+  - optional `:release/:commit` (must equal qualification `--commit` when provided),
+  - run metadata fields `:run-id` and `:runner`.
+- Referenced test artifact payload must parse as CoreForm map and declare `:ok true`.
 
 Policy gate behavior:
 - if `:release/:commit` is present, it MUST match the protected commit hash
+- `:release/:snapshot` MUST match the protected commit result snapshot
 - if `:release/:policy` is present and policy gating provided a policy hash, it MUST match
 - test entries with non-`:pass` results fail closed
+- qualification-test lineage fields (`:manifest`, `:run-id`, `:runner`, `:snapshot`) are required and validated fail-closed
 
 Pre-commit binding:
 - `:release/:commit = nil` is allowed for pre-commit qualification evidence attachment.

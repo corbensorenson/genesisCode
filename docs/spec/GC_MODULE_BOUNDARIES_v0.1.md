@@ -53,3 +53,34 @@ Current policy tracks:
 - Smaller, domain-scoped modules improve agent planning and reduce edit conflicts.
 - Stable boundaries reduce prompt context size and increase rewrite reliability.
 - Budget gates prevent silent drift into monolithic files that are hard for both agents and humans to maintain.
+
+## Selfhost Migration Plan (High-Churn Rust -> GC)
+
+Goal: reduce high-churn Rust production ownership by moving behavior into GC-authored modules where parity is proven.
+
+Phase model:
+
+- `phase-0`: extraction planning complete, no behavior moved yet.
+- `phase-1`: shared contract/data model moved to GC modules with parity harness checks.
+- `phase-2`: runtime dispatch moved to GC-first path, Rust path retained as parity-only sidecar.
+- `phase-3`: Rust implementation removed from production path; historical logic archived under `old_bootstrap/` or parity-only test harnesses.
+
+| Rust module | Target GC module(s) | Parity evidence gate | Phase | Status |
+|---|---|---|---|---|
+| `crates/gc_cli_driver/src/cmd_selfhost.rs` | `selfhost/toolchain.gc`, `selfhost/toolchain_manifest.gc` | `bash scripts/check_selfhost_readiness_scorecard.sh` | `phase-1` | `in-progress` |
+| `crates/gc_cli_driver/src/pkg_workspace_ops.rs` | `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-1` | `in-progress` |
+| `crates/gc_obligations/src/obligation_exec.rs` | `prelude/modules/30_service_orchestration.gc`, `prelude/modules/31_data_pipeline.gc` | `bash scripts/check_agent_generative_workloads.sh` | `phase-1` | `planned` |
+| `crates/gc_gfx/src/lib.rs` | `prelude/modules/33_game_loop.gc`, `prelude/modules/34_xr_workflow.gc` | `bash scripts/check_gfx_runtime_profile.sh` | `phase-1` | `in-progress` |
+| `crates/gc_prelude/src/prelude.rs` | `prelude/modules/manifest.toml` (module-surface split) | `bash scripts/check_prelude_capability_coverage.sh` | `phase-1` | `in-progress` |
+| `crates/gc_cli_driver/src/semantic_workspace.rs` | `prelude/modules/31_data_pipeline.gc`, `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-1` | `planned` |
+| `crates/gc_patches/src/lib.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_task_concurrency_stress.sh` | `phase-0` | `planned` |
+| `crates/gc_kernel/src/eval.rs` | `selfhost/toolchain.gc` (semantic ownership), `prelude/modules/00_core_media.gc` (data contracts) | `bash scripts/check_selfhost_boundary.sh --strict` | `phase-0` | `planned` |
+| `crates/gc_cli_driver/src/cmd_vcs.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_workflow_runtime_parity.sh` | `phase-0` | `planned` |
+| `crates/gc_effects/src/runner_host_bridge.rs` | `prelude/modules/10_browser_host.gc`, `prelude/modules/10_xr_host.gc` | `bash scripts/check_host_bridge_fault_injection.sh` | `phase-1` | `in-progress` |
+
+Exit criteria:
+
+1. Target GC module path is live in production authoring flow.
+2. Parity evidence gate is green in strict profile lanes.
+3. Rust path is no longer on production critical path (parity-only or archived).
+4. `policies/source_decomposition_progress.toml` is updated in the same change.

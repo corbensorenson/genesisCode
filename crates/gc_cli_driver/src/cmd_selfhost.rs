@@ -19,18 +19,9 @@ pub(super) fn cmd_selfhost_dashboard(
     let rows = build_selfhost_cutover_rows_from_cli()?;
 
     let total_commands = rows.len();
-    let routed_count = rows
-        .iter()
-        .filter(|r| r.selfhost_routed)
-        .count();
-    let default_selfhost_count = rows
-        .iter()
-        .filter(|r| r.default_selfhost)
-        .count();
-    let fast_path_total = rows
-        .iter()
-        .filter(|r| r.fast_path_required)
-        .count();
+    let routed_count = rows.iter().filter(|r| r.selfhost_routed).count();
+    let default_selfhost_count = rows.iter().filter(|r| r.default_selfhost).count();
+    let fast_path_total = rows.iter().filter(|r| r.fast_path_required).count();
     let fast_path_default_ok = rows
         .iter()
         .filter(|r| r.fast_path_required)
@@ -43,10 +34,7 @@ pub(super) fn cmd_selfhost_dashboard(
         .map(|row| {
             Term::Map(
                 [
-                    (
-                        TermOrdKey(Term::symbol(":cmd")),
-                        Term::Str(row.cmd.clone()),
-                    ),
+                    (TermOrdKey(Term::symbol(":cmd")), Term::Str(row.cmd.clone())),
                     (
                         TermOrdKey(Term::symbol(":fast-path-required")),
                         Term::Bool(row.fast_path_required),

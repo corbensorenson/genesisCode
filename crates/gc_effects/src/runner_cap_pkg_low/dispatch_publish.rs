@@ -302,6 +302,7 @@ pub(super) fn dispatch_publish(
                 }
                 let ctx = gc_vcs::ToolQualificationGateContext {
                     commit_hash: &commit_hex,
+                    snapshot_hash: &commit.result,
                     policy_hash: Some(&policy_h),
                 };
                 for t in &tool_qualification_terms {

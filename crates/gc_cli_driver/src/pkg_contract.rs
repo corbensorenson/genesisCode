@@ -135,11 +135,12 @@ mod tests {
             },
             PkgCmd::Qualify {
                 commit: None,
+                snapshot: "a".repeat(64),
                 policy: Some("b".repeat(64)),
                 profile: "release-full".to_string(),
                 requirements: vec!["TQ-1".to_string()],
                 test_artifacts: vec![
-                    "qual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    "qual=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
                         .to_string(),
                 ],
                 tools: vec!["genesis=./target/debug/genesis".to_string()],

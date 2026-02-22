@@ -3,6 +3,7 @@
 Last updated: 2026-02-22
 
 Purpose: provide a minimal, stable retrieval path for AI coding agents.
+This file is the single agent-first onboarding spine.
 
 ## Canonical Read Order (Required)
 
@@ -16,6 +17,19 @@ Purpose: provide a minimal, stable retrieval path for AI coding agents.
 8. `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`
 9. `upgrade_plan.md`
 
+## Agent-First Onboarding Spine (Required)
+
+1. Language semantics:
+`docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`, `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
+2. Runtime profiles:
+`docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`, `docs/spec/TESTING_BUNDLE_v0.1.md`
+3. Packaging and deployment:
+`docs/spec/GCPM_BUNDLE_v0.1.md`, `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`
+4. Assurance and traceability:
+`docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`, `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`, `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
+5. Active execution risk:
+`upgrade_plan.md`, `docs/status/REDTEAM_REPORT.md`, `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
+
 ## Canonical Domain Sources
 
 - CLI/tooling contracts: `docs/spec/CLI_TOOLING_BUNDLE_v0.1.md`
@@ -23,6 +37,7 @@ Purpose: provide a minimal, stable retrieval path for AI coding agents.
 - Runtime/capability/host contracts: `docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md`
 - GPU/gfx contracts: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
 - GPU compute contracts: `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+- GPU/XR productization templates + lanes: `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md` (`Productization Kits (Non-Gfx + XR)` section)
 - GFX runtime contracts: `docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md`
 - Test/perf/release lanes: `docs/spec/TESTING_BUNDLE_v0.1.md`
 - Agent authoring entrypoint: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`

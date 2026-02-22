@@ -219,6 +219,7 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
 
     let qualification_ctx = ToolQualificationGateContext {
         commit_hash: commit_ctx,
+        snapshot_hash: args.snapshot,
         policy_hash: args.policy,
     };
     validate_tool_qualification_evidence(&qualification.term, &qualification_ctx)

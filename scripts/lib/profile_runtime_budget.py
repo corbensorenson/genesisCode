@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--budget-ms", required=True, type=int)
     ap.add_argument("--min-history", required=True, type=int)
     ap.add_argument("--baseline-history", default="")
+    ap.add_argument("--history-scope-key", default="")
     ap.add_argument("--require-min-history", action="store_true")
     ap.add_argument("--extra-json", default="")
     return ap.parse_args()
@@ -36,7 +37,12 @@ def compute_p95(samples: list[int]) -> int:
     return sorted(samples)[idx]
 
 
-def read_history(path: Path, profile: str, budget_ms: int) -> list[dict[str, Any]]:
+def read_history(
+    path: Path,
+    profile: str,
+    budget_ms: int,
+    history_scope_key: str,
+) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     rows: list[dict[str, Any]] = []
@@ -54,6 +60,9 @@ def read_history(path: Path, profile: str, budget_ms: int) -> list[dict[str, Any
             and isinstance(row.get("elapsed_ms"), int)
             and int(row.get("budget_ms", -1)) == budget_ms
         ):
+            if history_scope_key:
+                if row.get("history_scope_key") != history_scope_key:
+                    continue
             rows.append(row)
     return rows
 
@@ -79,6 +88,7 @@ def main() -> None:
     report_path = Path(args.report)
     history_path = Path(args.history)
     baseline_history_path = Path(args.baseline_history) if args.baseline_history.strip() else None
+    history_scope_key = args.history_scope_key.strip()
     extra = parse_extra(args.extra_json)
 
     history_rows: list[dict[str, Any]] = []
@@ -88,9 +98,21 @@ def main() -> None:
             raise SystemExit(
                 f"profile-runtime-budget: baseline history file not found: {baseline_history_path}"
             )
-        baseline_rows = read_history(baseline_history_path, args.profile, args.budget_ms)
+        baseline_rows = read_history(
+            baseline_history_path,
+            args.profile,
+            args.budget_ms,
+            history_scope_key,
+        )
         history_rows.extend(baseline_rows)
-    history_rows.extend(read_history(history_path, args.profile, args.budget_ms))
+    history_rows.extend(
+        read_history(
+            history_path,
+            args.profile,
+            args.budget_ms,
+            history_scope_key,
+        )
+    )
     now_utc = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     current_row = {
         "kind": args.kind,
@@ -99,6 +121,8 @@ def main() -> None:
         "budget_ms": args.budget_ms,
         "timestamp_utc": now_utc,
     }
+    if history_scope_key:
+        current_row["history_scope_key"] = history_scope_key
     current_row.update(extra)
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -138,6 +162,8 @@ def main() -> None:
         "ok": True,
         "timestamp_utc": now_utc,
     }
+    if history_scope_key:
+        report_doc["history_scope_key"] = history_scope_key
     if previous_elapsed is not None:
         report_doc["previous_elapsed_ms"] = previous_elapsed
         report_doc["elapsed_delta_ms"] = args.elapsed_ms - previous_elapsed

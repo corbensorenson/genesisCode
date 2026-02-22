@@ -25,3 +25,24 @@ Shared primitives are explicit and limited:
 
 When a graphics workflow needs compute interop, it must cross via these shared primitives
 rather than collapsing into the compute lane policy.
+
+## Productization Kits (Non-Gfx + XR)
+
+Canonical authoring assets are intentionally consolidated into existing distribution docs to
+avoid markdown sprawl:
+
+- non-graphics GPU data/simulation recipe:
+  - `docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md`
+  - manifest id: `gpu_data_simulation_workflow`
+  - workflow: `examples/agent_compute_workflow/workflow.sh`
+  - heavy-compute variant workflow: `examples/agent_gpu_compute_workflow/workflow.sh`
+- XR deploy/test recipe:
+  - `docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md`
+  - manifest id: `xr_deploy_test_workflow`
+  - workflow: `scripts/check_gpu_xr_productization_kits.sh`
+  - runtime workflow: `examples/agent_xr_runtime_workflow/workflow.sh`
+  - browser conformance workflow: `scripts/check_webxr_browser_conformance.sh`
+
+Determinism enforcement for combined non-gfx GPU + XR lanes:
+
+- `scripts/check_gpu_xr_productization_kits.sh`

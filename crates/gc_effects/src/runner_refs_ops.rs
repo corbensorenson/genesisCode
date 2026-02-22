@@ -225,6 +225,7 @@ pub(crate) fn local_refs_validate_policy_gate(
             }
             let ctx = gc_vcs::ToolQualificationGateContext {
                 commit_hash: h,
+                snapshot_hash: &commit.result,
                 policy_hash: Some(policy_h),
             };
             for t in &tool_qualification_terms {

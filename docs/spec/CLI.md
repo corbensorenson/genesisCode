@@ -185,7 +185,7 @@ CI strict selfhost gates:
   - `genesis gcpm trace --pkg <package.toml> --requirements <requirements.gc> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--out <path>] [--no-store]`
     emits deterministic `:requirements-trace` evidence for protected release traceability gates.
     `--commit` is optional to support pre-commit evidence generation without commit/evidence hash cycles.
-  - `genesis gcpm qualify [--commit <hex64>] [--policy <hex64>] --profile <name> --requirement <id>... --test-artifact <id=hex64>... --tool <name=path>... [--out <path>] [--no-store]`
+  - `genesis gcpm qualify [--commit <hex64>] --snapshot <hex64> [--policy <hex64>] --profile <name> --requirement <id>... --test-artifact <id=run-manifest-hex64>... --tool <name=path>... [--out <path>] [--no-store]`
     emits deterministic `:tool-qualification` evidence for protected release qualification gates.
   - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <custom|do178c-dal-a|do178c-dal-b|nasa-class-a|nasa-class-b|iec62304-class-c> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--independence-attestation <left:right@attestor> ...] [--bundle-dir <dir>] [--out <path>] [--no-store]`
     emits deterministic `:assurance-pack` evidence with profile-gated trace/tool/coverage/independence checks and optional reproducible audit-bundle mirror.

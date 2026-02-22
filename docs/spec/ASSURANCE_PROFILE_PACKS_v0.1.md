@@ -33,7 +33,7 @@ Profile packs are executed through a stable deterministic flow:
 1. Emit requirements trace evidence:
    - `genesis gcpm trace --pkg <package.toml> --requirements <requirements.gc> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>]`
 2. Emit tool qualification evidence:
-   - `genesis gcpm qualify --profile <name> --requirement <id>... --test-artifact <id=hex64>... --tool <name=path>... [--commit <hex64>] [--policy <hex64>]`
+   - `genesis gcpm qualify --profile <name> --snapshot <hex64> --requirement <id>... --test-artifact <id=run-manifest-hex64>... --tool <name=path>... [--commit <hex64>] [--policy <hex64>]`
 3. Emit assurance pack evidence + optional reproducible bundle mirror:
    - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <profile> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--independence-attestation <left:right@attestor> ...] [--bundle-dir <dir>]`
 

@@ -248,6 +248,7 @@ fn file_gate_refs_set(
         }
         let ctx = gc_vcs::ToolQualificationGateContext {
             commit_hash: commit_h,
+            snapshot_hash: &commit.result,
             policy_hash: Some(policy_h),
         };
         for t in &tool_qualification_terms {

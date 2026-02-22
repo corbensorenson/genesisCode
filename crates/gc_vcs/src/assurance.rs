@@ -16,6 +16,7 @@ pub struct RequirementsTraceGateContext<'a> {
 #[derive(Debug, Clone)]
 pub struct ToolQualificationGateContext<'a> {
     pub commit_hash: &'a str,
+    pub snapshot_hash: &'a str,
     pub policy_hash: Option<&'a str>,
 }
 
@@ -180,6 +181,15 @@ pub fn validate_tool_qualification_evidence(
             ));
         }
     }
+    let snapshot_h = req_str(release, ":snapshot", "tool-qualification/:release")?;
+    validate_hex_hash(&snapshot_h)
+        .map_err(|e| format!("tool-qualification/:release :snapshot: {e}"))?;
+    if snapshot_h != ctx.snapshot_hash {
+        return Err(format!(
+            "tool-qualification/:release :snapshot mismatch: expected {}, got {}",
+            ctx.snapshot_hash, snapshot_h
+        ));
+    }
     if let Some(policy_h) = opt_str_or_nil(release, ":policy", "tool-qualification/:release")? {
         validate_hex_hash(&policy_h)
             .map_err(|e| format!("tool-qualification/:release :policy: {e}"))?;
@@ -248,6 +258,71 @@ pub fn validate_tool_qualification_evidence(
         )?;
         validate_hex_hash(&artifact)
             .map_err(|e| format!("tool-qualification:qualification-tests[{i}] :artifact: {e}"))?;
+        let manifest = req_str(
+            tm,
+            ":manifest",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )?;
+        validate_hex_hash(&manifest)
+            .map_err(|e| format!("tool-qualification:qualification-tests[{i}] :manifest: {e}"))?;
+        let run_id = req_str(
+            tm,
+            ":run-id",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )?;
+        if run_id.trim().is_empty() {
+            return Err(format!(
+                "tool-qualification:qualification-tests[{i}] :run-id cannot be empty"
+            ));
+        }
+        let runner = req_str(
+            tm,
+            ":runner",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )?;
+        if runner.trim().is_empty() {
+            return Err(format!(
+                "tool-qualification:qualification-tests[{i}] :runner cannot be empty"
+            ));
+        }
+        let profile = req_str(
+            tm,
+            ":profile",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )?;
+        if profile.trim().is_empty() {
+            return Err(format!(
+                "tool-qualification:qualification-tests[{i}] :profile cannot be empty"
+            ));
+        }
+        let test_snapshot = req_str(
+            tm,
+            ":snapshot",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )?;
+        validate_hex_hash(&test_snapshot)
+            .map_err(|e| format!("tool-qualification:qualification-tests[{i}] :snapshot: {e}"))?;
+        if test_snapshot != snapshot_h {
+            return Err(format!(
+                "tool-qualification:qualification-tests[{i}] :snapshot mismatch with release snapshot"
+            ));
+        }
+        if let Some(policy_h) = opt_str_or_nil(
+            tm,
+            ":policy",
+            &format!("tool-qualification:qualification-tests[{i}]"),
+        )? {
+            validate_hex_hash(&policy_h)
+                .map_err(|e| format!("tool-qualification:qualification-tests[{i}] :policy: {e}"))?;
+            if let Some(expected) = ctx.policy_hash
+                && policy_h != expected
+            {
+                return Err(format!(
+                    "tool-qualification:qualification-tests[{i}] :policy mismatch: expected {}, got {}",
+                    expected, policy_h
+                ));
+            }
+        }
         let result = normalize_symbol_like(&req_sym_or_str(
             tm,
             ":result",
@@ -472,6 +547,7 @@ mod tests {
               :kind :tool-qualification
               :status :qualified
               :release {:commit "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                        :snapshot "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
                         :policy nil}
               :requirements ["TQ-1"]
               :tools [{:name "genesis"
@@ -480,6 +556,12 @@ mod tests {
                        :size-bytes 1}]
               :qualification-tests [{:id "selfhost-boundary"
                                      :artifact "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+                                     :manifest "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                                     :run-id "run-1"
+                                     :runner "gcpm-assurance"
+                                     :profile "dal-a"
+                                     :snapshot "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+                                     :policy nil
                                      :result :pass}]
             }
             "#,
@@ -487,6 +569,7 @@ mod tests {
         .expect("term");
         let ctx = ToolQualificationGateContext {
             commit_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            snapshot_hash: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
             policy_hash: None,
         };
         validate_tool_qualification_evidence(&t, &ctx).expect("valid qualification");
@@ -538,6 +621,7 @@ mod tests {
               :kind :tool-qualification
               :status :qualified
               :release {:commit nil
+                        :snapshot "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
                         :policy nil}
               :requirements ["TQ-1"]
               :tools [{:name "genesis"
@@ -546,6 +630,12 @@ mod tests {
                        :size-bytes 1}]
               :qualification-tests [{:id "selfhost-boundary"
                                      :artifact "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+                                     :manifest "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                                     :run-id "run-1"
+                                     :runner "gcpm-assurance"
+                                     :profile "dal-a"
+                                     :snapshot "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+                                     :policy nil
                                      :result :pass}]
             }
             "#,
@@ -553,6 +643,7 @@ mod tests {
         .expect("term");
         let ctx = ToolQualificationGateContext {
             commit_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            snapshot_hash: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
             policy_hash: None,
         };
         validate_tool_qualification_evidence(&t, &ctx).expect("valid precommit qualification");

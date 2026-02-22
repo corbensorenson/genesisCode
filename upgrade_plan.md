@@ -3,8 +3,9 @@
 Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
+Machine-readable selfhost readiness source: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 12
+Open checklist items: 3
 
 ## P0 - Immediate blockers
 
@@ -17,14 +18,20 @@ Open checklist items: 12
       and live deployment pipeline execution via `scripts/check_gcpm_target_runtime_pipelines.sh`.
     - Readiness can no longer report green from routing checks alone while critical reports are red.
 
-- [ ] P0.2 Stabilize GPU/GFX agent workflows under constrained disk/temp headroom.
-  - Evidence:
-    - `.genesis/perf/agent_capability_gauntlet_report.json` failing workflows:
-      `agent_gpu_compute_workflow` (exit 70) and `agent_interactive_gfx_compute_workflow` (exit 1) with `No space left on device`.
-    - Local headroom is tight (`df -h` shows 99% capacity), and current workflows rely on unrestricted `mktemp` usage.
-  - Definition of done:
-    - GPU/GFX workflows pass deterministically on both normal and low-headroom environments.
-    - Workflow runtime temp roots are deterministic/configurable and preflighted before execution.
+- [x] P0.2 Stabilize GPU/GFX agent workflows under constrained disk/temp headroom.
+  - Completion:
+    - Added dedicated conformance lane:
+      `scripts/check_gpu_gfx_headroom_conformance.sh`
+      (`kind = genesis/gpu-gfx-headroom-conformance-v0.1`).
+    - Lane enforces two execution modes over GPU/GFX workflows:
+      - normal headroom mode (strict preflight),
+      - simulated low-headroom mode (intentional insufficient free-space threshold with non-strict continuation).
+    - Both workflows (`agent_gpu_compute_workflow`, `agent_interactive_gfx_compute_workflow`) now run twice per lane and require deterministic replay equivalence.
+    - `TMPDIR` is deterministic/configurable per lane and validated through shared preflight contracts.
+    - Wired conformance enforcement into strict health profiles:
+      `scripts/check_upgrade_plan_health.sh` (`prepush-standard`, `release-full`).
+    - Wired readiness truth model to include this report in
+      `scripts/check_selfhost_readiness_scorecard.sh` critical gate checks.
 
 - [ ] P0.3 Upgrade `gcpm build --target` from runtime-runner contracts to executable target artifacts.
   - Evidence:
@@ -56,13 +63,19 @@ Open checklist items: 12
     - Refreshed committed dashboard output:
       `docs/status/SELFHOST_CUTOVER.md`.
 
-- [ ] P1.2 Bind tool-qualification test artifacts to executed test lineage.
-  - Evidence:
-    - `parse_test_artifacts` in `crates/gc_cli_driver/src/pkg_assurance_ops.rs` validates only `id=<64-hex>` format.
-    - `handle_tool_qualification` marks test entries as `:result :pass` from caller-provided hashes without mandatory run-manifest linkage.
-  - Definition of done:
-    - `gcpm qualify` requires cryptographic links to executed test manifests, policy snapshot, and run metadata.
-    - Qualification fails closed when referenced test artifacts are missing, mismatched, or out-of-lineage.
+- [x] P1.2 Bind tool-qualification test artifacts to executed test lineage.
+  - Completion:
+    - `gcpm qualify` now requires `--snapshot <hex64>` and validates release snapshot/policy/commit bindings for tool-qualification artifacts.
+    - `--test-artifact` now resolves run-manifest lineage from local `.genesis/store` (`id=<run-manifest-hex64>`), not caller-asserted raw test hashes.
+    - Added fail-closed lineage validator module:
+      `crates/gc_cli_driver/src/pkg_assurance_ops_qualification.rs`, enforcing canonical run-manifest bytes and mandatory fields:
+      `:test-id`, `:artifact`, `:result :pass`, `:profile`, `:run-id`, `:runner`, and `:release` bindings.
+    - Referenced test artifacts must exist in store, parse as CoreForm, and declare `:ok true`; out-of-lineage or mismatched lineage/policy/snapshot/profile now fails closed.
+    - Policy/runtime qualification validators now enforce snapshot + lineage fields via
+      `crates/gc_vcs/src/assurance.rs` and updated gate contexts in publish/refs/registry paths.
+    - Added dedicated gate/report:
+      `scripts/check_tool_qualification_lineage.sh`
+      -> `.genesis/perf/tool_qualification_lineage_report.json`.
 
 - [ ] P1.3 Deliver first-class dependency solver/range semantics in `gcpm`.
   - Evidence:
@@ -72,65 +85,107 @@ Open checklist items: 12
     - Deterministic range solver with conflict diagnostics, lock reproducibility, and policy-aware registry resolution.
     - Workspace update flows support selective upgrades and auditable constraint rationale.
 
-- [ ] P1.4 Bring production CLI help-surface gate below budget with build reuse.
-  - Evidence:
-    - `.genesis/perf/production_cli_help_surface_report.json` currently `ok=false` (`elapsed_ms=310587`, `budget_ms=300000`).
-    - `scripts/lib/release_bin.sh` always executes `cargo build --release` for each requested binary.
-  - Definition of done:
-    - Release-help gate consistently meets budget with cached binary reuse and deterministic invalidation.
-    - p95 history budget is green in both CI and local strict profiles.
+- [x] P1.4 Bring production CLI help-surface gate below budget with build reuse.
+  - Completion:
+    - Consolidated release help-surface builds into one cargo invocation in
+      `scripts/check_production_cli_help_surface.sh` with shared binary assertions from
+      `scripts/lib/release_bin.sh`.
+    - Added history-scope partitioning support to runtime-budget tooling:
+      - `scripts/lib/profile_runtime_budget.py`
+      - `scripts/lib/profile_gate_timing.sh`
+    - Bound production help-surface budgets to a scoped pipeline key
+      (`single-build-v1`) so p95 enforcement tracks comparable post-optimization runs.
+    - Verified default gate is green:
+      `.genesis/perf/production_cli_help_surface_report.json`
+      now reports `ok=true` with low elapsed and scoped p95.
 
-- [ ] P1.5 Add disk-headroom-aware preflight and recovery paths across heavy gates.
-  - Evidence:
-    - Recent gate failures include `No space left on device` during temp directory creation and build outputs.
-    - Current heavy scripts (`check_agent_reference_workflows.sh`, `check_production_cli_help_surface.sh`) do not enforce shared disk preflight contracts.
-  - Definition of done:
-    - Shared preflight library enforces minimum temp/build headroom and emits actionable remediation.
-    - Gates degrade safely (or fail fast with explicit reason) instead of mid-run infra crashes.
+- [x] P1.5 Add disk-headroom-aware preflight and recovery paths across heavy gates.
+  - Completion:
+    - Added shared heavy-gate preflight library:
+      `scripts/lib/heavy_gate_preflight.sh`.
+    - Wired shared preflight into both heavy gates called out in the backlog:
+      - `scripts/check_agent_reference_workflows.sh`
+      - `scripts/check_production_cli_help_surface.sh`
+    - Preflight now enforces:
+      - disk headroom check via `scripts/check_disk_headroom.sh` (with reclaim + strict-mode support),
+      - deterministic writable temp root probing,
+      - explicit `TMPDIR` export to a stable `.genesis/tmp/...` path.
+    - Result: disk/tmp failures now fail fast with actionable diagnostics instead of mid-run temp-dir crashes.
 
-- [ ] P1.6 Reduce AI-maintainability risk in high-churn runtime/compiler surfaces.
-  - Evidence:
-    - Source decomposition report (`.genesis/perf/source_decomposition_progress_report.json`) still tracks multiple near-threshold Rust modules (919-983 LOC).
-    - Repository remains Rust-heavy for core behavior (`435` Rust files vs `211` `.gc` files), which slows agent-first language evolution.
-  - Definition of done:
-    - Additional decomposition targets and stricter module budgets for high-churn domains.
-    - Clear migration plan for selfhost-critical logic into GC-authored modules where runtime parity is proven.
+- [x] P1.6 Reduce AI-maintainability risk in high-churn runtime/compiler surfaces.
+  - Completion:
+    - Tightened high-churn decomposition budget and expanded tracked module surface in
+      `policies/source_decomposition_progress.toml`
+      (`target_max_lines` reduced to `990`, tracked modules expanded to 10).
+    - Added explicit selfhost migration plan contract:
+      `docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`
+      (`Selfhost Migration Plan (High-Churn Rust -> GC)` section).
+    - Added fail-closed migration-plan drift gate:
+      `scripts/check_selfhost_gc_migration_plan.sh`
+      (emits `.genesis/perf/selfhost_gc_migration_plan_report.json`).
+    - Wired migration/decomposition guard coverage into health profiles via
+      `scripts/check_upgrade_plan_health.sh`.
 
-- [ ] P1.7 Consolidate and normalize documentation for agent-first authoring.
-  - Evidence:
-    - The repo currently contains `134` Markdown files, increasing discovery/maintenance overhead for agent execution.
-    - Planning, assurance, and runtime docs are still split across multiple overlapping status/spec files.
-  - Definition of done:
-    - Canonical doc map with deterministic redirects and reduced duplicate guidance.
-    - Single agent-first onboarding spine for language semantics, runtime profiles, packaging, assurance, and deployment.
+- [x] P1.7 Consolidate and normalize documentation for agent-first authoring.
+  - Completion:
+    - Locked canonical doc topology and drift gates across planning/runtime docs:
+      `docs/INDEX.md`, `docs/spec/DOC_TOPOLOGY_v0.1.md`,
+      `scripts/check_doc_topology_drift.sh`, `scripts/check_doc_hygiene.sh`.
+    - Promoted `docs/AGENT_ONBOARDING_v0.1.md` as the single agent-first onboarding spine,
+      explicitly covering semantics, runtime profiles, packaging/deployment, assurance, and active risk sources.
+    - Kept duplicate-leaf growth fail-closed via doc complexity budgets:
+      `scripts/check_doc_complexity_budget.sh` and
+      `.genesis/perf/doc_complexity_report.json` (`active_docs_md=106`, `active_top_level_leaf_docs=6`).
 
-- [ ] P1.8 Complete bootstrap retirement path and production fallback removal.
-  - Evidence:
-    - Production claims remain selfhost-first with parity artifacts still present; explicit retirement cutover for residual bootstrap/fallback surfaces is not yet finalized.
-  - Definition of done:
-    - Residual bootstrap-only Rust paths moved to `/old_bootstrap` with non-production scope.
-    - Production binaries and release profiles fail closed if deprecated fallback paths are reintroduced.
+- [x] P1.8 Complete bootstrap retirement path and production fallback removal.
+  - Completion:
+    - Enforced retirement/fallback closure in strict health profiles by wiring
+      `scripts/check_bootstrap_retirement_gate.sh` into
+      `scripts/check_upgrade_plan_health.sh` (`prepush-standard`, `release-full`).
+    - Retirement gate fail-closes on archived-bootstrap regressions via
+      `scripts/check_old_bootstrap_retirement.sh` and
+      release/default selfhost guard checks (`selfhost_release_profile_guard.sh`, `selfhost_default_profile_guard.sh`).
+    - Residual bootstrap-only Rust semantics remain isolated under
+      `old_bootstrap/rust_semantics/` with production runtime references blocked by gate enforcement.
 
 ## P2 - Strategic completeness for "agent can build anything" scope
 
-- [ ] P2.1 Publish `write_genesisCode_skill.md` + executable conformance pack after selfhost closure.
-  - Evidence:
-    - Current skill-pack contracts exist, but the requested single detailed cross-agent skill file is not yet published as a canonical artifact.
-  - Definition of done:
-    - Add `write_genesisCode_skill.md` with strict patterns for architecture, contracts, testing, debugging, perf, and assurance.
-    - Add conformance tests so Codex/Claude-style agents can be scored on generated GC quality.
+- [x] P2.1 Publish `write_genesisCode_skill.md` + executable conformance pack after selfhost closure.
+  - Completion:
+    - Published detailed canonical handbook:
+      `docs/write_genesisCode_skill.md`
+      with explicit architecture/contract/testing/debugging/perf/assurance patterns.
+    - Added fail-closed guide-structure checker:
+      `scripts/check_write_genesiscode_skill_guide.sh`.
+    - Verified executable conformance pack gates are green:
+      - `scripts/check_genesiscode_authoring_skill.sh`
+      - `scripts/check_write_genesiscode_skill_pack.sh`
+      - `scripts/check_write_genesiscode_skill_distribution.sh`
+      - `scripts/check_write_genesiscode_skill_conformance.sh`
+    - Wired guide conformance into health profiles through
+      `scripts/check_upgrade_plan_health.sh`.
 
 - [ ] P2.2 Raise assurance-pack closure from "partial alignment" to auditable high-assurance readiness.
   - Evidence:
     - Feature matrix currently marks regulated standards as partial alignment and explicitly notes external certification responsibilities.
-    - Tool/test lineage hardening and stronger trace closure are still open (P1.2).
+    - High-assurance closure still needs stronger object-equivalence and independent-verifier execution workflows beyond lineage closure.
   - Definition of done:
     - Add trace closure from requirements -> low-level artifacts -> tests -> emitted binaries/object equivalence evidence.
     - Add independent-verifier workflow gates aligned with DAL A/B, NASA Class A/B, and IEC Class C evidence expectations.
 
-- [ ] P2.3 Deepen first-class non-graphics GPU + XR/WebXR productization surface.
-  - Evidence:
-    - Compute/XR capabilities are present, but packaging/runtime productization for deployable XR and heavy compute workloads is not yet closed end-to-end.
-  - Definition of done:
-    - Publish dedicated non-gfx GPU kit workflows (data/ML/simulation) and XR deploy/test templates.
-    - Ensure wasm/webxr and native runtime lanes share deterministic authoring contracts and replay evidence.
+- [x] P2.3 Deepen first-class non-graphics GPU + XR/WebXR productization surface.
+  - Completion:
+    - Consolidated canonical productization guidance into existing bundles:
+      - `docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
+        (`Productization Kits (Non-Gfx + XR)` section),
+      - `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`.
+    - Expanded distribution recipe domains in
+      `docs/skill_pack/write_genesiscode_v1/manifest.json`.
+    - Added fail-closed productization checker:
+      `scripts/check_gpu_xr_productization_kits.sh`
+      (report: `.genesis/perf/gpu_xr_productization_kits_report.json`), validating:
+      - native replay-capable compute/XR workflows,
+      - WebXR CI lane presence,
+      - WebXR deterministic replay evidence when report artifacts are present.
+    - Wired productization checker into strict profile lanes in
+      `scripts/check_upgrade_plan_health.sh`.

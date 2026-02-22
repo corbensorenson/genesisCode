@@ -190,9 +190,13 @@ enum PkgCmd {
     /// Build a deterministic tool-qualification evidence artifact for protected releases.
     Qualify {
         /// Optional release commit hash this qualification binds to.
-        /// When omitted, qualification is policy anchored and can be attached pre-commit.
+        /// When omitted, qualification is snapshot/policy anchored and can be attached pre-commit.
         #[arg(long)]
         commit: Option<String>,
+
+        /// Release snapshot hash this qualification binds to.
+        #[arg(long)]
+        snapshot: String,
 
         /// Policy artifact hash this qualification was validated against.
         #[arg(long)]
@@ -206,7 +210,8 @@ enum PkgCmd {
         #[arg(long = "requirement")]
         requirements: Vec<String>,
 
-        /// Qualification test artifact link in the form `id=<64-hex>`, repeatable.
+        /// Qualification test linkage in the form `id=<run-manifest-hex64>`, repeatable.
+        /// Each run-manifest artifact must resolve from `.genesis/store` and bind id/artifact/result/profile/release.
         #[arg(long = "test-artifact")]
         test_artifacts: Vec<String>,
 

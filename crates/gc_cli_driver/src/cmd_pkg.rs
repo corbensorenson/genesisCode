@@ -489,6 +489,7 @@ fn cmd_pkg_local_workspace_ops(
         ),
         PkgCmd::Qualify {
             commit,
+            snapshot,
             policy,
             profile,
             requirements,
@@ -500,6 +501,7 @@ fn cmd_pkg_local_workspace_ops(
             pkg_assurance_ops::handle_tool_qualification(
                 pkg_assurance_ops::ToolQualificationArgs {
                     commit: commit.as_deref(),
+                    snapshot,
                     policy: policy.as_deref(),
                     profile,
                     requirement_ids: requirements,

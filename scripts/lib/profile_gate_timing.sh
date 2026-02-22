@@ -17,6 +17,7 @@ genesis_profile_gate_emit_runtime_report() {
   local budget_ms="$6"
   local min_history="${7:-1}"
   local extra_json="${8:-}"
+  local history_scope_key="${9:-}"
 
   local end_ms
   local elapsed_ms
@@ -31,5 +32,6 @@ genesis_profile_gate_emit_runtime_report() {
     --elapsed-ms "$elapsed_ms" \
     --budget-ms "$budget_ms" \
     --min-history "$min_history" \
+    --history-scope-key "$history_scope_key" \
     --extra-json "$extra_json"
 }

@@ -641,6 +641,7 @@ COMMON_GATES=(
   "bash scripts/check_capability_indices.sh"
   "bash scripts/check_assurance_profile_packs.sh"
   "bash scripts/check_assurance_standards_crosswalk.sh"
+  "bash scripts/check_tool_qualification_lineage.sh"
   "bash scripts/check_cargo_target_dir_policy.sh"
   "bash scripts/check_selfhost_symbol_ownership.sh"
   "bash scripts/check_agent_authoring_bundle.sh"
@@ -660,6 +661,7 @@ COMMON_GATES=(
   "bash scripts/check_doc_topology_drift.sh"
   "bash scripts/check_doc_complexity_budget.sh"
   "bash scripts/check_write_genesiscode_skill_pack.sh"
+  "bash scripts/check_write_genesiscode_skill_guide.sh"
   "bash scripts/check_write_genesiscode_skill_distribution.sh"
   "bash scripts/check_task_concurrency_stress.sh"
   "bash scripts/check_host_bridge_fault_injection.sh"
@@ -676,6 +678,7 @@ COMMON_GATES=(
   "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
   "bash scripts/check_source_decomposition_progress.sh"
+  "bash scripts/check_selfhost_gc_migration_plan.sh"
   "bash scripts/check_test_size_budget.sh"
 )
 
@@ -690,6 +693,9 @@ if [[ "$PROFILE" == "agent-inner-loop" ]]; then
     "bash scripts/check_redteam_report.sh"
     "bash scripts/check_doc_complexity_budget.sh"
     "bash scripts/check_source_decomposition_progress.sh"
+    "bash scripts/check_selfhost_gc_migration_plan.sh"
+    "bash scripts/check_tool_qualification_lineage.sh"
+    "bash scripts/check_write_genesiscode_skill_guide.sh"
     "bash scripts/check_cli_diagnostics_contract.sh"
     "bash scripts/check_no_production_rust_frontend_refs.sh"
   )
@@ -717,7 +723,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
@@ -727,6 +735,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
+    PROFILE_GATES+=("bash scripts/check_gpu_gfx_headroom_conformance.sh")
     ;;
   release-full)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
@@ -736,9 +745,11 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
+    PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
@@ -753,6 +764,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
+    PROFILE_GATES+=("bash scripts/check_gpu_gfx_headroom_conformance.sh")
     PROFILE_GATES+=("bash scripts/check_wasm_production_surface.sh")
     ;;
 esac
