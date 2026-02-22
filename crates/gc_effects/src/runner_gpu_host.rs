@@ -123,9 +123,7 @@ fn first_party_gpu_response(runtime: &mut GpuHostRuntime, op: &str, payload: &Te
         "gpu/compute::create-pipeline-layout" | "gfx/gpu::create-pipeline-layout" => {
             first_party_create_opaque(runtime, op, payload, "pipeline-layout")
         }
-        "gpu/compute::create-compute-pipeline"
-        | "gpu/compute::create-kernel"
-        | "gfx/gpu::create-compute-pipeline" => {
+        "gpu/compute::create-compute-pipeline" | "gpu/compute::create-kernel" => {
             first_party_create_opaque(runtime, op, payload, "compute-pipeline")
         }
         "gfx/gpu::create-render-pipeline" => {
@@ -148,7 +146,6 @@ fn first_party_gpu_response(runtime: &mut GpuHostRuntime, op: &str, payload: &Te
         "gfx/gpu::features" => first_party_gfx_features(),
         "gpu/compute::submit" => first_party_submit(payload, "gpu-compute-submit"),
         "gfx/gpu::submit-frame-graph" => first_party_submit(payload, "gfx-frame-submit"),
-        "gfx/gpu::submit-compute-graph" => first_party_submit(payload, "gfx-compute-submit"),
         _ => first_party_error(op, "unsupported-op"),
     }
 }
@@ -585,7 +582,6 @@ fn is_gpu_host_op(op: &str) -> bool {
             | "gfx/gpu::create-pipeline-layout"
             | "gpu/compute::create-pipeline-layout"
             | "gfx/gpu::create-render-pipeline"
-            | "gfx/gpu::create-compute-pipeline"
             | "gpu/compute::create-compute-pipeline"
             | "gpu/compute::create-kernel"
             | "gfx/gpu::destroy-resource"
@@ -597,7 +593,6 @@ fn is_gpu_host_op(op: &str) -> bool {
             | "gpu/compute::read-buffer"
             | "gfx/gpu::read-texture"
             | "gfx/gpu::submit-frame-graph"
-            | "gfx/gpu::submit-compute-graph"
             | "gpu/compute::submit"
             | "gfx/gpu::limits"
             | "gpu/compute::limits"

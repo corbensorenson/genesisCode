@@ -44,8 +44,8 @@ if [[ "$run_out" != "$replay_out" ]]; then
   exit 1
 fi
 
-if [[ "$run_out" != *"xr-first-party-runtime"* || "$run_out" != *":session-id"* ]]; then
-  echo "agent-xr-runtime-workflow: expected xr runtime evidence fields, got=$run_out" >&2
+if [[ "$run_out" != *"xr-webxr-device-runtime"* || "$run_out" != *":replay-envelope"* || "$run_out" != *":session-id"* || "$run_out" != *":pulse-id"* ]]; then
+  echo "agent-xr-runtime-workflow: expected webxr-device runtime replay envelope + haptics evidence fields, got=$run_out" >&2
   exit 1
 fi
 

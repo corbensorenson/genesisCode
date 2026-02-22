@@ -11,6 +11,7 @@ DEFAULT_LOOP_SCRIPT="scripts/check_default_iteration_workflow.sh"
 STRICT_GOLDEN_SCRIPT="scripts/selfhost_strict_golden.sh"
 WASM_CROSS_HOST_SCRIPT="scripts/wasm_cross_host_determinism.mjs"
 FULL_CROSS_HOST_BUDGET_SCRIPT="scripts/check_full_cross_host_profile_budget.sh"
+AGENT_GENERATIVE_SCRIPT="scripts/check_agent_generative_workloads.sh"
 
 for path in \
   "$DOC" \
@@ -19,7 +20,8 @@ for path in \
   "$DEFAULT_LOOP_SCRIPT" \
   "$STRICT_GOLDEN_SCRIPT" \
   "$WASM_CROSS_HOST_SCRIPT" \
-  "$FULL_CROSS_HOST_BUDGET_SCRIPT"; do
+  "$FULL_CROSS_HOST_BUDGET_SCRIPT" \
+  "$AGENT_GENERATIVE_SCRIPT"; do
   [[ -f "$path" ]] || {
     echo "test-execution-profile-matrix: missing required file: $path" >&2
     exit 1
@@ -59,12 +61,18 @@ require_doc_pattern 'AI Iteration SLO Contention Policy'
 require_doc_pattern 'median-of-samples'
 require_doc_pattern 'GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM'
 require_doc_pattern 'GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT'
+require_doc_pattern 'GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK'
+require_doc_pattern 'GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK'
 require_doc_pattern '.genesis/perf/strict_golden_profile_report.json'
 require_doc_pattern '.genesis/perf/wasm_cross_host_profile_report.json'
 require_doc_pattern '.genesis/perf/full_cross_host_profile_report.json'
 require_doc_pattern '.genesis/perf/agent_scenario_perf_report.json'
+require_doc_pattern '.genesis/perf/agent_generative_workloads_report.json'
+require_doc_pattern 'policies/perf/full_cross_host_profile_seed_history.jsonl'
+require_doc_pattern 'policies/perf/agent_scenario_perf_seed_history.jsonl'
 require_doc_pattern 'scripts/check_full_cross_host_profile_budget.sh'
 require_doc_pattern 'scripts/check_agent_scenario_perf.sh'
+require_doc_pattern 'scripts/check_agent_generative_workloads.sh'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
 require_ci_pattern 'Selfhost Refactor Guard'
@@ -74,6 +82,7 @@ require_ci_pattern 'WASM Cross-Host Determinism (Native vs Node)'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate'
 require_ci_pattern 'Full Cross-Host Runtime Budget Gate (PR Required)'
 require_ci_pattern 'Agent End-to-End Scenario Perf Gate'
+require_ci_pattern 'Agent Generative Workload Gate'
 
 if ! grep -Fq 'GENESIS_TEST_CHANGED_BUDGET_MS:-120000' "$CHANGED_FAST_SCRIPT"; then
   echo "test-execution-profile-matrix: changed-fast default budget must remain 120000ms (2m)" >&2
@@ -153,6 +162,41 @@ fi
 
 if ! grep -Fq 'profile_runtime_budget.py' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
   echo "test-execution-profile-matrix: full cross-host budget script must emit/enforce aggregate runtime report via shared profile budget helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_FULL_CROSS_HOST_BASELINE_HISTORY' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
+  echo "test-execution-profile-matrix: full cross-host budget script must expose baseline seed history path" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- '--baseline-history "$FULL_BASELINE_HISTORY"' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
+  echo "test-execution-profile-matrix: full cross-host budget script must pass baseline history to shared runtime budget helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- '--require-min-history' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
+  echo "test-execution-profile-matrix: full cross-host budget script must fail-closed on insufficient history depth" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_AGENT_SCENARIO_BASELINE_HISTORY' scripts/check_agent_scenario_perf.sh; then
+  echo "test-execution-profile-matrix: agent scenario perf gate must expose baseline seed history path" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_AGENT_SCENARIO_REQUIRE_MIN_HISTORY' scripts/check_agent_scenario_perf.sh; then
+  echo "test-execution-profile-matrix: agent scenario perf gate must expose minimum-history fail-closed control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'genesis/agent-generative-workloads-v0.1' "$AGENT_GENERATIVE_SCRIPT"; then
+  echo "test-execution-profile-matrix: agent generative workload gate must emit stable report kind" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT' "$AGENT_GENERATIVE_SCRIPT"; then
+  echo "test-execution-profile-matrix: agent generative workload gate must support secondary report parity mode" >&2
   exit 1
 fi
 

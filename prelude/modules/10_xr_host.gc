@@ -12,6 +12,18 @@
       ((core/caps::perform (quote gfx/xr::input-poll))
         {:session-id session-id :max-inputs max-inputs}))))
 
+(def core/gfx/xr::haptics-pulse
+  (fn (session-id)
+    (fn (input-id)
+      (fn (amplitude)
+        (fn (duration-ms)
+          ((core/caps::perform (quote gfx/xr::haptics-pulse))
+            {
+              :session-id session-id
+              :input-id input-id
+              :amplitude amplitude
+              :duration-ms duration-ms}))))))
+
 (def core/gfx/xr::submit-frame
   (fn (session-id)
     (fn (frame)

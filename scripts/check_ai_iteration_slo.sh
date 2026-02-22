@@ -23,6 +23,10 @@ SAMPLES_CHANGED_FAST="${GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST:-2}"
 SAMPLES_CORE_SUITE="${GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE:-2}"
 SAMPLES_GCPM_LOCK="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK:-2}"
 SAMPLES_GCPM_ENV="${GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV:-2}"
+WARMUP_GCPM_LOCK="${GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK:-1}"
+WARMUP_GCPM_ENV="${GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV:-1}"
+STABILIZE_RETRIES_GCPM_LOCK="${GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK:-3}"
+STABILIZE_RETRIES_GCPM_ENV="${GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV:-3}"
 CONTENTION_WARN_PERCENT="${GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT:-60}"
 
 now_ns() {
@@ -97,6 +101,106 @@ PY
   MEASURE_LAST_SAMPLES_CSV="$csv"
   MEASURE_LAST_MEDIAN_MS="${stats%,*}"
   MEASURE_LAST_P95_MS="${stats#*,}"
+  MEASURE_LAST_SPREAD_PCT="$(python3 - "$csv" <<'PY'
+import sys
+
+values = [int(x) for x in sys.argv[1].split(",") if x]
+ordered = sorted(values)
+n = len(ordered)
+mid = n // 2
+if n % 2 == 1:
+    med = ordered[mid]
+else:
+    med = int((ordered[mid - 1] + ordered[mid]) / 2.0)
+if med <= 0:
+    spread = 0.0
+else:
+    spread = ((ordered[-1] - ordered[0]) * 100.0) / med
+print(f"{spread:.2f}")
+PY
+)"
+}
+
+measure_ms_samples_stabilized() {
+  local label="$1"
+  local sample_count="$2"
+  local warmup_runs="$3"
+  local max_retries="$4"
+  local spread_threshold="$5"
+  shift 5
+  local -a cmd=("$@")
+  local i retries
+  local -a all_samples=()
+  local -a window_samples=()
+  local csv
+
+  for ((i = 1; i <= warmup_runs; i += 1)); do
+    measure_ms "${label}:warmup" "${cmd[@]}"
+  done
+
+  for ((i = 1; i <= sample_count; i += 1)); do
+    measure_ms "${label}" "${cmd[@]}"
+    all_samples+=("$MEASURE_LAST_MS")
+    window_samples+=("$MEASURE_LAST_MS")
+  done
+
+  retries=0
+  while true; do
+    csv="$(IFS=,; echo "${window_samples[*]}")"
+    # Compute stats from the stabilized window only; do not rerun the measured command here.
+    MEASURE_LAST_SAMPLES_CSV="$csv"
+    MEASURE_LAST_MEDIAN_MS="$(python3 - "$csv" <<'PY'
+import sys
+values = sorted(int(x) for x in sys.argv[1].split(",") if x)
+n = len(values)
+mid = n // 2
+if n % 2 == 1:
+    print(values[mid])
+else:
+    print(int((values[mid - 1] + values[mid]) / 2.0))
+PY
+)"
+    MEASURE_LAST_P95_MS="$(python3 - "$csv" <<'PY'
+import sys
+values = sorted(int(x) for x in sys.argv[1].split(",") if x)
+idx = max(0, min(len(values) - 1, int(round(0.95 * (len(values) - 1)))))
+print(values[idx])
+PY
+)"
+    MEASURE_LAST_SPREAD_PCT="$(python3 - "$csv" <<'PY'
+import sys
+values = sorted(int(x) for x in sys.argv[1].split(",") if x)
+n = len(values)
+mid = n // 2
+if n % 2 == 1:
+    med = values[mid]
+else:
+    med = int((values[mid - 1] + values[mid]) / 2.0)
+spread = 0.0 if med <= 0 else ((values[-1] - values[0]) * 100.0) / med
+print(f"{spread:.2f}")
+PY
+)"
+    if (( retries >= max_retries )); then
+      break
+    fi
+    if python3 - "$MEASURE_LAST_SPREAD_PCT" "$spread_threshold" <<'PY'
+import sys
+spread = float(sys.argv[1])
+threshold = float(sys.argv[2])
+raise SystemExit(0 if spread <= threshold else 1)
+PY
+    then
+      break
+    fi
+
+    measure_ms "${label}:stabilize" "${cmd[@]}"
+    all_samples+=("$MEASURE_LAST_MS")
+    window_samples=("${window_samples[@]:1}" "$MEASURE_LAST_MS")
+    retries=$((retries + 1))
+  done
+
+  MEASURE_STABILIZE_TOTAL_RUNS="${#all_samples[@]}"
+  MEASURE_STABILIZE_EXTRA_RETRIES="$retries"
 }
 
 profile_target_dir() {
@@ -115,6 +219,10 @@ require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST" "$SAMPLES_C
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE" "$SAMPLES_CORE_SUITE"
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK" "$SAMPLES_GCPM_LOCK"
 require_positive_int "GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV" "$SAMPLES_GCPM_ENV"
+require_non_negative_int "GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK" "$WARMUP_GCPM_LOCK"
+require_non_negative_int "GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV" "$WARMUP_GCPM_ENV"
+require_non_negative_int "GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK" "$STABILIZE_RETRIES_GCPM_LOCK"
+require_non_negative_int "GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV" "$STABILIZE_RETRIES_GCPM_ENV"
 require_non_negative_int "GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT" "$CONTENTION_WARN_PERCENT"
 
 bash scripts/check_disk_headroom.sh --path "$ROOT_DIR" --context "ai-iteration-slo" --strict "$DISK_STRICT_MODE"
@@ -205,14 +313,20 @@ CORE_SUITE_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
 
 echo "ai-iteration-slo: measuring gcpm lock/env iteration path"
 run_gcpm_tmp new --workspace "slo" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
-measure_ms_samples gcpm_lock_ms "$SAMPLES_GCPM_LOCK" run_gcpm_tmp lock --strict
+measure_ms_samples_stabilized gcpm_lock_ms "$SAMPLES_GCPM_LOCK" "$WARMUP_GCPM_LOCK" "$STABILIZE_RETRIES_GCPM_LOCK" "$CONTENTION_WARN_PERCENT" run_gcpm_tmp lock --strict
 GCPM_LOCK_MS="$MEASURE_LAST_MEDIAN_MS"
 GCPM_LOCK_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
 GCPM_LOCK_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
-measure_ms_samples gcpm_env_ms "$SAMPLES_GCPM_ENV" run_gcpm_tmp env --profile dev
+GCPM_LOCK_SAMPLE_SPREAD_PCT="$MEASURE_LAST_SPREAD_PCT"
+GCPM_LOCK_TOTAL_RUNS="$MEASURE_STABILIZE_TOTAL_RUNS"
+GCPM_LOCK_STABILIZE_RETRIES="$MEASURE_STABILIZE_EXTRA_RETRIES"
+measure_ms_samples_stabilized gcpm_env_ms "$SAMPLES_GCPM_ENV" "$WARMUP_GCPM_ENV" "$STABILIZE_RETRIES_GCPM_ENV" "$CONTENTION_WARN_PERCENT" run_gcpm_tmp env --profile dev
 GCPM_ENV_MS="$MEASURE_LAST_MEDIAN_MS"
 GCPM_ENV_SAMPLES="$MEASURE_LAST_SAMPLES_CSV"
 GCPM_ENV_SAMPLE_P95_MS="$MEASURE_LAST_P95_MS"
+GCPM_ENV_SAMPLE_SPREAD_PCT="$MEASURE_LAST_SPREAD_PCT"
+GCPM_ENV_TOTAL_RUNS="$MEASURE_STABILIZE_TOTAL_RUNS"
+GCPM_ENV_STABILIZE_RETRIES="$MEASURE_STABILIZE_EXTRA_RETRIES"
 
 mkdir -p "$(dirname "$REPORT_OUT")"
 mkdir -p "$(dirname "$HISTORY_OUT")"
@@ -445,6 +559,8 @@ echo "  changed_fast_ms=$CHANGED_FAST_MS samples=[$CHANGED_FAST_SAMPLES] sample_
 echo "  core_suite_ms=$CORE_SUITE_MS samples=[$CORE_SUITE_SAMPLES] sample_p95=$CORE_SUITE_SAMPLE_P95_MS (budget=$BUDGET_CORE_SUITE_MS)"
 echo "  gcpm_lock_ms=$GCPM_LOCK_MS samples=[$GCPM_LOCK_SAMPLES] sample_p95=$GCPM_LOCK_SAMPLE_P95_MS (budget=$BUDGET_GCPM_LOCK_MS)"
 echo "  gcpm_env_ms=$GCPM_ENV_MS samples=[$GCPM_ENV_SAMPLES] sample_p95=$GCPM_ENV_SAMPLE_P95_MS (budget=$BUDGET_GCPM_ENV_MS)"
+echo "  gcpm_lock_stabilization spread_pct=$GCPM_LOCK_SAMPLE_SPREAD_PCT total_runs=$GCPM_LOCK_TOTAL_RUNS retries=$GCPM_LOCK_STABILIZE_RETRIES"
+echo "  gcpm_env_stabilization spread_pct=$GCPM_ENV_SAMPLE_SPREAD_PCT total_runs=$GCPM_ENV_TOTAL_RUNS retries=$GCPM_ENV_STABILIZE_RETRIES"
 
 [[ "$INCREMENTAL_WARM_MS" -le "$BUDGET_INCREMENTAL_WARM_MS" ]] || fail "warm incremental loop regression: $INCREMENTAL_WARM_MS > $BUDGET_INCREMENTAL_WARM_MS"
 [[ "$CHANGED_FAST_MS" -le "$BUDGET_CHANGED_FAST_MS" ]] || fail "changed fast loop regression: $CHANGED_FAST_MS > $BUDGET_CHANGED_FAST_MS"

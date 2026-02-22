@@ -189,7 +189,7 @@ Shadow pass labels and depth views are deterministic (`<prefix><index>`), and sh
 
 ### End-to-end demos (implemented)
 
-See `/Users/corbensorenson/Documents/genesisCode/docs/GFX_DEMOS.md` and `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/` for runnable `.gc` demos:
+See `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_GFX_BUNDLE_v0.1.md` and `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/` for runnable `.gc` demos:
 - `ui_app.gc`
 - `scene3d.gc`
 - `hybrid_web.gc`

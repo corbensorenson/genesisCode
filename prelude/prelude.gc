@@ -1822,9 +1822,6 @@
 (def core/gfx/gpu::create-render-pipeline
   (fn (desc) ((core/caps::perform (quote gfx/gpu::create-render-pipeline)) {:desc desc})))
 
-(def core/gfx/gpu::create-compute-pipeline
-  (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
-
 (def core/gfx/gpu::destroy-resource
   (fn (id) ((core/caps::perform (quote gfx/gpu::destroy-resource)) {:id id})))
 
@@ -1868,9 +1865,6 @@
 
 (def core/gfx/gpu::submit-frame-graph
   (fn (graph) ((core/caps::perform (quote gfx/gpu::submit-frame-graph)) {:graph graph})))
-
-(def core/gfx/gpu::submit-compute-graph
-  (fn (graph) ((core/caps::perform (quote gpu/compute::submit)) {:graph graph})))
 
 (def core/gfx/frame::empty
   {:type (quote :gfx/frame-graph) :render-passes [] :compute-passes []})
@@ -2424,6 +2418,18 @@
     (fn (max-inputs)
       ((core/caps::perform (quote gfx/xr::input-poll))
         {:session-id session-id :max-inputs max-inputs}))))
+
+(def core/gfx/xr::haptics-pulse
+  (fn (session-id)
+    (fn (input-id)
+      (fn (amplitude)
+        (fn (duration-ms)
+          ((core/caps::perform (quote gfx/xr::haptics-pulse))
+            {
+              :session-id session-id
+              :input-id input-id
+              :amplitude amplitude
+              :duration-ms duration-ms}))))))
 
 (def core/gfx/xr::submit-frame
   (fn (session-id)
@@ -5424,6 +5430,13 @@
     (fn (max-inputs)
       ((core/gfx/xr::input-poll session-id) max-inputs))))
 
+(def core/kit/xr::haptics-pulse
+  (fn (session-id)
+    (fn (input-id)
+      (fn (amplitude)
+        (fn (duration-ms)
+          ((((core/gfx/xr::haptics-pulse session-id) input-id) amplitude) duration-ms))))))
+
 (def core/kit/xr::submit-frame
   (fn (session-id)
     (fn (frame)
@@ -5444,20 +5457,24 @@
               ((core/effect::bind ((core/kit/xr::input-poll session-id) max-inputs))
                (fn (input-resp)
                  ((core/effect::bind
-                    ((core/kit/xr::submit-frame session-id)
-                     ((core/map::get frame-resp) (quote :frame))))
-                  (fn (submit-resp)
-                    ((core/effect::bind (core/kit/xr::session-close session-id))
-                     (fn (close-resp)
-                       (core/effect::pure
-                         {
-                           :schema (quote :core/kit/xr-frame-cycle-result.v1)
-                           :ok true
-                           :session open-resp
-                           :frame frame-resp
-                           :input input-resp
-                           :submit submit-resp
-                           :close close-resp})))))))))))))))
+                    ((((core/kit/xr::haptics-pulse session-id) "right-controller") 800) 24))
+                  (fn (haptics-resp)
+                    ((core/effect::bind
+                       ((core/kit/xr::submit-frame session-id)
+                        ((core/map::get frame-resp) (quote :frame))))
+                     (fn (submit-resp)
+                       ((core/effect::bind (core/kit/xr::session-close session-id))
+                        (fn (close-resp)
+                          (core/effect::pure
+                            {
+                              :schema (quote :core/kit/xr-frame-cycle-result.v1)
+                              :ok true
+                              :session open-resp
+                              :frame frame-resp
+                              :input input-resp
+                              :haptics haptics-resp
+                              :submit submit-resp
+                              :close close-resp})))))))))))))))))
 
 (def core/kit/media::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
 

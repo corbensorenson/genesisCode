@@ -361,6 +361,7 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_assurance_profile_packs.sh"
   "bash scripts/check_selfhost_symbol_ownership.sh"
   "bash scripts/check_agent_authoring_bundle.sh"
   "bash scripts/check_genesiscode_authoring_skill.sh"
@@ -403,6 +404,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
@@ -418,6 +420,7 @@ case "$PROFILE" in
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
     PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
+    PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")

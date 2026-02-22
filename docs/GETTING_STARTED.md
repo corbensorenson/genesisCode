@@ -98,4 +98,4 @@ cargo run -p gc_cli -- eval examples/gfx_demos/scene3d.gc
 cargo run -p gc_cli -- eval examples/gfx_demos/hybrid_web.gc
 ```
 
-See `docs/GFX_DEMOS.md` for details and test coverage.
+See `docs/spec/GPU_GFX_BUNDLE_v0.1.md` for canonical demo details and test coverage.

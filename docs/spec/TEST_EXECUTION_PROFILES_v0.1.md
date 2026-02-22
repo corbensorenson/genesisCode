@@ -34,11 +34,17 @@ Strict/full profile runtime reports:
 - `full-cross-host` aggregate lane
   - report: `.genesis/perf/full_cross_host_profile_report.json`
   - history: `.genesis/perf/full_cross_host_profile_history.jsonl`
-  - enforced by `scripts/check_full_cross_host_profile_budget.sh` as strict-golden + wasm-cross-host elapsed sum with history p95 gate.
+  - baseline seed history: `policies/perf/full_cross_host_profile_seed_history.jsonl`
+  - enforced by `scripts/check_full_cross_host_profile_budget.sh` as strict-golden + wasm-cross-host elapsed sum with history p95 gate, plus fail-closed minimum-history enforcement.
 - `agent-scenario-perf` aggregate lane
   - report: `.genesis/perf/agent_scenario_perf_report.json`
   - history: `.genesis/perf/agent_scenario_perf_history.jsonl`
-  - enforced by `scripts/check_agent_scenario_perf.sh` from gauntlet component durations (service + durable-data + gfx-loop + network-process) with median + p95 + regression gates.
+  - baseline seed history: `policies/perf/agent_scenario_perf_seed_history.jsonl`
+  - enforced by `scripts/check_agent_scenario_perf.sh` from gauntlet component durations (service + durable-data + gfx-loop + network-process) with median + p95 + regression gates and fail-closed minimum-history enforcement.
+- `agent-generative-workloads` mutation lane
+  - report: `.genesis/perf/agent_generative_workloads_report.json`
+  - history: `.genesis/perf/agent_generative_workloads_history.jsonl`
+  - enforced by `scripts/check_agent_generative_workloads.sh` using deterministic mutation sets derived from successful gauntlet workflows, with duration/domain/replay invariants and optional parity enforcement.
 
 ## Runners
 
@@ -87,6 +93,12 @@ Strict/full profile runtime reports:
   - `gcpm_env_ms`: `GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=2`
 - Reports include raw sample vectors + spread telemetry and contention warnings
   (`GENESIS_AI_ITERATION_SLO_CONTENTION_WARN_PERCENT`, default `60`).
+- `gcpm lock/env` paths use deterministic warm-up + stabilization retries before final
+  sample-window statistics:
+  - `GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK`
+  - `GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV`
+  - `GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK`
+  - `GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV`
 - Baseline regression gates continue to use history p95, but compare against
   median-per-run metrics to reduce host contention noise.
 
@@ -107,6 +119,8 @@ Strict/full profile runtime reports:
     process-lifecycle, plugin-runtime, and time-control workflows.
   - runs `scripts/check_agent_scenario_perf.sh` for aggregated end-to-end scenario latency SLOs
     (median + p95 + regression policy) derived from gauntlet workflow durations.
+  - runs `scripts/check_agent_generative_workloads.sh` for mutation-based workload validation
+    beyond the fixed reference workflow list.
   - full release-profile workflows also require dual GPU conformance lanes
     (`gpu_device_microbench` + `gpu_device_microbench_deterministic`) and
     lane-contract parity via `scripts/check_gpu_device_conformance_lane_parity.sh`.

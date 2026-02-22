@@ -67,6 +67,8 @@ check_ref "examples/agent_long_running_gfx_loop_workflow/workflow_run.gc" "core/
 check_ref "examples/agent_service_workflow/workflow.sh" "core/kit/service::status-v1"
 check_ref "examples/agent_browser_runtime_workflow/workflow_run.gc" "browser/window::open"
 check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "gfx/xr::session-open"
+check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "gfx/xr::haptics-pulse"
+check_ref "examples/agent_xr_runtime_workflow/caps.toml" "xr_backend = \"webxr-device\""
 check_ref "examples/agent_media_asset_workflow/workflow_run.gc" "core/kit/media::run-build"
 check_ref "examples/agent_deploy_bundle_workflow/workflow.sh" "gcpm --caps"
 

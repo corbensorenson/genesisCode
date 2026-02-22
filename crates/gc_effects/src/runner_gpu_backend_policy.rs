@@ -79,7 +79,6 @@ fn gpu_op_submit_or_introspection(op: &str) -> bool {
         op,
         "gpu/compute::submit"
             | "gfx/gpu::submit-frame-graph"
-            | "gfx/gpu::submit-compute-graph"
             | "gpu/compute::limits"
             | "gfx/gpu::limits"
             | "gpu/compute::features"
@@ -105,7 +104,6 @@ fn gpu_op_canonical_lifecycle(op: &str) -> bool {
                 | "gfx/gpu::create-pipeline-layout"
                 | "gpu/compute::create-compute-pipeline"
                 | "gpu/compute::create-kernel"
-                | "gfx/gpu::create-compute-pipeline"
                 | "gfx/gpu::create-render-pipeline"
                 | "gpu/compute::write-buffer"
                 | "gfx/gpu::write-buffer"

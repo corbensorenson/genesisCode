@@ -25,7 +25,7 @@ Compatibility notes:
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
-  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `submit-frame`, `session-close`) with deterministic first-party session/frame/input semantics and optional explicit bridge override
+  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `haptics-pulse`, `submit-frame`, `session-close`) with deterministic first-party session/frame/input/haptics semantics plus dedicated `xr_backend = "webxr-device"` bridge lane for device capture envelopes
   - `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` (deterministic browser host runtime baseline; explicit bridge policy may override)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
@@ -51,9 +51,8 @@ Compatibility notes:
   - `host/plugin::command` (generic host extension ABI)
   - `editor/plugin::command` (editor-domain wrapper over `host/plugin::command`)
   return deterministic sealed bridge errors when bridge policy is missing.
-- Canonical compute ABI lives under `gpu/compute::*`.
-  Legacy `gfx/gpu::create-compute-pipeline` and `gfx/gpu::submit-compute-graph`
-  are compatibility aliases that normalize to canonical compute ops before dispatch.
+- Canonical compute ABI lives under `gpu/compute::*`; graphics and compute
+  capabilities are decoupled surfaces in production runtime paths.
 - Under WASI profile, bridge-backed domains execute through deterministic response
   configuration (`wasi_bridge_response`, `wasi_bridge_response_file`, or
   `GENESIS_WASI_BRIDGE_RESPONSES`) instead of process spawning.
@@ -169,6 +168,7 @@ Compatibility notes:
 - `gfx/window::set-title`
 - `gfx/window::surface-info`
 - `gfx/xr::frame-poll`
+- `gfx/xr::haptics-pulse`
 - `gfx/xr::input-poll`
 - `gfx/xr::session-close`
 - `gfx/xr::session-open`
@@ -278,6 +278,7 @@ CI drift check:
 - `gfx/xr::session-open`
   - Optional payload field: `:opts` map (`:mode` string/symbol, `:reference-space` string/symbol, `:app` string/symbol).
   - First-party runtime returns deterministic `:session-id` with normalized mode/reference-space metadata.
+  - Optional per-op policy: `xr_backend = "webxr-device"` to force explicit bridge transport and WebXR device replay envelopes.
 - `gfx/xr::frame-poll`
   - Required payload field: `:session-id` (string).
   - Response map includes deterministic frame envelopes (`:frame-index`, `:predicted-display-time-ms`, stereo `:views`).
@@ -285,6 +286,12 @@ CI drift check:
   - Required payload field: `:session-id` (string).
   - Optional payload field: `:max-inputs` (int).
   - Response map includes deterministic bounded input/controller vector under `:inputs`.
+- `gfx/xr::haptics-pulse`
+  - Required payload fields: `:session-id` (string), `:input-id` (string), `:amplitude` (int), `:duration-ms` (int).
+  - Policy-gated by per-op XR haptics controls (`allow_haptics_inputs`, optional `max_haptics_amplitude`, optional `max_haptics_duration_ms`).
+  - Response map includes deterministic `:pulse-id`, accepted pulse metadata, and cumulative `:submitted-haptics`.
+  - Execution path is first-party deterministic by default; explicit bridge profile may override transport.
+  - When `xr_backend = "webxr-device"` is set, explicit bridge transport is required and responses include deterministic `:replay-envelope` metadata (`:schema`, `:capture-seq`, `:source`, `:op`, `:deterministic`).
 - `gfx/xr::submit-frame`
   - Required payload fields: `:session-id` (string), `:frame` (map).
   - Response map includes deterministic submit acceptance metadata and cumulative `:submitted-frames`.

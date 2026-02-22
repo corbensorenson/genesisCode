@@ -1,0 +1,62 @@
+version = 1
+schema = "genesis/assurance-profile-pack-v0.1"
+
+[profile.custom]
+standard_family = "custom"
+classification = "custom"
+target_profile_symbol = ":custom"
+minimum_coverage_profile = "none"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = false
+recommended_bundle_dir = ".genesis/assurance/bundles/custom"
+
+[profile.do178c-dal-a]
+standard_family = "RTCA DO-178C"
+classification = "DAL A"
+target_profile_symbol = ":do178c-dal-a"
+minimum_coverage_profile = "mcdc"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = true
+recommended_bundle_dir = ".genesis/assurance/bundles/do178c-dal-a"
+
+[profile.do178c-dal-b]
+standard_family = "RTCA DO-178C"
+classification = "DAL B"
+target_profile_symbol = ":do178c-dal-b"
+minimum_coverage_profile = "decision"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = true
+recommended_bundle_dir = ".genesis/assurance/bundles/do178c-dal-b"
+
+[profile.nasa-class-a]
+standard_family = "NASA NPR 7150.2"
+classification = "Class A"
+target_profile_symbol = ":nasa-class-a"
+minimum_coverage_profile = "mcdc"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = true
+recommended_bundle_dir = ".genesis/assurance/bundles/nasa-class-a"
+
+[profile.nasa-class-b]
+standard_family = "NASA NPR 7150.2"
+classification = "Class B"
+target_profile_symbol = ":nasa-class-b"
+minimum_coverage_profile = "decision"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = true
+recommended_bundle_dir = ".genesis/assurance/bundles/nasa-class-b"
+
+[profile.iec62304-class-c]
+standard_family = "IEC 62304"
+classification = "Class C"
+target_profile_symbol = ":iec62304-class-c"
+minimum_coverage_profile = "symbol"
+require_requirements_trace = true
+require_tool_qualification = true
+require_independence_attestations = false
+recommended_bundle_dir = ".genesis/assurance/bundles/iec62304-class-c"

@@ -50,6 +50,8 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md`
   - `docs/spec/WASI.md`
   - `docs/spec/WASM.md`
+  - `docs/spec/AGENT_SCENARIO_PERF_v0.1.md`
+  - `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`
   - `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
@@ -62,6 +64,7 @@ This is the canonical entrypoint for project documentation.
 - `docs/spec/GFX_CAPS.md`
 - `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `docs/spec/GPU_COMPUTE_DEVICE_BRIDGE_v0.1.md`
+- `docs/spec/GPU_GFX_BUNDLE_v0.1.md` (`Demo Workloads` section for runnable `.gc` gfx demos)
 - `docs/spec/CONCURRENCY_v0.1.md`
 - `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`
 

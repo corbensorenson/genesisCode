@@ -13,6 +13,7 @@ Purpose:
 - Script: `scripts/check_agent_scenario_perf.sh`
 - Report: `.genesis/perf/agent_scenario_perf_report.json`
 - History: `.genesis/perf/agent_scenario_perf_history.jsonl`
+- Baseline seed history: `policies/perf/agent_scenario_perf_seed_history.jsonl`
 
 ## Scenario Definition (Default)
 
@@ -29,8 +30,9 @@ Each sample is the sum of the four workflow durations from one gauntlet run.
 - `kind = "genesis/agent-scenario-perf-v0.1"`
 - `scenario_name`, `runtime_profile`, `required_workflows`
 - `component_durations_ms`, `scenario_duration_ms`
-- `samples_ms`, `sample_count`
+- `samples_ms`, `sample_count`, `historical_sample_count`, `baseline_seed_sample_count`
 - `median_ms`, `median_budget_ms`, `median_ok`
+- `require_min_history`, `history_min_ok`
 - `p95_ms`, `p95_budget_ms`, `p95_min_samples`, `p95_enforced`, `p95_ok`
 - `baseline_p95_ms`, `regression_percent`, `regression_budget_ms`, `regression_ok`
 - `contention_spread_percent`, `contention_warn_percent`, `contention_warning`
@@ -42,6 +44,8 @@ Each sample is the sum of the four workflow durations from one gauntlet run.
 - `GENESIS_AGENT_SCENARIO_MEDIAN_BUDGET_MS` default `600000`.
 - `GENESIS_AGENT_SCENARIO_P95_BUDGET_MS` default `750000`.
 - `GENESIS_AGENT_SCENARIO_P95_MIN_SAMPLES` default `8`.
+- `GENESIS_AGENT_SCENARIO_BASELINE_HISTORY` default `policies/perf/agent_scenario_perf_seed_history.jsonl`.
+- `GENESIS_AGENT_SCENARIO_REQUIRE_MIN_HISTORY` default `1` (fail-closed when sample depth is below `GENESIS_AGENT_SCENARIO_P95_MIN_SAMPLES`).
 - `GENESIS_AGENT_SCENARIO_REGRESSION_PERCENT` default `25`.
 - `GENESIS_AGENT_SCENARIO_CONTENTION_WARN_PERCENT` default `50`.
 

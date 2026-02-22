@@ -20,6 +20,8 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--elapsed-ms", required=True, type=int)
     ap.add_argument("--budget-ms", required=True, type=int)
     ap.add_argument("--min-history", required=True, type=int)
+    ap.add_argument("--baseline-history", default="")
+    ap.add_argument("--require-min-history", action="store_true")
     ap.add_argument("--extra-json", default="")
     return ap.parse_args()
 
@@ -76,9 +78,19 @@ def main() -> None:
 
     report_path = Path(args.report)
     history_path = Path(args.history)
+    baseline_history_path = Path(args.baseline_history) if args.baseline_history.strip() else None
     extra = parse_extra(args.extra_json)
 
-    history_rows = read_history(history_path, args.profile, args.budget_ms)
+    history_rows: list[dict[str, Any]] = []
+    baseline_rows: list[dict[str, Any]] = []
+    if baseline_history_path is not None:
+        if not baseline_history_path.is_file():
+            raise SystemExit(
+                f"profile-runtime-budget: baseline history file not found: {baseline_history_path}"
+            )
+        baseline_rows = read_history(baseline_history_path, args.profile, args.budget_ms)
+        history_rows.extend(baseline_rows)
+    history_rows.extend(read_history(history_path, args.profile, args.budget_ms))
     now_utc = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     current_row = {
         "kind": args.kind,
@@ -121,6 +133,8 @@ def main() -> None:
         "history_samples": len(elapsed_samples),
         "history_p95_ms": p95_ms,
         "history_file": str(history_path),
+        "baseline_history_file": str(baseline_history_path) if baseline_history_path else None,
+        "baseline_history_samples": len(baseline_rows),
         "ok": True,
         "timestamp_utc": now_utc,
     }
@@ -131,7 +145,8 @@ def main() -> None:
 
     elapsed_fail = args.elapsed_ms > args.budget_ms
     p95_fail = len(elapsed_samples) >= args.min_history and p95_ms > args.budget_ms
-    if elapsed_fail or p95_fail:
+    min_history_fail = args.require_min_history and len(elapsed_samples) < args.min_history
+    if elapsed_fail or p95_fail or min_history_fail:
         report_doc["ok"] = False
 
     report_path.write_text(
@@ -148,6 +163,11 @@ def main() -> None:
         raise SystemExit(
             f"profile-runtime-budget: elapsed budget exceeded for {args.profile}: "
             f"{args.elapsed_ms} > {args.budget_ms}"
+        )
+    if min_history_fail:
+        raise SystemExit(
+            "profile-runtime-budget: insufficient history samples for "
+            f"{args.profile}: {len(elapsed_samples)} < {args.min_history}"
         )
     if p95_fail:
         raise SystemExit(

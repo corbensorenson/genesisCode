@@ -1,26 +1,17 @@
-# GenesisCode Graphics Demos
+# Graphics Demos (Deprecated Redirect)
 
-These are end-to-end demo programs implemented entirely in GenesisCode (`.gc`) and exercised by automated tests.
+> Deprecated Top-Level Doc: Use `docs/DEPRECATION_MAP_v0.1.md` for canonical replacements.
+Bundle Entry: `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
+Legacy Split Doc: `true`
 
-## Demo files
+## Status
 
-- `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/ui_app.gc`
-- `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/scene3d.gc`
-- `/Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/hybrid_web.gc`
+Deprecated and intentionally reduced to a redirect stub so GPU/GFX demo guidance has one canonical bundle entrypoint.
 
-## Run demos
+## Canonical Replacements
 
-```sh
-genesis eval /Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/ui_app.gc
-genesis eval /Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/scene3d.gc
-genesis eval /Users/corbensorenson/Documents/genesisCode/examples/gfx_demos/hybrid_web.gc
-```
+- `docs/spec/GPU_GFX_BUNDLE_v0.1.md`
 
-Each demo returns a deterministic map containing a `:frame-hash` and planned frame graph data.
+## Migration Guidance
 
-## Test coverage
-
-- Pure evaluation + deterministic shape checks:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_prelude/tests/gfx_demos_examples.rs`
-- CLI execution smoke checks:
-  - `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli/tests/cli_gfx_demos.rs`
+Use `docs/spec/GPU_GFX_BUNDLE_v0.1.md` for demo entrypoints, run commands, and test coverage expectations.

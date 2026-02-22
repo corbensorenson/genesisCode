@@ -29,7 +29,6 @@ fn canonical_device_op(op: &str) -> Option<DeviceOp> {
     match op {
         "gpu/compute::submit" => Some(DeviceOp::Submit("gpu-compute-submit")),
         "gfx/gpu::submit-frame-graph" => Some(DeviceOp::Submit("gfx-frame-submit")),
-        "gfx/gpu::submit-compute-graph" => Some(DeviceOp::Submit("gfx-compute-submit")),
         "gpu/compute::limits" | "gfx/gpu::limits" => Some(DeviceOp::Limits),
         "gpu/compute::features" | "gfx/gpu::features" => Some(DeviceOp::Features),
         _ => None,

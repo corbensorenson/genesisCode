@@ -13,6 +13,9 @@ NATIVE_REPORT="${GENESIS_AGENT_PARITY_NATIVE_REPORT:-.genesis/perf/agent_capabil
 WASI_REPORT="${GENESIS_AGENT_PARITY_WASI_REPORT:-.genesis/perf/agent_capability_gauntlet_wasi_report.json}"
 NATIVE_HISTORY="${GENESIS_AGENT_PARITY_NATIVE_HISTORY:-.genesis/perf/agent_capability_gauntlet_native_history.jsonl}"
 WASI_HISTORY="${GENESIS_AGENT_PARITY_WASI_HISTORY:-.genesis/perf/agent_capability_gauntlet_wasi_history.jsonl}"
+GENERATIVE_REPORT="${GENESIS_AGENT_PARITY_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_parity_report.json}"
+GENERATIVE_HISTORY="${GENESIS_AGENT_PARITY_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_parity_history.jsonl}"
+GENERATIVE_SEED="${GENESIS_AGENT_PARITY_GENERATIVE_SEED:-genesis-agent-generative-parity-v1}"
 BUDGET_MS="${GENESIS_AGENT_PARITY_BUDGET_MS:-900000}"
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
@@ -46,6 +49,13 @@ GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE="wasi-wasm-host-bridge" \
 GENESIS_AGENT_GAUNTLET_REPORT="$WASI_REPORT" \
 GENESIS_AGENT_GAUNTLET_HISTORY="$WASI_HISTORY" \
 bash scripts/check_agent_reference_workflows.sh
+
+GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT="$NATIVE_REPORT" \
+GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT="$WASI_REPORT" \
+GENESIS_AGENT_GENERATIVE_REPORT="$GENERATIVE_REPORT" \
+GENESIS_AGENT_GENERATIVE_HISTORY="$GENERATIVE_HISTORY" \
+GENESIS_AGENT_GENERATIVE_SEED="$GENERATIVE_SEED" \
+bash scripts/check_agent_generative_workloads.sh
 
 end_ns="$(python3 - <<'PY'
 import time

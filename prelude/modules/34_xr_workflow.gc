@@ -25,6 +25,13 @@
     (fn (max-inputs)
       ((core/gfx/xr::input-poll session-id) max-inputs))))
 
+(def core/kit/xr::haptics-pulse
+  (fn (session-id)
+    (fn (input-id)
+      (fn (amplitude)
+        (fn (duration-ms)
+          ((((core/gfx/xr::haptics-pulse session-id) input-id) amplitude) duration-ms))))))
+
 (def core/kit/xr::submit-frame
   (fn (session-id)
     (fn (frame)
@@ -45,17 +52,21 @@
               ((core/effect::bind ((core/kit/xr::input-poll session-id) max-inputs))
                (fn (input-resp)
                  ((core/effect::bind
-                    ((core/kit/xr::submit-frame session-id)
-                     ((core/map::get frame-resp) (quote :frame))))
-                  (fn (submit-resp)
-                    ((core/effect::bind (core/kit/xr::session-close session-id))
-                     (fn (close-resp)
-                       (core/effect::pure
-                         {
-                           :schema (quote :core/kit/xr-frame-cycle-result.v1)
-                           :ok true
-                           :session open-resp
-                           :frame frame-resp
-                           :input input-resp
-                           :submit submit-resp
-                           :close close-resp})))))))))))))))
+                    ((((core/kit/xr::haptics-pulse session-id) "right-controller") 800) 24))
+                  (fn (haptics-resp)
+                    ((core/effect::bind
+                       ((core/kit/xr::submit-frame session-id)
+                        ((core/map::get frame-resp) (quote :frame))))
+                     (fn (submit-resp)
+                       ((core/effect::bind (core/kit/xr::session-close session-id))
+                        (fn (close-resp)
+                          (core/effect::pure
+                            {
+                              :schema (quote :core/kit/xr-frame-cycle-result.v1)
+                              :ok true
+                              :session open-resp
+                              :frame frame-resp
+                              :input input-resp
+                              :haptics haptics-resp
+                              :submit submit-resp
+                              :close close-resp})))))))))))))))))

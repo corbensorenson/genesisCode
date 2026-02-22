@@ -13,6 +13,8 @@ Canonical bundle for GenesisCode project/package manager (`gcpm`) contracts.
 - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_ABI_INDEX_v0.1.md`
 - `docs/spec/GCPM_TELEMETRY_v0.1.md`
+- `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
+- `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
 
 ## Agent Guidance
 

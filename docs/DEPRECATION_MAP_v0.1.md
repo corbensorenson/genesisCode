@@ -1,6 +1,6 @@
 # Documentation Deprecation Map v0.1
 
-Last updated: 2026-02-21
+Last updated: 2026-02-22
 
 Purpose: explicitly mark superseded/overlapping docs and point to canonical replacements.
 
@@ -14,6 +14,7 @@ Purpose: explicitly mark superseded/overlapping docs and point to canonical repl
 | `docs/REGISTRY_PROTOCOL_MINIMAL_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/TRANSPARENCY_LOG.md` | Deprecated (stub redirect) |
 | `docs/REACHABILITY_RULES_v0.1.md` | `docs/spec/REGISTRY_POLICY.md`, `docs/spec/PATCH_SCHEMA.md` | Deprecated (stub redirect) |
 | `docs/GARBAGE_COLLECTION_RULES_v0.1.md` | `docs/spec/CLI.md` (`gc/*` commands), `docs/spec/GCPM_BUNDLE_v0.1.md` | Deprecated (stub redirect) |
+| `docs/GFX_DEMOS.md` | `docs/spec/GPU_GFX_BUNDLE_v0.1.md` | Deprecated (stub redirect) |
 
 ## Stub Contract (Deprecated Docs)
 

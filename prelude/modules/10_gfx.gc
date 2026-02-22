@@ -27,9 +27,6 @@
 (def core/gfx/gpu::create-render-pipeline
   (fn (desc) ((core/caps::perform (quote gfx/gpu::create-render-pipeline)) {:desc desc})))
 
-(def core/gfx/gpu::create-compute-pipeline
-  (fn (desc) ((core/caps::perform (quote gpu/compute::create-compute-pipeline)) {:desc desc})))
-
 (def core/gfx/gpu::destroy-resource
   (fn (id) ((core/caps::perform (quote gfx/gpu::destroy-resource)) {:id id})))
 
@@ -73,9 +70,6 @@
 
 (def core/gfx/gpu::submit-frame-graph
   (fn (graph) ((core/caps::perform (quote gfx/gpu::submit-frame-graph)) {:graph graph})))
-
-(def core/gfx/gpu::submit-compute-graph
-  (fn (graph) ((core/caps::perform (quote gpu/compute::submit)) {:graph graph})))
 
 (def core/gfx/frame::empty
   {:type (quote :gfx/frame-graph) :render-passes [] :compute-passes []})

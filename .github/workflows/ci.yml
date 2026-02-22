@@ -108,6 +108,9 @@ jobs:
       - name: Capability Indices Guard
         run: bash scripts/check_capability_indices.sh
 
+      - name: Assurance Profile Pack Guard
+        run: bash scripts/check_assurance_profile_packs.sh
+
       - name: Agent Authoring Bundle Guard
         run: bash scripts/check_agent_authoring_bundle.sh
 
@@ -250,6 +253,10 @@ jobs:
       - name: Agent End-to-End Scenario Perf Gate
         if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
         run: bash scripts/check_agent_scenario_perf.sh
+
+      - name: Agent Generative Workload Gate
+        if: ${{ env.GENESIS_CI_PROFILE == 'standard' || env.GENESIS_CI_PROFILE == 'full' }}
+        run: bash scripts/check_agent_generative_workloads.sh
 
       - name: Selfhost Strict Golden (Native + WASI CLI)
         if: ${{ env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request' }}

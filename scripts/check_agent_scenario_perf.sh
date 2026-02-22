@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 GAUNTLET_REPORT="${GENESIS_AGENT_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
 GAUNTLET_HISTORY="${GENESIS_AGENT_GAUNTLET_HISTORY:-.genesis/perf/agent_capability_gauntlet_history.jsonl}"
+BASELINE_HISTORY="${GENESIS_AGENT_SCENARIO_BASELINE_HISTORY:-policies/perf/agent_scenario_perf_seed_history.jsonl}"
 SCENARIO_REPORT="${GENESIS_AGENT_SCENARIO_REPORT:-.genesis/perf/agent_scenario_perf_report.json}"
 SCENARIO_HISTORY="${GENESIS_AGENT_SCENARIO_HISTORY:-.genesis/perf/agent_scenario_perf_history.jsonl}"
 SCENARIO_NAME="${GENESIS_AGENT_SCENARIO_NAME:-service-data-gfx-network}"
@@ -13,12 +14,14 @@ REQUIRED_WORKFLOWS_CSV="${GENESIS_AGENT_SCENARIO_WORKFLOWS:-agent_service_workfl
 MEDIAN_BUDGET_MS="${GENESIS_AGENT_SCENARIO_MEDIAN_BUDGET_MS:-600000}"
 P95_BUDGET_MS="${GENESIS_AGENT_SCENARIO_P95_BUDGET_MS:-750000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_SCENARIO_P95_MIN_SAMPLES:-8}"
+REQUIRE_MIN_HISTORY="${GENESIS_AGENT_SCENARIO_REQUIRE_MIN_HISTORY:-1}"
 REGRESSION_PERCENT="${GENESIS_AGENT_SCENARIO_REGRESSION_PERCENT:-25}"
 CONTENTION_WARN_PERCENT="${GENESIS_AGENT_SCENARIO_CONTENTION_WARN_PERCENT:-50}"
 
 python3 - \
   "$GAUNTLET_REPORT" \
   "$GAUNTLET_HISTORY" \
+  "$BASELINE_HISTORY" \
   "$SCENARIO_REPORT" \
   "$SCENARIO_HISTORY" \
   "$SCENARIO_NAME" \
@@ -26,6 +29,7 @@ python3 - \
   "$MEDIAN_BUDGET_MS" \
   "$P95_BUDGET_MS" \
   "$P95_MIN_SAMPLES" \
+  "$REQUIRE_MIN_HISTORY" \
   "$REGRESSION_PERCENT" \
   "$CONTENTION_WARN_PERCENT" <<'PY'
 import datetime as dt
@@ -38,6 +42,7 @@ import sys
 (
     gauntlet_report_path,
     gauntlet_history_path,
+    baseline_history_path,
     scenario_report_path,
     scenario_history_path,
     scenario_name,
@@ -45,6 +50,7 @@ import sys
     median_budget_ms,
     p95_budget_ms,
     p95_min_samples,
+    require_min_history_raw,
     regression_percent,
     contention_warn_percent,
 ) = sys.argv[1:]
@@ -56,6 +62,7 @@ if not required_workflows:
 median_budget_ms = int(median_budget_ms)
 p95_budget_ms = int(p95_budget_ms)
 p95_min_samples = int(p95_min_samples)
+require_min_history = require_min_history_raw.strip() not in {"0", "false", "False", "no", "off"}
 regression_percent = float(regression_percent)
 contention_warn_percent = float(contention_warn_percent)
 if median_budget_ms <= 0 or p95_budget_ms <= 0:
@@ -80,6 +87,37 @@ def median(values: list[int]) -> int:
     if not values:
         return 0
     return int(round(statistics.median(values)))
+
+
+def load_baseline_scenario_samples(
+    path: pathlib.Path,
+    *,
+    expected_scenario: str,
+    expected_runtime_profile: str,
+) -> list[int]:
+    if not path.exists():
+        return []
+    samples: list[int] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("kind") != "genesis/agent-scenario-perf-v0.1":
+            continue
+        if entry.get("scenario_name") != expected_scenario:
+            continue
+        if entry.get("runtime_profile") != expected_runtime_profile:
+            continue
+        duration = entry.get("scenario_duration_ms")
+        if isinstance(duration, int) and duration > 0:
+            samples.append(duration)
+    return samples
 
 
 gauntlet_report_file = pathlib.Path(gauntlet_report_path)
@@ -126,6 +164,19 @@ if failing_components:
 current_duration_ms = sum(component_durations[name] for name in required_workflows)
 
 history_samples: list[int] = []
+baseline_seed_samples: list[int] = []
+baseline_history_file = pathlib.Path(baseline_history_path)
+if baseline_history_file.exists():
+    baseline_seed_samples = load_baseline_scenario_samples(
+        baseline_history_file,
+        expected_scenario=scenario_name,
+        expected_runtime_profile=runtime_profile,
+    )
+elif require_min_history:
+    raise SystemExit(
+        f"agent-scenario-perf: baseline history file missing: {baseline_history_file}"
+    )
+
 gauntlet_history_file = pathlib.Path(gauntlet_history_path)
 if gauntlet_history_file.exists():
     for line in gauntlet_history_file.read_text(encoding="utf-8").splitlines():
@@ -149,17 +200,25 @@ if gauntlet_history_file.exists():
             continue
         history_samples.append(sum(int(durations[name]) for name in required_workflows))
 
-samples_ms = history_samples + [current_duration_ms]
+historical_samples = baseline_seed_samples + history_samples
+samples_ms = historical_samples + [current_duration_ms]
 sample_count = len(samples_ms)
 median_ms = median(samples_ms)
 p95_ms = p95(samples_ms)
-baseline_p95_ms = p95(history_samples) if history_samples else None
+baseline_p95_ms = p95(historical_samples) if historical_samples else None
 
 median_ok = median_ms <= median_budget_ms
 p95_enforced = sample_count >= p95_min_samples
 p95_ok = (not p95_enforced) or (p95_ms <= p95_budget_ms)
 
-regression_enforced = baseline_p95_ms is not None and len(history_samples) >= p95_min_samples
+history_min_ok = sample_count >= p95_min_samples
+if require_min_history and not history_min_ok:
+    raise SystemExit(
+        "agent-scenario-perf: insufficient scenario history samples for enforcement: "
+        f"{sample_count} < {p95_min_samples}"
+    )
+
+regression_enforced = baseline_p95_ms is not None and len(historical_samples) >= p95_min_samples
 regression_budget_ms = None
 regression_ok = True
 if regression_enforced and baseline_p95_ms is not None:
@@ -182,6 +241,10 @@ scenario_report = {
     "component_durations_ms": {name: component_durations[name] for name in required_workflows},
     "scenario_duration_ms": current_duration_ms,
     "sample_count": sample_count,
+    "historical_sample_count": len(historical_samples),
+    "baseline_seed_sample_count": len(baseline_seed_samples),
+    "require_min_history": require_min_history,
+    "history_min_ok": history_min_ok,
     "samples_ms": samples_ms,
     "median_ms": median_ms,
     "median_budget_ms": median_budget_ms,
@@ -201,6 +264,7 @@ scenario_report = {
     "contention_warning": contention_warning,
     "gauntlet_report": str(gauntlet_report_file),
     "gauntlet_history": str(gauntlet_history_file),
+    "baseline_history": str(baseline_history_file),
     "timestamp_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
 }
 

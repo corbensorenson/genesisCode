@@ -10,6 +10,7 @@ Canonical bundle for deterministic test profiles, schemas, and verification lane
 - `docs/spec/FUZZ_DIFFERENTIAL_HARDENING_v0.1.md`
 - `docs/spec/PARITY_HARNESS.md`
 - `docs/spec/AGENT_SCENARIO_PERF_v0.1.md`
+- `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
 
 ## Agent Guidance
 

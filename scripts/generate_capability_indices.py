@@ -220,6 +220,23 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                 }
             },
         },
+        "gfx/xr::haptics-pulse": {
+            "payload": {
+                "required_fields": [
+                    field(":session-id", "string", ["non-empty"]),
+                    field(":input-id", "string", ["non-empty"]),
+                    field(":amplitude", "int", ["> 0", "<= max_haptics_amplitude"]),
+                    field(":duration-ms", "int", ["> 0", "<= max_haptics_duration_ms"]),
+                ],
+                "optional_fields": [],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :session-id string :input-id string :amplitude int :duration-ms int :pulse-id string :accepted bool :submitted-haptics int :backend string :adapter string ...}",
+                }
+            },
+        },
         "gfx/xr::submit-frame": {
             "payload": {
                 "required_fields": [

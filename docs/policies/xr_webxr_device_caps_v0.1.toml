@@ -1,0 +1,47 @@
+# Canonical WebXR device bridge profile for deterministic XR replay envelopes.
+#
+# The XR runtime remains deny-by-default; each op below is explicitly allowlisted
+# and pinned to `xr_backend = "webxr-device"`.
+#
+# For native lanes, set `bridge_cmd` (+ optional args/hash) per op or per shared wrapper.
+# For WASI parity lanes, provide deterministic `wasi_bridge_response` or
+# `wasi_bridge_response_file` mappings per op.
+
+allow = [
+  "gfx/xr::session-open",
+  "gfx/xr::frame-poll",
+  "gfx/xr::input-poll",
+  "gfx/xr::haptics-pulse",
+  "gfx/xr::submit-frame",
+  "gfx/xr::session-close",
+]
+
+[op."gfx/xr::session-open"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :mode \"immersive-vr\" :reference-space \"local-floor\"}"
+
+[op."gfx/xr::frame-poll"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :frame {:frame-index 1 :predicted-display-time-ms 11 :views []}}"
+
+[op."gfx/xr::input-poll"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :inputs [{:id \"right-controller\" :kind :controller :select true}]}"
+
+[op."gfx/xr::haptics-pulse"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :input-id \"right-controller\" :pulse-id \"webxr-pulse-1\" :accepted true}"
+
+[op."gfx/xr::submit-frame"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :accepted true :frame-index 1}"
+
+[op."gfx/xr::session-close"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :closed true}"

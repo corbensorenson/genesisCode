@@ -1,7 +1,24 @@
 (def prog
-  (core/effect::perform
-    'gfx/xr::session-open
-    {:opts {:app "agent-xr-workflow" :mode "immersive-vr" :reference-space "local-floor"}}
-    (fn (open-resp) (core/effect::pure open-resp))))
+  ((core/effect::bind
+     (core/effect::perform
+       'gfx/xr::session-open
+       {:opts {:app "agent-xr-workflow" :mode "immersive-vr" :reference-space "local-floor"}}
+       (fn (open-resp) (core/effect::pure open-resp))))
+   (fn (open-resp)
+     (let ((sid ((core/map::get open-resp) ':session-id)))
+       ((core/effect::bind
+          (core/effect::perform
+            'gfx/xr::haptics-pulse
+            {:session-id sid :input-id "right-controller" :amplitude 800 :duration-ms 24}
+            (fn (haptics-resp) (core/effect::pure haptics-resp))))
+        (fn (haptics-resp)
+          ((core/effect::bind
+             (core/effect::perform
+               'gfx/xr::session-close
+               {:session-id sid}
+               (fn (close-resp) (core/effect::pure close-resp))))
+           (fn (close-resp)
+             (core/effect::pure
+               {:open open-resp :haptics haptics-resp :close close-resp})))))))))
 
 prog

@@ -46,6 +46,17 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     let full_cross =
         fs::read_to_string(root.join("scripts/check_full_cross_host_profile_budget.sh"))
             .expect("read check_full_cross_host_profile_budget.sh");
+    let generative =
+        fs::read_to_string(root.join("scripts/check_agent_generative_workloads.sh"))
+            .expect("read check_agent_generative_workloads.sh");
+    let parity =
+        fs::read_to_string(root.join("scripts/check_agent_workflow_runtime_parity.sh"))
+            .expect("read check_agent_workflow_runtime_parity.sh");
+    let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
+        .expect("read check_upgrade_plan_health.sh");
+    let scenario =
+        fs::read_to_string(root.join("scripts/check_agent_scenario_perf.sh"))
+            .expect("read check_agent_scenario_perf.sh");
 
     assert!(
         hot.contains("source \"$ROOT_DIR/scripts/lib/measure.sh\""),
@@ -82,6 +93,14 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         slo.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
         "ai-iteration slo script must default to release-equivalent cargo profile"
+    );
+    assert!(
+        slo.contains("GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK"),
+        "ai-iteration slo script must expose gcpm lock warm-up control for stabilization"
+    );
+    assert!(
+        slo.contains("GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK"),
+        "ai-iteration slo script must expose gcpm lock stabilization retries control"
     );
     assert!(
         micro.contains("CARGO_PROFILE=\"${GENESIS_PERF_CARGO_PROFILE:-selfhost-strict}\""),
@@ -146,6 +165,42 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         full_cross.contains("--profile full-cross-host"),
         "full cross-host lane must stamp full-cross-host profile label"
+    );
+    assert!(
+        full_cross.contains("GENESIS_FULL_CROSS_HOST_BASELINE_HISTORY"),
+        "full cross-host lane must define a baseline history seed path"
+    );
+    assert!(
+        full_cross.contains("--baseline-history \"$FULL_BASELINE_HISTORY\""),
+        "full cross-host lane must pass baseline history into shared budget helper"
+    );
+    assert!(
+        full_cross.contains("--require-min-history"),
+        "full cross-host lane must fail when there are insufficient history samples"
+    );
+    assert!(
+        scenario.contains("GENESIS_AGENT_SCENARIO_BASELINE_HISTORY"),
+        "agent scenario perf gate must define a baseline history seed path"
+    );
+    assert!(
+        scenario.contains("GENESIS_AGENT_SCENARIO_REQUIRE_MIN_HISTORY"),
+        "agent scenario perf gate must allow explicit minimum-history enforcement control"
+    );
+    assert!(
+        scenario.contains("insufficient scenario history samples for enforcement"),
+        "agent scenario perf gate must fail-closed on insufficient sample depth"
+    );
+    assert!(
+        generative.contains("genesis/agent-generative-workloads-v0.1"),
+        "generative workload gate must emit a stable machine-readable report kind"
+    );
+    assert!(
+        parity.contains("check_agent_generative_workloads.sh"),
+        "agent workflow runtime parity gate must include generative workload parity checks"
+    );
+    assert!(
+        health.contains("check_agent_generative_workloads.sh"),
+        "upgrade-plan health profiles must include generative workload validation beyond fixed workflow lists"
     );
 }
 

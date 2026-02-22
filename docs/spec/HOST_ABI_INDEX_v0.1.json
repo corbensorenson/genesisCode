@@ -153,6 +153,7 @@
     ],
     "gfx/xr": [
       "gfx/xr::frame-poll",
+      "gfx/xr::haptics-pulse",
       "gfx/xr::input-poll",
       "gfx/xr::session-close",
       "gfx/xr::session-open",
@@ -346,6 +347,7 @@
     "gfx/window::set-title",
     "gfx/window::surface-info",
     "gfx/xr::frame-poll",
+    "gfx/xr::haptics-pulse",
     "gfx/xr::input-poll",
     "gfx/xr::session-close",
     "gfx/xr::session-open",

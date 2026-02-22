@@ -14,6 +14,7 @@ This is a strict parity gate, not a smoke test.
 - Script: `scripts/check_agent_workflow_runtime_parity.sh`
 - Primary report: `.genesis/perf/agent_workflow_runtime_parity_report.json`
 - History: `.genesis/perf/agent_workflow_runtime_parity_history.jsonl`
+- Mutation parity companion report: `.genesis/perf/agent_generative_workloads_parity_report.json`
 
 ## Inputs
 
@@ -24,6 +25,10 @@ The parity runner executes `scripts/check_agent_reference_workflows.sh` twice:
 
 Reference workflow set includes browser-runtime, XR runtime, and deployment lanes, so
 parity checks cover all platform runtime additions automatically via shared gauntlet inputs.
+
+After native/wasi gauntlets complete, parity runner invokes
+`scripts/check_agent_generative_workloads.sh` with both lane reports to verify replay-digest
+parity across deterministic mutation cases derived from the shared workflow pool.
 
 Each lane emits a gauntlet report with per-workflow:
 

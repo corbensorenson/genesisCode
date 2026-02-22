@@ -2667,6 +2667,60 @@
         }
       }
     },
+    "gfx/xr::haptics-pulse": {
+      "operation": "gfx/xr::haptics-pulse",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":session-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "non-empty"
+            ],
+            "name": ":input-id",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "> 0",
+              "<= max_haptics_amplitude"
+            ],
+            "name": ":amplitude",
+            "type": "int"
+          },
+          {
+            "constraints": [
+              "> 0",
+              "<= max_haptics_duration_ms"
+            ],
+            "name": ":duration-ms",
+            "type": "int"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :session-id string :input-id string :amplitude int :duration-ms int :pulse-id string :accepted bool :submitted-haptics int :backend string :adapter string ...}",
+          "value_kind": "map"
+        }
+      }
+    },
     "gfx/xr::input-poll": {
       "operation": "gfx/xr::input-poll",
       "payload": {

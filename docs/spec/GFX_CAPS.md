@@ -77,8 +77,9 @@ Dispatch/introspection:
 - `gpu/compute::limits`
 - `gpu/compute::features`
 
-Compatibility layer:
-- `core/gfx/gpu::create-compute-pipeline` and `core/gfx/gpu::submit-compute-graph` remain available as compatibility wrappers and forward to canonical `gpu/compute::*` ops.
+Compute lane:
+- canonical compute capabilities are exposed under `core/gpu/compute::*`.
+- `core/gfx/gpu::*` is graphics-only in production paths.
 
 ## `gfx/window::*` ops
 

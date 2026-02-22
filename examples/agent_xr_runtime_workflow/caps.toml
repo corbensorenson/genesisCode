@@ -1,7 +1,26 @@
 allow = [
   "gfx/xr::session-open",
+  "gfx/xr::haptics-pulse",
   "gfx/xr::frame-poll",
   "gfx/xr::input-poll",
   "gfx/xr::submit-frame",
   "gfx/xr::session-close"
 ]
+
+[op."gfx/xr::haptics-pulse"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-example-1\" :input-id \"right-controller\" :pulse-id \"webxr-example-pulse-1\" :accepted true}"
+allow_haptics_inputs = ["left-controller", "right-controller"]
+max_haptics_amplitude = 1000
+max_haptics_duration_ms = 64
+
+[op."gfx/xr::session-open"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-example-1\" :mode \"immersive-vr\" :reference-space \"local-floor\"}"
+
+[op."gfx/xr::session-close"]
+xr_backend = "webxr-device"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-webxr-example-1\" :closed true}"

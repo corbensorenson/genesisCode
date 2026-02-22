@@ -8,6 +8,7 @@ STRICT_REPORT="${GENESIS_STRICT_GOLDEN_PROFILE_REPORT:-.genesis/perf/strict_gold
 WASM_REPORT="${GENESIS_WASM_CROSS_HOST_PROFILE_REPORT:-.genesis/perf/wasm_cross_host_profile_report.json}"
 FULL_REPORT="${GENESIS_FULL_CROSS_HOST_PROFILE_REPORT:-.genesis/perf/full_cross_host_profile_report.json}"
 FULL_HISTORY="${GENESIS_FULL_CROSS_HOST_PROFILE_HISTORY:-.genesis/perf/full_cross_host_profile_history.jsonl}"
+FULL_BASELINE_HISTORY="${GENESIS_FULL_CROSS_HOST_BASELINE_HISTORY:-policies/perf/full_cross_host_profile_seed_history.jsonl}"
 FULL_BUDGET_MS="${GENESIS_FULL_CROSS_HOST_BUDGET_MS:-720000}"
 FULL_MIN_HISTORY="${GENESIS_FULL_CROSS_HOST_MIN_HISTORY:-5}"
 WASM_BINDGEN_JS_PATH="${GENESIS_WASM_BINDGEN_NODE_JS:-target/wasm-bindgen/gc_wasm/gc_wasm.js}"
@@ -19,6 +20,10 @@ WASM_BINDGEN_JS_PATH="${GENESIS_WASM_BINDGEN_NODE_JS:-target/wasm-bindgen/gc_was
 [[ "$FULL_MIN_HISTORY" =~ ^[0-9]+$ && "$FULL_MIN_HISTORY" -gt 0 ]] || {
   echo "full-cross-host-budget: GENESIS_FULL_CROSS_HOST_MIN_HISTORY must be a positive integer" >&2
   exit 2
+}
+[[ -f "$FULL_BASELINE_HISTORY" ]] || {
+  echo "full-cross-host-budget: baseline history file missing: $FULL_BASELINE_HISTORY" >&2
+  exit 1
 }
 
 ensure_runtime_prerequisites() {
@@ -88,6 +93,8 @@ python3 "$ROOT_DIR/scripts/lib/profile_runtime_budget.py" \
   --kind genesis/test-profile-runtime-v0.1 \
   --report "$FULL_REPORT" \
   --history "$FULL_HISTORY" \
+  --baseline-history "$FULL_BASELINE_HISTORY" \
+  --require-min-history \
   --elapsed-ms "$TOTAL_ELAPSED_MS" \
   --budget-ms "$FULL_BUDGET_MS" \
   --min-history "$FULL_MIN_HISTORY" \

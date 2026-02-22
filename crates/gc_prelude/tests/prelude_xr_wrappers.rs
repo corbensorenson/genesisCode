@@ -1,5 +1,5 @@
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, parse_module};
-use gc_kernel::{EffectProgram, EffectRequest, EvalCtx, Value, eval_module};
+use gc_kernel::{EffectProgram, EffectRequest, Env, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
 fn get_req(v: Value) -> EffectRequest {
@@ -18,6 +18,12 @@ fn get_req(v: Value) -> EffectRequest {
     req.clone()
 }
 
+fn assert_no_prelude_bootstrap_error(env: &Env) {
+    if let Some(err) = env.get("core/prelude::bootstrap-error") {
+        panic!("prelude bootstrap error: {}", err.debug_repr());
+    }
+}
+
 #[test]
 fn prelude_xr_wrappers_construct_expected_requests() {
     let src = r#"
@@ -25,6 +31,7 @@ fn prelude_xr_wrappers_construct_expected_requests() {
         :open (core/gfx/xr::session-open {:mode "immersive-vr" :reference-space "local-floor" :app "xr-agent"})
         :frame (core/gfx/xr::frame-poll "session-1")
         :input ((core/gfx/xr::input-poll "session-1") 4)
+        :haptics ((((core/gfx/xr::haptics-pulse "session-1") "right-controller") 800) 24)
         :submit ((core/gfx/xr::submit-frame "session-1") {:frame-index 3 :views []})
         :close (core/gfx/xr::session-close "session-1")
       }
@@ -34,6 +41,7 @@ fn prelude_xr_wrappers_construct_expected_requests() {
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
+    assert_no_prelude_bootstrap_error(&env);
     let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
 
     let Value::Map(m) = v else {
@@ -68,6 +76,13 @@ fn prelude_xr_wrappers_construct_expected_requests() {
     );
     assert_eq!(submit_req.op, "gfx/xr::submit-frame");
 
+    let haptics_req = get_req(
+        m.get(&TermOrdKey(Term::symbol(":haptics")))
+            .expect("missing :haptics")
+            .clone(),
+    );
+    assert_eq!(haptics_req.op, "gfx/xr::haptics-pulse");
+
     let close_req = get_req(
         m.get(&TermOrdKey(Term::symbol(":close")))
             .expect("missing :close")
@@ -88,6 +103,7 @@ fn prelude_xr_domain_kit_starts_with_session_open() {
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
+    assert_no_prelude_bootstrap_error(&env);
     let v = eval_module(&mut ctx, &mut env, &forms).unwrap();
     let req = get_req(v);
     assert_eq!(req.op, "gfx/xr::session-open");

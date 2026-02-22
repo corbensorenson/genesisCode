@@ -181,6 +181,14 @@ fn ci_deduplicates_pr_strict_equivalence_and_enforces_gc_source_budget() {
         "ci workflow must run domain kit workflow migration guard script"
     );
     assert!(
+        ci.contains("Agent Generative Workload Gate"),
+        "ci workflow must enforce generative agent workload validation gate"
+    );
+    assert!(
+        ci.contains("bash scripts/check_agent_generative_workloads.sh"),
+        "ci workflow must run generative agent workload validation script"
+    );
+    assert!(
         ci.contains("env.GENESIS_CI_PROFILE == 'full' && github.event_name != 'pull_request'"),
         "full-profile strict-equivalence checks in test job must skip pull_request to avoid duplication with pr_strict_equivalence_gate"
     );

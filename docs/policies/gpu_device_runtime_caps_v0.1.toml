@@ -10,7 +10,6 @@ allow = [
   "gpu/compute::limits",
   "gpu/compute::features",
   "gfx/gpu::submit-frame-graph",
-  "gfx/gpu::submit-compute-graph",
   "gfx/gpu::limits",
   "gfx/gpu::features",
 ]
@@ -28,10 +27,6 @@ gpu_backend = "device-runtime"
 gpu_backend_policy = "require-device"
 
 [op."gfx/gpu::submit-frame-graph"]
-gpu_backend = "device-runtime"
-gpu_backend_policy = "require-device"
-
-[op."gfx/gpu::submit-compute-graph"]
 gpu_backend = "device-runtime"
 gpu_backend_policy = "require-device"
 

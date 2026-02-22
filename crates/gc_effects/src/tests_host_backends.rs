@@ -133,7 +133,7 @@ fn gfx_gpu_backend_is_supported_and_replayable() {
         "gfx/gpu::write-texture",
         "gfx/gpu::read-texture",
         "gfx/gpu::submit-frame-graph",
-        "gfx/gpu::submit-compute-graph",
+        "gpu/compute::submit",
         "gfx/gpu::limits",
         "gfx/gpu::features",
     ]);
@@ -185,7 +185,7 @@ fn gfx_gpu_backend_is_supported_and_replayable() {
                                     (fn (x) (core/effect::pure x))))
                 (fn (_)
                   ((core/effect::bind (core/effect::perform
-                                        'gfx/gpu::submit-compute-graph
+                                        'gpu/compute::submit
                                         {:graph {:passes []}}
                                         (fn (x) (core/effect::pure x))))
                     (fn (_)

@@ -31,7 +31,7 @@ Legend:
 | Inbound server networking primitives (listen/accept/http-serve/ws-accept) | ✅ (first-class `core/net::*` inbound listener/accept/respond wrappers + policy-gated bind/request-size controls + gauntlet domain coverage) | ⚠️ | ✅ | ✅ | ✅ |
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ✅ (first-party `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` families + `first_party_profile=\"browser\"` for gfx window/input/audio parity lanes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
-| WebXR runtime primitives (session/frame/input/haptics) | ⚠️ (first-class `gfx/xr::*` session/frame/input/submit/close contracts; haptics lane not yet implemented) | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| WebXR runtime primitives (session/frame/input/haptics) | ⚠️ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts with policy gates; device backend lane still pending) | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | Durable data capability family (`io/db::*`) | ✅ (first-class SQL + KV bridge-backed contracts with policy-gated target/query/row/byte bounds and replay-stable envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
@@ -48,11 +48,12 @@ Legend:
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` + `:tool-qualification` schema + fail-closed policy gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Independent verifier role-separation policy enforcement | ✅ (ref/publish policy classes support required roles + per-role minimums + independence pairs enforced on valid attestations) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Standards-oriented assurance profile packs (DO-178C/NASA/IEC) | ✅ (`gcpm assurance-pack` profile lanes + `policies/assurance/profile_packs.toml` + deterministic crosswalk contract) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Current red-team backlog is concentrated in P2 breadth/optimization items.
+- Current red-team backlog is concentrated in productization blockers (P1).
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -61,11 +62,13 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- none
+- `P1.2` XR runtime is simulator-first and still lacks a real WebXR device backend lane with deterministic replay envelopes.
+- `P1.3` Compute/graphics decoupling is incomplete while `gfx/gpu::*` compute compatibility aliases remain in production paths.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_BUILD_TARGETS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`
