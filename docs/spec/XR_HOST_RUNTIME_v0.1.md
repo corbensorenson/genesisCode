@@ -60,6 +60,19 @@ WebXR device lane policy requirements:
 - fail-closed policy error if `xr_backend = "webxr-device"` is configured without bridge transport.
 - canonical template: `docs/policies/xr_webxr_device_caps_v0.1.toml`
 
+Browser-native conformance lane:
+
+- CI job: `webxr_browser_conformance` in `.github/workflows/ci.yml`
+- checker: `scripts/check_webxr_browser_conformance.sh`
+- runtime harness: `scripts/webxr_browser_conformance.mjs`
+- artifact: `.genesis/perf/webxr_browser_conformance_report.json`
+- conformance scope:
+  - real browser `navigator.xr` session open (`inline`) + reference-space request
+  - frame callback attempt with bounded timeout classification (`ok|timeout|error`)
+  - real input-source snapshot from `session.inputSources`
+  - real haptics attempt on available actuators, or deterministic `no-haptics-source` classification
+  - deterministic replay assertion using capture hash equivalence across two independent runs
+
 Session lifecycle contract:
 
 - `session-open` returns a deterministic session id and normalized mode/reference-space metadata.
@@ -107,5 +120,8 @@ Advanced XR policy gate contract:
 - First-party XR runtime state is process-local deterministic state (session table, frame counters, submit counters).
 - `haptics-pulse` emits deterministic `:pulse-id` and cumulative `:submitted-haptics` counters.
 - WebXR device lane emits deterministic per-op replay envelopes (`:replay-envelope`) that are hashed in run/replay equivalence checks.
+- Browser-native WebXR lane enforces deterministic capture-replay equivalence:
+  - `hash(run_a_capture) == hash(run_b_capture)`
+  - replay rule persisted in `.genesis/perf/webxr_browser_conformance_report.json`.
 - `run` and `replay` produce identical value hashes for the same program/log pair.
 - Native/WASI lane parity is enforced by `scripts/check_agent_workflow_runtime_parity.sh` via the shared gauntlet workflow set.

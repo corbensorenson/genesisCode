@@ -352,6 +352,36 @@ jobs:
       - name: Full Cross-Host Runtime Budget Gate (PR Required)
         run: bash scripts/check_full_cross_host_profile_budget.sh
 
+  webxr_browser_conformance:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    env:
+      GENESIS_ALLOW_RUST_ENGINE: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install JS Deps (Playwright)
+        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-fund --no-audit
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser-Native WebXR Conformance (Deterministic Capture/Replay)
+        run: bash scripts/check_webxr_browser_conformance.sh
+
+      - name: Upload WebXR Browser Conformance Artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: webxr-browser-conformance-artifacts
+          path: .genesis/perf/webxr_browser_conformance_report.json
+          if-no-files-found: warn
+
   gpu_device_microbench:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: [self-hosted, linux, x64, gpu]

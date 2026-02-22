@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:web-smoke": "node scripts/wasm_web_smoke.mjs"
+    "test:web-smoke": "node scripts/wasm_web_smoke.mjs",
+    "test:webxr-conformance": "bash scripts/check_webxr_browser_conformance.sh"
   },
   "devDependencies": {
     "playwright": "1.58.2"
   }
 }
-

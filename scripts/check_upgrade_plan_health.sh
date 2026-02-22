@@ -570,6 +570,7 @@ COMMON_GATES=(
   "bash scripts/check_fuzz_differential_hardening.sh"
   "bash scripts/check_test_execution_profile_matrix.sh"
   "bash scripts/check_gpu_conformance_lane_matrix.sh"
+  "bash scripts/check_webxr_browser_conformance_lane.sh"
   "bash scripts/check_gc_source_size_budget.sh"
   "bash scripts/check_source_size_budget.sh"
   "bash scripts/check_test_size_budget.sh"

@@ -25,7 +25,7 @@ Compatibility notes:
   - canonical `gpu/compute::*` lifecycle (`create-*`, `write-buffer`, `read-buffer`, `destroy-resource`, `submit`, `limits`, `features`)
   - `gfx/gpu::*` lifecycle/data/submit/introspection lanes (`create-*`, `write-*`, `read-*`, `destroy-resource`, `submit-*`, `limits`, `features`)
   - `gfx/window::*`, `gfx/input::*`, `gfx/audio::*` (`headless` deterministic profile + `interactive` terminal-host adapter profile + `desktop` non-terminal adapter profile + `browser` wasm-host/browser profile)
-  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `hands-poll`, `hit-test`, `spatial-mesh-poll`, `anchor-create`, `anchor-update`, `anchor-destroy`, `layer-create`, `layer-update`, `layer-destroy`, `haptics-pulse`, `submit-frame`, `session-close`) with deterministic first-party XR lifecycle/spatial/compositor semantics plus dedicated `xr_backend = "webxr-device"` bridge lane for device capture envelopes
+  - `gfx/xr::*` (`session-open`, `frame-poll`, `input-poll`, `hands-poll`, `hit-test`, `spatial-mesh-poll`, `anchor-create`, `anchor-update`, `anchor-destroy`, `layer-create`, `layer-update`, `layer-destroy`, `haptics-pulse`, `submit-frame`, `session-close`) with deterministic first-party XR lifecycle/spatial/compositor semantics plus dedicated `xr_backend = "webxr-device"` bridge lane for device capture envelopes and browser-native WebXR conformance lane (`scripts/check_webxr_browser_conformance.sh`)
   - `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` (deterministic browser host runtime baseline; explicit bridge policy may override)
   - `editor/clipboard::*`, `editor/dialog::*`, `editor/watch::*`, `editor/task::*`
 - Bridge-mediated runtime domains:
@@ -356,6 +356,13 @@ CI drift check:
 - `gfx/xr::session-close`
   - Required payload field: `:session-id` (string).
   - Response map includes deterministic `:closed` flag; subsequent use is rejected via stable XR error codes.
+
+Browser-native WebXR runtime conformance:
+
+- Deterministic browser lane checker: `scripts/check_webxr_browser_conformance.sh`
+- Runtime harness: `scripts/webxr_browser_conformance.mjs`
+- Artifact contract: `.genesis/perf/webxr_browser_conformance_report.json`
+- Replay invariant: `run_a_hash == run_b_hash` for captured WebXR session/frame/input/haptics behavior.
 
 ## Crypto/Network/Process Capability Contracts
 

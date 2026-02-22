@@ -32,7 +32,7 @@ Legend:
 | Generic host extension/FFI capability ABI | ✅ (first-class `core/plugin::*` wrappers with typed request/response schema ids, runtime schema validation, and policy allowlists) | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | Plugin command surface hardening (command allowlists + bridge digest pinning) | ✅ (`host/plugin::command` and `editor/plugin::command` require `allow_commands`; bridge transport requires `bridge_cmd_sha256` and fails closed when missing/mismatched) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Browser runtime host profile for wasm-hosted apps | ✅ (first-party `browser/window::*`, `browser/input::*`, `browser/audio::*`, `browser/storage::*` families + `first_party_profile=\"browser\"` for gfx window/input/audio parity lanes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
-| WebXR runtime primitives (session/frame/input/haptics) | ✅ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts across first-party + `xr_backend=\"webxr-device\"` deterministic bridge envelopes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
+| WebXR runtime primitives (session/frame/input/haptics) | ✅ (first-class `gfx/xr::*` session/frame/input/haptics/submit/close contracts across first-party + `xr_backend=\"webxr-device\"` deterministic bridge envelopes + browser-native conformance lane with deterministic capture/replay hashes) | ⚠️ | ⚠️ | ✅ | ⚠️ |
 | Advanced XR spatial primitives (anchors/hands/mesh/layers) | ✅ (first-class `gfx/xr::*` anchors/hands/hit-test/spatial-mesh/layer lifecycle contracts with deterministic envelopes and policy gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Durable data capability family (`io/db::*`) | ✅ (first-class SQL + KV bridge-backed contracts with policy-gated target/query/row/byte bounds and replay-stable envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | First-class cryptography capability family | ✅ (first-class `core/crypto::*` hash/sign/verify/KDF/AEAD capability contracts with policy-gated bridge envelopes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -59,7 +59,7 @@ Legend:
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
 - GenesisCode is strongest on deterministic capability/evidence workflows and semantic VCS/pkg integration.
-- Red-team backlog currently contains active P1 blockers; see `upgrade_plan.md`.
+- Red-team backlog currently contains active P0/P1 blockers; see `upgrade_plan.md`.
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
@@ -68,7 +68,13 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.5` - WebXR device lane lacks first-class browser-runtime conformance coverage.
+- `P0.1` - health gate partitioning crashes on Bash 3 when a partition array is empty.
+- `P0.2` - release guard path lacks low-disk fail-fast and executable artifact sanity checks.
+- `P1.1` - committed selfhost artifact freshness gate is failing (`selfhost/toolchain.gc` stale).
+- `P1.2` - runtime backend matrix lane is not disk-aware and failed under storage pressure.
+- `P1.3` - cargo target-dir/cache policy is inconsistent across compile-heavy script fleet.
+- `P1.4` - compile-heavy non-health lanes lack consistent timing telemetry for optimization.
+- `P2.1` - docs remain fragmented for agent retrieval; bundle consolidation is still open.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
