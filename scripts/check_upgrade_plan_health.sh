@@ -18,6 +18,9 @@ TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000}"
 HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
+HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-1}"
+HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-1}"
+HEALTH_WARMUP_REPORT="${GENESIS_HEALTH_WARMUP_REPORT:-.genesis/perf/upgrade_plan_health_warmup_${PROFILE}.json}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
 else
@@ -25,6 +28,8 @@ else
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
 GPU_DEVICE_CONFORMANCE=""
+NON_CARGO_PARTITION=()
+CARGO_PARTITION=()
 
 now_ms() {
   python3 - <<'PY'
@@ -133,6 +138,165 @@ report_path.parent.mkdir(parents=True, exist_ok=True)
 report_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 print(f"upgrade-plan-health: wrote profile report {report_path}")
 PY
+}
+
+write_health_warmup_report() {
+  local profile="$1"
+  local mode="$2"
+  local elapsed_ms="$3"
+  local command_count="$4"
+  local enabled="$5"
+  local report_path="$6"
+
+  python3 - "$profile" "$mode" "$elapsed_ms" "$command_count" "$enabled" "$report_path" <<'PY'
+import json
+import pathlib
+import sys
+
+profile = sys.argv[1]
+mode = sys.argv[2]
+elapsed_ms = int(sys.argv[3])
+command_count = int(sys.argv[4])
+enabled = sys.argv[5] == "1"
+report_path = pathlib.Path(sys.argv[6])
+
+doc = {
+    "kind": "genesis/upgrade-plan-health-cargo-warmup-v0.1",
+    "profile": profile,
+    "mode": mode,
+    "elapsed_ms": elapsed_ms,
+    "command_count": command_count,
+    "enabled": enabled,
+}
+if report_path.is_file():
+    try:
+        prev = json.loads(report_path.read_text(encoding="utf-8"))
+        if (
+            isinstance(prev, dict)
+            and prev.get("kind") == "genesis/upgrade-plan-health-cargo-warmup-v0.1"
+            and prev.get("profile") == profile
+            and prev.get("mode") == mode
+        ):
+            prev_elapsed = prev.get("elapsed_ms")
+            if isinstance(prev_elapsed, int):
+                doc["previous_elapsed_ms"] = prev_elapsed
+                doc["elapsed_delta_ms"] = elapsed_ms - prev_elapsed
+    except Exception:
+        pass
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(f"upgrade-plan-health: wrote cargo warmup report {report_path}")
+PY
+}
+
+command_uses_cargo() {
+  local cmd="$1"
+  local script_path=""
+
+  if [[ "$cmd" == cargo* || "$cmd" == *" cargo "* ]]; then
+    return 0
+  fi
+
+  if [[ "$cmd" == *" bash "* || "$cmd" == bash\ * ]]; then
+    script_path="${cmd#*bash }"
+    script_path="${script_path%% *}"
+    if [[ -f "$script_path" ]]; then
+      if command -v rg >/dev/null 2>&1; then
+        if rg -q '(^|[[:space:]])cargo[[:space:]]' "$script_path"; then
+          return 0
+        fi
+      else
+        if grep -Eq '(^|[[:space:]])cargo[[:space:]]' "$script_path"; then
+          return 0
+        fi
+      fi
+    fi
+  fi
+
+  return 1
+}
+
+partition_gate_commands() {
+  NON_CARGO_PARTITION=()
+  CARGO_PARTITION=()
+
+  local cmd
+  for cmd in "$@"; do
+    if command_uses_cargo "$cmd"; then
+      CARGO_PARTITION+=("$cmd")
+    else
+      NON_CARGO_PARTITION+=("$cmd")
+    fi
+  done
+}
+
+build_cargo_warmup_commands() {
+  local mode="$1"
+  CARGO_WARMUP_COMMANDS=()
+  CARGO_WARMUP_COMMANDS+=("cargo metadata --format-version 1 --no-deps >/dev/null")
+
+  case "$mode" in
+    mandatory-local)
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test task_concurrency_stress --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test host_bridge_fault_injection --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo check --workspace --all-targets --quiet")
+      ;;
+    profile:dev-fast)
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
+      ;;
+    profile:prepush-standard)
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_pkg_workspace --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo check --workspace --all-targets --quiet")
+      ;;
+    profile:release-full)
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_pkg_workspace --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test gfx_gpu_bridge --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test host_abi_surface --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_selfhost_gpu_parallel --no-run --quiet")
+      CARGO_WARMUP_COMMANDS+=("cargo check --workspace --all-targets --quiet")
+      ;;
+  esac
+}
+
+run_health_cargo_warmup() {
+  local mode="$1"
+
+  if [[ "$HEALTH_WARM_CARGO_CACHE" != "0" && "$HEALTH_WARM_CARGO_CACHE" != "1" ]]; then
+    echo "upgrade-plan-health: GENESIS_HEALTH_WARM_CARGO_CACHE must be 0 or 1" >&2
+    exit 2
+  fi
+
+  build_cargo_warmup_commands "$mode"
+
+  if [[ "$HEALTH_WARM_CARGO_CACHE" == "0" ]]; then
+    write_health_warmup_report "$PROFILE" "$mode" "0" "${#CARGO_WARMUP_COMMANDS[@]}" "0" "$HEALTH_WARMUP_REPORT"
+    echo "upgrade-plan-health: cargo warmup disabled (mode=${mode})"
+    return 0
+  fi
+
+  if [[ "${#CARGO_WARMUP_COMMANDS[@]}" -eq 0 ]]; then
+    write_health_warmup_report "$PROFILE" "$mode" "0" "0" "1" "$HEALTH_WARMUP_REPORT"
+    echo "upgrade-plan-health: cargo warmup skipped (mode=${mode}, no commands)"
+    return 0
+  fi
+
+  local start_ms
+  local end_ms
+  local elapsed_ms
+  start_ms="$(now_ms)"
+  local cmd
+  for cmd in "${CARGO_WARMUP_COMMANDS[@]}"; do
+    echo "upgrade-plan-health: [cargo-warmup ${mode}] >> $cmd"
+    bash -lc "$cmd"
+  done
+  end_ms="$(now_ms)"
+  elapsed_ms=$((end_ms - start_ms))
+  write_health_warmup_report "$PROFILE" "$mode" "$elapsed_ms" "${#CARGO_WARMUP_COMMANDS[@]}" "1" "$HEALTH_WARMUP_REPORT"
+  echo "upgrade-plan-health: cargo warmup elapsed_ms=${elapsed_ms} commands=${#CARGO_WARMUP_COMMANDS[@]} mode=${mode}"
 }
 
 run_gate_commands() {
@@ -259,6 +423,10 @@ if [[ ! "$HEALTH_SHARDS" =~ ^[0-9]+$ || "$HEALTH_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_SHARDS must be a positive integer" >&2
   exit 2
 fi
+if [[ ! "$HEALTH_CARGO_GATE_SHARDS" =~ ^[0-9]+$ || "$HEALTH_CARGO_GATE_SHARDS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_CARGO_GATE_SHARDS must be a positive integer" >&2
+  exit 2
+fi
 
 PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"
 if [[ -z "${GENESIS_HEALTH_PROFILE_SHARDS:-}" && ( "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" ) ]]; then
@@ -275,6 +443,10 @@ if [[ ! -f "$PLAN_FILE" ]]; then
   echo "upgrade-plan-health: missing file: $PLAN_FILE"
   exit 1
 fi
+
+mkdir -p "$HEALTH_CARGO_TARGET_DIR"
+export CARGO_TARGET_DIR="$HEALTH_CARGO_TARGET_DIR"
+echo "upgrade-plan-health: using shared cargo target dir: $CARGO_TARGET_DIR"
 
 declared_open="$(awk -F: '/^Open checklist items:/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$PLAN_FILE")"
 if [[ -z "$declared_open" || ! "$declared_open" =~ ^[0-9]+$ ]]; then
@@ -294,6 +466,7 @@ if [[ "$declared_open" -gt 0 ]]; then
   echo "upgrade-plan-health: backlog status: open checklist items = $declared_open"
   if [[ "$ENFORCE_GATES" != "1" ]]; then
     echo "upgrade-plan-health: backlog open; running mandatory local guard gates."
+    run_health_cargo_warmup "mandatory-local"
     MANDATORY_LOCAL_NON_CARGO_GATES=(
       "bash scripts/check_selfhost_boundary.sh --strict"
       "bash scripts/check_selfhost_doc_runtime_parity.sh"
@@ -304,9 +477,9 @@ if [[ "$declared_open" -gt 0 ]]; then
       "bash scripts/check_no_production_rust_frontend_refs.sh"
     )
     MANDATORY_LOCAL_CARGO_GATES=(
-      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_task_concurrency_stress.sh"
-      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_host_bridge_fault_injection.sh"
-      "CARGO_TARGET_DIR=$HEALTH_CARGO_TARGET_DIR bash scripts/check_no_user_panics.sh"
+      "bash scripts/check_task_concurrency_stress.sh"
+      "bash scripts/check_host_bridge_fault_injection.sh"
+      "bash scripts/check_no_user_panics.sh"
     )
     MANDATORY_LOCAL_GATES=(
       "${MANDATORY_LOCAL_NON_CARGO_GATES[@]}"
@@ -446,24 +619,53 @@ if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   PROFILE_GATES=()
 fi
 
-if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#COMMON_GATES[@]} common gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
+run_health_cargo_warmup "profile:${PROFILE}"
+
+partition_gate_commands "${COMMON_GATES[@]}"
+COMMON_NON_CARGO_GATES=("${NON_CARGO_PARTITION[@]}")
+COMMON_CARGO_GATES=("${CARGO_PARTITION[@]}")
+
+partition_gate_commands "${PROFILE_GATES[@]}"
+PROFILE_NON_CARGO_GATES=("${NON_CARGO_PARTITION[@]}")
+PROFILE_CARGO_GATES=("${CARGO_PARTITION[@]}")
+
+if [[ "${#COMMON_NON_CARGO_GATES[@]}" -gt 0 ]]; then
+  echo "upgrade-plan-health: running ${#COMMON_NON_CARGO_GATES[@]} common non-cargo gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
 fi
 
-if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#PROFILE_GATES[@]} profile gates (profile=${PROFILE}, shards=${PROFILE_SHARDS})"
+if [[ "${#COMMON_CARGO_GATES[@]}" -gt 0 ]]; then
+  echo "upgrade-plan-health: running ${#COMMON_CARGO_GATES[@]} common cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
+fi
+
+if [[ "${#PROFILE_NON_CARGO_GATES[@]}" -gt 0 ]]; then
+  echo "upgrade-plan-health: running ${#PROFILE_NON_CARGO_GATES[@]} profile non-cargo gates (profile=${PROFILE}, shards=${PROFILE_SHARDS})"
+fi
+
+if [[ "${#PROFILE_CARGO_GATES[@]}" -gt 0 ]]; then
+  echo "upgrade-plan-health: running ${#PROFILE_CARGO_GATES[@]} profile cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
 fi
 
 start_ms="$(now_ms)"
-if [[ "${#COMMON_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "common" "$HEALTH_SHARDS" "${COMMON_GATES[@]}"
+if [[ "${#COMMON_NON_CARGO_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "common-non-cargo" "$HEALTH_SHARDS" "${COMMON_NON_CARGO_GATES[@]}"
 fi
-if [[ "${#PROFILE_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "profile:${PROFILE}" "$PROFILE_SHARDS" "${PROFILE_GATES[@]}"
+if [[ "${#COMMON_CARGO_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "common-cargo" "$HEALTH_CARGO_GATE_SHARDS" "${COMMON_CARGO_GATES[@]}"
+fi
+if [[ "${#PROFILE_NON_CARGO_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "profile:${PROFILE}:non-cargo" "$PROFILE_SHARDS" "${PROFILE_NON_CARGO_GATES[@]}"
+fi
+if [[ "${#PROFILE_CARGO_GATES[@]}" -gt 0 ]]; then
+  run_gate_commands "profile:${PROFILE}:cargo" "$HEALTH_CARGO_GATE_SHARDS" "${PROFILE_CARGO_GATES[@]}"
 fi
 end_ms="$(now_ms)"
 elapsed_ms=$((end_ms - start_ms))
-gate_count=$(( ${#COMMON_GATES[@]} + ${#PROFILE_GATES[@]} ))
+gate_count=$(( \
+  ${#COMMON_NON_CARGO_GATES[@]} + \
+  ${#COMMON_CARGO_GATES[@]} + \
+  ${#PROFILE_NON_CARGO_GATES[@]} + \
+  ${#PROFILE_CARGO_GATES[@]} \
+))
 
 profile_budget=""
 profile_ok=1

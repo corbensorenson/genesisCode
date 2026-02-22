@@ -13,6 +13,7 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - Script: `scripts/check_agent_reference_workflows.sh`
 - Primary report: `.genesis/perf/agent_capability_gauntlet_report.json`
 - History: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
+- Baseline seed history: `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
 
 ## Report Contract
 
@@ -22,6 +23,8 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `domain_count`, `domain_successes`
 - `elapsed_ms`, `default_max_ms`
 - `p95_default_max_ms`, `p95_min_samples`, `p95_failures`
+- `baseline_history_path`, `require_min_history`
+- `regression_percent`, `regression_failures`, `history_min_failures`
 - `profile`, `runtime_profile`, `genesis_bin`
 - `domains`:
   - `domain`
@@ -35,6 +38,8 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
   - `replay_value_normalized`, `replay_hash_normalized`
   - `duration_ms`, `max_ms`, `duration_ok`
   - `p95_duration_ms`, `p95_budget_ms`, `p95_sample_count`, `p95_enforced`, `p95_ok`
+  - `history_min_ok`, `require_min_history`, `baseline_history_sample_count`
+  - `baseline_p95_ms`, `regression_percent`, `regression_enforced`, `regression_budget_ms`, `regression_ok`
   - `ok`
 
 ## Required Domains
@@ -66,6 +71,9 @@ If any required domain misses its minimum success threshold, the script exits no
 - `GENESIS_AGENT_GAUNTLET_P95_DEFAULT_MAX_MS` (defaults to `GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS`)
 - `GENESIS_AGENT_GAUNTLET_P95_MAX_MS_<WORKFLOW_NAME_UPPER>` per-workflow p95 override
 - `GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES` minimum history samples before p95 enforcement (default `8`)
+- `GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY` default `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
+- `GENESIS_AGENT_GAUNTLET_REQUIRE_MIN_HISTORY` fail-closed on insufficient per-workflow history (default `1`)
+- `GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT` per-workflow regression budget over baseline p95 (default `25`)
 
 ## CI Expectations
 

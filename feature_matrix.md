@@ -45,7 +45,7 @@ Legend:
 | Local artifact GC by refs/locks/pins reachability | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Runtime backend profile selection through project manager workflows | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 | Deterministic non-gfx runtime profiling in core workflow | ✅ (`gcpm profile-runtime` emits task/IO/memory profile artifacts with history-aware p95 regression gates) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Generative workload regression gates with enforced historical baselines | ⚠️ (`agent_generative_workloads*` lanes run, but reports still show `history_samples=1`/`regression_enforced=false`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Generative workload regression gates with enforced historical baselines | ✅ (`agent_generative_workloads*` lanes are fail-closed with seeded baseline histories, per-case minimum-history enforcement, and active regression budgets in native/parity runs) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Enforced runtime wall-time budgets for strict/full profile lanes | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Perf/hot-path gate operability under constrained local disk headroom | ✅ (shared `GENESIS_PERF_DISK_STRICT_MODE=auto|1|0`; default `auto` keeps CI fail-closed while avoiding local precheck false negatives) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact) | ✅ (`gcpm trace` + `:requirements-trace` schema + fail-closed policy gates on refs/publish/registry) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -66,7 +66,6 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- `P1.3` - generative/per-workflow regression statistics are not yet enforceable.
 - `P1.4` - XR feature surface lacks advanced spatial primitives.
 - `P1.5` - WebXR device lane lacks first-class browser-runtime conformance coverage.
 - `P1.6` - typechecker inference remains conservative for complex agent-authored programs.

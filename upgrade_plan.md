@@ -5,13 +5,9 @@ Last updated: 2026-02-22
 This file contains only unresolved findings from the latest red-team pass.
 Completed items are intentionally removed.
 
-Open checklist items: 10
+Open checklist items: 9
 
 ## P1 - Productization blockers for "agent can build anything" readiness
-
-- [ ] P1.3 Enforce statistically meaningful regression gates for generative agent workloads and per-workflow gauntlet lanes.
-  - Evidence: `.genesis/perf/agent_generative_workloads_report.json` and `.genesis/perf/agent_generative_workloads_parity_report.json` show `history_samples = 1` and `regression_enforced = false`; gauntlet workflow entries still report `p95_enforced = false`.
-  - Exit criteria: seed and enforce per-workflow history minima with fail-closed p95/regression gates (native + wasi parity lanes), not just aggregate scenario metrics.
 
 - [ ] P1.4 Expand XR runtime surface beyond session/frame/input/haptics to production-grade AR/VR primitives.
   - Evidence: `docs/spec/XR_HOST_RUNTIME_v0.1.md` currently standardizes only six ops (`session-open`, `frame-poll`, `input-poll`, `haptics-pulse`, `submit-frame`, `session-close`).

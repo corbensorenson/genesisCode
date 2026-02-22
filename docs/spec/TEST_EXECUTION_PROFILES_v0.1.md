@@ -44,7 +44,13 @@ Strict/full profile runtime reports:
 - `agent-generative-workloads` mutation lane
   - report: `.genesis/perf/agent_generative_workloads_report.json`
   - history: `.genesis/perf/agent_generative_workloads_history.jsonl`
-  - enforced by `scripts/check_agent_generative_workloads.sh` using deterministic mutation sets derived from successful gauntlet workflows, with duration/domain/replay invariants and optional parity enforcement.
+  - baseline seed history: `policies/perf/agent_generative_workloads_seed_history.jsonl`
+  - enforced by `scripts/check_agent_generative_workloads.sh` using deterministic mutation sets derived from successful gauntlet workflows, with fail-closed minimum-history + p95/regression enforcement and optional parity enforcement.
+- `agent-capability-gauntlet` per-workflow performance lane
+  - report: `.genesis/perf/agent_capability_gauntlet_report.json`
+  - history: `.genesis/perf/agent_capability_gauntlet_history.jsonl`
+  - baseline seed history: `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
+  - enforced by `scripts/check_agent_reference_workflows.sh` with per-workflow fail-closed minimum-history + p95/regression budgets (native and parity wasi lanes).
 
 ## Runners
 

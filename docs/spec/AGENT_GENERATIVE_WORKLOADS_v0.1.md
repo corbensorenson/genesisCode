@@ -12,6 +12,7 @@ Purpose:
 - Script: `scripts/check_agent_generative_workloads.sh`
 - Report: `.genesis/perf/agent_generative_workloads_report.json`
 - History: `.genesis/perf/agent_generative_workloads_history.jsonl`
+- Baseline seed history: `policies/perf/agent_generative_workloads_seed_history.jsonl`
 
 ## Inputs
 
@@ -37,6 +38,7 @@ For each generated case:
 - each generated case satisfies minimum domain coverage,
 - each generated case satisfies duration budget,
 - optional history-aware regression gates pass (when enough history exists),
+- fail-closed minimum-history policy is enforced by default (`require_min_history=1`),
 - when secondary report is provided, case replay digests match across both reports.
 
 ## Configuration
@@ -48,6 +50,8 @@ For each generated case:
 - `GENESIS_AGENT_GENERATIVE_MAX_CASE_DURATION_MS` (default `600000`)
 - `GENESIS_AGENT_GENERATIVE_P95_MIN_SAMPLES` (default `8`)
 - `GENESIS_AGENT_GENERATIVE_REGRESSION_PERCENT` (default `25`)
+- `GENESIS_AGENT_GENERATIVE_BASELINE_HISTORY` (default `policies/perf/agent_generative_workloads_seed_history.jsonl`)
+- `GENESIS_AGENT_GENERATIVE_REQUIRE_MIN_HISTORY` (default `1`)
 - `GENESIS_AGENT_GENERATIVE_SEED` (default `genesis-agent-generative-v1`)
 
 ## Report Contract
@@ -56,5 +60,6 @@ For each generated case:
 - `ok`, `seed`, `runtime_profile`, optional `secondary_runtime_profile`
 - case generation bounds and budgets
 - summary duration stats
-- `duration_failures`, `domain_failures`, `regression_failures`, `parity_mismatches`
+- `baseline_history_path`, `require_min_history`
+- `duration_failures`, `domain_failures`, `regression_failures`, `history_min_failures`, `parity_mismatches`
 - per-case records (workflow set, domain set, duration, replay digest, parity/regression fields)
