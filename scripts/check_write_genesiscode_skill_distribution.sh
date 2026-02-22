@@ -37,6 +37,27 @@ prompts = manifest.get("prompts")
 recipes = manifest.get("recipes")
 expected_reports = manifest.get("expected_reports")
 verification_scripts = manifest.get("verification_scripts")
+requirements = manifest.get("distribution_requirements")
+
+if not isinstance(requirements, dict):
+    raise SystemExit("write-genesiscode-skill-distribution: distribution_requirements must be an object")
+min_prompts = int(requirements.get("min_prompts", 1))
+min_recipes = int(requirements.get("min_recipes", 1))
+required_domains = requirements.get("required_recipe_domains", [])
+require_fault_injection = bool(requirements.get("require_fault_injection_recipe", False))
+min_report_score = int(requirements.get("min_report_score", 0))
+
+if min_prompts <= 0:
+    raise SystemExit("write-genesiscode-skill-distribution: min_prompts must be > 0")
+if min_recipes <= 0:
+    raise SystemExit("write-genesiscode-skill-distribution: min_recipes must be > 0")
+if min_report_score < 0:
+    raise SystemExit("write-genesiscode-skill-distribution: min_report_score must be >= 0")
+if not isinstance(required_domains, list):
+    raise SystemExit("write-genesiscode-skill-distribution: required_recipe_domains must be a list")
+for d in required_domains:
+    if not isinstance(d, str) or not d.strip():
+        raise SystemExit("write-genesiscode-skill-distribution: required_recipe_domains entries must be non-empty strings")
 
 if not isinstance(prompts, list) or not prompts:
     raise SystemExit("write-genesiscode-skill-distribution: prompts must be a non-empty list")
@@ -46,6 +67,17 @@ if not isinstance(expected_reports, list) or not expected_reports:
     raise SystemExit("write-genesiscode-skill-distribution: expected_reports must be a non-empty list")
 if not isinstance(verification_scripts, list) or not verification_scripts:
     raise SystemExit("write-genesiscode-skill-distribution: verification_scripts must be a non-empty list")
+
+if len(prompts) < min_prompts:
+    raise SystemExit(
+        "write-genesiscode-skill-distribution: prompts below minimum: "
+        f"{len(prompts)} < {min_prompts}"
+    )
+if len(recipes) < min_recipes:
+    raise SystemExit(
+        "write-genesiscode-skill-distribution: recipes below minimum: "
+        f"{len(recipes)} < {min_recipes}"
+    )
 
 for item in prompts:
     if not isinstance(item, dict):
@@ -59,18 +91,29 @@ for item in prompts:
             f"write-genesiscode-skill-distribution: missing prompt file: {full.as_posix()}"
         )
 
+seen_domains = set()
+fault_injection_count = 0
+
 for item in recipes:
     if not isinstance(item, dict):
         raise SystemExit("write-genesiscode-skill-distribution: recipe entry must be an object")
     recipe_path = item.get("path")
     workflow_path = item.get("workflow")
     domain = item.get("domain")
+    mode = item.get("mode", "standard")
     if not isinstance(recipe_path, str) or not recipe_path:
         raise SystemExit("write-genesiscode-skill-distribution: recipe path must be a non-empty string")
     if not isinstance(workflow_path, str) or not workflow_path:
         raise SystemExit("write-genesiscode-skill-distribution: recipe workflow must be a non-empty string")
     if not isinstance(domain, str) or not domain:
         raise SystemExit("write-genesiscode-skill-distribution: recipe domain must be a non-empty string")
+    if not isinstance(mode, str) or mode not in {"standard", "fault-injection"}:
+        raise SystemExit(
+            "write-genesiscode-skill-distribution: recipe mode must be 'standard' or 'fault-injection'"
+        )
+    seen_domains.add(domain)
+    if mode == "fault-injection":
+        fault_injection_count += 1
     recipe_full = kit_root / recipe_path
     if not recipe_full.is_file():
         raise SystemExit(
@@ -82,6 +125,17 @@ for item in recipes:
             f"write-genesiscode-skill-distribution: missing workflow script: {workflow_full.as_posix()}"
         )
 
+missing_domains = [d for d in required_domains if d not in seen_domains]
+if missing_domains:
+    raise SystemExit(
+        "write-genesiscode-skill-distribution: missing required recipe domains: "
+        + ", ".join(missing_domains)
+    )
+if require_fault_injection and fault_injection_count == 0:
+    raise SystemExit(
+        "write-genesiscode-skill-distribution: require_fault_injection_recipe=true but no fault-injection recipe found"
+    )
+
 for script_path in verification_scripts:
     if not isinstance(script_path, str) or not script_path:
         raise SystemExit("write-genesiscode-skill-distribution: verification script path must be a non-empty string")
@@ -89,6 +143,18 @@ for script_path in verification_scripts:
     if not full.is_file():
         raise SystemExit(
             f"write-genesiscode-skill-distribution: missing verification script: {full.as_posix()}"
+        )
+
+for item in expected_reports:
+    if not isinstance(item, dict):
+        raise SystemExit("write-genesiscode-skill-distribution: expected_report entry must be an object")
+    if "min_score" not in item:
+        raise SystemExit("write-genesiscode-skill-distribution: expected_report entry must include min_score")
+    report_min = int(item.get("min_score", 0))
+    if report_min < min_report_score:
+        raise SystemExit(
+            "write-genesiscode-skill-distribution: expected_report min_score below distribution threshold: "
+            f"{report_min} < {min_report_score}"
         )
 
 print(

@@ -168,12 +168,16 @@
       "capability": "GPU compute + graphics capability surfaces",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh"
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md"
+        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
+        "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md",
+        "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md"
       ]
     },
     {
@@ -189,7 +193,9 @@
       "capability": "Device-backed GPU compute required in release profile",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh"
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
@@ -351,10 +357,14 @@
     {
       "capability": "Deployment/bundle target pipeline in core toolchain",
       "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
+        "scripts/check_upgrade_plan_health.sh",
+        "crates/gc_cli/tests/cli_pkg_workspace.rs",
+        "examples/agent_deploy_bundle_workflow/workflow.sh"
       ],
       "evidence_paths": [
-        "docs/spec/CLI.md"
+        "docs/spec/CLI.md",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md"
       ]
     },
     {
@@ -375,6 +385,8 @@
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_cli_diagnostics_contract.sh",
         "scripts/check_write_genesiscode_skill_pack.sh",
+        "scripts/check_write_genesiscode_skill_distribution.sh",
+        "scripts/check_write_genesiscode_skill_conformance.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
       "evidence_paths": [
@@ -382,6 +394,7 @@
         "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
         "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
         "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
+        "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
         "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
       ]
@@ -428,6 +441,8 @@
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh",
         "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh",
         "scripts/check_agent_reference_workflows.sh",
         "scripts/check_perf_budgets.sh"
       ],

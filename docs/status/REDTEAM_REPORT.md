@@ -14,6 +14,4 @@ Scope:
 - `P1.2` Local AI authoring loop lacks bounded deterministic fast profile.
 - `P1.3` SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
 - `P1.4` Oversized high-churn Rust modules still impede AI-maintainable iteration.
-- `P1.5` `write_genesisCode_skill` distribution corpus breadth is below "make anything" needs.
-- `P1.6` Feature-matrix evidence ledger lags split GPU/GFX and deployment claims.
 - `P1.7` Semantic-edit workflow lacks first-class deterministic apply execution.

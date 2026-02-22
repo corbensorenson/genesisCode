@@ -103,6 +103,26 @@ workflows = [
         "domains": ["deployment"],
     },
     {
+        "name": "agent_deploy_ios_workflow",
+        "path": "examples/agent_deploy_ios_workflow/workflow.sh",
+        "domains": ["deployment", "deploy_ios"],
+    },
+    {
+        "name": "agent_deploy_android_workflow",
+        "path": "examples/agent_deploy_android_workflow/workflow.sh",
+        "domains": ["deployment", "deploy_android"],
+    },
+    {
+        "name": "agent_deploy_edge_workflow",
+        "path": "examples/agent_deploy_edge_workflow/workflow.sh",
+        "domains": ["deployment", "deploy_edge"],
+    },
+    {
+        "name": "agent_deploy_service_runtime_workflow",
+        "path": "examples/agent_deploy_service_runtime_workflow/workflow.sh",
+        "domains": ["deployment", "deploy_service_runtime"],
+    },
+    {
         "name": "agent_service_workflow",
         "path": "examples/agent_service_workflow/workflow.sh",
         "domains": ["service", "package_publish_sync"],
@@ -165,6 +185,10 @@ required_domains = {
     "browser_runtime": 1,
     "xr_runtime": 1,
     "deployment": 1,
+    "deploy_ios": 1,
+    "deploy_android": 1,
+    "deploy_edge": 1,
+    "deploy_service_runtime": 1,
 }
 
 env = dict(os.environ)
@@ -230,6 +254,28 @@ def load_workflow_duration_history(
                     continue
                 durations.setdefault(name, []).append(value)
     return durations
+
+def load_elapsed_history(
+    paths: list[pathlib.Path], current_runtime_profile: str
+) -> list[int]:
+    samples: list[int] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("runtime_profile") != current_runtime_profile:
+                continue
+            elapsed = entry.get("elapsed_ms")
+            if isinstance(elapsed, int) and elapsed > 0:
+                samples.append(elapsed)
+    return samples
 
 started = time.time()
 workflow_reports = []
@@ -359,7 +405,6 @@ workflow_successes = sum(1 for wf in workflow_reports if wf["ok"])
 score_percent = round((workflow_successes / workflow_count) * 100.0, 2) if workflow_count else 0.0
 domain_ok = all(d["ok"] for d in domain_reports)
 all_workflows_ok = workflow_successes == workflow_count
-ok = domain_ok and all_workflows_ok
 p95_failures = [wf["name"] for wf in workflow_reports if not wf["p95_ok"]]
 regression_failures = [wf["name"] for wf in workflow_reports if not wf["regression_ok"]]
 history_min_failures = [
@@ -367,6 +412,42 @@ history_min_failures = [
     for wf in workflow_reports
     if wf["require_min_history"] and not wf["history_min_ok"]
 ]
+elapsed_ms = int((time.time() - started) * 1000)
+budget_ms = default_max_ms
+elapsed_history_samples = load_elapsed_history(
+    [baseline_history_path, history_path], runtime_profile
+)
+elapsed_samples = elapsed_history_samples + [elapsed_ms]
+history_samples = len(elapsed_samples)
+history_p95_ms = p95(elapsed_samples)
+history_p95_enforced = history_samples >= p95_min_samples
+history_p95_ok = (not history_p95_enforced) or (history_p95_ms <= budget_ms)
+elapsed_budget_ok = elapsed_ms <= budget_ms
+history_min_ok_global = (not require_min_history) or (history_samples >= p95_min_samples)
+ok = (
+    domain_ok
+    and all_workflows_ok
+    and elapsed_budget_ok
+    and history_p95_ok
+    and history_min_ok_global
+)
+fail_reasons = []
+if not all_workflows_ok:
+    fail_reasons.append("workflow-failures")
+if not domain_ok:
+    fail_reasons.append("domain-coverage")
+if not elapsed_budget_ok:
+    fail_reasons.append("elapsed-budget")
+if not history_p95_ok:
+    fail_reasons.append("history-p95-budget")
+if not history_min_ok_global:
+    fail_reasons.append("insufficient-history")
+if p95_failures:
+    fail_reasons.append("workflow-p95-budget")
+if regression_failures:
+    fail_reasons.append("workflow-regression-budget")
+if history_min_failures:
+    fail_reasons.append("workflow-insufficient-history")
 
 report = {
     "kind": "genesis/agent-capability-gauntlet-v0.1",
@@ -376,7 +457,14 @@ report = {
     "score_percent": score_percent,
     "domain_count": len(domain_reports),
     "domain_successes": sum(1 for d in domain_reports if d["ok"]),
-    "elapsed_ms": int((time.time() - started) * 1000),
+    "elapsed_ms": elapsed_ms,
+    "budget_ms": budget_ms,
+    "history_samples": history_samples,
+    "history_p95_ms": history_p95_ms,
+    "history_p95_enforced": history_p95_enforced,
+    "history_p95_ok": history_p95_ok,
+    "history_min_ok": history_min_ok_global,
+    "fail_reasons": fail_reasons,
     "default_max_ms": default_max_ms,
     "p95_default_max_ms": p95_default_max_ms,
     "p95_min_samples": p95_min_samples,
@@ -408,6 +496,8 @@ history_entry = {
     "domain_successes": report["domain_successes"],
     "domain_count": report["domain_count"],
     "elapsed_ms": report["elapsed_ms"],
+    "budget_ms": report["budget_ms"],
+    "history_p95_ms": report["history_p95_ms"],
     "runtime_profile": runtime_profile,
     "workflow_durations_ms": {
         wf["name"]: wf["duration_ms"] for wf in workflow_reports
@@ -421,7 +511,8 @@ print(
     f"agent-capability-gauntlet: report={report_path} "
     f"runtime_profile={runtime_profile} "
     f"score={score_percent}% workflows={workflow_successes}/{workflow_count} "
-    f"domains={report['domain_successes']}/{report['domain_count']}"
+    f"domains={report['domain_successes']}/{report['domain_count']} "
+    f"elapsed_ms={elapsed_ms} budget_ms={budget_ms} history_p95_ms={history_p95_ms}"
 )
 
 if not ok:
@@ -437,6 +528,12 @@ if not ok:
         if wf.get("require_min_history") and not wf.get("history_min_ok")
     ]
     failing_domains = [d["domain"] for d in domain_reports if not d["ok"]]
+    if fail_reasons:
+        print(
+            "agent-capability-gauntlet: fail reasons: "
+            + ", ".join(fail_reasons),
+            file=sys.stderr,
+        )
     if failing_workflows:
         print(
             "agent-capability-gauntlet: failing workflows: "

@@ -25,9 +25,14 @@ GENERATIVE_REPORT="${GENESIS_AGENT_PARITY_GENERATIVE_REPORT:-.genesis/perf/agent
 GENERATIVE_HISTORY="${GENESIS_AGENT_PARITY_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_parity_history.jsonl}"
 GENERATIVE_SEED="${GENESIS_AGENT_PARITY_GENERATIVE_SEED:-genesis-agent-generative-parity-v1}"
 BUDGET_MS="${GENESIS_AGENT_PARITY_BUDGET_MS:-900000}"
+P95_MIN_SAMPLES="${GENESIS_AGENT_PARITY_P95_MIN_SAMPLES:-1}"
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_BUDGET_MS must be a positive integer" >&2
+  exit 2
+fi
+if [[ ! "$P95_MIN_SAMPLES" =~ ^[0-9]+$ || "$P95_MIN_SAMPLES" -le 0 ]]; then
+  echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_P95_MIN_SAMPLES must be a positive integer" >&2
   exit 2
 fi
 
@@ -72,9 +77,10 @@ PY
 )"
 elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
 
-python3 - "$NATIVE_REPORT" "$WASI_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$GAUNTLET_PROFILE" "$NATIVE_BIN" "$WASI_BIN" <<'PY'
+python3 - "$NATIVE_REPORT" "$WASI_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$GAUNTLET_PROFILE" "$NATIVE_BIN" "$WASI_BIN" "$P95_MIN_SAMPLES" <<'PY'
 import datetime as dt
 import json
+import math
 import pathlib
 import sys
 
@@ -87,6 +93,7 @@ budget_ms = int(sys.argv[6])
 gauntlet_profile = sys.argv[7]
 native_bin = sys.argv[8]
 wasi_bin = sys.argv[9]
+p95_min_samples = int(sys.argv[10])
 
 native = json.loads(native_report_path.read_text(encoding="utf-8"))
 wasi = json.loads(wasi_report_path.read_text(encoding="utf-8"))
@@ -96,6 +103,42 @@ if native.get("kind") != expected_kind:
     raise SystemExit(f"agent-workflow-runtime-parity: unexpected native gauntlet kind: {native.get('kind')!r}")
 if wasi.get("kind") != expected_kind:
     raise SystemExit(f"agent-workflow-runtime-parity: unexpected wasi gauntlet kind: {wasi.get('kind')!r}")
+
+if p95_min_samples < 1:
+    raise SystemExit("agent-workflow-runtime-parity: p95_min_samples must be >= 1")
+
+def p95(values: list[int]) -> int:
+    idx = max(0, math.ceil(0.95 * len(values)) - 1)
+    return sorted(values)[idx]
+
+def load_elapsed_history(path: pathlib.Path, expected_profile: str, expected_budget_ms: int) -> list[int]:
+    if not path.exists():
+        return []
+    samples: list[int] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        if row.get("kind") != "genesis/agent-workflow-runtime-parity-v0.1":
+            continue
+        if row.get("gauntlet_profile") != expected_profile:
+            continue
+        row_budget = row.get("budget_ms")
+        row_elapsed = row.get("elapsed_ms")
+        if not isinstance(row_budget, int) or not isinstance(row_elapsed, int):
+            continue
+        if row_budget != expected_budget_ms:
+            continue
+        if row_elapsed <= 0:
+            continue
+        samples.append(row_elapsed)
+    return samples
 
 native_wf = {wf["name"]: wf for wf in native.get("workflows", [])}
 wasi_wf = {wf["name"]: wf for wf in wasi.get("workflows", [])}
@@ -154,12 +197,35 @@ for domain in all_domains:
             }
         )
 
+elapsed_history = load_elapsed_history(history_path, gauntlet_profile, budget_ms)
+elapsed_samples = elapsed_history + [elapsed_ms]
+history_samples = len(elapsed_samples)
+history_p95_ms = p95(elapsed_samples)
+history_p95_enforced = history_samples >= p95_min_samples
+history_p95_ok = (not history_p95_enforced) or (history_p95_ms <= budget_ms)
+elapsed_budget_ok = elapsed_ms <= budget_ms
+
+fail_reasons = []
+if missing_native:
+    fail_reasons.append("missing-native-workflows")
+if missing_wasi:
+    fail_reasons.append("missing-wasi-workflows")
+if workflow_mismatches:
+    fail_reasons.append("workflow-parity-mismatch")
+if domain_mismatches:
+    fail_reasons.append("domain-parity-mismatch")
+if not elapsed_budget_ok:
+    fail_reasons.append("elapsed-budget")
+if not history_p95_ok:
+    fail_reasons.append("history-p95-budget")
+
 ok = (
     not missing_native
     and not missing_wasi
     and not workflow_mismatches
     and not domain_mismatches
-    and elapsed_ms <= budget_ms
+    and elapsed_budget_ok
+    and history_p95_ok
 )
 
 report = {
@@ -174,6 +240,12 @@ report = {
     "domain_count": len(all_domains),
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
+    "history_samples": history_samples,
+    "history_p95_ms": history_p95_ms,
+    "history_p95_enforced": history_p95_enforced,
+    "history_p95_ok": history_p95_ok,
+    "p95_min_samples": p95_min_samples,
+    "fail_reasons": fail_reasons,
     "missing_native_workflows": missing_native,
     "missing_wasi_workflows": missing_wasi,
     "workflow_mismatches": workflow_mismatches,
@@ -195,10 +267,22 @@ print(
 )
 
 if not ok:
-    if elapsed_ms > budget_ms:
+    if fail_reasons:
+        print(
+            "agent-workflow-runtime-parity: fail reasons: "
+            + ", ".join(fail_reasons),
+            file=sys.stderr,
+        )
+    if not elapsed_budget_ok:
         print(
             "agent-workflow-runtime-parity: elapsed budget exceeded "
             f"({elapsed_ms}ms > {budget_ms}ms)",
+            file=sys.stderr,
+        )
+    if not history_p95_ok:
+        print(
+            "agent-workflow-runtime-parity: history p95 budget exceeded "
+            f"({history_p95_ms}ms > {budget_ms}ms with {history_samples} samples)",
             file=sys.stderr,
         )
     if missing_native:

@@ -1,6 +1,25 @@
 {
   "kind": "genesis/write-genesiscode-skill-distribution-v1",
   "version": "1",
+  "distribution_requirements": {
+    "min_prompts": 10,
+    "min_recipes": 11,
+    "required_recipe_domains": [
+      "service",
+      "graphics",
+      "gpu_compute",
+      "package_publish_sync",
+      "deployment_targets",
+      "failure_recovery",
+      "performance_triage",
+      "assurance",
+      "plugin_ffi",
+      "xr_runtime",
+      "durable_data"
+    ],
+    "require_fault_injection_recipe": true,
+    "min_report_score": 100
+  },
   "prompts": [
     {
       "id": "backlog_slice",
@@ -13,6 +32,34 @@
     {
       "id": "selfhost_cutover",
       "path": "prompts/selfhost_cutover.md"
+    },
+    {
+      "id": "deployment_targets",
+      "path": "prompts/deployment_targets.md"
+    },
+    {
+      "id": "failure_recovery",
+      "path": "prompts/failure_recovery.md"
+    },
+    {
+      "id": "performance_triage",
+      "path": "prompts/performance_triage.md"
+    },
+    {
+      "id": "assurance_release",
+      "path": "prompts/assurance_release.md"
+    },
+    {
+      "id": "plugin_ffi",
+      "path": "prompts/plugin_ffi.md"
+    },
+    {
+      "id": "xr_experience",
+      "path": "prompts/xr_experience.md"
+    },
+    {
+      "id": "data_pipeline",
+      "path": "prompts/data_pipeline.md"
     }
   ],
   "recipes": [
@@ -20,25 +67,78 @@
       "id": "service_workflow",
       "path": "recipes/service_workflow.md",
       "workflow": "examples/agent_service_workflow/workflow.sh",
-      "domain": "service"
+      "domain": "service",
+      "mode": "standard"
     },
     {
       "id": "game_loop_workflow",
       "path": "recipes/game_loop_workflow.md",
       "workflow": "examples/agent_long_running_gfx_loop_workflow/workflow.sh",
-      "domain": "graphics"
+      "domain": "graphics",
+      "mode": "standard"
     },
     {
       "id": "gpu_compute_workflow",
       "path": "recipes/gpu_compute_workflow.md",
       "workflow": "examples/agent_gpu_compute_workflow/workflow.sh",
-      "domain": "gpu_compute"
+      "domain": "gpu_compute",
+      "mode": "standard"
     },
     {
       "id": "package_workflow",
       "path": "recipes/package_workflow.md",
       "workflow": "examples/agent_multi_package_publish_workflow/workflow.sh",
-      "domain": "package_publish_sync"
+      "domain": "package_publish_sync",
+      "mode": "standard"
+    },
+    {
+      "id": "deployment_targets_workflow",
+      "path": "recipes/deployment_targets_workflow.md",
+      "workflow": "examples/agent_deploy_bundle_workflow/workflow.sh",
+      "domain": "deployment_targets",
+      "mode": "standard"
+    },
+    {
+      "id": "failure_recovery_workflow",
+      "path": "recipes/failure_recovery_workflow.md",
+      "workflow": "scripts/check_host_bridge_fault_injection.sh",
+      "domain": "failure_recovery",
+      "mode": "fault-injection"
+    },
+    {
+      "id": "performance_triage_workflow",
+      "path": "recipes/performance_triage_workflow.md",
+      "workflow": "scripts/check_runtime_backend_feature_matrix.sh",
+      "domain": "performance_triage",
+      "mode": "standard"
+    },
+    {
+      "id": "assurance_workflow",
+      "path": "recipes/assurance_workflow.md",
+      "workflow": "scripts/check_assurance_profile_packs.sh",
+      "domain": "assurance",
+      "mode": "standard"
+    },
+    {
+      "id": "plugin_ffi_workflow",
+      "path": "recipes/plugin_ffi_workflow.md",
+      "workflow": "examples/agent_plugin_runtime_workflow/workflow.sh",
+      "domain": "plugin_ffi",
+      "mode": "standard"
+    },
+    {
+      "id": "xr_workflow",
+      "path": "recipes/xr_workflow.md",
+      "workflow": "examples/agent_xr_runtime_workflow/workflow.sh",
+      "domain": "xr_runtime",
+      "mode": "standard"
+    },
+    {
+      "id": "data_workflow",
+      "path": "recipes/data_workflow.md",
+      "workflow": "examples/agent_durable_data_workflow/workflow.sh",
+      "domain": "durable_data",
+      "mode": "standard"
     }
   ],
   "expected_reports": [

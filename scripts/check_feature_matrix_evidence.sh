@@ -87,6 +87,51 @@ for entry in entries:
             )
     entry_map[cap] = entry
 
+required_claim_mappings = {
+    "GPU compute + graphics capability surfaces": {
+        "evidence_paths": [
+            "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md",
+            "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md",
+        ],
+        "check_paths": [
+            "scripts/check_gpu_compute_runtime_profile.sh",
+            "scripts/check_gfx_runtime_profile.sh",
+            "scripts/check_gpu_stack_decoupling.sh",
+        ],
+    },
+    "Deployment/bundle target pipeline in core toolchain": {
+        "evidence_paths": [
+            "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+            "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md",
+        ],
+        "check_paths": [
+            "crates/gc_cli/tests/cli_pkg_workspace.rs",
+            "examples/agent_deploy_bundle_workflow/workflow.sh",
+        ],
+    },
+}
+
+for capability, req in required_claim_mappings.items():
+    entry = entry_map.get(capability)
+    if entry is None:
+        raise SystemExit(
+            f"feature-matrix-evidence: required capability missing from ledger: {capability}"
+        )
+    ev_set = set(entry.get("evidence_paths", []))
+    ck_set = set(entry.get("check_paths", []))
+    missing_ev = [p for p in req["evidence_paths"] if p not in ev_set]
+    missing_ck = [p for p in req["check_paths"] if p not in ck_set]
+    if missing_ev:
+        raise SystemExit(
+            "feature-matrix-evidence: capability missing required evidence mapping(s): "
+            f"{capability}: " + ", ".join(missing_ev)
+        )
+    if missing_ck:
+        raise SystemExit(
+            "feature-matrix-evidence: capability missing required check mapping(s): "
+            f"{capability}: " + ", ".join(missing_ck)
+        )
+
 missing = [cap for cap in capabilities if cap not in entry_map]
 extra = [cap for cap in entry_map if cap not in capabilities]
 if missing:

@@ -4,7 +4,7 @@ Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 
-Open checklist items: 12
+Open checklist items: 10
 
 ## P0 - Immediate blockers
 
@@ -71,22 +71,30 @@ Open checklist items: 12
     - Keep source-size debt allowlists empty.
     - Add decomposition progress checks for production modules over target thresholds.
 
-- [ ] P1.5 Expand `write_genesisCode_skill` executable distribution breadth for "make anything" scope.
+- [x] P1.5 Expand `write_genesisCode_skill` executable distribution breadth for "make anything" scope.
   - Evidence:
     - Current distribution manifest validates at low corpus size (`prompts=3`, `recipes=4`, `reports=1`) from `scripts/check_write_genesiscode_skill_distribution.sh`.
-  - Acceptance:
-    - Expand skill corpus with broader domain recipes (deployment targets, failure recovery, performance triage, assurance workflows, plugin/FFI, XR, data).
-    - Add negative/fault-injection recipe coverage and scored rubric thresholds.
-    - Require minimum corpus breadth thresholds in distribution gate.
+  - Completion:
+    - Expanded distribution corpus to `prompts=10`, `recipes=11` in
+      `docs/skill_pack/write_genesiscode_v1/manifest.json`, adding targeted prompt/recipe assets for:
+      deployment targets, failure recovery, performance triage, assurance, plugin/FFI, XR, and durable data domains.
+    - Added explicit fault-injection recipe mode (`mode="fault-injection"`) and enforced required domain coverage through manifest `distribution_requirements`.
+    - Upgraded `scripts/check_write_genesiscode_skill_distribution.sh` to fail-closed on minimum prompt/recipe thresholds, required domain set coverage, mandatory fault-injection recipe presence, and minimum report score thresholds.
+    - Updated distribution kit spec to reflect broadened corpus and enforcement contract:
+      `docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md`.
 
-- [ ] P1.6 Repair feature-matrix evidence ledger drift for split GPU/GFX and deployment claims.
+- [x] P1.6 Repair feature-matrix evidence ledger drift for split GPU/GFX and deployment claims.
   - Evidence:
     - Matrix states split compute/gfx bundles + independent lanes (`feature_matrix.md:24`), but evidence ledger still maps that capability only to `GPU_GFX_BUNDLE` + `check_gpu_compute_runtime_profile.sh` (`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md:25`).
     - Deployment claim is broad (`feature_matrix.md:42`) while evidence ledger maps only generic CLI + health script without target-specific conformance references (`docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md:43`).
-  - Acceptance:
-    - Upgrade evidence-generation logic to require claim-specific references for split bundles and target-specific conformance gates.
-    - Fail when capability claims include surfaces not represented in evidence/check mappings.
-    - Regenerate evidence ledger and keep it synchronized with feature matrix semantics.
+  - Completion:
+    - Upgraded evidence generation logic in `scripts/update_feature_matrix_evidence.sh` with claim-specific required mappings for:
+      - split GPU/GFX capability surface (`GPU_COMPUTE_BUNDLE`, `GFX_RUNTIME_BUNDLE`, independent compute/gfx/decoupling checks),
+      - deployment/bundle pipeline (gcpm schemas + target contract test/workflow references).
+    - Hardened `scripts/check_feature_matrix_evidence.sh` with fail-closed required mapping assertions for high-impact capability claims.
+    - Regenerated synchronized evidence ledgers:
+      `docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json` and
+      `docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`.
 
 - [ ] P1.7 Add executable semantic refactor application workflow (not just planning output).
   - Evidence:

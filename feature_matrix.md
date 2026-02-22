@@ -74,8 +74,6 @@ Known GenesisCode gaps (current red-team focus):
 - P1.2 Local AI authoring iteration loop still lacks a bounded, deterministic fast profile.
 - P1.3 SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
 - P1.4 Large high-churn Rust modules still need decomposition for AI maintainability.
-- P1.5 `write_genesisCode_skill` distribution corpus is too narrow for "make anything" scope.
-- P1.6 Feature-matrix evidence ledger is stale relative to split GPU/GFX and deployment claims.
 - P1.7 Semantic-edit flow lacks first-class deterministic apply command.
 - P2.1 No machine-readable selfhost completeness scorecard currently drives closure.
 - P2.2 Production WASM surface isolation for parity-only Rust frontend paths is incomplete.

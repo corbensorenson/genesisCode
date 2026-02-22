@@ -82,6 +82,8 @@ def classify(cap: str):
         add_e("docs/spec/GPU_GFX_BUNDLE_v0.1.md")
         add_e("docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md")
         add_c("scripts/check_gpu_compute_runtime_profile.sh")
+        add_c("scripts/check_gpu_stack_decoupling.sh")
+        add_c("scripts/check_gfx_runtime_profile.sh")
     if "webxr" in cap_l or "xr " in cap_l or "xr/" in cap_l:
         add_e("docs/spec/XR_HOST_RUNTIME_v0.1.md")
         add_c("scripts/check_webxr_browser_conformance_lane.sh")
@@ -98,6 +100,9 @@ def classify(cap: str):
         add_e("docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md")
         add_e("docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json")
         add_c("scripts/check_write_genesiscode_skill_pack.sh")
+        add_e("docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md")
+        add_c("scripts/check_write_genesiscode_skill_distribution.sh")
+        add_c("scripts/check_write_genesiscode_skill_conformance.sh")
     if "agent" in cap_l or "workflow" in cap_l or "gauntlet" in cap_l:
         add_e("docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md")
         add_e("docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md")
@@ -112,6 +117,20 @@ def classify(cap: str):
     if "runtime wall-time budgets" in cap_l or "perf" in cap_l or "hot-path" in cap_l or "profiling" in cap_l:
         add_e("docs/spec/TEST_EXECUTION_PROFILES_v0.1.md")
         add_c("scripts/check_perf_budgets.sh")
+
+    # Claim-specific hard requirements to prevent evidence drift for high-impact rows.
+    if cap == "GPU compute + graphics capability surfaces":
+        add_e("docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md")
+        add_e("docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md")
+        add_c("scripts/check_gpu_compute_runtime_profile.sh")
+        add_c("scripts/check_gfx_runtime_profile.sh")
+        add_c("scripts/check_gpu_stack_decoupling.sh")
+
+    if cap == "Deployment/bundle target pipeline in core toolchain":
+        add_e("docs/spec/GCPM_JSON_SCHEMAS_v0.1.md")
+        add_e("docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md")
+        add_c("crates/gc_cli/tests/cli_pkg_workspace.rs")
+        add_c("examples/agent_deploy_bundle_workflow/workflow.sh")
 
     return evidence, checks
 
