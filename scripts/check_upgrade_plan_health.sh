@@ -636,49 +636,43 @@ fi
 run_health_cargo_warmup "profile:${PROFILE}"
 
 partition_gate_commands "${COMMON_GATES[@]}"
-COMMON_NON_CARGO_GATES=("${NON_CARGO_PARTITION[@]}")
-COMMON_CARGO_GATES=("${CARGO_PARTITION[@]}")
-
-partition_gate_commands "${PROFILE_GATES[@]}"
-PROFILE_NON_CARGO_GATES=("${NON_CARGO_PARTITION[@]}")
-PROFILE_CARGO_GATES=("${CARGO_PARTITION[@]}")
-
-if [[ "${#COMMON_NON_CARGO_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#COMMON_NON_CARGO_GATES[@]} common non-cargo gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
-fi
-
-if [[ "${#COMMON_CARGO_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#COMMON_CARGO_GATES[@]} common cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
-fi
-
-if [[ "${#PROFILE_NON_CARGO_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#PROFILE_NON_CARGO_GATES[@]} profile non-cargo gates (profile=${PROFILE}, shards=${PROFILE_SHARDS})"
-fi
-
-if [[ "${#PROFILE_CARGO_GATES[@]}" -gt 0 ]]; then
-  echo "upgrade-plan-health: running ${#PROFILE_CARGO_GATES[@]} profile cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
-fi
-
 start_ms="$(now_ms)"
-if [[ "${#COMMON_NON_CARGO_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "common-non-cargo" "$HEALTH_SHARDS" "${COMMON_NON_CARGO_GATES[@]}"
+common_non_cargo_gate_count="${#NON_CARGO_PARTITION[@]}"
+common_cargo_gate_count="${#CARGO_PARTITION[@]}"
+
+if (( common_non_cargo_gate_count > 0 )); then
+  echo "upgrade-plan-health: running ${common_non_cargo_gate_count} common non-cargo gates (profile=${PROFILE}, shards=${HEALTH_SHARDS})"
+  run_gate_commands "common-non-cargo" "$HEALTH_SHARDS" "${NON_CARGO_PARTITION[@]}"
 fi
-if [[ "${#COMMON_CARGO_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "common-cargo" "$HEALTH_CARGO_GATE_SHARDS" "${COMMON_CARGO_GATES[@]}"
+if (( common_cargo_gate_count > 0 )); then
+  echo "upgrade-plan-health: running ${common_cargo_gate_count} common cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
+  run_gate_commands "common-cargo" "$HEALTH_CARGO_GATE_SHARDS" "${CARGO_PARTITION[@]}"
 fi
-if [[ "${#PROFILE_NON_CARGO_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "profile:${PROFILE}:non-cargo" "$PROFILE_SHARDS" "${PROFILE_NON_CARGO_GATES[@]}"
+
+if (( ${#PROFILE_GATES[@]} > 0 )); then
+  partition_gate_commands "${PROFILE_GATES[@]}"
+else
+  # Bash 3 + nounset treats "${arr[@]}" on empty arrays as unbound. Call with zero args explicitly.
+  partition_gate_commands
 fi
-if [[ "${#PROFILE_CARGO_GATES[@]}" -gt 0 ]]; then
-  run_gate_commands "profile:${PROFILE}:cargo" "$HEALTH_CARGO_GATE_SHARDS" "${PROFILE_CARGO_GATES[@]}"
+profile_non_cargo_gate_count="${#NON_CARGO_PARTITION[@]}"
+profile_cargo_gate_count="${#CARGO_PARTITION[@]}"
+
+if (( profile_non_cargo_gate_count > 0 )); then
+  echo "upgrade-plan-health: running ${profile_non_cargo_gate_count} profile non-cargo gates (profile=${PROFILE}, shards=${PROFILE_SHARDS})"
+  run_gate_commands "profile:${PROFILE}:non-cargo" "$PROFILE_SHARDS" "${NON_CARGO_PARTITION[@]}"
+fi
+if (( profile_cargo_gate_count > 0 )); then
+  echo "upgrade-plan-health: running ${profile_cargo_gate_count} profile cargo gates (profile=${PROFILE}, shards=${HEALTH_CARGO_GATE_SHARDS})"
+  run_gate_commands "profile:${PROFILE}:cargo" "$HEALTH_CARGO_GATE_SHARDS" "${CARGO_PARTITION[@]}"
 fi
 end_ms="$(now_ms)"
 elapsed_ms=$((end_ms - start_ms))
 gate_count=$(( \
-  ${#COMMON_NON_CARGO_GATES[@]} + \
-  ${#COMMON_CARGO_GATES[@]} + \
-  ${#PROFILE_NON_CARGO_GATES[@]} + \
-  ${#PROFILE_CARGO_GATES[@]} \
+  common_non_cargo_gate_count + \
+  common_cargo_gate_count + \
+  profile_non_cargo_gate_count + \
+  profile_cargo_gate_count \
 ))
 
 profile_budget=""

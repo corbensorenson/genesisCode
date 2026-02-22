@@ -4,9 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+
 REPO_ARTIFACT="$ROOT_DIR/selfhost/toolchain.gc"
 MANIFEST_FILE="$ROOT_DIR/selfhost/toolchain_manifest.gc"
 FRESHNESS_FILE="$ROOT_DIR/selfhost/toolchain.freshness.json"
+DISK_MIN_FREE_KB="${GENESIS_SELFHOST_ARTIFACT_FRESH_MIN_FREE_KB:-1048576}"
+DISK_STRICT_MODE="${GENESIS_SELFHOST_ARTIFACT_FRESH_DISK_STRICT_MODE:-1}"
 [[ -f "$REPO_ARTIFACT" ]] || {
   echo "selfhost-artifact-fresh: missing committed artifact at $REPO_ARTIFACT" >&2
   exit 1
@@ -89,8 +93,30 @@ PY
   fi
 fi
 
-GENESIS_BIN="$ROOT_DIR/target/debug/genesis"
+GENESIS_BIN_OVERRIDE="${GENESIS_BIN:-}"
+DEFAULT_DEBUG_DIR="$ROOT_DIR/target/debug"
+if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+  DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+fi
+if [[ -n "$GENESIS_BIN_OVERRIDE" ]]; then
+  GENESIS_BIN="$GENESIS_BIN_OVERRIDE"
+else
+  GENESIS_BIN="$DEFAULT_DEBUG_DIR/genesis"
+fi
 if [[ ! -x "$GENESIS_BIN" ]]; then
+  bash scripts/check_disk_headroom.sh \
+    --path "$ROOT_DIR" \
+    --context "selfhost-artifact-fresh" \
+    --min-kb "$DISK_MIN_FREE_KB" \
+    --strict "$DISK_STRICT_MODE"
+  genesis_configure_cargo_target_dir \
+    "$ROOT_DIR" \
+    "selfhost-artifact-fresh" \
+    ".genesis/build/selfhost_artifact_fresh" \
+    "GENESIS_SELFHOST_ARTIFACT_FRESH_CARGO_TARGET_DIR"
+  if [[ -z "$GENESIS_BIN_OVERRIDE" ]]; then
+    GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
+  fi
   cargo build -p gc_cli >/dev/null
 fi
 

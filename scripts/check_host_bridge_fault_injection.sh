@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+
 BUDGET_MS="${GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS:-45000}"
 REPORT_PATH="${GENESIS_HOST_BRIDGE_FAULT_REPORT:-.genesis/perf/host_bridge_fault_injection_report.json}"
 HISTORY_PATH="${GENESIS_HOST_BRIDGE_FAULT_HISTORY:-.genesis/perf/host_bridge_fault_injection_history.jsonl}"
@@ -12,6 +14,12 @@ if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "host-bridge-fault-injection: GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS must be a positive integer" >&2
   exit 2
 fi
+
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "host-bridge-fault-injection" \
+  ".genesis/build/host_bridge_fault_injection" \
+  "GENESIS_HOST_BRIDGE_FAULT_CARGO_TARGET_DIR"
 
 start_ns="$(python3 - <<'PY'
 import time

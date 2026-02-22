@@ -8,8 +8,28 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-GEN="${GEN_REL:-$ROOT_DIR/target/release/genesis}"
-GWASI="${GWASI_REL:-$ROOT_DIR/target/release/genesis_wasi}"
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+
+DISK_MIN_FREE_KB="${GENESIS_RELEASE_GUARD_MIN_FREE_KB:-2097152}"
+DISK_STRICT_MODE="${GENESIS_RELEASE_GUARD_DISK_STRICT_MODE:-1}"
+
+bash scripts/check_disk_headroom.sh \
+  --path "$ROOT_DIR" \
+  --context "selfhost-release-profile-guard" \
+  --min-kb "$DISK_MIN_FREE_KB" \
+  --strict "$DISK_STRICT_MODE"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "selfhost-release-profile-guard" \
+  ".genesis/build/selfhost_release_profile_guard" \
+  "GENESIS_RELEASE_GUARD_CARGO_TARGET_DIR"
+
+DEFAULT_RELEASE_DIR="$ROOT_DIR/target/release"
+if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+  DEFAULT_RELEASE_DIR="$CARGO_TARGET_DIR/release"
+fi
+GEN="${GEN_REL:-$DEFAULT_RELEASE_DIR/genesis}"
+GWASI="${GWASI_REL:-$DEFAULT_RELEASE_DIR/genesis_wasi}"
 
 cargo build -p gc_cli --release >/dev/null
 cargo build -p gc_wasi_cli --release >/dev/null
@@ -39,6 +59,25 @@ TOML
 fail() {
   echo "selfhost-release-profile-guard: $*" >&2
   exit 1
+}
+
+assert_release_binary() {
+  local label="$1"
+  local path="$2"
+  [[ -f "$path" ]] || fail "${label} missing release artifact at ${path}"
+  [[ -x "$path" ]] || fail "${label} artifact is not executable (${path})"
+
+  if command -v file >/dev/null 2>&1; then
+    local desc
+    desc="$(file -b "$path" 2>/dev/null || true)"
+    case "$desc" in
+      *"Mach-O"*|*"ELF"*|*"PE32"*|*"executable"*)
+        ;;
+      *)
+        fail "${label} artifact does not look like an executable binary (file='${desc}')"
+        ;;
+    esac
+  fi
 }
 
 expect_release_rejected() {
@@ -71,6 +110,9 @@ expect_bootstrap_mode_parse_rejected() {
     fail "$label missing artifact-only expectation hint (out=$out)"
   }
 }
+
+assert_release_binary "native release" "$GEN"
+assert_release_binary "wasi release" "$GWASI"
 
 # Native release binary: rust compatibility must remain disabled regardless of env flag.
 expect_release_rejected "native release fmt --engine rust" \

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+
 ITERATIONS="${GENESIS_TASK_STRESS_ITERATIONS:-2}"
 TEST_BUDGET_MS="${GENESIS_TASK_STRESS_BUDGET_MS:-75000}"
 SUITE_BUDGET_MS="${GENESIS_TASK_STRESS_SUITE_BUDGET_MS:-120000}"
@@ -22,6 +24,12 @@ if [[ ! "$SUITE_BUDGET_MS" =~ ^[0-9]+$ || "$SUITE_BUDGET_MS" -le 0 ]]; then
   echo "task-concurrency-stress: GENESIS_TASK_STRESS_SUITE_BUDGET_MS must be a positive integer" >&2
   exit 2
 fi
+
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "task-concurrency-stress" \
+  ".genesis/build/task_concurrency_stress" \
+  "GENESIS_TASK_STRESS_CARGO_TARGET_DIR"
 
 start_ns="$(python3 - <<'PY'
 import time

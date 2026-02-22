@@ -4,8 +4,27 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+
+GENESIS_BIN_OVERRIDE="${GENESIS_BIN:-}"
+DEFAULT_DEBUG_DIR="$ROOT_DIR/target/debug"
+if [[ -n "${CARGO_TARGET_DIR:-}" ]]; then
+  DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
+fi
+if [[ -n "$GENESIS_BIN_OVERRIDE" ]]; then
+  GENESIS_BIN="$GENESIS_BIN_OVERRIDE"
+else
+  GENESIS_BIN="$DEFAULT_DEBUG_DIR/genesis"
+fi
 if [[ ! -x "$GENESIS_BIN" ]]; then
+  genesis_configure_cargo_target_dir \
+    "$ROOT_DIR" \
+    "selfhost-symbol-ownership" \
+    ".genesis/build/selfhost_symbol_ownership" \
+    "GENESIS_SELFHOST_SYMBOL_OWNERSHIP_CARGO_TARGET_DIR"
+  if [[ -z "$GENESIS_BIN_OVERRIDE" ]]; then
+    GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
+  fi
   cargo build -p gc_cli >/dev/null
 fi
 
