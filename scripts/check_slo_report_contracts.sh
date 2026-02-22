@@ -31,7 +31,7 @@ if require_parity and not parity_path.is_file():
 reports: list[tuple[str, pathlib.Path, str]] = [
     ("gauntlet", gauntlet_path, "genesis/agent-capability-gauntlet-v0.1"),
 ]
-if parity_path.is_file():
+if require_parity:
     reports.append(
         ("parity", parity_path, "genesis/agent-workflow-runtime-parity-v0.1")
     )

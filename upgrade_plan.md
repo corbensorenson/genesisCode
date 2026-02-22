@@ -4,7 +4,7 @@ Last updated: 2026-02-22
 
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 
-Open checklist items: 10
+Open checklist items: 7
 
 ## P0 - Immediate blockers
 
@@ -29,14 +29,22 @@ Open checklist items: 10
 
 ## P1 - High-impact self-host and AI-first hardening
 
-- [ ] P1.1 Add end-to-end conformance workflows for mobile/edge/service-runtime targets.
+- [x] P1.1 Add end-to-end conformance workflows for mobile/edge/service-runtime targets.
   - Evidence:
     - Current agent deployment workflow validates only `web|desktop|service` (`examples/agent_deploy_bundle_workflow/workflow.sh`).
     - Gauntlet workflow set does not include `ios`, `android`, `edge`, or `service-runtime` domains (`scripts/check_agent_reference_workflows.sh` workflow table).
-  - Acceptance:
-    - Add first-party workflows for `ios`, `android`, `edge`, `service-runtime`.
-    - Extend gauntlet required domain set and parity profile checks to include new targets.
-    - Add deterministic replay/hash assertions for each new deployment lane.
+  - Completion:
+    - Added first-party deterministic deployment workflows:
+      `examples/agent_deploy_ios_workflow/workflow.sh`,
+      `examples/agent_deploy_android_workflow/workflow.sh`,
+      `examples/agent_deploy_edge_workflow/workflow.sh`,
+      `examples/agent_deploy_service_runtime_workflow/workflow.sh`.
+    - Added shared deployment lane helper with deterministic replay assertions and required artifact checks:
+      `examples/agent_deploy_bundle_workflow/target_workflow_lib.sh`.
+    - Extended gauntlet workflow/domain contracts to include
+      `deploy_ios`, `deploy_android`, `deploy_edge`, and `deploy_service_runtime`
+      in `scripts/check_agent_reference_workflows.sh`, which is consumed by both
+      native and runtime-parity lanes.
 
 - [ ] P1.2 Reduce local iteration latency to a deterministic AI-authoring inner loop budget.
   - Evidence:
@@ -47,14 +55,20 @@ Open checklist items: 10
     - Persist and enforce p95 history for inner-loop profile duration.
     - Remove redundant repeated process startups for high-frequency local workflows.
 
-- [ ] P1.3 Enforce explicit SLO fields and fail-closed budgets across all major gauntlet/parity reports.
+- [x] P1.3 Enforce explicit SLO fields and fail-closed budgets across all major gauntlet/parity reports.
   - Evidence:
     - `agent_capability_gauntlet_report.json` has `default_max_ms` but no top-level `budget_ms` field (`.genesis/perf/agent_capability_gauntlet_report.json:1-5`).
     - Large lanes exist (`elapsed_ms=104921` gauntlet, `elapsed_ms=157748` parity) but budget semantics are not uniformly normalized across report families.
-  - Acceptance:
-    - Standardize report schema on `elapsed_ms`, `budget_ms`, `history_p95_ms`, `ok`, and fail reason keys for all major performance/conformance reports.
-    - Fail health profiles when required SLO fields are absent.
-    - Add regression checks that guard both absolute and p95 budgets.
+  - Completion:
+    - Standardized gauntlet + parity report schema with explicit top-level SLO fields:
+      `elapsed_ms`, `budget_ms`, `history_samples`, `history_p95_ms`,
+      `history_p95_enforced`, `history_p95_ok`, `ok`, and `fail_reasons`.
+    - Added fail-closed SLO schema validator:
+      `scripts/check_slo_report_contracts.sh`.
+    - Wired SLO schema checks into health profiles in
+      `scripts/check_upgrade_plan_health.sh` (prepush/release).
+    - Upgraded gauntlet regression semantics to enforce p95-based regression budgets
+      (not single-sample spikes) and added bootstrap-history mode for newly introduced workflows.
 
 - [ ] P1.4 Decompose oversized high-churn Rust modules for AI maintainability.
   - Evidence:
@@ -107,13 +121,21 @@ Open checklist items: 10
 
 ## P2 - Strategic completeness for "agent can build anything" scope
 
-- [ ] P2.1 Publish machine-readable selfhost completeness scorecard and closure criteria.
+- [x] P2.1 Publish machine-readable selfhost completeness scorecard and closure criteria.
   - Evidence:
     - Selfhost status is currently distributed across docs/scripts and partial matrix rows; no canonical machine report currently drives closure readiness.
-  - Acceptance:
-    - Emit a deterministic `genesis/selfhost-readiness-v0.1` report with scored dimensions:
-      runtime routing coverage, parity-only surface isolation, bootstrap mode strictness, and deprecated bootstrap reference count.
-    - Wire report into `selfhost-dashboard`, `upgrade_plan`, and `feature_matrix` drift checks.
+  - Completion:
+    - Added deterministic machine-readable readiness scorecard:
+      `scripts/check_selfhost_readiness_scorecard.sh` -> `.genesis/perf/selfhost_readiness_report.json`
+      (`kind = genesis/selfhost-readiness-v0.1`) with scored dimensions:
+      runtime routing coverage, parity-only surface isolation, bootstrap mode strictness,
+      and deprecated bootstrap reference count.
+    - Wired readiness scorecard into selfhost dashboard freshness lane:
+      `scripts/check_selfhost_dashboard_fresh.sh`.
+    - Wired readiness source reference enforcement into drift checks:
+      `scripts/check_doc_topology_drift.sh` now requires
+      `.genesis/perf/selfhost_readiness_report.json` references in `upgrade_plan.md`
+      and `feature_matrix.md`.
 
 - [ ] P2.2 Harden production WASM artifact boundary to exclude parity-only Rust frontend surfaces.
   - Evidence:

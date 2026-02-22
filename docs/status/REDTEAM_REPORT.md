@@ -11,8 +11,6 @@ Scope:
 
 - `P0.1` Planning truthfulness drift (partial capability rows + zero-gap reporting mismatch).
 - `P0.2` `gcpm build` target support remains metadata-only for mobile/edge/service-runtime.
-- `P1.1` Missing executable conformance workflows for `ios|android|edge|service-runtime`.
 - `P1.2` Local AI authoring loop lacks bounded deterministic fast profile.
-- `P1.3` SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
 - `P1.4` Oversized high-churn Rust modules still impede AI-maintainable iteration.
 - `P1.7` Semantic-edit workflow lacks first-class deterministic apply execution.

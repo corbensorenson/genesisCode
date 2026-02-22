@@ -70,12 +70,9 @@ Regulated assurance readiness snapshot (indicative):
 Known GenesisCode gaps (current red-team focus):
 - P0.1 Planning truthfulness drift between partial capability states and zero-gap reporting.
 - P0.2 `gcpm build` target support is metadata-only for mobile/edge/service-runtime targets.
-- P1.1 Missing end-to-end conformance workflows for `ios|android|edge|service-runtime`.
 - P1.2 Local AI authoring iteration loop still lacks a bounded, deterministic fast profile.
-- P1.3 SLO schema/budget enforcement is not normalized across major gauntlet/parity reports.
 - P1.4 Large high-churn Rust modules still need decomposition for AI maintainability.
 - P1.7 Semantic-edit flow lacks first-class deterministic apply command.
-- P2.1 No machine-readable selfhost completeness scorecard currently drives closure.
 - P2.2 Production WASM surface isolation for parity-only Rust frontend paths is incomplete.
 - P2.3 Documentation surface remains too large and needs consolidation phase 2.
 
