@@ -19,10 +19,10 @@ Use this bundle first; open split specs only when a task requires field-level de
 
 ## Legacy Split Docs (must stay marked)
 
-- `docs/spec/CLI.md`
+- `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
-- `docs/spec/HOST_ABI.md`
-- `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
+- `docs/spec/HOST_BRIDGE_PROTOCOL.md`
+- `docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 
 ## Agent Guidance
 

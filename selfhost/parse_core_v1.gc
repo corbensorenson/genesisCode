@@ -1,0 +1,184 @@
+(def selfhost/parse::parse-symbol-or-int
+  (fn (bs)
+    (fn (i)
+      (let ((b ((selfhost/parse::byte bs) i)))
+        (if ((core/int::eq? b) 45)
+          (let ((b2 ((selfhost/parse::byte bs) ((core/int::add i) 1))))
+            (if (selfhost/parse::is-digit? b2)
+              (let ((r ((selfhost/parse::read-int bs) i)))
+                {
+                  :i ((core/map::get r) (quote :i))
+                  :t ((core/map::get r) (quote :v))})
+              ((selfhost/parse::parse-symbol bs) i)))
+          (if (selfhost/parse::is-digit? b)
+            (let ((r ((selfhost/parse::read-int bs) i)))
+              {
+                :i ((core/map::get r) (quote :i))
+                :t ((core/map::get r) (quote :v))})
+            ((selfhost/parse::parse-symbol bs) i)))))))
+
+(def selfhost/parse::parse-symbol
+  (fn (bs)
+    (fn (i)
+      (let ((r ((selfhost/parse::read-symbol bs) i)))
+        (if (selfhost/parse::is-error r)
+          r
+          (let ((s ((core/map::get r) (quote :s))))
+            (if (selfhost/parse::is-error s)
+              s
+              (if ((core/eq? s) "nil")
+                {
+                  :i ((core/map::get r) (quote :i))
+                  :t nil}
+                (if ((core/eq? s) "true")
+                  {
+                    :i ((core/map::get r) (quote :i))
+                    :t true}
+                  (if ((core/eq? s) "false")
+                    {
+                      :i ((core/map::get r) (quote :i))
+                      :t false}
+                    (let ((sym (core/sym::from-str s)))
+                      (if (selfhost/parse::is-error sym)
+                        sym
+                        {
+                          :i ((core/map::get r) (quote :i))
+                          :t sym}))))))))))))
+
+(def selfhost/parse::parse-list
+  (fn (bs) (fn (i) (fn (at) ((((selfhost/parse::parse-list2 bs) i) at) [])))))
+
+(def selfhost/parse::parse-list2
+  (fn (bs)
+    (fn (i)
+      (fn (at)
+        (fn (items)
+          (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+            (let ((b ((selfhost/parse::byte bs) j)))
+              (if (core/list::is-nil? b)
+                (((selfhost/parse::error "core/parse/unexpected") "unterminated list") at)
+                (if ((core/int::eq? b) 41)
+                  {
+                    :i ((core/int::add j) 1)
+                    :t (selfhost/parse::list-from-vec items)}
+                  (if ((core/int::eq? b) 93)
+                    (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                      j)
+                    (if ((core/int::eq? b) 125)
+                      (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                        j)
+                      (let ((r ((selfhost/parse::parse-term-at bs) j)))
+                        (if (selfhost/parse::is-error r)
+                          r
+                          ((((selfhost/parse::parse-list2 bs) ((core/map::get r) (quote :i))) at)
+                            ((core/vec::push items) ((core/map::get r) (quote :t)))))))))))))))))
+
+(def selfhost/parse::parse-vector
+  (fn (bs)
+    (fn (i)
+      (fn (at)
+        (fn (out)
+          (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+            (let ((b ((selfhost/parse::byte bs) j)))
+              (if (core/list::is-nil? b)
+                (((selfhost/parse::error "core/parse/unexpected") "unterminated vector") at)
+                (if ((core/int::eq? b) 93)
+                  {
+                    :i ((core/int::add j) 1)
+                    :t out}
+                  (if ((core/int::eq? b) 41)
+                    (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                      j)
+                    (if ((core/int::eq? b) 125)
+                      (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                        j)
+                      (let ((r ((selfhost/parse::parse-term-at bs) j)))
+                        (if (selfhost/parse::is-error r)
+                          r
+                          ((((selfhost/parse::parse-vector bs) ((core/map::get r) (quote :i))) at)
+                            ((core/vec::push out) ((core/map::get r) (quote :t)))))))))))))))))
+
+(def selfhost/parse::parse-map
+  (fn (bs)
+    (fn (i)
+      (fn (at)
+        (fn (out)
+          (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+            (let ((b ((selfhost/parse::byte bs) j)))
+              (if (core/list::is-nil? b)
+                (((selfhost/parse::error "core/parse/unexpected") "unterminated map") at)
+                (if ((core/int::eq? b) 125)
+                  {
+                    :i ((core/int::add j) 1)
+                    :t out}
+                  (if ((core/int::eq? b) 41)
+                    (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                      j)
+                    (if ((core/int::eq? b) 93)
+                      (((selfhost/parse::error "core/parse/unexpected") "unexpected closing delimiter")
+                        j)
+                      (let ((rk ((selfhost/parse::parse-term-at bs) j)))
+                        (if (selfhost/parse::is-error rk)
+                          rk
+                          (let ((k ((core/map::get rk) (quote :t))))
+                            (let
+                              ((j2 ((selfhost/parse::skip-ws-and-comments bs) ((core/map::get rk) (quote :i)))))
+                              (let ((b2 ((selfhost/parse::byte bs) j2)))
+                                (if (core/list::is-nil? b2)
+                                  (((selfhost/parse::error "core/parse/unexpected") "unterminated map")
+                                    at)
+                                  (if ((core/int::eq? b2) 125)
+                                    (((selfhost/parse::error "core/parse/unexpected") "map literal must have even number of forms")
+                                      at)
+                                    (let ((rv ((selfhost/parse::parse-term-at bs) j2)))
+                                      (if (selfhost/parse::is-error rv)
+                                        rv
+                                        ((((selfhost/parse::parse-map bs) ((core/map::get rv) (quote :i))) at)
+                                          (((core/map::put out) k) ((core/map::get rv) (quote :t))))))))))))))))))))))))
+
+(def selfhost/parse::parse-term
+  (fn (src)
+    (let
+      (
+        (bs
+          (let ((tag (core/data::tag src)))
+            (if ((core/sym::eq? tag) (quote :bytes))
+              src
+              (if ((core/sym::eq? tag) (quote :str))
+                (core/str::to-utf8 src)
+                ((core/error::make2 "core/type-error") "parse-term expects string or bytes"))))))
+      (if (selfhost/parse::is-error bs)
+        bs
+        (let ((r ((selfhost/parse::parse-term-at bs) 0)))
+          (if (selfhost/parse::is-error r)
+            r
+            (let ((j ((selfhost/parse::skip-ws-and-comments bs) ((core/map::get r) (quote :i)))))
+              (if (core/list::is-nil? ((selfhost/parse::byte bs) j))
+                ((core/map::get r) (quote :t))
+                (((selfhost/parse::error "core/parse/unexpected") "trailing tokens after term") j)))))))))
+
+(def selfhost/parse::parse-module
+  (fn (src)
+    (let
+      (
+        (bs
+          (let ((tag (core/data::tag src)))
+            (if ((core/sym::eq? tag) (quote :bytes))
+              src
+              (if ((core/sym::eq? tag) (quote :str))
+                (core/str::to-utf8 src)
+                ((core/error::make2 "core/type-error") "parse-module expects string or bytes"))))))
+      (if (selfhost/parse::is-error bs) bs (((selfhost/parse::parse-module2 bs) 0) (quote []))))))
+
+(def selfhost/parse::parse-module2
+  (fn (bs)
+    (fn (i)
+      (fn (forms)
+        (let ((j ((selfhost/parse::skip-ws-and-comments bs) i)))
+          (if (core/list::is-nil? ((selfhost/parse::byte bs) j))
+            forms
+            (let ((r ((selfhost/parse::parse-term-at bs) j)))
+              (if (selfhost/parse::is-error r)
+                r
+                (((selfhost/parse::parse-module2 bs) ((core/map::get r) (quote :i)))
+                  ((core/vec::push forms) ((core/map::get r) (quote :t))))))))))))

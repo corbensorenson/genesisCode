@@ -17,7 +17,7 @@ Legend:
 | Built-in package/project manager | ✅ (`gcpm/pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
 | Strict selfhost frontend default in production CLI | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explicit selfhost-only execution mode | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Fully self-hosted toolchain with zero bootstrap-language dependency | ✅ (production binaries are selfhost-first; Rust parity is isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (production binaries are selfhost-first, but artifact regeneration/recovery still requires explicit bootstrap-seed handling; Rust parity remains isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Artifact-only bootstrap default across WASM host APIs | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -68,9 +68,18 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps (current red-team focus):
-- P1.1 Documentation surface remains large/noisy for agent retrieval (`docs/*.md` + legacy split markers).
-- P1.2 Oversized production Rust modules need further decomposition for AI-first maintainability.
-- P1.3 Oversized selfhost `.gc` modules need decomposition for AI-first maintainability.
+- P0.1 Artifact bootstrap deadlock in production selfhost flow.
+- P1.1 `dev-fast` wall-time remains too high for tight agent loops.
+- P1.2 Build cache/target-dir sprawl still risks ENOSPC under repeated gate runs.
+- P1.3 Runtime backend feature matrix check lacks enforced wall-time SLO.
+- P1.4 Production CLI parse/help surface checks remain high-latency release runs.
+- P1.5 GPU compute backend fallback defaults are too permissive for strict release lanes.
+- P1.6 Agent authoring skill lacks executable generation-quality conformance gates.
+- P1.7 Bootstrap-independence capability claim is ahead of current recovery behavior.
+- P2.1 `gcpm build` targets are limited to `web|desktop|service`.
+- P2.2 GPU compute and graphics stacks need clearer architectural decoupling.
+- P2.3 Remaining high-churn authoring modules still need deeper decomposition.
+- P2.4 `write_genesisCode_skill` needs executable v1 distribution for multi-agent use.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

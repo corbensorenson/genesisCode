@@ -1,0 +1,214 @@
+(def core/cli::set-keys->vec
+  (fn (m)
+    (let ((entries (core/map::entries m)))
+      (if (core/cli::vec? entries)
+        ((((core/cli::set-keys->vec2 entries) (core/vec::len entries)) 0) core/cli::empty-vec)
+        core/cli::empty-vec))))
+
+(def core/cli::set-keys->vec2
+  (fn (entries)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((e ((core/vec::get entries) i)))
+              (if (core/cli::vec? e)
+                (if ((core/int::eq? (core/vec::len e)) 2)
+                  (let ((k ((core/vec::get e) 0)))
+                    ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1))
+                      ((core/vec::push out) k)))
+                  ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out))
+                ((((core/cli::set-keys->vec2 entries) n) ((core/int::add i) 1)) out)))))))))
+
+(def core/cli::reach-str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/cli::reach-int? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/cli::hash-hex?
+  (fn (x) (if (core/cli::reach-str? x) ((core/int::eq? (core/str::len x)) 64) false)))
+
+(def core/cli::hash-vec?
+  (fn (xs) (if (core/cli::vec? xs) ((((core/cli::hash-vec2 xs) (core/vec::len xs)) 0) true) false)))
+
+(def core/cli::hash-vec2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (ok)
+          (if ((core/int::eq? i) n)
+            ok
+            (if ok
+              ((((core/cli::hash-vec2 xs) n) ((core/int::add i) 1))
+                (core/cli::hash-hex? ((core/vec::get xs) i)))
+              false)))))))
+
+(def core/cli::vcs-make-commit
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :attestations ((core/map::get req) (quote :attestations))
+        :base ((core/map::get req) (quote :base))
+        :evidence ((core/map::get req) (quote :evidence))
+        :message ((core/map::get req) (quote :message))
+        :obligations ((core/map::get req) (quote :obligations))
+        :parents ((core/map::get req) (quote :parents))
+        :patch ((core/map::get req) (quote :patch))
+        :result ((core/map::get req) (quote :result))
+        :type (quote :vcs/commit)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-commit expects map"))))
+
+(def core/cli::vcs-make-evidence
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :data ((core/map::get req) (quote :data))
+        :inputs ((core/map::get req) (quote :inputs))
+        :kind ((core/map::get req) (quote :kind))
+        :outputs ((core/map::get req) (quote :outputs))
+        :type (quote :vcs/evidence)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-evidence expects map"))))
+
+(def core/cli::vcs-make-snapshot
+  (fn (req)
+    (if (core/cli::map? req)
+      {
+        :deps ((core/map::get req) (quote :deps))
+        :kind ((core/map::get req) (quote :kind))
+        :members ((core/map::get req) (quote :members))
+        :obligations ((core/map::get req) (quote :obligations))
+        :type (quote :vcs/snapshot)
+        :v 1}
+      ((core/error::make2 "core/type-error") "core/cli::vcs-make-snapshot expects map"))))
+
+(def core/cli::vcs-validate-commit
+  (fn (commit)
+    (if (core/cli::map? commit)
+      (let
+        ((ty ((core/map::get commit) (quote :type))) (v ((core/map::get commit) (quote :v)))
+          (parents ((core/map::get commit) (quote :parents)))
+          (base ((core/map::get commit) (quote :base)))
+          (patch ((core/map::get commit) (quote :patch)))
+          (result ((core/map::get commit) (quote :result)))
+          (evidence ((core/map::get commit) (quote :evidence)))
+          (attestations ((core/map::get commit) (quote :attestations))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (if (core/cli::hash-hex? patch) (core/cli::hash-hex? result) false)
+            (if (if (core/list::is-nil? base) true (core/cli::hash-hex? base))
+              (if (if (core/cli::hash-vec? parents) (core/cli::hash-vec? evidence) false)
+                (if (core/cli::hash-vec? attestations)
+                  commit
+                  ((core/error::make2 "core/vcs/bad-commit")
+                    "commit :attestations must be vector of 64-hex hashes"))
+                ((core/error::make2 "core/vcs/bad-commit")
+                  "commit parents/evidence must be vectors of 64-hex hashes"))
+              ((core/error::make2 "core/vcs/bad-commit") "commit :base must be nil or 64-hex hash"))
+            ((core/error::make2 "core/vcs/bad-commit") "commit :patch/:result must be 64-hex hashes"))
+          ((core/error::make2 "core/vcs/bad-commit") "commit :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-commit expects map"))))
+
+(def core/cli::vcs-validate-evidence
+  (fn (evidence)
+    (if (core/cli::map? evidence)
+      (let
+        ((ty ((core/map::get evidence) (quote :type))) (v ((core/map::get evidence) (quote :v)))
+          (kind ((core/map::get evidence) (quote :kind)))
+          (inputs ((core/map::get evidence) (quote :inputs)))
+          (outputs ((core/map::get evidence) (quote :outputs)))
+          (data ((core/map::get evidence) (quote :data))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/evidence)) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (core/cli::sym? kind)
+            (if (if (core/cli::hash-vec? inputs) (core/cli::hash-vec? outputs) false)
+              (if (if (core/list::is-nil? data) true (core/cli::hash-hex? data))
+                evidence
+                ((core/error::make2 "core/vcs/bad-evidence")
+                  "evidence :data must be nil or 64-hex hash"))
+              ((core/error::make2 "core/vcs/bad-evidence")
+                "evidence :inputs/:outputs must be vectors of 64-hex hashes"))
+            ((core/error::make2 "core/vcs/bad-evidence") "evidence :kind must be symbol"))
+          ((core/error::make2 "core/vcs/bad-evidence") "evidence :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-evidence expects map"))))
+
+(def core/cli::vcs-validate-snapshot
+  (fn (snapshot)
+    (if (core/cli::map? snapshot)
+      (let
+        ((ty ((core/map::get snapshot) (quote :type))) (v ((core/map::get snapshot) (quote :v)))
+          (kind ((core/map::get snapshot) (quote :kind))))
+        (if
+          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/snapshot)) false)
+            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
+            false)
+          (if (core/cli::sym? kind)
+            snapshot
+            ((core/error::make2 "core/vcs/bad-snapshot") "snapshot :kind must be symbol"))
+          ((core/error::make2 "core/vcs/bad-snapshot") "snapshot :type/:v mismatch")))
+      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-snapshot expects map"))))
+
+(def core/cli::str-starts-with?
+  (fn (s)
+    (fn (prefix)
+      (if (if (core/cli::reach-str? s) (core/cli::reach-str? prefix) false)
+        (let ((sb (core/str::to-utf8 s)))
+          (let ((pb (core/str::to-utf8 prefix)))
+            (let ((sn (core/bytes::len sb)))
+              (let ((pn (core/bytes::len pb)))
+                (if ((core/int::lt? sn) pn) false ((core/eq? (((core/bytes::slice sb) 0) pn)) pb))))))
+        false))))
+
+(def core/cli::lock-selector-kind
+  (fn (selector)
+    (if (core/cli::reach-str? selector)
+      (if ((core/cli::str-starts-with? selector) "commit:")
+        (quote :commit)
+        (if ((core/cli::str-starts-with? selector) "snapshot:")
+          (quote :snapshot)
+          (if ((core/cli::str-starts-with? selector) "ref:")
+            (quote :ref)
+            (if ((core/cli::str-starts-with? selector) "refs/") (quote :ref) (quote :unknown)))))
+      (quote :unknown))))
+
+(def core/cli::lock-make-entry
+  (fn (requirement)
+    (fn (resolved)
+      (if (if (core/cli::map? requirement) (core/cli::map? resolved) false)
+        (let
+          (
+            (e0
+              (quote
+                {
+                  :commit nil
+                  :registry nil
+                  :resolved_ref nil
+                  :snapshot ""
+                  :source_selector ""}))
+            (e1 (((core/map::put e0) (quote :commit)) ((core/map::get resolved) (quote :commit))))
+            (e2
+              (((core/map::put e1) (quote :registry)) ((core/map::get resolved) (quote :registry))))
+            (e3
+              (((core/map::put e2) (quote :resolved_ref))
+                ((core/map::get resolved) (quote :resolved_ref))))
+            (e4
+              (((core/map::put e3) (quote :snapshot)) ((core/map::get resolved) (quote :snapshot))))
+            (e5
+              (((core/map::put e4) (quote :source_selector))
+                ((core/map::get requirement) (quote :selector)))))
+          e5)
+        ((core/error::make2 "core/type-error") "core/cli::lock-make-entry expects maps")))))
+
+(def core/cli::opt-bool
+  (fn (opts)
+    (fn (k)
+      (fn (fallback)
+        (if (core/cli::map? opts)
+          (let ((v ((core/map::get opts) k)))
+            (if ((core/sym::eq? (core/data::tag v)) (quote :bool)) v fallback))
+          fallback)))))
