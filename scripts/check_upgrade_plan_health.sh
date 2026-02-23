@@ -288,7 +288,6 @@ build_cargo_warmup_commands() {
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --no-run --quiet")
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_pkg_workspace --no-run --quiet")
-      CARGO_WARMUP_COMMANDS+=("cargo check --workspace --all-targets --quiet")
       ;;
     profile:release-full)
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_smoke --no-run --quiet")
@@ -297,7 +296,6 @@ build_cargo_warmup_commands() {
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test gfx_gpu_bridge --no-run --quiet")
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_effects --test host_abi_surface --no-run --quiet")
       CARGO_WARMUP_COMMANDS+=("cargo test -p gc_cli --test cli_selfhost_gpu_parallel --no-run --quiet")
-      CARGO_WARMUP_COMMANDS+=("cargo check --workspace --all-targets --quiet")
       ;;
   esac
 }
@@ -722,7 +720,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
-    PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=(
+      "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR=$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=1 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 bash scripts/check_runtime_backend_feature_matrix.sh"
+    )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_xr_productization_kits.sh")
@@ -744,7 +744,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
-    PROFILE_GATES+=("bash scripts/check_runtime_backend_feature_matrix.sh")
+    PROFILE_GATES+=(
+      "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR=$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=1 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 bash scripts/check_runtime_backend_feature_matrix.sh"
+    )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"

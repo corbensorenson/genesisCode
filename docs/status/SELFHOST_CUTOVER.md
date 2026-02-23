@@ -1,8 +1,8 @@
 # Selfhost Cutover Dashboard (v0.2)
 
-- Artifact hash: `7a84c40a7d885a2d985b6086255f32ad931f0d996e0892ad6f9885a99d7dfb61`
-- Store artifact: `.genesis/store/7a84c40a7d885a2d985b6086255f32ad931f0d996e0892ad6f9885a99d7dfb61`
-- Selfhost toolchain artifact configured: `/Users/corbensorenson/Documents/genesisCode/selfhost/toolchain.gc`
+- Artifact hash: `30f29fb709f0899f15f9094c24716451f0e715d9b5054da30f559dde3c115ea6`
+- Store artifact: `.genesis/store/30f29fb709f0899f15f9094c24716451f0e715d9b5054da30f559dde3c115ea6`
+- Selfhost toolchain artifact configured: `selfhost/toolchain.gc`
 - Selfhost toolchain artifact exists: `true`
 
 ## Summary

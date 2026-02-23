@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "gpu-gfx-headroom-conformance" \
+  ".genesis/build/cargo" \
+  "GENESIS_GPU_GFX_HEADROOM_CARGO_TARGET_DIR"
+
 source "$ROOT_DIR/scripts/lib/heavy_gate_preflight.sh"
 
 REPORT_OUT="${GENESIS_GPU_GFX_HEADROOM_REPORT_OUT:-.genesis/perf/gpu_gfx_headroom_conformance_report.json}"
@@ -12,6 +19,7 @@ BUDGET_MS="${GENESIS_GPU_GFX_HEADROOM_BUDGET_MS:-600000}"
 TMP_ROOT_BASE="${GENESIS_GPU_GFX_HEADROOM_TMPDIR:-$ROOT_DIR/.genesis/tmp/check-gpu-gfx-headroom-conformance}"
 NORMAL_MIN_FREE_KB="${GENESIS_GPU_GFX_HEADROOM_NORMAL_MIN_FREE_KB:-3145728}"
 NORMAL_AUTO_RECLAIM="${GENESIS_GPU_GFX_HEADROOM_NORMAL_AUTO_RECLAIM:-1}"
+NORMAL_STRICT_MODE="${GENESIS_GPU_GFX_HEADROOM_NORMAL_STRICT_MODE:-auto}"
 LOW_AUTO_RECLAIM="${GENESIS_GPU_GFX_HEADROOM_LOW_AUTO_RECLAIM:-0}"
 LOW_STRICT_MODE="${GENESIS_GPU_GFX_HEADROOM_LOW_STRICT_MODE:-0}"
 LOW_MIN_FREE_KB="${GENESIS_GPU_GFX_HEADROOM_LOW_MIN_FREE_KB:-}"
@@ -27,6 +35,10 @@ if [[ ! "$NORMAL_MIN_FREE_KB" =~ ^[0-9]+$ || "$NORMAL_MIN_FREE_KB" -le 0 ]]; the
 fi
 if [[ "$NORMAL_AUTO_RECLAIM" != "0" && "$NORMAL_AUTO_RECLAIM" != "1" ]]; then
   echo "gpu-gfx-headroom: GENESIS_GPU_GFX_HEADROOM_NORMAL_AUTO_RECLAIM must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$NORMAL_STRICT_MODE" != "auto" && "$NORMAL_STRICT_MODE" != "0" && "$NORMAL_STRICT_MODE" != "1" ]]; then
+  echo "gpu-gfx-headroom: GENESIS_GPU_GFX_HEADROOM_NORMAL_STRICT_MODE must be auto, 0, or 1" >&2
   exit 2
 fi
 if [[ "$LOW_AUTO_RECLAIM" != "0" && "$LOW_AUTO_RECLAIM" != "1" ]]; then
@@ -146,7 +158,7 @@ run_lane_workflows() {
   done
 }
 
-run_lane_workflows "normal" "1" "$NORMAL_MIN_FREE_KB" "$NORMAL_AUTO_RECLAIM"
+run_lane_workflows "normal" "$NORMAL_STRICT_MODE" "$NORMAL_MIN_FREE_KB" "$NORMAL_AUTO_RECLAIM"
 run_lane_workflows "low-headroom" "$LOW_STRICT_MODE" "$LOW_MIN_FREE_KB" "$LOW_AUTO_RECLAIM"
 
 END_MS="$(python3 - <<'PY'

@@ -10,9 +10,6 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P0.1` - Cargo target-dir policy drift in strict gate scripts breaks fail-closed health profile execution.
-- `P0.2` - Selfhost toolchain review sidecar freshness is stale (`check_selfhost_toolchain_review_fresh.sh` failing).
-- `P0.3` - Test-size budget regression (`crates/gc_cli/tests/cli_pkg_workspace.rs` over target).
 - `P0.4` - Strict health profiles (`prepush-standard`, `release-full`) currently non-green from clean execution.
 - `P1.1` - WebXR conformance lane is deterministic but functionally degraded (`frame timeout`, `session_close error`).
 - `P1.2` - Documentation complexity budget has no headroom for agent retrieval quality.

@@ -5,18 +5,34 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+ORIGINAL_CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-}"
 
-DISK_MIN_FREE_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB:-1572864}"
-DISK_STRICT_MODE="${GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE:-1}"
+DISK_MIN_FREE_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB:-2097152}"
+DISK_STRICT_MODE="${GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE:-auto}"
 AUTO_RECLAIM="${GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM:-1}"
 RECLAIM_MAX_BUILD_KB="${GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_BUILD_KB:-8388608}"
 RECLAIM_MAX_AGE_DAYS="${GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_AGE_DAYS:-7}"
 REPORT_OUT="${GENESIS_RUNTIME_BACKEND_MATRIX_REPORT_OUT:-.genesis/perf/runtime_backend_feature_matrix_report.json}"
 HISTORY_OUT="${GENESIS_RUNTIME_BACKEND_MATRIX_HISTORY_OUT:-.genesis/perf/runtime_backend_feature_matrix_history.jsonl}"
 BUDGET_MS="${GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS:-360000}"
+CLEAN_TARGET_DIR="${GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR:-0}"
+MATRIX_DEV_DEBUG="${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG:-0}"
+MATRIX_INCREMENTAL="${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL:-0}"
+if [[ -z "${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR:-}" ]]; then
+  export GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR="$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix"
+fi
+RUNTIME_MATRIX_TARGET_DIR="${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR}"
 TMP_DIR="$(mktemp -d)"
 STAGE_FILE="$TMP_DIR/stages.tsv"
-trap 'rm -rf "$TMP_DIR"' EXIT
+cleanup() {
+  rm -rf "$TMP_DIR"
+  if [[ "$CLEAN_TARGET_DIR" == "1" ]]; then
+    if [[ -n "$RUNTIME_MATRIX_TARGET_DIR" && "$RUNTIME_MATRIX_TARGET_DIR" != "$ORIGINAL_CARGO_TARGET_DIR" ]]; then
+      rm -rf "$RUNTIME_MATRIX_TARGET_DIR" || true
+    fi
+  fi
+}
+trap cleanup EXIT
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_BUDGET_MS must be a positive integer" >&2
@@ -24,6 +40,10 @@ if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
 fi
 if [[ "$AUTO_RECLAIM" != "0" && "$AUTO_RECLAIM" != "1" ]]; then
   echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_AUTO_RECLAIM must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$DISK_STRICT_MODE" != "auto" && "$DISK_STRICT_MODE" != "0" && "$DISK_STRICT_MODE" != "1" ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE must be auto, 0, or 1" >&2
   exit 2
 fi
 if [[ ! "$RECLAIM_MAX_BUILD_KB" =~ ^[0-9]+$ ]]; then
@@ -34,8 +54,19 @@ if [[ ! "$RECLAIM_MAX_AGE_DAYS" =~ ^[0-9]+$ ]]; then
   echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_RECLAIM_MAX_AGE_DAYS must be numeric" >&2
   exit 2
 fi
+if [[ "$CLEAN_TARGET_DIR" != "0" && "$CLEAN_TARGET_DIR" != "1" ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$MATRIX_DEV_DEBUG" =~ ^[0-9]+$ ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG must be numeric" >&2
+  exit 2
+fi
+if [[ "$MATRIX_INCREMENTAL" != "0" && "$MATRIX_INCREMENTAL" != "1" ]]; then
+  echo "runtime-backend-feature-matrix: GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL must be 0 or 1" >&2
+  exit 2
+fi
 
-RUNTIME_MATRIX_TARGET_DIR="${GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix}"
 if [[ "$AUTO_RECLAIM" == "1" ]]; then
   echo "runtime-backend-feature-matrix: proactive build-cache reclaim enabled"
   bash scripts/reclaim_build_space.sh \
@@ -56,6 +87,8 @@ genesis_configure_cargo_target_dir \
   "runtime-backend-feature-matrix" \
   ".genesis/build/runtime_backend_feature_matrix" \
   "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR"
+export CARGO_PROFILE_DEV_DEBUG="$MATRIX_DEV_DEBUG"
+export CARGO_INCREMENTAL="$MATRIX_INCREMENTAL"
 
 now_ms() {
   python3 - <<'PY'
@@ -70,6 +103,12 @@ run_stage() {
   local start_ms
   local end_ms
   local elapsed_ms
+  bash scripts/check_disk_headroom.sh \
+    --path "$ROOT_DIR" \
+    --context "runtime-backend-feature-matrix:${label}" \
+    --min-kb "$DISK_MIN_FREE_KB" \
+    --auto-reclaim "$AUTO_RECLAIM" \
+    --strict "$DISK_STRICT_MODE"
   start_ms="$(now_ms)"
   "$@"
   end_ms="$(now_ms)"

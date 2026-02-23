@@ -56,14 +56,43 @@ run_target_deploy_workflow() {
   fi
 
   local target_bundle_dir="$target_out/$target/$hash_a"
+  local launch_script=""
+  local package_file=""
+  local signature_file=""
+  case "$target" in
+    android)
+      launch_script="$target_bundle_dir/artifact/launch_android.sh"
+      package_file="$target_bundle_dir/artifact/package.aab"
+      signature_file="$target_bundle_dir/artifact/package.aab.sig"
+      ;;
+    ios)
+      launch_script="$target_bundle_dir/artifact/launch_ios.sh"
+      package_file="$target_bundle_dir/artifact/package.ipa"
+      signature_file="$target_bundle_dir/artifact/package.ipa.sig"
+      ;;
+    edge)
+      launch_script="$target_bundle_dir/artifact/launch_edge.sh"
+      package_file="$target_bundle_dir/artifact/package.edge.wasm"
+      signature_file="$target_bundle_dir/artifact/package.edge.wasm.sig"
+      ;;
+    service-runtime)
+      launch_script="$target_bundle_dir/artifact/launch_service_runtime.sh"
+      package_file="$target_bundle_dir/artifact/package.service-runtime.wasm"
+      signature_file="$target_bundle_dir/artifact/package.service-runtime.wasm.sig"
+      ;;
+    *)
+      echo "agent-deploy-${lane_label}-workflow: unsupported target '$target'" >&2
+      return 2
+      ;;
+  esac
   local required_files=(
     "$target_bundle_dir/build_manifest.gc"
     "$target_bundle_dir/provenance.gc"
     "$target_bundle_dir/package.toml"
     "$target_bundle_dir/package_artifact.txt"
-    "$target_bundle_dir/runtime/runtime_contract.gc"
-    "$target_bundle_dir/runtime/boot.sh"
-    "$target_bundle_dir/runtime/smoke.sh"
+    "$launch_script"
+    "$package_file"
+    "$signature_file"
   )
   local missing=()
   local f
@@ -87,16 +116,10 @@ run_target_deploy_workflow() {
     return 1
   fi
 
-  local contract_out
   local boot_out
   local smoke_out
-  contract_out="$(bash "$target_bundle_dir/runtime/boot.sh" --contract | tr -d '\n')"
-  boot_out="$(bash "$target_bundle_dir/runtime/boot.sh" --boot | tr -d '\n')"
-  smoke_out="$(bash "$target_bundle_dir/runtime/smoke.sh" | tr -d '\n')"
-  if [[ "$contract_out" != "contract-ok:$target:$hash_a" ]]; then
-    echo "agent-deploy-${lane_label}-workflow: contract lane mismatch for '$target': $contract_out" >&2
-    return 1
-  fi
+  boot_out="$(bash "$launch_script" --boot | tr -d '\n')"
+  smoke_out="$(bash "$launch_script" --smoke | tr -d '\n')"
   if [[ "$boot_out" != "boot-ok:$target:$hash_a" ]]; then
     echo "agent-deploy-${lane_label}-workflow: boot lane mismatch for '$target': $boot_out" >&2
     return 1
@@ -107,6 +130,6 @@ run_target_deploy_workflow() {
   fi
 
   local replay
-  replay="$(printf '%s|%s|%s|%s|%s|%s|%s' "$target" "$hash_a" "$manifest_count" "$provenance_count" "$contract_out" "$boot_out" "$smoke_out")"
+  replay="$(printf '%s|%s|%s|%s|%s|%s' "$target" "$hash_a" "$manifest_count" "$provenance_count" "$boot_out" "$smoke_out")"
   echo "agent-deploy-${lane_label}-workflow: ok replay=$replay"
 }

@@ -60,10 +60,6 @@ pub(super) fn artifact_layout_for_target(target: &str) -> Result<TargetArtifactL
     Ok(layout)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "build artifact generation needs explicit deterministic provenance inputs"
-)]
 pub(super) fn write_target_executable_bundle(
     bundle_root: &Path,
     target_label: &str,

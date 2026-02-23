@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "gcpm-target-runtime-pipelines" \
+  ".genesis/build/cargo" \
+  "GENESIS_GCPM_TARGET_RUNTIME_PIPELINES_CARGO_TARGET_DIR"
+
 GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
 if [[ ! -x "$GENESIS_BIN" ]]; then
   cargo build -p gc_cli >/dev/null

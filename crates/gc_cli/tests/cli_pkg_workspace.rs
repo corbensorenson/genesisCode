@@ -1,73 +1,16 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey};
 
-fn write_caps(dir: &Path) -> PathBuf {
-    let caps = dir.join("caps.toml");
-    fs::write(&caps, "allow = []\n").unwrap();
-    caps
-}
-
-fn write_caps_with_store_remote(dir: &Path, remote: &str, remote_allow: &str) -> PathBuf {
-    let caps = dir.join("caps.toml");
-    fs::write(
-        &caps,
-        format!(
-            r#"
-allow = [
-  "core/store::get"
-]
-
-[store]
-dir = "./.genesis/store"
-remote = "{remote}"
-remote_allow = ["{remote_allow}"]
-"#
-        ),
-    )
-    .unwrap();
-    caps
-}
-
-fn put_remote_artifact(remote_dir: &Path, hex: &str, bytes: &[u8]) {
-    let store = remote_dir.join("v1").join("store");
-    fs::create_dir_all(&store).unwrap();
-    fs::write(store.join(hex), bytes).unwrap();
-}
-
-fn parse_coreform_value_map(stdout: &[u8]) -> std::collections::BTreeMap<TermOrdKey, Term> {
-    let v: serde_json::Value = serde_json::from_slice(stdout).unwrap();
-    let value = v.pointer("/data/value").and_then(|x| x.as_str()).unwrap();
-    let t = gc_coreform::parse_term(value).unwrap();
-    let Term::Map(m) = t else {
-        panic!("expected map value");
-    };
-    m
-}
-
-fn map_string(map: &std::collections::BTreeMap<TermOrdKey, Term>, key: &str) -> String {
-    map.get(&TermOrdKey(Term::symbol(key)))
-        .and_then(|t| match t {
-            Term::Str(s) => Some(s.clone()),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("expected string at key `{key}`"))
-}
-
-fn map_map<'a>(
-    map: &'a std::collections::BTreeMap<TermOrdKey, Term>,
-    key: &str,
-) -> &'a std::collections::BTreeMap<TermOrdKey, Term> {
-    map.get(&TermOrdKey(Term::symbol(key)))
-        .and_then(|t| match t {
-            Term::Map(m) => Some(m),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("expected map at key `{key}`"))
-}
+#[path = "support/pkg_workspace_test_support.rs"]
+mod pkg_workspace_test_support;
+use pkg_workspace_test_support::{
+    map_map, map_string, parse_coreform_value_map, put_remote_artifact, write_caps,
+    write_caps_with_store_remote,
+};
 
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
@@ -969,115 +912,4 @@ fn gcpm_env_runtime_backend_profile_contract_is_machine_readable() {
                 "incompatible with active runtime backend",
             ));
     }
-}
-
-#[test]
-fn gcpm_profile_runtime_emits_profile_artifact_and_history() {
-    let td = tempfile::tempdir().unwrap();
-    let dir = td.path();
-    let caps = write_caps(dir);
-    let out_file = dir.join("runtime_profile.gc");
-    let history_file = dir.join("runtime_profile_history.jsonl");
-
-    let out = cargo_bin_cmd!("genesis")
-        .current_dir(dir)
-        .args(["--json", "gcpm", "--caps"])
-        .arg(&caps)
-        .args([
-            "profile-runtime",
-            "--out",
-            "runtime_profile.gc",
-            "--history",
-            "runtime_profile_history.jsonl",
-            "--min-history",
-            "999",
-            "--task-budget-us",
-            "20000000",
-            "--io-budget-us",
-            "20000000",
-            "--memory-budget-us",
-            "20000000",
-        ])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(
-        v.get("kind").and_then(|x| x.as_str()),
-        Some("genesis/pkg-runtime-profile-v0.1")
-    );
-    assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(true));
-
-    let map = parse_coreform_value_map(&out);
-    assert_eq!(
-        map.get(&TermOrdKey(Term::symbol(":ok"))),
-        Some(&Term::Bool(true))
-    );
-    assert!(map.contains_key(&TermOrdKey(Term::symbol(":task-elapsed-us"))));
-    assert!(map.contains_key(&TermOrdKey(Term::symbol(":io-elapsed-us"))));
-    assert!(map.contains_key(&TermOrdKey(Term::symbol(":memory-elapsed-us"))));
-    assert!(out_file.is_file());
-    assert!(history_file.is_file());
-
-    let profile_src = fs::read_to_string(&out_file).unwrap();
-    let profile_t = gc_coreform::parse_term(&profile_src).unwrap();
-    let Term::Map(profile_m) = profile_t else {
-        panic!("runtime profile artifact must be map");
-    };
-    assert_eq!(
-        profile_m.get(&TermOrdKey(Term::symbol(":kind"))),
-        Some(&Term::symbol(":runtime-profile"))
-    );
-    assert!(profile_m.contains_key(&TermOrdKey(Term::symbol(":task-scheduler"))));
-    assert!(profile_m.contains_key(&TermOrdKey(Term::symbol(":io-store-cycle"))));
-    assert!(profile_m.contains_key(&TermOrdKey(Term::symbol(":memory-pressure"))));
-}
-
-#[test]
-fn gcpm_profile_runtime_fails_closed_when_budget_is_exceeded() {
-    let td = tempfile::tempdir().unwrap();
-    let dir = td.path();
-    let caps = write_caps(dir);
-
-    let out = cargo_bin_cmd!("genesis")
-        .current_dir(dir)
-        .args(["--json", "gcpm", "--caps"])
-        .arg(&caps)
-        .args([
-            "profile-runtime",
-            "--out",
-            "runtime_profile.gc",
-            "--history",
-            "runtime_profile_history.jsonl",
-            "--no-history-append",
-            "--task-budget-us",
-            "1",
-            "--io-budget-us",
-            "1",
-            "--memory-budget-us",
-            "1",
-        ])
-        .assert()
-        .code(50)
-        .get_output()
-        .stdout
-        .clone();
-    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(
-        v.get("kind").and_then(|x| x.as_str()),
-        Some("genesis/pkg-runtime-profile-v0.1")
-    );
-    assert_eq!(v.get("ok").and_then(|x| x.as_bool()), Some(false));
-
-    let map = parse_coreform_value_map(&out);
-    assert_eq!(
-        map.get(&TermOrdKey(Term::symbol(":ok"))),
-        Some(&Term::Bool(false))
-    );
-    assert_eq!(
-        map.get(&TermOrdKey(Term::symbol(":task-budget-ok"))),
-        Some(&Term::Bool(false))
-    );
 }

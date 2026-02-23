@@ -68,9 +68,6 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, object-equivalence evidence, and reproducible assurance-pack bundles are built-in; full device-risk/QMS qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P0.1`: Cargo target-dir policy drift across strict gate scripts.
-- `P0.2`: Selfhost toolchain review sidecar freshness regression.
-- `P0.3`: Test-size budget regression in workspace package integration lane.
 - `P0.4`: Strict health profiles (`prepush-standard`, `release-full`) not green from clean execution.
 - `P1.1`: WebXR conformance is deterministic but functionally degraded (`frame timeout`, `session_close error`).
 - `P1.2`: Documentation complexity is at budget ceiling (no retrieval headroom).

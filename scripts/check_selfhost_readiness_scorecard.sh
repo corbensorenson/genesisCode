@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "selfhost-readiness" \
+  ".genesis/build/cargo" \
+  "GENESIS_SELFHOST_READINESS_CARGO_TARGET_DIR"
+
 REPORT_PATH="${GENESIS_SELFHOST_READINESS_REPORT:-.genesis/perf/selfhost_readiness_report.json}"
 HISTORY_PATH="${GENESIS_SELFHOST_READINESS_HISTORY:-.genesis/perf/selfhost_readiness_history.jsonl}"
 BUDGET_MS="${GENESIS_SELFHOST_READINESS_BUDGET_MS:-600000}"
@@ -35,7 +42,15 @@ cleanup() {
 trap cleanup EXIT
 
 DASHBOARD_JSON="$TMP_DIR/selfhost_dashboard.json"
-"$GENESIS_BIN" --json selfhost-dashboard >"$DASHBOARD_JSON"
+# `selfhost-dashboard` always emits markdown; direct it into the temp dir so this
+# readiness check never mutates the committed dashboard as a side effect.
+DASHBOARD_MD="$TMP_DIR/SELFHOST_CUTOVER.md"
+"$GENESIS_BIN" \
+  --selfhost-artifact "selfhost/toolchain.gc" \
+  --json \
+  selfhost-dashboard \
+  --markdown "$DASHBOARD_MD" \
+  >"$DASHBOARD_JSON"
 
 START_NS="$(python3 - <<'PY'
 import time

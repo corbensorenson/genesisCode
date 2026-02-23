@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `e762053720a9a4a0d72f2ab2e45dc51fdc9f1a60346507052cb7bf511f1c4607`
-- Freshness artifact hash: `e762053720a9a4a0d72f2ab2e45dc51fdc9f1a60346507052cb7bf511f1c4607`
-- Freshness source hash: `2c09e6763ca2c617bcc348d3ac5911f57ab8c4f7a0705c6f382e6e89b68874a7`
-- Source aggregate hash (module path + module sha256): `e8c9e9bb27411fc0105ae8c57f81d1c76bf27813da7db5fbf01247f2d315eee8`
+- Artifact sha256: `3f89a7bf92f1ec5ede590364b38c83d0564211083cf9843674dba3a367447ad9`
+- Freshness artifact hash: `3f89a7bf92f1ec5ede590364b38c83d0564211083cf9843674dba3a367447ad9`
+- Freshness source hash: `018349c1d7b131f5259bfefe1f3ebe7732b901daae9cf60d097b559c190ba05f`
+- Source aggregate hash (module path + module sha256): `cb28df15fc25e13dd2658a717ec7ce7813c97bd54ecde1aa8db8d4af530627eb`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `21`
 
@@ -25,13 +25,13 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_coreform_v1.gc` | 429 | 18040 | 42 | `f405f69443475c39` |
 | `selfhost/cli_coreform_vcs_queries_v1.gc` | 210 | 9125 | 13 | `96fbbb8f4b9f1e06` |
 | `selfhost/cli_coreform_vcs_blame_v1.gc` | 327 | 17092 | 13 | `24b55511a286997b` |
-| `selfhost/cli_coreform_vcs_pkg_v1.gc` | 496 | 24437 | 21 | `94d44289883538c1` |
-| `selfhost/cli_pkg_runtime_v1.gc` | 290 | 16823 | 8 | `907c604a4ed2e851` |
-| `selfhost/cli_pkg_runtime_updates_v1.gc` | 249 | 13418 | 8 | `95c8ff5cb22ce4c3` |
+| `selfhost/cli_coreform_vcs_pkg_v1.gc` | 465 | 22278 | 21 | `befd359a9422d577` |
+| `selfhost/cli_pkg_runtime_v1.gc` | 233 | 13168 | 8 | `7f05a6398597ecdd` |
+| `selfhost/cli_pkg_runtime_updates_v1.gc` | 201 | 10219 | 8 | `d872ba3597eda520` |
 | `selfhost/cli_pkg_runtime_verify_v1.gc` | 237 | 11535 | 14 | `4673d497fcb0e2ad` |
 | `selfhost/cli_pkg_ops_v1.gc` | 421 | 21222 | 21 | `7bd3d718d554a167` |
 | `selfhost/cli_reachability_v1.gc` | 398 | 14168 | 24 | `2dae442240dbd8b8` |
-| `selfhost/cli_reachability_rules_v1.gc` | 214 | 9368 | 17 | `84c495894f83fb06` |
+| `selfhost/cli_reachability_rules_v1.gc` | 218 | 9499 | 17 | `bfc421a3bc682517` |
 | `selfhost/cli_reachability_closure_v1.gc` | 297 | 13959 | 21 | `0c82e8d660c258b3` |
 | `selfhost/patch_schema_v1.gc` | 356 | 17578 | 32 | `2d406bff742c79a1` |
 | `selfhost/patch_schema_apply_v1.gc` | 163 | 8681 | 10 | `59117ea31903a5b8` |
