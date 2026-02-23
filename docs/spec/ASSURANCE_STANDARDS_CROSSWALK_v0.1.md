@@ -64,11 +64,11 @@ GenesisCode toolchain contract:
 
 | Control ID | Standard/Profile | Status | Owner | Tracking |
 | --- | --- | --- | --- | --- |
-| `DO178C-A-ORG-INDEPENDENCE-PROGRAM` | RTCA DO-178C DAL A | open | program-governance | `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims` |
-| `DO178C-B-AUTHORITY-SIGNOFF` | RTCA DO-178C DAL B | open | program-governance | `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims` |
-| `NASA-A-IVV-GOVERNANCE` | NASA NPR 7150.2 Class A | open | program-governance | `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims` |
-| `NASA-B-IVV-ORG-SCOPE` | NASA NPR 7150.2 Class B | open | program-governance | `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims` |
-| `IEC62304-C-QMS-INTEGRATION` | IEC 62304 Class C | open | program-governance | `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims` |
+| `DO178C-A-ORG-INDEPENDENCE-PROGRAM` | RTCA DO-178C DAL A | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#do178c-a-org-independence-program` |
+| `DO178C-B-AUTHORITY-SIGNOFF` | RTCA DO-178C DAL B | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#do178c-b-authority-signoff` |
+| `NASA-A-IVV-GOVERNANCE` | NASA NPR 7150.2 Class A | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#nasa-a-ivv-governance` |
+| `NASA-B-IVV-ORG-SCOPE` | NASA NPR 7150.2 Class B | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#nasa-b-ivv-org-scope` |
+| `IEC62304-C-QMS-INTEGRATION` | IEC 62304 Class C | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#iec62304-c-qms-integration` |
 
 ## Not a Certification Claim
 

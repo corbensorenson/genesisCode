@@ -101,6 +101,17 @@ Strict/full profile runtime reports:
     - `release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default.
     - `dev-fast` and `prepush-standard` remain opt-in via
       `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
+  - Agent GPU automation profile contract:
+    - automation contexts (`agent-inner-loop`, `prepush-standard`, `release-full`, `full-selfhost-cutover`)
+      must set `GENESIS_AGENT_GPU_PROFILE=agent-gpu-strict|agent-gpu-fallback`.
+    - strict profile (`agent-gpu-strict`) forces fail-closed policy:
+      `GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT=require-device` and
+      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`.
+    - fallback profile (`agent-gpu-fallback`) forces explicit fallback policy:
+      `GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT=allow-fallback` and
+      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=dev-allow-fallback`.
+    - downgrade attempts (strict profile + fallback policy env) are rejected by
+      `scripts/check_agent_gpu_profile_contract.sh`.
   - GPU/GFX decoupled runtime lanes:
     - compute-only lane: `scripts/check_gpu_compute_runtime_profile.sh`
     - gfx-only lane: `scripts/check_gfx_runtime_profile.sh`

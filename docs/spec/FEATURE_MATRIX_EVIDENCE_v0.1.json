@@ -105,6 +105,18 @@
       ]
     },
     {
+      "capability": "Real native deploy packaging/execution artifacts",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/check_selfhost_artifact_fresh.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/SELF_HOST_BOUNDARY.md"
+      ]
+    },
+    {
       "capability": "Strict selfhost frontend default in production binaries",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
@@ -129,6 +141,47 @@
       ]
     },
     {
+      "capability": "Machine-readable agent planning index + schema contracts",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_cli_diagnostics_contract.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Semantic edit/refactor primitives as first-class CLI surface",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "LSP/editor server surface",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "Interactive debugger/breakpoint surface",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
       "capability": "GPU compute + graphics capability surfaces",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
@@ -145,7 +198,7 @@
       ]
     },
     {
-      "capability": "Deterministic concurrency/task runtime with replay semantics",
+      "capability": "Deterministic task concurrency runtime with replay semantics",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh",
@@ -165,17 +218,6 @@
       ],
       "evidence_paths": [
         "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Schema-stable machine JSON contracts for CLI/tooling",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_cli_diagnostics_contract.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
       ]
     },
     {
@@ -203,14 +245,17 @@
       ]
     },
     {
-      "capability": "Built-in regulated-assurance profile packs",
+      "capability": "Regulated assurance profile packs in core workflow",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_agent_reference_workflows.sh",
         "scripts/check_assurance_profile_packs.sh",
         "scripts/check_assurance_standards_crosswalk.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
         "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
         "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
         "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
@@ -218,7 +263,7 @@
       ]
     }
   ],
-  "entry_count": 18,
+  "entry_count": 22,
   "kind": "genesis/feature-matrix-evidence-v0.1",
   "source_feature_matrix": "feature_matrix.md",
   "version": "0.1"

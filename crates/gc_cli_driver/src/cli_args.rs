@@ -216,6 +216,12 @@ enum Cmd {
         store: Option<PathBuf>,
     },
 
+    /// Deterministic debug/trace commands for contract dispatch root-cause loops.
+    Debug {
+        #[command(subcommand)]
+        cmd: DebugCmd,
+    },
+
     /// Run package obligations (unit tests, determinism, replay checks, etc.) and write evidence into .genesis/store.
     Test {
         /// Path to package.toml
@@ -615,6 +621,86 @@ enum SemanticEditCmd {
         /// Optional capability policy path used when applying the generated patch.
         #[arg(long)]
         caps: Option<PathBuf>,
+    },
+}
+
+#[derive(Args, Clone)]
+struct DebugTraceArgs {
+    /// Path to module file containing the contract definition.
+    file: PathBuf,
+    /// Frontend engine (selfhost by default in production profile).
+    #[arg(long, help = fmt_engine_help())]
+    engine: Option<FmtEngine>,
+    /// Contract expression or symbol (CoreForm).
+    #[arg(long)]
+    contract: String,
+    /// Message datum (CoreForm term, usually (msg op payload)).
+    #[arg(long)]
+    msg: String,
+    /// Optional output path for canonicalized explain trace artifact.
+    #[arg(long)]
+    trace_out: Option<PathBuf>,
+}
+
+#[derive(Subcommand)]
+enum DebugCmd {
+    /// Advance a deterministic trace cursor by N steps and return the selected frame.
+    Step {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        /// Trace cursor index (0-based, next frame to execute).
+        #[arg(long, default_value_t = 0)]
+        cursor: u64,
+        /// Number of frames to advance.
+        #[arg(long, default_value_t = 1)]
+        count: u64,
+    },
+    /// Find first frame matching a key/value condition starting at index.
+    Break {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        /// Start index for breakpoint scan (0-based).
+        #[arg(long, default_value_t = 0)]
+        start: u64,
+        /// Step map key to match (for example `:override` or `override`).
+        #[arg(long = "match-key")]
+        match_key: String,
+        /// CoreForm term expected at `--match-key`.
+        #[arg(long = "match-value")]
+        match_value: String,
+    },
+    /// Inspect a specific trace frame by index.
+    Inspect {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        /// Frame index (0-based).
+        #[arg(long, default_value_t = 0)]
+        index: u64,
+    },
+    /// Continue from cursor until end or breakpoint condition match.
+    Continue {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        /// Trace cursor index (0-based, next frame to execute).
+        #[arg(long, default_value_t = 0)]
+        cursor: u64,
+        /// Optional step map key to match (for example `:override`).
+        #[arg(long = "match-key")]
+        match_key: Option<String>,
+        /// Optional CoreForm term expected at `--match-key`.
+        #[arg(long = "match-value")]
+        match_value: Option<String>,
+    },
+    /// List trace frames as a deterministic window.
+    Frames {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        /// Window start index (0-based).
+        #[arg(long, default_value_t = 0)]
+        start: u64,
+        /// Maximum number of frames in the window.
+        #[arg(long)]
+        limit: Option<u64>,
     },
 }
 

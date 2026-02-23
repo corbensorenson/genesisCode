@@ -1,12 +1,12 @@
 # GenesisCode Feature Matrix (Audit Date: 2026-02-23)
 
-Last updated: 2026-02-23  
-Scope: first-class language/runtime/toolchain capabilities, not third-party ecosystem breadth.
+Last updated: 2026-02-23
+Scope: language/runtime/toolchain capabilities relevant to AI-first, agentic software development.
 
 Legend:
-- `✅` first-class in language/toolchain/runtime
-- `⚠️` partial, profile-gated, or ecosystem-dependent
-- `❌` absent as first-class capability
+- `✅` first-class and production-usable
+- `⚠️` implemented but partial, profile-scoped, or contract-level only
+- `❌` not present as first-class capability
 
 | Capability | GenesisCode | Rust | Go | TypeScript (Node) | Python | Zig |
 |---|---|---|---|---|---|---|
@@ -18,26 +18,34 @@ Legend:
 | Obligations + evidence artifacts in core workflow | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Language-native semantic VCS graph + refs + bundles | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Built-in package/project manager | ✅ (`gcpm`/`pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (npm/pnpm/yarn) | ⚠️ (pip/poetry/pixi) | ✅ (`zig build`) |
-| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target`) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Deployment/bundle target pipeline in core toolchain | ⚠️ (deterministic target bundles + signatures; launch artifacts are contract scripts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Real native deploy packaging/execution artifacts | ❌ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Strict selfhost frontend default in production binaries | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Full no-bootstrap-language self-host closure | ⚠️ (bounded permanent Rust TCB contract) | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ |
+| Machine-readable agent planning index + schema contracts | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| Semantic edit/refactor primitives as first-class CLI surface | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| LSP/editor server surface | ❌ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| Interactive debugger/breakpoint surface | ✅ (`debug step/break/inspect/continue/frames` deterministic trace API) | ✅ | ✅ | ✅ | ✅ | ⚠️ |
 | GPU compute + graphics capability surfaces | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deterministic concurrency/task runtime with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Deterministic task concurrency runtime with replay semantics | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | WASM runtime + WASI CLI surfaces | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ |
-| Schema-stable machine JSON contracts for CLI/tooling | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain policy + provenance gating in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Local artifact GC by semantic reachability (refs/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Built-in regulated-assurance profile packs | ⚠️ (engineering readiness built-in; certification program external) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Regulated assurance profile packs in core workflow | ✅ (engineering coverage) | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-Known GenesisCode gaps
-- P0.1 - strict prepush lane runtime is too slow for AI-first iteration loops.
+Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
+- P0.1 Target build pipeline still uses contract launch scripts (`boot-ok/smoke-ok`) rather than real deploy/runtime outputs.
+- P0.3 Rust-to-GC migration still has `in-progress` rows not cut over to GC-first dispatch.
+- P1.4 Heavy parity/performance lanes remain too slow for tight agent iteration loops.
+- P2.2 Signed domain bootstrap bundle set is not yet complete for broad agent bootstrapping.
 
 Primary evidence paths:
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_BUNDLE_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_workspace_ops_build_artifacts.rs`
+- `/Users/corbensorenson/Documents/genesisCode/scripts/check_gcpm_target_runtime_pipelines.sh`
+- `/Users/corbensorenson/Documents/genesisCode/scripts/check_disk_headroom.sh`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/upgrade_plan_health_profile_report.json`

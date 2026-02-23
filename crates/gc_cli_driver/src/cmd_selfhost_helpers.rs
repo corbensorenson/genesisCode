@@ -45,6 +45,11 @@ const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
         fast_path_required: true,
     },
     SelfhostCutoverMetadata {
+        cli_name: "debug",
+        dashboard_cmd: "debug/*",
+        fast_path_required: true,
+    },
+    SelfhostCutoverMetadata {
         cli_name: "run",
         dashboard_cmd: "run",
         fast_path_required: true,

@@ -180,6 +180,12 @@ Supported keys:
   - strict runtime profiles may override the implicit default using
     `GENESIS_GPU_BACKEND_POLICY_DEFAULT=require-device`; explicit per-op `gpu_backend_policy`
     entries still take precedence.
+  - automation profile contract:
+    - `GENESIS_AGENT_GPU_PROFILE=agent-gpu-strict` requires
+      `GENESIS_GPU_BACKEND_POLICY_DEFAULT=require-device`.
+    - `GENESIS_AGENT_GPU_PROFILE=agent-gpu-fallback` requires
+      explicit fallback (`allow-fallback`/`dev-allow-fallback`).
+    - enforced by `scripts/check_agent_gpu_profile_contract.sh`.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
 - `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).
@@ -335,7 +341,7 @@ bridge_cmd = "./tools/host_bridge.sh"
 bridge_cmd = "./tools/host_bridge.sh"
 
 [op."sys/process::exec"]
-allow_programs = ["gcpm", "genesis-lsp"]
+allow_programs = ["gcpm"]
 bridge_cmd = "./tools/host_bridge.sh"
 ```
 

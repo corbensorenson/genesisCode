@@ -18,6 +18,7 @@ fn cli_help_surface_contains_expected_command_groups() {
         "fmt",
         "eval",
         "explain",
+        "debug",
         "run",
         "replay",
         "test",
@@ -82,6 +83,14 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("--engine"),
         "explain --help output missing --engine"
     );
+
+    let s = stdout_str(&["debug", "step", "--help"]);
+    for needle in ["--engine", "--contract", "--msg", "--cursor", "--count"] {
+        assert!(
+            s.contains(needle),
+            "debug step --help output missing {needle}"
+        );
+    }
 
     let s = stdout_str(&["run", "--help"]);
     assert!(s.contains("--engine"), "run --help output missing --engine");

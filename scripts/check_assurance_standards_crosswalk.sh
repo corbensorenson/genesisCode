@@ -99,6 +99,7 @@ if not isinstance(entries, list) or not entries:
 seen_profiles = set()
 unresolved_count = 0
 allowed_status = {"covered-by-toolchain", "partial", "external"}
+allowed_unresolved_status = {"open", "program-backlog"}
 for entry in entries:
     if not isinstance(entry, dict):
         raise SystemExit("assurance-standards-crosswalk: each profiles entry must be an object")
@@ -159,10 +160,21 @@ for entry in entries:
                 raise SystemExit(
                     f"assurance-standards-crosswalk: unresolved control in `{profile}` missing `{key}`"
                 )
-        if control["status"] != "open":
+        if control["status"] not in allowed_unresolved_status:
             raise SystemExit(
-                f"assurance-standards-crosswalk: unresolved control `{control.get('control_id')}` in `{profile}` must be status=open"
+                f"assurance-standards-crosswalk: unresolved control `{control.get('control_id')}` in `{profile}` has invalid status `{control['status']}`"
             )
+        tracked_in = str(control.get("tracked_in", ""))
+        tracked_path = tracked_in.split("#", 1)[0]
+        if not tracked_path or not (root / tracked_path).is_file():
+            raise SystemExit(
+                f"assurance-standards-crosswalk: unresolved control `{control.get('control_id')}` in `{profile}` must track to an existing document via tracked_in"
+            )
+        if control["status"] == "program-backlog":
+            if tracked_path != "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md":
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: program-backlog control `{control.get('control_id')}` in `{profile}` must track to docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md"
+                )
         unresolved_count += 1
 
 missing_profiles = sorted(regulated_profiles - seen_profiles)

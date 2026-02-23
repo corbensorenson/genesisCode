@@ -543,6 +543,41 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Fmt { engine, .. } => enforce_selfhost_engine(cli, "fmt", *engine),
         Cmd::Eval { engine, .. } => enforce_selfhost_engine(cli, "eval", *engine),
         Cmd::Explain { engine, .. } => enforce_selfhost_engine(cli, "explain", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Step {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug step", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Break {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug break", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Inspect {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug inspect", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Continue {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug continue", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Frames {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug frames", *engine),
         Cmd::Run { engine, .. } => enforce_selfhost_engine(cli, "run", *engine),
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Optimize { engine, .. } => enforce_selfhost_engine(cli, "optimize", *engine),

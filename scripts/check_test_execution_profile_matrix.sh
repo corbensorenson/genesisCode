@@ -13,6 +13,9 @@ WASM_CROSS_HOST_SCRIPT="scripts/wasm_cross_host_determinism.mjs"
 FULL_CROSS_HOST_BUDGET_SCRIPT="scripts/check_full_cross_host_profile_budget.sh"
 AGENT_GENERATIVE_SCRIPT="scripts/check_agent_generative_workloads.sh"
 CARGO_TARGET_POLICY_SCRIPT="scripts/check_cargo_target_dir_policy.sh"
+UPGRADE_PLAN_SYNC_SCRIPT="scripts/sync_upgrade_plan_state.sh"
+AGENT_GPU_PROFILE_CONTRACT_SCRIPT="scripts/check_agent_gpu_profile_contract.sh"
+AGENT_GPU_PROFILE_LIB="scripts/lib/agent_gpu_profile_contract.sh"
 
 for path in \
   "$DOC" \
@@ -23,7 +26,10 @@ for path in \
   "$WASM_CROSS_HOST_SCRIPT" \
   "$FULL_CROSS_HOST_BUDGET_SCRIPT" \
   "$AGENT_GENERATIVE_SCRIPT" \
-  "$CARGO_TARGET_POLICY_SCRIPT"; do
+  "$CARGO_TARGET_POLICY_SCRIPT" \
+  "$UPGRADE_PLAN_SYNC_SCRIPT" \
+  "$AGENT_GPU_PROFILE_CONTRACT_SCRIPT" \
+  "$AGENT_GPU_PROFILE_LIB"; do
   [[ -f "$path" ]] || {
     echo "test-execution-profile-matrix: missing required file: $path" >&2
     exit 1
@@ -90,6 +96,8 @@ require_doc_pattern 'scripts/check_agent_scenario_perf.sh'
 require_doc_pattern 'scripts/check_agent_generative_workloads.sh'
 require_doc_pattern 'scripts/check_cargo_target_dir_policy.sh'
 require_doc_pattern 'scripts/check_wasm_production_surface.sh'
+require_doc_pattern 'GENESIS_AGENT_GPU_PROFILE=agent-gpu-strict|agent-gpu-fallback'
+require_doc_pattern 'scripts/check_agent_gpu_profile_contract.sh'
 
 require_ci_pattern 'Changed-File Fast Loop Budget'
 require_ci_pattern 'Selfhost Refactor Guard'
@@ -168,6 +176,29 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep explicit gpu device conformance lane toggle" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'export GENESIS_PERF_DISK_STRICT_MODE="1"' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'export GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE="1"' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: strict profiles must force fail-closed disk headroom mode" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'sync-upgrade-plan-state: ok' "$UPGRADE_PLAN_SYNC_SCRIPT"; then
+  echo "test-execution-profile-matrix: sync_upgrade_plan_state command must perform end-to-end synchronization checks" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_AGENT_GPU_PROFILE' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'genesis_apply_agent_gpu_profile_contract' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: upgrade-plan health must enforce explicit agent gpu profile contract in automation contexts" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'agent-gpu-strict' "$AGENT_GPU_PROFILE_LIB" || \
+   ! grep -Fq 'agent-gpu-fallback' "$AGENT_GPU_PROFILE_LIB"; then
+  echo "test-execution-profile-matrix: agent gpu profile contract script must support strict and fallback profile selections" >&2
   exit 1
 fi
 

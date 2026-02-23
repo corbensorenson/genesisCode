@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
 
 use anyhow::Context;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 use gc_coreform::{
@@ -49,6 +49,7 @@ mod cli_schema;
 mod cmd_agent_index;
 mod cmd_commit;
 mod cmd_core;
+mod cmd_debug;
 mod cmd_gc;
 mod cmd_pkg;
 mod cmd_policy;
@@ -93,6 +94,7 @@ use cli_schema::cmd_cli_schema;
 use cmd_agent_index::cmd_agent_index;
 use cmd_commit::cmd_commit;
 use cmd_core::*;
+use cmd_debug::cmd_debug;
 use cmd_gc::cmd_gc;
 use cmd_pkg::cmd_pkg;
 use cmd_policy::cmd_policy;
@@ -338,6 +340,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             log,
             store,
         } => cmd_replay(cli, file, *engine, log, store.as_deref()),
+        Cmd::Debug { cmd } => cmd_debug(cli, cmd),
         Cmd::Test { pkg, caps } => cmd_test(cli, pkg, caps.as_deref()),
         Cmd::Pack { pkg } => cmd_pack(cli, pkg),
         Cmd::SelfhostArtifact {

@@ -5,6 +5,7 @@ export LC_ALL=C
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/lib/agent_gpu_profile_contract.sh"
 
 PLAN_FILE="upgrade_plan.md"
 DEFAULT_PROFILE="dev-fast"
@@ -12,6 +13,10 @@ if [[ "${CI:-}" == "true" ]]; then
   DEFAULT_PROFILE="release-full"
 fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
+export GENESIS_HEALTH_PROFILE="$PROFILE"
+AGENT_AUTOMATION_CONTEXT="$(genesis_resolve_agent_automation_context "$PROFILE")"
+export GENESIS_AGENT_AUTOMATION_CONTEXT="$AGENT_AUTOMATION_CONTEXT"
+AGENT_GPU_PROFILE="${GENESIS_AGENT_GPU_PROFILE:-}"
 HEALTH_GPU_BACKEND_POLICY_DEFAULT="${GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT:-}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
 DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-300000}"
@@ -37,7 +42,7 @@ else
 fi
 ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
 HEALTH_AUTO_RECLAIM="${GENESIS_HEALTH_AUTO_RECLAIM:-1}"
-HEALTH_RECLAIM_MAX_BUILD_KB="${GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB:-8388608}"
+HEALTH_RECLAIM_MAX_BUILD_KB="${GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB:-33554432}"
 HEALTH_RECLAIM_MAX_AGE_DAYS="${GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS:-7}"
 HEALTH_MIN_FREE_KB="${GENESIS_HEALTH_MIN_FREE_KB:-1048576}"
 HEALTH_PARALLEL_CARGO_MIN_FREE_KB="${GENESIS_HEALTH_PARALLEL_CARGO_MIN_FREE_KB:-2097152}"
@@ -130,7 +135,13 @@ default_health_cargo_gate_shards_for_profile() {
   local cpu_count
   cpu_count="$(detect_parallelism)"
   case "$profile" in
-    prepush-standard|release-full)
+    prepush-standard)
+      # Prepush cargo gates share one target dir for deterministic artifact reuse.
+      # Running them in parallel shards causes lock contention and large wall-time
+      # inflation on hot caches; serialize by default and allow explicit override.
+      echo "1"
+      ;;
+    release-full)
       if (( cpu_count >= 8 )); then
         echo "2"
       else
@@ -551,6 +562,17 @@ if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; t
   echo "upgrade-plan-health: GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE must be 0 or 1" >&2
   exit 2
 fi
+genesis_apply_agent_gpu_profile_contract "$PROFILE" "$AGENT_AUTOMATION_CONTEXT"
+if [[ -n "$AGENT_GPU_PROFILE" ]]; then
+  echo "upgrade-plan-health: agent gpu profile selection=$AGENT_GPU_PROFILE"
+fi
+if [[ "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" || "$PROFILE" == "full-selfhost-cutover" ]]; then
+  # Strict profiles must fail closed on disk headroom checks, even in local runs.
+  export GENESIS_PERF_DISK_STRICT_MODE="1"
+  export GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE="1"
+  export GENESIS_DISK_STRICT_MODE="1"
+  echo "upgrade-plan-health: strict disk headroom enforcement enabled (profile=$PROFILE)"
+fi
 if [[ -z "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" ]]; then
   case "$PROFILE" in
     prepush-standard|release-full|full-selfhost-cutover)
@@ -649,6 +671,7 @@ if [[ "$declared_open" -gt 0 ]]; then
       "bash scripts/check_selfhost_boundary.sh --strict"
       "bash scripts/check_selfhost_doc_runtime_parity.sh"
       "bash scripts/check_selfhost_readiness_scorecard.sh"
+      "bash scripts/check_agent_gpu_profile_contract.sh"
       "bash scripts/check_redteam_report.sh"
       "bash scripts/check_selfhost_symbol_ownership.sh"
       "bash scripts/check_selfhost_toolchain_review_fresh.sh"
@@ -719,6 +742,7 @@ fi
 COMMON_GATES=(
   "bash scripts/check_selfhost_boundary.sh --strict"
   "bash scripts/check_host_abi_conformance.sh"
+  "bash scripts/check_agent_gpu_profile_contract.sh"
   "bash scripts/check_runner_high_level_op_guard.sh"
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
@@ -810,7 +834,7 @@ case "$PROFILE" in
       "GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB=1048576 GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=1 GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM=0 bash scripts/check_runtime_backend_feature_matrix.sh"
     )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT=60 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=3000 bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")

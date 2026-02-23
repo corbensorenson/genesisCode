@@ -61,6 +61,11 @@ Optional environment knobs:
     `gpu_backend_policy`.
   - strict health lanes (`prepush-standard`, `release-full`, `full-selfhost-cutover`) set this to
     `require-device`; inner-loop profiles keep `allow-fallback`.
+- `GENESIS_AGENT_GPU_PROFILE`
+  - explicit automation contract selection:
+    - `agent-gpu-strict` -> fail-closed (`require-device`)
+    - `agent-gpu-fallback` -> explicit fallback (`allow-fallback` / `dev-allow-fallback`)
+  - enforced in automation contexts by `scripts/check_agent_gpu_profile_contract.sh`.
 - `GENESIS_PERF_CARGO_PROFILE`
   - Build profile for benchmark execution.
 

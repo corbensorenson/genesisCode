@@ -29,6 +29,11 @@ Failure envelopes always use:
 - `fmt` -> `genesis/fmt-v0.2`
 - `eval` -> `genesis/eval-v0.2`
 - `explain` -> `genesis/explain-v0.2`
+- `debug step` -> `genesis/debug-step-v0.1`
+- `debug break` -> `genesis/debug-break-v0.1`
+- `debug inspect` -> `genesis/debug-inspect-v0.1`
+- `debug continue` -> `genesis/debug-continue-v0.1`
+- `debug frames` -> `genesis/debug-frames-v0.1`
 - `run` -> `genesis/run-v0.2`
 - `replay` -> `genesis/replay-v0.2`
 - `test` -> `genesis/test-v0.2`

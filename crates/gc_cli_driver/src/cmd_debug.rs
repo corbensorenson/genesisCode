@@ -1,0 +1,548 @@
+use super::*;
+
+#[derive(Debug, Clone)]
+struct DebugTraceBundle {
+    file: String,
+    engine: &'static str,
+    kernel_eval_backend: &'static str,
+    contract: String,
+    msg: String,
+    trace_term: Term,
+    trace_hash_hex: String,
+    trace_out: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct StepMatcher {
+    key_symbol: String,
+    expected: Term,
+}
+
+pub(super) fn cmd_debug(cli: &Cli, cmd: &DebugCmd) -> Result<CmdOut, CliError> {
+    match cmd {
+        DebugCmd::Step {
+            trace,
+            cursor,
+            count,
+        } => cmd_debug_step(cli, trace, *cursor, *count),
+        DebugCmd::Break {
+            trace,
+            start,
+            match_key,
+            match_value,
+        } => cmd_debug_break(cli, trace, *start, match_key, match_value),
+        DebugCmd::Inspect { trace, index } => cmd_debug_inspect(cli, trace, *index),
+        DebugCmd::Continue {
+            trace,
+            cursor,
+            match_key,
+            match_value,
+        } => cmd_debug_continue(
+            cli,
+            trace,
+            *cursor,
+            match_key.as_deref(),
+            match_value.as_deref(),
+        ),
+        DebugCmd::Frames {
+            trace,
+            start,
+            limit,
+        } => cmd_debug_frames(cli, trace, *start, *limit),
+    }
+}
+
+fn cmd_debug_step(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    cursor: u64,
+    count: u64,
+) -> Result<CmdOut, CliError> {
+    if count == 0 {
+        return Err(cli_err(EX_PARSE, "debug/step", "--count must be >= 1"));
+    }
+    let bundle = build_debug_trace(cli, trace_args, "debug step")?;
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let cursor_start = parse_cursor(cursor, steps.len(), "debug/step", true)?;
+    let step_count = usize::try_from(count).map_err(|_| {
+        cli_err(
+            EX_PARSE,
+            "debug/step",
+            format!("--count `{count}` does not fit on this host"),
+        )
+    })?;
+    let cursor_end = cursor_start.saturating_add(step_count).min(steps.len());
+    let executed = cursor_end.saturating_sub(cursor_start);
+    let selected_index = if executed > 0 {
+        Some(cursor_end - 1)
+    } else {
+        None
+    };
+    let selected = selected_index.map(|idx| steps[idx].clone());
+    let selected_render = selected
+        .as_ref()
+        .map(gc_coreform::print_term)
+        .unwrap_or_else(|| "nil".to_string());
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-step-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "trace_step_count": steps.len(),
+            "cursor_start": cursor_start,
+            "cursor_end": cursor_end,
+            "steps_executed": executed,
+            "selected_step_index": selected_index,
+            "selected_step": selected_render,
+            "selected_step_format": "coreform",
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{selected_render}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn cmd_debug_break(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    start: u64,
+    match_key: &str,
+    match_value: &str,
+) -> Result<CmdOut, CliError> {
+    let bundle = build_debug_trace(cli, trace_args, "debug break")?;
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let start_index = parse_cursor(start, steps.len(), "debug/break", true)?;
+    let matcher = parse_matcher(match_key, match_value)?;
+    let hit = find_breakpoint(steps, start_index, &matcher)?;
+    let hit_render = hit
+        .map(|idx| gc_coreform::print_term(&steps[idx]))
+        .unwrap_or_else(|| "nil".to_string());
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-break-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "trace_step_count": steps.len(),
+            "start": start_index,
+            "match_key": matcher.key_symbol,
+            "match_value": gc_coreform::print_term(&matcher.expected),
+            "match_value_format": "coreform",
+            "breakpoint_index": hit,
+            "breakpoint_step": hit_render,
+            "breakpoint_step_format": "coreform",
+            "hit": hit.is_some(),
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{hit_render}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn cmd_debug_inspect(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    index: u64,
+) -> Result<CmdOut, CliError> {
+    let bundle = build_debug_trace(cli, trace_args, "debug inspect")?;
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let idx = parse_required_index(index, steps.len(), "debug/inspect")?;
+    let frame = gc_coreform::print_term(&steps[idx]);
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-inspect-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "trace_step_count": steps.len(),
+            "index": idx,
+            "frame": frame,
+            "frame_format": "coreform",
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{frame}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn cmd_debug_continue(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    cursor: u64,
+    match_key: Option<&str>,
+    match_value: Option<&str>,
+) -> Result<CmdOut, CliError> {
+    let bundle = build_debug_trace(cli, trace_args, "debug continue")?;
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let cursor_start = parse_cursor(cursor, steps.len(), "debug/continue", true)?;
+    let matcher = match (match_key, match_value) {
+        (None, None) => None,
+        (Some(k), Some(v)) => Some(parse_matcher(k, v)?),
+        _ => {
+            return Err(cli_err(
+                EX_PARSE,
+                "debug/continue",
+                "--match-key and --match-value must be provided together",
+            ));
+        }
+    };
+
+    let (cursor_end, selected_index, halted, reason) = if let Some(m) = &matcher {
+        if let Some(idx) = find_breakpoint(steps, cursor_start, m)? {
+            (idx + 1, Some(idx), true, "breakpoint")
+        } else {
+            (steps.len(), None, false, "eof")
+        }
+    } else if cursor_start < steps.len() {
+        (steps.len(), Some(steps.len() - 1), false, "eof")
+    } else {
+        (steps.len(), None, false, "eof")
+    };
+    let selected = selected_index
+        .map(|idx| gc_coreform::print_term(&steps[idx]))
+        .unwrap_or_else(|| "nil".to_string());
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-continue-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "trace_step_count": steps.len(),
+            "cursor_start": cursor_start,
+            "cursor_end": cursor_end,
+            "selected_step_index": selected_index,
+            "selected_step": selected,
+            "selected_step_format": "coreform",
+            "halted": halted,
+            "halt_reason": reason,
+            "match_key": matcher.as_ref().map(|m| m.key_symbol.clone()),
+            "match_value": matcher.as_ref().map(|m| gc_coreform::print_term(&m.expected)),
+            "match_value_format": matcher.as_ref().map(|_| "coreform"),
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{selected}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn cmd_debug_frames(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    start: u64,
+    limit: Option<u64>,
+) -> Result<CmdOut, CliError> {
+    let bundle = build_debug_trace(cli, trace_args, "debug frames")?;
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let start_index = parse_cursor(start, steps.len(), "debug/frames", true)?;
+    let max = steps.len().saturating_sub(start_index);
+    let limit = match limit {
+        Some(v) => usize::try_from(v).map_err(|_| {
+            cli_err(
+                EX_PARSE,
+                "debug/frames",
+                format!("--limit `{v}` does not fit on this host"),
+            )
+        })?,
+        None => max,
+    };
+    let window = limit.min(max);
+    let end = start_index + window;
+    let frame_vec = Term::Vector(steps[start_index..end].to_vec());
+    let frames_render = gc_coreform::print_term(&frame_vec);
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-frames-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "trace_step_count": steps.len(),
+            "start": start_index,
+            "limit": window,
+            "end": end,
+            "frames": frames_render,
+            "frames_format": "coreform",
+        })),
+        error: None,
+    };
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{frames_render}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn build_debug_trace(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    cmd_name: &str,
+) -> Result<DebugTraceBundle, CliError> {
+    let engine = resolved_engine(cli, cmd_name, trace_args.engine)?;
+    let src = std::fs::read_to_string(&trace_args.file)
+        .with_context(|| format!("read {}", trace_args.file.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let (mut ctx, mut env, forms, contract_term, msg_term) = match engine {
+        #[cfg(feature = "parity-harness")]
+        FmtEngine::Rust => {
+            let forms = parse_module(&src)
+                .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
+            let forms = canonicalize_module(forms)
+                .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let contract_term = parse_term(&trace_args.contract)
+                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--contract: {e}")))?;
+            let msg_term = parse_term(&trace_args.msg)
+                .map_err(|e| cli_err(EX_PARSE, "parse/term", format!("--msg: {e}")))?;
+            let mut ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut ctx);
+            (ctx, prelude.env, forms, contract_term, msg_term)
+        }
+        FmtEngine::Selfhost => {
+            let mut parse_ctx = EvalCtx::with_step_limit(None);
+            parse_ctx.set_mem_limits(resolved_mem_limits(cli));
+            let prelude = build_prelude(&mut parse_ctx);
+            let mut parse_env = prelude.env;
+            load_runtime_selfhost_toolchain(cli, &mut parse_ctx, &mut parse_env)?;
+
+            parse_ctx.steps = 0;
+            parse_ctx.step_limit = None;
+            let forms = selfhost_parse_canonicalize_module(&mut parse_ctx, &parse_env, &src)?;
+            let contract_term = selfhost_parse_term(
+                &mut parse_ctx,
+                &parse_env,
+                &trace_args.contract,
+                "--contract",
+            )?;
+            let msg_term =
+                selfhost_parse_term(&mut parse_ctx, &parse_env, &trace_args.msg, "--msg")?;
+
+            let mut eval_ctx = mk_ctx(cli);
+            let prelude = build_prelude(&mut eval_ctx);
+            (eval_ctx, prelude.env, forms, contract_term, msg_term)
+        }
+    };
+
+    let (_, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+    let contract = eval_term(&mut ctx, &env, &contract_term)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("--contract: {e}")))?;
+    let msg_val = Value::Data(msg_term);
+    let explain = env.get("core/contract::explain").ok_or_else(|| {
+        cli_err(
+            EX_INTERNAL,
+            "prelude/missing",
+            "missing prelude binding core/contract::explain",
+        )
+    })?;
+    let trace_value = explain
+        .apply(&mut ctx, contract)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("apply contract: {e}")))?
+        .apply(&mut ctx, msg_val)
+        .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("explain failed: {e}")))?;
+    let trace_term = trace_value.as_data().cloned().ok_or_else(|| {
+        cli_err(
+            EX_EVAL,
+            "debug/trace",
+            "core/contract::explain returned non-data value",
+        )
+    })?;
+    extract_trace_steps(&trace_term)?;
+    let trace_hash_hex = hex32(gc_coreform::hash_term(&trace_term));
+
+    let trace_out = if let Some(path) = trace_args.trace_out.as_ref() {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("mkdir {}", parent.display()))
+                .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+        }
+        std::fs::write(path, format!("{}\n", gc_coreform::print_term(&trace_term)))
+            .with_context(|| format!("write {}", path.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+        Some(path.display().to_string())
+    } else {
+        None
+    };
+
+    Ok(DebugTraceBundle {
+        file: trace_args.file.display().to_string(),
+        engine: engine.as_str(),
+        kernel_eval_backend: eval_backend.as_str(),
+        contract: trace_args.contract.clone(),
+        msg: trace_args.msg.clone(),
+        trace_term,
+        trace_hash_hex,
+        trace_out,
+    })
+}
+
+fn extract_trace_steps(trace: &Term) -> Result<&Vec<Term>, CliError> {
+    let Term::Map(map) = trace else {
+        return Err(cli_err(
+            EX_EVAL,
+            "debug/trace",
+            "trace artifact must be a map",
+        ));
+    };
+    let key = TermOrdKey(Term::symbol(":steps"));
+    let Some(Term::Vector(steps)) = map.get(&key) else {
+        return Err(cli_err(
+            EX_EVAL,
+            "debug/trace",
+            "trace artifact missing :steps vector",
+        ));
+    };
+    for (idx, step) in steps.iter().enumerate() {
+        if !matches!(step, Term::Map(_)) {
+            return Err(cli_err(
+                EX_EVAL,
+                "debug/trace",
+                format!("trace :steps[{idx}] must be map"),
+            ));
+        }
+    }
+    Ok(steps)
+}
+
+fn parse_cursor(
+    value: u64,
+    len: usize,
+    code: &'static str,
+    allow_equal_end: bool,
+) -> Result<usize, CliError> {
+    let idx = usize::try_from(value).map_err(|_| {
+        cli_err(
+            EX_PARSE,
+            code,
+            format!("index `{value}` does not fit on this host"),
+        )
+    })?;
+    let max = if allow_equal_end {
+        idx <= len
+    } else {
+        idx < len
+    };
+    if !max {
+        return Err(cli_err(
+            EX_PARSE,
+            code,
+            format!("index `{idx}` out of range for {len} steps"),
+        ));
+    }
+    Ok(idx)
+}
+
+fn parse_required_index(value: u64, len: usize, code: &'static str) -> Result<usize, CliError> {
+    if len == 0 {
+        return Err(cli_err(EX_PARSE, code, "trace has no steps"));
+    }
+    parse_cursor(value, len, code, false)
+}
+
+fn parse_matcher(match_key: &str, match_value: &str) -> Result<StepMatcher, CliError> {
+    let normalized = normalize_step_match_key(match_key)?;
+    let expected = parse_term(match_value)
+        .map_err(|e| cli_err(EX_PARSE, "debug/match", format!("--match-value: {e}")))?;
+    Ok(StepMatcher {
+        key_symbol: normalized,
+        expected,
+    })
+}
+
+fn normalize_step_match_key(raw: &str) -> Result<String, CliError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(cli_err(
+            EX_PARSE,
+            "debug/match",
+            "--match-key must not be empty",
+        ));
+    }
+    if trimmed.starts_with(':') {
+        Ok(trimmed.to_string())
+    } else {
+        Ok(format!(":{trimmed}"))
+    }
+}
+
+fn find_breakpoint(
+    steps: &[Term],
+    start: usize,
+    matcher: &StepMatcher,
+) -> Result<Option<usize>, CliError> {
+    let key = TermOrdKey(Term::symbol(&matcher.key_symbol));
+    for (idx, step) in steps.iter().enumerate().skip(start) {
+        let Term::Map(map) = step else {
+            return Err(cli_err(
+                EX_EVAL,
+                "debug/trace",
+                format!("trace :steps[{idx}] must be map"),
+            ));
+        };
+        if map.get(&key) == Some(&matcher.expected) {
+            return Ok(Some(idx));
+        }
+    }
+    Ok(None)
+}

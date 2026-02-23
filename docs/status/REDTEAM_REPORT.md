@@ -1,12 +1,13 @@
-# GenesisCode Red-Team Report
+# GenesisCode Red-Team Report (P0/P1 Active Risk Summary)
 
 Last updated: 2026-02-23
 
 Scope:
 - Track unresolved `P0`/`P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
 - Keep active IDs synchronized with `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`.
-- Focus on blockers to self-hosted, fully functional, AI-first operation.
 
 ## Active Risks (P0/P1)
 
-- P0.1 - prepush profile runtime is too slow for AI inner-loop iteration.
+- P0.1 - Replace target-bundle contract scripts with real target runtime/deploy pipelines.
+- P0.3 - Finish `in-progress` Rust->GC migrations to GC-first production dispatch (`phase-2`).
+- P1.4 - Reduce heavy parity/performance lane runtime for release-grade agent feedback loops.
