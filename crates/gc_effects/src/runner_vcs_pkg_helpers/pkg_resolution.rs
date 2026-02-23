@@ -1,14 +1,24 @@
 use super::*;
+use crate::refs::RefEntry;
+use semver::{Version, VersionReq};
 
 #[derive(Debug, Clone)]
 pub(crate) enum Selector {
     Commit(String),
     Snapshot(String),
     Ref(String),
+    SemverRange(String),
 }
 
 pub(crate) fn parse_selector(s: &str) -> Option<Selector> {
     let t = s.trim();
+    if let Some(rest) = t.strip_prefix("semver:") {
+        let range = rest.trim();
+        if range.is_empty() {
+            return None;
+        }
+        return Some(Selector::SemverRange(range.to_string()));
+    }
     if let Some(rest) = t.strip_prefix("commit:") {
         return Some(Selector::Commit(rest.trim().to_string()));
     }
@@ -25,6 +35,71 @@ pub(crate) fn parse_selector(s: &str) -> Option<Selector> {
         return Some(Selector::Commit(t.to_string()));
     }
     None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SemverSelectionPolicy {
+    Highest,
+    Lowest,
+}
+
+fn semver_selection_policy(tag_policy: Option<&str>) -> Result<SemverSelectionPolicy, String> {
+    match tag_policy.unwrap_or("highest") {
+        // Keep existing tag-policy defaults backward compatible with v0.1 ("exact").
+        "highest" | "latest" | "exact" => Ok(SemverSelectionPolicy::Highest),
+        "lowest" => Ok(SemverSelectionPolicy::Lowest),
+        other => Err(format!(
+            "unsupported semver tag_policy `{other}` (expected highest|lowest)"
+        )),
+    }
+}
+
+fn parse_tag_semver_version(ref_name: &str) -> Option<Version> {
+    let tag = ref_name.strip_prefix("refs/tags/")?;
+    if tag.is_empty() {
+        return None;
+    }
+    Version::parse(tag).ok().or_else(|| {
+        tag.strip_prefix('v')
+            .and_then(|raw| Version::parse(raw).ok())
+    })
+}
+
+fn select_semver_tag_ref(
+    refs: &[RefEntry],
+    req: &VersionReq,
+    policy: SemverSelectionPolicy,
+) -> Option<(String, String)> {
+    let mut best: Option<(String, String, Version)> = None;
+    for entry in refs {
+        let Some(commit_hex) = entry.hash.as_ref() else {
+            continue;
+        };
+        let Some(version) = parse_tag_semver_version(&entry.name) else {
+            continue;
+        };
+        if !req.matches(&version) {
+            continue;
+        }
+        let candidate = (entry.name.clone(), commit_hex.clone(), version);
+        let replace = match &best {
+            None => true,
+            Some((best_ref, _best_commit, best_version)) => match policy {
+                SemverSelectionPolicy::Highest => {
+                    candidate.2 > *best_version
+                        || (candidate.2 == *best_version && candidate.0 < *best_ref)
+                }
+                SemverSelectionPolicy::Lowest => {
+                    candidate.2 < *best_version
+                        || (candidate.2 == *best_version && candidate.0 < *best_ref)
+                }
+            },
+        };
+        if replace {
+            best = Some(candidate);
+        }
+    }
+    best.map(|(ref_name, commit_hex, _)| (ref_name, commit_hex))
 }
 
 pub(crate) fn compute_requirement_fingerprint(
@@ -311,6 +386,58 @@ pub(crate) fn validate_locked_entries_strict(
                         error_tok,
                         "core/pkg/lock-invariant",
                         format!("ref selector resolved without commit for {name}"),
+                        Some(op),
+                    ));
+                }
+            }
+            Some(Selector::SemverRange(range)) => {
+                let Some(resolved_ref) = le.resolved_ref.as_deref() else {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/lock-invariant",
+                        format!("semver selector resolved without resolved_ref for {name}"),
+                        Some(op),
+                    ));
+                };
+                if !resolved_ref.starts_with("refs/tags/") {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/lock-invariant",
+                        format!("semver selector resolved_ref is not under refs/tags/* for {name}"),
+                        Some(op),
+                    ));
+                }
+                let req_range = VersionReq::parse(&range).map_err(|e| {
+                    mk_error(
+                        error_tok,
+                        "core/pkg/bad-selector",
+                        format!("invalid semver selector range `{range}`: {e}"),
+                        Some(op),
+                    )
+                })?;
+                let Some(resolved_version) = parse_tag_semver_version(resolved_ref) else {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/lock-invariant",
+                        format!("resolved semver tag is not parseable for {name}: {resolved_ref}"),
+                        Some(op),
+                    ));
+                };
+                if !req_range.matches(&resolved_version) {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/lock-invariant",
+                        format!(
+                            "resolved semver tag `{resolved_ref}` is outside selector range `{range}` for {name}"
+                        ),
+                        Some(op),
+                    ));
+                }
+                if le.commit.is_none() {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/lock-invariant",
+                        format!("semver selector resolved without commit for {name}"),
                         Some(op),
                     ));
                 }
@@ -679,5 +806,92 @@ pub(crate) fn resolve_requirement(
                 environment_fingerprint: Some(fp),
             })
         }
+        Selector::SemverRange(range) => {
+            let req_range = VersionReq::parse(&range).map_err(|e| {
+                mk_error(
+                    error_tok,
+                    "core/pkg/bad-selector",
+                    format!("invalid semver selector range `{range}`: {e}"),
+                    Some(op),
+                )
+            })?;
+            let policy = semver_selection_policy(req.tag_policy.as_deref())
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)))?;
+            let refs_list = refs
+                .list(Some("refs/tags/"))
+                .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
+            let Some((resolved_ref, commit_hex)) =
+                select_semver_tag_ref(&refs_list, &req_range, policy)
+            else {
+                return Err(mk_error(
+                    error_tok,
+                    "core/pkg/ref-not-found",
+                    format!("no refs/tags entry satisfies semver range `{range}`"),
+                    Some(op),
+                ));
+            };
+            if !store.path_for(&commit_hex).exists() {
+                return Err(mk_error(
+                    error_tok,
+                    "core/store/not-found",
+                    format!("artifact not found: {commit_hex}"),
+                    Some(op),
+                ));
+            }
+            let t = store_get_term(store, &commit_hex)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            let c = gc_vcs::Commit::from_term(&t)
+                .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+            let snapshot = c.result;
+            let fp =
+                compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&commit_hex));
+            Ok(gc_pkg::LockedEntry {
+                commit: Some(commit_hex),
+                snapshot,
+                registry: req.registry.clone(),
+                source_selector: req.selector.clone(),
+                resolved_ref: Some(resolved_ref),
+                exports_hash: None,
+                environment_fingerprint: Some(fp),
+            })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_selector_accepts_semver_range() {
+        let parsed = parse_selector("semver:^1.2.0");
+        assert!(matches!(parsed, Some(Selector::SemverRange(r)) if r == "^1.2.0"));
+    }
+
+    #[test]
+    fn semver_tag_selection_is_deterministic_by_policy() {
+        let refs = vec![
+            RefEntry {
+                name: "refs/tags/v1.2.0".to_string(),
+                hash: Some("a".repeat(64)),
+            },
+            RefEntry {
+                name: "refs/tags/v1.2.3".to_string(),
+                hash: Some("b".repeat(64)),
+            },
+            RefEntry {
+                name: "refs/tags/v1.2.5".to_string(),
+                hash: Some("c".repeat(64)),
+            },
+            RefEntry {
+                name: "refs/tags/v2.0.0".to_string(),
+                hash: Some("d".repeat(64)),
+            },
+        ];
+        let range = VersionReq::parse("^1.2.0").expect("valid range");
+        let high = select_semver_tag_ref(&refs, &range, SemverSelectionPolicy::Highest);
+        let low = select_semver_tag_ref(&refs, &range, SemverSelectionPolicy::Lowest);
+        assert_eq!(high, Some(("refs/tags/v1.2.5".to_string(), "c".repeat(64))));
+        assert_eq!(low, Some(("refs/tags/v1.2.0".to_string(), "a".repeat(64))));
     }
 }

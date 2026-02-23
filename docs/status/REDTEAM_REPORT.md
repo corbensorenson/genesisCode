@@ -10,5 +10,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P0.3`: Target deployment pipeline remains runtime-runner contract based, not platform-native executable artifact based.
-- `P1.3`: `gcpm` dependency solver/range semantics are still local-only and below mature package-manager expectations.
+- `P1.3`: `gcpm` dependency solver/range semantics are improved but still below mature package-manager expectations (semver tag-range solving exists; registry conflict diagnostics and full workspace selective-upgrade ergonomics remain open).

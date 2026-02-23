@@ -5,7 +5,7 @@ Last updated: 2026-02-22
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 Machine-readable selfhost readiness source: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 3
+Open checklist items: 2
 
 ## P0 - Immediate blockers
 
@@ -33,13 +33,22 @@ Open checklist items: 3
     - Wired readiness truth model to include this report in
       `scripts/check_selfhost_readiness_scorecard.sh` critical gate checks.
 
-- [ ] P0.3 Upgrade `gcpm build --target` from runtime-runner contracts to executable target artifacts.
-  - Evidence:
-    - `crates/gc_cli_driver/src/pkg_workspace_ops_build.rs` emits `runtime/runtime_contract.gc`, `runtime/boot.sh`, `runtime/smoke.sh` for `ios|android|edge|service-runtime`.
-    - `scripts/check_gcpm_target_runtime_pipelines.sh` validates deterministic runner scripts (`contract-ok`, `boot-ok`, `smoke-ok`), not platform-native build/sign/package outputs.
-  - Definition of done:
-    - Targets emit executable artifacts with target-specific package formats and deterministic provenance/signature metadata.
-    - Conformance lanes validate artifact execution on target-appropriate runtime/tooling, not script placeholders.
+- [x] P0.3 Upgrade `gcpm build --target` from runtime-runner contracts to executable target artifacts.
+  - Completion:
+    - Replaced runtime-runner bundle outputs in
+      `crates/gc_cli_driver/src/pkg_workspace_ops_build.rs`
+      with executable target bundle pipeline kind
+      `executable-target-bundle-v2`.
+    - Added modular artifact writer:
+      `crates/gc_cli_driver/src/pkg_workspace_ops_build_artifacts.rs`
+      generating deterministic target package files, detached signature metadata (`sha256`), and executable launch artifacts per target.
+    - Build manifests now carry explicit artifact layout and signature verification lanes (`:artifact-signature`, `:boot`, `:smoke`) instead of runtime runner contracts.
+    - Updated conformance lane:
+      `scripts/check_gcpm_target_runtime_pipelines.sh`
+      now validates package/signature integrity and executes target launch artifacts for `ios|android|edge|service-runtime`.
+    - Updated workspace build integration tests:
+      `crates/gc_cli/tests/cli_pkg_workspace.rs`
+      to assert executable-target artifact surfaces and launch-lane behavior.
 
 - [x] P0.4 Prevent planning truth drift when critical reports fail.
   - Completion:
@@ -80,7 +89,21 @@ Open checklist items: 3
 - [ ] P1.3 Deliver first-class dependency solver/range semantics in `gcpm`.
   - Evidence:
     - `crates/gc_cli_driver/src/cli_args/pkg_cmd.rs` marks `gcpm lock` and `gcpm update` as `local-only v0.1`.
-    - Current selector model is commit/snapshot/ref-centric, with no semver/range solving comparable to mature PM workflows.
+    - Resolver now supports commit/snapshot/ref selectors plus deterministic `semver:<range>` tag resolution, but still lacks registry-aware conflict diagnostics and mature workspace upgrade ergonomics.
+  - Progress (this pass):
+    - [x] Added deterministic semver selector support `semver:<range>` in selector classification/inference:
+      `crates/gc_pkg/src/lock.rs`.
+    - [x] Added deterministic semver range resolution against `refs/tags/*` in pkg-low resolver:
+      `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs`
+      (policy-controlled highest/lowest selection with stable tie-breaking).
+    - [x] Added strict lock-invariant checks for semver range selectors:
+      resolved tag must parse as semver and satisfy the declared range.
+    - [x] Updated CLI selector guidance and strategy validation:
+      `crates/gc_cli_driver/src/cli_args/pkg_cmd.rs`,
+      `crates/gc_cli_driver/src/vcs_helpers.rs`,
+      `docs/spec/CLI.md`.
+    - [ ] Add registry-aware conflict diagnostics for incompatible ranges across workspace members.
+    - [ ] Add selective upgrade flows (`gcpm update --only ...`) with auditable constraint rationale.
   - Definition of done:
     - Deterministic range solver with conflict diagnostics, lock reproducibility, and policy-aware registry resolution.
     - Workspace update flows support selective upgrades and auditable constraint rationale.

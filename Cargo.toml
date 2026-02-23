@@ -47,6 +47,7 @@ zeroize = "1"
 wasm-encoder = "0.245"
 wasmi = "1.0"
 sha2 = "0.10"
+semver = "1"
 
 [profile.selfhost-strict]
 inherits = "test"

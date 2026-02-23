@@ -46,14 +46,40 @@ for target in "${targets[@]}"; do
   fi
 
   bundle_root="$workspace/.genesis/build-targets/$target/$hash_a"
+  case "$target" in
+    ios)
+      package_rel="artifact/package.ipa"
+      sig_rel="artifact/package.ipa.sig"
+      launch_rel="artifact/launch_ios.sh"
+      ;;
+    android)
+      package_rel="artifact/package.aab"
+      sig_rel="artifact/package.aab.sig"
+      launch_rel="artifact/launch_android.sh"
+      ;;
+    edge)
+      package_rel="artifact/package.edge.wasm"
+      sig_rel="artifact/package.edge.wasm.sig"
+      launch_rel="artifact/launch_edge.sh"
+      ;;
+    service-runtime)
+      package_rel="artifact/package.service-runtime.wasm"
+      sig_rel="artifact/package.service-runtime.wasm.sig"
+      launch_rel="artifact/launch_service_runtime.sh"
+      ;;
+    *)
+      echo "gcpm-target-runtime-pipelines: unsupported target=$target" >&2
+      exit 1
+      ;;
+  esac
   required=(
     "$bundle_root/build_manifest.gc"
     "$bundle_root/provenance.gc"
     "$bundle_root/package.toml"
     "$bundle_root/package_artifact.txt"
-    "$bundle_root/runtime/runtime_contract.gc"
-    "$bundle_root/runtime/boot.sh"
-    "$bundle_root/runtime/smoke.sh"
+    "$bundle_root/$package_rel"
+    "$bundle_root/$sig_rel"
+    "$bundle_root/$launch_rel"
   )
   for f in "${required[@]}"; do
     if [[ ! -f "$f" ]]; then
@@ -62,22 +88,26 @@ for target in "${targets[@]}"; do
     fi
   done
 
-  if ! grep -q ':gcpm/runtime-runner-contract' "$bundle_root/runtime/runtime_contract.gc"; then
-    echo "gcpm-target-runtime-pipelines: runtime contract kind missing for target=$target" >&2
-    exit 1
-  fi
-  if ! grep -q '"runtime-runner-bundle-v1"' "$bundle_root/build_manifest.gc"; then
+  if ! grep -q '"executable-target-bundle-v2"' "$bundle_root/build_manifest.gc"; then
     echo "gcpm-target-runtime-pipelines: build manifest pipeline-kind missing for target=$target" >&2
     exit 1
   fi
 
-  contract_out="$(bash "$bundle_root/runtime/boot.sh" --contract | tr -d '\n')"
-  boot_out="$(bash "$bundle_root/runtime/boot.sh" --boot | tr -d '\n')"
-  smoke_out="$(bash "$bundle_root/runtime/smoke.sh" | tr -d '\n')"
-  if [[ "$contract_out" != "contract-ok:$target:$hash_a" ]]; then
-    echo "gcpm-target-runtime-pipelines: contract lane mismatch for target=$target out=$contract_out" >&2
+  sig_expected="$(tr -d '\r\n' < "$bundle_root/$sig_rel")"
+  sig_actual="$(python3 - "$bundle_root/$package_rel" <<'PY'
+import hashlib
+import pathlib
+import sys
+print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
+PY
+)"
+  if [[ "$sig_actual" != "$sig_expected" ]]; then
+    echo "gcpm-target-runtime-pipelines: artifact signature mismatch for target=$target expected=$sig_expected actual=$sig_actual" >&2
     exit 1
   fi
+
+  boot_out="$(bash "$bundle_root/$launch_rel" --boot | tr -d '\n')"
+  smoke_out="$(bash "$bundle_root/$launch_rel" --smoke | tr -d '\n')"
   if [[ "$boot_out" != "boot-ok:$target:$hash_a" ]]; then
     echo "gcpm-target-runtime-pipelines: boot lane mismatch for target=$target out=$boot_out" >&2
     exit 1

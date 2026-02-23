@@ -358,7 +358,7 @@ path = "lib.gc"
         };
         assert_eq!(
             map_string(&build_manifest_map, ":pipeline-kind"),
-            "runtime-runner-bundle-v1"
+            "executable-target-bundle-v2"
         );
         let profile = map_map(&build_manifest_map, ":target-profile");
         assert_eq!(
@@ -377,55 +377,74 @@ path = "lib.gc"
             "target {target} artifact-format mismatch"
         );
 
-        let runtime_dir = bundle_root.join("runtime");
-        let contract_path = runtime_dir.join("runtime_contract.gc");
-        let boot_script = runtime_dir.join("boot.sh");
-        let smoke_script = runtime_dir.join("smoke.sh");
+        let (package_rel, signature_rel, launch_rel) = match target {
+            "web" => (
+                "artifact/package.webbundle",
+                "artifact/package.webbundle.sig",
+                "artifact/launch_web.sh",
+            ),
+            "desktop" => (
+                "artifact/package.desktop.app",
+                "artifact/package.desktop.app.sig",
+                "artifact/launch_desktop.sh",
+            ),
+            "service" => (
+                "artifact/package.service.bin",
+                "artifact/package.service.bin.sig",
+                "artifact/launch_service.sh",
+            ),
+            "ios" => (
+                "artifact/package.ipa",
+                "artifact/package.ipa.sig",
+                "artifact/launch_ios.sh",
+            ),
+            "android" => (
+                "artifact/package.aab",
+                "artifact/package.aab.sig",
+                "artifact/launch_android.sh",
+            ),
+            "edge" => (
+                "artifact/package.edge.wasm",
+                "artifact/package.edge.wasm.sig",
+                "artifact/launch_edge.sh",
+            ),
+            "service-runtime" => (
+                "artifact/package.service-runtime.wasm",
+                "artifact/package.service-runtime.wasm.sig",
+                "artifact/launch_service_runtime.sh",
+            ),
+            other => panic!("unexpected target {other}"),
+        };
+        let package_path = bundle_root.join(package_rel);
+        let signature_path = bundle_root.join(signature_rel);
+        let launch_script = bundle_root.join(launch_rel);
         assert!(
-            contract_path.is_file(),
-            "target {target} missing runtime contract"
+            package_path.is_file(),
+            "target {target} missing package artifact"
         );
-        assert!(boot_script.is_file(), "target {target} missing boot script");
         assert!(
-            smoke_script.is_file(),
-            "target {target} missing smoke script"
+            signature_path.is_file(),
+            "target {target} missing package signature"
+        );
+        assert!(
+            launch_script.is_file(),
+            "target {target} missing launch executable"
         );
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let boot_mode = fs::metadata(&boot_script).unwrap().permissions().mode();
-            let smoke_mode = fs::metadata(&smoke_script).unwrap().permissions().mode();
+            let launch_mode = fs::metadata(&launch_script).unwrap().permissions().mode();
             assert_ne!(
-                boot_mode & 0o111,
+                launch_mode & 0o111,
                 0,
-                "target {target} boot script not executable"
-            );
-            assert_ne!(
-                smoke_mode & 0o111,
-                0,
-                "target {target} smoke script not executable"
+                "target {target} launch script not executable"
             );
         }
 
         let bundle_h = map_string(&map, ":bundle-h");
-        let contract_out = Command::new("bash")
-            .arg(&boot_script)
-            .arg("--contract")
-            .output()
-            .expect("run contract lane");
-        assert!(
-            contract_out.status.success(),
-            "target {target} contract lane failed: {:?}",
-            contract_out
-        );
-        assert_eq!(
-            String::from_utf8(contract_out.stdout).unwrap().trim(),
-            format!("contract-ok:{target}:{bundle_h}")
-        );
-
         let boot_out = Command::new("bash")
-            .arg(&boot_script)
+            .arg(&launch_script)
             .arg("--boot")
             .output()
             .expect("run boot lane");
@@ -440,7 +459,8 @@ path = "lib.gc"
         );
 
         let smoke_out = Command::new("bash")
-            .arg(&smoke_script)
+            .arg(&launch_script)
+            .arg("--smoke")
             .output()
             .expect("run smoke lane");
         assert!(

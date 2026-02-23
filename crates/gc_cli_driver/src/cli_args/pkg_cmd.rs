@@ -49,7 +49,7 @@ enum PkgCmd {
     /// Add or update a dependency requirement in `genesis.lock`.
     ///
     /// Spec format: `<name>@<selector>` where selector is `commit:<hex>`, `snapshot:<hex>`,
-    /// or `refs/...` (or `ref:refs/...`).
+    /// `refs/...` (or `ref:refs/...`), or `semver:<range>` for deterministic tag-range resolution.
     Add {
         spec: String,
 

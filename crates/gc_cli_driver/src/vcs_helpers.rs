@@ -74,13 +74,13 @@ pub(crate) fn normalize_pkg_add_strategy(
     if matches!(strategy, gc_pkg::ResolutionStrategy::TagPolicy)
         && !matches!(
             gc_pkg::classify_selector(selector),
-            Some(gc_pkg::SelectorKind::TagRef)
+            Some(gc_pkg::SelectorKind::TagRef | gc_pkg::SelectorKind::SemverRange)
         )
     {
         return Err(cli_err(
             EX_PARSE,
             "pkg/spec",
-            "tag-policy strategy requires selector under refs/tags/*".to_string(),
+            "tag-policy strategy requires selector under refs/tags/* or semver:<range>".to_string(),
         ));
     }
     if !matches!(strategy, gc_pkg::ResolutionStrategy::TagPolicy) && tag_policy.is_some() {

@@ -39,7 +39,7 @@ Legend:
 | WASM runtime APIs | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
 | WASI CLI support | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 | Schema-stable JSON CLI contracts for agents | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| Deployment/bundle target pipeline in core toolchain | ⚠️ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits deterministic runtime-runner bundles today (`runtime_contract/boot/smoke`); platform-native executable packaging/signing lanes remain open in P0.3) | ⚠️ | ✅ | ⚠️ | ⚠️ |
+| Deployment/bundle target pipeline in core toolchain | ✅ (`gcpm build --target <web|desktop|service|ios|android|edge|service-runtime>` emits deterministic executable target bundles with package artifacts, detached signatures, and launch-lane validation surfaces) | ⚠️ | ✅ | ⚠️ | ⚠️ |
 | Workspace semantic graph/refactor API for automation | ✅ (`semantic-edit workspace-graph` + `semantic-edit refactor-plan` + `semantic-edit apply-plan` provide deterministic dependency graph export, machine-mergeable patch planning, and obligation-gated plan application with conflict diagnostics) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Machine-consumable agent authoring contract | ✅ (`docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json` + `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json` + canonical handbook `docs/write_genesisCode_skill.md` + executable conformance gates `scripts/check_genesiscode_authoring_skill.sh`, `scripts/check_write_genesiscode_skill_pack.sh`, `scripts/check_write_genesiscode_skill_guide.sh`, `scripts/check_write_genesiscode_skill_distribution.sh`, and `scripts/check_write_genesiscode_skill_conformance.sh`) | ❌ | ❌ | ❌ | ❌ |
 | Supply-chain signing + transparency in primary CLI | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -68,8 +68,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P0.3`: `gcpm build --target` emits runtime-runner contracts, not platform-native executable artifacts.
-- `P1.3`: `gcpm` dependency resolution remains local-only v0.1 without semver/range solving.
+- `P1.3`: `gcpm` range solving is now partially landed (`semver:<range>` over `refs/tags/*`), but registry-backed conflict diagnostics and full workspace upgrade ergonomics are still incomplete.
 - `P2.2`: Assurance packs require stronger object/lineage/independence closure for high-assurance programs.
 
 Primary evidence paths:

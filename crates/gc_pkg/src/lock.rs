@@ -75,10 +75,17 @@ pub enum SelectorKind {
     Snapshot,
     Ref,
     TagRef,
+    SemverRange,
 }
 
 pub fn classify_selector(selector: &str) -> Option<SelectorKind> {
     let t = selector.trim();
+    if let Some(rest) = t.strip_prefix("semver:") {
+        if !rest.trim().is_empty() {
+            return Some(SelectorKind::SemverRange);
+        }
+        return None;
+    }
     if let Some(rest) = t.strip_prefix("commit:") {
         if is_hex64(rest.trim()) {
             return Some(SelectorKind::Commit);
@@ -119,7 +126,9 @@ pub fn infer_strategy(selector: &str) -> ResolutionStrategy {
             ResolutionStrategy::Pinned
         }
         Some(SelectorKind::Ref) => ResolutionStrategy::TrackRef,
-        Some(SelectorKind::TagRef) => ResolutionStrategy::TagPolicy,
+        Some(SelectorKind::TagRef) | Some(SelectorKind::SemverRange) => {
+            ResolutionStrategy::TagPolicy
+        }
     }
 }
 
@@ -262,12 +271,15 @@ impl GenesisLock {
                 None => infer_strategy(&r.selector),
             };
             if matches!(strategy, ResolutionStrategy::TagPolicy)
-                && !matches!(classify_selector(&r.selector), Some(SelectorKind::TagRef))
+                && !matches!(
+                    classify_selector(&r.selector),
+                    Some(SelectorKind::TagRef | SelectorKind::SemverRange)
+                )
             {
                 return Err(LockError::Invalid {
                     path: path.display().to_string(),
                     msg: format!(
-                        "requirement {name} uses strategy tag-policy but selector is not refs/tags/*"
+                        "requirement {name} uses strategy tag-policy but selector is not refs/tags/* or semver:<range>"
                     ),
                 });
             }
@@ -473,7 +485,7 @@ fn has_v2_requirements(requirements: &BTreeMap<String, Requirement>) -> bool {
             || r.tag_policy.is_some()
             || matches!(
                 classify_selector(&r.selector),
-                Some(SelectorKind::Ref | SelectorKind::TagRef)
+                Some(SelectorKind::Ref | SelectorKind::TagRef | SelectorKind::SemverRange)
             )
     })
 }
@@ -575,11 +587,19 @@ mod tests {
             Some(SelectorKind::TagRef)
         );
         assert_eq!(
+            classify_selector("semver:^1.2.0"),
+            Some(SelectorKind::SemverRange)
+        );
+        assert_eq!(
             infer_strategy("refs/heads/main"),
             ResolutionStrategy::TrackRef
         );
         assert_eq!(
             infer_strategy("refs/tags/v1.2.3"),
+            ResolutionStrategy::TagPolicy
+        );
+        assert_eq!(
+            infer_strategy("semver:^1.2.0"),
             ResolutionStrategy::TagPolicy
         );
         assert_eq!(

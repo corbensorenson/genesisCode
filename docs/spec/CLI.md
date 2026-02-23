@@ -166,11 +166,14 @@ CI strict selfhost gates:
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
 - Workspace lifecycle commands:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
+  - `genesis gcpm add <name>@<selector>` supports deterministic selectors:
+    `commit:<hex>`, `snapshot:<hex>`, `refs/...` (or `ref:refs/...`), and
+    `semver:<range>` (resolved against `refs/tags/*` with deterministic tag selection policy).
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
   - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service|ios|android|edge|service-runtime> [--out-dir <path>]`
-    emits deterministic immutable runtime runner bundles with `build_manifest.gc`, `provenance.gc`,
-    and target runtime verification lanes (`runtime/boot.sh`, `runtime/smoke.sh`, `runtime/runtime_contract.gc`).
+    emits deterministic immutable executable target bundles with `build_manifest.gc`, `provenance.gc`,
+    and target artifact surfaces (`artifact/package.*`, `artifact/package.*.sig`, `artifact/launch_*.sh`).
   - `genesis gcpm abi --pkg <package.toml>` exports a deterministic contract ABI/introspection index including contract op tables, type/effect signatures, required capabilities, and manifest obligations.
   - `genesis gcpm test --pkg <package.toml>` is a gcpm alias for package obligation execution.
   - `genesis gcpm run <task>` executes canonical workspace tasks from `genesis.workspace.toml` (no shell glue).
