@@ -1,6 +1,6 @@
 # GenesisCode Red-Team Report
 
-Last updated: 2026-02-22
+Last updated: 2026-02-23
 
 Scope:
 - Track unresolved `P0` and `P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
@@ -10,4 +10,12 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- No active `P0`/`P1` items are currently open in `upgrade_plan.md`.
+- `P0.1` - Cargo target-dir policy drift in strict gate scripts breaks fail-closed health profile execution.
+- `P0.2` - Selfhost toolchain review sidecar freshness is stale (`check_selfhost_toolchain_review_fresh.sh` failing).
+- `P0.3` - Test-size budget regression (`crates/gc_cli/tests/cli_pkg_workspace.rs` over target).
+- `P0.4` - Strict health profiles (`prepush-standard`, `release-full`) currently non-green from clean execution.
+- `P1.1` - WebXR conformance lane is deterministic but functionally degraded (`frame timeout`, `session_close error`).
+- `P1.2` - Documentation complexity budget has no headroom for agent retrieval quality.
+- `P1.3` - High-churn assurance/runtime surfaces need decomposition for AI maintainability.
+- `P1.4` - Strict profile warmup latency is high for agent inner loops.
+- `P1.5` - Residual parity-harness ownership dependencies keep full selfhost closure partial.

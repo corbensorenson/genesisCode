@@ -17,14 +17,14 @@ Consolidated source:
 
 ## Crosswalk Matrix
 
-| Standard family | Classification | `--assurance-profile` | Required trace | Required qualification | Minimum coverage profile | Independence attestations |
-|---|---|---|---|---|---|---|
-| Custom/internal | custom | `custom` | yes | yes | `none` | no |
-| RTCA DO-178C | DAL A | `do178c-dal-a` | yes | yes | `mcdc` | yes |
-| RTCA DO-178C | DAL B | `do178c-dal-b` | yes | yes | `decision` | yes |
-| NASA NPR 7150.2 | Class A | `nasa-class-a` | yes | yes | `mcdc` | yes |
-| NASA NPR 7150.2 | Class B | `nasa-class-b` | yes | yes | `decision` | yes |
-| IEC 62304 | Class C | `iec62304-class-c` | yes | yes | `symbol` | no |
+| Standard family | Classification | `--assurance-profile` | Required trace | Required qualification | Minimum coverage profile | Object equivalence evidence | Independence attestations | Independent verifier runs |
+|---|---|---|---|---|---|---|---|---|
+| Custom/internal | custom | `custom` | yes | yes | `none` | no | no | no |
+| RTCA DO-178C | DAL A | `do178c-dal-a` | yes | yes | `mcdc` | yes | yes | yes |
+| RTCA DO-178C | DAL B | `do178c-dal-b` | yes | yes | `decision` | yes | yes | yes |
+| NASA NPR 7150.2 | Class A | `nasa-class-a` | yes | yes | `mcdc` | yes | yes | yes |
+| NASA NPR 7150.2 | Class B | `nasa-class-b` | yes | yes | `decision` | yes | yes | yes |
+| IEC 62304 | Class C | `iec62304-class-c` | yes | yes | `symbol` | yes | no | yes |
 
 ## Deterministic Export Contract
 
@@ -35,13 +35,15 @@ Profile packs are executed through a stable deterministic flow:
 2. Emit tool qualification evidence:
    - `genesis gcpm qualify --profile <name> --snapshot <hex64> --requirement <id>... --test-artifact <id=run-manifest-hex64>... --tool <name=path>... [--commit <hex64>] [--policy <hex64>]`
 3. Emit assurance pack evidence + optional reproducible bundle mirror:
-   - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <profile> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--independence-attestation <left:right@attestor> ...] [--bundle-dir <dir>]`
+   - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <profile> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--object-equivalence <path-or-hash>] [--independence-attestation <left:right@attestor> ...] [--independent-verifier-run <path-or-hash> ...] [--bundle-dir <dir>]`
 
 When `--bundle-dir` is supplied, output is reproducible and must contain:
 - `assurance_pack.gc`
 - `requirements_trace.gc`
 - `tool_qualification.gc`
 - `coverage/*.gc`
+- `object_equivalence.gc`
+- `independent_verifier/*.gc`
 - `bundle_manifest.gc`
 
 ## Scope Notes

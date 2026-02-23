@@ -83,6 +83,8 @@ expected_outputs = {
     "requirements_trace.gc",
     "tool_qualification.gc",
     "coverage/*.gc",
+    "object_equivalence.gc",
+    "independent_verifier/*.gc",
     "bundle_manifest.gc",
 }
 if set(outputs) != expected_outputs:

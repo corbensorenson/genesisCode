@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EXAMPLE_DIR="$ROOT_DIR/examples/agent_inbound_server_workflow"
 GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
 
-cargo build -p gc_cli >/dev/null
+if [[ ! -x "$GENESIS_BIN" ]]; then
+  cargo build -p gc_cli >/dev/null
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -15,7 +17,12 @@ cp -R "$EXAMPLE_DIR" "$WORK_DIR"
 chmod +x "$WORK_DIR/tools/host_bridge.sh"
 
 ART="$TMP_DIR/selfhost_toolchain.gc"
-"$GENESIS_BIN" selfhost-artifact --out "$ART" >/dev/null
+REPO_ART="$ROOT_DIR/selfhost/toolchain.gc"
+if [[ -f "$REPO_ART" ]]; then
+  cp "$REPO_ART" "$ART"
+else
+  "$GENESIS_BIN" selfhost-artifact --out "$ART" >/dev/null
+fi
 
 run_log="$WORK_DIR/workflow_run.gclog"
 run_out="$("$GENESIS_BIN" \

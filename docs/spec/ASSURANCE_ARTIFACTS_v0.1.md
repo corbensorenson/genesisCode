@@ -92,6 +92,29 @@ Policy gate behavior:
 Pre-commit binding:
 - `:release/:commit = nil` is allowed for pre-commit qualification evidence attachment.
 
+## 2.5 High-Assurance Supplemental Artifacts
+
+Object-equivalence artifact (`genesis/object-equivalence-v0.1`) required fields:
+- `:kind "genesis/object-equivalence-v0.1"`
+- `:ok true`
+- `:trace-artifact <hex64>`
+- `:qualification-artifact <hex64>`
+- `:source-artifact <hex64>`
+- `:object-artifact <hex64>`
+- `:method <symbol|string>`
+
+Independent verifier run artifact (`genesis/independent-verifier-run-v0.1`) required fields:
+- `:kind "genesis/independent-verifier-run-v0.1"`
+- `:ok true`
+- `:assurance-profile <symbol|string>`
+- `:trace-artifact <hex64>`
+- `:qualification-artifact <hex64>`
+- `:object-equivalence-artifact <hex64>`
+- `:run-id <string>`
+- `:runner <string>`
+- `:roles [<symbol|string> ...]` (minimum 2 entries)
+- `:result :pass`
+
 ## 3. Assurance Pack Artifact
 
 Artifact kind:
@@ -119,15 +142,30 @@ Required fields:
   - `:profile <symbol>`
   - `:ok <bool>`
   - `:source <string>`
+- `:object-equivalence` map|`nil`:
+  - `:artifact <hex64>`
+  - `:source <string>`
+  - `:source-artifact <hex64>` low-level/source binary artifact hash
+  - `:object-artifact <hex64>` emitted object/binary artifact hash
+  - `:method <symbol>` deterministic equivalence method identifier
 - `:independence-attestations` vector of maps:
   - `:kind :independence-attestation`
   - `:roles [<symbol> <symbol>]`
   - `:attestor <string>`
+- `:independent-verifier-runs` vector of maps:
+  - `:artifact <hex64>`
+  - `:run-id <string>`
+  - `:runner <string>`
+  - `:roles [<symbol> ...]`
+  - `:source <string>`
 
 Profile gate behavior:
 - `:do178c-dal-a` and `:nasa-class-a` require at least one independence attestation and minimum `:mcdc` coverage rank.
 - `:do178c-dal-b` and `:nasa-class-b` require at least one independence attestation and minimum `:decision` coverage rank.
 - `:iec62304-class-c` requires minimum `:symbol` coverage rank.
+- regulated profiles (`:do178c-dal-a`, `:do178c-dal-b`, `:nasa-class-a`, `:nasa-class-b`, `:iec62304-class-c`) require:
+  - one valid object-equivalence artifact (`genesis/object-equivalence-v0.1`),
+  - at least one independent verifier run artifact (`genesis/independent-verifier-run-v0.1`) with `:result :pass`, profile binding, and hash linkage to trace/qualification/object-equivalence artifacts.
 - `:custom` has no additional profile constraints beyond valid trace/qualification artifacts.
 
 Deterministic bundle mirror behavior:
@@ -136,6 +174,8 @@ Deterministic bundle mirror behavior:
   - `requirements_trace.gc`
   - `tool_qualification.gc`
   - `coverage/*.gc`
+  - `object_equivalence.gc`
+  - `independent_verifier/*.gc`
   - `bundle_manifest.gc`
 
 ## 4. Deterministic CLI Emitters

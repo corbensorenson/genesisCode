@@ -277,9 +277,17 @@ enum PkgCmd {
         #[arg(long = "coverage")]
         coverage: Vec<String>,
 
+        /// Object-equivalence evidence artifact path or store hash.
+        #[arg(long = "object-equivalence")]
+        object_equivalence: Option<String>,
+
         /// Independence attestation in `<left-role>:<right-role>@<attestor>` format (repeatable).
         #[arg(long = "independence-attestation")]
         independence_attestations: Vec<String>,
+
+        /// Independent verifier execution artifact path or store hash (repeatable).
+        #[arg(long = "independent-verifier-run")]
+        independent_verifier_runs: Vec<String>,
 
         /// Output path for the generated assurance pack term.
         #[arg(long, default_value = ".genesis/assurance/assurance_pack.gc")]

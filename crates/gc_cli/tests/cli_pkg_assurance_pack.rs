@@ -144,6 +144,74 @@ fn emit_qualification(
         .success();
 }
 
+fn canonical_file_hash(path: &Path) -> String {
+    let src = fs::read_to_string(path).unwrap();
+    let term = parse_term(&src).unwrap();
+    let canonical = print_term(&term) + "\n";
+    blake3::hash(canonical.as_bytes()).to_hex().to_string()
+}
+
+fn write_object_equivalence(
+    dir: &Path,
+    trace_h: &str,
+    qualification_h: &str,
+    out: &str,
+) -> PathBuf {
+    let out_path = dir.join(out);
+    fs::write(
+        &out_path,
+        format!(
+            r#"
+{{
+  :kind "genesis/object-equivalence-v0.1"
+  :ok true
+  :trace-artifact "{trace_h}"
+  :qualification-artifact "{qualification_h}"
+  :source-artifact "{source_artifact}"
+  :object-artifact "{object_artifact}"
+  :method :repro-build
+}}
+"#,
+            source_artifact = "c".repeat(64),
+            object_artifact = "d".repeat(64),
+        ),
+    )
+    .unwrap();
+    out_path
+}
+
+fn write_independent_verifier_run(
+    dir: &Path,
+    profile: &str,
+    trace_h: &str,
+    qualification_h: &str,
+    object_equivalence_h: &str,
+    out: &str,
+) -> PathBuf {
+    let out_path = dir.join(out);
+    fs::write(
+        &out_path,
+        format!(
+            r#"
+{{
+  :kind "genesis/independent-verifier-run-v0.1"
+  :ok true
+  :assurance-profile "{profile}"
+  :trace-artifact "{trace_h}"
+  :qualification-artifact "{qualification_h}"
+  :object-equivalence-artifact "{object_equivalence_h}"
+  :run-id "ivv-01"
+  :runner "independent-qa-lane"
+  :roles [:development :verification]
+  :result :pass
+}}
+"#,
+        ),
+    )
+    .unwrap();
+    out_path
+}
+
 #[test]
 fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
     let td = tempfile::tempdir().unwrap();
@@ -186,6 +254,19 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
         &tool_path,
         "qualification.gc",
     );
+    let trace_h = canonical_file_hash(&dir.join("trace.gc"));
+    let qualification_h = canonical_file_hash(&dir.join("qualification.gc"));
+    let object_equivalence =
+        write_object_equivalence(dir, &trace_h, &qualification_h, "object_equivalence.gc");
+    let object_equivalence_h = canonical_file_hash(&object_equivalence);
+    let _independent_run = write_independent_verifier_run(
+        dir,
+        ":do178c-dal-a",
+        &trace_h,
+        &qualification_h,
+        &object_equivalence_h,
+        "independent_run.gc",
+    );
 
     fs::write(
         dir.join("coverage_mcdc.gc"),
@@ -216,8 +297,12 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
             "qualification.gc",
             "--coverage",
             "coverage_mcdc.gc",
+            "--object-equivalence",
+            "object_equivalence.gc",
             "--independence-attestation",
             "development:verification@qa-team",
+            "--independent-verifier-run",
+            "independent_run.gc",
             "--bundle-dir",
         ])
         .arg(&bundle_dir)
@@ -265,8 +350,10 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
     assert!(bundle_dir.join("assurance_pack.gc").exists());
     assert!(bundle_dir.join("requirements_trace.gc").exists());
     assert!(bundle_dir.join("tool_qualification.gc").exists());
+    assert!(bundle_dir.join("object_equivalence.gc").exists());
     assert!(bundle_dir.join("bundle_manifest.gc").exists());
     assert!(bundle_dir.join("coverage").exists());
+    assert!(bundle_dir.join("independent_verifier").exists());
 
     cargo_bin_cmd!("genesis")
         .current_dir(dir)
@@ -288,8 +375,12 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
             "qualification.gc",
             "--coverage",
             "coverage_mcdc.gc",
+            "--object-equivalence",
+            "object_equivalence.gc",
             "--independence-attestation",
             "development:verification@qa-team",
+            "--independent-verifier-run",
+            "independent_run.gc",
             "--bundle-dir",
         ])
         .arg(&bundle_dir)
@@ -342,6 +433,19 @@ fn gcpm_assurance_pack_rejects_insufficient_profile_coverage() {
         &tool_path,
         "qualification.gc",
     );
+    let trace_h = canonical_file_hash(&dir.join("trace.gc"));
+    let qualification_h = canonical_file_hash(&dir.join("qualification.gc"));
+    let object_equivalence =
+        write_object_equivalence(dir, &trace_h, &qualification_h, "object_equivalence.gc");
+    let object_equivalence_h = canonical_file_hash(&object_equivalence);
+    let _independent_run = write_independent_verifier_run(
+        dir,
+        ":do178c-dal-a",
+        &trace_h,
+        &qualification_h,
+        &object_equivalence_h,
+        "independent_run.gc",
+    );
 
     fs::write(
         dir.join("coverage_decision.gc"),
@@ -369,6 +473,91 @@ fn gcpm_assurance_pack_rejects_insufficient_profile_coverage() {
             "qualification.gc",
             "--coverage",
             "coverage_decision.gc",
+            "--object-equivalence",
+            "object_equivalence.gc",
+            "--independence-attestation",
+            "development:verification@qa-team",
+            "--independent-verifier-run",
+            "independent_run.gc",
+            "--out",
+            "assurance_pack.gc",
+            "--no-store",
+        ])
+        .assert()
+        .code(10)
+        .stdout(predicates::str::contains(
+            "requires minimum coverage rank 3",
+        ));
+}
+
+#[test]
+fn gcpm_assurance_pack_rejects_missing_object_equivalence_for_regulated_profile() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    write_minimal_package(dir);
+
+    let tool_path = dir.join("genesis_tool.bin");
+    fs::write(&tool_path, b"genesis-toolchain-binary").unwrap();
+
+    let snapshot_h = "a".repeat(64);
+    let policy_h = "b".repeat(64);
+    let test_artifact_h = put_store_term(
+        dir,
+        r#"
+{
+  :kind "genesis/unit-tests-v0.2"
+  :ok true
+  :package "mini"
+  :tests []
+}
+"#,
+    );
+    let run_manifest_h = write_run_manifest(
+        dir,
+        "selfhost-boundary",
+        "dal-a",
+        &snapshot_h,
+        &policy_h,
+        &test_artifact_h,
+    );
+
+    emit_trace(dir, &caps, &snapshot_h, &policy_h, "trace.gc");
+    emit_qualification(
+        dir,
+        &caps,
+        &snapshot_h,
+        &policy_h,
+        &run_manifest_h,
+        &tool_path,
+        "qualification.gc",
+    );
+    fs::write(
+        dir.join("coverage_mcdc.gc"),
+        "{ :kind \"genesis/coverage-v0.2\" :profile :mcdc :ok true }\n",
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "assurance-pack",
+            "--pkg",
+            "package.toml",
+            "--assurance-profile",
+            "do178c-dal-a",
+            "--snapshot",
+            &snapshot_h,
+            "--policy",
+            &policy_h,
+            "--trace",
+            "trace.gc",
+            "--qualification",
+            "qualification.gc",
+            "--coverage",
+            "coverage_mcdc.gc",
             "--independence-attestation",
             "development:verification@qa-team",
             "--out",
@@ -378,6 +567,6 @@ fn gcpm_assurance_pack_rejects_insufficient_profile_coverage() {
         .assert()
         .code(10)
         .stdout(predicates::str::contains(
-            "requires minimum coverage rank 3",
+            "requires --object-equivalence evidence",
         ));
 }

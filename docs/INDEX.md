@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-02-22
+Last updated: 2026-02-23
 
 This is the canonical entrypoint for project documentation.
 

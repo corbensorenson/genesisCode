@@ -47,12 +47,12 @@ if not isinstance(profile_table, dict):
     raise SystemExit("assurance-profile-packs: missing [profile.*] table entries")
 
 expected = {
-    "custom": ("none", False, ":custom"),
-    "do178c-dal-a": ("mcdc", True, ":do178c-dal-a"),
-    "do178c-dal-b": ("decision", True, ":do178c-dal-b"),
-    "nasa-class-a": ("mcdc", True, ":nasa-class-a"),
-    "nasa-class-b": ("decision", True, ":nasa-class-b"),
-    "iec62304-class-c": ("symbol", False, ":iec62304-class-c"),
+    "custom": ("none", False, ":custom", False, False),
+    "do178c-dal-a": ("mcdc", True, ":do178c-dal-a", True, True),
+    "do178c-dal-b": ("decision", True, ":do178c-dal-b", True, True),
+    "nasa-class-a": ("mcdc", True, ":nasa-class-a", True, True),
+    "nasa-class-b": ("decision", True, ":nasa-class-b", True, True),
+    "iec62304-class-c": ("symbol", False, ":iec62304-class-c", True, True),
 }
 
 actual_keys = set(profile_table.keys())
@@ -68,7 +68,7 @@ if extra:
         "assurance-profile-packs: unexpected profile(s): " + ", ".join(extra)
     )
 
-for name, (coverage, independence, symbol) in expected.items():
+for name, (coverage, independence, symbol, object_equivalence, independent_runs) in expected.items():
     entry = profile_table[name]
     if not isinstance(entry, dict):
         raise SystemExit(f"assurance-profile-packs: profile `{name}` must be a table")
@@ -92,6 +92,16 @@ for name, (coverage, independence, symbol) in expected.items():
     if entry.get("require_tool_qualification") is not True:
         raise SystemExit(
             f"assurance-profile-packs: profile `{name}` must require tool qualification evidence"
+        )
+    if entry.get("require_object_equivalence") is not object_equivalence:
+        raise SystemExit(
+            "assurance-profile-packs: profile "
+            f"`{name}` require_object_equivalence must be {str(object_equivalence).lower()}"
+        )
+    if entry.get("require_independent_verifier_runs") is not independent_runs:
+        raise SystemExit(
+            "assurance-profile-packs: profile "
+            f"`{name}` require_independent_verifier_runs must be {str(independent_runs).lower()}"
         )
 
 doc_text = doc_path.read_text(encoding="utf-8")

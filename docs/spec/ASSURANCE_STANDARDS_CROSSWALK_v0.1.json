@@ -9,6 +9,8 @@
     "requirements_trace.gc",
     "tool_qualification.gc",
     "coverage/*.gc",
+    "object_equivalence.gc",
+    "independent_verifier/*.gc",
     "bundle_manifest.gc"
   ],
   "profiles": [
@@ -18,21 +20,30 @@
       "objectives": [
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
-            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
-          ],
-          "objective_id": "DO178C-A-TRACE-BIDIRECTIONAL",
-          "status": "covered-by-toolchain",
-          "summary": "Bidirectional requirements traceability from system/HLR/LLR to code + tests + evidence."
-        },
-        {
-          "evidence_refs": [
             "policies/assurance/profile_packs.toml",
             "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
           ],
           "objective_id": "DO178C-A-COVERAGE-MCDC",
           "status": "covered-by-toolchain",
           "summary": "Minimum MC/DC structural coverage requirement enforced by profile-pack policy."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "DO178C-A-INDEPENDENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Independent verifier execution artifacts and role-pair attestations are enforced by assurance-pack profile gates."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#25-high-assurance-supplemental-artifacts",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "DO178C-A-OBJECT-EQUIVALENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Object-equivalence evidence linking low-level/source artifacts to emitted object artifacts with deterministic hash closure."
         },
         {
           "evidence_refs": [
@@ -45,12 +56,12 @@
         },
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact",
-            "policies/assurance/profile_packs.toml"
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
+            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
           ],
-          "objective_id": "DO178C-A-INDEPENDENCE",
-          "status": "partial",
-          "summary": "Independence attestation syntax + policy enforcement exists; organizational independence execution remains external."
+          "objective_id": "DO178C-A-TRACE-BIDIRECTIONAL",
+          "status": "covered-by-toolchain",
+          "summary": "Bidirectional requirements traceability from system/HLR/LLR to code + tests + evidence."
         }
       ],
       "standard_family": "RTCA DO-178C",
@@ -60,7 +71,7 @@
           "owner": "program-governance",
           "status": "open",
           "summary": "Independent verifier staffing model and authority-approved review workflow are external program controls.",
-          "tracked_in": "upgrade_plan.md#P2.1"
+          "tracked_in": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims"
         }
       ]
     },
@@ -68,15 +79,6 @@
       "assurance_profile": "do178c-dal-b",
       "classification": "DAL B",
       "objectives": [
-        {
-          "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
-            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
-          ],
-          "objective_id": "DO178C-B-TRACE-BIDIRECTIONAL",
-          "status": "covered-by-toolchain",
-          "summary": "Bidirectional requirements traceability export and policy checks."
-        },
         {
           "evidence_refs": [
             "policies/assurance/profile_packs.toml",
@@ -88,6 +90,23 @@
         },
         {
           "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+          ],
+          "objective_id": "DO178C-B-INDEPENDENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Independent verifier execution artifacts and role-pair attestations are enforced by assurance-pack profile gates."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#25-high-assurance-supplemental-artifacts",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "DO178C-B-OBJECT-EQUIVALENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Object-equivalence evidence linking low-level/source artifacts to emitted object artifacts with deterministic hash closure."
+        },
+        {
+          "evidence_refs": [
             "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#2-tool-qualification-artifact"
           ],
           "objective_id": "DO178C-B-TOOL-QUAL",
@@ -96,11 +115,12 @@
         },
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
+            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
           ],
-          "objective_id": "DO178C-B-INDEPENDENCE",
-          "status": "partial",
-          "summary": "Independence attestations are required by profile policy; organizational separation remains external."
+          "objective_id": "DO178C-B-TRACE-BIDIRECTIONAL",
+          "status": "covered-by-toolchain",
+          "summary": "Bidirectional requirements traceability export and policy checks."
         }
       ],
       "standard_family": "RTCA DO-178C",
@@ -110,7 +130,7 @@
           "owner": "program-governance",
           "status": "open",
           "summary": "Authority-facing signoff package templates and acceptance workflow remain external.",
-          "tracked_in": "upgrade_plan.md#P2.1"
+          "tracked_in": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims"
         }
       ]
     },
@@ -118,15 +138,6 @@
       "assurance_profile": "nasa-class-a",
       "classification": "Class A",
       "objectives": [
-        {
-          "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
-            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
-          ],
-          "objective_id": "NASA-A-TRACEABILITY",
-          "status": "covered-by-toolchain",
-          "summary": "Requirements trace matrix, lifecycle linkage, and deterministic release binding."
-        },
         {
           "evidence_refs": [
             "policies/assurance/profile_packs.toml",
@@ -138,6 +149,23 @@
         },
         {
           "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+          ],
+          "objective_id": "NASA-A-IVV-INDEPENDENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Independent verifier execution artifacts and role-pair attestations are enforced by assurance-pack profile gates."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#25-high-assurance-supplemental-artifacts",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "NASA-A-OBJECT-EQUIVALENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Object-equivalence evidence linking mission software build artifacts to emitted object artifacts with deterministic closure."
+        },
+        {
+          "evidence_refs": [
             "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#2-tool-qualification-artifact"
           ],
           "objective_id": "NASA-A-TOOL-QUAL",
@@ -146,11 +174,12 @@
         },
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact",
+            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#deterministic-export-contract"
           ],
-          "objective_id": "NASA-A-IVV-INDEPENDENCE",
-          "status": "partial",
-          "summary": "Role-pair attestations are represented, but mission-level IV&V organizational controls are external."
+          "objective_id": "NASA-A-TRACEABILITY",
+          "status": "covered-by-toolchain",
+          "summary": "Requirements trace matrix, lifecycle linkage, and deterministic release binding."
         }
       ],
       "standard_family": "NASA NPR 7150.2",
@@ -160,7 +189,7 @@
           "owner": "program-governance",
           "status": "open",
           "summary": "Mission IV&V governance, staffing, and approval workflow remain external to toolchain policy files.",
-          "tracked_in": "upgrade_plan.md#P2.1"
+          "tracked_in": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims"
         }
       ]
     },
@@ -170,19 +199,28 @@
       "objectives": [
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact"
-          ],
-          "objective_id": "NASA-B-TRACEABILITY",
-          "status": "covered-by-toolchain",
-          "summary": "Traceability artifact contract and deterministic release linkage."
-        },
-        {
-          "evidence_refs": [
             "policies/assurance/profile_packs.toml"
           ],
           "objective_id": "NASA-B-COVERAGE-DECISION",
           "status": "covered-by-toolchain",
           "summary": "Decision coverage minimum profile + assurance-pack coverage exports."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+          ],
+          "objective_id": "NASA-B-INDEPENDENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Independent verifier execution artifacts and role-pair attestations are enforced by assurance-pack profile gates."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#25-high-assurance-supplemental-artifacts",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "NASA-B-OBJECT-EQUIVALENCE",
+          "status": "covered-by-toolchain",
+          "summary": "Object-equivalence evidence linking mission software build artifacts to emitted object artifacts with deterministic closure."
         },
         {
           "evidence_refs": [
@@ -194,11 +232,11 @@
         },
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#3-assurance-pack-artifact"
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact"
           ],
-          "objective_id": "NASA-B-INDEPENDENCE",
-          "status": "partial",
-          "summary": "Independence attestation requirement is encoded; governance execution remains external."
+          "objective_id": "NASA-B-TRACEABILITY",
+          "status": "covered-by-toolchain",
+          "summary": "Traceability artifact contract and deterministic release linkage."
         }
       ],
       "standard_family": "NASA NPR 7150.2",
@@ -208,7 +246,7 @@
           "owner": "program-governance",
           "status": "open",
           "summary": "Program-specific independent review responsibilities and evidence signoff remain outside toolchain scope.",
-          "tracked_in": "upgrade_plan.md#P2.1"
+          "tracked_in": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims"
         }
       ]
     },
@@ -218,11 +256,20 @@
       "objectives": [
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact"
+            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#scope-notes"
           ],
-          "objective_id": "IEC62304-C-TRACEABILITY",
+          "objective_id": "IEC62304-C-DEVICE-QMS",
+          "status": "external",
+          "summary": "Device-level QMS, clinical risk controls, and regulator submission workflows are external."
+        },
+        {
+          "evidence_refs": [
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#25-high-assurance-supplemental-artifacts",
+            "policies/assurance/profile_packs.toml"
+          ],
+          "objective_id": "IEC62304-C-OBJECT-EQUIVALENCE",
           "status": "covered-by-toolchain",
-          "summary": "Traceability exports linking software requirements to evidence artifacts."
+          "summary": "Object-equivalence evidence linking validated software artifacts to emitted binaries/objects with deterministic closure."
         },
         {
           "evidence_refs": [
@@ -243,11 +290,11 @@
         },
         {
           "evidence_refs": [
-            "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md#scope-notes"
+            "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md#1-requirements-trace-artifact"
           ],
-          "objective_id": "IEC62304-C-DEVICE-QMS",
-          "status": "external",
-          "summary": "Device-level QMS, clinical risk controls, and regulator submission workflows are external."
+          "objective_id": "IEC62304-C-TRACEABILITY",
+          "status": "covered-by-toolchain",
+          "summary": "Traceability exports linking software requirements to evidence artifacts."
         }
       ],
       "standard_family": "IEC 62304",
@@ -257,7 +304,7 @@
           "owner": "program-governance",
           "status": "open",
           "summary": "QMS and device-specific regulatory submission integration are outside core toolchain scope.",
-          "tracked_in": "upgrade_plan.md#P2.1"
+          "tracked_in": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md#unresolved-controls-explicit-non-claims"
         }
       ]
     }

@@ -1,4 +1,4 @@
-# GenesisCode Feature Matrix (Audit Date: 2026-02-22)
+# GenesisCode Feature Matrix (Audit Date: 2026-02-23)
 
 Legend:
 - `✅` = first-class and built into the primary language/toolchain surface
@@ -54,7 +54,7 @@ Legend:
 | Structural coverage profiles (decision/MC/DC) | ✅ (`core/obligation::coverage-decision` + `core/obligation::coverage-mcdc` with fail-closed gates + structural evidence payloads) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Qualified-tool evidence bundles for regulated release | ✅ (`gcpm qualify` enforces snapshot-bound run-manifest lineage from local store (`--test-artifact id=run-manifest-hex64`), validates canonical manifest/artifact integrity, and fails closed on lineage/policy/profile mismatches) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Independent verifier role-separation policy enforcement | ✅ (ref/publish policy classes support required roles + per-role minimums + independence pairs enforced on valid attestations) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Standards-oriented assurance profile packs (DO-178C/NASA/IEC) | ⚠️ (`gcpm assurance-pack` profile lanes and deterministic crosswalk contracts exist, but high-assurance object-equivalence and independent-verifier closure remain open in P2.2) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Standards-oriented assurance profile packs (DO-178C/NASA/IEC) | ⚠️ (`gcpm assurance-pack` now enforces object-equivalence and independent-verifier run evidence for regulated profiles with deterministic crosswalk contracts; authority/governance certification controls remain external by design) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Notes:
 - This compares first-class language/toolchain semantics, not total ecosystem power.
@@ -63,12 +63,22 @@ Notes:
 - Regulated-standard alignment status below is an engineering-readiness view, not a formal certification claim.
 
 Regulated assurance readiness snapshot (indicative):
-- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability, structural decision/MC/DC coverage, tool qualification workflows, and deterministic assurance-pack bundles are in place; formal certification program execution remains external to the language runtime/toolchain).
-- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, structural coverage, and assurance-pack bundling are in place; independent mission IV&V process controls remain organizational responsibilities).
-- `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
+- `DO-178C DAL A/B`: ⚠️ partial alignment (requirements traceability, structural decision/MC/DC coverage, tool qualification workflows, object-equivalence evidence, and independent-verifier run closure are built-in; formal certification program execution remains external to the language runtime/toolchain).
+- `NASA NPR 7150.2 Class A/B`: ⚠️ partial alignment (deterministic runtime, traceability artifacts, role gates, structural coverage, object-equivalence evidence, and independent-verifier run closure are built-in; mission IV&V governance controls remain organizational responsibilities).
+- `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, object-equivalence evidence, and reproducible assurance-pack bundles are built-in; full device-risk/QMS qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P2.2`: Assurance packs require stronger object/lineage/independence closure for high-assurance programs.
+- `P0.1`: Cargo target-dir policy drift across strict gate scripts.
+- `P0.2`: Selfhost toolchain review sidecar freshness regression.
+- `P0.3`: Test-size budget regression in workspace package integration lane.
+- `P0.4`: Strict health profiles (`prepush-standard`, `release-full`) not green from clean execution.
+- `P1.1`: WebXR conformance is deterministic but functionally degraded (`frame timeout`, `session_close error`).
+- `P1.2`: Documentation complexity is at budget ceiling (no retrieval headroom).
+- `P1.3`: High-churn assurance/runtime surfaces exceed AI-friendly modularity targets.
+- `P1.4`: Strict profile cargo warmup latency remains high for agent inner loops.
+- `P1.5`: Residual parity-harness ownership dependencies keep full selfhost closure partial.
+- `P2.1`: Fully self-hosted zero-bootstrap-language closure still partial (TCB boundary unresolved).
+- `P2.2`: Missing first-class deterministic `gcpm` scaffolding for complex product archetypes.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
