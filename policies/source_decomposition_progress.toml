@@ -26,15 +26,15 @@ disallowed_statuses = ["planned"]
 module_path = "crates/gc_cli_driver/src/cmd_selfhost.rs"
 target_gc_modules = ["selfhost/toolchain.gc", "selfhost/toolchain_manifest.gc"]
 parity_gate = "bash scripts/check_selfhost_readiness_scorecard.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-2"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
 target_gc_modules = ["prelude/modules/31_data_pipeline.gc"]
 parity_gate = "bash scripts/check_agent_reference_workflows.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-2"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_obligations/src/obligation_exec.rs"
@@ -47,15 +47,15 @@ status = "in-progress"
 module_path = "crates/gc_gfx/src/lib.rs"
 target_gc_modules = ["prelude/modules/33_game_loop.gc", "prelude/modules/34_xr_workflow.gc"]
 parity_gate = "bash scripts/check_gfx_runtime_profile.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-2"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_prelude/src/prelude.rs"
 target_gc_modules = ["prelude/modules/manifest.toml"]
 parity_gate = "bash scripts/check_prelude_capability_coverage.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-2"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_cli_driver/src/semantic_workspace.rs"
@@ -89,5 +89,5 @@ status = "in-progress"
 module_path = "crates/gc_effects/src/runner_host_bridge.rs"
 target_gc_modules = ["prelude/modules/10_browser_host.gc", "prelude/modules/10_xr_host.gc"]
 parity_gate = "bash scripts/check_host_bridge_fault_injection.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-2"
+status = "migrated"
