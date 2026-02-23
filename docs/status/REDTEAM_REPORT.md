@@ -8,4 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.3 - Finish `in-progress` Rust->GC migrations to GC-first production dispatch (`phase-2`).
+No active P0/P1 risks.

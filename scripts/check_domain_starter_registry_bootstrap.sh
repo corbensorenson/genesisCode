@@ -90,8 +90,10 @@ EOF_CAPS
 
 cat >"$consumer/caps.toml" <<EOF_CAPS
 allow = [
+  "core/store::put",
   "core/store::get",
   "core/store::has",
+  "core/sync::pull",
   "core/pkg-low::init",
   "core/pkg-low::add",
   "core/pkg-low::lock",
@@ -106,6 +108,10 @@ allow = [
 dir = "./.genesis/store"
 remote = "$remote"
 remote_allow = ["$remote_allow"]
+
+[op."core/sync::pull"]
+remote_allow = ["$remote_allow"]
+wasi_network_profile = "local"
 
 [op."core/pkg-low::init"]
 base_dir = "."
@@ -250,6 +256,7 @@ for spec in "${starters[@]}"; do
   (
     cd "$consumer"
     g gcpm --caps "$consumer/caps.toml" add "$name@commit:$commit_h" --registry default >/dev/null
+    g sync --caps "$consumer/caps.toml" pull --remote "$remote" --root "$commit_h" >/dev/null
   )
 done
 
