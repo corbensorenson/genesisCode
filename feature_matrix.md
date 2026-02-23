@@ -17,7 +17,7 @@ Legend:
 | Built-in package/project manager | ✅ (`gcpm/pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
 | Strict selfhost frontend default in production CLI | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explicit selfhost-only execution mode | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (production binaries are selfhost-first with explicit deterministic artifact recovery from manifest sources; Rust parity remains isolated to dedicated parity harness artifacts) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (bounded permanent TCB contract is explicit in `docs/spec/SELF_HOST_BOUNDARY.md`; production semantics are selfhost-first with deterministic artifact bootstrap, and any Rust parity surface is non-authoritative) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Artifact-only bootstrap default across WASM host APIs | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic concurrency/task API with replay semantics | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Multithreaded runtime task execution | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
@@ -71,7 +71,6 @@ Known GenesisCode gaps:
 - `P0.4`: Strict health profiles (`prepush-standard`, `release-full`) not green from clean execution.
 - `P1.1`: WebXR conformance is deterministic but functionally degraded (`frame timeout`, `session_close error`).
 - `P1.2`: Documentation complexity is at budget ceiling (no retrieval headroom).
-- `P1.3`: High-churn assurance/runtime surfaces exceed AI-friendly modularity targets.
 - `P1.4`: Strict profile cargo warmup latency remains high for agent inner loops.
 - `P1.5`: Residual parity-harness ownership dependencies keep full selfhost closure partial.
 - `P2.1`: Fully self-hosted zero-bootstrap-language closure still partial (TCB boundary unresolved).
@@ -83,13 +82,11 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CONCURRENCY_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/DOMAIN_KITS_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GFX_CAPS.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`

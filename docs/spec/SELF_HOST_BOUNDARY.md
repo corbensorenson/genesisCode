@@ -51,6 +51,29 @@ Measurable retirement criteria:
 Only after these criteria are satisfied should bootstrap-era Rust semantic helpers be considered
 fully retired from active production usage.
 
+## Permanent Minimal TCB Contract (v1 release scope)
+
+GenesisCode v1 selfhost claims are scoped to a bounded permanent TCB instead of literal
+"zero Rust in repository" closure.
+
+Contract:
+
+1. Production semantics authority remains selfhost-first.
+   - Parser/canonicalization/hash/tooling semantics execute through selfhost artifacts by default.
+   - Rust semantic fallback is forbidden in production profiles.
+2. Permanent Rust TCB is limited to:
+   - TCB-A kernel crates (`gc_coreform`, `gc_kernel`, `gc_prelude`).
+   - Host capability transport/runtime bridge (`gc_effects` + CLI embedding shells).
+3. Rust parity references are non-authoritative.
+   - Parity-only fixtures/harnesses may exist for migration/comparison, but they cannot define
+     production semantic truth.
+4. Any expansion of permanent TCB requires explicit spec update + gate updates.
+   - `scripts/check_selfhost_boundary.sh --strict`
+   - `scripts/check_bootstrap_retirement_gate.sh`
+   - `scripts/check_selfhost_readiness_scorecard.sh`
+
+This contract is the canonical boundary for feature-matrix selfhost claims and release readiness.
+
 ## Trust Boundaries
 
 ### TCB-A: Pure Kernel (must stay tiny)

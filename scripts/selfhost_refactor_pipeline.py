@@ -57,7 +57,11 @@ def ensure_genesis_bin(repo_root: Path, explicit: str | None) -> Path:
             raise RefactorError(f"--genesis-bin is not executable: {p}")
         return p
 
-    p = repo_root / "target" / "debug" / "genesis"
+    cargo_target_dir = os.environ.get("CARGO_TARGET_DIR", "").strip()
+    if cargo_target_dir:
+        p = Path(cargo_target_dir).expanduser().resolve() / "debug" / "genesis"
+    else:
+        p = repo_root / "target" / "debug" / "genesis"
     if p.is_file() and os.access(p, os.X_OK):
         return p
 
@@ -459,7 +463,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--genesis-bin",
         default=None,
-        help="Optional path to genesis CLI binary (defaults to target/debug/genesis).",
+        help=(
+            "Optional path to genesis CLI binary (defaults to "
+            "$CARGO_TARGET_DIR/debug/genesis when set, else target/debug/genesis)."
+        ),
     )
 
     sub = p.add_subparsers(dest="subcmd", required=True)

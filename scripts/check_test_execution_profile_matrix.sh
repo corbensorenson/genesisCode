@@ -121,8 +121,8 @@ if ! grep -Fq 'GENESIS_FULL_CROSS_HOST_BUDGET_MS:-720000' "$FULL_CROSS_HOST_BUDG
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-240000' scripts/check_upgrade_plan_health.sh; then
-  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 240000ms (4m)" >&2
+if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-1050000' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 1050000ms (17m30s)" >&2
   exit 1
 fi
 

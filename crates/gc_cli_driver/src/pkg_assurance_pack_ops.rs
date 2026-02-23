@@ -1,7 +1,5 @@
-use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
-
-use gc_coreform::{Term, TermOrdKey, hash_term, parse_term, print_term};
+use std::collections::BTreeSet;
+use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_effects::ArtifactStore;
 use gc_pkg::PackageManifest;
 use gc_vcs::{
@@ -10,143 +8,23 @@ use gc_vcs::{
 };
 
 use crate::pkg_workspace_ops::LocalPkgResult;
-#[path = "pkg_assurance_pack_bundle.rs"]
-mod pkg_assurance_pack_bundle;
-use pkg_assurance_pack_bundle::write_bundle_dir;
 
-pub(crate) struct AssurancePackArgs<'a> {
-    pub pkg: &'a Path,
-    pub assurance_profile: &'a str,
-    pub commit: Option<&'a str>,
-    pub snapshot: &'a str,
-    pub policy: Option<&'a str>,
-    pub trace_spec: &'a str,
-    pub qualification_spec: &'a str,
-    pub coverage_specs: &'a [String],
-    pub object_equivalence_spec: Option<&'a str>,
-    pub independence_attestations: &'a [String],
-    pub independent_verifier_run_specs: &'a [String],
-    pub out: &'a Path,
-    pub bundle_dir: Option<&'a Path>,
-    pub no_store: bool,
-}
+mod bundle;
+mod parse;
+mod profile;
+mod resolve;
+mod term_helpers;
+mod types;
 
-#[derive(Debug, Clone)]
-struct LoadedTerm {
-    term: Term,
-    hash: String,
-    canonical_src: String,
-    source: String,
-}
-
-#[derive(Debug, Clone)]
-struct CoverageExport {
-    loaded: LoadedTerm,
-    profile: String,
-    ok: bool,
-}
-
-#[derive(Debug, Clone)]
-struct ObjectEquivalenceEvidence {
-    loaded: LoadedTerm,
-    source_artifact: String,
-    object_artifact: String,
-    method: String,
-}
-
-#[derive(Debug, Clone)]
-struct IndependentVerifierRun {
-    loaded: LoadedTerm,
-    run_id: String,
-    runner: String,
-    roles: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AssuranceProfile {
-    Custom,
-    Do178cDalA,
-    Do178cDalB,
-    NasaClassA,
-    NasaClassB,
-    Iec62304ClassC,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct AssuranceRequirements {
-    minimum_coverage_rank: u8,
-    require_independence_attestations: bool,
-    require_object_equivalence: bool,
-    require_independent_verifier_runs: bool,
-}
-
-impl AssuranceProfile {
-    fn parse(raw: &str) -> Result<Self, String> {
-        match raw.trim().to_ascii_lowercase().as_str() {
-            "custom" => Ok(Self::Custom),
-            "do178c-dal-a" => Ok(Self::Do178cDalA),
-            "do178c-dal-b" => Ok(Self::Do178cDalB),
-            "nasa-class-a" => Ok(Self::NasaClassA),
-            "nasa-class-b" => Ok(Self::NasaClassB),
-            "iec62304-class-c" => Ok(Self::Iec62304ClassC),
-            other => Err(format!(
-                "unsupported --assurance-profile `{other}`; expected one of custom|do178c-dal-a|do178c-dal-b|nasa-class-a|nasa-class-b|iec62304-class-c"
-            )),
-        }
-    }
-
-    fn as_symbol(self) -> &'static str {
-        match self {
-            Self::Custom => ":custom",
-            Self::Do178cDalA => ":do178c-dal-a",
-            Self::Do178cDalB => ":do178c-dal-b",
-            Self::NasaClassA => ":nasa-class-a",
-            Self::NasaClassB => ":nasa-class-b",
-            Self::Iec62304ClassC => ":iec62304-class-c",
-        }
-    }
-
-    fn requirements(self) -> AssuranceRequirements {
-        match self {
-            Self::Custom => AssuranceRequirements {
-                minimum_coverage_rank: 0,
-                require_independence_attestations: false,
-                require_object_equivalence: false,
-                require_independent_verifier_runs: false,
-            },
-            Self::Do178cDalA => AssuranceRequirements {
-                minimum_coverage_rank: 3,
-                require_independence_attestations: true,
-                require_object_equivalence: true,
-                require_independent_verifier_runs: true,
-            },
-            Self::Do178cDalB => AssuranceRequirements {
-                minimum_coverage_rank: 2,
-                require_independence_attestations: true,
-                require_object_equivalence: true,
-                require_independent_verifier_runs: true,
-            },
-            Self::NasaClassA => AssuranceRequirements {
-                minimum_coverage_rank: 3,
-                require_independence_attestations: true,
-                require_object_equivalence: true,
-                require_independent_verifier_runs: true,
-            },
-            Self::NasaClassB => AssuranceRequirements {
-                minimum_coverage_rank: 2,
-                require_independence_attestations: true,
-                require_object_equivalence: true,
-                require_independent_verifier_runs: true,
-            },
-            Self::Iec62304ClassC => AssuranceRequirements {
-                minimum_coverage_rank: 1,
-                require_independence_attestations: false,
-                require_object_equivalence: true,
-                require_independent_verifier_runs: true,
-            },
-        }
-    }
-}
+use bundle::write_bundle_dir;
+use parse::{
+    parse_coverage_export, parse_independence_attestation, parse_independent_verifier_run,
+    parse_object_equivalence_evidence,
+};
+use profile::AssuranceProfile;
+use resolve::load_term_from_spec;
+use term_helpers::{coverage_rank, extract_release_binding, extract_vector_field};
+pub(crate) use types::AssurancePackArgs;
 
 pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<LocalPkgResult, String> {
     let assurance_profile = AssuranceProfile::parse(args.assurance_profile)?;
@@ -336,6 +214,7 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
             )
         })
         .collect();
+
     let independent_verifier_run_terms: Vec<Term> = independent_verifier_runs
         .iter()
         .map(|run| {
@@ -367,6 +246,7 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
             )
         })
         .collect();
+
     let object_equivalence_term = object_equivalence
         .as_ref()
         .map(|e| {
@@ -532,6 +412,7 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
         .into_iter()
         .collect(),
     );
+
     let pack_src = print_term(&pack) + "\n";
     if let Some(parent) = args.out.parent()
         && !parent.as_os_str().is_empty()
@@ -540,8 +421,8 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
     }
     std::fs::write(args.out, pack_src.as_bytes())
         .map_err(|e| format!("write {}: {e}", args.out.display()))?;
-    let mut pack_h = blake3::hash(pack_src.as_bytes()).to_hex().to_string();
 
+    let mut pack_h = blake3::hash(pack_src.as_bytes()).to_hex().to_string();
     if !args.no_store {
         let store = ArtifactStore::open(&store_dir)
             .map_err(|e| format!("open {}: {e}", store_dir.display()))?;
@@ -628,397 +509,4 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
         program_hash: hash_term(&value),
         value,
     })
-}
-
-fn load_term_from_spec(
-    spec: &str,
-    base_dir: &Path,
-    store_dir: &Path,
-    label: &str,
-) -> Result<LoadedTerm, String> {
-    let candidate = PathBuf::from(spec);
-    let path = if candidate.is_file() || candidate.is_absolute() {
-        candidate
-    } else {
-        let from_base = base_dir.join(spec);
-        if from_base.is_file() {
-            from_base
-        } else if is_hex64(spec) {
-            store_dir.join(spec)
-        } else {
-            from_base
-        }
-    };
-    if !path.is_file() {
-        return Err(format!(
-            "{label} artifact spec `{spec}` did not resolve to a readable file (tried {})",
-            path.display()
-        ));
-    }
-    let src =
-        std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
-    let term = parse_term(&src).map_err(|e| format!("parse {}: {e}", path.display()))?;
-    let canonical_src = print_term(&term) + "\n";
-    let hash = blake3::hash(canonical_src.as_bytes()).to_hex().to_string();
-    if is_hex64(spec) && spec != hash {
-        return Err(format!(
-            "{label} artifact hash mismatch for `{spec}`: canonical hash is {hash}"
-        ));
-    }
-    Ok(LoadedTerm {
-        term,
-        hash,
-        canonical_src,
-        source: path.display().to_string(),
-    })
-}
-
-fn parse_coverage_export(loaded: LoadedTerm) -> Result<CoverageExport, String> {
-    let map = as_map(&loaded.term, "coverage export")?;
-    let kind = required_symbol_or_string(map, ":kind", "coverage export")?;
-    if kind != "genesis/coverage-v0.2" {
-        return Err(format!(
-            "coverage export kind must be genesis/coverage-v0.2, got {kind}"
-        ));
-    }
-    let profile = normalize_symbol_like(&required_symbol_or_string(
-        map,
-        ":profile",
-        "coverage export",
-    )?);
-    let ok = required_bool(map, ":ok", "coverage export")?;
-    Ok(CoverageExport {
-        loaded,
-        profile,
-        ok,
-    })
-}
-
-fn parse_object_equivalence_evidence(
-    loaded: LoadedTerm,
-    expected_trace_hash: &str,
-    expected_qualification_hash: &str,
-) -> Result<ObjectEquivalenceEvidence, String> {
-    let map = as_map(&loaded.term, "object equivalence artifact")?;
-    let kind = required_symbol_or_string(map, ":kind", "object equivalence artifact")?;
-    if kind != "genesis/object-equivalence-v0.1" {
-        return Err(format!(
-            "object equivalence kind must be genesis/object-equivalence-v0.1, got {kind}"
-        ));
-    }
-    let ok = required_bool(map, ":ok", "object equivalence artifact")?;
-    if !ok {
-        return Err("object equivalence artifact must declare :ok true".to_string());
-    }
-    let trace_artifact = required_hex64(map, ":trace-artifact", "object equivalence artifact")?;
-    if trace_artifact != expected_trace_hash {
-        return Err(format!(
-            "object equivalence :trace-artifact {} does not match assurance trace artifact {}",
-            trace_artifact, expected_trace_hash
-        ));
-    }
-    let qualification_artifact = required_hex64(
-        map,
-        ":qualification-artifact",
-        "object equivalence artifact",
-    )?;
-    if qualification_artifact != expected_qualification_hash {
-        return Err(format!(
-            "object equivalence :qualification-artifact {} does not match assurance qualification artifact {}",
-            qualification_artifact, expected_qualification_hash
-        ));
-    }
-    let source_artifact = required_hex64(map, ":source-artifact", "object equivalence artifact")?;
-    let object_artifact = required_hex64(map, ":object-artifact", "object equivalence artifact")?;
-    let method = normalize_symbol_like(&required_symbol_or_string(
-        map,
-        ":method",
-        "object equivalence artifact",
-    )?);
-    Ok(ObjectEquivalenceEvidence {
-        loaded,
-        source_artifact,
-        object_artifact,
-        method,
-    })
-}
-
-fn parse_independent_verifier_run(
-    loaded: LoadedTerm,
-    expected_profile: &str,
-    expected_trace_hash: &str,
-    expected_qualification_hash: &str,
-    expected_object_equivalence_hash: Option<&str>,
-) -> Result<IndependentVerifierRun, String> {
-    let map = as_map(&loaded.term, "independent verifier run artifact")?;
-    let kind = required_symbol_or_string(map, ":kind", "independent verifier run artifact")?;
-    if kind != "genesis/independent-verifier-run-v0.1" {
-        return Err(format!(
-            "independent verifier run kind must be genesis/independent-verifier-run-v0.1, got {kind}"
-        ));
-    }
-    let ok = required_bool(map, ":ok", "independent verifier run artifact")?;
-    if !ok {
-        return Err("independent verifier run artifact must declare :ok true".to_string());
-    }
-    let profile = normalize_symbol_like(&required_symbol_or_string(
-        map,
-        ":assurance-profile",
-        "independent verifier run artifact",
-    )?);
-    if profile != expected_profile {
-        return Err(format!(
-            "independent verifier run :assurance-profile {} does not match target profile {}",
-            profile, expected_profile
-        ));
-    }
-    let result = normalize_symbol_like(&required_symbol_or_string(
-        map,
-        ":result",
-        "independent verifier run artifact",
-    )?);
-    if result != ":pass" {
-        return Err(format!(
-            "independent verifier run :result must be :pass, got {result}"
-        ));
-    }
-    let trace_artifact =
-        required_hex64(map, ":trace-artifact", "independent verifier run artifact")?;
-    if trace_artifact != expected_trace_hash {
-        return Err(format!(
-            "independent verifier run :trace-artifact {} does not match assurance trace artifact {}",
-            trace_artifact, expected_trace_hash
-        ));
-    }
-    let qualification_artifact = required_hex64(
-        map,
-        ":qualification-artifact",
-        "independent verifier run artifact",
-    )?;
-    if qualification_artifact != expected_qualification_hash {
-        return Err(format!(
-            "independent verifier run :qualification-artifact {} does not match assurance qualification artifact {}",
-            qualification_artifact, expected_qualification_hash
-        ));
-    }
-    let object_equivalence_artifact = required_hex64(
-        map,
-        ":object-equivalence-artifact",
-        "independent verifier run artifact",
-    )?;
-    if let Some(expected) = expected_object_equivalence_hash {
-        if object_equivalence_artifact != expected {
-            return Err(format!(
-                "independent verifier run :object-equivalence-artifact {} does not match assurance object equivalence artifact {}",
-                object_equivalence_artifact, expected
-            ));
-        }
-    } else {
-        return Err(
-            "independent verifier run was provided but no --object-equivalence artifact is loaded"
-                .to_string(),
-        );
-    }
-    let run_id = required_string(map, ":run-id", "independent verifier run artifact")?;
-    let runner = required_string(map, ":runner", "independent verifier run artifact")?;
-    let roles = required_symbol_vector(map, ":roles", "independent verifier run artifact")?;
-    if roles.len() < 2 {
-        return Err(
-            "independent verifier run artifact :roles must include at least two role symbols"
-                .to_string(),
-        );
-    }
-    Ok(IndependentVerifierRun {
-        loaded,
-        run_id,
-        runner,
-        roles,
-    })
-}
-
-fn parse_independence_attestation(raw: &str) -> Result<Term, String> {
-    let trimmed = raw.trim();
-    let (pair, attestor) = trimmed.split_once('@').ok_or_else(|| {
-        format!(
-            "invalid --independence-attestation `{trimmed}`; expected <left-role>:<right-role>@<attestor>"
-        )
-    })?;
-    let (left, right) = pair.split_once(':').ok_or_else(|| {
-        format!(
-            "invalid --independence-attestation `{trimmed}`; expected <left-role>:<right-role>@<attestor>"
-        )
-    })?;
-    let left = normalize_symbol_like(left);
-    let right = normalize_symbol_like(right);
-    let attestor = attestor.trim();
-    if left == right {
-        return Err(format!(
-            "invalid --independence-attestation `{trimmed}`: role pair must use distinct roles"
-        ));
-    }
-    if attestor.is_empty() {
-        return Err(format!(
-            "invalid --independence-attestation `{trimmed}`: attestor cannot be empty"
-        ));
-    }
-    Ok(Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::symbol(":independence-attestation"),
-            ),
-            (
-                TermOrdKey(Term::symbol(":roles")),
-                Term::Vector(vec![Term::symbol(&left), Term::symbol(&right)]),
-            ),
-            (
-                TermOrdKey(Term::symbol(":attestor")),
-                Term::Str(attestor.to_string()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    ))
-}
-
-fn extract_release_binding(term: &Term, key: &str) -> Result<Option<String>, String> {
-    let root = as_map(term, "artifact")?;
-    let release_term = root
-        .get(&TermOrdKey(Term::symbol(":release")))
-        .ok_or_else(|| "artifact missing :release".to_string())?;
-    let release = as_map(release_term, "artifact/:release")?;
-    match release.get(&TermOrdKey(Term::symbol(key))) {
-        None | Some(Term::Nil) => Ok(None),
-        Some(Term::Str(s)) => {
-            if s.trim().is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(s.clone()))
-            }
-        }
-        Some(other) => Err(format!(
-            "artifact/:release {key} must be string|nil, got {}",
-            print_term(other)
-        )),
-    }
-}
-
-fn extract_vector_field<'a>(term: &'a Term, key: &str, what: &str) -> Result<&'a [Term], String> {
-    let root = as_map(term, what)?;
-    match root.get(&TermOrdKey(Term::symbol(key))) {
-        Some(Term::Vector(v)) => Ok(v.as_slice()),
-        Some(other) => Err(format!(
-            "{what} {key} must be vector, got {}",
-            print_term(other)
-        )),
-        None => Err(format!("{what} missing {key}")),
-    }
-}
-
-fn as_map<'a>(term: &'a Term, what: &str) -> Result<&'a BTreeMap<TermOrdKey, Term>, String> {
-    match term {
-        Term::Map(m) => Ok(m),
-        _ => Err(format!("{what} must be map, got {}", print_term(term))),
-    }
-}
-
-fn required_symbol_or_string(
-    m: &BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    what: &str,
-) -> Result<String, String> {
-    let t = m
-        .get(&TermOrdKey(Term::symbol(key)))
-        .ok_or_else(|| format!("{what} missing {key}"))?;
-    match t {
-        Term::Symbol(s) | Term::Str(s) => Ok(s.clone()),
-        _ => Err(format!("{what} {key} must be symbol|string")),
-    }
-}
-
-fn required_string(
-    m: &BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    what: &str,
-) -> Result<String, String> {
-    let t = m
-        .get(&TermOrdKey(Term::symbol(key)))
-        .ok_or_else(|| format!("{what} missing {key}"))?;
-    match t {
-        Term::Str(s) => {
-            if s.trim().is_empty() {
-                Err(format!("{what} {key} cannot be empty"))
-            } else {
-                Ok(s.clone())
-            }
-        }
-        _ => Err(format!("{what} {key} must be string")),
-    }
-}
-
-fn required_hex64(m: &BTreeMap<TermOrdKey, Term>, key: &str, what: &str) -> Result<String, String> {
-    let value = required_string(m, key, what)?;
-    validate_hex_hash(&value).map_err(|e| format!("{what} {key} must be hex64: {e}"))?;
-    Ok(value)
-}
-
-fn required_symbol_vector(
-    m: &BTreeMap<TermOrdKey, Term>,
-    key: &str,
-    what: &str,
-) -> Result<Vec<String>, String> {
-    let t = m
-        .get(&TermOrdKey(Term::symbol(key)))
-        .ok_or_else(|| format!("{what} missing {key}"))?;
-    let Term::Vector(values) = t else {
-        return Err(format!("{what} {key} must be vector"));
-    };
-    let mut out = Vec::with_capacity(values.len());
-    for value in values {
-        match value {
-            Term::Symbol(s) | Term::Str(s) => out.push(normalize_symbol_like(s)),
-            _ => {
-                return Err(format!(
-                    "{what} {key} entries must be symbols|strings, got {}",
-                    print_term(value)
-                ));
-            }
-        }
-    }
-    Ok(out)
-}
-
-fn required_bool(m: &BTreeMap<TermOrdKey, Term>, key: &str, what: &str) -> Result<bool, String> {
-    let t = m
-        .get(&TermOrdKey(Term::symbol(key)))
-        .ok_or_else(|| format!("{what} missing {key}"))?;
-    match t {
-        Term::Bool(v) => Ok(*v),
-        _ => Err(format!("{what} {key} must be bool")),
-    }
-}
-
-fn normalize_symbol_like(raw: &str) -> String {
-    let trimmed = raw.trim();
-    if trimmed.starts_with(':') {
-        trimmed.to_string()
-    } else {
-        format!(":{trimmed}")
-    }
-}
-
-fn is_hex64(s: &str) -> bool {
-    if s.len() != 64 {
-        return false;
-    }
-    validate_hex_hash(s).is_ok()
-}
-
-fn coverage_rank(profile: &str) -> u8 {
-    match normalize_symbol_like(profile).as_str() {
-        ":symbol" => 1,
-        ":decision" => 2,
-        ":mcdc" => 3,
-        _ => 0,
-    }
 }

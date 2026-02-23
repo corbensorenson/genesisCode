@@ -385,8 +385,9 @@ fn eval_module_default_executes_with_compiled_fast_path() {
 
 #[test]
 fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
+    let rust_frontend = rust_coreform_frontend();
     let err = crate::frontend::enforce_frontend_allowed_with_flag(
-        &CoreformFrontend::Rust,
+        &rust_frontend,
         "test",
         true,
         true,
@@ -404,8 +405,9 @@ fn selfhost_only_rejects_rust_frontend_at_library_boundary() {
 
 #[test]
 fn rust_frontend_requires_compat_flag_at_library_boundary() {
+    let rust_frontend = rust_coreform_frontend();
     let err = crate::frontend::enforce_frontend_allowed_with_flag(
-        &CoreformFrontend::Rust,
+        &rust_frontend,
         "test",
         false,
         false,
@@ -413,7 +415,7 @@ fn rust_frontend_requires_compat_flag_at_library_boundary() {
     .expect_err("rust frontend must require explicit compatibility mode");
     assert!(format!("{err}").contains("Rust frontend is disabled in this profile"));
     crate::frontend::enforce_frontend_allowed_with_flag(
-        &CoreformFrontend::Rust,
+        &rust_frontend,
         "test",
         false,
         true,

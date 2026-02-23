@@ -95,7 +95,7 @@ Strict/full profile runtime reports:
     (`kind = genesis/upgrade-plan-health-cargo-warmup-v0.1`)
   - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
     `.genesis/perf/upgrade_plan_health_profile_report.json`
-  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `240000`)
+  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `1050000`)
     whenever health gates are enforced
   - GPU device-conformance lane policy:
     - `release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default.

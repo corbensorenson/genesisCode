@@ -2,7 +2,7 @@ use std::path::Path;
 
 use gc_coreform::{Term, TermOrdKey, print_term};
 
-use super::{CoverageExport, IndependentVerifierRun, LoadedTerm, ObjectEquivalenceEvidence};
+use super::types::{CoverageExport, IndependentVerifierRun, LoadedTerm, ObjectEquivalenceEvidence};
 
 #[expect(
     clippy::too_many_arguments,

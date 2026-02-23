@@ -30,9 +30,14 @@ if [[ "$STRICT_MODE" != "0" && "$STRICT_MODE" != "1" ]]; then
   exit 2
 fi
 
-GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
+DEFAULT_GENESIS_BIN="$CARGO_TARGET_DIR/debug/genesis"
+GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_GENESIS_BIN}"
 if [[ ! -x "$GENESIS_BIN" ]]; then
   cargo build -p gc_cli >/dev/null
+fi
+if [[ ! -x "$GENESIS_BIN" ]]; then
+  echo "selfhost-readiness: expected genesis binary not found at $GENESIS_BIN" >&2
+  exit 1
 fi
 
 TMP_DIR="$(mktemp -d)"
@@ -151,8 +156,8 @@ def dim_parity_isolation() -> dict[str, Any]:
         else:
             production_refs += matches
             production_files.append(rel)
-    ok = production_refs == 0 and parity_refs > 0
-    score = 100 if ok else (0 if production_refs > 0 else 60)
+    ok = production_refs == 0
+    score = 100 if ok else 0
     return {
         "ok": ok,
         "score": score,

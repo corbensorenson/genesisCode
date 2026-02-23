@@ -15,6 +15,8 @@ and removed from active retrieval paths:
 | `docs/spec/HOST_ABI_INDEX_v0.1.md` | `docs/spec/HOST_ABI.md` |
 | `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.md` | `docs/spec/HOST_ABI.md` |
 | `docs/spec/GCPM_ABI_INDEX_v0.1.md` | `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md` |
+| `docs/spec/BUDGETS.md` | `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`, `docs/spec/CONCURRENCY_GPU_SLO_v0.1.md`, `docs/spec/SOURCE_SIZE_BUDGET_v0.1.md` |
+| `docs/spec/COVERAGE.md` | `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`, `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md` |
 
 ## Deprecated Top-Level Docs
 

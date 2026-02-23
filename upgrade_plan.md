@@ -5,7 +5,7 @@ Last updated: 2026-02-23
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 Machine-readable selfhost readiness source: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 8
+Open checklist items: 7
 
 ## P0 - Immediate blockers
 
@@ -31,9 +31,8 @@ Open checklist items: 8
 
 - [ ] P0.4 Return strict profile health lanes to green in clean local/CI execution.
   - Evidence:
-    - `prepush-standard` now reaches late profile cargo gates with dashboard drift and clippy blockers removed.
-    - current local blocker is disk exhaustion in `runtime-backend-feature-matrix` (`No space left on device`) before profile completion.
-    - `release-full` has not yet been revalidated after the latest strict-gate fixes.
+    - `prepush-standard` now executes full gate coverage end-to-end (including runtime-backend matrix + agent gauntlet) without semantic failures, but currently misses wall budget on cold run (`942840ms > 900000ms`).
+    - latest `release-full` validation attempt still failed in selfhost-strict compile stage under local disk pressure (`No space left on device`) and must be rerun with stable headroom.
   - Definition of done:
     - both profiles run green from a clean checkout with no degraded/local bypass mode.
 
@@ -55,13 +54,18 @@ Open checklist items: 8
     - reduce active docs and fanout below caps with operational headroom.
     - keep canonical agent onboarding path minimal and stable.
 
-- [ ] P1.3 Decompose high-churn assurance/runtime surfaces to reduce AI maintenance risk.
-  - Evidence:
-    - `crates/gc_cli_driver/src/pkg_assurance_pack_ops.rs` is `1171` lines (high-churn, recently expanded).
-    - strict suite repeatedly highlights large integration surfaces (workspace/pkg lanes).
-  - Definition of done:
-    - split high-churn files into focused modules with stable interfaces and localized tests.
-    - preserve fail-closed behavior and deterministic outputs.
+- [x] P1.3 Decompose high-churn assurance/runtime surfaces to reduce AI maintenance risk.
+  - Completion evidence:
+    - split assurance-pack surface into focused modules:
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops.rs` (orchestration; now `512` lines)
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/types.rs`
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/profile.rs`
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/resolve.rs`
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/parse.rs`
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/term_helpers.rs`
+      - `crates/gc_cli_driver/src/pkg_assurance_pack_ops/bundle.rs`
+    - removed deprecated monolith-adjacent bundle file `crates/gc_cli_driver/src/pkg_assurance_pack_bundle.rs`.
+    - validation: `cargo test -p gc_cli --test cli_pkg_assurance_pack` passes (`3 passed`).
 
 - [ ] P1.4 Reduce strict health warmup latency for agent inner loops.
   - Evidence:
