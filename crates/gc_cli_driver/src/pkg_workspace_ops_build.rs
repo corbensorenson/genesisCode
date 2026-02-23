@@ -18,10 +18,11 @@ pub(super) fn handle_build(
     let target_label = normalize_build_target(target)?;
     let target_profile = build_target_profile(target_label)?;
     let artifact_layout = build_artifacts::artifact_layout_for_target(target_label)?;
-    let (manifest, _) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
     let package_src = std::fs::read(pkg).map_err(|e| e.to_string())?;
     let package_h = blake3::hash(&package_src).to_hex().to_string();
     let package_artifact = gc_obligations::package_artifact_hash(pkg).map_err(|e| e.to_string())?;
+    let entrypoint_src = build_target_entrypoint_source(&pkg_dir, &manifest)?;
 
     let build_manifest = Term::Map(
         [
@@ -83,6 +84,10 @@ pub(super) fn handle_build(
                             TermOrdKey(Term::symbol(":executable")),
                             Term::Str(artifact_layout.executable_rel.to_string()),
                         ),
+                        (
+                            TermOrdKey(Term::symbol(":entrypoint")),
+                            Term::Str(artifact_layout.entrypoint_rel.to_string()),
+                        ),
                     ]
                     .into_iter()
                     .collect(),
@@ -138,13 +143,16 @@ pub(super) fn handle_build(
     .map_err(|e| e.to_string())?;
 
     let executable_bundle = build_artifacts::write_target_executable_bundle(
-        &bundle_root,
-        target_label,
-        &bundle_h,
-        &target_profile,
-        &package_h,
-        &package_artifact,
-        &artifact_layout,
+        build_artifacts::TargetExecutableBundleInput {
+            bundle_root: &bundle_root,
+            target_label,
+            bundle_h: &bundle_h,
+            target_profile: &target_profile,
+            package_h: &package_h,
+            package_artifact: &package_artifact,
+            layout: &artifact_layout,
+            entrypoint_src: &entrypoint_src,
+        },
     )?;
 
     let provenance = Term::Map(
@@ -185,6 +193,14 @@ pub(super) fn handle_build(
             (
                 TermOrdKey(Term::symbol(":executable-path")),
                 Term::Str(executable_bundle.executable_path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":entrypoint-path")),
+                Term::Str(executable_bundle.entrypoint_path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":entrypoint-h")),
+                Term::Str(executable_bundle.entrypoint_h.clone()),
             ),
             (
                 TermOrdKey(Term::symbol(":generated-by")),
@@ -245,6 +261,14 @@ pub(super) fn handle_build(
                         (
                             TermOrdKey(Term::symbol(":sha256")),
                             Term::Str(executable_bundle.package_sha256),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":entrypoint")),
+                            Term::Str(executable_bundle.entrypoint_path.display().to_string()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":entrypoint-h")),
+                            Term::Str(executable_bundle.entrypoint_h),
                         ),
                     ]
                     .into_iter()
@@ -319,6 +343,33 @@ fn build_target_profile(target: &str) -> Result<BuildTargetProfile, String> {
             "invalid build target `{other}`; expected one of web|desktop|service|ios|android|edge|service-runtime"
         )),
     }
+}
+
+fn build_target_entrypoint_source(
+    pkg_dir: &Path,
+    manifest: &PackageManifest,
+) -> Result<String, String> {
+    if manifest.modules.is_empty() {
+        return Err(
+            "package manifest must contain at least one module for target build".to_string(),
+        );
+    }
+
+    let mut rendered = String::new();
+    for (idx, module) in manifest.modules.iter().enumerate() {
+        let module_path = pkg_dir.join(&module.path);
+        let src = std::fs::read_to_string(&module_path)
+            .map_err(|e| format!("read module `{}`: {e}", module_path.display()))?;
+        if idx > 0 {
+            rendered.push('\n');
+        }
+        rendered.push_str(&src);
+        if !rendered.ends_with('\n') {
+            rendered.push('\n');
+        }
+    }
+
+    Ok(rendered)
 }
 
 fn write_immutable_executable(path: &Path, bytes: &[u8]) -> std::io::Result<()> {

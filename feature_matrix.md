@@ -34,9 +34,7 @@ Legend:
 | Regulated assurance profile packs in core workflow | ✅ (engineering coverage) | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- P0.1 Target build pipeline still uses contract launch scripts (`boot-ok/smoke-ok`) rather than real deploy/runtime outputs.
 - P0.3 Rust-to-GC migration still has `in-progress` rows not cut over to GC-first dispatch.
-- P1.4 Heavy parity/performance lanes remain too slow for tight agent iteration loops.
 - P2.2 Signed domain bootstrap bundle set is not yet complete for broad agent bootstrapping.
 
 Primary evidence paths:

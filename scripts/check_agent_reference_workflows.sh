@@ -365,6 +365,7 @@ for wf in workflows:
     baseline_p95_ms = p95(wf_history_samples) if wf_history_samples else None
     regression_enforced = (
         (not build_bootstrap_mode)
+        and (not history_bootstrap_mode)
         and baseline_p95_ms is not None
         and len(wf_history_samples) >= p95_min_samples
     )

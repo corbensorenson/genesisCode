@@ -1,10 +1,10 @@
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
-#[path = "semantic_workspace_misc.rs"]
-mod semantic_workspace_misc;
 #[path = "semantic_workspace_analysis.rs"]
 mod semantic_workspace_analysis;
+#[path = "semantic_workspace_misc.rs"]
+mod semantic_workspace_misc;
 #[path = "semantic_workspace_plan.rs"]
 mod semantic_workspace_plan;
 #[path = "semantic_workspace_types.rs"]
@@ -18,9 +18,7 @@ use semantic_workspace_plan::{
     map_patch_error, patch_term_from_plan, replace_symbol_in_term, validate_refactor_symbols,
     validate_relative_module_path,
 };
-use semantic_workspace_types::{
-    PlannedOp, RefactorConflict,
-};
+use semantic_workspace_types::{PlannedOp, RefactorConflict};
 
 pub(super) fn cmd_semantic_edit_workspace_graph(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;

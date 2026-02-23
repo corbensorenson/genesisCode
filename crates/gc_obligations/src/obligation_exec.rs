@@ -2,18 +2,18 @@ use super::*;
 
 #[path = "obligation_exec_budgets.rs"]
 mod obligation_exec_budgets;
+#[path = "obligation_exec_coverage.rs"]
+mod obligation_exec_coverage;
 #[cfg(test)]
 #[path = "obligation_exec_coverage_profile_tests.rs"]
 mod obligation_exec_coverage_profile_tests;
-#[path = "obligation_exec_coverage.rs"]
-mod obligation_exec_coverage;
 #[path = "obligation_exec_replay.rs"]
 mod obligation_exec_replay;
 #[path = "obligation_exec_tests.rs"]
 mod obligation_exec_tests;
-pub(crate) use obligation_exec_coverage::{CoverageProfile, CoverageRunArgs, obligation_coverage};
 #[cfg(test)]
 pub(crate) use obligation_exec_coverage::mcdc_independence_for_site;
+pub(crate) use obligation_exec_coverage::{CoverageProfile, CoverageRunArgs, obligation_coverage};
 
 pub(super) fn obligation_property_tests(
     store: &EvidenceStore,

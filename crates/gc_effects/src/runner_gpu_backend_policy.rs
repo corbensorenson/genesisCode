@@ -77,13 +77,13 @@ fn parse_gpu_backend_fallback_policy(raw: &str) -> GpuBackendFallbackPolicy {
 
 fn default_gpu_backend_fallback_policy() -> GpuBackendFallbackPolicy {
     default_gpu_backend_fallback_policy_from_env(
-        std::env::var("GENESIS_GPU_BACKEND_POLICY_DEFAULT").ok().as_deref(),
+        std::env::var("GENESIS_GPU_BACKEND_POLICY_DEFAULT")
+            .ok()
+            .as_deref(),
     )
 }
 
-fn default_gpu_backend_fallback_policy_from_env(
-    raw: Option<&str>,
-) -> GpuBackendFallbackPolicy {
+fn default_gpu_backend_fallback_policy_from_env(raw: Option<&str>) -> GpuBackendFallbackPolicy {
     match raw {
         Some(value) => parse_gpu_backend_fallback_policy(value),
         None => GpuBackendFallbackPolicy::AllowFallback,

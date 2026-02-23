@@ -12,16 +12,16 @@ use gc_kernel::{
 mod prelude_assembled {
     include!(concat!(env!("OUT_DIR"), "/prelude_assembled.rs"));
 }
-#[path = "prelude_coreform_api.rs"]
-mod prelude_coreform_api;
 #[path = "prelude_contract_effect.rs"]
 mod prelude_contract_effect;
+#[path = "prelude_coreform_api.rs"]
+mod prelude_coreform_api;
+use prelude_contract_effect::*;
 use prelude_coreform_api::{
     nf_coreform_canonicalize_module, nf_coreform_fmt_module, nf_coreform_hash_module,
     nf_coreform_hash_module_src, nf_coreform_hash_term, nf_coreform_parse_module,
     nf_coreform_parse_term, nf_coreform_print_module, nf_coreform_print_term,
 };
-use prelude_contract_effect::*;
 
 pub struct Prelude {
     pub env: Env,

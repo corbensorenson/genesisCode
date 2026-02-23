@@ -421,7 +421,6 @@ fn reset_persistent_bridge_sessions_for_tests() {
     runner_host_bridge_persistent::reset_persistent_bridge_sessions_for_tests();
 }
 
-
 #[cfg(not(target_os = "wasi"))]
 #[expect(
     clippy::too_many_arguments,

@@ -1,6 +1,10 @@
 use super::*;
 
-pub(super) fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<Value, KernelError> {
+pub(super) fn eval_module(
+    ctx: &mut EvalCtx,
+    env: &mut Env,
+    forms: &[Term],
+) -> Result<Value, KernelError> {
     let mut last = Value::Data(Term::Nil);
     for form in forms {
         if let Some((name, expr)) = parse_def(form) {
@@ -89,7 +93,11 @@ pub(super) fn eval_let_tco(
     })
 }
 
-pub(super) fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
+pub(super) fn eval_fn(
+    _ctx: &mut EvalCtx,
+    env: &Env,
+    items: Vec<&Term>,
+) -> Result<Value, KernelError> {
     if items.len() < 3 {
         return Err(KernelError::new(
             KernelErrorKind::BadForm,
@@ -185,7 +193,11 @@ pub(super) fn eval_fn(_ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Resul
     })
 }
 
-pub(super) fn eval_seal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
+pub(super) fn eval_seal(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    items: Vec<&Term>,
+) -> Result<Value, KernelError> {
     match items.len() {
         1 => {
             let id = ctx.state.next_seal_id;
@@ -210,7 +222,11 @@ pub(super) fn eval_seal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Resu
     }
 }
 
-pub(super) fn eval_unseal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
+pub(super) fn eval_unseal(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    items: Vec<&Term>,
+) -> Result<Value, KernelError> {
     if items.len() != 3 {
         return Err(KernelError::new(
             KernelErrorKind::BadForm,
@@ -230,7 +246,11 @@ pub(super) fn eval_unseal(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Re
     Ok(Value::Data(Term::Nil))
 }
 
-pub(super) fn eval_prim(ctx: &mut EvalCtx, env: &Env, items: Vec<&Term>) -> Result<Value, KernelError> {
+pub(super) fn eval_prim(
+    ctx: &mut EvalCtx,
+    env: &Env,
+    items: Vec<&Term>,
+) -> Result<Value, KernelError> {
     if items.len() < 2 {
         return Err(KernelError::new(
             KernelErrorKind::BadForm,

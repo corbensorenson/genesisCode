@@ -15,12 +15,12 @@ use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
 use thiserror::Error;
 
+#[path = "patch_apply.rs"]
+mod patch_apply;
 #[path = "patch_manifest.rs"]
 mod patch_manifest;
 #[path = "patch_parse.rs"]
 mod patch_parse;
-#[path = "patch_apply.rs"]
-mod patch_apply;
 #[path = "patch_refactor.rs"]
 mod patch_refactor;
 #[path = "patch_replace.rs"]
@@ -236,7 +236,6 @@ pub fn apply_patch_with_step_limit(
         default_coreform_frontend(),
     )
 }
-
 
 pub fn apply_patch_with_step_limit_and_frontend(
     patch_path: &Path,

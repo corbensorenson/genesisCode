@@ -223,7 +223,6 @@ pub(super) fn cmd_selfhost_dashboard(
     })
 }
 
-
 #[path = "cmd_selfhost_artifact.rs"]
 mod cmd_selfhost_artifact;
 

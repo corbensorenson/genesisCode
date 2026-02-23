@@ -271,7 +271,13 @@ pub(crate) fn handle_env(
     workspace_file: &Path,
     out_dir: &Path,
 ) -> Result<LocalPkgResult, String> {
-    pkg_workspace_ops_env::handle_env(profile, runtime_backend_override, lock, workspace_file, out_dir)
+    pkg_workspace_ops_env::handle_env(
+        profile,
+        runtime_backend_override,
+        lock,
+        workspace_file,
+        out_dir,
+    )
 }
 
 pub(crate) fn empty_log(program_hash: [u8; 32]) -> EffectLog {

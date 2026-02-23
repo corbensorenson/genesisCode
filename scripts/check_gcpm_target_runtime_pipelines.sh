@@ -12,9 +12,7 @@ genesis_configure_cargo_target_dir \
   "GENESIS_GCPM_TARGET_RUNTIME_PIPELINES_CARGO_TARGET_DIR"
 
 GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
-if [[ ! -x "$GENESIS_BIN" ]]; then
-  cargo build -p gc_cli >/dev/null
-fi
+cargo build -p gc_cli --bin genesis >/dev/null
 
 tmp_dir="$(mktemp -d)"
 cleanup() {
@@ -86,6 +84,7 @@ for target in "${targets[@]}"; do
     "$bundle_root/package_artifact.txt"
     "$bundle_root/$package_rel"
     "$bundle_root/$sig_rel"
+    "$bundle_root/artifact/entrypoint.gc"
     "$bundle_root/$launch_rel"
   )
   for f in "${required[@]}"; do
@@ -113,13 +112,13 @@ PY
     exit 1
   fi
 
-  boot_out="$(bash "$bundle_root/$launch_rel" --boot | tr -d '\n')"
-  smoke_out="$(bash "$bundle_root/$launch_rel" --smoke | tr -d '\n')"
-  if [[ "$boot_out" != "boot-ok:$target:$hash_a" ]]; then
+  boot_out="$(GENESIS_BIN="$GENESIS_BIN" bash "$bundle_root/$launch_rel" --boot | tr -d '\n')"
+  smoke_out="$(GENESIS_BIN="$GENESIS_BIN" bash "$bundle_root/$launch_rel" --smoke | tr -d '\n')"
+  if [[ ! "$boot_out" =~ ^boot-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "gcpm-target-runtime-pipelines: boot lane mismatch for target=$target out=$boot_out" >&2
     exit 1
   fi
-  if [[ "$smoke_out" != "smoke-ok:$target:$hash_a" ]]; then
+  if [[ ! "$smoke_out" =~ ^smoke-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "gcpm-target-runtime-pipelines: smoke lane mismatch for target=$target out=$smoke_out" >&2
     exit 1
   fi

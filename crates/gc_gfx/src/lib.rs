@@ -219,7 +219,6 @@ pub fn scene_hash(scene: &Scene) -> [u8; 32] {
     *blake3::hash(&pre).as_bytes()
 }
 
-
 mod headless;
 mod term_codec;
 

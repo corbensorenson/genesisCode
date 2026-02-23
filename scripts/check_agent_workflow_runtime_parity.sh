@@ -49,19 +49,36 @@ print(time.time_ns())
 PY
 )"
 
-GENESIS_BIN="$NATIVE_BIN" \
-GENESIS_AGENT_GAUNTLET_PROFILE="$GAUNTLET_PROFILE" \
-GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE="native" \
-GENESIS_AGENT_GAUNTLET_REPORT="$NATIVE_REPORT" \
-GENESIS_AGENT_GAUNTLET_HISTORY="$NATIVE_HISTORY" \
-bash scripts/check_agent_reference_workflows.sh
+run_gauntlet_lane() {
+  local lane_bin="$1"
+  local runtime_profile="$2"
+  local lane_report="$3"
+  local lane_history="$4"
+  GENESIS_BIN="$lane_bin" \
+  GENESIS_AGENT_GAUNTLET_PROFILE="$GAUNTLET_PROFILE" \
+  GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE="$runtime_profile" \
+  GENESIS_AGENT_GAUNTLET_REPORT="$lane_report" \
+  GENESIS_AGENT_GAUNTLET_HISTORY="$lane_history" \
+  bash scripts/check_agent_reference_workflows.sh
+}
 
-GENESIS_BIN="$WASI_BIN" \
-GENESIS_AGENT_GAUNTLET_PROFILE="$GAUNTLET_PROFILE" \
-GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE="wasi-wasm-host-bridge" \
-GENESIS_AGENT_GAUNTLET_REPORT="$WASI_REPORT" \
-GENESIS_AGENT_GAUNTLET_HISTORY="$WASI_HISTORY" \
-bash scripts/check_agent_reference_workflows.sh
+run_gauntlet_lane "$NATIVE_BIN" "native" "$NATIVE_REPORT" "$NATIVE_HISTORY" &
+native_pid=$!
+run_gauntlet_lane "$WASI_BIN" "wasi-wasm-host-bridge" "$WASI_REPORT" "$WASI_HISTORY" &
+wasi_pid=$!
+
+lane_failures=0
+if ! wait "$native_pid"; then
+  echo "agent-workflow-runtime-parity: native lane failed" >&2
+  lane_failures=1
+fi
+if ! wait "$wasi_pid"; then
+  echo "agent-workflow-runtime-parity: wasi lane failed" >&2
+  lane_failures=1
+fi
+if [[ "$lane_failures" -ne 0 ]]; then
+  exit 1
+fi
 
 GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT="$NATIVE_REPORT" \
 GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT="$WASI_REPORT" \

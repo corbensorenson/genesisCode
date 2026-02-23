@@ -12,6 +12,10 @@ use pkg_workspace_test_support::{
     write_caps_with_store_remote,
 };
 
+fn is_hex_64(s: &str) -> bool {
+    s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
+}
+
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
     let td = tempfile::tempdir().unwrap();
@@ -361,6 +365,7 @@ path = "lib.gc"
         let package_path = bundle_root.join(package_rel);
         let signature_path = bundle_root.join(signature_rel);
         let launch_script = bundle_root.join(launch_rel);
+        let entrypoint_path = bundle_root.join("artifact/entrypoint.gc");
         assert!(
             package_path.is_file(),
             "target {target} missing package artifact"
@@ -372,6 +377,10 @@ path = "lib.gc"
         assert!(
             launch_script.is_file(),
             "target {target} missing launch executable"
+        );
+        assert!(
+            entrypoint_path.is_file(),
+            "target {target} missing bundled entrypoint"
         );
 
         #[cfg(unix)]
@@ -386,9 +395,12 @@ path = "lib.gc"
         }
 
         let bundle_h = map_string(&map, ":bundle-h");
+        let genesis_bin = std::env::var("CARGO_BIN_EXE_genesis")
+            .expect("CARGO_BIN_EXE_genesis must be set for integration tests");
         let boot_out = Command::new("bash")
             .arg(&launch_script)
             .arg("--boot")
+            .env("GENESIS_BIN", &genesis_bin)
             .output()
             .expect("run boot lane");
         assert!(
@@ -396,14 +408,22 @@ path = "lib.gc"
             "target {target} boot lane failed: {:?}",
             boot_out
         );
-        assert_eq!(
-            String::from_utf8(boot_out.stdout).unwrap().trim(),
-            format!("boot-ok:{target}:{bundle_h}")
+        let boot_msg = String::from_utf8(boot_out.stdout).unwrap();
+        let boot_trimmed = boot_msg.trim();
+        let boot_prefix = format!("boot-exec-ok:{target}:{bundle_h}:");
+        assert!(
+            boot_trimmed.starts_with(&boot_prefix),
+            "target {target} boot lane output mismatch: {boot_trimmed}"
+        );
+        assert!(
+            is_hex_64(&boot_trimmed[boot_prefix.len()..]),
+            "target {target} boot lane digest must be hex64: {boot_trimmed}"
         );
 
         let smoke_out = Command::new("bash")
             .arg(&launch_script)
             .arg("--smoke")
+            .env("GENESIS_BIN", &genesis_bin)
             .output()
             .expect("run smoke lane");
         assert!(
@@ -411,9 +431,16 @@ path = "lib.gc"
             "target {target} smoke lane failed: {:?}",
             smoke_out
         );
-        assert_eq!(
-            String::from_utf8(smoke_out.stdout).unwrap().trim(),
-            format!("smoke-ok:{target}:{bundle_h}")
+        let smoke_msg = String::from_utf8(smoke_out.stdout).unwrap();
+        let smoke_trimmed = smoke_msg.trim();
+        let smoke_prefix = format!("smoke-exec-ok:{target}:{bundle_h}:");
+        assert!(
+            smoke_trimmed.starts_with(&smoke_prefix),
+            "target {target} smoke lane output mismatch: {smoke_trimmed}"
+        );
+        assert!(
+            is_hex_64(&smoke_trimmed[smoke_prefix.len()..]),
+            "target {target} smoke lane digest must be hex64: {smoke_trimmed}"
         );
     }
 }

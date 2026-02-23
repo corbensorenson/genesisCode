@@ -18,7 +18,7 @@ This is a strict parity gate, not a smoke test.
 
 ## Inputs
 
-The parity runner executes `scripts/check_agent_reference_workflows.sh` twice:
+The parity runner executes `scripts/check_agent_reference_workflows.sh` twice in parallel:
 
 1. native lane (`runtime_profile = "native"`)
 2. wasi lane (`runtime_profile = "wasi-wasm-host-bridge"`)

@@ -85,9 +85,7 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
                     }
                 };
                 let hk = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-                    Some(Value::Data(Term::Str(s))) if s == "term" || s == "module" => {
-                        s.clone()
-                    }
+                    Some(Value::Data(Term::Str(s))) if s == "term" || s == "module" => s.clone(),
                     _ => {
                         return Err(cli_err(
                             EX_INTERNAL,

@@ -1,7 +1,7 @@
-use super::*;
 use super::cmd_selfhost_helpers::{
     extract_manifest_module_paths, maybe_update_selfhost_freshness_metadata,
 };
+use super::*;
 
 pub(super) fn cmd_selfhost_artifact(
     cli: &Cli,

@@ -1,7 +1,7 @@
-use super::*;
 use super::semantic_workspace_types::{
     DefinitionSite, PathStep, PlannedOp, RefactorConflict, SymbolOccurrence, WorkspaceAnalysis,
 };
+use super::*;
 pub(super) fn find_definition_sites(
     analysis: &WorkspaceAnalysis,
     symbol: &str,

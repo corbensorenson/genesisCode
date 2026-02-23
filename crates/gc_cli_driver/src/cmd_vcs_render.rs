@@ -1,6 +1,9 @@
 use super::*;
 
-#[expect(clippy::too_many_arguments, reason = "final response assembly spans cli/json/stdout/contracts")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "final response assembly spans cli/json/stdout/contracts"
+)]
 pub(super) fn finalize_vcs_cmd_output(
     cli: &Cli,
     cmd: &VcsCmd,

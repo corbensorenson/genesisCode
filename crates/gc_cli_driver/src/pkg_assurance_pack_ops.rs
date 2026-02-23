@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_effects::ArtifactStore;
 use gc_pkg::PackageManifest;
@@ -6,6 +5,7 @@ use gc_vcs::{
     RequirementsTraceGateContext, ToolQualificationGateContext, validate_hex_hash,
     validate_requirements_trace_evidence, validate_tool_qualification_evidence,
 };
+use std::collections::BTreeSet;
 
 use crate::pkg_workspace_ops::LocalPkgResult;
 

@@ -11,18 +11,18 @@ use num_traits::ToPrimitive;
 
 #[path = "eval_decimal_ops.rs"]
 mod eval_decimal_ops;
-#[path = "eval_prims.rs"]
-mod eval_prims;
 #[path = "eval_forms.rs"]
 mod eval_forms;
+#[path = "eval_prims.rs"]
+mod eval_prims;
 #[path = "eval_value_ops.rs"]
 mod eval_value_ops;
 
 use eval_decimal_ops::{
     prim_dec_bin, prim_dec_cmp, prim_dec_from_int, prim_dec_parse, prim_dec_to_str,
 };
-pub(crate) use eval_prims::{prim, type_err};
 use eval_forms::{eval_fn, eval_let_tco, eval_prim, eval_seal, eval_unseal};
+pub(crate) use eval_prims::{prim, type_err};
 use eval_value_ops::{eq_value, escape_bytes, escape_str};
 
 /// Toolchain default evaluation step limit.
@@ -475,7 +475,6 @@ impl Default for EvalCtx {
 pub fn eval_module(ctx: &mut EvalCtx, env: &mut Env, forms: &[Term]) -> Result<Value, KernelError> {
     eval_forms::eval_module(ctx, env, forms)
 }
-
 
 fn hash_hex(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";

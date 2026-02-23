@@ -120,11 +120,11 @@ run_target_deploy_workflow() {
   local smoke_out
   boot_out="$(bash "$launch_script" --boot | tr -d '\n')"
   smoke_out="$(bash "$launch_script" --smoke | tr -d '\n')"
-  if [[ "$boot_out" != "boot-ok:$target:$hash_a" ]]; then
+  if [[ ! "$boot_out" =~ ^boot-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "agent-deploy-${lane_label}-workflow: boot lane mismatch for '$target': $boot_out" >&2
     return 1
   fi
-  if [[ "$smoke_out" != "smoke-ok:$target:$hash_a" ]]; then
+  if [[ ! "$smoke_out" =~ ^smoke-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "agent-deploy-${lane_label}-workflow: smoke lane mismatch for '$target': $smoke_out" >&2
     return 1
   fi

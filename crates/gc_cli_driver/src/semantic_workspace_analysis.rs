@@ -1,7 +1,7 @@
-use super::*;
 use super::semantic_workspace_types::{
     DefinitionSite, ModuleAnalysis, PathStep, SymbolOccurrence, WorkspaceAnalysis,
 };
+use super::*;
 pub(super) fn analyze_workspace(
     cli: &Cli,
     pkg: &Path,
@@ -52,7 +52,8 @@ pub(super) fn analyze_workspace(
             };
             let form_path = vec![PathStep::Form(i)];
             let symbol_path = vec![PathStep::Form(i), PathStep::PairCdr, PathStep::PairCar];
-            let form_path_repr = print_term(&super::semantic_workspace_plan::path_to_term(&form_path)?);
+            let form_path_repr =
+                print_term(&super::semantic_workspace_plan::path_to_term(&form_path)?);
             let symbol_path_repr =
                 print_term(&super::semantic_workspace_plan::path_to_term(&symbol_path)?);
             let (node_id, term_hash) = semantic_node_lookup

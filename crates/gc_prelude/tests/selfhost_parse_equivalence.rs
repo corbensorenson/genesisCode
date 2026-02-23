@@ -13,16 +13,16 @@ fn load_selfhost_parse(env: &mut Env, ctx: &mut EvalCtx) {
     ];
     for module_path in parse_modules {
         let parse_path = Path::new(module_path);
-        let src =
-            std::fs::read_to_string(parse_path).unwrap_or_else(|e| panic!("read {module_path}: {e}"));
+        let src = std::fs::read_to_string(parse_path)
+            .unwrap_or_else(|e| panic!("read {module_path}: {e}"));
         let raw_forms = parse_module(&src).unwrap_or_else(|e| panic!("parse {module_path}: {e}"));
         for (i, f) in raw_forms.iter().enumerate() {
             if let Err(e) = canonicalize_form(f.clone()) {
                 panic!("{module_path} canonicalize failed at form {i}: {e}");
             }
         }
-        let forms =
-            canonicalize_module(raw_forms).unwrap_or_else(|e| panic!("canonicalize {module_path}: {e}"));
+        let forms = canonicalize_module(raw_forms)
+            .unwrap_or_else(|e| panic!("canonicalize {module_path}: {e}"));
         let _ = eval_module(ctx, env, &forms).unwrap_or_else(|e| panic!("eval {module_path}: {e}"));
     }
 }

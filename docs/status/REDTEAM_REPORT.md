@@ -8,6 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.1 - Replace target-bundle contract scripts with real target runtime/deploy pipelines.
 - P0.3 - Finish `in-progress` Rust->GC migrations to GC-first production dispatch (`phase-2`).
-- P1.4 - Reduce heavy parity/performance lane runtime for release-grade agent feedback loops.

@@ -158,7 +158,10 @@ pub(super) fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Va
     })))
 }
 
-pub(super) fn nf_contract_extend(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_extend(
+    ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
     let base = match &args[0] {
         Value::Contract(c) => c.clone(),
         _ => return Ok(mk_error(ctx, "extend base must be a contract")),
@@ -222,7 +225,10 @@ fn merge_meta(base: &Value, plus: &Value) -> Value {
     }
 }
 
-pub(super) fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_internal_override_handler(
+    ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let overrides = match &args[0] {
         Value::Map(m) => m,
@@ -250,7 +256,10 @@ pub(super) fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) 
     Ok(mk_unhandled(ctx, msg_term))
 }
 
-pub(super) fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_dispatch(
+    ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let mut cur = match &args[0] {
         Value::Contract(c) => c.clone(),
@@ -274,7 +283,10 @@ pub(super) fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Resul
     }
 }
 
-pub(super) fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_explain(
+    ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let mut cur = match &args[0] {
         Value::Contract(c) => c.clone(),
@@ -514,7 +526,10 @@ pub(super) fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Valu
     bind_impl(ctx, args[0].clone(), f)
 }
 
-pub(super) fn nf_effect_bind_cont(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_bind_cont(
+    ctx: &mut EvalCtx,
+    args: Vec<Value>,
+) -> Result<Value, KernelError> {
     let k = args[0].clone();
     let f = args[1].clone();
     let resp = args[2].clone();
