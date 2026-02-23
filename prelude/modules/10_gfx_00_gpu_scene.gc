@@ -1,0 +1,220 @@
+(def core/caps::perform
+  (fn (op)
+    (fn (payload)
+      (((core/effect::perform op) payload) (fn (resp) (core/effect::pure resp))))))
+
+(def core/gfx/gpu::create-buffer
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-buffer)) {:desc desc})))
+
+(def core/gfx/gpu::create-texture
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-texture)) {:desc desc})))
+
+(def core/gfx/gpu::create-sampler
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-sampler)) {:desc desc})))
+
+(def core/gfx/gpu::create-shader-module
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-shader-module)) {:desc desc})))
+
+(def core/gfx/gpu::create-bind-group-layout
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-bind-group-layout)) {:desc desc})))
+
+(def core/gfx/gpu::create-bind-group
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-bind-group)) {:desc desc})))
+
+(def core/gfx/gpu::create-pipeline-layout
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-pipeline-layout)) {:desc desc})))
+
+(def core/gfx/gpu::create-render-pipeline
+  (fn (desc) ((core/caps::perform (quote gfx/gpu::create-render-pipeline)) {:desc desc})))
+
+(def core/gfx/gpu::destroy-resource
+  (fn (id) ((core/caps::perform (quote gfx/gpu::destroy-resource)) {:id id})))
+
+(def core/gfx/gpu::write-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (data)
+        ((core/caps::perform (quote gfx/gpu::write-buffer))
+          {
+            :data data
+            :id id
+            :offset offset})))))
+
+(def core/gfx/gpu::write-texture
+  (fn (id)
+    (fn (layout)
+      (fn (data)
+        ((core/caps::perform (quote gfx/gpu::write-texture))
+          {
+            :data data
+            :id id
+            :layout layout})))))
+
+(def core/gfx/gpu::read-buffer
+  (fn (id)
+    (fn (offset)
+      (fn (size)
+        ((core/caps::perform (quote gfx/gpu::read-buffer))
+          {
+            :id id
+            :offset offset
+            :size size})))))
+
+(def core/gfx/gpu::read-texture
+  (fn (id)
+    (fn (region)
+      ((core/caps::perform (quote gfx/gpu::read-texture))
+        {
+          :id id
+          :region region}))))
+
+(def core/gfx/gpu::submit-frame-graph
+  (fn (graph) ((core/caps::perform (quote gfx/gpu::submit-frame-graph)) {:graph graph})))
+
+(def core/gfx/frame::empty
+  {:type (quote :gfx/frame-graph) :render-passes [] :compute-passes []})
+
+(def core/gfx/frame::render-pass
+  (fn (label)
+    (fn (color-attachments)
+      (fn (depth-attachment)
+        (fn (commands)
+          {
+            :type (quote :gfx/render-pass)
+            :label label
+            :color-attachments color-attachments
+            :depth-attachment depth-attachment
+            :commands commands})))))
+
+(def core/gfx/frame::compute-pass
+  (fn (label)
+    (fn (commands)
+      {
+        :type (quote :gfx/compute-pass)
+        :label label
+        :commands commands})))
+
+(def core/gfx/frame::add-render-pass
+  (fn (graph)
+    (fn (pass)
+      (((core/map::put graph) (quote :render-passes))
+        ((core/vec::push ((core/map::get graph) (quote :render-passes))) pass)))))
+
+(def core/gfx/frame::add-compute-pass
+  (fn (graph)
+    (fn (pass)
+      (((core/map::put graph) (quote :compute-passes))
+        ((core/vec::push ((core/map::get graph) (quote :compute-passes))) pass)))))
+
+(def core/gfx/frame::submit
+  (fn (graph) (core/gfx/gpu::submit-frame-graph graph)))
+
+(def core/gfx/scene::identity-transform
+  {
+    :translation {:x 0 :y 0 :z 0}
+    :rotation {:x 0 :y 0 :z 0 :w 1000000}
+    :scale {:x 1000000 :y 1000000 :z 1000000}})
+
+(def core/gfx/scene::empty
+  (fn (name)
+    {:type (quote :gfx/scene) :name name :root-nodes [] :nodes []}))
+
+(def core/gfx/scene::node
+  (fn (name)
+    (fn (transform)
+      (fn (mesh)
+        (fn (material)
+          (fn (camera)
+            (fn (light)
+              (fn (children)
+                {
+                  :name name
+                  :transform transform
+                  :mesh mesh
+                  :material material
+                  :camera camera
+                  :light light
+                  :children children}))))))))
+
+(def core/gfx/scene::add-node
+  (fn (scene)
+    (fn (node)
+      (((core/map::put scene) (quote :nodes))
+        ((core/vec::push ((core/map::get scene) (quote :nodes))) node)))))
+
+(def core/gfx/scene::set-roots
+  (fn (scene)
+    (fn (roots) (((core/map::put scene) (quote :root-nodes)) roots))))
+
+(def core/gfx/scene::add-root
+  (fn (scene)
+    (fn (root-id)
+      (((core/map::put scene) (quote :root-nodes))
+        ((core/vec::push ((core/map::get scene) (quote :root-nodes))) root-id)))))
+
+(def core/gfx/scene::add-child
+  (fn (node)
+    (fn (child-id)
+      (((core/map::put node) (quote :children))
+        ((core/vec::push ((core/map::get node) (quote :children))) child-id)))))
+
+(def core/gfx/math::v2 (fn (x) (fn (y) {:x x :y y})))
+
+(def core/gfx/math::v3 (fn (x) (fn (y) (fn (z) {:x x :y y :z z}))))
+
+(def core/gfx/math::quat (fn (x) (fn (y) (fn (z) (fn (w) {:x x :y y :z z :w w})))))
+
+(def core/gfx/math::rgb (fn (r) (fn (g) (fn (b) [r g b]))))
+
+(def core/gfx/math::rgba (fn (r) (fn (g) (fn (b) (fn (a) [r g b a])))))
+
+(def core/gfx/scene::transform
+  (fn (translation) (fn (rotation) (fn (scale) {:translation translation :rotation rotation :scale scale}))))
+
+(def core/gfx/scene::mesh-ref (fn (mesh-artifact) {:mesh-artifact mesh-artifact}))
+
+(def core/gfx/scene::material-pbr
+  (fn (base-color)
+    (fn (base-color-texture)
+      (fn (metallic-roughness-texture)
+        (fn (normal-texture)
+          (fn (emissive-texture)
+            {
+              :type (quote :gfx/material-pbr)
+              :base-color base-color
+              :base-color-texture base-color-texture
+              :metallic-roughness-texture metallic-roughness-texture
+              :normal-texture normal-texture
+              :emissive-texture emissive-texture}))))))
+
+(def core/gfx/scene::camera-perspective
+  (fn (fov-milli-deg) (fn (near-mm) (fn (far-mm) {:kind "perspective" :fov-milli-deg fov-milli-deg :near-mm near-mm :far-mm far-mm}))))
+
+(def core/gfx/scene::camera-orthographic
+  (fn (near-mm) (fn (far-mm) {:kind "orthographic" :fov-milli-deg 0 :near-mm near-mm :far-mm far-mm})))
+
+(def core/gfx/scene::light-point
+  (fn (color-rgb)
+    (fn (intensity-milli)
+      (fn (range-mm)
+        {:kind "point" :color-rgb color-rgb :intensity-milli intensity-milli :range-mm range-mm}))))
+
+(def core/gfx/scene::light-directional
+  (fn (color-rgb)
+    (fn (intensity-milli) {:kind "directional" :color-rgb color-rgb :intensity-milli intensity-milli :range-mm 0})))
+
+(def core/gfx/scene::node-basic
+  (fn (name)
+    (fn (transform)
+      (fn (mesh)
+        (fn (material)
+          (fn (children)
+            {
+              :name name
+              :transform transform
+              :mesh mesh
+              :material material
+              :camera nil
+              :light nil
+              :children children}))))))
+

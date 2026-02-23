@@ -1,0 +1,130 @@
+(def core/editor/lint::lint-module
+  (fn (path)
+    (fn (forms)
+      (let
+        ((diags []) (defs (core/editor/lint::collect-def-names forms))
+          (state (core/editor/lint::meta-state forms)))
+        (let
+          ((has-meta ((core/map::get state) (quote :has-def)))
+            (meta ((core/map::get state) (quote :meta)))
+            (malformed ((core/map::get state) (quote :malformed))))
+          (let
+            (
+              (d1
+                (if has-meta
+                  diags
+                  ((core/vec::push diags)
+                    (((core/editor/lint::error "editor/lint/missing-meta") path)
+                      "module is missing (def ::meta (quote {...}))"))))
+              (d2
+                (if malformed
+                  ((core/vec::push d1)
+                    (((core/editor/lint::error "editor/lint/malformed-meta") path)
+                      "::meta must be a quoted map datum"))
+                  d1)))
+            (if (core/editor/lint::map? meta)
+              (let
+                ((exports ((core/map::get meta) (quote :exports)))
+                  (types ((core/map::get meta) (quote :types)))
+                  (intent ((core/map::get meta) (quote :intent)))
+                  (caps ((core/map::get meta) (quote :caps))))
+                (let
+                  (
+                    (d2a
+                      (if ((core/sym::eq? (core/data::tag intent)) (quote :nil))
+                        ((core/vec::push d2)
+                          (((core/editor/lint::warn "editor/lint/missing-intent") path)
+                            "::meta should include :intent string"))
+                        (if ((core/sym::eq? (core/data::tag intent)) (quote :str))
+                          d2
+                          ((core/vec::push d2)
+                            (((core/editor/lint::warn "editor/lint/intent-not-string") path)
+                              "::meta :intent should be a string")))))
+                    (d2b
+                      (if ((core/sym::eq? (core/data::tag caps)) (quote :nil))
+                        ((core/vec::push d2a)
+                          (((core/editor/lint::warn "editor/lint/missing-caps") path)
+                            "::meta should include :caps vector (empty for pure modules)"))
+                        (if ((core/sym::eq? (core/data::tag caps)) (quote :vec))
+                          d2a
+                          ((core/vec::push d2a)
+                            (((core/editor/lint::warn "editor/lint/caps-not-vector") path)
+                              "::meta :caps should be a vector"))))))
+                  (if ((core/sym::eq? (core/data::tag exports)) (quote :vec))
+                    (let ((d3 (((core/editor/lint::lint-exports path) exports) defs)))
+                      (let ((d4 ((core/editor/lint::vec-append d2b) d3)))
+                        (if (core/editor/lint::map? types)
+                          ((core/editor/lint::vec-append d4)
+                            (((core/editor/lint::lint-types path) exports) types))
+                          ((core/vec::push d4)
+                            (((core/editor/lint::warn "editor/lint/missing-types-map") path)
+                              "::meta should include :types map")))))
+                    ((core/vec::push d2b)
+                      (((core/editor/lint::error "editor/lint/missing-exports") path)
+                        "::meta must include :exports vector")))))
+              d2)))))))
+
+(def core/editor/lint::global-code?
+  (fn (code)
+    (if (prim core/eq? code "editor/lint/missing-meta")
+      true
+      (if (prim core/eq? code "editor/lint/malformed-meta")
+        true
+        (if (prim core/eq? code "editor/lint/missing-exports")
+          true
+          (if (prim core/eq? code "editor/lint/missing-types-map")
+            true
+            (if (prim core/eq? code "editor/lint/export-not-symbol")
+              true
+              (if (prim core/eq? code "editor/lint/missing-intent")
+                true
+                (if (prim core/eq? code "editor/lint/intent-not-string")
+                  true
+                  (if (prim core/eq? code "editor/lint/missing-caps")
+                    true
+                    (if (prim core/eq? code "editor/lint/caps-not-vector") true false)))))))))))
+
+(def core/editor/lint::diag-sym (fn (diag) ((core/map::get diag) (quote :sym))))
+
+(def core/editor/lint::diag-code (fn (diag) ((core/map::get diag) (quote :code))))
+
+(def core/editor/lint::diag-affected?
+  (fn (changed-syms)
+    (fn (diag)
+      (let ((code (core/editor/lint::diag-code diag)) (sym (core/editor/lint::diag-sym diag)))
+        (if (core/editor/lint::global-code? code)
+          true
+          (if (core/editor/lint::sym? sym)
+            ((core/editor/lint::contains-sym? changed-syms) sym)
+            false))))))
+
+(def core/editor/lint::filter-diags
+  (fn (changed-syms)
+    (fn (diags) ((((core/editor/lint::filter-diags-loop changed-syms) diags) 0) []))))
+
+(def core/editor/lint::filter-diags-loop
+  (fn (changed-syms)
+    (fn (diags)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len diags))
+            out
+            (let ((d ((core/vec::get diags) i)))
+              ((((core/editor/lint::filter-diags-loop changed-syms) diags) ((core/int::add i) 1))
+                (if ((core/editor/lint::diag-affected? changed-syms) d)
+                  ((core/vec::push out) d)
+                  out)))))))))
+
+(def core/editor/lint::lint-module-delta
+  (fn (path)
+    (fn (forms)
+      (fn (changed-syms)
+        (let ((all ((core/editor/lint::lint-module path) forms)))
+          (if (core/editor/lint::vec? changed-syms)
+            (if ((core/int::eq? (core/vec::len changed-syms)) 0)
+              []
+              (if ((core/editor/lint::contains-sym? changed-syms) (quote ::meta))
+                all
+                ((core/editor/lint::filter-diags changed-syms) all)))
+            all))))))
+

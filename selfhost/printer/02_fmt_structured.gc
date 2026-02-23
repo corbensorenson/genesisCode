@@ -1,0 +1,131 @@
+(def selfhost/printer::fmt-term
+  (fn (t)
+    (fn (indent)
+      (let ((s (selfhost/printer::single-line t)))
+        (if (selfhost/printer::is-error s)
+          s
+          (if (if (core/list::is-nil? s) true (if ((core/int::lt? ((core/int::add (core/str::len s)) indent)) ((core/int::add selfhost/printer::MAX_WIDTH) 1)) false true))
+            (selfhost/printer::fmt-term2 t indent)
+            ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) s)) nil)))))))
+
+(def selfhost/printer::fmt-term2
+  (fn (t)
+    (fn (indent)
+      (let ((a (selfhost/printer::atom-repr t)))
+        (if (selfhost/printer::is-error a)
+          a
+          (if (core/list::is-nil? a)
+            (let ((tg (selfhost/printer::tag t)))
+              (if (selfhost/printer::is-error tg)
+                tg
+                (if ((core/sym::eq? tg) (quote :vec))
+                  ((selfhost/printer::fmt-vector t) indent)
+                  (if ((core/sym::eq? tg) (quote :map))
+                    ((selfhost/printer::fmt-map t) indent)
+                    (if ((core/sym::eq? tg) (quote :pair))
+                      ((selfhost/printer::fmt-list t) indent)
+                      ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "<unknown>")) nil))))))
+            ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) a)) nil)))))))
+
+(def selfhost/printer::fmt-vector
+  (fn (v)
+    (fn (indent)
+      (if ((core/int::eq? (core/vec::len v)) 0)
+        ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "[]")) nil)
+        (let ((open ((core/str::concat (selfhost/printer::spaces indent)) "[")))
+          (let ((out_rev ((core/pair::cons open) nil)))
+            (let ((out_rev2 (((((selfhost/printer::fmt-vector2 v) indent) 0) out_rev))))
+              (if (selfhost/printer::is-error out_rev2)
+                out_rev2
+                (let ((last (core/pair::car out_rev2)))
+                  (let ((rest (core/pair::cdr out_rev2)))
+                    (selfhost/printer::list-rev
+                      ((core/pair::cons ((core/str::concat last) "]")) rest))))))))))))
+
+(def selfhost/printer::fmt-vector2
+  (fn (v)
+    (fn (indent)
+      (fn (i)
+        (fn (out_rev)
+          (let ((n (core/vec::len v)))
+            (if ((core/int::eq? i) n)
+              out_rev
+              (let ((x ((core/vec::get v) i)))
+                (let ((lines ((selfhost/printer::fmt-term x) ((core/int::add indent) selfhost/printer::INDENT))))
+                  (if (selfhost/printer::is-error lines)
+                    lines
+                    ((((selfhost/printer::fmt-vector2 v) indent) ((core/int::add i) 1))
+                      ((selfhost/printer::append-lines-to-rev out_rev) lines))))))))))))
+
+(def selfhost/printer::fmt-map
+  (fn (m)
+    (fn (indent)
+      (if ((core/int::eq? (core/map::len m)) 0)
+        ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "{}")) nil)
+        (let ((open ((core/str::concat (selfhost/printer::spaces indent)) "{")))
+          (let ((entries (core/map::entries m)))
+            (let ((out_rev ((core/pair::cons open) nil)))
+              (let ((out_rev2 (((((selfhost/printer::fmt-map2 entries) indent) 0) out_rev))))
+                (if (selfhost/printer::is-error out_rev2)
+                  out_rev2
+                  (let ((last (core/pair::car out_rev2)))
+                    (let ((rest (core/pair::cdr out_rev2)))
+                      (selfhost/printer::list-rev
+                        ((core/pair::cons ((core/str::concat last) "}")) rest)))))))))))))
+
+(def selfhost/printer::fmt-map2
+  (fn (entries)
+    (fn (indent)
+      (fn (i)
+        (fn (out_rev)
+          (let ((n (core/vec::len entries)))
+            (if ((core/int::eq? i) n)
+              out_rev
+              (let ((e ((core/vec::get entries) i)))
+                (let ((k ((core/vec::get e) 0)))
+                  (let ((v ((core/vec::get e) 1)))
+                    (let ((ks (selfhost/printer::single-line k)))
+                      (if (selfhost/printer::is-error ks)
+                        ks
+                        (let ((vs (selfhost/printer::single-line v)))
+                          (if (selfhost/printer::is-error vs)
+                            vs
+                            (let ((lines (selfhost/printer::fmt-map-entry k v indent ks vs)))
+                              (if (selfhost/printer::is-error lines)
+                                lines
+                                ((((selfhost/printer::fmt-map2 entries) indent) ((core/int::add i) 1))
+                                  ((selfhost/printer::append-lines-to-rev out_rev) lines))))))))))))))))))
+
+(def selfhost/printer::fmt-map-entry
+  (fn (k)
+    (fn (v)
+      (fn (indent)
+        (fn (ks)
+          (fn (vs)
+            (if (if (core/list::is-nil? ks) false (if (core/list::is-nil? vs) false true))
+              (let ((line
+                     ((core/str::concat (selfhost/printer::spaces ((core/int::add indent) selfhost/printer::INDENT)))
+                       ((core/str::concat ks) ((core/str::concat " ") vs)))))
+                (if ((core/int::lt? (core/str::len line)) ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                  ((core/pair::cons line) nil)
+                  (selfhost/printer::fmt-map-entry-multiline k v indent)))
+              (selfhost/printer::fmt-map-entry-multiline k v indent))))))))
+
+(def selfhost/printer::fmt-map-entry-multiline
+  (fn (k)
+    (fn (v)
+      (fn (indent)
+        (let ((kl ((selfhost/printer::fmt-term k) ((core/int::add indent) selfhost/printer::INDENT))))
+          (if (selfhost/printer::is-error kl)
+            kl
+            (let ((vl ((selfhost/printer::fmt-term v) ((core/int::add indent) ((core/int::mul selfhost/printer::INDENT) 2)))))
+              (if (selfhost/printer::is-error vl)
+                vl
+                (let ((out_rev (selfhost/printer::list-rev kl)))
+                  (if (selfhost/printer::is-error out_rev)
+                    out_rev
+                    (let ((out_rev2 ((selfhost/printer::append-lines-to-rev out_rev) vl)))
+                      (if (selfhost/printer::is-error out_rev2)
+                        out_rev2
+                        (selfhost/printer::list-rev out_rev2)))))))))))))
+

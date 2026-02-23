@@ -1,0 +1,146 @@
+(def core/gfx/obligation::metric-int
+  (fn (m)
+    (fn (k)
+      (let ((v ((core/map::get m) k))) (if (core/gfx/obligation::int? v) v nil)))))
+
+(def core/gfx/obligation::frame-budget-case
+  (fn (suite)
+    (fn (name)
+      (fn (metrics)
+        (fn (limits)
+          (fn (frame-time-ms)
+            (fn (runtime-error)
+              (let
+                ((render-passes ((core/gfx/obligation::metric-int metrics) (quote :render-passes)))
+                  (compute-passes ((core/gfx/obligation::metric-int metrics) (quote :compute-passes)))
+                  (draw-commands ((core/gfx/obligation::metric-int metrics) (quote :draw-commands)))
+                  (compute-commands ((core/gfx/obligation::metric-int metrics) (quote :compute-commands)))
+                  (frame-graph-bytes ((core/gfx/obligation::metric-int metrics) (quote :frame-graph-bytes)))
+                  (max-render-passes ((core/gfx/obligation::metric-int limits) (quote :max-render-passes-per-frame)))
+                  (max-compute-passes ((core/gfx/obligation::metric-int limits) (quote :max-compute-passes-per-frame)))
+                  (max-draw-commands ((core/gfx/obligation::metric-int limits) (quote :max-draw-commands-per-frame)))
+                  (max-compute-commands
+                    ((core/gfx/obligation::metric-int limits) (quote :max-compute-commands-per-frame)))
+                  (max-frame-graph-bytes ((core/gfx/obligation::metric-int limits) (quote :max-frame-graph-bytes)))
+                  (max-frame-time-ms ((core/gfx/obligation::metric-int limits) (quote :max-frame-time-ms))))
+                (let
+                  ((errors0
+                     (((core/gfx/obligation::errors-push-if [])
+                       (core/gfx/obligation::str? runtime-error))
+                       (if (core/gfx/obligation::str? runtime-error) runtime-error "runtime error")))
+                    (errors1
+                      (((core/gfx/obligation::errors-push-if errors0)
+                        (if (core/gfx/obligation::int? max-render-passes)
+                          (if (core/gfx/obligation::int? render-passes)
+                            ((core/int::lt? max-render-passes) render-passes)
+                            false)
+                          false))
+                        "render passes exceed max"))
+                    (errors2
+                      (((core/gfx/obligation::errors-push-if errors1)
+                        (if (core/gfx/obligation::int? max-compute-passes)
+                          (if (core/gfx/obligation::int? compute-passes)
+                            ((core/int::lt? max-compute-passes) compute-passes)
+                            false)
+                          false))
+                        "compute passes exceed max"))
+                    (errors3
+                      (((core/gfx/obligation::errors-push-if errors2)
+                        (if (core/gfx/obligation::int? max-draw-commands)
+                          (if (core/gfx/obligation::int? draw-commands)
+                            ((core/int::lt? max-draw-commands) draw-commands)
+                            false)
+                          false))
+                        "draw commands exceed max"))
+                    (errors4
+                      (((core/gfx/obligation::errors-push-if errors3)
+                        (if (core/gfx/obligation::int? max-compute-commands)
+                          (if (core/gfx/obligation::int? compute-commands)
+                            ((core/int::lt? max-compute-commands) compute-commands)
+                            false)
+                          false))
+                        "compute commands exceed max"))
+                    (errors5
+                      (((core/gfx/obligation::errors-push-if errors4)
+                        (if (core/gfx/obligation::int? max-frame-graph-bytes)
+                          (if (core/gfx/obligation::int? frame-graph-bytes)
+                            ((core/int::lt? max-frame-graph-bytes) frame-graph-bytes)
+                            false)
+                          false))
+                        "frame graph bytes exceed max"))
+                    (errors6
+                      (((core/gfx/obligation::errors-push-if errors5)
+                        (if (core/gfx/obligation::int? max-frame-time-ms)
+                          (if (core/gfx/obligation::int? frame-time-ms)
+                            ((core/int::lt? max-frame-time-ms) frame-time-ms)
+                            true)
+                          false))
+                        "frame time exceeds max or is missing")))
+                  {
+                    :compute-commands compute-commands
+                    :compute-passes compute-passes
+                    :draw-commands draw-commands
+                    :errors errors6
+                    :frame-graph-bytes frame-graph-bytes
+                    :frame-time-ms frame-time-ms
+                    :name name
+                    :ok ((core/int::eq? (core/vec::len errors6)) 0)
+                    :render-passes render-passes
+                    :suite suite})))))))))
+
+(def core/gfx/obligation::api-stability-analysis
+  (fn (exported)
+    (fn (expected-exports)
+      (fn (tracked)
+        (fn (expected-surface-h)
+          (fn (surface-h)
+            (fn (has-config)
+              (fn (missing-defs)
+                (let
+                  ((compare-exports (if ((core/int::eq? (core/vec::len expected-exports)) 0) false true))
+                    (missing
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff expected-exports) exported)
+                        []))
+                    (extra
+                      (if compare-exports
+                        ((core/gfx/obligation::sym-diff exported) expected-exports)
+                        []))
+                    (surface-mismatch
+                      (if (core/gfx/obligation::str? expected-surface-h)
+                        (if ((core/eq? expected-surface-h) surface-h) false true)
+                        false)))
+                  (let
+                    ((errors0
+                       (((core/gfx/obligation::errors-push-if [])
+                         (if compare-exports
+                           (if ((core/int::eq? (core/vec::len missing)) 0) false true)
+                           false))
+                         "missing exported gfx symbols"))
+                      (errors1
+                        (((core/gfx/obligation::errors-push-if errors0)
+                          (if compare-exports
+                            (if ((core/int::eq? (core/vec::len extra)) 0) false true)
+                            false))
+                          "unexpected exported gfx symbols"))
+                      (errors2
+                        (((core/gfx/obligation::errors-push-if errors1)
+                          (if ((core/int::eq? (core/vec::len tracked)) 0) true false))
+                          "no tracked gfx API exports found"))
+                      (errors3
+                        (((core/gfx/obligation::errors-push-if errors2) (if has-config false true))
+                          "gfx api stability requires gfx.api_exports and/or gfx.api_surface_hash configuration"))
+                      (errors4
+                        (((core/gfx/obligation::errors-push-if errors3) surface-mismatch)
+                          "gfx API surface hash mismatch"))
+                      (errors5
+                        (((core/gfx/obligation::errors-push-if errors4)
+                          (if ((core/int::eq? (core/vec::len missing-defs)) 0) false true))
+                          "tracked API symbol has no defining def form")))
+                    {
+                      :errors errors5
+                      :extra extra
+                      :missing missing
+                      :missing-defs missing-defs
+                      :ok ((core/int::eq? (core/vec::len errors5)) 0)}))))))))))
+

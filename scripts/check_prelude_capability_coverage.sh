@@ -8,7 +8,9 @@ cd "$ROOT_DIR"
 
 PRELUDE_FILES=(
   "prelude/modules/10_browser_host.gc"
-  "prelude/modules/10_gfx.gc"
+  "prelude/modules/10_gfx_00_gpu_scene.gc"
+  "prelude/modules/10_gfx_01_frame_desc.gc"
+  "prelude/modules/10_gfx_02_2d_host.gc"
   "prelude/modules/10_xr_host.gc"
   "prelude/modules/11_gpu_compute.gc"
   "prelude/modules/20_editor.gc"

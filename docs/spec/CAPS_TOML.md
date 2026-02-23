@@ -177,6 +177,9 @@ Supported keys:
   - supported values:
     - `allow-fallback` (default): on device backend unavailability/error, fail open to `first-party-runtime` and annotate response with fallback metadata.
     - `require-device`: fail closed with sealed error when device backend is unavailable/errors.
+  - strict runtime profiles may override the implicit default using
+    `GENESIS_GPU_BACKEND_POLICY_DEFAULT=require-device`; explicit per-op `gpu_backend_policy`
+    entries still take precedence.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
 - `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).

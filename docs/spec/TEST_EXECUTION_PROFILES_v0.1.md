@@ -119,6 +119,9 @@ Strict/full profile runtime reports:
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY`
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY`
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY`
+- Full-selfhost closure lane: `scripts/check_upgrade_plan_health.sh --profile full-selfhost-cutover`
+  - runs `scripts/check_full_selfhost_cutover_profile.sh` with strict refresh enabled.
+  - enforces explicit closure-contract verification from `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`.
 
 ### AI Iteration SLO Contention Policy
 

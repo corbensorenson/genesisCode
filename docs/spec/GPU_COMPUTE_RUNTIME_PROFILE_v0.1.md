@@ -56,6 +56,11 @@ Optional environment knobs:
 - `GENESIS_GPU_COMPUTE_BACKEND_POLICY`
   - `require-device` for perf-critical/release lanes (fails closed if no device backend exists).
   - `dev-allow-fallback` for explicit dev/test fallback mode.
+- `GENESIS_GPU_BACKEND_POLICY_DEFAULT`
+  - global runtime default for per-op GPU backend fallback when `caps.toml` does not set
+    `gpu_backend_policy`.
+  - strict health lanes (`prepush-standard`, `release-full`, `full-selfhost-cutover`) set this to
+    `require-device`; inner-loop profiles keep `allow-fallback`.
 - `GENESIS_PERF_CARGO_PROFILE`
   - Build profile for benchmark execution.
 

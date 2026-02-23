@@ -1,0 +1,142 @@
+(def core/gfx/obligation::golden-report
+  (fn (package)
+    (fn (ok)
+      (fn (cases)
+        (fn (errors)
+          {
+            :cases (core/gfx/runtime::vec-or-empty cases)
+            :errors (core/gfx/runtime::vec-or-empty errors)
+            :kind "genesis/gfx-golden-images-v0.2"
+            :ok ok
+            :package package})))))
+
+(def core/gfx/obligation::frame-budget-report
+  (fn (package)
+    (fn (ok)
+      (fn (limits)
+        (fn (cases)
+          (fn (errors)
+            {
+              :cases (core/gfx/runtime::vec-or-empty cases)
+              :errors (core/gfx/runtime::vec-or-empty errors)
+              :kind "genesis/gfx-frame-budgets-v0.2"
+              :limits (if ((core/sym::eq? (core/data::tag limits)) (quote :map)) limits {})
+              :ok ok
+              :package package}))))))
+
+(def core/gfx/obligation::api-stability-report
+  (fn (package)
+    (fn (ok)
+      (fn (surface-h)
+        (fn (expected-surface-h)
+          (fn (surface)
+            (fn (errors)
+              {
+                :errors (core/gfx/runtime::vec-or-empty errors)
+                :expected-surface-h expected-surface-h
+                :kind "genesis/gfx-api-stability-v0.2"
+                :ok ok
+                :package package
+                :surface surface
+                :surface-h surface-h})))))))
+
+(def core/gfx/obligation::sym?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+
+(def core/gfx/obligation::str?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/gfx/obligation::int?
+  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :int))))
+
+(def core/gfx/obligation::vec-contains-sym?
+  (fn (xs) (fn (sym) ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) 0) false))))
+
+(def core/gfx/obligation::vec-contains-sym-loop
+  (fn (xs)
+    (fn (sym)
+      (fn (i)
+        (fn (found)
+          (if found
+            true
+            (if ((core/int::eq? i) (core/vec::len xs))
+              false
+              (let ((x ((core/vec::get xs) i)))
+                ((((core/gfx/obligation::vec-contains-sym-loop xs) sym) ((core/int::add i) 1))
+                  (if (core/gfx/obligation::sym? x) ((core/sym::eq? x) sym) false))))))))))
+
+(def core/gfx/obligation::sym-diff
+  (fn (left) (fn (right) ((((core/gfx/obligation::sym-diff-loop left) right) 0) []))))
+
+(def core/gfx/obligation::sym-diff-loop
+  (fn (left)
+    (fn (right)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) (core/vec::len left))
+            out
+            (let ((x ((core/vec::get left) i)))
+              ((((core/gfx/obligation::sym-diff-loop left) right) ((core/int::add i) 1))
+                (if (core/gfx/obligation::sym? x)
+                  (if ((core/gfx/obligation::vec-contains-sym? right) x) out ((core/vec::push out) x))
+                  out)))))))))
+
+(def core/gfx/obligation::errors-push-if
+  (fn (errors)
+    (fn (cond)
+      (fn (msg) (if cond ((core/vec::push errors) msg) errors)))))
+
+(def core/gfx/obligation::golden-case
+  (fn (suite)
+    (fn (name)
+      (fn (kind)
+        (fn (expect-h)
+          (fn (actual-h)
+            (fn (expect-png-h)
+              (fn (actual-png-h)
+                (fn (pixel-width)
+                  (fn (pixel-height)
+                    (fn (runtime-error)
+                      (let
+                        ((runtime-ok (if (core/gfx/obligation::str? runtime-error) false true))
+                          (hash-ok (if runtime-ok ((core/eq? expect-h) actual-h) false))
+                          (need-png (if ((core/sym::eq? (core/data::tag expect-png-h)) (quote :nil)) false true))
+                          (png-ok
+                            (if runtime-ok
+                              (if need-png ((core/eq? expect-png-h) actual-png-h) true)
+                              false)))
+                        (let
+                          ((errors0 [])
+                            (errors1
+                              (((core/gfx/obligation::errors-push-if errors0)
+                                (core/gfx/obligation::str? runtime-error))
+                                (if (core/gfx/obligation::str? runtime-error)
+                                  runtime-error
+                                  "runtime error")))
+                            (errors2
+                              (((core/gfx/obligation::errors-push-if errors1)
+                                (if runtime-ok (if hash-ok false true) false))
+                                "golden hash mismatch"))
+                            (errors3
+                              (((core/gfx/obligation::errors-push-if errors2)
+                                (if runtime-ok (if need-png (if png-ok false true) false) false))
+                                "golden png hash mismatch")))
+                          {
+                            :actual-h actual-h
+                            :actual-png-h actual-png-h
+                            :error runtime-error
+                            :errors errors3
+                            :expect-h expect-h
+                            :expect-png-h expect-png-h
+                            :kind kind
+                            :name name
+                            :ok
+                              (if runtime-ok
+                                (if hash-ok
+                                  (if need-png png-ok true)
+                                  false)
+                                false)
+                            :pixel-height pixel-height
+                            :pixel-width pixel-width
+                            :suite suite})))))))))))))
+

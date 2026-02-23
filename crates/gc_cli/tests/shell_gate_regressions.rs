@@ -259,6 +259,19 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         health.contains("check_gfx_runtime_profile.sh"),
         "upgrade-plan health profiles must include gfx-only runtime profile lane validation"
     );
+    assert!(
+        health.contains("full-selfhost-cutover"),
+        "upgrade-plan health script must expose dedicated full-selfhost-cutover profile"
+    );
+    assert!(
+        health.contains("GENESIS_GPU_BACKEND_POLICY_DEFAULT")
+            && health.contains("profile=$PROFILE"),
+        "upgrade-plan health script must emit explicit gpu backend fallback policy defaults per profile"
+    );
+    assert!(
+        health.contains("check_full_selfhost_cutover_profile.sh"),
+        "release/full selfhost lanes must validate full-selfhost cutover profile contract"
+    );
 }
 
 #[test]

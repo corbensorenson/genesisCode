@@ -1,0 +1,161 @@
+(def core/gfx/2d::identity-rotation ((core/gfx/math::quat 0) 0 0 1000000))
+
+(def core/gfx/2d::transform
+  (fn (x)
+    (fn (y)
+      (fn (z)
+        (fn (width)
+          (fn (height)
+              (core/gfx/scene::transform
+                (((core/gfx/math::v3 x) y) z)
+                core/gfx/2d::identity-rotation
+                (((core/gfx/math::v3 width) height) 1000000))))))))
+
+(def core/gfx/2d::sprite-material
+  (fn (texture-artifact)
+    (fn (tint-rgba)
+      (((((core/gfx/scene::material-pbr tint-rgba) texture-artifact) nil) nil) nil))))
+
+(def core/gfx/2d::sprite-node
+  (fn (name)
+    (fn (mesh-artifact)
+      (fn (texture-artifact)
+        (fn (x)
+          (fn (y)
+            (fn (z)
+              (fn (width)
+                (fn (height)
+                  (fn (tint-rgba)
+                    (((((core/gfx/scene::node-basic name)
+                        (((((core/gfx/2d::transform x) y) z) width) height))
+                        (core/gfx/scene::mesh-ref mesh-artifact))
+                        ((core/gfx/2d::sprite-material texture-artifact) tint-rgba))
+                        [])))))))))))
+
+(def core/gfx/2d::scene-empty
+  (fn (name)
+    {
+      :type (quote :gfx/2d-scene)
+      :name name
+      :draws []}))
+
+(def core/gfx/2d::scene-add-draw
+  (fn (scene)
+    (fn (draw)
+      (((core/map::put scene) (quote :draws))
+        ((core/vec::push ((core/map::get scene) (quote :draws))) draw)))))
+
+(def core/gfx/2d::draw-sprite
+  (fn (texture-artifact)
+    (fn (tint-rgba)
+      (fn (x)
+        (fn (y)
+          (fn (z)
+            (fn (width)
+              (fn (height)
+                {
+                  :type (quote :gfx/2d-draw)
+                  :kind (quote :sprite)
+                  :texture texture-artifact
+                  :font nil
+                  :blend (quote :alpha)
+                  :tint tint-rgba
+                  :x x
+                  :y y
+                  :z z
+                  :width width
+                  :height height}))))))))
+
+(def core/gfx/2d::draw-rect
+  (fn (fill-rgba)
+    (fn (x)
+      (fn (y)
+        (fn (z)
+          (fn (width)
+            (fn (height)
+              {
+                :type (quote :gfx/2d-draw)
+                :kind (quote :rect)
+                :texture nil
+                :font nil
+                :blend (quote :alpha)
+                :fill fill-rgba
+                :x x
+                :y y
+                :z z
+                :width width
+                :height height})))))))
+
+(def core/gfx/2d::draw-text
+  (fn (font-artifact)
+    (fn (text)
+      (fn (color-rgba)
+        (fn (x)
+          (fn (y)
+            (fn (z)
+              (fn (px-size)
+                {
+                  :type (quote :gfx/2d-draw)
+                  :kind (quote :text)
+                  :texture nil
+                  :font font-artifact
+                  :blend (quote :alpha)
+                  :text text
+                  :color color-rgba
+                  :x x
+                  :y y
+                  :z z
+                  :px-size px-size}))))))))
+
+(def core/gfx/gpu::limits
+  (fn (_) ((core/caps::perform (quote gfx/gpu::limits)) {})))
+
+(def core/gfx/gpu::features
+  (fn (_) ((core/caps::perform (quote gfx/gpu::features)) {})))
+
+(def core/gfx/window::create-surface
+  (fn (opts) ((core/caps::perform (quote gfx/window::create-surface)) {:opts opts})))
+
+(def core/gfx/window::resize-surface
+  (fn (surface)
+    (fn (width)
+      (fn (height)
+        ((core/caps::perform (quote gfx/window::resize-surface))
+          {
+            :height height
+            :surface surface
+            :width width})))))
+
+(def core/gfx/window::set-title
+  (fn (surface)
+    (fn (title)
+      ((core/caps::perform (quote gfx/window::set-title))
+        {
+          :surface surface
+          :title title}))))
+
+(def core/gfx/window::request-redraw
+  (fn (surface) ((core/caps::perform (quote gfx/window::request-redraw)) {:surface surface})))
+
+(def core/gfx/window::surface-info
+  (fn (surface) ((core/caps::perform (quote gfx/window::surface-info)) {:surface surface})))
+
+(def core/gfx/input::poll-events
+  (fn (surface) ((core/caps::perform (quote gfx/input::poll-events)) {:surface surface})))
+
+(def core/gfx/input::set-cursor-mode
+  (fn (surface)
+    (fn (mode)
+      ((core/caps::perform (quote gfx/input::set-cursor-mode))
+        {
+          :mode mode
+          :surface surface}))))
+
+(def core/gfx/time::frame-tick
+  (fn (surface) ((core/caps::perform (quote gfx/time::frame-tick)) {:surface surface})))
+
+(def core/gfx/audio::enqueue
+  (fn (event) ((core/caps::perform (quote gfx/audio::enqueue)) {:event event})))
+
+(def core/gfx/audio::set-master
+  (fn (gain) ((core/caps::perform (quote gfx/audio::set-master)) {:gain gain})))

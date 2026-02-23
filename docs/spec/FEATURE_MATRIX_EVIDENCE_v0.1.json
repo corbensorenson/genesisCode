@@ -13,7 +13,7 @@
       ]
     },
     {
-      "capability": "Canonical CoreForm normalization + stable content hashing contract",
+      "capability": "Canonical language form + stable semantic hashing",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "capability": "Unforgeable protocol values (sealed UNHANDLED/EFFECT/ERROR)",
+      "capability": "Unforgeable protocol values (sealed error/effect channels)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "capability": "Deny-by-default capability policy runtime",
+      "capability": "Deny-by-default capability runtime",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -71,7 +71,7 @@
       ]
     },
     {
-      "capability": "Language-native semantic VCS DAG + refs + bundles",
+      "capability": "Language-native semantic VCS graph + refs + bundles",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -92,7 +92,20 @@
       ]
     },
     {
-      "capability": "Strict selfhost frontend default in production CLI",
+      "capability": "Deployment/bundle target pipeline in core toolchain",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "crates/gc_cli/tests/cli_pkg_workspace.rs",
+        "examples/agent_deploy_bundle_workflow/workflow.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Strict selfhost frontend default in production binaries",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
@@ -104,7 +117,7 @@
       ]
     },
     {
-      "capability": "Explicit selfhost-only execution mode",
+      "capability": "Full no-bootstrap-language self-host closure",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
@@ -113,55 +126,6 @@
       "evidence_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SELF_HOST_BOUNDARY.md"
-      ]
-    },
-    {
-      "capability": "Fully self-hosted toolchain with zero bootstrap-language dependency",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md"
-      ]
-    },
-    {
-      "capability": "Artifact-only bootstrap default across WASM host APIs",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md"
-      ]
-    },
-    {
-      "capability": "Deterministic concurrency/task API with replay semantics",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_no_user_panics.sh",
-        "scripts/check_task_concurrency_stress.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SEALS_DISPATCH_REPLAY.md",
-        "docs/spec/DETERMINISM.md",
-        "docs/spec/CONCURRENCY_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Multithreaded runtime task execution",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_task_concurrency_stress.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/CONCURRENCY_v0.1.md"
       ]
     },
     {
@@ -181,30 +145,21 @@
       ]
     },
     {
-      "capability": "Media/asset pipeline contracts for AI-generated build lanes",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Device-backed GPU compute required in release profile",
+      "capability": "Deterministic concurrency/task runtime with replay semantics",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh",
-        "scripts/check_gpu_stack_decoupling.sh",
-        "scripts/check_gfx_runtime_profile.sh"
+        "scripts/check_no_user_panics.sh",
+        "scripts/check_task_concurrency_stress.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md"
+        "docs/spec/SEALS_DISPATCH_REPLAY.md",
+        "docs/spec/DETERMINISM.md",
+        "docs/spec/CONCURRENCY_v0.1.md"
       ]
     },
     {
-      "capability": "Network + process execution as policy-gated capabilities",
+      "capability": "WASM runtime + WASI CLI surfaces",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -213,99 +168,18 @@
       ]
     },
     {
-      "capability": "Filesystem management capability surface (`stat/list/mkdir/rename/remove`)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Process lifecycle + stdio streaming primitives",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Raw socket/stream networking primitives",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Inbound server networking primitives (listen/accept/http-serve/ws-accept)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Generic host extension/FFI capability ABI",
+      "capability": "Schema-stable machine JSON contracts for CLI/tooling",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_host_abi_conformance.sh"
+        "scripts/check_cli_diagnostics_contract.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/HOST_ABI.md",
-        "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md"
+        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
       ]
     },
     {
-      "capability": "Plugin command surface hardening (command allowlists + bridge digest pinning)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_host_abi_conformance.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/HOST_ABI.md",
-        "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Browser runtime host profile for wasm-hosted apps",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/BROWSER_HOST_RUNTIME_v0.1.md"
-      ]
-    },
-    {
-      "capability": "WebXR runtime primitives (session/frame/input/haptics)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_webxr_browser_conformance_lane.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/XR_HOST_RUNTIME_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Advanced XR spatial primitives (anchors/hands/mesh/layers)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_webxr_browser_conformance_lane.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/XR_HOST_RUNTIME_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Durable data capability family (`io/db::*`)",
+      "capability": "Supply-chain policy + provenance gating in primary CLI",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -314,102 +188,7 @@
       ]
     },
     {
-      "capability": "First-class cryptography capability family",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "WASM runtime APIs",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "WASI CLI support",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Schema-stable JSON CLI contracts for agents",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_cli_diagnostics_contract.sh",
-        "scripts/check_agent_reference_workflows.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Deployment/bundle target pipeline in core toolchain",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "crates/gc_cli/tests/cli_pkg_workspace.rs",
-        "examples/agent_deploy_bundle_workflow/workflow.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
-        "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Workspace semantic graph/refactor API for automation",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_foundation_stdlib_conformance.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/GCPM_BUNDLE_v0.1.md",
-        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Machine-consumable agent authoring contract",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_cli_diagnostics_contract.sh",
-        "scripts/check_write_genesiscode_skill_pack.sh",
-        "scripts/check_write_genesiscode_skill_distribution.sh",
-        "scripts/check_write_genesiscode_skill_conformance.sh",
-        "scripts/check_agent_reference_workflows.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
-        "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
-        "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
-        "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Supply-chain signing + transparency in primary CLI",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Local artifact GC by refs/locks/pins reachability",
+      "capability": "Local artifact GC by semantic reachability (refs/locks/pins)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
@@ -424,141 +203,7 @@
       ]
     },
     {
-      "capability": "Runtime backend profile selection through project manager workflows",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_agent_reference_workflows.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Deterministic non-gfx runtime profiling in core workflow",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_no_user_panics.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh",
-        "scripts/check_gpu_stack_decoupling.sh",
-        "scripts/check_gfx_runtime_profile.sh",
-        "scripts/check_agent_reference_workflows.sh",
-        "scripts/check_perf_budgets.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SEALS_DISPATCH_REPLAY.md",
-        "docs/spec/DETERMINISM.md",
-        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
-        "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Generative workload regression gates with enforced historical baselines",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Enforced runtime wall-time budgets for strict/full profile lanes",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_perf_budgets.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Perf/hot-path gate operability under constrained local disk headroom",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_perf_budgets.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Health gate lock-aware cargo scheduling + shared build cache target",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_foundation_stdlib_conformance.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/GCPM_BUNDLE_v0.1.md",
-        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Bidirectional requirements traceability (system/HLR/LLR -> code -> tests -> artifact)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh",
-        "scripts/check_assurance_profile_packs.sh",
-        "scripts/check_assurance_standards_crosswalk.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md",
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
-        "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
-      ]
-    },
-    {
-      "capability": "Structural coverage profiles (decision/MC/DC)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_assurance_profile_packs.sh",
-        "scripts/check_assurance_standards_crosswalk.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
-        "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
-      ]
-    },
-    {
-      "capability": "Qualified-tool evidence bundles for regulated release",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_assurance_profile_packs.sh",
-        "scripts/check_assurance_standards_crosswalk.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
-        "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
-      ]
-    },
-    {
-      "capability": "Independent verifier role-separation policy enforcement",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Standards-oriented assurance profile packs (DO-178C/NASA/IEC)",
+      "capability": "Built-in regulated-assurance profile packs",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_assurance_profile_packs.sh",
@@ -573,7 +218,7 @@
       ]
     }
   ],
-  "entry_count": 48,
+  "entry_count": 18,
   "kind": "genesis/feature-matrix-evidence-v0.1",
   "source_feature_matrix": "feature_matrix.md",
   "version": "0.1"

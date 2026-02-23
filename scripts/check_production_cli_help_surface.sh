@@ -27,8 +27,14 @@ genesis_heavy_gate_preflight \
 START_MS="$(genesis_profile_gate_now_ms)"
 REPORT_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT:-.genesis/perf/production_cli_help_surface_report.json}"
 HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY:-.genesis/perf/production_cli_help_surface_history.jsonl}"
-BUDGET_MS="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-300000}"
-HISTORY_SCOPE_KEY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY:-single-build-v1}"
+BUDGET_MS="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-180000}"
+HISTORY_SCOPE_KEY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY:-production-only-v1}"
+INCLUDE_PARITY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY:-0}"
+
+if [[ "$INCLUDE_PARITY" != "0" && "$INCLUDE_PARITY" != "1" ]]; then
+  echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY must be 0 or 1" >&2
+  exit 2
+fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -60,31 +66,32 @@ assert_contains() {
 
 GENESIS_HELP="$TMP/genesis.help"
 GENESIS_WASI_HELP="$TMP/genesis_wasi.help"
-GENESIS_PARITY_HELP="$TMP/genesis_parity.help"
-GENESIS_WASI_PARITY_HELP="$TMP/genesis_wasi_parity.help"
 GENESIS_FMT_HELP="$TMP/genesis_fmt.help"
 GENESIS_WASI_FMT_HELP="$TMP/genesis_wasi_fmt.help"
+GENESIS_PARITY_HELP="$TMP/genesis_parity.help"
+GENESIS_WASI_PARITY_HELP="$TMP/genesis_wasi_parity.help"
 GENESIS_PARITY_FMT_HELP="$TMP/genesis_parity_fmt.help"
 GENESIS_WASI_PARITY_FMT_HELP="$TMP/genesis_wasi_parity_fmt.help"
 
-# Build all required release binaries in one cargo invocation so incremental reuse is effective.
-genesis_build_release_bins \
-  -p gc_cli --bin genesis --bin genesis_parity \
-  -p gc_wasi_cli --bin genesis_wasi --bin genesis_wasi_parity
+if [[ "$INCLUDE_PARITY" == "1" ]]; then
+  # Build production + parity bins in one release invocation when parity validation is explicitly requested.
+  genesis_build_release_bins \
+    -p gc_cli --bin genesis --bin genesis_parity \
+    -p gc_wasi_cli --bin genesis_wasi --bin genesis_wasi_parity
+else
+  # Default/common lanes validate production bins only to avoid parity-only compile overhead.
+  genesis_build_release_bins \
+    -p gc_cli --bin genesis \
+    -p gc_wasi_cli --bin genesis_wasi
+fi
 
 GENESIS_BIN="$(genesis_assert_release_bin genesis)"
 GENESIS_WASI_BIN="$(genesis_assert_release_bin genesis_wasi)"
-GENESIS_PARITY_BIN="$(genesis_assert_release_bin genesis_parity)"
-GENESIS_WASI_PARITY_BIN="$(genesis_assert_release_bin genesis_wasi_parity)"
 
 run_help "$GENESIS_BIN" "$GENESIS_HELP"
 run_help "$GENESIS_WASI_BIN" "$GENESIS_WASI_HELP"
-run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_HELP"
-run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_HELP"
 run_help "$GENESIS_BIN" "$GENESIS_FMT_HELP" fmt
 run_help "$GENESIS_WASI_BIN" "$GENESIS_WASI_FMT_HELP" fmt
-run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_FMT_HELP" fmt
-run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_FMT_HELP" fmt
 
 # Production binaries must advertise selfhost-only accepted values.
 assert_contains "$GENESIS_HELP" "Accepted value: selfhost."
@@ -98,11 +105,22 @@ assert_not_contains "$GENESIS_WASI_HELP" "Accepted values: selfhost, rust."
 assert_not_contains "$GENESIS_FMT_HELP" "Accepted values: selfhost, rust."
 assert_not_contains "$GENESIS_WASI_FMT_HELP" "Accepted values: selfhost, rust."
 
-# Parity harness binaries must preserve explicit rust compatibility surface.
-assert_contains "$GENESIS_PARITY_HELP" "Accepted values: selfhost, rust."
-assert_contains "$GENESIS_WASI_PARITY_HELP" "Accepted values: selfhost, rust."
-assert_contains "$GENESIS_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
-assert_contains "$GENESIS_WASI_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
+checked_bins_json='["genesis","genesis_wasi"]'
+if [[ "$INCLUDE_PARITY" == "1" ]]; then
+  GENESIS_PARITY_BIN="$(genesis_assert_release_bin genesis_parity)"
+  GENESIS_WASI_PARITY_BIN="$(genesis_assert_release_bin genesis_wasi_parity)"
+  run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_HELP"
+  run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_HELP"
+  run_help "$GENESIS_PARITY_BIN" "$GENESIS_PARITY_FMT_HELP" fmt
+  run_help "$GENESIS_WASI_PARITY_BIN" "$GENESIS_WASI_PARITY_FMT_HELP" fmt
+
+  # Parity harness binaries must preserve explicit rust compatibility surface.
+  assert_contains "$GENESIS_PARITY_HELP" "Accepted values: selfhost, rust."
+  assert_contains "$GENESIS_WASI_PARITY_HELP" "Accepted values: selfhost, rust."
+  assert_contains "$GENESIS_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
+  assert_contains "$GENESIS_WASI_PARITY_FMT_HELP" "Accepted values: selfhost, rust."
+  checked_bins_json='["genesis","genesis_wasi","genesis_parity","genesis_wasi_parity"]'
+fi
 
 genesis_profile_gate_emit_runtime_report \
   "production-cli-help-surface" \
@@ -112,7 +130,7 @@ genesis_profile_gate_emit_runtime_report \
   "$START_MS" \
   "$BUDGET_MS" \
   "1" \
-  "{\"build_strategy\":\"single-cargo-build\"}" \
+  "{\"build_strategy\":\"single-cargo-build\",\"include_parity\":$INCLUDE_PARITY,\"checked_bins\":$checked_bins_json}" \
   "$HISTORY_SCOPE_KEY"
 
 echo "help-surface: ok"

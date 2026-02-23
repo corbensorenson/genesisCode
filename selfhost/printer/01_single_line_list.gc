@@ -1,0 +1,38 @@
+(def selfhost/printer::single-line-list
+  (fn (t)
+    (let ((items (core/pair::as-proper-list t)))
+      (if (core/list::is-nil? items)
+        nil
+        (let ((parts (selfhost/printer::vec-single-lines items (core/vec::len items))))
+          (if (selfhost/printer::is-error parts)
+            parts
+            (if (core/list::is-nil? parts)
+              nil
+              (let ((mid ((core/str::join parts) " ")))
+                (let ((s ((core/str::concat "(") ((core/str::concat mid) ")"))))
+                  (if ((core/int::lt? (core/str::len s)) ((core/int::add selfhost/printer::MAX_WIDTH) 1))
+                    s
+                    nil))))))))))
+
+(def selfhost/printer::vec-single-lines
+  (fn (v)
+    (fn (n)
+      (let ((lst (((selfhost/printer::vec-single-lines2 v) n) nil)))
+        (if (selfhost/printer::is-error lst)
+          lst
+          (if (core/list::is-nil? lst) nil (core/pair::as-proper-list lst)))))))
+(def selfhost/printer::vec-single-lines2
+  (fn (v)
+    (fn (n)
+      (fn (acc)
+        (if ((core/int::eq? n) 0)
+          acc
+          (let ((i ((core/int::sub n) 1)))
+            (let ((x ((core/vec::get v) i)))
+              (let ((s (selfhost/printer::single-line x)))
+                (if (selfhost/printer::is-error s)
+                  s
+                  (if (core/list::is-nil? s)
+                    nil
+                    (((selfhost/printer::vec-single-lines2 v) i) ((core/pair::cons s) acc))))))))))))
+

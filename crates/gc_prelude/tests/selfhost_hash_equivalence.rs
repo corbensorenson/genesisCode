@@ -2,16 +2,40 @@ use gc_coreform::{canonicalize_module, parse_module};
 use gc_kernel::{EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
+const PRINTER_MODULES: [&str; 4] = [
+    "selfhost/printer/00_core_single_line.gc",
+    "selfhost/printer/01_single_line_list.gc",
+    "selfhost/printer/02_fmt_structured.gc",
+    "selfhost/printer/03_fmt_list_module.gc",
+];
+
+fn repo_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("canonical repo root")
+}
+
+fn selfhost_printer_src(root: &std::path::Path) -> String {
+    let mut out = String::new();
+    for module in PRINTER_MODULES {
+        let src = std::fs::read_to_string(root.join(module))
+            .unwrap_or_else(|e| panic!("read {}: {e}", module));
+        out.push_str(&src);
+        out.push('\n');
+    }
+    out
+}
+
 fn bytes32_hex(h: [u8; 32]) -> String {
     blake3::Hash::from_bytes(h).to_hex().to_string()
 }
 
 #[test]
 fn selfhost_hash_matches_rust_for_terms_and_modules() {
-    let printer_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/printer.gc");
-    let hash_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/hash.gc");
-    let printer_src = std::fs::read_to_string(&printer_path).expect("read printer");
+    let root = repo_root();
+    let hash_path = root.join("selfhost/hash.gc");
+    let printer_src = selfhost_printer_src(&root);
     let hash_src = std::fs::read_to_string(&hash_path).expect("read hash");
 
     let src = format!(

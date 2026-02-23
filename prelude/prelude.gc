@@ -2079,6 +2079,7 @@
               :light nil
               :children children}))))))
 
+
 (def core/gfx/frame::render-pass-empty
   (fn (label) ((((core/gfx/frame::render-pass label) []) nil) [])))
 
@@ -2271,6 +2272,7 @@
 
 (def core/gfx/desc::compute-pipeline
   (fn (label) (fn (cs) {:type (quote :gfx/compute-pipeline-desc) :label label :cs cs})))
+
 
 (def core/gfx/2d::identity-rotation ((core/gfx/math::quat 0) 0 0 1000000))
 
@@ -3428,6 +3430,7 @@
                     (trace ((core/map::get plan) (quote :trace))))
                   ((core/gfx/runtime::store-trace-artifact-with-meta trace) meta))))))))))
 
+
 (def core/gfx/obligation::golden-report
   (fn (package)
     (fn (ok)
@@ -3569,6 +3572,7 @@
                             :pixel-height pixel-height
                             :pixel-width pixel-width
                             :suite suite})))))))))))))
+
 
 (def core/gfx/obligation::metric-int
   (fn (m)
@@ -4006,6 +4010,7 @@
             ((((core/editor/lint::vec-append-loop a) b) ((core/int::add i) 1))
               ((core/vec::push acc) ((core/vec::get b) i)))))))))
 
+
 (def core/editor/lint::lint-module
   (fn (path)
     (fn (forms)
@@ -4135,6 +4140,7 @@
                 all
                 ((core/editor/lint::filter-diags changed-syms) all)))
             all))))))
+
 
 (def core/editor/lint::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
 

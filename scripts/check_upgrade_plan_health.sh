@@ -12,6 +12,7 @@ if [[ "${CI:-}" == "true" ]]; then
   DEFAULT_PROFILE="release-full"
 fi
 PROFILE="${GENESIS_HEALTH_PROFILE:-$DEFAULT_PROFILE}"
+HEALTH_GPU_BACKEND_POLICY_DEFAULT="${GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT:-}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
 DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-300000}"
 AGENT_INNER_LOOP_BUDGET_MS="${GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS:-300000}"
@@ -97,6 +98,13 @@ default_health_shards_for_profile() {
       elif (( cpu_count >= 4 )); then
         echo "3"
       elif (( cpu_count >= 2 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
+    full-selfhost-cutover)
+      if (( cpu_count >= 4 )); then
         echo "2"
       else
         echo "1"
@@ -419,7 +427,7 @@ run_health_proactive_reclaim() {
 
 usage() {
   cat <<'EOF'
-Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|agent-inner-loop|prepush-standard|release-full>]
+Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|agent-inner-loop|prepush-standard|release-full|full-selfhost-cutover>]
 EOF
 }
 
@@ -441,8 +449,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "agent-inner-loop" && "$PROFILE" != "prepush-standard" && "$PROFILE" != "release-full" ]]; then
-  echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|agent-inner-loop|prepush-standard|release-full)" >&2
+if [[ "$PROFILE" != "dev-fast" && "$PROFILE" != "agent-inner-loop" && "$PROFILE" != "prepush-standard" && "$PROFILE" != "release-full" && "$PROFILE" != "full-selfhost-cutover" ]]; then
+  echo "upgrade-plan-health: invalid profile '$PROFILE' (expected dev-fast|agent-inner-loop|prepush-standard|release-full|full-selfhost-cutover)" >&2
   exit 2
 fi
 if [[ -z "${GENESIS_HEALTH_PROFILE_REPORT:-}" && "$PROFILE" == "agent-inner-loop" ]]; then
@@ -483,6 +491,22 @@ if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; t
   echo "upgrade-plan-health: GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE must be 0 or 1" >&2
   exit 2
 fi
+if [[ -z "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" ]]; then
+  case "$PROFILE" in
+    prepush-standard|release-full|full-selfhost-cutover)
+      HEALTH_GPU_BACKEND_POLICY_DEFAULT="require-device"
+      ;;
+    *)
+      HEALTH_GPU_BACKEND_POLICY_DEFAULT="allow-fallback"
+      ;;
+  esac
+fi
+if [[ "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" != "require-device" && "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" != "allow-fallback" && "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" != "dev-allow-fallback" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT must be one of require-device|allow-fallback|dev-allow-fallback" >&2
+  exit 2
+fi
+export GENESIS_GPU_BACKEND_POLICY_DEFAULT="$HEALTH_GPU_BACKEND_POLICY_DEFAULT"
+echo "upgrade-plan-health: gpu backend fallback default policy=$GENESIS_GPU_BACKEND_POLICY_DEFAULT (profile=$PROFILE)"
 if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
@@ -669,7 +693,7 @@ COMMON_GATES=(
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
-  "bash scripts/check_production_cli_help_surface.sh"
+  "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=0 bash scripts/check_production_cli_help_surface.sh"
   "bash scripts/check_cli_diagnostics_contract.sh"
   "bash scripts/check_fuzz_differential_hardening.sh"
   "bash scripts/check_test_execution_profile_matrix.sh"
@@ -751,6 +775,7 @@ case "$PROFILE" in
       "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR=$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=1 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 bash scripts/check_runtime_backend_feature_matrix.sh"
     )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
+    PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     PROFILE_GATES+=(
       "GENESIS_AGENT_GAUNTLET_PROFILE=release-full GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 bash scripts/check_agent_reference_workflows.sh"
     )
@@ -761,7 +786,16 @@ case "$PROFILE" in
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
+    PROFILE_GATES+=(
+      "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1 GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT=.genesis/perf/production_cli_help_surface_parity_report.json GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY=.genesis/perf/production_cli_help_surface_parity_history.jsonl GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY=production-plus-parity-v1 bash scripts/check_production_cli_help_surface.sh"
+    )
     PROFILE_GATES+=("GENESIS_SLO_REQUIRE_PARITY_REPORT=1 bash scripts/check_slo_report_contracts.sh")
+    PROFILE_GATES+=(
+      "GENESIS_TASK_STRESS_RUNS=6 GENESIS_TASK_STRESS_ITERATIONS=8 GENESIS_TASK_STRESS_MAX_FAILURE_RATE_PCT=0 GENESIS_TASK_STRESS_SUITE_BUDGET_MS=420000 bash scripts/check_task_concurrency_stress.sh"
+    )
+    PROFILE_GATES+=(
+      "GENESIS_HOST_BRIDGE_FAULT_RUNS=6 GENESIS_HOST_BRIDGE_FAULT_MAX_FAILURE_RATE_PCT=0 GENESIS_HOST_BRIDGE_FAULT_BUDGET_MS=300000 bash scripts/check_host_bridge_fault_injection.sh"
+    )
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")
@@ -771,6 +805,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_gfx_headroom_conformance.sh")
     PROFILE_GATES+=("bash scripts/check_wasm_production_surface.sh")
+    ;;
+  full-selfhost-cutover)
+    PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=1 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
 esac
 

@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `3f89a7bf92f1ec5ede590364b38c83d0564211083cf9843674dba3a367447ad9`
-- Freshness artifact hash: `3f89a7bf92f1ec5ede590364b38c83d0564211083cf9843674dba3a367447ad9`
-- Freshness source hash: `018349c1d7b131f5259bfefe1f3ebe7732b901daae9cf60d097b559c190ba05f`
-- Source aggregate hash (module path + module sha256): `cb28df15fc25e13dd2658a717ec7ce7813c97bd54ecde1aa8db8d4af530627eb`
+- Artifact sha256: `c40ba1e3bb4d0cec3ef39258e8d306faf45d12e568b063378f58ae1c2ac46adf`
+- Freshness artifact hash: `c40ba1e3bb4d0cec3ef39258e8d306faf45d12e568b063378f58ae1c2ac46adf`
+- Freshness source hash: `a712d5e71017cdea1962a222fdebd1b04bd40015555cb06532af38d0ade3c793`
+- Source aggregate hash (module path + module sha256): `d3676cad161f1c8ff5c0cf1040e1a275fb1257ac68b9158942726ba04fff1ef5`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `21`
+- Module count: `24`
 
 ## Module Summary
 
@@ -19,7 +19,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/parse.gc` | 389 | 17882 | 32 | `c703e7343f2d871a` |
 | `selfhost/parse_core_v1.gc` | 184 | 8297 | 9 | `043012c45aa0e0f3` |
 | `selfhost/canon.gc` | 496 | 20780 | 59 | `b15225e443e83bbb` |
-| `selfhost/printer.gc` | 510 | 21131 | 44 | `425954a350839a13` |
+| `selfhost/printer/00_core_single_line.gc` | 208 | 7799 | 23 | `b3830b4d2e39fb31` |
+| `selfhost/printer/01_single_line_list.gc` | 38 | 1452 | 3 | `5f1d744a14a38286` |
+| `selfhost/printer/02_fmt_structured.gc` | 131 | 6260 | 8 | `bbe116ae8dc10b8b` |
+| `selfhost/printer/03_fmt_list_module.gc` | 133 | 5620 | 10 | `de51e99e34b710f5` |
 | `selfhost/hash.gc` | 28 | 1055 | 5 | `54f123181935d454` |
 | `selfhost/tool_coreform_v1.gc` | 28 | 1101 | 4 | `cc8247e0a315fff3` |
 | `selfhost/cli_coreform_v1.gc` | 429 | 18040 | 42 | `f405f69443475c39` |
@@ -43,7 +46,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/parse.gc`: `selfhost/parse::error`, `selfhost/parse::is-error`, `selfhost/parse::SYM_QUOTE`, `selfhost/parse::byte`, `selfhost/parse::is-ws?`, `selfhost/parse::is-delim?`, `selfhost/parse::skip-ws-and-comments`, `selfhost/parse::skip-comment`
 - `selfhost/parse_core_v1.gc`: `selfhost/parse::parse-symbol-or-int`, `selfhost/parse::parse-symbol`, `selfhost/parse::parse-list`, `selfhost/parse::parse-list2`, `selfhost/parse::parse-vector`, `selfhost/parse::parse-map`, `selfhost/parse::parse-term`, `selfhost/parse::parse-module`
 - `selfhost/canon.gc`: `selfhost/canon::is-error`, `selfhost/canon::bad-form`, `selfhost/canon::type-error`, `selfhost/canon::tag`, `selfhost/canon::SYM_QUOTE`, `selfhost/canon::SYM_DEF`, `selfhost/canon::SYM_FN`, `selfhost/canon::SYM_IF`
-- `selfhost/printer.gc`: `selfhost/printer::is-error`, `selfhost/printer::tag`, `selfhost/printer::INDENT`, `selfhost/printer::MAX_WIDTH`, `selfhost/printer::spaces`, `selfhost/printer::list-rev`, `selfhost/printer::list-rev2`, `selfhost/printer::append-lines-to-rev`
+- `selfhost/printer/00_core_single_line.gc`: `selfhost/printer::is-error`, `selfhost/printer::tag`, `selfhost/printer::INDENT`, `selfhost/printer::MAX_WIDTH`, `selfhost/printer::spaces`, `selfhost/printer::list-rev`, `selfhost/printer::list-rev2`, `selfhost/printer::append-lines-to-rev`
+- `selfhost/printer/01_single_line_list.gc`: `selfhost/printer::single-line-list`, `selfhost/printer::vec-single-lines`, `selfhost/printer::vec-single-lines2`
+- `selfhost/printer/02_fmt_structured.gc`: `selfhost/printer::fmt-term`, `selfhost/printer::fmt-term2`, `selfhost/printer::fmt-vector`, `selfhost/printer::fmt-vector2`, `selfhost/printer::fmt-map`, `selfhost/printer::fmt-map2`, `selfhost/printer::fmt-map-entry`, `selfhost/printer::fmt-map-entry-multiline`
+- `selfhost/printer/03_fmt_list_module.gc`: `selfhost/printer::fmt-list`, `selfhost/printer::fmt-list-items`, `selfhost/printer::fmt-list-headless`, `selfhost/printer::fmt-list-headed`, `selfhost/printer::list-head-count`, `selfhost/printer::list-first-line`, `selfhost/printer::fmt-list-tail`, `selfhost/printer::print-term`
 - `selfhost/hash.gc`: `selfhost/hash::is-error`, `selfhost/hash::PREFIX_TERM`, `selfhost/hash::PREFIX_MODULE`, `selfhost/hash::hash-term`, `selfhost/hash::hash-module`
 - `selfhost/tool_coreform_v1.gc`: `selfhost/tool::is-error`, `selfhost/tool::fmt-module`, `selfhost/tool::hash-module-src`, `selfhost/tool::hash-src-with-kind`
 - `selfhost/cli_coreform_v1.gc`: `core/cli::is-error`, `core/cli::sym?`, `core/cli::vec?`, `core/cli::map?`, `core/cli::pair?`, `core/cli::str?`, `core/cli::bool?`, `core/cli::int?`

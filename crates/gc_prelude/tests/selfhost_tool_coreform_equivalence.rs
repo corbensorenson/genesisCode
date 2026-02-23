@@ -2,20 +2,43 @@ use gc_coreform::{canonicalize_module, parse_module};
 use gc_kernel::{EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
+const PRINTER_MODULES: [&str; 4] = [
+    "selfhost/printer/00_core_single_line.gc",
+    "selfhost/printer/01_single_line_list.gc",
+    "selfhost/printer/02_fmt_structured.gc",
+    "selfhost/printer/03_fmt_list_module.gc",
+];
+
+fn repo_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("canonical repo root")
+}
+
+fn selfhost_printer_src(root: &std::path::Path) -> String {
+    let mut out = String::new();
+    for module in PRINTER_MODULES {
+        let src = std::fs::read_to_string(root.join(module))
+            .unwrap_or_else(|e| panic!("read {}: {e}", module));
+        out.push_str(&src);
+        out.push('\n');
+    }
+    out
+}
+
 #[test]
 fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
-    let parse_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/parse.gc");
-    let printer_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/printer.gc");
-    let canon_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/canon.gc");
-    let hash_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/hash.gc");
-    let tool_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/tool_coreform_v1.gc");
+    let root = repo_root();
+    let parse_path = root.join("selfhost/parse.gc");
+    let parse_core_path = root.join("selfhost/parse_core_v1.gc");
+    let canon_path = root.join("selfhost/canon.gc");
+    let hash_path = root.join("selfhost/hash.gc");
+    let tool_path = root.join("selfhost/tool_coreform_v1.gc");
 
     let parse_src = std::fs::read_to_string(&parse_path).expect("read parse");
-    let printer_src = std::fs::read_to_string(&printer_path).expect("read printer");
+    let parse_core_src = std::fs::read_to_string(&parse_core_path).expect("read parse_core");
+    let printer_src = selfhost_printer_src(&root);
     let canon_src = std::fs::read_to_string(&canon_path).expect("read canon");
     let hash_src = std::fs::read_to_string(&hash_path).expect("read hash");
     let tool_src = std::fs::read_to_string(&tool_path).expect("read tool");
@@ -33,6 +56,7 @@ fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
     let src = format!(
         r#"
 {parse}
+{parse_core}
 {printer}
 {canon}
 {hash}
@@ -51,6 +75,7 @@ fn selfhost_coreform_tool_fmt_and_hash_match_rust_bootstrap_api() {
         hash = hash_src,
         tool = tool_src,
         s = src_escaped,
+        parse_core = parse_core_src,
     );
 
     let forms = canonicalize_module(parse_module(&src).expect("parse")).expect("canon");

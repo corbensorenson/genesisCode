@@ -74,6 +74,12 @@ Contract:
 
 This contract is the canonical boundary for feature-matrix selfhost claims and release readiness.
 
+Full-selfhost closure profile:
+- `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md` defines the explicit remaining exceptions,
+  closure path, and gate contract.
+- `scripts/check_full_selfhost_cutover_profile.sh` enforces that contract and emits
+  `.genesis/perf/full_selfhost_cutover_profile_report.json`.
+
 ## Trust Boundaries
 
 ### TCB-A: Pure Kernel (must stay tiny)
@@ -156,7 +162,8 @@ CI enforcement:
   - Strict mode (`--strict`) scans production `crates/*/src/**/*.rs` and excludes benchmark-only
     crate `crates/gc_runtime_bench/*`; default diff mode (`--diff`) remains optimized for local iteration.
 - `scripts/check_prelude_capability_coverage.sh` fails when a shipped
-  `prelude/modules/10_gfx.gc`, `prelude/modules/11_gpu_compute.gc`, or
+  `prelude/modules/10_gfx_00_gpu_scene.gc` (plus split gfx module siblings),
+  `prelude/modules/11_gpu_compute.gc`, or
   `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by
   `crates/gc_effects/src/runner_capability_dispatch.rs`.
 

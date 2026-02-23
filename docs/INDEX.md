@@ -62,6 +62,7 @@ This is the canonical entrypoint for project documentation.
   - `docs/spec/WASM.md`
   - `docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md`
   - `docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md`
+  - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
   - `docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`
 - VCS/pkg/registry:
   - `docs/spec/PATCH_SCHEMA.md`

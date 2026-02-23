@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use gc_coreform::{
     Term, canonicalize_form, canonicalize_module, parse_module, parse_term, print_module,
     print_term,
@@ -7,16 +5,37 @@ use gc_coreform::{
 use gc_kernel::{Apply, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
+const PRINTER_MODULES: [&str; 4] = [
+    "selfhost/printer/00_core_single_line.gc",
+    "selfhost/printer/01_single_line_list.gc",
+    "selfhost/printer/02_fmt_structured.gc",
+    "selfhost/printer/03_fmt_list_module.gc",
+];
+
+fn selfhost_printer_src() -> String {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("canonical repo root");
+    let mut out = String::new();
+    for module in PRINTER_MODULES {
+        let src = std::fs::read_to_string(root.join(module))
+            .unwrap_or_else(|e| panic!("read {}: {e}", module));
+        out.push_str(&src);
+        out.push('\n');
+    }
+    out
+}
+
 #[test]
 fn selfhost_printer_matches_rust_canonical_printer_for_terms_and_modules() {
-    let printer_path = Path::new("/Users/corbensorenson/Documents/genesisCode/selfhost/printer.gc");
-    let src = std::fs::read_to_string(printer_path).expect("read selfhost/printer.gc");
+    let src = selfhost_printer_src();
 
     let raw_forms = parse_module(&src).unwrap();
     for (i, f) in raw_forms.iter().enumerate() {
         if let Err(e) = canonicalize_form(f.clone()) {
             panic!(
-                "selfhost/printer.gc canonicalize failed at form {i}: {e}\nform={}",
+                "selfhost printer module canonicalize failed at form {i}: {e}\nform={}",
                 print_term(f)
             );
         }

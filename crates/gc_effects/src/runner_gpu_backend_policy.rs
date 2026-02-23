@@ -5,6 +5,9 @@ use crate::policy::OpPolicy;
 pub(crate) const GPU_BACKEND_FIRST_PARTY: &str = "first-party-runtime";
 pub(crate) const GPU_BACKEND_DEVICE_RUNTIME: &str = "device-runtime";
 pub(crate) const GPU_BACKEND_DEVICE_RUNTIME_FULL: &str = "device-runtime-full";
+const GPU_BACKEND_POLICY_ALLOW_FALLBACK: &str = "allow-fallback";
+const GPU_BACKEND_POLICY_DEV_ALLOW_FALLBACK: &str = "dev-allow-fallback";
+const GPU_BACKEND_POLICY_REQUIRE_DEVICE: &str = "require-device";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GpuBackendKind {
@@ -50,19 +53,40 @@ pub(crate) fn gpu_backend_kind_label(kind: GpuBackendKind) -> &'static str {
 }
 
 pub(crate) fn gpu_backend_fallback_policy(pol: Option<&OpPolicy>) -> GpuBackendFallbackPolicy {
-    let raw = pol
-        .and_then(|p| {
-            p.extra
-                .get("gpu_backend_policy")
-                .or_else(|| p.extra.get("backend_policy"))
-                .and_then(|v| v.as_str())
-        })
-        .unwrap_or("allow-fallback")
-        .trim()
-        .to_ascii_lowercase();
-    match raw.as_str() {
-        "require-device" => GpuBackendFallbackPolicy::RequireDevice,
+    if let Some(raw) = pol.and_then(|p| {
+        p.extra
+            .get("gpu_backend_policy")
+            .or_else(|| p.extra.get("backend_policy"))
+            .and_then(|v| v.as_str())
+    }) {
+        return parse_gpu_backend_fallback_policy(raw);
+    }
+    default_gpu_backend_fallback_policy()
+}
+
+fn parse_gpu_backend_fallback_policy(raw: &str) -> GpuBackendFallbackPolicy {
+    let normalized = raw.trim().to_ascii_lowercase();
+    match normalized.as_str() {
+        GPU_BACKEND_POLICY_REQUIRE_DEVICE => GpuBackendFallbackPolicy::RequireDevice,
+        GPU_BACKEND_POLICY_DEV_ALLOW_FALLBACK | GPU_BACKEND_POLICY_ALLOW_FALLBACK => {
+            GpuBackendFallbackPolicy::AllowFallback
+        }
         _ => GpuBackendFallbackPolicy::AllowFallback,
+    }
+}
+
+fn default_gpu_backend_fallback_policy() -> GpuBackendFallbackPolicy {
+    default_gpu_backend_fallback_policy_from_env(
+        std::env::var("GENESIS_GPU_BACKEND_POLICY_DEFAULT").ok().as_deref(),
+    )
+}
+
+fn default_gpu_backend_fallback_policy_from_env(
+    raw: Option<&str>,
+) -> GpuBackendFallbackPolicy {
+    match raw {
+        Some(value) => parse_gpu_backend_fallback_policy(value),
+        None => GpuBackendFallbackPolicy::AllowFallback,
     }
 }
 
@@ -133,4 +157,44 @@ pub(crate) fn inject_backend_fallback_metadata(
         Term::Str(reason.to_string()),
     );
     Term::Map(map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        GpuBackendFallbackPolicy, default_gpu_backend_fallback_policy_from_env,
+        parse_gpu_backend_fallback_policy,
+    };
+
+    #[test]
+    fn parse_gpu_backend_fallback_policy_accepts_release_and_dev_variants() {
+        assert_eq!(
+            parse_gpu_backend_fallback_policy("require-device"),
+            GpuBackendFallbackPolicy::RequireDevice
+        );
+        assert_eq!(
+            parse_gpu_backend_fallback_policy("allow-fallback"),
+            GpuBackendFallbackPolicy::AllowFallback
+        );
+        assert_eq!(
+            parse_gpu_backend_fallback_policy("dev-allow-fallback"),
+            GpuBackendFallbackPolicy::AllowFallback
+        );
+    }
+
+    #[test]
+    fn default_gpu_backend_policy_is_fail_open_without_override() {
+        assert_eq!(
+            default_gpu_backend_fallback_policy_from_env(None),
+            GpuBackendFallbackPolicy::AllowFallback
+        );
+    }
+
+    #[test]
+    fn default_gpu_backend_policy_can_fail_closed_via_override() {
+        assert_eq!(
+            default_gpu_backend_fallback_policy_from_env(Some("require-device")),
+            GpuBackendFallbackPolicy::RequireDevice
+        );
+    }
 }
