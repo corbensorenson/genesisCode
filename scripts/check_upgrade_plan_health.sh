@@ -27,7 +27,7 @@ HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_pl
 # reflects full strict scope on clean runs.
 PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-1050000}"
 HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
-HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-1}"
+HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-}"
 HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-auto}"
 HEALTH_WARMUP_REPORT="${GENESIS_HEALTH_WARMUP_REPORT:-.genesis/perf/upgrade_plan_health_warmup_${PROFILE}.json}"
 if [[ "${CI:-}" == "true" ]]; then
@@ -39,6 +39,9 @@ ENFORCE_GATES="${GENESIS_HEALTH_ENFORCE_GATES:-$ENFORCE_GATES_DEFAULT}"
 HEALTH_AUTO_RECLAIM="${GENESIS_HEALTH_AUTO_RECLAIM:-1}"
 HEALTH_RECLAIM_MAX_BUILD_KB="${GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB:-8388608}"
 HEALTH_RECLAIM_MAX_AGE_DAYS="${GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS:-7}"
+HEALTH_MIN_FREE_KB="${GENESIS_HEALTH_MIN_FREE_KB:-1048576}"
+HEALTH_PARALLEL_CARGO_MIN_FREE_KB="${GENESIS_HEALTH_PARALLEL_CARGO_MIN_FREE_KB:-2097152}"
+HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK="${GENESIS_HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK:-1}"
 GPU_DEVICE_CONFORMANCE=""
 NON_CARGO_PARTITION=()
 CARGO_PARTITION=()
@@ -58,6 +61,10 @@ if count < 1:
     count = 1
 print(count)
 PY
+}
+
+free_kb_root() {
+  df -Pk "$ROOT_DIR" | awk 'NR==2 {print $4}'
 }
 
 default_health_shards_for_profile() {
@@ -84,7 +91,9 @@ default_health_shards_for_profile() {
       fi
       ;;
     prepush-standard)
-      if (( cpu_count >= 4 )); then
+      if (( cpu_count >= 8 )); then
+        echo "6"
+      elif (( cpu_count >= 4 )); then
         echo "4"
       elif (( cpu_count >= 2 )); then
         echo "2"
@@ -105,6 +114,24 @@ default_health_shards_for_profile() {
       ;;
     full-selfhost-cutover)
       if (( cpu_count >= 4 )); then
+        echo "2"
+      else
+        echo "1"
+      fi
+      ;;
+    *)
+      echo "1"
+      ;;
+  esac
+}
+
+default_health_cargo_gate_shards_for_profile() {
+  local profile="$1"
+  local cpu_count
+  cpu_count="$(detect_parallelism)"
+  case "$profile" in
+    prepush-standard|release-full)
+      if (( cpu_count >= 8 )); then
         echo "2"
       else
         echo "1"
@@ -423,6 +450,27 @@ run_health_proactive_reclaim() {
     --max-build-kb "$HEALTH_RECLAIM_MAX_BUILD_KB" \
     --max-age-days "$HEALTH_RECLAIM_MAX_AGE_DAYS" \
     --preserve-dir "$HEALTH_CARGO_TARGET_DIR"
+
+  local free_kb
+  free_kb="$(free_kb_root)"
+  if (( free_kb < HEALTH_MIN_FREE_KB )) && [[ "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" == "1" ]]; then
+    echo "upgrade-plan-health: low disk headroom (${free_kb}KB < ${HEALTH_MIN_FREE_KB}KB); running aggressive reclaim"
+    bash scripts/reclaim_build_space.sh \
+      --aggressive \
+      --max-build-kb "$HEALTH_RECLAIM_MAX_BUILD_KB" \
+      --max-age-days "$HEALTH_RECLAIM_MAX_AGE_DAYS"
+    free_kb="$(free_kb_root)"
+  fi
+
+  if (( free_kb < HEALTH_MIN_FREE_KB )); then
+    echo "upgrade-plan-health: insufficient free disk after reclaim (${free_kb}KB < ${HEALTH_MIN_FREE_KB}KB). Free disk or lower GENESIS_HEALTH_MIN_FREE_KB." >&2
+    return 1
+  fi
+
+  if (( HEALTH_CARGO_GATE_SHARDS > 1 )) && (( free_kb < HEALTH_PARALLEL_CARGO_MIN_FREE_KB )); then
+    echo "upgrade-plan-health: downshifting cargo gate shards ${HEALTH_CARGO_GATE_SHARDS}->1 (free_kb=${free_kb} < ${HEALTH_PARALLEL_CARGO_MIN_FREE_KB})"
+    HEALTH_CARGO_GATE_SHARDS=1
+  fi
 }
 
 usage() {
@@ -487,6 +535,18 @@ if [[ ! "$HEALTH_RECLAIM_MAX_AGE_DAYS" =~ ^[0-9]+$ ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS must be numeric" >&2
   exit 2
 fi
+if [[ ! "$HEALTH_MIN_FREE_KB" =~ ^[0-9]+$ || "$HEALTH_MIN_FREE_KB" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_MIN_FREE_KB must be a positive integer" >&2
+  exit 2
+fi
+if [[ ! "$HEALTH_PARALLEL_CARGO_MIN_FREE_KB" =~ ^[0-9]+$ || "$HEALTH_PARALLEL_CARGO_MIN_FREE_KB" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PARALLEL_CARGO_MIN_FREE_KB must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" != "0" && "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK must be 0 or 1" >&2
+  exit 2
+fi
 if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE must be 0 or 1" >&2
   exit 2
@@ -534,6 +594,10 @@ if [[ ! "$HEALTH_SHARDS" =~ ^[0-9]+$ || "$HEALTH_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_SHARDS must be a positive integer" >&2
   exit 2
 fi
+DEFAULT_HEALTH_CARGO_GATE_SHARDS="$(default_health_cargo_gate_shards_for_profile "$PROFILE")"
+if [[ -z "$HEALTH_CARGO_GATE_SHARDS" ]]; then
+  HEALTH_CARGO_GATE_SHARDS="$DEFAULT_HEALTH_CARGO_GATE_SHARDS"
+fi
 if [[ ! "$HEALTH_CARGO_GATE_SHARDS" =~ ^[0-9]+$ || "$HEALTH_CARGO_GATE_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_CARGO_GATE_SHARDS must be a positive integer" >&2
   exit 2
@@ -547,11 +611,6 @@ if [[ "$HEALTH_WARM_CARGO_CACHE" == "auto" ]]; then
 fi
 
 PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"
-if [[ -z "${GENESIS_HEALTH_PROFILE_SHARDS:-}" && ( "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" ) ]]; then
-  # Profile gates include multiple cargo-heavy commands. Serial execution avoids lock contention
-  # and redundant recompiles while preserving full semantic coverage.
-  PROFILE_SHARDS="1"
-fi
 if [[ ! "$PROFILE_SHARDS" =~ ^[0-9]+$ || "$PROFILE_SHARDS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PROFILE_SHARDS must be a positive integer" >&2
   exit 2
@@ -748,7 +807,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=(
-      "GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_TARGET_DIR=$ROOT_DIR/.genesis/build/runtime_backend_feature_matrix GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=1 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=0 bash scripts/check_runtime_backend_feature_matrix.sh"
+      "GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB=1048576 GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=1 GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM=0 bash scripts/check_runtime_backend_feature_matrix.sh"
     )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_reference_workflows.sh")
@@ -757,8 +816,8 @@ case "$PROFILE" in
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
-    PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
-    PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
+    PROFILE_GATES+=("GENESIS_BUDGET_WARMUPS=0 GENESIS_BUDGET_REPEATS=1 bash scripts/check_perf_budgets.sh")
+    PROFILE_GATES+=("GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM=1 GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST=1 GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE=1 GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK=1 GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=1 GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK=0 GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV=0 GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK=0 GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV=0 bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")
     PROFILE_GATES+=("bash scripts/check_gfx_runtime_profile.sh")

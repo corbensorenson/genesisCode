@@ -1,4 +1,4 @@
-# GenesisCode Feature Matrix (Red-Team Baseline)
+# GenesisCode Feature Matrix (Audit Date: 2026-02-23)
 
 Last updated: 2026-02-23  
 Scope: first-class language/runtime/toolchain capabilities, not third-party ecosystem breadth.
@@ -31,21 +31,13 @@ Legend:
 
 Known GenesisCode gaps
 - P0.1 - strict prepush lane runtime is too slow for AI-first iteration loops.
-- P1.1 - high-churn Rust hotspots remain near decomposition caps in core paths.
-- P1.2 - largest selfhost/prelude `.gc` modules still need further decomposition for AI edit locality.
 
-Primary evidence paths
+Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/WASI.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GCPM_BUNDLE_v0.1.md`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md`
 - `/Users/corbensorenson/Documents/genesisCode/scripts/check_upgrade_plan_health.sh`
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_full_selfhost_cutover_profile.sh`
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_production_cli_help_surface.sh`
-- `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_gpu_backend_policy.rs`
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_task_concurrency_stress.sh`
-- `/Users/corbensorenson/Documents/genesisCode/scripts/check_host_bridge_fault_injection.sh`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/upgrade_plan_health_profile_report.json`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/source_decomposition_progress_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

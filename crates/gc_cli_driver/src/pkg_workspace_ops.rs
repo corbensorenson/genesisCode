@@ -407,3 +407,7 @@ fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(tmp, path)
 }
+
+fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    pkg_workspace_ops_env::write_if_same_or_new(path, bytes)
+}

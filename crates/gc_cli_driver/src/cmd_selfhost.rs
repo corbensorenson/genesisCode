@@ -226,4 +226,19 @@ pub(super) fn cmd_selfhost_dashboard(
 
 #[path = "cmd_selfhost_artifact.rs"]
 mod cmd_selfhost_artifact;
-pub(super) use cmd_selfhost_artifact::cmd_selfhost_artifact;
+
+pub(super) fn cmd_selfhost_artifact(
+    cli: &Cli,
+    out: &Path,
+    min_stage2_supported_modules: u64,
+    min_stage2_validated_modules: u64,
+    recover_missing_artifact: bool,
+) -> Result<CmdOut, CliError> {
+    cmd_selfhost_artifact::cmd_selfhost_artifact(
+        cli,
+        out,
+        min_stage2_supported_modules,
+        min_stage2_validated_modules,
+        recover_missing_artifact,
+    )
+}

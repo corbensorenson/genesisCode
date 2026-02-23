@@ -7,16 +7,24 @@ use gc_kernel::{Apply, Env, EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
 fn load_selfhost_parse(env: &mut Env, ctx: &mut EvalCtx) {
-    let parse_path = Path::new("/Users/corbensorenson/Documents/genesisCode/selfhost/parse.gc");
-    let src = std::fs::read_to_string(parse_path).expect("read selfhost/parse.gc");
-    let raw_forms = parse_module(&src).expect("parse selfhost/parse.gc");
-    for (i, f) in raw_forms.iter().enumerate() {
-        if let Err(e) = canonicalize_form(f.clone()) {
-            panic!("selfhost/parse.gc canonicalize failed at form {i}: {e}");
+    let parse_modules = [
+        "/Users/corbensorenson/Documents/genesisCode/selfhost/parse.gc",
+        "/Users/corbensorenson/Documents/genesisCode/selfhost/parse_core_v1.gc",
+    ];
+    for module_path in parse_modules {
+        let parse_path = Path::new(module_path);
+        let src =
+            std::fs::read_to_string(parse_path).unwrap_or_else(|e| panic!("read {module_path}: {e}"));
+        let raw_forms = parse_module(&src).unwrap_or_else(|e| panic!("parse {module_path}: {e}"));
+        for (i, f) in raw_forms.iter().enumerate() {
+            if let Err(e) = canonicalize_form(f.clone()) {
+                panic!("{module_path} canonicalize failed at form {i}: {e}");
+            }
         }
+        let forms =
+            canonicalize_module(raw_forms).unwrap_or_else(|e| panic!("canonicalize {module_path}: {e}"));
+        let _ = eval_module(ctx, env, &forms).unwrap_or_else(|e| panic!("eval {module_path}: {e}"));
     }
-    let forms = canonicalize_module(raw_forms).expect("canonicalize selfhost/parse.gc");
-    let _ = eval_module(ctx, env, &forms).expect("eval selfhost/parse.gc");
 }
 
 fn value_to_term(v: &Value) -> Option<Term> {

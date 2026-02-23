@@ -376,7 +376,7 @@ pub(super) fn resolve_env_runtime_backend_profile(
     })
 }
 
-fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub(super) fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if path.is_file() {
         let old = std::fs::read(path)?;
         if old == bytes {

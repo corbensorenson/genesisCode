@@ -1,6 +1,6 @@
 use super::*;
 
-fn make_genesis() -> Value {
+pub(super) fn make_genesis() -> Value {
     let empty_overrides = Value::Map(BTreeMap::new());
     // Avoid any fallible/alloc-heavy path during runtime init: construct the
     // partially-applied native function directly.
@@ -78,19 +78,19 @@ fn hex(bytes: &[u8]) -> String {
 
 // Native function implementations
 
-fn nf_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let msg = value_to_data_term(&args[0])?;
     Ok(mk_unhandled(ctx, msg))
 }
 
-fn nf_is_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_is_unhandled(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     Ok(Value::Data(Term::Bool(
         sealed_matches(&args[0], p.unhandled).is_some(),
     )))
 }
 
-fn nf_effect_wrap(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_wrap(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     Ok(Value::Sealed {
         token: p.effect,
@@ -98,14 +98,14 @@ fn nf_effect_wrap(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelEr
     })
 }
 
-fn nf_is_effect(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_is_effect(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     Ok(Value::Data(Term::Bool(
         sealed_matches(&args[0], p.effect).is_some(),
     )))
 }
 
-fn nf_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     Ok(Value::Sealed {
         token: p.error,
@@ -113,14 +113,14 @@ fn nf_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     })
 }
 
-fn nf_is_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_is_error(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     Ok(Value::Data(Term::Bool(
         sealed_matches(&args[0], p.error).is_some(),
     )))
 }
 
-fn nf_unerror(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_unerror(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     if let Some(payload) = sealed_matches(&args[0], p.error) {
         Ok(payload.clone())
@@ -129,7 +129,7 @@ fn nf_unerror(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError>
     }
 }
 
-fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let handler = args[0].clone();
     if !matches!(
         handler,
@@ -158,7 +158,7 @@ fn nf_contract_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Kernel
     })))
 }
 
-fn nf_contract_extend(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_extend(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let base = match &args[0] {
         Value::Contract(c) => c.clone(),
         _ => return Ok(mk_error(ctx, "extend base must be a contract")),
@@ -222,7 +222,7 @@ fn merge_meta(base: &Value, plus: &Value) -> Value {
     }
 }
 
-fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let overrides = match &args[0] {
         Value::Map(m) => m,
@@ -250,7 +250,7 @@ fn nf_internal_override_handler(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<V
     Ok(mk_unhandled(ctx, msg_term))
 }
 
-fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let mut cur = match &args[0] {
         Value::Contract(c) => c.clone(),
@@ -274,7 +274,7 @@ fn nf_contract_dispatch(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ke
     }
 }
 
-fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let mut cur = match &args[0] {
         Value::Contract(c) => c.clone(),
@@ -358,14 +358,14 @@ fn nf_contract_explain(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Ker
     Ok(Value::Data(trace))
 }
 
-fn nf_contract_meta(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_meta(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     match &args[0] {
         Value::Contract(c) => Ok(c.meta.clone()),
         _ => Ok(mk_error(ctx, "meta expects a contract")),
     }
 }
 
-fn nf_contract_proto(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_proto(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     match &args[0] {
         Value::Contract(c) => match &c.proto {
             Some(p) => Ok(Value::Contract(p.clone())),
@@ -375,14 +375,14 @@ fn nf_contract_proto(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, Kerne
     }
 }
 
-fn nf_contract_shape(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_contract_shape(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     match &args[0] {
         Value::Contract(c) => Ok(Value::Data(Term::Str(hex(&c.shape_id)))),
         _ => Ok(mk_error(ctx, "shape expects a contract")),
     }
 }
 
-fn nf_msg_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_msg_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let op = match value_to_data_term(&args[0])? {
         Term::Symbol(s) => Term::Symbol(s),
         _ => return Ok(mk_error(ctx, "msg op must be a symbol datum")),
@@ -395,7 +395,7 @@ fn nf_msg_make(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError
     ])))
 }
 
-fn nf_msg_op(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_msg_op(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let msg = match &args[0] {
         Value::Data(t) => t.clone(),
         _ => return Ok(mk_error(ctx, "msg must be a datum")),
@@ -407,7 +407,7 @@ fn nf_msg_op(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> 
     Ok(Value::Data(op))
 }
 
-fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let msg = match &args[0] {
         Value::Data(t) => t.clone(),
         _ => return Ok(mk_error(ctx, "msg must be a datum")),
@@ -419,13 +419,13 @@ fn nf_msg_payload(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelEr
     Ok(Value::Data(payload))
 }
 
-fn nf_effect_pure(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_pure(_ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     Ok(Value::EffectProgram(Box::new(EffectProgram::Pure(
         Box::new(args[0].clone()),
     ))))
 }
 
-fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_perform(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let p = proto(ctx);
     let op = match value_to_data_term(&args[0])? {
         Term::Symbol(s) => s,
@@ -503,7 +503,7 @@ fn bind_impl(ctx: &mut EvalCtx, program: Value, f: Value) -> Result<Value, Kerne
     }
 }
 
-fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let f = args[1].clone();
     if !matches!(
         f,
@@ -514,7 +514,7 @@ fn nf_effect_bind(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelEr
     bind_impl(ctx, args[0].clone(), f)
 }
 
-fn nf_effect_bind_cont(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
+pub(super) fn nf_effect_bind_cont(ctx: &mut EvalCtx, args: Vec<Value>) -> Result<Value, KernelError> {
     let k = args[0].clone();
     let f = args[1].clone();
     let resp = args[2].clone();

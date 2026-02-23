@@ -1,4 +1,8 @@
 use super::*;
+#[path = "cmd_vcs_hash.rs"]
+mod cmd_vcs_hash;
+#[path = "cmd_vcs_render.rs"]
+mod cmd_vcs_render;
 
 pub(super) fn cmd_vcs(
     cli: &Cli,
@@ -6,143 +10,8 @@ pub(super) fn cmd_vcs(
     log: Option<&Path>,
     cmd: &VcsCmd,
 ) -> Result<CmdOut, CliError> {
-    if let VcsCmd::Hash { input, engine } = cmd {
-        let engine = resolved_engine(cli, "vcs hash", *engine)?;
-        let src = std::fs::read_to_string(input)
-            .with_context(|| format!("read {}", input.display()))
-            .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
-        let (hash_hex, hk) = if engine == FmtEngine::Selfhost {
-            let mut ctx = EvalCtx::with_step_limit(None);
-            ctx.set_mem_limits(resolved_mem_limits(cli));
-            let prelude = build_prelude(&mut ctx);
-            let mut env = prelude.env;
-            load_runtime_selfhost_toolchain(cli, &mut ctx, &mut env)?;
-
-            let f = env.get("core/cli::hash-src-with-kind").ok_or_else(|| {
-                cli_err(
-                    EX_INTERNAL,
-                    "selfhost/missing",
-                    "missing binding core/cli::hash-src-with-kind",
-                )
-            })?;
-
-            ctx.steps = 0;
-            ctx.step_limit = resolved_step_limit(cli).resolve();
-            let r = f
-                .apply(&mut ctx, Value::Data(Term::Str(src.clone())))
-                .map_err(|e| {
-                    cli_err(
-                        EX_EVAL,
-                        "eval/error",
-                        format!("selfhost vcs hash failed: {e}"),
-                    )
-                })?;
-            if let Some((code, message, payload)) = extract_protocol_error(&ctx, &r) {
-                return Err(CliError {
-                    exit_code: EX_PARSE,
-                    json: JsonError {
-                        code: "selfhost/error",
-                        message: format!("{code}: {message}"),
-                        context: payload.map(serde_json::Value::String),
-                    },
-                });
-            }
-            let (hash_hex, hk) = match r {
-                Value::Data(Term::Map(m)) => {
-                    let hash_hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
-                        Some(Term::Str(s)) => s.clone(),
-                        _ => {
-                            return Err(cli_err(
-                                EX_INTERNAL,
-                                "selfhost/bad-return",
-                                "selfhost vcs hash return missing :hash string",
-                            ));
-                        }
-                    };
-                    let hk = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-                        Some(Term::Str(s)) if s == "term" || s == "module" => s.clone(),
-                        _ => {
-                            return Err(cli_err(
-                                EX_INTERNAL,
-                                "selfhost/bad-return",
-                                "selfhost vcs hash return missing :kind string",
-                            ));
-                        }
-                    };
-                    (hash_hex, hk)
-                }
-                Value::Map(m) => {
-                    let hash_hex = match m.get(&TermOrdKey(Term::symbol(":hash"))) {
-                        Some(Value::Data(Term::Str(s))) => s.clone(),
-                        _ => {
-                            return Err(cli_err(
-                                EX_INTERNAL,
-                                "selfhost/bad-return",
-                                "selfhost vcs hash return missing :hash string",
-                            ));
-                        }
-                    };
-                    let hk = match m.get(&TermOrdKey(Term::symbol(":kind"))) {
-                        Some(Value::Data(Term::Str(s))) if s == "term" || s == "module" => {
-                            s.clone()
-                        }
-                        _ => {
-                            return Err(cli_err(
-                                EX_INTERNAL,
-                                "selfhost/bad-return",
-                                "selfhost vcs hash return missing :kind string",
-                            ));
-                        }
-                    };
-                    (hash_hex, hk)
-                }
-                _ => {
-                    return Err(cli_err(
-                        EX_INTERNAL,
-                        "selfhost/bad-return",
-                        format!("selfhost vcs hash returned non-map: {}", r.debug_repr()),
-                    ));
-                }
-            };
-            (hash_hex, hk)
-        } else {
-            let (h, hk) = match parse_term(&src) {
-                Ok(t) => (gc_coreform::hash_term(&t), "term"),
-                Err(_) => {
-                    let forms = parse_module(&src)
-                        .map_err(|e| cli_err(EX_PARSE, "parse/coreform", e.to_string()))?;
-                    let forms = canonicalize_module(forms)
-                        .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
-                    (hash_module(&forms), "module")
-                }
-            };
-            (gc_vcs::bytes32_to_hex(&h), hk.to_string())
-        };
-
-        let env = JsonEnvelope {
-            ok: true,
-            kind: vcs_contract::kind(cmd),
-            data: Some(serde_json::json!({
-                "in": input.display().to_string(),
-                // Keep legacy field for backward-compat while standardizing on `in`.
-                "input": input.display().to_string(),
-                "hash": hash_hex,
-                "hash_kind": hk,
-                "hash_format": "hex",
-                "engine": if engine == FmtEngine::Selfhost { "selfhost" } else { "rust" },
-                "selfhost_artifact": selfhost_artifact_identity_for_engine(cli, engine),
-            })),
-            error: None,
-        };
-        return Ok(CmdOut {
-            exit_code: EX_OK,
-            stdout: if cli.json {
-                String::new()
-            } else {
-                format!("{hash_hex}\n")
-            },
-            json: json_envelope_value(env)?,
-        });
+    if matches!(cmd, VcsCmd::Hash { .. }) {
+        return cmd_vcs_hash::handle_vcs_hash(cli, cmd);
     }
 
     let frontend = resolved_coreform_frontend(cli)?;
@@ -768,94 +637,14 @@ pub(super) fn cmd_vcs(
         .with_context(|| format!("write {}", log_path.display()))
         .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
 
-    let mut ok = true;
-    let mut exit_code = EX_OK;
-    if let Some(proto) = ctx.protocol
-        && let Value::Sealed { token, payload } = &r.value
-        && *token == proto.error
-    {
-        ok = false;
-        exit_code = EX_EVAL;
-        if let Value::Data(Term::Map(m)) = payload.as_ref()
-            && matches!(
-                m.get(&gc_coreform::TermOrdKey(Term::symbol(":error/code"))),
-                Some(Term::Str(s)) if s == "core/caps/denied"
-            )
-        {
-            exit_code = EX_CAPS_DENIED;
-        }
-    }
-
-    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
-
-    let map_is_conflict = |m: &std::collections::BTreeMap<TermOrdKey, Term>| {
-        let ok_false = matches!(
-            m.get(&gc_coreform::TermOrdKey(Term::symbol(":ok")))
-                .or_else(|| m.get(&gc_coreform::TermOrdKey(Term::Str(":ok".to_string())))),
-            Some(Term::Bool(false))
-        );
-        let has_conflict = m.contains_key(&gc_coreform::TermOrdKey(Term::symbol(":conflict")))
-            || m.contains_key(&gc_coreform::TermOrdKey(Term::Str(":conflict".to_string())));
-        ok_false && has_conflict
-    };
-    let value_is_conflict = match &r.value {
-        Value::Data(Term::Map(m)) => map_is_conflict(m),
-        Value::Data(Term::Str(s)) => match gc_coreform::parse_term(s) {
-            Ok(Term::Map(m)) => map_is_conflict(&m),
-            _ => false,
-        },
-        _ => false,
-    } || match gc_coreform::parse_term(&value) {
-        Ok(Term::Map(m)) => map_is_conflict(&m),
-        _ => false,
-    };
-    // Detect conflict artifact and use stable exit semantics for merge.
-    if matches!(cmd, VcsCmd::Merge3 { .. } | VcsCmd::ResolveConflict { .. }) && value_is_conflict {
-        ok = false;
-        exit_code = 3; // conflict
-    }
-
-    let stdout = if cli.json {
-        String::new()
-    } else {
-        match cmd {
-            VcsCmd::Diff { .. } => extract_vcs_patch_hash(&r.value)
-                .map(|h| format!("{h}\n"))
-                .unwrap_or_else(|| format!("{value}\n")),
-            VcsCmd::Apply { .. } => extract_vcs_snapshot_hash(&r.value)
-                .map(|h| format!("{h}\n"))
-                .unwrap_or_else(|| format!("{value}\n")),
-            VcsCmd::Blame { .. } => extract_vcs_commit_hash(&r.value)
-                .map(|h| format!("{h}\n"))
-                .unwrap_or_else(|| format!("{value}\n")),
-            _ => format!("{value}\n"),
-        }
-    };
-
-    let env = JsonEnvelope {
-        ok,
+    cmd_vcs_render::finalize_vcs_cmd_output(
+        cli,
+        cmd,
         kind,
-        data: Some(serde_json::json!({
-            "coreform_frontend": frontend_info,
-            "caps": caps.display().to_string(),
-            "log": log_path.display().to_string(),
-            "value": value,
-            "value_format": value_format,
-        })),
-        error: if ok {
-            None
-        } else {
-            Some(JsonError {
-                code: "vcs/error",
-                message: "vcs operation failed".to_string(),
-                context: None,
-            })
-        },
-    };
-
-    Ok(CmdOut {
-        exit_code,
-        stdout,
-        json: json_envelope_value(env)?,
-    })
+        frontend_info,
+        caps,
+        &log_path,
+        &ctx,
+        &r.value,
+    )
 }

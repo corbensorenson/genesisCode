@@ -6,10 +6,13 @@ use gc_prelude::build_prelude;
 fn selfhost_canon_collapses_singleton_list_forms() {
     let parse_path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/parse.gc");
+    let parse_core_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/parse_core_v1.gc");
     let canon_path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/canon.gc");
 
     let parse_src = std::fs::read_to_string(&parse_path).expect("read parse");
+    let parse_core_src = std::fs::read_to_string(&parse_core_path).expect("read parse core");
     let canon_src = std::fs::read_to_string(&canon_path).expect("read canon");
 
     // This is the regression that historically diverged between selfhost and Rust fmt: `(y)` must
@@ -27,6 +30,7 @@ fn selfhost_canon_collapses_singleton_list_forms() {
     let src = format!(
         r#"
 {parse}
+{parse_core}
 {canon}
 
 (let ((forms (selfhost/parse::parse-module "{p}")))
@@ -41,6 +45,7 @@ fn selfhost_canon_collapses_singleton_list_forms() {
         }}))))
         "#,
         parse = parse_src,
+        parse_core = parse_core_src,
         canon = canon_src,
         p = program_escaped,
     );
