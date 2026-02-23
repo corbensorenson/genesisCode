@@ -35,6 +35,7 @@ pub(super) fn cmd_pkg(
     let r = gc_effects::run(&mut ctx, &policy, prog, program_hash, toolchain)
         .map_err(|e| cli_err(EX_EVAL, "effects/run", format!("{e}")))?;
     enforce_no_legacy_semantic_fallback_in_selfhost_only(cli, "pkg", &r.log)?;
+    let contract_value = normalize_pkg_contract_value(cmd, &r.value);
 
     let log_path = log
         .map(PathBuf::from)
@@ -46,7 +47,7 @@ pub(super) fn cmd_pkg(
     let mut ok = true;
     let mut exit_code = EX_OK;
     if let Some(proto) = ctx.protocol
-        && let Value::Sealed { token, payload } = &r.value
+        && let Value::Sealed { token, payload } = &contract_value
         && *token == proto.error
     {
         ok = false;
@@ -68,13 +69,13 @@ pub(super) fn cmd_pkg(
     } else if matches!(
         cmd,
         PkgCmd::Install { .. } | PkgCmd::Verify { .. } | PkgCmd::Doctor { .. }
-    ) && let Some(false) = extract_pkg_ok_bool(&r.value)
+    ) && let Some(false) = extract_pkg_ok_bool(&contract_value)
     {
         ok = false;
         exit_code = EX_VERIFY;
     }
 
-    let (value, value_format) = render_value_for_cli(&ctx, &r.value);
+    let (value, value_format) = render_value_for_cli(&ctx, &contract_value);
     if !ok
         && exit_code == EX_EVAL
         && matches!(cmd, PkgCmd::Publish { .. })
@@ -99,13 +100,13 @@ pub(super) fn cmd_pkg(
             | PkgCmd::Qualify { .. }
             | PkgCmd::AssurancePack { .. }
             | PkgCmd::Env { .. }
-            | PkgCmd::ProfileRuntime { .. } => extract_pkg_lock_hash(&r.value)
+            | PkgCmd::ProfileRuntime { .. } => extract_pkg_lock_hash(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             PkgCmd::Init { .. }
             | PkgCmd::Add { .. }
             | PkgCmd::Lock { .. }
-            | PkgCmd::Update { .. } => extract_pkg_lock_hash(&r.value)
+            | PkgCmd::Update { .. } => extract_pkg_lock_hash(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
             PkgCmd::Install { .. } | PkgCmd::Verify { .. } => {
@@ -125,16 +126,16 @@ pub(super) fn cmd_pkg(
             PkgCmd::List { .. } | PkgCmd::Info { .. } | PkgCmd::Abi { .. } => {
                 format!("{value}\n")
             }
-            PkgCmd::Snapshot { .. } => extract_pkg_snapshot_hash(&r.value)
+            PkgCmd::Snapshot { .. } => extract_pkg_snapshot_hash(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
-            PkgCmd::Export { .. } => extract_pkg_export_bundle_hash(&r.value)
+            PkgCmd::Export { .. } => extract_pkg_export_bundle_hash(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
-            PkgCmd::Import { .. } => extract_pkg_import_root(&r.value)
+            PkgCmd::Import { .. } => extract_pkg_import_root(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| format!("{value}\n")),
-            PkgCmd::Publish { .. } => extract_pkg_publish_commit(&r.value)
+            PkgCmd::Publish { .. } => extract_pkg_publish_commit(&contract_value)
                 .map(|h| format!("{h}\n"))
                 .unwrap_or_else(|| {
                     if ok {
@@ -148,7 +149,12 @@ pub(super) fn cmd_pkg(
 
     let doctor_report = if let PkgCmd::Doctor { lock } = cmd {
         Some(pkg_doctor::build_pkg_doctor_report(
-            &ctx, &r.value, caps, lock, ok, exit_code,
+            &ctx,
+            &contract_value,
+            caps,
+            lock,
+            ok,
+            exit_code,
         ))
     } else {
         None
@@ -161,7 +167,7 @@ pub(super) fn cmd_pkg(
             exit_code = EX_VERIFY;
         }
     }
-    let ai_report = pkg_reports::build_pkg_ai_report(cmd, &r.value, caps);
+    let ai_report = pkg_reports::build_pkg_ai_report(cmd, &contract_value, caps);
 
     let mut data = serde_json::json!({
         "coreform_frontend": frontend_info,
@@ -186,7 +192,7 @@ pub(super) fn cmd_pkg(
             ok,
             exit_code,
             &r.log,
-            &r.value,
+            &contract_value,
             obj.get("report"),
             obj.get("doctor"),
         );
@@ -213,6 +219,23 @@ pub(super) fn cmd_pkg(
         stdout,
         json: json_envelope_value(env)?,
     })
+}
+
+fn normalize_pkg_contract_value(cmd: &PkgCmd, value: &Value) -> Value {
+    if !matches!(cmd, PkgCmd::Update { .. }) {
+        return value.clone();
+    }
+    let Value::Data(Term::Map(m)) = value else {
+        return value.clone();
+    };
+    let mut out = m.clone();
+    out.entry(gc_coreform::TermOrdKey(Term::symbol(":selected-count")))
+        .or_insert(Term::Int(0.into()));
+    out.entry(gc_coreform::TermOrdKey(Term::symbol(":rationale-count")))
+        .or_insert(Term::Int(0.into()));
+    out.entry(gc_coreform::TermOrdKey(Term::symbol(":rationale")))
+        .or_insert(Term::Vector(Vec::new()));
+    Value::Data(Term::Map(out))
 }
 
 fn cmd_pkg_local_workspace_ops(

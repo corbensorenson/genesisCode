@@ -135,6 +135,34 @@ pub(crate) fn payload_pkg_bool(payload: &Term, key: &str) -> Option<bool> {
     }
 }
 
+pub(crate) fn payload_pkg_only(payload: &Term) -> Result<Option<Vec<String>>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":only"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Vector(xs)) => {
+            let mut out = Vec::with_capacity(xs.len());
+            for (idx, x) in xs.iter().enumerate() {
+                match x {
+                    Term::Str(s) => out.push(s.clone()),
+                    other => {
+                        return Err(format!(
+                            ":only entries must be strings (entry {idx} got {})",
+                            print_term(other)
+                        ));
+                    }
+                }
+            }
+            Ok(Some(out))
+        }
+        Some(other) => Err(format!(
+            ":only must be vector<string> or nil, got {}",
+            print_term(other)
+        )),
+    }
+}
+
 pub(crate) fn payload_pkg_publish_remote(payload: &Term) -> Result<String, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());

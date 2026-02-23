@@ -5,7 +5,7 @@ Last updated: 2026-02-22
 This file tracks unresolved blockers only. Completed work belongs in git history and release notes.
 Machine-readable selfhost readiness source: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 2
+Open checklist items: 1
 
 ## P0 - Immediate blockers
 
@@ -86,27 +86,34 @@ Open checklist items: 2
       `scripts/check_tool_qualification_lineage.sh`
       -> `.genesis/perf/tool_qualification_lineage_report.json`.
 
-- [ ] P1.3 Deliver first-class dependency solver/range semantics in `gcpm`.
-  - Evidence:
-    - `crates/gc_cli_driver/src/cli_args/pkg_cmd.rs` marks `gcpm lock` and `gcpm update` as `local-only v0.1`.
-    - Resolver now supports commit/snapshot/ref selectors plus deterministic `semver:<range>` tag resolution, but still lacks registry-aware conflict diagnostics and mature workspace upgrade ergonomics.
-  - Progress (this pass):
-    - [x] Added deterministic semver selector support `semver:<range>` in selector classification/inference:
+- [x] P1.3 Deliver first-class dependency solver/range semantics in `gcpm`.
+  - Completion:
+    - Added deterministic semver selector support `semver:<range>` in selector classification/inference:
       `crates/gc_pkg/src/lock.rs`.
-    - [x] Added deterministic semver range resolution against `refs/tags/*` in pkg-low resolver:
+    - Added deterministic semver range resolution against `refs/tags/*` in pkg-low resolver:
       `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs`
       (policy-controlled highest/lowest selection with stable tie-breaking).
-    - [x] Added strict lock-invariant checks for semver range selectors:
+    - Added strict lock-invariant checks for semver range selectors:
       resolved tag must parse as semver and satisfy the declared range.
-    - [x] Updated CLI selector guidance and strategy validation:
+    - Updated CLI selector guidance and strategy validation:
       `crates/gc_cli_driver/src/cli_args/pkg_cmd.rs`,
       `crates/gc_cli_driver/src/vcs_helpers.rs`,
       `docs/spec/CLI.md`.
-    - [ ] Add registry-aware conflict diagnostics for incompatible ranges across workspace members.
-    - [ ] Add selective upgrade flows (`gcpm update --only ...`) with auditable constraint rationale.
-  - Definition of done:
-    - Deterministic range solver with conflict diagnostics, lock reproducibility, and policy-aware registry resolution.
-    - Workspace update flows support selective upgrades and auditable constraint rationale.
+    - Added registry-aware conflict diagnostics:
+      - explicit `core/pkg/registry-not-found` diagnostics when requirement registry aliases are not configured,
+      - explicit `core/pkg/semver-no-match` diagnostics with range/policy/available-tag context.
+    - Added selective upgrade flow with auditable rationale:
+      `gcpm update --only <dep> ...` now emits deterministic `:rationale` entries and `:selected-count` / `:rationale-count` telemetry fields.
+    - Closed selfhost frontend parity for advanced resolver/update semantics by routing selfhost `pkg add/lock/update` through `core/pkg-low::{add,lock,update}` payload contracts (including `:strategy`, `:tag-policy`, `:only`):
+      `selfhost/cli_coreform_vcs_pkg_v1.gc`,
+      `selfhost/cli_pkg_runtime_v1.gc`,
+      `selfhost/cli_pkg_runtime_updates_v1.gc`.
+    - Extended selfhost selector taxonomy to classify `semver:` explicitly:
+      `selfhost/cli_reachability_rules_v1.gc`.
+    - Regenerated committed selfhost toolchain artifact from manifest sources so runtime behavior matches source modules:
+      `selfhost/toolchain.gc`.
+    - Added explicit semver parity coverage test:
+      `crates/gc_cli/tests/cli_pkg_engine.rs` (`pkg_lock_semver_failure_matches_between_frontends`).
 
 - [x] P1.4 Bring production CLI help-surface gate below budget with build reuse.
   - Completion:

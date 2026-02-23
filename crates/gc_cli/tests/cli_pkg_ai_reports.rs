@@ -141,6 +141,30 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     };
     assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
     assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
+
+    let update_only_out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["--json", "--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["update", "--lock", "genesis.lock", "--only", "missing-dep"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let update_only_v: serde_json::Value = serde_json::from_slice(&update_only_out).unwrap();
+    assert_eq!(
+        update_only_v
+            .pointer("/data/report/selected_count")
+            .and_then(|x| x.as_i64()),
+        Some(0)
+    );
+    assert_eq!(
+        update_only_v
+            .pointer("/data/report/rationale_count")
+            .and_then(|x| x.as_i64()),
+        Some(1)
+    );
 }
 
 #[test]

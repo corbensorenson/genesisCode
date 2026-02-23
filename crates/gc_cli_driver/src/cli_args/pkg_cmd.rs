@@ -94,11 +94,15 @@ enum PkgCmd {
         strict: bool,
     },
 
-    /// Update locked entries for tracked refs (`update_policy=auto`) (local-only v0.1).
+    /// Update locked entries for tracked refs (`update_policy=auto`) with deterministic selection/rationale.
     Update {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
+
+        /// Restrict updates to selected dependency names (repeatable).
+        #[arg(long = "only")]
+        only: Vec<String>,
     },
 
     /// Run a named workspace task from `genesis.workspace.toml` as canonical command data.

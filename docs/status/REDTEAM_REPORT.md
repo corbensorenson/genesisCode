@@ -10,4 +10,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P1.3`: `gcpm` dependency solver/range semantics are improved but still below mature package-manager expectations (semver tag-range solving exists; registry conflict diagnostics and full workspace selective-upgrade ergonomics remain open).
+- No active `P0`/`P1` items are currently open in `upgrade_plan.md`.

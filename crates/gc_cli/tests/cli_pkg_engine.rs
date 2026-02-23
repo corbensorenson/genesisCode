@@ -612,6 +612,119 @@ fn pkg_update_value_matches_between_frontends() {
 }
 
 #[test]
+fn pkg_lock_semver_failure_matches_between_frontends() {
+    let td = tempfile::tempdir().unwrap();
+    let rust_dir = td.path().join("rust");
+    let self_dir = td.path().join("self");
+    fs::create_dir_all(&rust_dir).unwrap();
+    fs::create_dir_all(&self_dir).unwrap();
+
+    let rust_caps = write_caps(&rust_dir);
+    let self_caps = write_caps(&self_dir);
+    let artifact = build_selfhost_artifact(&self_dir);
+
+    let rust_lock = rust_dir.join("genesis.lock");
+    let self_lock = self_dir.join("genesis.lock");
+
+    cmd()
+        .current_dir(&rust_dir)
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["init", "--workspace", "w", "--lock"])
+        .arg(&rust_lock)
+        .args(["--policy", "policy:default-v0.1"])
+        .assert()
+        .success();
+    cmd()
+        .current_dir(&self_dir)
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["init", "--workspace", "w", "--lock"])
+        .arg(&self_lock)
+        .args(["--policy", "policy:default-v0.1"])
+        .assert()
+        .success();
+
+    cmd()
+        .current_dir(&rust_dir)
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args([
+            "add",
+            "dep@semver:^1.0.0",
+            "--strategy",
+            "tag-policy",
+            "--tag-policy",
+            "highest",
+            "--update-policy",
+            "auto",
+            "--lock",
+        ])
+        .arg(&rust_lock)
+        .assert()
+        .success();
+    cmd()
+        .current_dir(&self_dir)
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args([
+            "add",
+            "dep@semver:^1.0.0",
+            "--strategy",
+            "tag-policy",
+            "--tag-policy",
+            "highest",
+            "--update-policy",
+            "auto",
+            "--lock",
+        ])
+        .arg(&self_lock)
+        .assert()
+        .success();
+
+    let rust_lock_out = cmd()
+        .current_dir(&rust_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "rust"])
+        .args(["pkg", "--caps"])
+        .arg(&rust_caps)
+        .args(["lock", "--lock"])
+        .arg(&rust_lock)
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let self_lock_out = cmd()
+        .current_dir(&self_dir)
+        .arg("--json")
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["pkg", "--caps"])
+        .arg(&self_caps)
+        .args(["lock", "--lock"])
+        .arg(&self_lock)
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    assert_eq!(json_frontend_name(&rust_lock_out), "rust");
+    assert_eq!(json_frontend_name(&self_lock_out), "selfhost");
+    let rust_lock_s = String::from_utf8(rust_lock_out).unwrap();
+    let self_lock_s = String::from_utf8(self_lock_out).unwrap();
+    assert!(rust_lock_s.contains("core/pkg/semver-no-match"));
+    assert!(self_lock_s.contains("core/pkg/semver-no-match"));
+}
+
+#[test]
 fn pkg_install_verify_values_match_between_frontends() {
     let td = tempfile::tempdir().unwrap();
     let rust_dir = td.path().join("rust");

@@ -105,6 +105,7 @@ mod tests {
             },
             PkgCmd::Update {
                 lock: PathBuf::from("genesis.lock"),
+                only: vec![],
             },
             PkgCmd::Run {
                 task: "test".to_string(),

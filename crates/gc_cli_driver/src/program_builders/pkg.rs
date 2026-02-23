@@ -138,16 +138,26 @@ pub(crate) fn mk_pkg_lock_program(lock: &Path, strict: bool) -> Vec<Term> {
     ]
 }
 
-pub(crate) fn mk_pkg_update_program(lock: &Path) -> Vec<Term> {
+pub(crate) fn mk_pkg_update_program(lock: &Path, only: &[String]) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
         Term::symbol("core/pkg-low::update"),
     ]);
+    let mut only_names: Vec<String> = only.iter().map(|s| s.trim().to_string()).collect();
+    only_names.retain(|s| !s.is_empty());
+    only_names.sort();
+    only_names.dedup();
     let payload = Term::Map(
-        [(
-            gc_coreform::TermOrdKey(Term::symbol(":lock")),
-            Term::Str(lock.display().to_string()),
-        )]
+        [
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":lock")),
+                Term::Str(lock.display().to_string()),
+            ),
+            (
+                gc_coreform::TermOrdKey(Term::symbol(":only")),
+                Term::Vector(only_names.into_iter().map(Term::Str).collect()),
+            ),
+        ]
         .into_iter()
         .collect(),
     );

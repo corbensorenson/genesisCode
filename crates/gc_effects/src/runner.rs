@@ -33,7 +33,7 @@ use crate::runner_io_ops::{
     sandbox_path_write, write_file_no_follow,
 };
 use crate::runner_pkg_payload::{
-    payload_pkg_bool, payload_pkg_lock, payload_pkg_name, payload_pkg_policy,
+    payload_pkg_bool, payload_pkg_lock, payload_pkg_name, payload_pkg_only, payload_pkg_policy,
     payload_pkg_publish_commit, payload_pkg_publish_depth, payload_pkg_publish_expected_old,
     payload_pkg_publish_policy, payload_pkg_publish_ref, payload_pkg_publish_remote,
     payload_pkg_registry, payload_pkg_registry_default, payload_pkg_selector, payload_pkg_strategy,

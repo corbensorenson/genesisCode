@@ -12,7 +12,7 @@ pub(crate) fn build_pkg_ai_report(
 ) -> Option<serde_json::Value> {
     match cmd {
         PkgCmd::Lock { lock, strict } => Some(build_lock_report(value, caps, lock, *strict)),
-        PkgCmd::Update { lock } => Some(build_update_report(value, caps, lock)),
+        PkgCmd::Update { lock, only } => Some(build_update_report(value, caps, lock, only)),
         PkgCmd::SelfOptimize { pkg, dry_run, .. } => {
             Some(build_self_optimize_report(value, caps, pkg, *dry_run))
         }
@@ -115,9 +115,16 @@ fn build_lock_report(value: &Value, caps: &Path, lock: &Path, strict: bool) -> s
     })
 }
 
-fn build_update_report(value: &Value, caps: &Path, lock: &Path) -> serde_json::Value {
+fn build_update_report(
+    value: &Value,
+    caps: &Path,
+    lock: &Path,
+    only: &[String],
+) -> serde_json::Value {
     let lock_hash = map_get_str(value, ":lock-h");
     let updated_count = map_get_int(value, ":updated").unwrap_or(0);
+    let selected_count = map_get_int(value, ":selected-count").unwrap_or(0);
+    let rationale_count = map_get_int(value, ":rationale-count").unwrap_or(0);
     let changed = updated_count > 0;
 
     serde_json::json!({
@@ -127,6 +134,9 @@ fn build_update_report(value: &Value, caps: &Path, lock: &Path) -> serde_json::V
         "lock": lock.display().to_string(),
         "lock_hash": lock_hash,
         "updated_count": updated_count,
+        "selected_count": selected_count,
+        "rationale_count": rationale_count,
+        "only": only,
         "why": if changed {
             "advanced tracked dependencies and rewrote lock deterministically"
         } else {
@@ -263,6 +273,49 @@ mod tests {
         assert_eq!(
             report.get("published_commit").and_then(|v| v.as_str()),
             Some(expected_commit.as_str())
+        );
+    }
+
+    #[test]
+    fn update_report_carries_selection_and_rationale_metrics() {
+        let mut m = BTreeMap::new();
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":lock-h")),
+            Term::Str("d".repeat(64)),
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":updated")),
+            Term::Int(0.into()),
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":selected-count")),
+            Term::Int(0.into()),
+        );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":rationale-count")),
+            Term::Int(1.into()),
+        );
+        let value = Value::Data(Term::Map(m));
+        let cmd = PkgCmd::Update {
+            lock: PathBuf::from("genesis.lock"),
+            only: vec!["missing-dep".to_string()],
+        };
+        let report = build_pkg_ai_report(&cmd, &value, &PathBuf::from("caps.toml")).unwrap();
+        assert_eq!(
+            report.get("schema").and_then(|v| v.as_str()),
+            Some("genesis/pkg-update-report-v0.1")
+        );
+        assert_eq!(
+            report.get("selected_count").and_then(|v| v.as_i64()),
+            Some(0)
+        );
+        assert_eq!(
+            report.get("rationale_count").and_then(|v| v.as_i64()),
+            Some(1)
+        );
+        assert_eq!(
+            report.pointer("/only/0").and_then(|v| v.as_str()),
+            Some("missing-dep")
         );
     }
 }

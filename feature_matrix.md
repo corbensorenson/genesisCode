@@ -68,7 +68,6 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, and reproducible assurance-pack bundles are in place; full device-risk process qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P1.3`: `gcpm` range solving is now partially landed (`semver:<range>` over `refs/tags/*`), but registry-backed conflict diagnostics and full workspace upgrade ergonomics are still incomplete.
 - `P2.2`: Assurance packs require stronger object/lineage/independence closure for high-assurance programs.
 
 Primary evidence paths:

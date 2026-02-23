@@ -171,9 +171,13 @@
         (quote :commit)
         (if ((core/cli::str-starts-with? selector) "snapshot:")
           (quote :snapshot)
-          (if ((core/cli::str-starts-with? selector) "ref:")
-            (quote :ref)
-            (if ((core/cli::str-starts-with? selector) "refs/") (quote :ref) (quote :unknown)))))
+          (if ((core/cli::str-starts-with? selector) "semver:")
+            (quote :semver)
+            (if ((core/cli::str-starts-with? selector) "ref:")
+              (quote :ref)
+              (if ((core/cli::str-starts-with? selector) "refs/")
+                (quote :ref)
+                (quote :unknown))))))
       (quote :unknown))))
 
 (def core/cli::lock-make-entry

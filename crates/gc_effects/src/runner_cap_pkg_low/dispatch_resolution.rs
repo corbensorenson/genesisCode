@@ -165,11 +165,16 @@ pub(super) fn dispatch_resolution(
 
             let mut out_locked: BTreeMap<String, gc_pkg::LockedEntry> = BTreeMap::new();
             for (name, req) in &l.requirements {
+                if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
+                    return Ok(v);
+                }
                 match resolve_requirement(store, refs, name, req, error_tok, op) {
                     Ok(le) => {
                         out_locked.insert(name.clone(), le);
                     }
-                    Err(err_val) => return Ok(err_val),
+                    Err(err_val) => {
+                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
+                    }
                 }
             }
 
@@ -274,6 +279,10 @@ pub(super) fn dispatch_resolution(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
+            let only_filter = match payload_pkg_only(payload) {
+                Ok(xs) => normalize_only_filter(xs),
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+            };
             let base_dir = effective_base_dir(pol)?;
             let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
                 Ok(p) => p,
@@ -299,22 +308,77 @@ pub(super) fn dispatch_resolution(
             };
 
             let mut updated: u64 = 0;
+            let mut rationale: Vec<Term> = Vec::new();
+            let mut selected_count: u64 = 0;
             for (name, req) in &l.requirements {
+                if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
+                    return Ok(v);
+                }
+                if !only_filter.is_empty() && !only_filter.contains(name) {
+                    rationale.push(update_rationale_term(
+                        name,
+                        ":skipped-unselected",
+                        "not selected by --only filter",
+                    ));
+                    continue;
+                }
+                selected_count = selected_count.saturating_add(1);
                 let should_update = req.update_policy == gc_pkg::UpdatePolicy::Auto
                     && matches!(
                         req.strategy,
                         gc_pkg::ResolutionStrategy::TrackRef
                             | gc_pkg::ResolutionStrategy::TagPolicy
                     );
-                if !should_update && l.locked.contains_key(name) {
+                let has_existing = l.locked.contains_key(name);
+                if !should_update && has_existing {
+                    rationale.push(update_rationale_term(
+                        name,
+                        ":kept-existing",
+                        "update_policy=manual and locked entry already present",
+                    ));
                     continue;
                 }
+                let previous = l.locked.get(name).cloned();
                 match resolve_requirement(store, refs, name, req, error_tok, op) {
                     Ok(le) => {
+                        let changed = previous
+                            .as_ref()
+                            .map(|old| !locked_entry_eq(old, &le))
+                            .unwrap_or(true);
                         l.locked.insert(name.clone(), le);
-                        updated = updated.saturating_add(1);
+                        if changed {
+                            updated = updated.saturating_add(1);
+                            rationale.push(update_rationale_term(
+                                name,
+                                ":updated",
+                                if has_existing {
+                                    "resolved new lock entry for selected dependency"
+                                } else {
+                                    "resolved missing locked entry"
+                                },
+                            ));
+                        } else {
+                            rationale.push(update_rationale_term(
+                                name,
+                                ":no-change",
+                                "resolved dependency equals existing lock entry",
+                            ));
+                        }
                     }
-                    Err(err_val) => return Ok(err_val),
+                    Err(err_val) => {
+                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
+                    }
+                }
+            }
+            if !only_filter.is_empty() {
+                for selected in &only_filter {
+                    if !l.requirements.contains_key(selected) {
+                        rationale.push(update_rationale_term(
+                            selected,
+                            ":missing-requirement",
+                            "selected dependency is not present in lock requirements",
+                        ));
+                    }
                 }
             }
             if strict
@@ -374,6 +438,18 @@ pub(super) fn dispatch_resolution(
             m.insert(
                 TermOrdKey(Term::symbol(":updated")),
                 Term::Int((updated as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":selected-count")),
+                Term::Int((selected_count as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale-count")),
+                Term::Int((rationale.len() as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale")),
+                Term::Vector(rationale),
             );
             m.insert(TermOrdKey(Term::symbol(":strict")), Term::Bool(strict));
             m.insert(
@@ -714,6 +790,142 @@ pub(super) fn dispatch_resolution(
             format!("core/pkg-low dispatch received unsupported op_eff: {op_eff}"),
             Some(op),
         )),
+    }
+}
+
+fn normalize_only_filter(raw: Option<Vec<String>>) -> std::collections::BTreeSet<String> {
+    let mut out = std::collections::BTreeSet::new();
+    if let Some(xs) = raw {
+        for x in xs {
+            let trimmed = x.trim();
+            if !trimmed.is_empty() {
+                out.insert(trimmed.to_string());
+            }
+        }
+    }
+    out
+}
+
+fn locked_entry_eq(a: &gc_pkg::LockedEntry, b: &gc_pkg::LockedEntry) -> bool {
+    a.commit == b.commit
+        && a.snapshot == b.snapshot
+        && a.registry == b.registry
+        && a.source_selector == b.source_selector
+        && a.resolved_ref == b.resolved_ref
+        && a.exports_hash == b.exports_hash
+        && a.environment_fingerprint == b.environment_fingerprint
+}
+
+fn update_rationale_term(name: &str, action_sym: &str, reason: &str) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":name")),
+                Term::Str(name.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":action")),
+                Term::symbol(action_sym),
+            ),
+            (
+                TermOrdKey(Term::symbol(":reason")),
+                Term::Str(reason.to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn validate_requirement_registry_alias(
+    lock: &gc_pkg::GenesisLock,
+    name: &str,
+    req: &gc_pkg::Requirement,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    let Some(alias) = req.registry.as_deref() else {
+        return Ok(());
+    };
+    if alias == "default" {
+        return Ok(());
+    }
+    if lock.registries.contains_key(alias) {
+        return Ok(());
+    }
+    let available = lock
+        .registries
+        .keys()
+        .cloned()
+        .map(Term::Str)
+        .collect::<Vec<_>>();
+    Err(mk_error_with_ctx(
+        error_tok,
+        "core/pkg/registry-not-found",
+        format!("requirement `{name}` references unknown registry alias `{alias}`"),
+        Some(op),
+        Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":name")),
+                    Term::Str(name.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":selector")),
+                    Term::Str(req.selector.clone()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":registry")),
+                    Term::Str(alias.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":available-registries")),
+                    Term::Vector(available),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    ))
+}
+
+fn annotate_requirement_resolution_error(
+    err: Value,
+    name: &str,
+    req: &gc_pkg::Requirement,
+) -> Value {
+    let Value::Sealed { token, payload } = err else {
+        return err;
+    };
+    let Value::Data(Term::Map(mut mm)) = *payload else {
+        return Value::Sealed { token, payload };
+    };
+    let existing_ctx = mm
+        .get(&TermOrdKey(Term::symbol(":error/context")))
+        .cloned()
+        .unwrap_or(Term::Nil);
+    let mut ctx = BTreeMap::new();
+    ctx.insert(
+        TermOrdKey(Term::symbol(":name")),
+        Term::Str(name.to_string()),
+    );
+    ctx.insert(
+        TermOrdKey(Term::symbol(":selector")),
+        Term::Str(req.selector.clone()),
+    );
+    ctx.insert(
+        TermOrdKey(Term::symbol(":strategy")),
+        Term::symbol(format!(":{}", req.strategy.as_str())),
+    );
+    ctx.insert(
+        TermOrdKey(Term::symbol(":registry")),
+        req.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+    );
+    ctx.insert(TermOrdKey(Term::symbol(":inner")), existing_ctx);
+    mm.insert(TermOrdKey(Term::symbol(":error/context")), Term::Map(ctx));
+    Value::Sealed {
+        token,
+        payload: Box::new(Value::Data(Term::Map(mm))),
     }
 }
 

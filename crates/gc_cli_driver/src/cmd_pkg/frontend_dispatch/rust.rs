@@ -67,8 +67,8 @@ pub(super) fn build(
             "genesis/pkg-lock-v0.1",
             "pkg-lock",
         ),
-        PkgCmd::Update { lock } => (
-            mk_pkg_update_program(lock),
+        PkgCmd::Update { lock, only } => (
+            mk_pkg_update_program(lock, only),
             "genesis/pkg-update-v0.1",
             "pkg-update",
         ),

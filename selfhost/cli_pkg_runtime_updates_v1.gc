@@ -190,60 +190,12 @@
 (def core/cli::pkg-update-program
   (fn (req)
     (if (core/cli::map? req)
-      (let ((lock ((core/map::get req) (quote :lock))))
-        ((core/effect::bind (core/cli::pkg-load-lock-program lock))
-          (fn (low-r)
-            (if (core/cli::is-error low-r)
-              (core/effect::pure low-r)
-              (if (core/cli::map? low-r)
-                (let
-                  ((reqs0 ((core/map::get low-r) (quote :requirements)))
-                    (locked0 ((core/map::get low-r) (quote :locked)))
-                    (reqs (if (core/cli::map? reqs0) reqs0 (quote {})))
-                    (locked (if (core/cli::map? locked0) locked0 (quote {})))
-                    (entries (core/cli::map-entries-vec reqs)))
-                  ((core/effect::bind (((((core/cli::pkg-update-loop entries) (core/vec::len entries)) 0) locked) 0))
-                    (fn (plan)
-                      (if (core/cli::is-error plan)
-                        (core/effect::pure plan)
-                        (if (core/cli::map? plan)
-                          (let
-                            ((locked2 ((core/map::get plan) (quote :locked)))
-                              (updated ((core/map::get plan) (quote :updated)))
-                              (artifacts ((core/map::get low-r) (quote :artifacts)))
-                              (policy ((core/map::get low-r) (quote :policy)))
-                              (registries ((core/map::get low-r) (quote :registries)))
-                              (workspace ((core/map::get low-r) (quote :workspace)))
-                              (payload0
-                                (quote
-                                  {
-                                    :artifacts {}
-                                    :lock ""
-                                    :locked {}
-                                    :policy nil
-                                    :registries {}
-                                    :requirements {}
-                                    :workspace ""}))
-                              (payload1 (((core/map::put payload0) (quote :artifacts)) artifacts))
-                              (payload2 (((core/map::put payload1) (quote :lock)) lock))
-                              (payload3 (((core/map::put payload2) (quote :locked)) locked2))
-                              (payload4 (((core/map::put payload3) (quote :policy)) policy))
-                              (payload5 (((core/map::put payload4) (quote :registries)) registries))
-                              (payload6 (((core/map::put payload5) (quote :requirements)) reqs))
-                              (payload7 (((core/map::put payload6) (quote :workspace)) workspace)))
-                            (((core/effect::perform (quote core/pkg-low::save-lock)) payload7)
-                              (fn (save-r)
-                                (if (core/cli::is-error save-r)
-                                  (core/effect::pure save-r)
-                                  (if (core/cli::map? save-r)
-                                    (core/effect::pure
-                                      (((core/map::put save-r) (quote :updated)) updated))
-                                    (core/effect::pure
-                                      ((core/error::make2 "core/type-error")
-                                        "core/pkg-low::save-lock returned non-map")))))))
-                          (core/effect::pure
-                            ((core/error::make2 "core/type-error")
-                              "core/cli::pkg-update-loop returned non-map")))))))
-                (core/effect::pure
-                  ((core/error::make2 "core/type-error") "core/pkg-low::load-lock returned non-map")))))))
+      (let
+        ((lock ((core/map::get req) (quote :lock))) (only0 ((core/map::get req) (quote :only))))
+        (let
+          ((only1 (if (core/cli::vec? only0) only0 (core/pair::as-proper-list only0)))
+            (only (if (core/cli::vec? only1) only1 (quote [])))
+            (payload {:lock lock :only only}))
+          (((core/effect::perform (quote core/pkg-low::update)) payload)
+            (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-update-program expects map"))))

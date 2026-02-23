@@ -169,6 +169,7 @@ CI strict selfhost gates:
   - `genesis gcpm add <name>@<selector>` supports deterministic selectors:
     `commit:<hex>`, `snapshot:<hex>`, `refs/...` (or `ref:refs/...`), and
     `semver:<range>` (resolved against `refs/tags/*` with deterministic tag selection policy).
+  - `genesis gcpm update [--only <dep> ...]` supports selective deterministic upgrades and emits machine-readable update rationale in command output.
   - `genesis gcpm remove <dep>` removes dependency requirements deterministically.
   - `genesis gcpm migrate --pkg package.toml` migrates package-only repos to workspace+lock form.
   - `genesis gcpm build --pkg <package.toml> --target <web|desktop|service|ios|android|edge|service-runtime> [--out-dir <path>]`

@@ -21,6 +21,7 @@ fn write_caps(dir: &Path, remote_allow: &str) -> PathBuf {
             r#"
 allow = [
   "core/pkg-low::init",
+  "core/pkg-low::add",
   "core/pkg-low::lock",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
@@ -50,6 +51,9 @@ base_dir = "."
 [op."core/pkg-low::init"]
 base_dir = "."
 create_dirs = true
+
+[op."core/pkg-low::add"]
+base_dir = "."
 
 [op."core/pkg-low::lock"]
 base_dir = "."

@@ -102,6 +102,19 @@ fn select_semver_tag_ref(
     best.map(|(ref_name, commit_hex, _)| (ref_name, commit_hex))
 }
 
+fn collect_available_semver_tags(refs: &[RefEntry]) -> Vec<Term> {
+    let mut tags: Vec<String> = refs
+        .iter()
+        .filter_map(|entry| {
+            parse_tag_semver_version(&entry.name)?;
+            Some(entry.name.clone())
+        })
+        .collect();
+    tags.sort();
+    tags.dedup();
+    tags.into_iter().map(Term::Str).collect()
+}
+
 pub(crate) fn compute_requirement_fingerprint(
     req: &gc_pkg::Requirement,
     snapshot: Option<&str>,
@@ -823,11 +836,34 @@ pub(crate) fn resolve_requirement(
             let Some((resolved_ref, commit_hex)) =
                 select_semver_tag_ref(&refs_list, &req_range, policy)
             else {
-                return Err(mk_error(
+                return Err(mk_error_with_ctx(
                     error_tok,
-                    "core/pkg/ref-not-found",
+                    "core/pkg/semver-no-match",
                     format!("no refs/tags entry satisfies semver range `{range}`"),
                     Some(op),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":selector")),
+                                Term::Str(req.selector.clone()),
+                            ),
+                            (TermOrdKey(Term::symbol(":range")), Term::Str(range.clone())),
+                            (
+                                TermOrdKey(Term::symbol(":tag-policy")),
+                                req.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":registry")),
+                                req.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":available-tags")),
+                                Term::Vector(collect_available_semver_tags(&refs_list)),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
                 ));
             };
             if !store.path_for(&commit_hex).exists() {

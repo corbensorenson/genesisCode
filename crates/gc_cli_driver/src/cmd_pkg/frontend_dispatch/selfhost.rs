@@ -235,7 +235,7 @@ pub(super) fn build(
             );
             (prog, "genesis/pkg-lock-v0.1", "pkg-lock", desc)
         }
-        PkgCmd::Update { lock } => {
+        PkgCmd::Update { lock, only } => {
             let f = env.get("core/cli::pkg-update-program").ok_or_else(|| {
                 cli_err(
                     EX_INTERNAL,
@@ -244,10 +244,16 @@ pub(super) fn build(
                 )
             })?;
             let req = Term::Map(
-                [(
-                    TermOrdKey(Term::symbol(":lock")),
-                    Term::Str(lock.display().to_string()),
-                )]
+                [
+                    (
+                        TermOrdKey(Term::symbol(":lock")),
+                        Term::Str(lock.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":only")),
+                        Term::Vector(only.iter().cloned().map(Term::Str).collect()),
+                    ),
+                ]
                 .into_iter()
                 .collect(),
             );
@@ -267,6 +273,10 @@ pub(super) fn build(
                     (
                         TermOrdKey(Term::symbol(":lock")),
                         Term::Str(lock.display().to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":only")),
+                        Term::Vector(only.iter().cloned().map(Term::Str).collect()),
                     ),
                 ]
                 .into_iter()

@@ -440,57 +440,26 @@
         ((lock ((core/map::get req) (quote :lock))) (name ((core/map::get req) (quote :name)))
           (selector ((core/map::get req) (quote :selector)))
           (up0 ((core/map::get req) (quote :update-policy)))
-          (reg ((core/map::get req) (quote :registry))))
+          (reg ((core/map::get req) (quote :registry)))
+          (strategy ((core/map::get req) (quote :strategy)))
+          (tag-policy ((core/map::get req) (quote :tag-policy))))
         (if (if (core/cli::str? name) (core/cli::str? selector) false)
           (let ((up (core/cli::pkg-normalize-update-policy up0)))
             (if (core/cli::is-error up)
               (core/effect::pure up)
-              ((core/effect::bind (core/cli::pkg-load-lock-program lock))
-                (fn (low-r)
-                  (if (core/cli::is-error low-r)
-                    (core/effect::pure low-r)
-                    (if (core/cli::map? low-r)
-                      (let
-                        ((reqs0 ((core/map::get low-r) (quote :requirements)))
-                          (reqs (if (core/cli::map? reqs0) reqs0 (quote {})))
-                          (req-entry0
-                            (quote
-                              {
-                                :registry nil
-                                :selector ""
-                                :update-policy :manual}))
-                          (req-entry1 (((core/map::put req-entry0) (quote :registry)) reg))
-                          (req-entry2 (((core/map::put req-entry1) (quote :selector)) selector))
-                          (req-entry3 (((core/map::put req-entry2) (quote :update-policy)) up))
-                          (reqs2 (((core/map::put reqs) name) req-entry3))
-                          (artifacts ((core/map::get low-r) (quote :artifacts)))
-                          (locked ((core/map::get low-r) (quote :locked)))
-                          (policy ((core/map::get low-r) (quote :policy)))
-                          (registries ((core/map::get low-r) (quote :registries)))
-                          (workspace ((core/map::get low-r) (quote :workspace)))
-                          (payload0
-                            (quote
-                              {
-                                :artifacts {}
-                                :lock ""
-                                :locked {}
-                                :policy nil
-                                :registries {}
-                                :requirements {}
-                                :workspace ""}))
-                          (payload1 (((core/map::put payload0) (quote :artifacts)) artifacts))
-                          (payload2 (((core/map::put payload1) (quote :lock)) lock))
-                          (payload3 (((core/map::put payload2) (quote :locked)) locked))
-                          (payload4 (((core/map::put payload3) (quote :policy)) policy))
-                          (payload5 (((core/map::put payload4) (quote :registries)) registries))
-                          (payload6 (((core/map::put payload5) (quote :requirements)) reqs2))
-                          (payload7 (((core/map::put payload6) (quote :workspace)) workspace)))
-                        (((core/effect::perform (quote core/pkg-low::save-lock)) payload7)
-                          (fn (r) (core/effect::pure r))))
-                      (core/effect::pure
-                        ((core/error::make2 "core/type-error")
-                          "core/pkg-low::load-lock returned non-map"))))))))
+              (let
+                ((up-s (if ((core/sym::eq? up) (quote :auto)) "auto" "manual"))
+                  (payload
+                    {
+                      :lock lock
+                      :name name
+                      :registry reg
+                      :selector selector
+                      :strategy strategy
+                      :tag-policy tag-policy
+                      :update-policy up-s}))
+                (((core/effect::perform (quote core/pkg-low::add)) payload)
+                  (fn (r) (core/effect::pure r))))))
           (core/effect::pure
             ((core/error::make2 "core/pkg/bad-payload") ":name and :selector must be strings"))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-add-program expects map"))))
-
