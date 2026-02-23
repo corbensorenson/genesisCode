@@ -33,7 +33,7 @@ print results, but kernel evaluation remains pure.
   - `genesis replay <file> --log <log.gclog> [--store <dir>]`
   - `genesis store --caps <caps.toml> [--log <out.gclog>] {put|get|has|verify} ...`
   - `genesis refs --caps <caps.toml> [--log <out.gclog>] {get|list|set|delete} ...` (local refs only)
-  - `genesis pkg|gcpm --caps <caps.toml> [--log <out.gclog>] {...}` (init/add/remove/lock/update/install/verify/list/info/doctor/abi/snapshot/export/import/publish/env/migrate/new/run/test/self-optimize)
+  - `genesis pkg|gcpm --caps <caps.toml> [--log <out.gclog>] {...}` (init/new/scaffold/add/remove/lock/update/install/verify/list/info/doctor/abi/snapshot/export/import/publish/env/migrate/run/test/self-optimize)
   - `genesis policy ...`
   - `genesis sync ...`
   - `genesis gc ...`

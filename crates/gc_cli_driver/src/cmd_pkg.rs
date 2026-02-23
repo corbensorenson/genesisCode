@@ -90,6 +90,7 @@ pub(super) fn cmd_pkg(
     } else {
         match cmd {
             PkgCmd::New { .. }
+            | PkgCmd::Scaffold { .. }
             | PkgCmd::Remove { .. }
             | PkgCmd::Migrate { .. }
             | PkgCmd::Run { .. }
@@ -452,6 +453,26 @@ fn cmd_pkg_local_workspace_ops(
                 members,
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/new", e))?,
+        ),
+        PkgCmd::Scaffold {
+            archetype,
+            name,
+            root,
+            force,
+            runtime_backend,
+            policy,
+            registry_default,
+        } => Some(
+            pkg_scaffold::handle_scaffold(pkg_scaffold::PkgScaffoldArgs {
+                archetype,
+                name,
+                root,
+                force: *force,
+                runtime_backend: runtime_backend.as_deref(),
+                policy,
+                registry_default: registry_default.as_deref(),
+            })
+            .map_err(|e| cli_err(EX_PARSE, "pkg/scaffold", e))?,
         ),
         PkgCmd::Build {
             pkg,

@@ -14,7 +14,7 @@ Legend:
 | Deterministic effect logs + replay checker | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Obligations + evidence artifacts in core workflow | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Language-native semantic VCS DAG + refs + bundles | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Built-in package/project manager | ✅ (`gcpm/pkg`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
+| Built-in package/project manager | ✅ (`gcpm/pkg` with first-class deterministic archetype scaffolding via `gcpm scaffold`) | ✅ (`cargo`) | ✅ (`go mod`) | ⚠️ (`npm/pnpm/yarn`) | ⚠️ (`pip/poetry/pixi`) |
 | Strict selfhost frontend default in production CLI | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explicit selfhost-only execution mode | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Fully self-hosted toolchain with zero bootstrap-language dependency | ⚠️ (bounded permanent TCB contract is explicit in `docs/spec/SELF_HOST_BOUNDARY.md`; production semantics are selfhost-first with deterministic artifact bootstrap, and any Rust parity surface is non-authoritative) | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -68,13 +68,7 @@ Regulated assurance readiness snapshot (indicative):
 - `IEC 62304 Class C`: ⚠️ partial alignment (lifecycle evidence/policy gates, qualification artifacts, object-equivalence evidence, and reproducible assurance-pack bundles are built-in; full device-risk/QMS qualification remains product-program specific).
 
 Known GenesisCode gaps:
-- `P0.4`: Strict health profiles (`prepush-standard`, `release-full`) not green from clean execution.
-- `P1.1`: WebXR conformance is deterministic but functionally degraded (`frame timeout`, `session_close error`).
-- `P1.2`: Documentation complexity is at budget ceiling (no retrieval headroom).
-- `P1.4`: Strict profile cargo warmup latency remains high for agent inner loops.
-- `P1.5`: Residual parity-harness ownership dependencies keep full selfhost closure partial.
-- `P2.1`: Fully self-hosted zero-bootstrap-language closure still partial (TCB boundary unresolved).
-- `P2.2`: Missing first-class deterministic `gcpm` scaffolding for complex product archetypes.
+- none currently tracked in `upgrade_plan.md` unresolved backlog.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

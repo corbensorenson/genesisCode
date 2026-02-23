@@ -71,6 +71,7 @@ mod pkg_contract;
 mod pkg_doctor;
 mod pkg_reports;
 mod pkg_runtime_profile;
+mod pkg_scaffold;
 mod pkg_self_opt;
 mod pkg_task_runner;
 mod pkg_telemetry;

@@ -11,6 +11,7 @@ pub(super) fn build(
 
     let (prog, kind, log_op, desc) = match cmd {
         PkgCmd::New { .. }
+        | PkgCmd::Scaffold { .. }
         | PkgCmd::Remove { .. }
         | PkgCmd::Migrate { .. }
         | PkgCmd::Run { .. }

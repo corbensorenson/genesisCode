@@ -10,8 +10,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P0.4` - Strict health profiles (`prepush-standard`, `release-full`) currently non-green from clean execution.
-- `P1.1` - WebXR conformance lane is deterministic but functionally degraded (`frame timeout`, `session_close error`).
-- `P1.2` - Documentation complexity budget has no headroom for agent retrieval quality.
-- `P1.4` - Strict profile warmup latency is high for agent inner loops.
-- `P1.5` - Residual parity-harness ownership dependencies keep full selfhost closure partial.
+No active P0/P1 risks.

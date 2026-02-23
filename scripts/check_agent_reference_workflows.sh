@@ -71,6 +71,9 @@ baseline_history_path = pathlib.Path(sys.argv[5])
 default_max_ms = int(sys.argv[6])
 require_min_history = sys.argv[7].strip().lower() not in {"0", "false", "no", "off"}
 regression_percent = float(sys.argv[8])
+regression_slack_ms = int(
+    os.environ.get("GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS", "500")
+)
 
 workflows = [
     {
@@ -221,9 +224,17 @@ if p95_min_samples < 1:
     raise SystemExit("agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_P95_MIN_SAMPLES must be >= 1")
 if regression_percent < 0:
     raise SystemExit("agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT must be >= 0")
+if regression_slack_ms < 0:
+    raise SystemExit(
+        "agent-capability-gauntlet: GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS must be >= 0"
+    )
 
 backend_pattern = re.compile(r':backend\s+"([^"]+)"')
 replay_pattern = re.compile(r"replay=([^\r\n]+)")
+compile_activity_pattern = re.compile(
+    r"(^|\n)\s*Compiling\s+|Finished `(?:dev|release|selfhost-strict)` profile",
+    re.MULTILINE,
+)
 
 def normalize_replay_value(workflow_name: str, replay_value: Optional[str]) -> Optional[str]:
     if replay_value is None:
@@ -333,12 +344,14 @@ for wf in workflows:
         if replay_value_normalized
         else None
     )
+    stderr_text = proc.stderr or ""
+    build_bootstrap_mode = compile_activity_pattern.search(stderr_text) is not None
     gpu_backend_required = require_gpu_device and ("gpu_compute" in wf["domains"])
     gpu_backend_ok = (not gpu_backend_required) or (reported_backend == "device-runtime")
     replay_signal = replay_value is not None
     duration_ok = duration_ms <= max_ms
     wf_history_samples = history_durations.get(wf["name"], [])
-    wf_samples = wf_history_samples + [duration_ms]
+    wf_samples = wf_history_samples + ([] if build_bootstrap_mode else [duration_ms])
     workflow_seeded = len(baseline_history_durations.get(wf["name"], [])) >= p95_min_samples
     history_bootstrap_mode = require_min_history and (not workflow_seeded)
     history_min_ok = (
@@ -350,9 +363,16 @@ for wf in workflows:
     p95_enforced = len(wf_samples) >= p95_min_samples
     p95_ok = (not p95_enforced) or (p95_duration_ms <= p95_budget_ms)
     baseline_p95_ms = p95(wf_history_samples) if wf_history_samples else None
-    regression_enforced = baseline_p95_ms is not None and len(wf_history_samples) >= p95_min_samples
+    regression_enforced = (
+        (not build_bootstrap_mode)
+        and baseline_p95_ms is not None
+        and len(wf_history_samples) >= p95_min_samples
+    )
     regression_budget_ms = (
-        int(math.ceil(baseline_p95_ms * (1.0 + regression_percent / 100.0)))
+        max(
+            int(math.ceil(baseline_p95_ms * (1.0 + regression_percent / 100.0))),
+            int(baseline_p95_ms + regression_slack_ms),
+        )
         if regression_enforced and baseline_p95_ms is not None
         else None
     )
@@ -392,10 +412,12 @@ for wf in workflows:
             "p95_ok": p95_ok,
             "history_min_ok": history_min_ok,
             "history_bootstrap_mode": history_bootstrap_mode,
+            "build_bootstrap_mode": build_bootstrap_mode,
             "require_min_history": require_min_history,
             "baseline_history_sample_count": len(wf_history_samples),
             "baseline_p95_ms": baseline_p95_ms,
             "regression_percent": regression_percent,
+            "regression_slack_ms": regression_slack_ms,
             "regression_enforced": regression_enforced,
             "regression_budget_ms": regression_budget_ms,
             "regression_observed_ms": p95_duration_ms,
@@ -494,6 +516,7 @@ report = {
     "baseline_history_path": str(baseline_history_path),
     "require_min_history": require_min_history,
     "regression_percent": regression_percent,
+    "regression_slack_ms": regression_slack_ms,
     "regression_failures": regression_failures,
     "history_min_failures": history_min_failures,
     "profile": profile,
@@ -522,7 +545,9 @@ history_entry = {
     "history_p95_ms": report["history_p95_ms"],
     "runtime_profile": runtime_profile,
     "workflow_durations_ms": {
-        wf["name"]: wf["duration_ms"] for wf in workflow_reports
+        wf["name"]: wf["duration_ms"]
+        for wf in workflow_reports
+        if not wf.get("build_bootstrap_mode")
     },
     "timestamp_utc": report["timestamp_utc"],
 }

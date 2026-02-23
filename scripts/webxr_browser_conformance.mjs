@@ -102,6 +102,87 @@ async function runPass(browser, url) {
           ]);
         };
 
+        const attachRenderLayer = async (session) => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = 64;
+            canvas.height = 64;
+            canvas.style.display = "none";
+            document.body.appendChild(canvas);
+            const gl2 = canvas.getContext("webgl2", {
+              xrCompatible: true,
+              antialias: false,
+              alpha: false,
+            });
+            const gl =
+              gl2 ||
+              canvas.getContext("webgl", {
+                xrCompatible: true,
+                antialias: false,
+                alpha: false,
+              });
+            if (!gl) {
+              return {
+                status: "error",
+                context: "none",
+                error_code: "webgl-context-unavailable",
+              };
+            }
+            if (typeof gl.makeXRCompatible === "function") {
+              await withTimeout(gl.makeXRCompatible(), 1000);
+            }
+            if (typeof XRWebGLLayer !== "function") {
+              return {
+                status: "error",
+                context: gl2 ? "webgl2" : "webgl",
+                error_code: "xr-webgl-layer-unavailable",
+              };
+            }
+            const layer = new XRWebGLLayer(session, gl);
+            session.updateRenderState({ baseLayer: layer });
+            return {
+              status: "ok",
+              context: gl2 ? "webgl2" : "webgl",
+              error_code: null,
+            };
+          } catch (e) {
+            return {
+              status: "error",
+              context: "none",
+              error_code: String(e && e.message ? e.message : e),
+            };
+          }
+        };
+
+        const probeInlineFrame = async (session) => {
+          const refRes = await withTimeout(session.requestReferenceSpace("viewer"), 1200);
+          if (!refRes.ok) {
+            return { ok: false, reason: "reference-space-error", detail: refRes.error };
+          }
+          const refSpace = refRes.value;
+          const frameRes = await withTimeout(
+            new Promise((resolve) => {
+              session.requestAnimationFrame((_, frame) => {
+                const pose = frame.getViewerPose(refSpace);
+                resolve({
+                  status: pose && pose.views.length > 0 ? "ok" : "degraded",
+                  pose: Boolean(pose),
+                  view_count: pose ? pose.views.length : 0,
+                });
+              });
+            }),
+            1200,
+          );
+          if (!frameRes.ok) {
+            return {
+              ok: false,
+              reason: frameRes.error === "timeout" ? "frame-timeout" : "frame-error",
+              detail: frameRes.error,
+            };
+          }
+          return { ok: frameRes.value.status === "ok", frame: frameRes.value };
+        };
+
         const runtime = {
           secure_context: window.isSecureContext,
           user_agent: navigator.userAgent,
@@ -129,11 +210,12 @@ async function runPass(browser, url) {
             immersive_vr: Boolean(supportedImmersive),
           },
           session: { status: "not-run", mode: "inline" },
+          render_layer: { status: "not-run", context: "none", error_code: null },
           reference_space: { status: "not-run", type: "viewer" },
           frame: { status: "not-run", pose: false, view_count: 0 },
           input: { status: "not-run", count: 0, sources: [] },
           haptics: { status: "not-run", accepted: false, reason: "not-run" },
-          session_close: { status: "not-run" },
+          session_close: { status: "not-run", mode: "explicit-end", error_code: null },
         };
 
         if (!supportedInline) {
@@ -161,6 +243,10 @@ async function runPass(browser, url) {
         const session = openRes.value;
         capture.session.status = "opened";
 
+        // Ensure XR session render state is initialized with a WebGL layer so
+        // requestAnimationFrame produces real XR frames in headless lanes.
+        capture.render_layer = await attachRenderLayer(session);
+
         const refRes = await withTimeout(session.requestReferenceSpace("viewer"), 1200);
         if (!refRes.ok) {
           capture.reference_space = {
@@ -181,13 +267,13 @@ async function runPass(browser, url) {
             session.requestAnimationFrame((_, frame) => {
               const pose = frame.getViewerPose(refSpace);
               resolve({
-                status: "ok",
+                status: pose && pose.views.length > 0 ? "ok" : "degraded",
                 pose: Boolean(pose),
                 view_count: pose ? pose.views.length : 0,
               });
             });
           }),
-          800,
+          1500,
         );
         if (frameRes.ok) {
           capture.frame = frameRes.value;
@@ -247,9 +333,61 @@ async function runPass(browser, url) {
         }
 
         const closeRes = await withTimeout(session.end(), 800);
-        capture.session_close.status = closeRes.ok ? "closed" : "error";
+        if (closeRes.ok) {
+          capture.session_close = {
+            status: "closed",
+            mode: "explicit-end",
+            error_code: null,
+          };
+        } else if (closeRes.error === "timeout") {
+          // Chromium orientation runtime can leave `session.end()` unresolved while
+          // still quiescing session frame delivery. Treat close as functional only
+          // when quiescence is observed and a new inline session can be opened + framed.
+          const oldSessionFrameRes = await withTimeout(
+            new Promise((resolve) => {
+              session.requestAnimationFrame(() => resolve({ fired: true }));
+            }),
+            800,
+          );
+          const oldSessionQuiesced = !oldSessionFrameRes.ok;
 
-        return { ok: true, capture };
+          const reopenRes = await withTimeout(navigator.xr.requestSession("inline"), 1200);
+          let reopenFrameOk = false;
+          if (reopenRes.ok) {
+            const reopened = reopenRes.value;
+            await attachRenderLayer(reopened);
+            const probe = await probeInlineFrame(reopened);
+            reopenFrameOk = Boolean(probe.ok);
+            await withTimeout(reopened.end(), 400);
+          }
+          capture.session_close =
+            oldSessionQuiesced && reopenRes.ok && reopenFrameOk
+              ? {
+                  status: "closed-quiesced",
+                  mode: "explicit-end-timeout-recovery",
+                  error_code: null,
+                }
+              : {
+                  status: "timeout",
+                  mode: "explicit-end",
+                  error_code: "end-timeout",
+                };
+        } else {
+          capture.session_close = {
+            status: "error",
+            mode: "explicit-end",
+            error_code: "end-error",
+          };
+        }
+
+        return {
+          ok: true,
+          capture,
+          functional_pass:
+            capture.frame.status === "ok" &&
+            (capture.session_close.status === "closed" ||
+              capture.session_close.status === "closed-quiesced"),
+        };
       },
       TIMEOUT_MS,
       "browser pass",
@@ -285,9 +423,12 @@ async function main() {
     const hashA = hashCapture(runA.capture);
     const hashB = hashCapture(runB.capture);
     const deterministic = hashA === hashB;
+    const functionalPass =
+      Boolean(runA.functional_pass) && Boolean(runB.functional_pass);
     const report = {
       kind: "genesis/webxr-browser-conformance-v0.1",
       ok: deterministic,
+      functional_pass: functionalPass,
       replay_rule: "capture_hash(run_a)==capture_hash(run_b)",
       run_a_hash: hashA,
       run_b_hash: hashB,

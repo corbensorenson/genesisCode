@@ -34,6 +34,8 @@ if doc.get("kind") != "genesis/webxr-browser-conformance-v0.1":
     )
 if doc.get("ok") is not True:
     raise SystemExit("webxr-browser-conformance: report indicates failure")
+if doc.get("functional_pass") is not True:
+    raise SystemExit("webxr-browser-conformance: functional pass must be true")
 
 cap = doc.get("run_a_capture")
 if not isinstance(cap, dict):
@@ -54,9 +56,15 @@ if haptics.get("status") not in {"ok", "error"}:
     )
 
 frame = cap.get("frame", {})
-if frame.get("status") not in {"ok", "timeout", "error"}:
+if frame.get("status") != "ok":
     raise SystemExit(
-        f"webxr-browser-conformance: invalid frame status {frame.get('status')!r}"
+        f"webxr-browser-conformance: expected functional frame status 'ok', got {frame.get('status')!r}"
+    )
+
+session_close = cap.get("session_close", {})
+if session_close.get("status") not in {"closed", "closed-quiesced"}:
+    raise SystemExit(
+        f"webxr-browser-conformance: expected closed session status, got {session_close.get('status')!r}"
     )
 
 print(f"webxr-browser-conformance: ok report={report_path}")

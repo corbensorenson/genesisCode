@@ -3,6 +3,7 @@ use super::PkgCmd;
 pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
     match cmd {
         PkgCmd::New { .. } => "genesis/pkg-new-v0.1",
+        PkgCmd::Scaffold { .. } => "genesis/pkg-scaffold-v0.1",
         PkgCmd::Init { .. } => "genesis/pkg-init-v0.1",
         PkgCmd::Add { .. } => "genesis/pkg-add-v0.1",
         PkgCmd::Remove { .. } => "genesis/pkg-remove-v0.1",
@@ -34,6 +35,7 @@ pub(crate) fn kind(cmd: &PkgCmd) -> &'static str {
 pub(crate) fn log_op(cmd: &PkgCmd) -> &'static str {
     match cmd {
         PkgCmd::New { .. } => "pkg-new",
+        PkgCmd::Scaffold { .. } => "pkg-scaffold",
         PkgCmd::Init { .. } => "pkg-init",
         PkgCmd::Add { .. } => "pkg-add",
         PkgCmd::Remove { .. } => "pkg-remove",
@@ -80,6 +82,15 @@ mod tests {
                 policy: "policy:default-v0.1".to_string(),
                 registry_default: None,
                 members: vec![],
+            },
+            PkgCmd::Scaffold {
+                archetype: "web".to_string(),
+                name: "ai-app".to_string(),
+                root: PathBuf::from("."),
+                force: false,
+                runtime_backend: None,
+                policy: "policy:default-v0.1".to_string(),
+                registry_default: None,
             },
             PkgCmd::Init {
                 workspace: "ws".to_string(),

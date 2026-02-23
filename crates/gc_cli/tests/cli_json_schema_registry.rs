@@ -98,6 +98,7 @@ fn gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
     let expected_kinds = [
         "genesis/pkg-init-v0.1",
         "genesis/pkg-new-v0.1",
+        "genesis/pkg-scaffold-v0.1",
         "genesis/pkg-add-v0.1",
         "genesis/pkg-remove-v0.1",
         "genesis/pkg-lock-v0.1",

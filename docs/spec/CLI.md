@@ -166,6 +166,8 @@ CI strict selfhost gates:
   - Command schema IDs are enumerated in `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.
 - Workspace lifecycle commands:
   - `genesis gcpm new` initializes `genesis.workspace.toml` + `genesis.lock`.
+  - `genesis gcpm scaffold --archetype <web|service|desktop|mobile|xr-game|data-ai> --name <workspace> [--root <dir>] [--runtime-backend <headless|gpu|gfx|backend>] [--force]`
+    bootstraps deterministic archetype project skeletons (workspace, package, caps policies, deploy presets, and AI-friendly starter module).
   - `genesis gcpm add <name>@<selector>` supports deterministic selectors:
     `commit:<hex>`, `snapshot:<hex>`, `refs/...` (or `ref:refs/...`), and
     `semver:<range>` (resolved against `refs/tags/*` with deterministic tag selection policy).

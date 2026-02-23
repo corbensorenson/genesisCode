@@ -141,6 +141,10 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("self-optimize"),
         "pkg --help output missing self-optimize subcommand"
     );
+    assert!(
+        s.contains("scaffold"),
+        "pkg --help output missing scaffold subcommand"
+    );
 
     let s = stdout_str(&["pkg", "abi", "--help"]);
     assert!(s.contains("--pkg"), "pkg abi --help output missing --pkg");

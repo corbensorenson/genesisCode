@@ -27,6 +27,40 @@ enum PkgCmd {
         members: Vec<String>,
     },
 
+    /// Create a deterministic archetype scaffold (workspace + package + deploy presets).
+    Scaffold {
+        /// Product archetype.
+        #[arg(
+            long,
+            value_parser = ["web", "service", "desktop", "mobile", "xr-game", "data-ai"]
+        )]
+        archetype: String,
+
+        /// Workspace/project name.
+        #[arg(long)]
+        name: String,
+
+        /// Root directory for generated scaffold files.
+        #[arg(long, default_value = ".")]
+        root: PathBuf,
+
+        /// Overwrite existing scaffold-managed files.
+        #[arg(long)]
+        force: bool,
+
+        /// Optional runtime backend override.
+        #[arg(long = "runtime-backend")]
+        runtime_backend: Option<String>,
+
+        /// Workspace policy alias.
+        #[arg(long, default_value = "policy:default-v0.1")]
+        policy: String,
+
+        /// Default registry remote spec.
+        #[arg(long)]
+        registry_default: Option<String>,
+    },
+
     /// Initialize a `genesis.lock` workspace lock file.
     Init {
         /// Workspace name.

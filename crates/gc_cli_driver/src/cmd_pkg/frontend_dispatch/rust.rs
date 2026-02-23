@@ -8,6 +8,7 @@ pub(super) fn build(
 ) -> Result<(Value, &'static str, &'static str, [u8; 32]), CliError> {
     let (forms, kind, log_op) = match cmd {
         PkgCmd::New { .. }
+        | PkgCmd::Scaffold { .. }
         | PkgCmd::Remove { .. }
         | PkgCmd::Migrate { .. }
         | PkgCmd::Run { .. }

@@ -68,9 +68,14 @@ Browser-native conformance lane:
 - artifact: `.genesis/perf/webxr_browser_conformance_report.json`
 - conformance scope:
   - real browser `navigator.xr` session open (`inline`) + reference-space request
-  - frame callback attempt with bounded timeout classification (`ok|timeout|error`)
+  - deterministic render-layer initialization (`XRWebGLLayer`) before frame probe
+  - frame callback with bounded classification; functional pass requires `frame.status = ok`
   - real input-source snapshot from `session.inputSources`
   - real haptics attempt on available actuators, or deterministic `no-haptics-source` classification
+  - session-close functional proof:
+    - `session.end()` resolved close (`status = closed`), or
+    - deterministic close-recovery proof (`status = closed-quiesced`) when browser runtime leaves
+      `session.end()` unresolved but old-session frames quiesce and reopen+frame succeeds
   - deterministic replay assertion using capture hash equivalence across two independent runs
 
 Session lifecycle contract:

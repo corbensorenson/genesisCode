@@ -34,6 +34,7 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 
 - `gcpm init` -> `genesis/pkg-init-v0.1`
 - `gcpm new` -> `genesis/pkg-new-v0.1`
+- `gcpm scaffold --archetype <web|service|desktop|mobile|xr-game|data-ai>` -> `genesis/pkg-scaffold-v0.1`
 - `gcpm add` -> `genesis/pkg-add-v0.1`
 - `gcpm remove` -> `genesis/pkg-remove-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-v0.1`
