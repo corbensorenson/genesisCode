@@ -198,6 +198,20 @@ fn diagnostics_contract_covers_all_cli_command_families() {
             ],
         },
         Case {
+            family: "debug",
+            expect: Expect::Failure,
+            argv: vec![
+                "--json".into(),
+                "debug".into(),
+                "frames".into(),
+                missing.display().to_string(),
+                "--contract".into(),
+                "c".into(),
+                "--msg".into(),
+                "(core/msg::make 'pkg/op::x nil)".into(),
+            ],
+        },
+        Case {
             family: "run",
             expect: Expect::Failure,
             argv: vec![

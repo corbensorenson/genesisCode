@@ -33,43 +33,43 @@ pub(super) fn artifact_layout_for_target(target: &str) -> Result<TargetArtifactL
         "web" => TargetArtifactLayout {
             package_rel: "artifact/package.webbundle",
             signature_rel: "artifact/package.webbundle.sig",
-            executable_rel: "artifact/launch_web.sh",
+            executable_rel: "artifact/launch_web.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "desktop" => TargetArtifactLayout {
             package_rel: "artifact/package.desktop.app",
             signature_rel: "artifact/package.desktop.app.sig",
-            executable_rel: "artifact/launch_desktop.sh",
+            executable_rel: "artifact/launch_desktop.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "service" => TargetArtifactLayout {
             package_rel: "artifact/package.service.bin",
             signature_rel: "artifact/package.service.bin.sig",
-            executable_rel: "artifact/launch_service.sh",
+            executable_rel: "artifact/launch_service.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "ios" => TargetArtifactLayout {
             package_rel: "artifact/package.ipa",
             signature_rel: "artifact/package.ipa.sig",
-            executable_rel: "artifact/launch_ios.sh",
+            executable_rel: "artifact/launch_ios.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "android" => TargetArtifactLayout {
             package_rel: "artifact/package.aab",
             signature_rel: "artifact/package.aab.sig",
-            executable_rel: "artifact/launch_android.sh",
+            executable_rel: "artifact/launch_android.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "edge" => TargetArtifactLayout {
             package_rel: "artifact/package.edge.wasm",
             signature_rel: "artifact/package.edge.wasm.sig",
-            executable_rel: "artifact/launch_edge.sh",
+            executable_rel: "artifact/launch_edge.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "service-runtime" => TargetArtifactLayout {
             package_rel: "artifact/package.service-runtime.wasm",
             signature_rel: "artifact/package.service-runtime.wasm.sig",
-            executable_rel: "artifact/launch_service_runtime.sh",
+            executable_rel: "artifact/launch_service_runtime.gc",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         other => {
@@ -168,73 +168,86 @@ pub(super) fn write_target_executable_bundle(
         .map_err(|e| e.to_string())?;
     write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes()).map_err(|e| e.to_string())?;
 
-    let launch_script = format!(
-        r#"#!/usr/bin/env bash
-set -euo pipefail
-MODE="${{1:---boot}}"
-SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
-PKG_PATH="$SCRIPT_DIR/{pkg_rel_name}"
-SIG_PATH="$SCRIPT_DIR/{sig_rel_name}"
-ENTRYPOINT_PATH="$SCRIPT_DIR/{entrypoint_rel_name}"
-TARGET="{target}"
-BUNDLE_H="{bundle_h}"
-GENESIS_BIN="${{GENESIS_BIN:-genesis}}"
-EXPECTED_SIG="$(tr -d '\r\n' < "$SIG_PATH")"
-ACTUAL_SIG="$(python3 - "$PKG_PATH" <<'PY'
-import hashlib
-import pathlib
-import sys
-path = pathlib.Path(sys.argv[1])
-print(hashlib.sha256(path.read_bytes()).hexdigest())
-PY
-)"
-if [[ "$ACTUAL_SIG" != "$EXPECTED_SIG" ]]; then
-  echo "signature-mismatch:$TARGET:$ACTUAL_SIG:$EXPECTED_SIG" >&2
-  exit 2
-fi
-if ! command -v "$GENESIS_BIN" >/dev/null 2>&1; then
-  echo "genesis-bin-not-found:$TARGET:$GENESIS_BIN" >&2
-  exit 127
-fi
-hash_text() {{
-  python3 - <<'PY'
-import hashlib
-import sys
-print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())
-PY
-}}
-run_entrypoint() {{
-  "$GENESIS_BIN" eval "$ENTRYPOINT_PATH"
-}}
-case "$MODE" in
-  --boot)
-    BOOT_OUT="$(run_entrypoint)"
-    BOOT_H="$(printf "%s" "$BOOT_OUT" | hash_text)"
-    echo "boot-exec-ok:$TARGET:$BUNDLE_H:$BOOT_H"
-    ;;
-  --smoke)
-    SMOKE_A="$(run_entrypoint)"
-    SMOKE_B="$(run_entrypoint)"
-    if [[ "$SMOKE_A" != "$SMOKE_B" ]]; then
-      echo "smoke-nondeterministic:$TARGET:$BUNDLE_H" >&2
-      exit 3
-    fi
-    SMOKE_H="$(printf "%s" "$SMOKE_A" | hash_text)"
-    echo "smoke-exec-ok:$TARGET:$BUNDLE_H:$SMOKE_H"
-    ;;
-  *)
-    echo "usage: launch.sh [--boot|--smoke]" >&2
-    exit 64
-    ;;
-esac
-"#,
-        pkg_rel_name = relative_name(layout.package_rel),
-        sig_rel_name = relative_name(layout.signature_rel),
-        entrypoint_rel_name = relative_name(layout.entrypoint_rel),
-        target = target_label,
-        bundle_h = bundle_h
+    let launch_adapter = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":gcpm/target-exec-adapter"),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (
+                TermOrdKey(Term::symbol(":target")),
+                Term::Str(target_label.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":bundle-h")),
+                Term::Str(bundle_h.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":lanes")),
+                proper_list(vec![Term::symbol(":boot"), Term::symbol(":smoke")]),
+            ),
+            (
+                TermOrdKey(Term::symbol(":verify")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":sha256")),
+                            Term::Map(
+                                [
+                                    (
+                                        TermOrdKey(Term::symbol(":package")),
+                                        Term::Str(relative_name(layout.package_rel)),
+                                    ),
+                                    (
+                                        TermOrdKey(Term::symbol(":signature")),
+                                        Term::Str(relative_name(layout.signature_rel)),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":entrypoint")),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":path")),
+                            Term::Str(relative_name(layout.entrypoint_rel)),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":hash")),
+                            Term::Str(entrypoint_h.clone()),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime")),
+                Term::Str(target_profile.runtime.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":host-profile")),
+                Term::Str(target_profile.host_profile.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":artifact-format")),
+                Term::Str(target_profile.artifact_format.to_string()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
     );
-    write_immutable_executable(&executable_path, launch_script.as_bytes())
+    let launch_adapter_src = gc_coreform::print_term(&launch_adapter) + "\n";
+    write_if_same_or_new(&executable_path, launch_adapter_src.as_bytes())
         .map_err(|e| e.to_string())?;
 
     Ok(TargetExecutableBundle {

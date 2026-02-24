@@ -51,32 +51,35 @@ fn parse_optional_string_or_symbol_field(
     Ok(Some(trimmed.to_string()))
 }
 
-fn parse_schema_alias(
+fn reject_legacy_schema_field(
     payload: &Term,
     op: &str,
     canonical_key: &str,
     legacy_key: &str,
-) -> Result<Option<String>, EffectsError> {
-    let canonical = parse_optional_string_or_symbol_field(payload, op, canonical_key)?;
-    let legacy = parse_optional_string_or_symbol_field(payload, op, legacy_key)?;
-    match (canonical, legacy) {
-        (Some(a), Some(b)) if a != b => Err(EffectsError::BadPayload(format!(
-            "{op} payload schema alias mismatch: `{canonical_key}` ({a}) != `{legacy_key}` ({b})"
-        ))),
-        (Some(a), _) => Ok(Some(a)),
-        (None, Some(b)) => Ok(Some(b)),
-        (None, None) => Ok(None),
+) -> Result<(), EffectsError> {
+    let Term::Map(mm) = payload else {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload must be a map"
+        )));
+    };
+    if mm.contains_key(&TermOrdKey(Term::symbol(legacy_key))) {
+        return Err(EffectsError::BadPayload(format!(
+            "{op} payload field `{legacy_key}` is retired; use `{canonical_key}`"
+        )));
     }
+    Ok(())
 }
 
 pub(crate) fn parse_plugin_schema_ids(
     payload: &Term,
     op: &str,
 ) -> Result<PluginSchemaIds, EffectsError> {
+    reject_legacy_schema_field(payload, op, ":request-schema-id", ":request-schema")?;
+    reject_legacy_schema_field(payload, op, ":response-schema-id", ":response-schema")?;
     let request_schema_id =
-        parse_schema_alias(payload, op, ":request-schema-id", ":request-schema")?;
+        parse_optional_string_or_symbol_field(payload, op, ":request-schema-id")?;
     let response_schema_id =
-        parse_schema_alias(payload, op, ":response-schema-id", ":response-schema")?;
+        parse_optional_string_or_symbol_field(payload, op, ":response-schema-id")?;
     Ok(PluginSchemaIds {
         request_schema_id,
         response_schema_id,

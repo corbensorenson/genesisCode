@@ -74,8 +74,8 @@ Phase model:
 | `crates/gc_prelude/src/prelude.rs` | `prelude/modules/manifest.toml` | `bash scripts/check_prelude_capability_coverage.sh` | `phase-2` | `migrated` |
 | `crates/gc_cli_driver/src/semantic_workspace.rs` | `prelude/modules/31_data_pipeline.gc`, `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_reference_workflows.sh` | `phase-1` | `in-progress` |
 | `crates/gc_patches/src/lib.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_task_concurrency_stress.sh` | `phase-1` | `in-progress` |
-| `crates/gc_kernel/src/eval.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `bash scripts/check_selfhost_boundary.sh --strict` | `phase-1` | `in-progress` |
-| `crates/gc_cli_driver/src/cmd_vcs.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_agent_workflow_runtime_parity.sh` | `phase-1` | `in-progress` |
+| `crates/gc_kernel/src/eval.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `bash scripts/check_kernel_tcb_contract.sh` | `phase-3` | `migrated` |
+| `crates/gc_cli_driver/src/cmd_vcs.rs` | `prelude/modules/32_network_workflow.gc` | `bash scripts/check_vcs_selfhost_contract.sh` | `phase-3` | `migrated` |
 | `crates/gc_effects/src/runner_host_bridge.rs` | `prelude/modules/10_browser_host.gc`, `prelude/modules/10_xr_host.gc` | `bash scripts/check_host_bridge_fault_injection.sh` | `phase-2` | `migrated` |
 
 Exit criteria:

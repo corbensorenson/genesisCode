@@ -1,0 +1,39 @@
+{
+  "failure_taxonomy": {
+    "EX_CAPS_DENIED": 41,
+    "EX_EVAL": 20,
+    "EX_IO": 70,
+    "EX_OBLIGATIONS": 30,
+    "EX_PARSE": 10,
+    "EX_VERIFY": 50
+  },
+  "kind": "genesis/gcpm-operation-contract-pack-v0.1",
+  "operations": {
+    "build": {
+      "kind": "genesis/pkg-build-v0.1",
+      "log_op": "pkg-build",
+      "variant": "Build"
+    },
+    "qualify": {
+      "kind": "genesis/pkg-tool-qualification-v0.1",
+      "log_op": "pkg-tool-qualification",
+      "variant": "Qualify"
+    },
+    "run": {
+      "kind": "genesis/pkg-run-v0.1",
+      "log_op": "pkg-run",
+      "variant": "Run"
+    },
+    "test": {
+      "kind": "genesis/pkg-test-v0.1",
+      "log_op": "pkg-test",
+      "variant": "Test"
+    },
+    "trace": {
+      "kind": "genesis/pkg-requirements-trace-v0.1",
+      "log_op": "pkg-requirements-trace",
+      "variant": "Trace"
+    }
+  },
+  "version": 1
+}

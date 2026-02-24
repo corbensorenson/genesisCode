@@ -114,7 +114,7 @@ fn vcs_hash_json_schema_v02_matches_between_rust_and_selfhost_engines() {
 
     let rust_d = rust_v.get("data").unwrap();
     let self_d = self_v.get("data").unwrap();
-    for key in ["hash", "hash_kind", "hash_format", "in", "input"] {
+    for key in ["hash", "hash_kind", "hash_format", "in"] {
         assert_eq!(
             rust_d.get(key),
             self_d.get(key),

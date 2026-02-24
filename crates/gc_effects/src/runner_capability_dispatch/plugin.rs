@@ -69,7 +69,18 @@ pub(super) fn capability_host_plugin_command(
 ) -> Result<Value, EffectsError> {
     let plugin = payload_required_string_or_symbol_field(payload, op, ":plugin")?;
     let command = payload_required_string_or_symbol_field(payload, op, ":command")?;
-    let schema_ids = parse_plugin_schema_ids(payload, op)?;
+    let schema_ids = match parse_plugin_schema_ids(payload, op) {
+        Ok(ids) => ids,
+        Err(EffectsError::BadPayload(msg)) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/caps/payload-error",
+                msg,
+                Some(op),
+            ));
+        }
+        Err(e) => return Err(e),
+    };
     let allow_plugins = match plugin_allowlist_from_policy(pol, op) {
         Ok(v) => v,
         Err(e) => {

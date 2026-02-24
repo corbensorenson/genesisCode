@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
 source "$ROOT_DIR/scripts/lib/heavy_gate_preflight.sh"
+source "$ROOT_DIR/scripts/lib/agent_gpu_profile_contract.sh"
 genesis_configure_cargo_target_dir \
   "$ROOT_DIR" \
   "check-agent-reference-workflows" \
@@ -41,6 +42,35 @@ GAUNTLET_BASELINE_HISTORY="${GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY:-policies/p
 GAUNTLET_DEFAULT_MAX_MS="${GENESIS_AGENT_GAUNTLET_DEFAULT_MAX_MS:-300000}"
 GAUNTLET_REQUIRE_MIN_HISTORY="${GENESIS_AGENT_GAUNTLET_REQUIRE_MIN_HISTORY:-1}"
 GAUNTLET_REGRESSION_PERCENT="${GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT:-25}"
+
+GAUNTLET_PROFILE="${GENESIS_AGENT_GAUNTLET_PROFILE:-dev-fast}"
+AGENT_AUTOMATION_CONTEXT="$(genesis_resolve_agent_automation_context "$GAUNTLET_PROFILE")"
+export GENESIS_AGENT_AUTOMATION_CONTEXT="$AGENT_AUTOMATION_CONTEXT"
+if [[ -z "${GENESIS_AGENT_GPU_PROFILE:-}" ]]; then
+  case "$GAUNTLET_PROFILE" in
+    release-full|release|full-selfhost-cutover)
+      export GENESIS_AGENT_GPU_PROFILE="agent-gpu-strict"
+      ;;
+    *)
+      export GENESIS_AGENT_GPU_PROFILE="agent-gpu-fallback"
+      ;;
+  esac
+fi
+genesis_apply_agent_gpu_profile_contract "$GAUNTLET_PROFILE" "$AGENT_AUTOMATION_CONTEXT"
+if [[ -n "${HEALTH_GPU_BACKEND_POLICY_DEFAULT:-}" ]]; then
+  export GENESIS_GPU_BACKEND_POLICY_DEFAULT="$HEALTH_GPU_BACKEND_POLICY_DEFAULT"
+fi
+if [[ -z "${GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND+x}" ]]; then
+  case "$GAUNTLET_PROFILE" in
+    release-full|release|full-selfhost-cutover)
+      export GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND="1"
+      ;;
+    *)
+      export GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND="0"
+      ;;
+  esac
+fi
+echo "agent-capability-gauntlet: gpu-profile=${GENESIS_AGENT_GPU_PROFILE} backend_default=${GENESIS_GPU_BACKEND_POLICY_DEFAULT:-unset} require_gpu_device=${GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND}"
 
 python3 - \
   "$ROOT_DIR" \

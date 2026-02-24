@@ -52,6 +52,8 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read check_agent_generative_workloads.sh");
     let parity = fs::read_to_string(root.join("scripts/check_agent_workflow_runtime_parity.sh"))
         .expect("read check_agent_workflow_runtime_parity.sh");
+    let gauntlet = fs::read_to_string(root.join("scripts/check_agent_reference_workflows.sh"))
+        .expect("read check_agent_reference_workflows.sh");
     let health = fs::read_to_string(root.join("scripts/check_upgrade_plan_health.sh"))
         .expect("read check_upgrade_plan_health.sh");
     let scenario = fs::read_to_string(root.join("scripts/check_agent_scenario_perf.sh"))
@@ -238,6 +240,25 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         parity.contains("check_agent_generative_workloads.sh"),
         "agent workflow runtime parity gate must include generative workload parity checks"
+    );
+    assert!(
+        gauntlet.contains("source \"$ROOT_DIR/scripts/lib/agent_gpu_profile_contract.sh\""),
+        "agent capability gauntlet must source shared agent gpu profile contract helper"
+    );
+    assert!(
+        gauntlet.contains("genesis_apply_agent_gpu_profile_contract \"$GAUNTLET_PROFILE\" \"$AGENT_AUTOMATION_CONTEXT\""),
+        "agent capability gauntlet must enforce agent gpu profile contract"
+    );
+    assert!(
+        gauntlet.contains(
+            "export GENESIS_GPU_BACKEND_POLICY_DEFAULT=\"$HEALTH_GPU_BACKEND_POLICY_DEFAULT\""
+        ),
+        "agent capability gauntlet must propagate resolved gpu backend policy default into runtime env"
+    );
+    assert!(
+        gauntlet.contains("GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND")
+            && gauntlet.contains("release-full|release|full-selfhost-cutover"),
+        "agent capability gauntlet must default release/full profiles to require device-backed gpu lanes"
     );
     assert!(
         health.contains("check_agent_generative_workloads.sh"),
@@ -456,6 +477,7 @@ fn upgrade_plan_health_does_not_bypass_ci_gates_when_backlog_is_open() {
         .env("CI", "true")
         .env("GENESIS_HEALTH_ENFORCE_GATES", "1")
         .env("GENESIS_HEALTH_TEST_GATE_OVERRIDE", "true")
+        .env("GENESIS_AGENT_AUTOMATION_CONTEXT", "0")
         .current_dir(&root)
         .output()
         .expect("run upgrade-plan health script");

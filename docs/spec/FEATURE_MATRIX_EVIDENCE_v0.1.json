@@ -13,7 +13,7 @@
       ]
     },
     {
-      "capability": "Canonical language form + stable semantic hashing",
+      "capability": "Canonical CoreForm + stable semantic hash identity",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "capability": "Unforgeable protocol values (sealed error/effect channels)",
+      "capability": "Unforgeable sealed effect/error protocol",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
@@ -35,7 +35,7 @@
       ]
     },
     {
-      "capability": "Deny-by-default capability runtime",
+      "capability": "Deny-by-default capability policy runtime",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "capability": "Deterministic effect logs + replay checker",
+      "capability": "Deterministic effect logs + replay mismatch fail-fast",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
@@ -56,22 +56,7 @@
       ]
     },
     {
-      "capability": "Obligations + evidence artifacts in core workflow",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh",
-        "scripts/check_agent_reference_workflows.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Language-native semantic VCS graph + refs + bundles",
+      "capability": "Language-native semantic VCS graph (`commit/refs/patch`)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -80,7 +65,7 @@
       ]
     },
     {
-      "capability": "Built-in package/project manager",
+      "capability": "Built-in package/project manager (`pkg` / `gcpm`)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh"
@@ -92,7 +77,91 @@
       ]
     },
     {
-      "capability": "Deployment/bundle target pipeline in core toolchain",
+      "capability": "Agent planning schema (`cli-schema`, `agent-index`)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_cli_diagnostics_contract.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Semantic edit/refactor CLI (`semantic-edit`)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "Deterministic task concurrency primitives",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_no_user_panics.sh",
+        "scripts/check_task_concurrency_stress.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/SEALS_DISPATCH_REPLAY.md",
+        "docs/spec/DETERMINISM.md",
+        "docs/spec/CONCURRENCY_v0.1.md"
+      ]
+    },
+    {
+      "capability": "GPU compute capability independent of graphics surface",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
+        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
+        "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md"
+      ]
+    },
+    {
+      "capability": "GPU device-runtime strict lane in default gauntlets",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
+        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Graphics/window/input/audio capability families",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_gfx_runtime_profile.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
+        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
+        "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Deployment target pipeline in core toolchain",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
@@ -105,15 +174,12 @@
       ]
     },
     {
-      "capability": "Real native deploy packaging/execution artifacts",
+      "capability": "Native platform packaging/execution adapters",
       "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh"
+        "scripts/check_upgrade_plan_health.sh"
       ],
       "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md"
+        "docs/spec/CLI.md"
       ]
     },
     {
@@ -129,7 +195,7 @@
       ]
     },
     {
-      "capability": "Full no-bootstrap-language self-host closure",
+      "capability": "Full selfhost closure with minimal bounded Rust TCB",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
@@ -141,96 +207,61 @@
       ]
     },
     {
-      "capability": "Machine-readable agent planning index + schema contracts",
+      "capability": "WASI CLI parity with native CLI for registry hosting",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "Type/effect system maturity for large generated codebases",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "Interactive deterministic debugger surface",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_cli_diagnostics_contract.sh",
+        "scripts/check_no_user_panics.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/SEALS_DISPATCH_REPLAY.md",
+        "docs/spec/DETERMINISM.md"
+      ]
+    },
+    {
+      "capability": "LSP/editor server for human IDE workflows",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
         "scripts/check_agent_reference_workflows.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
         "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
       ]
     },
     {
-      "capability": "Semantic edit/refactor primitives as first-class CLI surface",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "LSP/editor server surface",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Interactive debugger/breakpoint surface",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "GPU compute + graphics capability surfaces",
+      "capability": "Policy-gated supply-chain provenance workflow",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh",
-        "scripts/check_gpu_stack_decoupling.sh",
-        "scripts/check_gfx_runtime_profile.sh"
+        "scripts/check_agent_reference_workflows.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md",
-        "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md"
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
       ]
     },
     {
-      "capability": "Deterministic task concurrency runtime with replay semantics",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_no_user_panics.sh",
-        "scripts/check_task_concurrency_stress.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/SEALS_DISPATCH_REPLAY.md",
-        "docs/spec/DETERMINISM.md",
-        "docs/spec/CONCURRENCY_v0.1.md"
-      ]
-    },
-    {
-      "capability": "WASM runtime + WASI CLI surfaces",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Supply-chain policy + provenance gating in primary CLI",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Local artifact GC by semantic reachability (refs/locks/pins)",
+      "capability": "Reachability-based artifact GC (refs/locks/pins)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
@@ -243,27 +274,9 @@
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
         "docs/spec/SELF_HOST_BOUNDARY.md"
       ]
-    },
-    {
-      "capability": "Regulated assurance profile packs in core workflow",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_agent_reference_workflows.sh",
-        "scripts/check_assurance_profile_packs.sh",
-        "scripts/check_assurance_standards_crosswalk.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
-        "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
-        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
-      ]
     }
   ],
-  "entry_count": 22,
+  "entry_count": 23,
   "kind": "genesis/feature-matrix-evidence-v0.1",
   "source_feature_matrix": "feature_matrix.md",
   "version": "0.1"

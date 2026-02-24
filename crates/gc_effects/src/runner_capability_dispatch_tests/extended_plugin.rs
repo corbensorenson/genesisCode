@@ -242,11 +242,11 @@ wasi_bridge_response = "{:ok true :result {:exit-code 0}}"
         (Term::symbol(":plugin"), Term::Str("demo".to_string())),
         (Term::symbol(":command"), Term::Str("run".to_string())),
         (
-            Term::symbol(":request-schema"),
+            Term::symbol(":request-schema-id"),
             Term::Str("genesis/plugin.request.exec.v1".to_string()),
         ),
         (
-            Term::symbol(":response-schema"),
+            Term::symbol(":response-schema-id"),
             Term::Str("genesis/plugin.response.result.v1".to_string()),
         ),
         (
@@ -266,6 +266,52 @@ wasi_bridge_response = "{:ok true :result {:exit-code 0}}"
     )
     .expect("call capability");
     assert_eq!(code_from_error(out), "core/caps/schema-error");
+}
+
+#[test]
+fn host_plugin_typed_schema_rejects_legacy_schema_alias_fields() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["demo"]
+allow_commands = ["run"]
+allow_schema_ids = ["genesis/plugin.request.exec.v1", "genesis/plugin.response.result.v1"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :result {:exit-code 0}}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (Term::symbol(":plugin"), Term::Str("demo".to_string())),
+        (Term::symbol(":command"), Term::Str("run".to_string())),
+        (
+            Term::symbol(":request-schema"),
+            Term::Str("genesis/plugin.request.exec.v1".to_string()),
+        ),
+        (
+            Term::symbol(":response-schema"),
+            Term::Str("genesis/plugin.response.result.v1".to_string()),
+        ),
+        (
+            Term::symbol(":payload"),
+            term_map([(Term::symbol(":args"), Term::Vector(vec![]))]),
+        ),
+    ]);
+    let out = call_capability(
+        "host/plugin::command",
+        &payload,
+        policy.op_policy("host/plugin::command"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(31),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/payload-error");
 }
 
 #[test]

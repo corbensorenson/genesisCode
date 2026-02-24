@@ -254,7 +254,7 @@ pub(super) fn run_bridge_process_persistent(
     max_bytes: Option<usize>,
 ) -> Result<Term, BridgeError> {
     let payload_src = print_term(payload);
-    enforce_payload_limit(family, payload, max_bytes)?;
+    runner_host_bridge_policy::enforce_payload_limit(family, payload, max_bytes)?;
     let payload_frame = format!("{}\n{}", payload_src.len(), payload_src);
     let key = PersistentBridgeSessionKey {
         family: family.to_string(),

@@ -119,14 +119,16 @@ def classify(cap: str):
         add_c("scripts/check_perf_budgets.sh")
 
     # Claim-specific hard requirements to prevent evidence drift for high-impact rows.
-    if cap == "GPU compute + graphics capability surfaces":
+    if cap == "GPU compute capability independent of graphics surface":
         add_e("docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md")
-        add_e("docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md")
         add_c("scripts/check_gpu_compute_runtime_profile.sh")
-        add_c("scripts/check_gfx_runtime_profile.sh")
         add_c("scripts/check_gpu_stack_decoupling.sh")
 
-    if cap == "Deployment/bundle target pipeline in core toolchain":
+    if cap == "Graphics/window/input/audio capability families":
+        add_e("docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md")
+        add_c("scripts/check_gfx_runtime_profile.sh")
+
+    if cap == "Deployment target pipeline in core toolchain":
         add_e("docs/spec/GCPM_JSON_SCHEMAS_v0.1.md")
         add_e("docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md")
         add_c("crates/gc_cli/tests/cli_pkg_workspace.rs")

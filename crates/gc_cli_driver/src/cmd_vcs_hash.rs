@@ -124,8 +124,6 @@ pub(super) fn handle_vcs_hash(cli: &Cli, cmd: &VcsCmd) -> Result<CmdOut, CliErro
         kind: vcs_contract::kind(cmd),
         data: Some(serde_json::json!({
             "in": input.display().to_string(),
-            // Keep legacy field for backward-compat while standardizing on `in`.
-            "input": input.display().to_string(),
             "hash": hash_hex,
             "hash_kind": hk,
             "hash_format": "hex",

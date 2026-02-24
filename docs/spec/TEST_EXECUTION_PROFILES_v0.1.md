@@ -103,13 +103,16 @@ Strict/full profile runtime reports:
       `GENESIS_HEALTH_REQUIRE_GPU_DEVICE_CONFORMANCE=1`.
   - Agent GPU automation profile contract:
     - automation contexts (`agent-inner-loop`, `prepush-standard`, `release-full`, `full-selfhost-cutover`)
-      must set `GENESIS_AGENT_GPU_PROFILE=agent-gpu-strict|agent-gpu-fallback`.
+      resolve an explicit `GENESIS_AGENT_GPU_PROFILE=agent-gpu-strict|agent-gpu-fallback`
+      (caller-provided or profile-derived by `check_agent_reference_workflows.sh`).
     - strict profile (`agent-gpu-strict`) forces fail-closed policy:
       `GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT=require-device` and
-      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`.
+      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=require-device`; the gauntlet runtime also exports
+      `GENESIS_GPU_BACKEND_POLICY_DEFAULT=require-device`.
     - fallback profile (`agent-gpu-fallback`) forces explicit fallback policy:
       `GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT=allow-fallback` and
-      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=dev-allow-fallback`.
+      `GENESIS_GPU_COMPUTE_BACKEND_POLICY=dev-allow-fallback`; the gauntlet runtime also exports
+      `GENESIS_GPU_BACKEND_POLICY_DEFAULT=allow-fallback`.
     - downgrade attempts (strict profile + fallback policy env) are rejected by
       `scripts/check_agent_gpu_profile_contract.sh`.
   - GPU/GFX decoupled runtime lanes:

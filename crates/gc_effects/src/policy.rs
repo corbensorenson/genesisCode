@@ -156,17 +156,10 @@ impl CapsPolicy {
 
     pub fn is_allowed(&self, op: &str) -> bool {
         self.ops.contains_key(op)
-            || low_level_aliases(op)
-                .iter()
-                .any(|alias| self.ops.contains_key(*alias))
     }
 
     pub fn op_policy(&self, op: &str) -> Option<&OpPolicy> {
-        self.ops.get(op).or_else(|| {
-            low_level_aliases(op)
-                .iter()
-                .find_map(|alias| self.ops.get(*alias))
-        })
+        self.ops.get(op)
     }
 
     pub fn inline_max_bytes_for(&self, op: &str) -> Option<usize> {
@@ -229,11 +222,7 @@ impl CapsPolicy {
             }
         }
 
-        // Per-op configuration is accepted in two equivalent encodings:
-        // - canonical: [op."<op-symbol>"] tables (preferred)
-        // - legacy/shortcut: ["<op-symbol>"] tables at the top level
-        //
-        // Both are merged into `ops` with allow/remove semantics.
+        // Per-op configuration must use canonical [op."<op-symbol>"] tables.
         if let Some(op_tbl) = tbl.get("op").and_then(|v| v.as_table()) {
             for (op, cfg) in op_tbl {
                 apply_op_cfg(&mut ops, op, cfg)?;
@@ -252,9 +241,14 @@ impl CapsPolicy {
             {
                 continue;
             }
-            if let Some(_cfg_tbl) = v.as_table() {
-                apply_op_cfg(&mut ops, k, v)?;
+            if v.is_table() {
+                return Err(EffectsError::Log(format!(
+                    "caps.toml: top-level table `{k}` is not supported; define per-op policy under [op.\"{k}\"]"
+                )));
             }
+            return Err(EffectsError::Log(format!(
+                "caps.toml: unknown top-level key `{k}`"
+            )));
         }
 
         Ok(Self {
@@ -327,14 +321,6 @@ impl CapsPolicy {
                 }
             }
         }
-    }
-}
-
-fn low_level_aliases(op: &str) -> &'static [&'static str] {
-    match op {
-        // Internal low-level alias: `pkg snapshot` checks call `load-package`.
-        "core/pkg-low::load-package" => &["core/pkg-low::snapshot"],
-        _ => &[],
     }
 }
 

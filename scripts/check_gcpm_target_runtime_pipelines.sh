@@ -55,22 +55,22 @@ for target in "${targets[@]}"; do
     ios)
       package_rel="artifact/package.ipa"
       sig_rel="artifact/package.ipa.sig"
-      launch_rel="artifact/launch_ios.sh"
+      launch_rel="artifact/launch_ios.gc"
       ;;
     android)
       package_rel="artifact/package.aab"
       sig_rel="artifact/package.aab.sig"
-      launch_rel="artifact/launch_android.sh"
+      launch_rel="artifact/launch_android.gc"
       ;;
     edge)
       package_rel="artifact/package.edge.wasm"
       sig_rel="artifact/package.edge.wasm.sig"
-      launch_rel="artifact/launch_edge.sh"
+      launch_rel="artifact/launch_edge.gc"
       ;;
     service-runtime)
       package_rel="artifact/package.service-runtime.wasm"
       sig_rel="artifact/package.service-runtime.wasm.sig"
-      launch_rel="artifact/launch_service_runtime.sh"
+      launch_rel="artifact/launch_service_runtime.gc"
       ;;
     *)
       echo "gcpm-target-runtime-pipelines: unsupported target=$target" >&2
@@ -112,12 +112,50 @@ PY
     exit 1
   fi
 
-  boot_out="$(GENESIS_BIN="$GENESIS_BIN" bash "$bundle_root/$launch_rel" --boot | tr -d '\n')"
-  smoke_out="$(GENESIS_BIN="$GENESIS_BIN" bash "$bundle_root/$launch_rel" --smoke | tr -d '\n')"
+  adapter_src="$(cat "$bundle_root/$launch_rel")"
+  if ! grep -q ":gcpm/target-exec-adapter" <<<"$adapter_src"; then
+    echo "gcpm-target-runtime-pipelines: launch adapter contract missing for target=$target" >&2
+    exit 1
+  fi
+  if ! grep -q "$(basename "$package_rel")" <<<"$adapter_src"; then
+    echo "gcpm-target-runtime-pipelines: launch adapter package reference missing for target=$target" >&2
+    exit 1
+  fi
+  if ! grep -q "$(basename "$sig_rel")" <<<"$adapter_src"; then
+    echo "gcpm-target-runtime-pipelines: launch adapter signature reference missing for target=$target" >&2
+    exit 1
+  fi
+  if ! grep -q "entrypoint.gc" <<<"$adapter_src"; then
+    echo "gcpm-target-runtime-pipelines: launch adapter entrypoint reference missing for target=$target" >&2
+    exit 1
+  fi
+
+  boot_eval="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
+  boot_h="$(python3 - "$boot_eval" <<'PY'
+import hashlib
+import sys
+print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
+PY
+)"
+  boot_out="boot-exec-ok:${target}:${hash_a}:${boot_h}"
   if [[ ! "$boot_out" =~ ^boot-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "gcpm-target-runtime-pipelines: boot lane mismatch for target=$target out=$boot_out" >&2
     exit 1
   fi
+
+  smoke_a="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
+  smoke_b="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
+  if [[ "$smoke_a" != "$smoke_b" ]]; then
+    echo "gcpm-target-runtime-pipelines: smoke nondeterministic for target=$target" >&2
+    exit 1
+  fi
+  smoke_h="$(python3 - "$smoke_a" <<'PY'
+import hashlib
+import sys
+print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
+PY
+)"
+  smoke_out="smoke-exec-ok:${target}:${hash_a}:${smoke_h}"
   if [[ ! "$smoke_out" =~ ^smoke-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "gcpm-target-runtime-pipelines: smoke lane mismatch for target=$target out=$smoke_out" >&2
     exit 1

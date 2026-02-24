@@ -2,8 +2,10 @@ use std::path::Path;
 
 use gc_coreform::Term;
 
+#[cfg(feature = "parity-harness")]
 use crate::{CliError, EX_PARSE, cli_err};
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
     let op = Term::list(vec![
         Term::symbol("quote"),
@@ -35,6 +37,7 @@ pub(crate) fn mk_vcs_log_program(root: &str, max: u64) -> Vec<Term> {
     ]
 }
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_blame_program(
     snapshot: &str,
     sym: &str,
@@ -78,6 +81,7 @@ pub(crate) fn mk_vcs_blame_program(
     ])
 }
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_why_program(
     snapshot: &str,
     sym: &str,
@@ -124,6 +128,7 @@ pub(crate) fn mk_vcs_why_program(
     ])
 }
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_diff_program(
     base: &str,
     to: &str,
@@ -208,6 +213,7 @@ pub(crate) fn mk_vcs_apply_program(
     ]
 }
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_merge3_program(
     base: &str,
     left: &str,
@@ -250,6 +256,7 @@ pub(crate) fn mk_vcs_merge3_program(
     ]
 }
 
+#[cfg(feature = "parity-harness")]
 pub(crate) fn mk_vcs_resolve_conflict_program(
     conflict: &str,
     strategy: Option<&str>,

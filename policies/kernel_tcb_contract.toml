@@ -1,0 +1,40 @@
+version = 1
+
+kernel_src_dir = "crates/gc_kernel/src"
+
+# Explicit kernel source contract set (excluding tests).
+# Any additions/removals require intentional policy updates.
+expected_kernel_surface_files = [
+  "compiled.rs",
+  "compiled_blob.rs",
+  "compiled_coverage.rs",
+  "env.rs",
+  "error.rs",
+  "eval.rs",
+  "eval_decimal_ops.rs",
+  "eval_forms.rs",
+  "eval_prims.rs",
+  "eval_treewalk.rs",
+  "eval_value_ops.rs",
+  "lib.rs",
+  "value.rs",
+]
+
+# eval.rs must stay as boundary/orchestration; treewalk internals live in eval_treewalk.rs.
+required_eval_markers = [
+  "mod eval_treewalk;",
+  "eval_treewalk::eval_term_impl",
+]
+
+forbidden_eval_markers = [
+  "fn eval_term_impl(",
+  "fn eval_list_tco(",
+]
+
+[line_budgets]
+"crates/gc_kernel/src/eval.rs" = 550
+"crates/gc_kernel/src/eval_treewalk.rs" = 260
+"crates/gc_kernel/src/eval_forms.rs" = 320
+"crates/gc_kernel/src/eval_prims.rs" = 900
+"crates/gc_kernel/src/eval_decimal_ops.rs" = 160
+"crates/gc_kernel/src/eval_value_ops.rs" = 140

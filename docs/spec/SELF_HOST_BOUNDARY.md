@@ -69,6 +69,10 @@ Contract:
      production semantic truth.
 4. Any expansion of permanent TCB requires explicit spec update + gate updates.
    - `scripts/check_selfhost_boundary.sh --strict`
+   - `scripts/check_kernel_tcb_contract.sh`
+   - `scripts/check_vcs_selfhost_contract.sh`
+   - `scripts/check_host_api_evolution_contracts.sh`
+   - `scripts/check_gcpm_operation_contract_pack.sh`
    - `scripts/check_bootstrap_retirement_gate.sh`
    - `scripts/check_selfhost_readiness_scorecard.sh`
 
@@ -166,6 +170,21 @@ CI enforcement:
   `prelude/modules/11_gpu_compute.gc`, or
   `prelude/modules/20_editor.gc` wrapper op is not explicitly dispatched by
   `crates/gc_effects/src/runner_capability_dispatch.rs`.
+- `scripts/check_kernel_tcb_contract.sh` fail-closes kernel evaluator-surface growth by enforcing:
+  - explicit kernel source-set contract (`policies/kernel_tcb_contract.toml`)
+  - eval-file line budgets for high-churn evaluator modules
+  - `eval.rs` boundary markers (must delegate treewalk through `eval_treewalk::eval_term_impl`)
+    and forbidden in-file treewalk implementation markers.
+- `scripts/check_vcs_selfhost_contract.sh` fail-closes VCS command routing drift by enforcing:
+  - parity-only cfg-gating for Rust VCS program builders in `crates/gc_cli_driver/src/cmd_vcs.rs`
+  - production-driver compile check without parity harness features
+  - parity-driver compile check with parity harness enabled.
+- `scripts/check_host_api_evolution_contracts.sh` fail-closes high-churn host API drift by enforcing:
+  - coverage and schema-envelope contracts for GPU/XR/editor/network/plugin domains
+  - deterministic domain-level and overall host API contract hashes.
+- `scripts/check_gcpm_operation_contract_pack.sh` fail-closes `gcpm` contract drift by enforcing:
+  - versioned operation contract pack parity (`build/run/test/trace/qualify`)
+  - deterministic failure taxonomy constant stability.
 
 ## Self-Host Definition (v0.2)
 

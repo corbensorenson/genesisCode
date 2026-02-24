@@ -51,6 +51,7 @@ This is the canonical entrypoint for project documentation.
 - Tooling/CLI/project manager:
   - `docs/spec/CLI.md`
   - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+  - `docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json`
 - Effects/policies/runtime:
   - `docs/spec/CAPS_TOML.md`
   - `docs/spec/HOST_ABI.md`

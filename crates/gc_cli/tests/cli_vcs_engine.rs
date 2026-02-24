@@ -2,9 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use gc_coreform::{
-    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
-};
+use gc_coreform::{Term, TermOrdKey, hash_module, parse_term, print_module, print_term};
 use predicates::prelude::*;
 
 mod support;
@@ -49,40 +47,36 @@ fn poison_cli_vcs_log_program(artifact: &Path) {
     let Term::Vector(entries) = modules else {
         panic!("artifact :modules must be vector");
     };
-    let cli_mod = entries
-        .iter_mut()
-        .find_map(|entry| match entry {
-            Term::Map(mm)
-                if matches!(
-                    mm.get(&TermOrdKey(Term::symbol(":path"))),
-                    Some(Term::Str(path)) if path == "selfhost/cli_coreform_v1.gc"
-                ) =>
-            {
-                Some(mm)
-            }
-            _ => None,
-        })
-        .expect("selfhost/cli_coreform_v1.gc entry");
+    let poison_def = Term::list(vec![
+        Term::symbol("def"),
+        Term::symbol("core/cli::vcs-log-program"),
+        Term::Str("shadowed".to_string()),
+    ]);
 
-    let module_src = match cli_mod.get(&TermOrdKey(Term::symbol(":source"))) {
-        Some(Term::Str(src)) => src.clone(),
-        _ => panic!("cli module missing :source"),
-    };
-    let poisoned_src = format!("{module_src}\n(def core/cli::vcs-log-program \"shadowed\")\n");
-    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).unwrap()).unwrap();
-    let poisoned_hash = hash_module(&poisoned_forms);
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":source")),
-        Term::Str(poisoned_src.to_string()),
-    );
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":forms")),
-        Term::Vector(poisoned_forms),
-    );
-    cli_mod.insert(
-        TermOrdKey(Term::symbol(":module-h")),
-        Term::Bytes(poisoned_hash.to_vec().into()),
-    );
+    let mut poisoned_count = 0usize;
+    for entry in entries.iter_mut() {
+        let Term::Map(mm) = entry else {
+            continue;
+        };
+        let mut forms = match mm.get(&TermOrdKey(Term::symbol(":forms"))) {
+            Some(Term::Vector(forms)) => forms.clone(),
+            _ => continue,
+        };
+        forms.push(poison_def.clone());
+        let poisoned_src = print_module(&forms);
+        let poisoned_hash = hash_module(&forms);
+        mm.insert(
+            TermOrdKey(Term::symbol(":source")),
+            Term::Str(poisoned_src.to_string()),
+        );
+        mm.insert(TermOrdKey(Term::symbol(":forms")), Term::Vector(forms));
+        mm.insert(
+            TermOrdKey(Term::symbol(":module-h")),
+            Term::Bytes(poisoned_hash.to_vec().into()),
+        );
+        poisoned_count = poisoned_count.saturating_add(1);
+    }
+    assert!(poisoned_count > 0, "artifact had no module forms to poison");
     fs::write(artifact, print_term(&term)).unwrap();
 }
 

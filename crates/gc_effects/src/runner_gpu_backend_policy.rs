@@ -24,22 +24,13 @@ pub(crate) enum GpuBackendFallbackPolicy {
 
 pub(crate) fn gpu_backend_kind(pol: Option<&OpPolicy>) -> GpuBackendKind {
     let raw = pol
-        .and_then(|p| {
-            p.extra
-                .get("gpu_backend")
-                .or_else(|| p.extra.get("backend"))
-                .and_then(|v| v.as_str())
-        })
+        .and_then(|p| p.extra.get("gpu_backend").and_then(|v| v.as_str()))
         .unwrap_or(GPU_BACKEND_FIRST_PARTY)
         .trim()
         .to_ascii_lowercase();
     match raw.as_str() {
-        "device-runtime-full" | "device-runtime-lifecycle" | "device-full" | "full-device" => {
-            GpuBackendKind::DeviceRuntimeFullLifecycle
-        }
-        "device-runtime" | "device-runtime-submit" | "device" | "device-bridge" => {
-            GpuBackendKind::DeviceRuntimeSubmitIntrospection
-        }
+        "device-runtime-full" => GpuBackendKind::DeviceRuntimeFullLifecycle,
+        "device-runtime" => GpuBackendKind::DeviceRuntimeSubmitIntrospection,
         _ => GpuBackendKind::FirstParty,
     }
 }
@@ -53,12 +44,8 @@ pub(crate) fn gpu_backend_kind_label(kind: GpuBackendKind) -> &'static str {
 }
 
 pub(crate) fn gpu_backend_fallback_policy(pol: Option<&OpPolicy>) -> GpuBackendFallbackPolicy {
-    if let Some(raw) = pol.and_then(|p| {
-        p.extra
-            .get("gpu_backend_policy")
-            .or_else(|| p.extra.get("backend_policy"))
-            .and_then(|v| v.as_str())
-    }) {
+    if let Some(raw) = pol.and_then(|p| p.extra.get("gpu_backend_policy").and_then(|v| v.as_str()))
+    {
         return parse_gpu_backend_fallback_policy(raw);
     }
     default_gpu_backend_fallback_policy()
@@ -161,10 +148,71 @@ pub(crate) fn inject_backend_fallback_metadata(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use toml::Value as TomlValue;
+
     use super::{
-        GpuBackendFallbackPolicy, default_gpu_backend_fallback_policy_from_env,
-        parse_gpu_backend_fallback_policy,
+        GpuBackendFallbackPolicy, GpuBackendKind, default_gpu_backend_fallback_policy_from_env,
+        gpu_backend_kind, parse_gpu_backend_fallback_policy,
     };
+    use crate::policy::OpPolicy;
+
+    fn op_with_extra(entries: &[(&str, &str)]) -> OpPolicy {
+        let mut extra = BTreeMap::new();
+        for (k, v) in entries {
+            extra.insert((*k).to_string(), TomlValue::String((*v).to_string()));
+        }
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra,
+        }
+    }
+
+    #[test]
+    fn gpu_backend_kind_accepts_only_canonical_backend_values() {
+        let op = op_with_extra(&[("gpu_backend", "device-runtime")]);
+        assert_eq!(
+            gpu_backend_kind(Some(&op)),
+            GpuBackendKind::DeviceRuntimeSubmitIntrospection
+        );
+
+        let op = op_with_extra(&[("gpu_backend", "device-runtime-full")]);
+        assert_eq!(
+            gpu_backend_kind(Some(&op)),
+            GpuBackendKind::DeviceRuntimeFullLifecycle
+        );
+
+        let legacy = [
+            "device-bridge",
+            "device-runtime-submit",
+            "device-runtime-lifecycle",
+            "device",
+            "device-full",
+            "full-device",
+        ];
+        for value in legacy {
+            let op = op_with_extra(&[("gpu_backend", value)]);
+            assert_eq!(
+                gpu_backend_kind(Some(&op)),
+                GpuBackendKind::FirstParty,
+                "legacy gpu_backend value `{value}` must not be accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn gpu_backend_kind_ignores_legacy_backend_key_alias() {
+        let op = op_with_extra(&[("backend", "device-runtime")]);
+        assert_eq!(
+            gpu_backend_kind(Some(&op)),
+            GpuBackendKind::FirstParty,
+            "legacy `backend` key alias must not be accepted"
+        );
+    }
 
     #[test]
     fn parse_gpu_backend_fallback_policy_accepts_release_and_dev_variants() {
@@ -195,6 +243,16 @@ mod tests {
         assert_eq!(
             default_gpu_backend_fallback_policy_from_env(Some("require-device")),
             GpuBackendFallbackPolicy::RequireDevice
+        );
+    }
+
+    #[test]
+    fn gpu_backend_policy_ignores_legacy_backend_policy_key_alias() {
+        let op = op_with_extra(&[("backend_policy", "require-device")]);
+        assert_eq!(
+            super::gpu_backend_fallback_policy(Some(&op)),
+            GpuBackendFallbackPolicy::AllowFallback,
+            "legacy `backend_policy` key alias must not be accepted"
         );
     }
 }

@@ -2,8 +2,8 @@ use super::CapsPolicy;
 use std::path::Path;
 
 #[test]
-fn supports_legacy_top_level_op_tables() {
-    let p = CapsPolicy::from_toml_str(
+fn rejects_legacy_top_level_op_tables() {
+    let err = CapsPolicy::from_toml_str(
         r#"
 allow = ["io/fs::read"]
 
@@ -11,9 +11,9 @@ allow = ["io/fs::read"]
 base_dir = "./x"
 "#,
     )
-    .unwrap();
-    assert!(p.is_allowed("io/fs::read"));
-    assert!(p.op_policy("io/fs::read").unwrap().base_dir.is_some());
+    .expect_err("legacy top-level op tables must be rejected");
+    assert!(format!("{err}").contains("top-level table"));
+    assert!(format!("{err}").contains("[op.\"io/fs::read\"]"));
 }
 
 #[test]
@@ -29,6 +29,19 @@ base_dir = "./x"
     .unwrap();
     assert!(p.is_allowed("io/fs::read"));
     assert!(p.op_policy("io/fs::read").unwrap().base_dir.is_some());
+}
+
+#[test]
+fn rejects_unknown_top_level_keys() {
+    let err = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/fs::read"]
+custom = "x"
+"#,
+    )
+    .expect_err("unknown top-level keys must be rejected");
+    assert!(format!("{err}").contains("unknown top-level key"));
+    assert!(format!("{err}").contains("custom"));
 }
 
 #[test]
@@ -257,7 +270,7 @@ default_workers = 0
 }
 
 #[test]
-fn supports_pkg_snapshot_low_level_alias_for_low_level_loader() {
+fn pkg_snapshot_allow_does_not_implicitly_allow_load_package() {
     let p = CapsPolicy::from_toml_str(
         r#"
 allow = ["core/pkg-low::snapshot"]
@@ -267,8 +280,8 @@ base_dir = "."
 "#,
     )
     .unwrap();
-    assert!(p.is_allowed("core/pkg-low::load-package"));
-    assert!(p.op_policy("core/pkg-low::load-package").is_some());
+    assert!(!p.is_allowed("core/pkg-low::load-package"));
+    assert!(p.op_policy("core/pkg-low::load-package").is_none());
 }
 
 #[test]

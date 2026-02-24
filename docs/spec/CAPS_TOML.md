@@ -168,10 +168,7 @@ Supported keys:
     - `first-party-runtime` (default): deterministic in-memory runtime backend.
     - `device-runtime`: in-repo device-backed backend for submit/introspection ops (`submit`, `limits`, `features`).
     - `device-runtime-full`: in-repo device-backed backend request for canonical lifecycle ops (`create*`, `write*`, `read*`, `destroy-resource`, `submit`, `limits`, `features`).
-    - legacy aliases accepted and normalized:
-      - `device-bridge` -> `device-runtime`
-      - `device-runtime-submit` -> `device-runtime`
-      - `device-runtime-lifecycle` -> `device-runtime-full`
+    - legacy aliases are not supported; use canonical values only.
   - applies only when no explicit bridge profile is configured for the op.
 - `gpu_backend_policy` (string): optional fail behavior for `gpu_backend = "device-runtime"` or `"device-runtime-full"`.
   - supported values:

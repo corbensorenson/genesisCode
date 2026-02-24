@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use blake3::hash as blake3_hash;
 use gc_coreform::{Term, TermOrdKey};
 
 #[path = "support/pkg_workspace_test_support.rs"]
@@ -328,37 +328,37 @@ path = "lib.gc"
             "web" => (
                 "artifact/package.webbundle",
                 "artifact/package.webbundle.sig",
-                "artifact/launch_web.sh",
+                "artifact/launch_web.gc",
             ),
             "desktop" => (
                 "artifact/package.desktop.app",
                 "artifact/package.desktop.app.sig",
-                "artifact/launch_desktop.sh",
+                "artifact/launch_desktop.gc",
             ),
             "service" => (
                 "artifact/package.service.bin",
                 "artifact/package.service.bin.sig",
-                "artifact/launch_service.sh",
+                "artifact/launch_service.gc",
             ),
             "ios" => (
                 "artifact/package.ipa",
                 "artifact/package.ipa.sig",
-                "artifact/launch_ios.sh",
+                "artifact/launch_ios.gc",
             ),
             "android" => (
                 "artifact/package.aab",
                 "artifact/package.aab.sig",
-                "artifact/launch_android.sh",
+                "artifact/launch_android.gc",
             ),
             "edge" => (
                 "artifact/package.edge.wasm",
                 "artifact/package.edge.wasm.sig",
-                "artifact/launch_edge.sh",
+                "artifact/launch_edge.gc",
             ),
             "service-runtime" => (
                 "artifact/package.service-runtime.wasm",
                 "artifact/package.service-runtime.wasm.sig",
-                "artifact/launch_service_runtime.sh",
+                "artifact/launch_service_runtime.gc",
             ),
             other => panic!("unexpected target {other}"),
         };
@@ -376,31 +376,51 @@ path = "lib.gc"
         );
         assert!(
             launch_script.is_file(),
-            "target {target} missing launch executable"
+            "target {target} missing launch adapter"
         );
         assert!(
             entrypoint_path.is_file(),
             "target {target} missing bundled entrypoint"
         );
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let launch_mode = fs::metadata(&launch_script).unwrap().permissions().mode();
-            assert_ne!(
-                launch_mode & 0o111,
-                0,
-                "target {target} launch script not executable"
-            );
-        }
+        let launch_src = fs::read_to_string(&launch_script).unwrap();
+        let launch_term = gc_coreform::parse_term(&launch_src).expect("parse launch adapter");
+        let Term::Map(launch_map) = launch_term else {
+            panic!("target {target} launch adapter must be map");
+        };
+        assert_eq!(
+            launch_map.get(&TermOrdKey(Term::symbol(":type"))),
+            Some(&Term::symbol(":gcpm/target-exec-adapter"))
+        );
+        assert_eq!(
+            launch_map.get(&TermOrdKey(Term::symbol(":target"))),
+            Some(&Term::Str(target.to_string()))
+        );
+        let launch_verify = map_map(&launch_map, ":verify");
+        let launch_sha256 = map_map(launch_verify, ":sha256");
+        assert_eq!(
+            map_string(launch_sha256, ":package"),
+            PathBuf::from(package_rel)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        );
+        assert_eq!(
+            map_string(launch_sha256, ":signature"),
+            PathBuf::from(signature_rel)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        );
+        let launch_entrypoint = map_map(&launch_map, ":entrypoint");
+        assert_eq!(map_string(launch_entrypoint, ":path"), "entrypoint.gc");
 
         let bundle_h = map_string(&map, ":bundle-h");
-        let genesis_bin = std::env::var("CARGO_BIN_EXE_genesis")
-            .expect("CARGO_BIN_EXE_genesis must be set for integration tests");
-        let boot_out = Command::new("bash")
-            .arg(&launch_script)
-            .arg("--boot")
-            .env("GENESIS_BIN", &genesis_bin)
+        let boot_out = cargo_bin_cmd!("genesis")
+            .arg("eval")
+            .arg(&entrypoint_path)
             .output()
             .expect("run boot lane");
         assert!(
@@ -408,39 +428,57 @@ path = "lib.gc"
             "target {target} boot lane failed: {:?}",
             boot_out
         );
-        let boot_msg = String::from_utf8(boot_out.stdout).unwrap();
-        let boot_trimmed = boot_msg.trim();
+        let boot_trimmed = String::from_utf8(boot_out.stdout).unwrap().trim().to_string();
+        let boot_hash = blake3_hash(boot_trimmed.as_bytes()).to_hex().to_string();
         let boot_prefix = format!("boot-exec-ok:{target}:{bundle_h}:");
+        let boot_msg = format!("{boot_prefix}{boot_hash}");
         assert!(
-            boot_trimmed.starts_with(&boot_prefix),
-            "target {target} boot lane output mismatch: {boot_trimmed}"
+            boot_msg.starts_with(&boot_prefix),
+            "target {target} boot lane output mismatch: {boot_msg}"
         );
         assert!(
-            is_hex_64(&boot_trimmed[boot_prefix.len()..]),
-            "target {target} boot lane digest must be hex64: {boot_trimmed}"
+            is_hex_64(&boot_msg[boot_prefix.len()..]),
+            "target {target} boot lane digest must be hex64: {boot_msg}"
         );
 
-        let smoke_out = Command::new("bash")
-            .arg(&launch_script)
-            .arg("--smoke")
-            .env("GENESIS_BIN", &genesis_bin)
+        let smoke_out_a = cargo_bin_cmd!("genesis")
+            .arg("eval")
+            .arg(&entrypoint_path)
             .output()
-            .expect("run smoke lane");
+            .expect("run smoke lane a");
         assert!(
-            smoke_out.status.success(),
-            "target {target} smoke lane failed: {:?}",
-            smoke_out
+            smoke_out_a.status.success(),
+            "target {target} smoke lane a failed: {:?}",
+            smoke_out_a
         );
-        let smoke_msg = String::from_utf8(smoke_out.stdout).unwrap();
-        let smoke_trimmed = smoke_msg.trim();
+        let smoke_out_b = cargo_bin_cmd!("genesis")
+            .arg("eval")
+            .arg(&entrypoint_path)
+            .output()
+            .expect("run smoke lane b");
+        assert!(
+            smoke_out_b.status.success(),
+            "target {target} smoke lane b failed: {:?}",
+            smoke_out_b
+        );
+        let smoke_trimmed_a = String::from_utf8(smoke_out_a.stdout).unwrap().trim().to_string();
+        let smoke_trimmed_b = String::from_utf8(smoke_out_b.stdout).unwrap().trim().to_string();
+        assert_eq!(
+            smoke_trimmed_a, smoke_trimmed_b,
+            "target {target} smoke lane must be deterministic"
+        );
+        let smoke_hash = blake3_hash(smoke_trimmed_a.as_bytes())
+            .to_hex()
+            .to_string();
         let smoke_prefix = format!("smoke-exec-ok:{target}:{bundle_h}:");
+        let smoke_msg = format!("{smoke_prefix}{smoke_hash}");
         assert!(
-            smoke_trimmed.starts_with(&smoke_prefix),
-            "target {target} smoke lane output mismatch: {smoke_trimmed}"
+            smoke_msg.starts_with(&smoke_prefix),
+            "target {target} smoke lane output mismatch: {smoke_msg}"
         );
         assert!(
-            is_hex_64(&smoke_trimmed[smoke_prefix.len()..]),
-            "target {target} smoke lane digest must be hex64: {smoke_trimmed}"
+            is_hex_64(&smoke_msg[smoke_prefix.len()..]),
+            "target {target} smoke lane digest must be hex64: {smoke_msg}"
         );
     }
 }

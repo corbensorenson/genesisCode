@@ -372,22 +372,6 @@ fn build_target_entrypoint_source(
     Ok(rendered)
 }
 
-fn write_immutable_executable(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    write_if_same_or_new(path, bytes)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let metadata = std::fs::metadata(path)?;
-        let mut perms = metadata.permissions();
-        let mode = perms.mode();
-        if mode & 0o111 != 0o111 {
-            perms.set_mode(mode | 0o755);
-            std::fs::set_permissions(path, perms)?;
-        }
-    }
-    Ok(())
-}
-
 fn proper_list(items: Vec<Term>) -> Term {
     let mut acc = Term::Nil;
     for item in items.into_iter().rev() {

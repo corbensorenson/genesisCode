@@ -747,6 +747,8 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_host_api_evolution_contracts.sh"
+  "bash scripts/check_gcpm_operation_contract_pack.sh"
   "bash scripts/check_assurance_profile_packs.sh"
   "bash scripts/check_assurance_standards_crosswalk.sh"
   "bash scripts/check_tool_qualification_lineage.sh"
@@ -775,6 +777,8 @@ COMMON_GATES=(
   "bash scripts/check_host_bridge_fault_injection.sh"
   "bash scripts/check_no_user_panics.sh"
   "bash scripts/check_rust_engine_compat.sh"
+  "bash scripts/check_kernel_tcb_contract.sh"
+  "bash scripts/check_vcs_selfhost_contract.sh"
   "bash scripts/check_no_production_rust_frontend_refs.sh"
   "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=0 bash scripts/check_production_cli_help_surface.sh"
   "bash scripts/check_cli_diagnostics_contract.sh"
@@ -805,6 +809,8 @@ if [[ "$PROFILE" == "agent-inner-loop" ]]; then
     "bash scripts/check_tool_qualification_lineage.sh"
     "bash scripts/check_write_genesiscode_skill_guide.sh"
     "bash scripts/check_cli_diagnostics_contract.sh"
+    "bash scripts/check_kernel_tcb_contract.sh"
+    "bash scripts/check_vcs_selfhost_contract.sh"
     "bash scripts/check_no_production_rust_frontend_refs.sh"
   )
 fi

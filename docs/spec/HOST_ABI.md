@@ -260,6 +260,51 @@ Machine-readable indices for agent planning:
 - `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json` (derived per-op payload/response contracts)
 - `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json` (derived from prelude `core/caps::perform` wrappers)
 
+### High-Churn Host API Evolution Contract
+
+#### Versioned Contract Families
+
+The following high-churn surfaces are version-locked by machine-readable indices:
+
+- `gpu/compute::*`
+- `gfx/gpu::*`
+- `gfx/xr::*`
+- `editor/*`
+- `io/net::*`
+- `host/plugin::*` and `editor/plugin::*`
+
+Canonical sources:
+
+- `docs/spec/HOST_ABI_INDEX_v0.1.json`
+- `docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json`
+
+#### Deterministic Evolution Rules
+
+1. Every operation in the high-churn families above must have a schema entry in
+   `HOST_ABI_SCHEMA_INDEX_v0.1.json`.
+2. Every schema entry must define:
+   - payload contract (`payload.type` + deterministic constraints)
+   - success envelope (`response_envelope.success.value_kind`)
+   - sealed error envelope (`response_envelope.error.sealed = true`,
+     `response_envelope.error.code_prefix` under `core/caps/*`).
+3. Plugin gateway continuity is mandatory:
+   - `host/plugin::command`
+   - `editor/plugin::command`
+4. Backward-incompatible changes require a version bump in the impacted schema ID and
+   same-change doc/index updates.
+
+#### Machine Checks
+
+Fail-closed gates:
+
+- `scripts/check_capability_indices.sh`
+- `scripts/check_host_api_evolution_contracts.sh`
+
+Report:
+
+- `.genesis/perf/host_api_evolution_contract_report.json`
+- `kind = genesis/host-api-evolution-contract-report-v0.1`
+
 CI drift check:
 
 - `scripts/check_capability_indices.sh`
@@ -633,8 +678,8 @@ Determinism:
     - `:command` (string or symbol)
   - Optional payload field:
     - `:payload` (arbitrary CoreForm term, forwarded to bridge)
-    - `:request-schema-id` (string or symbol, alias `:request-schema`)
-    - `:response-schema-id` (string or symbol, alias `:response-schema`)
+    - `:request-schema-id` (string or symbol)
+    - `:response-schema-id` (string or symbol)
       - when either schema field is present, request/response are validated against
         schema-id contracts in `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`.
   - Required per-op policy controls:

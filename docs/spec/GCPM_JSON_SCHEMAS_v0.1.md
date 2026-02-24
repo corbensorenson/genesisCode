@@ -4,6 +4,8 @@
 # GCPM JSON Schemas v0.1
 
 This document freezes the `--json` schema IDs for all currently implemented `genesis gcpm` commands.
+Versioned operation/log-op/failure-class lock for core autonomous workflows lives in:
+`docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json`.
 
 ## Shared Envelope
 

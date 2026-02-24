@@ -6,8 +6,8 @@ Schema-id contracts for typed plugin capability calls.
 
 `host/plugin::command` and `editor/plugin::command` support typed request/response schemas via:
 
-- `:request-schema-id` (preferred, alias `:request-schema`)
-- `:response-schema-id` (preferred, alias `:response-schema`)
+- `:request-schema-id`
+- `:response-schema-id`
 
 When either schema id is present:
 

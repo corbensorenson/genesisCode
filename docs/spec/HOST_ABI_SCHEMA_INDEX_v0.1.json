@@ -2034,7 +2034,7 @@
           },
           {
             "constraints": [
-              "alias :request-schema accepted",
+              "legacy alias :request-schema rejected",
               "requires allow_schema_ids when present"
             ],
             "name": ":request-schema-id",
@@ -2042,7 +2042,7 @@
           },
           {
             "constraints": [
-              "alias :response-schema accepted",
+              "legacy alias :response-schema rejected",
               "requires allow_schema_ids when present"
             ],
             "name": ":response-schema-id",
@@ -3868,7 +3868,7 @@
           },
           {
             "constraints": [
-              "alias :request-schema accepted",
+              "legacy alias :request-schema rejected",
               "requires allow_schema_ids when present"
             ],
             "name": ":request-schema-id",
@@ -3876,7 +3876,7 @@
           },
           {
             "constraints": [
-              "alias :response-schema accepted",
+              "legacy alias :response-schema rejected",
               "requires allow_schema_ids when present"
             ],
             "name": ":response-schema-id",

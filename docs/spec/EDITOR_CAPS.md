@@ -42,7 +42,6 @@ Determinism:
 
 - `editor/plugin::command`
   - payload: `{ :plugin str|sym :command str|sym :payload term :request-schema-id? str|sym :response-schema-id? str|sym }`
-    - legacy aliases `:request-schema` and `:response-schema` are accepted for backward compatibility.
   - response: bridge-defined CoreForm term | ERROR
   - policy: wrapper over generic host extension ABI (`host/plugin::command`) and must use per-op
     allowlists (`allow_plugins`, optional `allow_commands`, and `allow_schema_ids` when typed schemas are present) plus bridge policy.

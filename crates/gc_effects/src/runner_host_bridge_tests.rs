@@ -1,4 +1,4 @@
-use super::{call_host_bridge, decode_bridge_stdout, normalize_sha256_hex};
+use super::{call_host_bridge, decode_bridge_stdout, runner_host_bridge_policy};
 use crate::policy::CapsPolicy;
 use gc_coreform::{Term, TermOrdKey};
 #[cfg(not(target_os = "wasi"))]
@@ -85,13 +85,16 @@ wasi_bridge_profile = true
 #[test]
 fn normalize_sha256_hex_accepts_prefixed_and_plain_hex() {
     let raw = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd";
-    assert_eq!(normalize_sha256_hex(raw), Some(raw.to_string()));
     assert_eq!(
-        normalize_sha256_hex(&format!("sha256:{raw}")),
+        runner_host_bridge_policy::normalize_sha256_hex(raw),
         Some(raw.to_string())
     );
-    assert!(normalize_sha256_hex("sha256:not-a-hex").is_none());
-    assert!(normalize_sha256_hex("abc").is_none());
+    assert_eq!(
+        runner_host_bridge_policy::normalize_sha256_hex(&format!("sha256:{raw}")),
+        Some(raw.to_string())
+    );
+    assert!(runner_host_bridge_policy::normalize_sha256_hex("sha256:not-a-hex").is_none());
+    assert!(runner_host_bridge_policy::normalize_sha256_hex("abc").is_none());
 }
 
 #[cfg(not(target_os = "wasi"))]

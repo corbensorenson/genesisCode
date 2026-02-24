@@ -74,16 +74,16 @@ status = "in-progress"
 [[migration_rows]]
 module_path = "crates/gc_kernel/src/eval.rs"
 target_gc_modules = ["selfhost/toolchain.gc", "prelude/modules/00_core_media.gc"]
-parity_gate = "bash scripts/check_selfhost_boundary.sh --strict"
-phase = "phase-1"
-status = "in-progress"
+parity_gate = "bash scripts/check_kernel_tcb_contract.sh"
+phase = "phase-3"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_cli_driver/src/cmd_vcs.rs"
 target_gc_modules = ["prelude/modules/32_network_workflow.gc"]
-parity_gate = "bash scripts/check_agent_workflow_runtime_parity.sh"
-phase = "phase-1"
-status = "in-progress"
+parity_gate = "bash scripts/check_vcs_selfhost_contract.sh"
+phase = "phase-3"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_effects/src/runner_host_bridge.rs"
