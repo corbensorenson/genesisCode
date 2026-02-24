@@ -281,6 +281,16 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         "upgrade-plan health profiles must include gfx-only runtime profile lane validation"
     );
     assert!(
+        health.contains("GENESIS_HEALTH_PROFILE_GATE_CACHE")
+            && health.contains("GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC"),
+        "upgrade-plan health script must expose deterministic profile gate cache controls"
+    );
+    assert!(
+        health.contains("apply_profile_gate_cache_policy")
+            && health.contains("run_cached_health_gate.sh"),
+        "upgrade-plan health script must wrap high-cost profile gates with cache policy helper"
+    );
+    assert!(
         health.contains("full-selfhost-cutover"),
         "upgrade-plan health script must expose dedicated full-selfhost-cutover profile"
     );

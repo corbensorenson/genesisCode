@@ -2,6 +2,12 @@ use std::fs;
 use std::path::Path;
 
 use assert_cmd::cargo::cargo_bin_cmd;
+use gc_coreform::{
+    Term, TermOrdKey, canonicalize_module, hash_module, parse_module, parse_term, print_term,
+};
+use predicates::prelude::*;
+
+mod support;
 
 fn write_pkg(dir: &Path) {
     fs::write(
@@ -100,6 +106,55 @@ tests = ["my/pkg::tests"]
 "#,
     )
     .unwrap();
+}
+
+fn poison_patch_schema_validate_patch_unknown_op(artifact: &Path) {
+    let src = fs::read_to_string(artifact).expect("read toolchain artifact");
+    let mut term = parse_term(&src).expect("parse toolchain artifact");
+    let Term::Map(root) = &mut term else {
+        panic!("artifact root must be map");
+    };
+    let modules = root
+        .get_mut(&TermOrdKey(Term::symbol(":modules")))
+        .expect("artifact :modules");
+    let Term::Vector(entries) = modules else {
+        panic!("artifact :modules must be vector");
+    };
+    let patch_mod = entries
+        .iter_mut()
+        .find_map(|entry| match entry {
+            Term::Map(mm)
+                if matches!(
+                    mm.get(&TermOrdKey(Term::symbol(":path"))),
+                    Some(Term::Str(path)) if path == "selfhost/patch_schema_apply_v1.gc"
+                ) =>
+            {
+                Some(mm)
+            }
+            _ => None,
+        })
+        .expect("selfhost/patch_schema_apply_v1.gc entry");
+
+    let module_src = match patch_mod.get(&TermOrdKey(Term::symbol(":source"))) {
+        Some(Term::Str(src)) => src.clone(),
+        _ => panic!("patch schema apply module missing :source"),
+    };
+    let poisoned_src = format!(
+        "{module_src}\n(def core/cli::validate-patch (fn (t) ((core/error::make2 \"core/patch-schema\") \"unknown :op\")))\n"
+    );
+    let poisoned_forms = canonicalize_module(parse_module(&poisoned_src).expect("parse poisoned"))
+        .expect("canonicalize poisoned");
+    let poisoned_hash = hash_module(&poisoned_forms);
+    patch_mod.insert(TermOrdKey(Term::symbol(":source")), Term::Str(poisoned_src));
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":forms")),
+        Term::Vector(poisoned_forms),
+    );
+    patch_mod.insert(
+        TermOrdKey(Term::symbol(":module-h")),
+        Term::Bytes(poisoned_hash.to_vec().into()),
+    );
+    fs::write(artifact, print_term(&term)).expect("write poisoned artifact");
 }
 
 #[test]
@@ -256,6 +311,38 @@ fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
         patch.contains("a.gc") && patch.contains("b.gc"),
         "refactor patch should contain multi-file edits"
     );
+}
+
+#[test]
+fn semantic_edit_refactor_plan_selfhost_fails_when_validate_patch_contract_is_poisoned() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+    let artifact = support::copy_repo_toolchain_artifact(dir);
+    poison_patch_schema_validate_patch_unknown_op(&artifact);
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--coreform-frontend",
+            "selfhost",
+            "--selfhost-artifact",
+            artifact.to_str().unwrap(),
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "rename",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo_v2",
+        ])
+        .assert()
+        .failure()
+        .code(10)
+        .stderr(predicate::str::contains("unknown :op"));
 }
 
 #[test]

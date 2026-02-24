@@ -38,7 +38,6 @@ Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorens
 - P2.1 - obligation execution migration remains phase-1 in-progress.
 - P2.2 - semantic workspace mutation path remains phase-1 in-progress.
 - P2.3 - patch orchestration path remains phase-1 in-progress.
-- P3.1 - strict profile wall-time still needs tighter fast-loop optimization policy.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

@@ -190,25 +190,23 @@ pub(super) fn write_target_executable_bundle(
             (
                 TermOrdKey(Term::symbol(":verify")),
                 Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":sha256")),
-                            Term::Map(
-                                [
-                                    (
-                                        TermOrdKey(Term::symbol(":package")),
-                                        Term::Str(relative_name(layout.package_rel)),
-                                    ),
-                                    (
-                                        TermOrdKey(Term::symbol(":signature")),
-                                        Term::Str(relative_name(layout.signature_rel)),
-                                    ),
-                                ]
-                                .into_iter()
-                                .collect(),
-                            ),
+                    [(
+                        TermOrdKey(Term::symbol(":sha256")),
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":package")),
+                                    Term::Str(relative_name(layout.package_rel)),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":signature")),
+                                    Term::Str(relative_name(layout.signature_rel)),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
                         ),
-                    ]
+                    )]
                     .into_iter()
                     .collect(),
                 ),

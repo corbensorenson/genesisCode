@@ -255,8 +255,25 @@ pub fn apply_patch_with_step_limit_and_frontend(
     )
 }
 
-/// Validate a patch artifact term without performing any I/O.
-pub fn validate_patch_term(t: &Term) -> Result<(), PatchError> {
-    let _ = Patch::from_term(t)?;
-    Ok(())
+/// Validate a patch term using the selected frontend.
+///
+/// Production callers should prefer this API so patch-schema acceptance follows
+/// selfhost `.gc` semantics when running with the selfhost frontend.
+pub fn validate_patch_term_with_frontend(
+    t: &Term,
+    frontend: &CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+) -> Result<(), PatchError> {
+    if coreform_frontend_is_rust(frontend) {
+        let _ = Patch::from_term(t)?;
+        return Ok(());
+    }
+    let CoreformFrontend::Selfhost(cfg) = frontend else {
+        return Err(PatchError::Validate(
+            "invalid frontend dispatch while validating patch".to_string(),
+        ));
+    };
+    let mut sh = SelfhostPatchToolchain::init(cfg, mem_limits)?;
+    sh.validate_patch_term(t, step_limit)
 }

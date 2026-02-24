@@ -1,7 +1,7 @@
 # Selfhost Cutover Dashboard (v0.2)
 
-- Artifact hash: `30f29fb709f0899f15f9094c24716451f0e715d9b5054da30f559dde3c115ea6`
-- Store artifact: `.genesis/store/30f29fb709f0899f15f9094c24716451f0e715d9b5054da30f559dde3c115ea6`
+- Artifact hash: `c28ef6e82d2afe4d341bba6e2db9bb2d237cb6014381cac517f416f1f246009c`
+- Store artifact: `.genesis/store/c28ef6e82d2afe4d341bba6e2db9bb2d237cb6014381cac517f416f1f246009c`
 - Selfhost toolchain artifact configured: `selfhost/toolchain.gc`
 - Selfhost toolchain artifact exists: `true`
 
@@ -9,8 +9,8 @@
 
 | Metric | Value |
 | --- | --- |
-| Total command groups | 29 |
-| Selfhost-routed command groups | 29 |
+| Total command groups | 30 |
+| Selfhost-routed command groups | 30 |
 | Selfhost-routed coverage | 100.00% |
 | Default selfhost coverage | 100.00% |
 | Fast-path default OK | true |
@@ -23,6 +23,7 @@
 | `apply-patch` | true | true | true |
 | `cli-schema` | false | true | true |
 | `commit/*` | true | true | true |
+| `debug/*` | true | true | true |
 | `eval` | true | true | true |
 | `explain` | true | true | true |
 | `fmt` | true | true | true |

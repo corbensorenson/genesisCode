@@ -1,6 +1,8 @@
 use proptest::prelude::*;
 
 use gc_coreform::parse_term;
+use gc_kernel::{MemLimits, StepLimit};
+use gc_obligations::rust_coreform_frontend;
 
 proptest! {
     #![proptest_config(ProptestConfig {
@@ -17,6 +19,12 @@ proptest! {
         let Ok(t) = parse_term(&input) else {
             return Ok(());
         };
-        let _ = gc_patches::validate_patch_term(&t);
+        let frontend = rust_coreform_frontend();
+        let _ = gc_patches::validate_patch_term_with_frontend(
+            &t,
+            &frontend,
+            StepLimit::Default,
+            MemLimits::default(),
+        );
     }
 }

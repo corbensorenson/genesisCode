@@ -428,7 +428,10 @@ path = "lib.gc"
             "target {target} boot lane failed: {:?}",
             boot_out
         );
-        let boot_trimmed = String::from_utf8(boot_out.stdout).unwrap().trim().to_string();
+        let boot_trimmed = String::from_utf8(boot_out.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
         let boot_hash = blake3_hash(boot_trimmed.as_bytes()).to_hex().to_string();
         let boot_prefix = format!("boot-exec-ok:{target}:{bundle_h}:");
         let boot_msg = format!("{boot_prefix}{boot_hash}");
@@ -461,15 +464,19 @@ path = "lib.gc"
             "target {target} smoke lane b failed: {:?}",
             smoke_out_b
         );
-        let smoke_trimmed_a = String::from_utf8(smoke_out_a.stdout).unwrap().trim().to_string();
-        let smoke_trimmed_b = String::from_utf8(smoke_out_b.stdout).unwrap().trim().to_string();
+        let smoke_trimmed_a = String::from_utf8(smoke_out_a.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
+        let smoke_trimmed_b = String::from_utf8(smoke_out_b.stdout)
+            .unwrap()
+            .trim()
+            .to_string();
         assert_eq!(
             smoke_trimmed_a, smoke_trimmed_b,
             "target {target} smoke lane must be deterministic"
         );
-        let smoke_hash = blake3_hash(smoke_trimmed_a.as_bytes())
-            .to_hex()
-            .to_string();
+        let smoke_hash = blake3_hash(smoke_trimmed_a.as_bytes()).to_hex().to_string();
         let smoke_prefix = format!("smoke-exec-ok:{target}:{bundle_h}:");
         let smoke_msg = format!("{smoke_prefix}{smoke_hash}");
         assert!(

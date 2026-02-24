@@ -1,0 +1,275 @@
+(def selfhost/patch_refactor::is-error core/error::is?)
+
+(def selfhost/patch_refactor::err
+  (fn (msg) ((core/error::make2 "core/patch-schema") msg)))
+
+(def selfhost/patch_refactor::empty-vec (quote []))
+
+(def selfhost/patch_refactor::res
+  (fn (term) (fn (count) [term count])))
+
+(def selfhost/patch_refactor::res-term
+  (fn (r) ((core/vec::get r) 0)))
+
+(def selfhost/patch_refactor::res-count
+  (fn (r) ((core/vec::get r) 1)))
+
+(def selfhost/patch_refactor::rename-result
+  (fn (forms)
+    (fn (count)
+      (let ((m0 (quote {})))
+        (let ((m1 (((core/map::put m0) (quote :forms)) forms)))
+          (((core/map::put m1) (quote :rewrite-count)) count))))))
+
+(def selfhost/patch_refactor::split-result
+  (fn (keep)
+    (fn (extracted)
+      (fn (moved)
+        (let ((m0 (quote {})))
+          (let ((m1 (((core/map::put m0) (quote :keep)) keep)))
+            (let ((m2 (((core/map::put m1) (quote :extracted)) extracted)))
+              (((core/map::put m2) (quote :moved-def-count)) moved))))))))
+
+(def selfhost/patch_refactor::sym-or-str->str
+  (fn (x)
+    (if (selfhost/patch_schema::is-str? x)
+      x
+      (if (selfhost/patch_schema::is-sym? x)
+        (core/sym::to-str x)
+        (selfhost/patch_refactor::err "expected symbol|string")))))
+
+(def selfhost/patch_refactor::rename-term
+  (fn (t)
+    (fn (from)
+      (fn (to)
+        (let ((tg (core/data::tag t)))
+          (if ((core/sym::eq? tg) (quote :sym))
+            (let ((s (core/sym::to-str t)))
+              (if ((core/eq? s) from)
+                ((selfhost/patch_refactor::res (core/sym::from-str to)) 1)
+                ((selfhost/patch_refactor::res t) 0)))
+            (if ((core/sym::eq? tg) (quote :pair))
+              (let ((a (core/pair::car t))
+                    (d (core/pair::cdr t)))
+                (let ((ra (((selfhost/patch_refactor::rename-term a) from) to)))
+                  (if (selfhost/patch_refactor::is-error ra)
+                    ra
+                    (let ((rd (((selfhost/patch_refactor::rename-term d) from) to)))
+                      (if (selfhost/patch_refactor::is-error rd)
+                        rd
+                        (let ((na (selfhost/patch_refactor::res-term ra))
+                              (nd (selfhost/patch_refactor::res-term rd))
+                              (ca (selfhost/patch_refactor::res-count ra))
+                              (cd (selfhost/patch_refactor::res-count rd)))
+                          ((selfhost/patch_refactor::res ((core/pair::cons na) nd))
+                           ((core/int::add ca) cd))))))))
+              (if ((core/sym::eq? tg) (quote :vec))
+                (let ((n (core/vec::len t)))
+                  (((((selfhost/patch_refactor::rename-vec-loop t) from) to) n) 0)
+                   selfhost/patch_refactor::empty-vec
+                   0)
+                (if ((core/sym::eq? tg) (quote :map))
+                  (let ((entries (core/map::entries t)))
+                    (let ((n (core/vec::len entries)))
+                      (((((selfhost/patch_refactor::rename-map-entries-loop entries) from) to) n) 0)
+                       selfhost/patch_refactor::empty-vec
+                       0))
+                  ((selfhost/patch_refactor::res t) 0))))))))))
+
+(def selfhost/patch_refactor::rename-vec-loop
+  (fn (v)
+    (fn (from)
+      (fn (to)
+        (fn (n)
+          (fn (i)
+            (fn (out)
+              (fn (count)
+                (if ((core/int::eq? i) n)
+                  ((selfhost/patch_refactor::res out) count)
+                  (let ((x ((core/vec::get v) i)))
+                    (let ((rx (((selfhost/patch_refactor::rename-term x) from) to)))
+                      (if (selfhost/patch_refactor::is-error rx)
+                        rx
+                        ((((((selfhost/patch_refactor::rename-vec-loop v) from) to) n)
+                          ((core/int::add i) 1))
+                         ((core/vec::push out) (selfhost/patch_refactor::res-term rx))
+                         ((core/int::add count) (selfhost/patch_refactor::res-count rx)))))))))))))))
+
+(def selfhost/patch_refactor::rename-map-entries-loop
+  (fn (entries)
+    (fn (from)
+      (fn (to)
+        (fn (n)
+          (fn (i)
+            (fn (out)
+              (fn (count)
+                (if ((core/int::eq? i) n)
+                  (let ((m (core/map::from-entries out)))
+                    (if (selfhost/patch_refactor::is-error m)
+                      m
+                      ((selfhost/patch_refactor::res m) count)))
+                  (let ((e ((core/vec::get entries) i)))
+                    (let ((k ((core/vec::get e) 0))
+                          (v ((core/vec::get e) 1)))
+                      (let ((rk (((selfhost/patch_refactor::rename-term k) from) to)))
+                        (if (selfhost/patch_refactor::is-error rk)
+                          rk
+                          (let ((rv (((selfhost/patch_refactor::rename-term v) from) to)))
+                            (if (selfhost/patch_refactor::is-error rv)
+                              rv
+                              (let ((nk (selfhost/patch_refactor::res-term rk))
+                                    (nv (selfhost/patch_refactor::res-term rv))
+                                    (ck (selfhost/patch_refactor::res-count rk))
+                                    (cv (selfhost/patch_refactor::res-count rv)))
+                                ((((((selfhost/patch_refactor::rename-map-entries-loop entries) from) to) n)
+                                  ((core/int::add i) 1))
+                                 ((core/vec::push out) [nk nv])
+                                 ((core/int::add count) ((core/int::add ck) cv)))))))))))))))))))
+
+(def selfhost/patch_refactor::rename-forms-loop
+  (fn (forms)
+    (fn (from)
+      (fn (to)
+        (fn (n)
+          (fn (i)
+            (fn (out)
+              (fn (count)
+                (if ((core/int::eq? i) n)
+                  ((selfhost/patch_refactor::res out) count)
+                  (let ((f ((core/vec::get forms) i)))
+                    (let ((rf (((selfhost/patch_refactor::rename-term f) from) to)))
+                      (if (selfhost/patch_refactor::is-error rf)
+                        rf
+                        ((((((selfhost/patch_refactor::rename-forms-loop forms) from) to) n)
+                          ((core/int::add i) 1))
+                         ((core/vec::push out) (selfhost/patch_refactor::res-term rf))
+                         ((core/int::add count) (selfhost/patch_refactor::res-count rf)))))))))))))))
+
+(def selfhost/patch_refactor::rename-symbol-forms-core
+  (fn (forms)
+    (fn (from)
+      (fn (to)
+        (if ((core/eq? from) to)
+          ((selfhost/patch_refactor::rename-result forms) 0)
+          (let ((n (core/vec::len forms)))
+            (let ((rr (((((((selfhost/patch_refactor::rename-forms-loop forms) from) to) n) 0)
+                         selfhost/patch_refactor::empty-vec)
+                        0)))
+              (if (selfhost/patch_refactor::is-error rr)
+                rr
+                (let ((next (selfhost/patch_refactor::res-term rr))
+                      (count (selfhost/patch_refactor::res-count rr)))
+                  ((selfhost/patch_refactor::rename-result next) count))))))))))
+
+(def core/cli::rename-symbol-forms
+  (fn (req)
+    (if (selfhost/patch_schema::is-map? req)
+      (let ((forms ((core/map::get req) (quote :forms)))
+            (fromv ((core/map::get req) (quote :from)))
+            (tov ((core/map::get req) (quote :to))))
+        (if (selfhost/patch_schema::is-vec? forms)
+          (let ((from (selfhost/patch_refactor::sym-or-str->str fromv)))
+            (if (selfhost/patch_refactor::is-error from)
+              from
+              (let ((to (selfhost/patch_refactor::sym-or-str->str tov)))
+                (if (selfhost/patch_refactor::is-error to)
+                  to
+                  (((selfhost/patch_refactor::rename-symbol-forms-core forms) from) to)))))
+          (selfhost/patch_refactor::err "rename-symbol-forms :forms must be vector")))
+      (selfhost/patch_refactor::err "rename-symbol-forms expects map request"))))
+
+(def selfhost/patch_refactor::vec-sym-or-str-set
+  (fn (xs)
+    (let ((n (core/vec::len xs)))
+      (((selfhost/patch_refactor::vec-sym-or-str-set2 xs n) 0) {}))))
+
+(def selfhost/patch_refactor::vec-sym-or-str-set2
+  (fn (xs)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((x ((core/vec::get xs) i)))
+              (let ((s (selfhost/patch_refactor::sym-or-str->str x)))
+                (if (selfhost/patch_refactor::is-error s)
+                  s
+                  ((((selfhost/patch_refactor::vec-sym-or-str-set2 xs n) ((core/int::add i) 1))
+                    (((core/map::put out) s) true))))))))))))
+
+(def selfhost/patch_refactor::top-level-def-name
+  (fn (form)
+    (if (selfhost/patch_schema::is-pair? form)
+      (let ((items (core/pair::as-proper-list form)))
+        (if (selfhost/patch_schema::is-vec? items)
+          (if ((core/int::eq? (core/vec::len items)) 3)
+            (let ((h ((core/vec::get items) 0))
+                  (n ((core/vec::get items) 1)))
+              (if (if (selfhost/patch_schema::is-sym? h) ((core/sym::eq? h) (quote def)) false)
+                (if (selfhost/patch_schema::is-sym? n) (core/sym::to-str n) nil)
+                nil))
+            nil)
+          nil))
+      nil)))
+
+(def selfhost/patch_refactor::split-forms-loop
+  (fn (forms)
+    (fn (symset)
+      (fn (n)
+        (fn (i)
+          (fn (keep)
+            (fn (extracted)
+              (fn (moved)
+                (if ((core/int::eq? i) n)
+                  (((selfhost/patch_refactor::split-result keep) extracted) moved)
+                  (let ((f ((core/vec::get forms) i)))
+                    (let ((name (selfhost/patch_refactor::top-level-def-name f)))
+                      (let ((take?
+                             (if (core/list::is-nil? name)
+                               false
+                               (if (core/list::is-nil? ((core/map::get symset) name)) false true))))
+                        (if take?
+                          (((((selfhost/patch_refactor::split-forms-loop forms) symset) n)
+                            ((core/int::add i) 1))
+                           keep
+                           ((core/vec::push extracted) f)
+                           ((core/int::add moved) 1))
+                          (((((selfhost/patch_refactor::split-forms-loop forms) symset) n)
+                            ((core/int::add i) 1))
+                           ((core/vec::push keep) f)
+                           extracted
+                           moved))))))))))))))
+
+(def selfhost/patch_refactor::split-module-forms-core
+  (fn (forms)
+    (fn (symset)
+      (let ((n (core/vec::len forms)))
+        (let ((split (((((((selfhost/patch_refactor::split-forms-loop forms) symset) n) 0)
+                        selfhost/patch_refactor::empty-vec)
+                       selfhost/patch_refactor::empty-vec)
+                      0)))
+          (if (selfhost/patch_refactor::is-error split)
+            split
+            (let ((moved ((core/map::get split) (quote :moved-def-count))))
+              (if ((core/int::eq? moved) 0)
+                (selfhost/patch_refactor::err "split-module found no matching top-level definitions")
+                (let ((keep ((core/map::get split) (quote :keep)))
+                      (extracted ((core/map::get split) (quote :extracted))))
+                  (((selfhost/patch_refactor::split-result keep) extracted) moved))))))))))
+
+(def core/cli::split-module-forms
+  (fn (req)
+    (if (selfhost/patch_schema::is-map? req)
+      (let ((forms ((core/map::get req) (quote :forms)))
+            (symbols ((core/map::get req) (quote :symbols))))
+        (if (selfhost/patch_schema::is-vec? forms)
+          (if (selfhost/patch_schema::is-vec? symbols)
+            (if ((core/int::lt? 0) (core/vec::len symbols))
+              (let ((symset (selfhost/patch_refactor::vec-sym-or-str-set symbols)))
+                (if (selfhost/patch_refactor::is-error symset)
+                  symset
+                  ((selfhost/patch_refactor::split-module-forms-core forms) symset)))
+              (selfhost/patch_refactor::err "split-module :symbols must be non-empty"))
+            (selfhost/patch_refactor::err "split-module :symbols must be vector"))
+          (selfhost/patch_refactor::err "split-module :forms must be vector")))
+      (selfhost/patch_refactor::err "split-module expects map request"))))

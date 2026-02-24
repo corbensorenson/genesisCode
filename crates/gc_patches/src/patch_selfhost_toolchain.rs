@@ -10,6 +10,8 @@ pub(super) struct SelfhostPatchToolchain {
     manifest_apply_add_module: Value,
     manifest_apply_remove_module: Value,
     manifest_apply_update_manifest_op: Value,
+    rename_symbol_forms: Value,
+    split_module_forms: Value,
 }
 
 fn summarize_protocol_error_payload(payload: &Value) -> String {
@@ -103,6 +105,16 @@ impl SelfhostPatchToolchain {
                     "missing binding core/cli::manifest-apply-update-manifest-op".to_string(),
                 )
             })?;
+        let rename_symbol_forms = env
+            .get("core/cli::rename-symbol-forms")
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "missing binding core/cli::rename-symbol-forms".to_string(),
+                )
+            })?;
+        let split_module_forms = env.get("core/cli::split-module-forms").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::split-module-forms".to_string())
+        })?;
 
         Ok(SelfhostPatchToolchain {
             ctx,
@@ -114,6 +126,8 @@ impl SelfhostPatchToolchain {
             manifest_apply_add_module,
             manifest_apply_remove_module,
             manifest_apply_update_manifest_op,
+            rename_symbol_forms,
+            split_module_forms,
         })
     }
 
@@ -326,5 +340,125 @@ impl SelfhostPatchToolchain {
             )));
         };
         Ok(t)
+    }
+
+    pub(super) fn rename_symbol_forms_term(
+        &mut self,
+        forms: &[Term],
+        from: &str,
+        to: &str,
+        step_limit: StepLimit,
+    ) -> Result<(Vec<Term>, usize), PatchError> {
+        self.with_limits(step_limit);
+        let req = Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":forms")), Term::Vector(forms.to_vec())),
+                (
+                    TermOrdKey(Term::symbol(":from")),
+                    Term::Symbol(from.to_string()),
+                ),
+                (TermOrdKey(Term::symbol(":to")), Term::Symbol(to.to_string())),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let out = self
+            .rename_symbol_forms
+            .clone()
+            .apply(&mut self.ctx, Value::Data(req))
+            .map_err(|e| PatchError::Validate(format!("selfhost rename-symbol-forms apply: {e}")))?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli rename-symbol-forms failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Map(m)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli rename-symbol-forms must return map, got {}",
+                out.debug_repr()
+            )));
+        };
+        let forms_t = m
+            .get(&TermOrdKey(Term::symbol(":forms")))
+            .ok_or_else(|| PatchError::Validate("rename-symbol-forms missing :forms".to_string()))?;
+        let Term::Vector(next_forms) = forms_t else {
+            return Err(PatchError::Validate(
+                "rename-symbol-forms :forms must be vector".to_string(),
+            ));
+        };
+        let count_t = m.get(&TermOrdKey(Term::symbol(":rewrite-count"))).ok_or_else(|| {
+            PatchError::Validate("rename-symbol-forms missing :rewrite-count".to_string())
+        })?;
+        let Term::Int(i) = count_t else {
+            return Err(PatchError::Validate(
+                "rename-symbol-forms :rewrite-count must be int".to_string(),
+            ));
+        };
+        let count = i.to_usize().ok_or_else(|| {
+            PatchError::Validate("rename-symbol-forms :rewrite-count out of range".to_string())
+        })?;
+        Ok((next_forms.clone(), count))
+    }
+
+    pub(super) fn split_module_forms_term(
+        &mut self,
+        forms: &[Term],
+        symbols: &[String],
+        step_limit: StepLimit,
+    ) -> Result<(Vec<Term>, Vec<Term>, usize), PatchError> {
+        self.with_limits(step_limit);
+        let symbols_t = Term::Vector(symbols.iter().cloned().map(Term::Symbol).collect());
+        let req = Term::Map(
+            [
+                (TermOrdKey(Term::symbol(":forms")), Term::Vector(forms.to_vec())),
+                (TermOrdKey(Term::symbol(":symbols")), symbols_t),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let out = self
+            .split_module_forms
+            .clone()
+            .apply(&mut self.ctx, Value::Data(req))
+            .map_err(|e| PatchError::Validate(format!("selfhost split-module-forms apply: {e}")))?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli split-module-forms failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Map(m)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli split-module-forms must return map, got {}",
+                out.debug_repr()
+            )));
+        };
+        let keep_t = m
+            .get(&TermOrdKey(Term::symbol(":keep")))
+            .ok_or_else(|| PatchError::Validate("split-module-forms missing :keep".to_string()))?;
+        let Term::Vector(keep) = keep_t else {
+            return Err(PatchError::Validate(
+                "split-module-forms :keep must be vector".to_string(),
+            ));
+        };
+        let extracted_t = m.get(&TermOrdKey(Term::symbol(":extracted"))).ok_or_else(|| {
+            PatchError::Validate("split-module-forms missing :extracted".to_string())
+        })?;
+        let Term::Vector(extracted) = extracted_t else {
+            return Err(PatchError::Validate(
+                "split-module-forms :extracted must be vector".to_string(),
+            ));
+        };
+        let moved_t = m.get(&TermOrdKey(Term::symbol(":moved-def-count"))).ok_or_else(|| {
+            PatchError::Validate("split-module-forms missing :moved-def-count".to_string())
+        })?;
+        let Term::Int(i) = moved_t else {
+            return Err(PatchError::Validate(
+                "split-module-forms :moved-def-count must be int".to_string(),
+            ));
+        };
+        let moved = i.to_usize().ok_or_else(|| {
+            PatchError::Validate("split-module-forms :moved-def-count out of range".to_string())
+        })?;
+        Ok((keep.clone(), extracted.clone(), moved))
     }
 }

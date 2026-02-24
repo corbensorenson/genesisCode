@@ -21,18 +21,9 @@ pub fn apply_patch_with_step_limit_and_frontend(
         Some(SelfhostPatchToolchain::init(cfg, mem_limits)?)
     };
 
-    // When running under the selfhost CoreForm frontend, validate patch schema via the
-    // self-hosted contract to ensure schema acceptance is controlled by `.gc` semantics.
-    if let Some(sh) = selfhost.as_mut()
-        && let Err(err) = sh.validate_patch_term(&patch_term, step_limit)
-    {
-        match &err {
-            PatchError::Validate(msg) if msg.contains("unknown :op") => {
-                // Allow forward-compatible patch ops when selfhost artifact lags schema source.
-                // Rust-side parser/validator remains authoritative for these ops.
-            }
-            _ => return Err(err),
-        }
+    // Selfhost frontend is authoritative for patch-schema acceptance.
+    if let Some(sh) = selfhost.as_mut() {
+        sh.validate_patch_term(&patch_term, step_limit)?;
     }
 
     let patch = Patch::from_term(&patch_term)?;
@@ -428,14 +419,19 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
             let before_module_hash = hash32_hex(hash_module(&forms));
-            let (next, rewrites) = patch_refactor::rename_symbol_in_forms(forms, from, to)?;
+            let (next, rewrites) = if let Some(sh) = selfhost.as_mut() {
+                sh.rename_symbol_forms_term(&forms, from, to, step_limit)?
+            } else {
+                let (next, rewrites) = patch_refactor::rename_symbol_in_forms(forms, from, to)?;
+                let next =
+                    canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+                (next, rewrites)
+            };
             if rewrites == 0 {
                 return Err(PatchError::Validate(format!(
                     "rename-symbol found no `{from}` references in {module_path}"
                 )));
             }
-            let next =
-                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
             let after_module_hash = hash32_hex(hash_module(&next));
             if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
@@ -532,15 +528,21 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&from_abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
             let before_module_hash = hash32_hex(hash_module(&forms));
-            let symbol_set = symbols
-                .iter()
-                .cloned()
-                .collect::<std::collections::BTreeSet<_>>();
-            let (keep, extracted, moved) = patch_refactor::split_module_forms(forms, &symbol_set)?;
-            let keep =
-                canonicalize_module(keep).map_err(|e| PatchError::Validate(e.to_string()))?;
-            let extracted =
-                canonicalize_module(extracted).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let (keep, extracted, moved) = if let Some(sh) = selfhost.as_mut() {
+                sh.split_module_forms_term(&forms, symbols, step_limit)?
+            } else {
+                let symbol_set = symbols
+                    .iter()
+                    .cloned()
+                    .collect::<std::collections::BTreeSet<_>>();
+                let (keep, extracted, moved) =
+                    patch_refactor::split_module_forms(forms, &symbol_set)?;
+                let keep =
+                    canonicalize_module(keep).map_err(|e| PatchError::Validate(e.to_string()))?;
+                let extracted = canonicalize_module(extracted)
+                    .map_err(|e| PatchError::Validate(e.to_string()))?;
+                (keep, extracted, moved)
+            };
             let after_module_hash = hash32_hex(hash_module(&keep));
             let extracted_module_hash = hash32_hex(hash_module(&extracted));
             if let Some(parent) = to_abs.parent() {

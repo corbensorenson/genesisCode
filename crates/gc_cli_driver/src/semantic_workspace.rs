@@ -312,7 +312,13 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
 
     let planned_ops = dedupe_replace_targets(planned_ops, &mut conflicts);
     let patch_term = patch_term_from_plan(kind, from_symbol, to_symbol, &planned_ops)?;
-    gc_patches::validate_patch_term(&patch_term).map_err(map_patch_error)?;
+    gc_patches::validate_patch_term_with_frontend(
+        &patch_term,
+        &frontend,
+        StepLimit::Default,
+        MemLimits::default(),
+    )
+    .map_err(map_patch_error)?;
     let patch_coreform = print_term(&patch_term);
     let patch_hash = hex32(gc_coreform::hash_term(&patch_term));
     let ops_json = planned_ops

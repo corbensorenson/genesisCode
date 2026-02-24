@@ -254,12 +254,19 @@ pub(super) fn cmd_selfhost_artifact(
     } else {
         None
     };
-    let stage2_seed_index = bootstrap_artifact
-        .as_deref()
-        .and_then(load_stage2_seed_index);
-    let use_manifest_recovery = bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
-        && recover_missing_artifact
-        && (bootstrap_artifact.is_none() || stage2_seed_index.is_none());
+    let force_manifest_recovery =
+        bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly && recover_missing_artifact;
+    let stage2_seed_index = if force_manifest_recovery {
+        None
+    } else {
+        bootstrap_artifact
+            .as_deref()
+            .and_then(load_stage2_seed_index)
+    };
+    let use_manifest_recovery = force_manifest_recovery
+        || (bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
+            && recover_missing_artifact
+            && (bootstrap_artifact.is_none() || stage2_seed_index.is_none()));
     if bootstrap_mode == SelfhostBootstrapMode::ArtifactOnly
         && bootstrap_artifact.is_none()
         && !use_manifest_recovery

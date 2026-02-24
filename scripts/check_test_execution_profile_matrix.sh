@@ -76,6 +76,9 @@ require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_TARGET_DIR'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
 require_doc_pattern 'GENESIS_HEALTH_WARM_CARGO_CACHE=auto|1|0'
+require_doc_pattern 'GENESIS_HEALTH_PROFILE_GATE_CACHE=auto|1'
+require_doc_pattern 'GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC'
+require_doc_pattern 'scripts/lib/run_cached_health_gate.sh'
 require_doc_pattern 'genesis/upgrade-plan-health-cargo-warmup-v0.1'
 require_doc_pattern 'release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default'
 require_doc_pattern 'AI Iteration SLO Contention Policy'
@@ -156,6 +159,13 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_CARGO_GATE_SHARDS' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep dedicated cargo gate shard control" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_PROFILE_GATE_CACHE' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'apply_profile_gate_cache_policy' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'run_cached_health_gate.sh' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: check_upgrade_plan_health.sh must keep deterministic profile gate cache wrapper policy" >&2
   exit 1
 fi
 

@@ -25,6 +25,7 @@
     "selfhost/patch_schema_v1.gc"
     "selfhost/patch_schema_apply_v1.gc"
     "selfhost/patch_schema_manifest_v1.gc"
+    "selfhost/patch_schema_refactor_v1.gc"
     "selfhost/stage1_v1.gc"
   ]
   :required-symbols [
@@ -74,5 +75,7 @@
     core/cli::vcs-merge3-program
     core/cli::vcs-resolve-conflict-program
     core/cli::vcs-why-program
+    core/cli::rename-symbol-forms
+    core/cli::split-module-forms
   ]
 }

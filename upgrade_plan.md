@@ -7,7 +7,7 @@ Scope:
 - Remove completed items; rely on git history and perf artifacts for closure evidence.
 - Machine-readable source of unresolved IDs: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 4
+Open checklist items: 3
 
 ## Selfhost Closure (Rust Ownership Still In Critical Path)
 
@@ -15,9 +15,14 @@ Open checklist items: 4
 - [ ] P2.2 Move `crates/gc_cli_driver/src/semantic_workspace.rs` from `phase-1 in-progress` to `phase-3 migrated` with GC-owned planning/edit graph logic as source of truth for agent workspace mutation workflows.
 - [ ] P2.3 Move `crates/gc_patches/src/lib.rs` from `phase-1 in-progress` to `phase-3 migrated` so semantic patch construction/normalization is GC-owned in production execution paths.
 
-## Iteration Throughput
+### Current execution batch (2026-02-24)
 
-- [ ] P3.1 Reduce `prepush-standard` and strict-profile iteration latency via deterministic shard scheduling/caching policy so full-quality loops are routinely single-digit minutes on warm cache.
+- [x] P2.3.a Made selfhost `core/cli::validate-patch` authoritative in `gc_patches` production execution; removed silent Rust fallback on `"unknown :op"` validation failures.
+- [x] P2.3.b Added frontend-aware patch validation API (`validate_patch_term_with_frontend`) and wired semantic workspace refactor-plan validation through the selected CoreForm frontend.
+- [x] P2.3.c Added regression coverage proving poisoned selfhost `validate-patch` now hard-fails apply-patch instead of falling back to Rust acceptance.
+- [x] P2.3.d Removed the Rust-only `validate_patch_term` entrypoint from `gc_patches`; all patch validation callsites now pass explicit frontend + limits.
+- [x] P2.2.a Added semantic-edit selfhost poisoning regression (`cli_semantic_edit`) proving refactor-plan fails closed when selfhost `core/cli::validate-patch` rejects patch schema.
+- Next for P2.3: migrate remaining Rust-owned refactor transforms (`rename-symbol`, `move-module`, `split-module`, `rewrite-*`, `migrate-contract-signature`) into selfhost `.gc` contracts for full phase-3 closure.
 
 ## Evidence Anchors
 
