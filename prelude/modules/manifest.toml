@@ -39,6 +39,7 @@ modules = [
   "33_game_loop.gc",
   "34_xr_workflow.gc",
   "35_media_pipeline.gc",
+  "36_semantic_workspace.gc",
 ]
 
 [deps]
@@ -80,3 +81,4 @@ modules = [
 "33_game_loop.gc" = ["00_core.gc", "10_gfx_02_2d_host.gc", "31_data_pipeline.gc"]
 "34_xr_workflow.gc" = ["00_core.gc", "10_xr_host.gc"]
 "35_media_pipeline.gc" = ["00_core.gc", "00_core_media.gc"]
+"36_semantic_workspace.gc" = ["00_core.gc", "30_service_orchestration.gc"]

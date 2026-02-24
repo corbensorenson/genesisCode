@@ -1,0 +1,146 @@
+(def core/cli/ws::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
+(def core/cli/ws::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/cli/ws::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/cli/ws::vec-or-empty (fn (x) (if (core/cli/ws::vec? x) x [])))
+
+(def core/cli/ws::vec-contains-str?
+  (fn (xs) (fn (needle) ((((core/cli/ws::vec-contains-str-loop xs) needle) (core/vec::len xs)) 0))))
+
+(def core/cli/ws::vec-contains-str-loop
+  (fn (xs)
+    (fn (needle)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            false
+            (let ((x ((core/vec::get xs) i)))
+              (if (if (core/cli/ws::str? x) (core/cli/ws::str? needle) false)
+                (if ((core/eq? x) needle)
+                  true
+                  ((((core/cli/ws::vec-contains-str-loop xs) needle) n) ((core/int::add i) 1)))
+                ((((core/cli/ws::vec-contains-str-loop xs) needle) n) ((core/int::add i) 1))))))))))
+
+(def core/cli/ws::push-unique-str
+  (fn (xs)
+    (fn (v)
+      (if (if (core/cli/ws::str? v) ((core/cli/ws::vec-contains-str? xs) v) false)
+        xs
+        (if (core/cli/ws::str? v) ((core/vec::push xs) v) xs)))))
+
+(def core/cli/ws::owner-modules
+  (fn (owners)
+    (fn (symbol) ((((core/cli/ws::owner-modules-loop owners) symbol) (core/vec::len owners)) 0))))
+
+(def core/cli/ws::owner-modules-loop
+  (fn (owners)
+    (fn (symbol)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            []
+            (let ((entry ((core/vec::get owners) i)))
+              (if (core/cli/ws::map? entry)
+                (let ((entry-symbol ((core/map::get entry) (quote :symbol))))
+                  (if (if (core/cli/ws::str? entry-symbol) (core/cli/ws::str? symbol) false)
+                    (if ((core/eq? entry-symbol) symbol)
+                      (core/cli/ws::vec-or-empty ((core/map::get entry) (quote :module-paths)))
+                      ((((core/cli/ws::owner-modules-loop owners) symbol) n) ((core/int::add i) 1)))
+                    ((((core/cli/ws::owner-modules-loop owners) symbol) n) ((core/int::add i) 1))))
+                ((((core/cli/ws::owner-modules-loop owners) symbol) n) ((core/int::add i) 1))))))))))
+
+(def core/cli/ws::duplicate-owners
+  (fn (owners) ((((core/cli/ws::duplicate-owners-loop owners) (core/vec::len owners)) 0) [])))
+
+(def core/cli/ws::duplicate-owners-loop
+  (fn (owners)
+    (fn (n)
+      (fn (i)
+        (fn (out)
+          (if ((core/int::eq? i) n)
+            out
+            (let ((next (((core/cli/ws::duplicate-owners-loop owners) n) ((core/int::add i) 1))))
+              (let ((entry ((core/vec::get owners) i)))
+                (if (core/cli/ws::map? entry)
+                  (let ((symbol ((core/map::get entry) (quote :symbol))))
+                    (let
+                      ((module-paths (core/cli/ws::vec-or-empty ((core/map::get entry) (quote :module-paths)))))
+                      (if
+                        (if (core/cli/ws::str? symbol)
+                          ((core/int::lt? 1) (core/vec::len module-paths))
+                          false)
+                        (next ((core/vec::push out) {:module-paths module-paths :symbol symbol}))
+                        (next out))))
+                  (next out))))))))))
+
+(def core/cli/ws::step
+  (fn (owners)
+    (fn (occ)
+      (fn (state)
+        (if (core/cli/ws::map? occ)
+          (let ((from-module ((core/map::get occ) (quote :module-path))))
+            (let ((symbol ((core/map::get occ) (quote :symbol))))
+              (let
+                ((edges (core/cli/ws::vec-or-empty ((core/map::get state) (quote :edge-events)))))
+                (let
+                  ((unresolved (core/cli/ws::vec-or-empty ((core/map::get state) (quote :unresolved-symbols)))))
+                  (if (if (core/cli/ws::str? from-module) (core/cli/ws::str? symbol) false)
+                    (let ((owner-modules ((core/cli/ws::owner-modules owners) symbol)))
+                      (if (core/cli/ws::vec? owner-modules)
+                        (if ((core/int::eq? (core/vec::len owner-modules)) 1)
+                          (let ((owner-module ((core/vec::get owner-modules) 0)))
+                            (if
+                              (if (core/cli/ws::str? owner-module)
+                                ((core/eq? owner-module) from-module)
+                                false)
+                              {:edge-events edges :unresolved-symbols unresolved}
+                              {
+                                :edge-events
+                                  ((core/vec::push edges)
+                                    {
+                                      :from-module from-module
+                                      :symbol symbol
+                                      :to-module owner-module})
+                                :unresolved-symbols unresolved}))
+                          {
+                            :edge-events edges
+                            :unresolved-symbols ((core/cli/ws::push-unique-str unresolved) symbol)})
+                        {
+                          :edge-events edges
+                          :unresolved-symbols ((core/cli/ws::push-unique-str unresolved) symbol)}))
+                    {:edge-events edges :unresolved-symbols unresolved})))))
+          state)))))
+
+(def core/cli/ws::reduce-loop
+  (fn (owners)
+    (fn (occurrences)
+      (fn (n)
+        (fn (i)
+          (fn (state)
+            (if ((core/int::eq? i) n)
+              state
+              (((((core/cli/ws::reduce-loop owners) occurrences) n) ((core/int::add i) 1))
+                (((core/cli/ws::step owners) ((core/vec::get occurrences) i)) state)))))))))
+
+(def core/cli::semantic-workspace-graph-analyze
+  (fn (payload)
+    (if (core/cli/ws::map? payload)
+      (let ((owners (core/cli/ws::vec-or-empty ((core/map::get payload) (quote :owners)))))
+        (let
+          ((occurrences (core/cli/ws::vec-or-empty ((core/map::get payload) (quote :occurrences)))))
+          (let
+            (
+              (state
+                (((((core/cli/ws::reduce-loop owners) occurrences) (core/vec::len occurrences)) 0)
+                  {
+                    :edge-events []
+                    :unresolved-symbols []})))
+            {
+              :duplicate-symbol-owners (core/cli/ws::duplicate-owners owners)
+              :edge-events (core/cli/ws::vec-or-empty ((core/map::get state) (quote :edge-events)))
+              :unresolved-symbols
+                (core/cli/ws::vec-or-empty ((core/map::get state) (quote :unresolved-symbols)))})))
+      ((core/error::make2 "core/type-error")
+        "core/cli::semantic-workspace-graph-analyze expects map payload"))))

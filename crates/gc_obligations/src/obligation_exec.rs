@@ -88,6 +88,70 @@ fn obligation_report_term(contract: &str, args: &[Term]) -> Result<Term, Obligat
     }
 }
 
+fn term_map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, key: &str) -> Option<&'a Term> {
+    m.get(&TermOrdKey(Term::symbol(key)))
+}
+
+fn term_vec_strings(t: &Term, field: &str) -> Result<Vec<String>, ObligationError> {
+    let Term::Vector(xs) = t else {
+        return Err(ObligationError::Test(format!(
+            "core/obligation::plan returned non-vector {field}"
+        )));
+    };
+    let mut out = Vec::with_capacity(xs.len());
+    for x in xs {
+        let Term::Str(s) = x else {
+            return Err(ObligationError::Test(format!(
+                "core/obligation::plan returned non-string in {field}"
+            )));
+        };
+        out.push(s.clone());
+    }
+    Ok(out)
+}
+
+pub(super) fn obligation_plan_symbols(
+    obligations: &[String],
+) -> Result<Vec<String>, ObligationError> {
+    let report = obligation_report_term(
+        "core/obligation::plan",
+        &[Term::Vector(
+            obligations
+                .iter()
+                .cloned()
+                .map(Term::Str)
+                .collect::<Vec<_>>(),
+        )],
+    )?;
+    let Term::Map(report_map) = report else {
+        return Err(ObligationError::Test(
+            "core/obligation::plan returned non-map report".to_string(),
+        ));
+    };
+
+    let rejected = match term_map_get(&report_map, ":rejected") {
+        Some(t) => term_vec_strings(t, ":rejected")?,
+        None => {
+            return Err(ObligationError::Test(
+                "core/obligation::plan report missing :rejected".to_string(),
+            ));
+        }
+    };
+    if !rejected.is_empty() {
+        return Err(ObligationError::Test(format!(
+            "core/obligation::plan rejected obligation entries: {}",
+            rejected.join(", ")
+        )));
+    }
+
+    match term_map_get(&report_map, ":run") {
+        Some(t) => term_vec_strings(t, ":run"),
+        None => Err(ObligationError::Test(
+            "core/obligation::plan report missing :run".to_string(),
+        )),
+    }
+}
+
 pub(super) fn obligation_unit_tests(
     store: &EvidenceStore,
     manifest: &PackageManifest,

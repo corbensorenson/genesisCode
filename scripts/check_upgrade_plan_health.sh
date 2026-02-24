@@ -809,7 +809,6 @@ if [[ "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" != "require-device" && "$HEALTH_GPU_B
 fi
 export GENESIS_GPU_BACKEND_POLICY_DEFAULT="$HEALTH_GPU_BACKEND_POLICY_DEFAULT"
 echo "upgrade-plan-health: gpu backend fallback default policy=$GENESIS_GPU_BACKEND_POLICY_DEFAULT (profile=$PROFILE)"
-echo "upgrade-plan-health: profile gate cache policy=$HEALTH_PROFILE_GATE_CACHE ttl_sec=$HEALTH_PROFILE_GATE_CACHE_TTL_SEC"
 if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
@@ -869,6 +868,7 @@ if [[ "$HEALTH_PROFILE_GATE_CACHE" == "auto" ]]; then
 fi
 export GENESIS_HEALTH_PROFILE_GATE_CACHE="$HEALTH_PROFILE_GATE_CACHE"
 export GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC="$HEALTH_PROFILE_GATE_CACHE_TTL_SEC"
+echo "upgrade-plan-health: profile gate cache policy=$HEALTH_PROFILE_GATE_CACHE ttl_sec=$HEALTH_PROFILE_GATE_CACHE_TTL_SEC"
 
 PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"
 if [[ ! "$PROFILE_SHARDS" =~ ^[0-9]+$ || "$PROFILE_SHARDS" -le 0 ]]; then

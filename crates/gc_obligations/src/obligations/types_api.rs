@@ -349,9 +349,10 @@ pub fn test_package_with_step_limit_and_frontend(
     let test_runs =
         run_tests_with_frontend(&pkg_dir, &manifest, &modules, &caps, limits, &frontend)?;
 
+    let obligation_plan = obligation_plan_symbols(&manifest.obligations)?;
     let mut obligation_results = Vec::new();
     let mut ok_all = true;
-    for ob in &manifest.obligations {
+    for ob in &obligation_plan {
         let r = match ob.as_str() {
             "core/obligation::unit-tests" => obligation_unit_tests(&store, &manifest, &test_runs),
             "core/obligation::budgets" => obligation_budgets(&store, &manifest, &test_runs),

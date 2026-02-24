@@ -433,6 +433,60 @@ fn core_obligation_report_builders_match_exec_report_shapes() {
 }
 
 #[test]
+fn core_obligation_plan_contract_dedupes_and_preserves_order() {
+    let src = r#"
+            (core/obligation::plan
+              ["core/obligation::unit-tests"
+               "core/obligation::determinism"
+               "core/obligation::unit-tests"
+               "core/obligation::capabilities-declared"])
+            "#;
+    let term = eval_gc_term(src);
+    let expected = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/obligation-plan-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":rejected")),
+                Term::Vector(Vec::<Term>::new()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":run")),
+                Term::Vector(vec![
+                    Term::Str("core/obligation::unit-tests".to_string()),
+                    Term::Str("core/obligation::determinism".to_string()),
+                    Term::Str("core/obligation::capabilities-declared".to_string()),
+                ]),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    assert_eq!(term, expected);
+}
+
+#[test]
+fn obligation_plan_symbols_routes_through_gc_contract() {
+    let obligations = vec![
+        "core/obligation::unit-tests".to_string(),
+        "core/obligation::determinism".to_string(),
+        "core/obligation::unit-tests".to_string(),
+        "core/obligation::capabilities-declared".to_string(),
+    ];
+    let planned = obligation_plan_symbols(&obligations).expect("plan should succeed");
+    assert_eq!(
+        planned,
+        vec![
+            "core/obligation::unit-tests".to_string(),
+            "core/obligation::determinism".to_string(),
+            "core/obligation::capabilities-declared".to_string(),
+        ]
+    );
+}
+
+#[test]
 fn lint_autofix_builds_replace_node_patch_for_missing_types() {
     let src = r#"
           (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))

@@ -67,6 +67,8 @@
 
 (def core/obligation::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
 
+(def core/obligation::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+
 (def core/obligation::vec-or-empty (fn (x) (if (core/obligation::vec? x) x [])))
 
 (def core/obligation::unit-test-case-ok
@@ -120,3 +122,54 @@
           :kind "genesis/caps-declared-v0.2"
           :ok ok
           :package package}))))
+
+(def core/obligation::plan-contains-str?
+  (fn (xs)
+    (fn (needle)
+      ((((core/obligation::plan-contains-str-loop xs) needle) (core/vec::len xs)) 0))))
+
+(def core/obligation::plan-contains-str-loop
+  (fn (xs)
+    (fn (needle)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            false
+            (let ((x ((core/vec::get xs) i)))
+              (if (if (core/obligation::str? x) (core/obligation::str? needle) false)
+                (if ((core/eq? x) needle)
+                  true
+                  ((((core/obligation::plan-contains-str-loop xs) needle) n)
+                    ((core/int::add i) 1)))
+                ((((core/obligation::plan-contains-str-loop xs) needle) n)
+                  ((core/int::add i) 1))))))))))
+
+(def core/obligation::plan-push-unique-str
+  (fn (xs)
+    (fn (v)
+      (if (if (core/obligation::str? v) ((core/obligation::plan-contains-str? xs) v) false)
+        xs
+        (if (core/obligation::str? v) ((core/vec::push xs) v) xs)))))
+
+(def core/obligation::plan-loop
+  (fn (obligations)
+    (fn (n)
+      (fn (i)
+        (fn (run)
+          (fn (rejected)
+            (if ((core/int::eq? i) n)
+              {:rejected rejected :run run}
+              (let ((next ((((core/obligation::plan-loop obligations) n) ((core/int::add i) 1)))))
+                (let ((ob ((core/vec::get obligations) i)))
+                  (if (core/obligation::str? ob)
+                    ((next ((core/obligation::plan-push-unique-str run) ob)) rejected)
+                    (next run ((core/vec::push rejected) (core/sym::to-str (core/data::tag ob))))))))))))))
+
+(def core/obligation::plan
+  (fn (obligations0)
+    (let ((obligations (core/obligation::vec-or-empty obligations0)))
+      (let ((state (((((core/obligation::plan-loop obligations) (core/vec::len obligations)) 0) []) [])))
+        {
+          :kind "genesis/obligation-plan-v0.2"
+          :rejected (core/obligation::vec-or-empty ((core/map::get state) (quote :rejected)))
+          :run (core/obligation::vec-or-empty ((core/map::get state) (quote :run)))}))))

@@ -40,7 +40,7 @@ status = "migrated"
 module_path = "crates/gc_obligations/src/obligation_exec.rs"
 target_gc_modules = ["prelude/modules/30_service_orchestration.gc", "prelude/modules/31_data_pipeline.gc"]
 parity_gate = "bash scripts/check_agent_generative_workloads.sh"
-phase = "phase-1"
+phase = "phase-2"
 status = "in-progress"
 
 [[migration_rows]]
@@ -59,17 +59,17 @@ status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_cli_driver/src/semantic_workspace.rs"
-target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/32_network_workflow.gc"]
+target_gc_modules = ["prelude/modules/36_semantic_workspace.gc", "prelude/modules/32_network_workflow.gc"]
 parity_gate = "bash scripts/check_agent_reference_workflows.sh"
-phase = "phase-1"
+phase = "phase-2"
 status = "in-progress"
 
 [[migration_rows]]
 module_path = "crates/gc_patches/src/lib.rs"
 target_gc_modules = ["prelude/modules/32_network_workflow.gc"]
 parity_gate = "bash scripts/check_task_concurrency_stress.sh"
-phase = "phase-1"
-status = "in-progress"
+phase = "phase-3"
+status = "migrated"
 
 [[migration_rows]]
 module_path = "crates/gc_kernel/src/eval.rs"

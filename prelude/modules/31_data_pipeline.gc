@@ -4,28 +4,25 @@
   (fn (name)
     (fn (run)
       {
-        :schema (quote :core/kit/pipeline-stage.v1)
         :name name
-        :run run})))
+        :run run
+        :schema (quote :core/kit/pipeline-stage.v1)})))
 
 (def core/kit/pipeline::spec-v1
   (fn (name)
     (fn (seed)
       (fn (stages)
         {
-          :schema (quote :core/kit/pipeline-spec.v1)
           :name name
+          :schema (quote :core/kit/pipeline-spec.v1)
           :seed seed
           :stages stages}))))
 
 (def core/kit/pipeline::invalid-spec
-  (fn (message)
-    (core/effect::pure ((core/error::make2 "core/kit/pipeline-invalid-spec") message))))
+  (fn (message) (core/effect::pure ((core/error::make2 "core/kit/pipeline-invalid-spec") message))))
 
 (def core/kit/pipeline::run-stage
-  (fn (stage)
-    (fn (state)
-      (((core/map::get stage) (quote :run)) state))))
+  (fn (stage) (fn (state) (((core/map::get stage) (quote :run)) state))))
 
 (def core/kit/pipeline::run-loop
   (fn (stages)
@@ -47,157 +44,3 @@
         (core/kit/pipeline::invalid-spec "core/kit/pipeline::run-spec expects :stages vec")))))
 
 (def core/kit/pipeline::run core/kit/pipeline::run-spec)
-
-(def core/cli::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
-
-(def core/cli::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
-
-(def core/cli::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
-
-(def core/cli::vec-or-empty (fn (x) (if (core/cli::vec? x) x [])))
-
-(def core/cli::vec-contains-str?
-  (fn (xs) (fn (needle) ((((core/cli::vec-contains-str-loop xs) needle) (core/vec::len xs)) 0))))
-
-(def core/cli::vec-contains-str-loop
-  (fn (xs)
-    (fn (needle)
-      (fn (n)
-        (fn (i)
-          (if ((core/int::eq? i) n)
-            false
-            (let ((x ((core/vec::get xs) i)))
-              (if (if (core/cli::str? x) (core/cli::str? needle) false)
-                (if ((core/eq? x) needle)
-                  true
-                  ((((core/cli::vec-contains-str-loop xs) needle) n) ((core/int::add i) 1)))
-                ((((core/cli::vec-contains-str-loop xs) needle) n) ((core/int::add i) 1))))))))))
-
-(def core/cli::push-unique-str
-  (fn (xs)
-    (fn (v)
-      (if (if (core/cli::str? v) ((core/cli::vec-contains-str? xs) v) false)
-        xs
-        (if (core/cli::str? v) ((core/vec::push xs) v) xs)))))
-
-(def core/cli::semantic-owner-modules
-  (fn (owners)
-    (fn (symbol)
-      ((((core/cli::semantic-owner-modules-loop owners) symbol) (core/vec::len owners)) 0))))
-
-(def core/cli::semantic-owner-modules-loop
-  (fn (owners)
-    (fn (symbol)
-      (fn (n)
-        (fn (i)
-          (if ((core/int::eq? i) n)
-            nil
-            (let ((entry ((core/vec::get owners) i)))
-              (if (core/cli::map? entry)
-                (let
-                  ((entry-symbol ((core/map::get entry) (quote :symbol)))
-                    (module-paths ((core/map::get entry) (quote :module-paths))))
-                  (if (if (core/cli::str? entry-symbol) (core/cli::str? symbol) false)
-                    (if ((core/eq? entry-symbol) symbol)
-                      (core/cli::vec-or-empty module-paths)
-                      ((((core/cli::semantic-owner-modules-loop owners) symbol) n)
-                        ((core/int::add i) 1)))
-                    ((((core/cli::semantic-owner-modules-loop owners) symbol) n)
-                      ((core/int::add i) 1))))
-                ((((core/cli::semantic-owner-modules-loop owners) symbol) n) ((core/int::add i) 1)))))))))
-
-(def core/cli::semantic-duplicate-owners
-  (fn (owners)
-    ((((core/cli::semantic-duplicate-owners-loop owners) (core/vec::len owners)) 0) [])))
-
-(def core/cli::semantic-duplicate-owners-loop
-  (fn (owners)
-    (fn (n)
-      (fn (i)
-        (fn (out)
-          (if ((core/int::eq? i) n)
-            out
-            (let ((next (((core/cli::semantic-duplicate-owners-loop owners) n) ((core/int::add i) 1))))
-              (let ((entry ((core/vec::get owners) i)))
-                (if (core/cli::map? entry)
-                  (let
-                    ((symbol ((core/map::get entry) (quote :symbol)))
-                      (module-paths (core/cli::vec-or-empty ((core/map::get entry) (quote :module-paths)))))
-                    (if (if (core/cli::str? symbol) ((core/int::lt? 1) (core/vec::len module-paths)) false)
-                      (next
-                        ((core/vec::push out)
-                          {:module_paths module-paths :symbol symbol}))
-                      (next out)))
-                  (next out))))))))))
-
-(def core/cli::semantic-workspace-graph-step
-  (fn (owners)
-    (fn (occ)
-      (fn (state)
-        (if (core/cli::map? occ)
-          (let
-            ((from-module ((core/map::get occ) (quote :module-path)))
-              (symbol ((core/map::get occ) (quote :symbol)))
-              (edges (core/cli::vec-or-empty ((core/map::get state) (quote :edge-events))))
-              (unresolved (core/cli::vec-or-empty ((core/map::get state) (quote :unresolved-symbols)))))
-            (if (if (core/cli::str? from-module) (core/cli::str? symbol) false)
-              (let ((owner-modules ((core/cli::semantic-owner-modules owners) symbol)))
-                (if (core/cli::vec? owner-modules)
-                  (if ((core/int::eq? (core/vec::len owner-modules)) 1)
-                    (let ((owner-module ((core/vec::get owner-modules) 0)))
-                      (if (if (core/cli::str? owner-module) ((core/eq? owner-module) from-module) false)
-                        {:edge-events edges :unresolved-symbols unresolved}
-                        {
-                          :edge-events
-                            ((core/vec::push edges)
-                              {
-                                :from-module from-module
-                                :symbol symbol
-                                :to-module owner-module})
-                          :unresolved-symbols unresolved}))
-                    {
-                      :edge-events edges
-                      :unresolved-symbols ((core/cli::push-unique-str unresolved) symbol)})
-                  {
-                    :edge-events edges
-                    :unresolved-symbols ((core/cli::push-unique-str unresolved) symbol)}))
-              {:edge-events edges :unresolved-symbols unresolved}))
-          state)))))
-
-(def core/cli::semantic-workspace-graph-reduce
-  (fn (owners)
-    (fn (occurrences)
-      ((((core/cli::semantic-workspace-graph-reduce-loop owners) occurrences)
-        (core/vec::len occurrences))
-        0))))
-
-(def core/cli::semantic-workspace-graph-reduce-loop
-  (fn (owners)
-    (fn (occurrences)
-      (fn (n)
-        (fn (i)
-          (if ((core/int::eq? i) n)
-            (fn (state) state)
-            (fn (state)
-              (let ((next ((((core/cli::semantic-workspace-graph-reduce-loop owners) occurrences) n)
-                            ((core/int::add i) 1))))
-                (next (((core/cli::semantic-workspace-graph-step owners) ((core/vec::get occurrences) i))
-                        state)))))))))
-
-(def core/cli::semantic-workspace-graph-analyze
-  (fn (payload)
-    (if (core/cli::map? payload)
-      (let
-        ((owners (core/cli::vec-or-empty ((core/map::get payload) (quote :owners))))
-          (occurrences (core/cli::vec-or-empty ((core/map::get payload) (quote :occurrences)))))
-        (let
-          ((state
-            (((core/cli::semantic-workspace-graph-reduce owners) occurrences)
-              {:edge-events [] :unresolved-symbols []})))
-          {
-            :duplicate-symbol-owners (core/cli::semantic-duplicate-owners owners)
-            :edge-events (core/cli::vec-or-empty ((core/map::get state) (quote :edge-events)))
-            :unresolved-symbols
-              (core/cli::vec-or-empty ((core/map::get state) (quote :unresolved-symbols)))}))
-      ((core/error::make2 "core/type-error")
-        "core/cli::semantic-workspace-graph-analyze expects map payload"))))
