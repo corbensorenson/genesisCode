@@ -17,12 +17,23 @@ genesis_configure_cargo_target_dir \
 DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GEN="${GEN:-$DEFAULT_DEBUG_DIR/genesis}"
 GWASI="${GWASI:-$DEFAULT_DEBUG_DIR/genesis_wasi}"
+FORCE_REBUILD="${GENESIS_SELFHOST_DEFAULT_PROFILE_GUARD_FORCE_REBUILD:-1}"
 
-if [[ ! -x "$GEN" ]]; then
-  cargo build -p gc_cli >/dev/null
+if [[ "$FORCE_REBUILD" != "0" && "$FORCE_REBUILD" != "1" ]]; then
+  echo "selfhost-default-profile-guard: GENESIS_SELFHOST_DEFAULT_PROFILE_GUARD_FORCE_REBUILD must be 0 or 1" >&2
+  exit 2
 fi
-if [[ ! -x "$GWASI" ]]; then
-  cargo build -p gc_wasi_cli >/dev/null
+
+# Always rebuilding by default removes stale-binary nondeterminism from shared target dirs.
+if [[ "$FORCE_REBUILD" == "1" ]]; then
+  cargo build -p gc_cli -p gc_wasi_cli >/dev/null
+else
+  if [[ ! -x "$GEN" ]]; then
+    cargo build -p gc_cli >/dev/null
+  fi
+  if [[ ! -x "$GWASI" ]]; then
+    cargo build -p gc_wasi_cli >/dev/null
+  fi
 fi
 
 TMP_DIR="$(mktemp -d)"

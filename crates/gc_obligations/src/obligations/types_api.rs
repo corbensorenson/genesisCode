@@ -351,7 +351,6 @@ pub fn test_package_with_step_limit_and_frontend(
 
     let obligation_plan = obligation_plan_symbols(&manifest.obligations)?;
     let mut obligation_results = Vec::new();
-    let mut ok_all = true;
     for ob in &obligation_plan {
         let r = match ob.as_str() {
             "core/obligation::unit-tests" => obligation_unit_tests(&store, &manifest, &test_runs),
@@ -359,42 +358,36 @@ pub fn test_package_with_step_limit_and_frontend(
             "core/obligation::property-tests" => {
                 obligation_property_tests(&store, &pkg_dir, &manifest, &modules, limits)
             }
-            "core/obligation::coverage" => {
-                obligation_coverage(CoverageRunArgs {
-                    store: &store,
-                    pkg_dir: &pkg_dir,
-                    manifest: &manifest,
-                    modules: &modules,
-                    tests: &test_runs,
-                    limits,
-                    profile: CoverageProfile::Symbol,
-                    obligation_name: "core/obligation::coverage",
-                })
-            }
-            "core/obligation::coverage-decision" => {
-                obligation_coverage(CoverageRunArgs {
-                    store: &store,
-                    pkg_dir: &pkg_dir,
-                    manifest: &manifest,
-                    modules: &modules,
-                    tests: &test_runs,
-                    limits,
-                    profile: CoverageProfile::Decision,
-                    obligation_name: "core/obligation::coverage-decision",
-                })
-            }
-            "core/obligation::coverage-mcdc" => {
-                obligation_coverage(CoverageRunArgs {
-                    store: &store,
-                    pkg_dir: &pkg_dir,
-                    manifest: &manifest,
-                    modules: &modules,
-                    tests: &test_runs,
-                    limits,
-                    profile: CoverageProfile::Mcdc,
-                    obligation_name: "core/obligation::coverage-mcdc",
-                })
-            }
+            "core/obligation::coverage" => obligation_coverage(CoverageRunArgs {
+                store: &store,
+                pkg_dir: &pkg_dir,
+                manifest: &manifest,
+                modules: &modules,
+                tests: &test_runs,
+                limits,
+                profile: CoverageProfile::Symbol,
+                obligation_name: "core/obligation::coverage",
+            }),
+            "core/obligation::coverage-decision" => obligation_coverage(CoverageRunArgs {
+                store: &store,
+                pkg_dir: &pkg_dir,
+                manifest: &manifest,
+                modules: &modules,
+                tests: &test_runs,
+                limits,
+                profile: CoverageProfile::Decision,
+                obligation_name: "core/obligation::coverage-decision",
+            }),
+            "core/obligation::coverage-mcdc" => obligation_coverage(CoverageRunArgs {
+                store: &store,
+                pkg_dir: &pkg_dir,
+                manifest: &manifest,
+                modules: &modules,
+                tests: &test_runs,
+                limits,
+                profile: CoverageProfile::Mcdc,
+                obligation_name: "core/obligation::coverage-mcdc",
+            }),
             "core/obligation::determinism" => {
                 obligation_determinism(&store, &manifest, &modules, &test_runs)
             }
@@ -430,12 +423,12 @@ pub fn test_package_with_step_limit_and_frontend(
             other => {
                 return Err(ObligationError::Test(format!(
                     "core/obligation::plan emitted unsupported obligation {other}"
-                )))
+                )));
             }
         }?;
-        ok_all &= r.ok;
         obligation_results.push(r);
     }
+    let ok_all = obligation_acceptance_ok(&obligation_results)?;
 
     let acceptance = acceptance_term(&manifest, ok_all, &obligation_results);
     let acceptance_artifact = store.put_term(&acceptance)?;

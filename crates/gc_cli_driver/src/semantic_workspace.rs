@@ -8,6 +8,8 @@ mod semantic_workspace_contract;
 mod semantic_workspace_misc;
 #[path = "semantic_workspace_plan.rs"]
 mod semantic_workspace_plan;
+#[path = "semantic_workspace_refactor_contract.rs"]
+mod semantic_workspace_refactor_contract;
 #[path = "semantic_workspace_types.rs"]
 mod semantic_workspace_types;
 use semantic_workspace_analysis::analyze_workspace;
@@ -15,10 +17,13 @@ use semantic_workspace_contract::semantic_workspace_graph_model_from_contract;
 use semantic_workspace_misc::{refactor_kind_symbol, refactor_kind_token, term_tag};
 use semantic_workspace_plan::{
     collect_symbol_replacements, dedupe_replace_targets, find_definition_sites, make_def_form,
-    map_patch_error, patch_term_from_plan, replace_symbol_in_term, validate_refactor_symbols,
-    validate_relative_module_path,
+    map_patch_error, patch_term_from_plan, replace_symbol_in_term, validate_relative_module_path,
 };
-use semantic_workspace_types::{PlannedOp, RefactorConflict};
+use semantic_workspace_refactor_contract::{
+    semantic_refactor_plan_conflicts_from_contract,
+    semantic_refactor_target_conflicts_from_contract, semantic_refactor_validate_from_contract,
+};
+use semantic_workspace_types::PlannedOp;
 
 pub(super) fn cmd_semantic_edit_workspace_graph(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
@@ -131,88 +136,45 @@ pub(super) fn cmd_semantic_edit_refactor_plan(
     let frontend_info = coreform_frontend_json(&frontend);
     let analysis = analyze_workspace(cli, pkg, &frontend)?;
 
-    let mut conflicts = Vec::new();
-    validate_refactor_symbols(from_symbol, to_symbol, &mut conflicts);
+    let mut conflicts =
+        semantic_refactor_validate_from_contract(cli, kind, from_symbol, to_symbol)?;
 
     let from_defs = find_definition_sites(&analysis, from_symbol);
-    if from_defs.is_empty() {
-        conflicts.push(RefactorConflict {
-            code: "refactor/source-symbol-missing",
-            message: format!("source symbol `{from_symbol}` is not defined in this package"),
-            module_path: None,
-            path_repr: None,
-        });
-    } else if from_defs.len() > 1 {
-        conflicts.push(RefactorConflict {
-            code: "refactor/source-symbol-ambiguous",
-            message: format!(
-                "source symbol `{from_symbol}` is defined in multiple modules: {}",
-                from_defs
-                    .iter()
-                    .map(|d| d.module_path.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            module_path: None,
-            path_repr: None,
-        });
-    }
-
+    let from_def_modules = from_defs
+        .iter()
+        .map(|d| d.module_path.clone())
+        .collect::<Vec<_>>();
     let to_defs = find_definition_sites(&analysis, to_symbol);
-    if !to_defs.is_empty() && from_symbol != to_symbol {
-        conflicts.push(RefactorConflict {
-            code: "refactor/destination-symbol-exists",
-            message: format!("destination symbol `{to_symbol}` already exists"),
-            module_path: to_defs.first().map(|d| d.module_path.clone()),
-            path_repr: to_defs.first().map(|d| d.symbol_path_repr.clone()),
-        });
-    }
+    let to_first = to_defs.first();
+    conflicts.extend(semantic_refactor_plan_conflicts_from_contract(
+        cli,
+        from_symbol,
+        to_symbol,
+        &from_def_modules,
+        to_first.map(|d| d.module_path.as_str()),
+        to_first.map(|d| d.symbol_path_repr.as_str()),
+    )?);
 
     let validated_target_module_path = match kind {
         RefactorKind::Rename => None,
-        RefactorKind::Move | RefactorKind::Extract => match target_module_path {
-            Some(path) => {
-                if !conflicts.is_empty() {
-                    None
-                } else {
-                    match validate_relative_module_path(path) {
-                        Ok(()) => {
-                            if analysis.modules.iter().any(|m| m.module_path == path) {
-                                conflicts.push(RefactorConflict {
-                                        code: "refactor/target-module-exists",
-                                        message: format!(
-                                            "target module `{path}` already exists; add-module would conflict"
-                                        ),
-                                        module_path: Some(path.to_string()),
-                                        path_repr: None,
-                                    });
-                                None
-                            } else {
-                                Some(path.to_string())
-                            }
-                        }
-                        Err(msg) => {
-                            conflicts.push(RefactorConflict {
-                                code: "refactor/target-module-invalid",
-                                message: msg,
-                                module_path: Some(path.to_string()),
-                                path_repr: None,
-                            });
-                            None
-                        }
-                    }
-                }
-            }
-            None => {
-                conflicts.push(RefactorConflict {
-                    code: "refactor/target-module-required",
-                    message: "move/extract requires --target-module-path".to_string(),
-                    module_path: None,
-                    path_repr: None,
-                });
+        RefactorKind::Move | RefactorKind::Extract => {
+            let target_valid =
+                target_module_path.is_some_and(|path| validate_relative_module_path(path).is_ok());
+            let target_exists = target_module_path
+                .is_some_and(|path| analysis.modules.iter().any(|m| m.module_path == path));
+            conflicts.extend(semantic_refactor_target_conflicts_from_contract(
+                cli,
+                kind,
+                target_module_path,
+                target_valid,
+                target_exists,
+            )?);
+            if conflicts.is_empty() {
+                target_module_path.map(str::to_string)
+            } else {
                 None
             }
-        },
+        }
     };
 
     let mut planned_ops = Vec::new();

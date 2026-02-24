@@ -51,7 +51,7 @@ pub(super) fn dedupe_replace_targets(
                 let key = (module_path.clone(), path_repr.clone());
                 if !seen_paths.insert(key.clone()) {
                     conflicts.push(RefactorConflict {
-                        code: "refactor/duplicate-edit-target",
+                        code: "refactor/duplicate-edit-target".to_string(),
                         message: "multiple edits target the same node path".to_string(),
                         module_path: Some(key.0),
                         path_repr: Some(key.1),
@@ -199,45 +199,6 @@ fn proper_list(items: Vec<Term>) -> Term {
     items.into_iter().rev().fold(Term::Nil, |tail, item| {
         Term::Pair(Box::new(item), Box::new(tail))
     })
-}
-
-pub(super) fn validate_refactor_symbols(
-    from_symbol: &str,
-    to_symbol: &str,
-    conflicts: &mut Vec<RefactorConflict>,
-) {
-    if from_symbol.trim().is_empty() {
-        conflicts.push(RefactorConflict {
-            code: "refactor/from-symbol-empty",
-            message: "source symbol must be non-empty".to_string(),
-            module_path: None,
-            path_repr: None,
-        });
-    }
-    if to_symbol.trim().is_empty() {
-        conflicts.push(RefactorConflict {
-            code: "refactor/to-symbol-empty",
-            message: "destination symbol must be non-empty".to_string(),
-            module_path: None,
-            path_repr: None,
-        });
-    }
-    if from_symbol.starts_with(':') || to_symbol.starts_with(':') {
-        conflicts.push(RefactorConflict {
-            code: "refactor/symbol-keyword-forbidden",
-            message: "keyword symbols are not valid refactor targets".to_string(),
-            module_path: None,
-            path_repr: None,
-        });
-    }
-    if from_symbol == to_symbol {
-        conflicts.push(RefactorConflict {
-            code: "refactor/no-op",
-            message: "source and destination symbols are identical".to_string(),
-            module_path: None,
-            path_repr: None,
-        });
-    }
 }
 
 pub(super) fn validate_relative_module_path(path: &str) -> Result<(), String> {

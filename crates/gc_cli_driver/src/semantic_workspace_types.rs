@@ -47,7 +47,7 @@ pub(super) struct WorkspaceAnalysis {
 
 #[derive(Clone, Debug)]
 pub(super) struct RefactorConflict {
-    pub(super) code: &'static str,
+    pub(super) code: String,
     pub(super) message: String,
     pub(super) module_path: Option<String>,
     pub(super) path_repr: Option<String>,

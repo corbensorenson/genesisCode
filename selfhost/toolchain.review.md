@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `c40ba1e3bb4d0cec3ef39258e8d306faf45d12e568b063378f58ae1c2ac46adf`
-- Freshness artifact hash: `c40ba1e3bb4d0cec3ef39258e8d306faf45d12e568b063378f58ae1c2ac46adf`
-- Freshness source hash: `a712d5e71017cdea1962a222fdebd1b04bd40015555cb06532af38d0ade3c793`
-- Source aggregate hash (module path + module sha256): `d3676cad161f1c8ff5c0cf1040e1a275fb1257ac68b9158942726ba04fff1ef5`
+- Artifact sha256: `8e00f170156e96364d1b9be03376465733597a98735b7d09637fd50be6bfef61`
+- Freshness artifact hash: `8e00f170156e96364d1b9be03376465733597a98735b7d09637fd50be6bfef61`
+- Freshness source hash: `fd84beb25cc89f09715f2a081f1ae873d55a8cb31acbd6e90451a891c627214d`
+- Source aggregate hash (module path + module sha256): `e07e47e7019d2e69f9d0243032bde104e6fe004d517cc9f94abbcbd00fb4a0cc`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `24`
+- Module count: `25`
 
 ## Module Summary
 
@@ -38,7 +38,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_reachability_closure_v1.gc` | 297 | 13959 | 21 | `0c82e8d660c258b3` |
 | `selfhost/patch_schema_v1.gc` | 356 | 17578 | 32 | `2d406bff742c79a1` |
 | `selfhost/patch_schema_apply_v1.gc` | 163 | 8681 | 10 | `59117ea31903a5b8` |
-| `selfhost/patch_schema_manifest_v1.gc` | 316 | 14008 | 28 | `9ab3286173641429` |
+| `selfhost/patch_schema_manifest_v1.gc` | 406 | 17939 | 33 | `a1f23ac0a6708185` |
+| `selfhost/patch_schema_refactor_v1.gc` | 935 | 45840 | 61 | `6824fd2deced077f` |
 | `selfhost/stage1_v1.gc` | 398 | 16588 | 47 | `332a04e971ddc71b` |
 
 ## Export Surface (Preview)
@@ -66,4 +67,5 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/patch_schema_v1.gc`: `selfhost/patch_schema::is-int?`, `selfhost/patch_schema::is-str?`, `selfhost/patch_schema::is-sym?`, `selfhost/patch_schema::is-sym-or-str?`, `selfhost/patch_schema::is-vec?`, `selfhost/patch_schema::is-map?`, `selfhost/patch_schema::err`, `selfhost/patch_schema::require`
 - `selfhost/patch_schema_apply_v1.gc`: `selfhost/patch_schema::vec-replace-loop`, `selfhost/patch_schema::step-tag`, `selfhost/patch_schema::apply-replace-step-sym`, `selfhost/patch_schema::apply-replace-step`, `selfhost/patch_schema::apply-replace-term`, `core/cli::apply-replace-node`, `core/cli::print-module-forms`, `core/cli::canonicalize-module-content`
 - `selfhost/patch_schema_manifest_v1.gc`: `selfhost/patch_schema::empty-vec`, `selfhost/patch_schema_manifest::err`, `selfhost/patch_schema::str?`, `selfhost/patch_schema::sym?`, `selfhost/patch_schema::vec?`, `selfhost/patch_schema::map?`, `selfhost/patch_schema::key->str`, `selfhost/patch_schema::require-map-field`
+- `selfhost/patch_schema_refactor_v1.gc`: `selfhost/patch_refactor::is-error`, `selfhost/patch_refactor::err`, `selfhost/patch_refactor::empty-vec`, `selfhost/patch_refactor::vec2`, `selfhost/patch_refactor::res`, `selfhost/patch_refactor::res-term`, `selfhost/patch_refactor::res-count`, `selfhost/patch_refactor::rename-result`
 - `selfhost/stage1_v1.gc`: `selfhost/stage1::is-error`, `selfhost/stage1::type-error`, `selfhost/stage1::bad-form`, `selfhost/stage1::tag`, `selfhost/stage1::empty-vec`, `selfhost/stage1::vec1`, `selfhost/stage1::vec2`, `selfhost/stage1::vec3`

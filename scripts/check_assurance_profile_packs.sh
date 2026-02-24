@@ -7,6 +7,8 @@ cd "$ROOT_DIR"
 PROFILE_FILE="policies/assurance/profile_packs.toml"
 DOC_FILE="docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md"
 BUNDLE_FILE="docs/spec/GCPM_BUNDLE_v0.1.md"
+REPORT_PATH="${GENESIS_ASSURANCE_PROFILE_PACKS_REPORT:-.genesis/perf/assurance_profile_packs_report.json}"
+HISTORY_PATH="${GENESIS_ASSURANCE_PROFILE_PACKS_HISTORY:-.genesis/perf/assurance_profile_packs_history.jsonl}"
 
 [[ -f "$PROFILE_FILE" ]] || {
   echo "assurance-profile-packs: missing profile file: $PROFILE_FILE" >&2
@@ -21,9 +23,11 @@ BUNDLE_FILE="docs/spec/GCPM_BUNDLE_v0.1.md"
   exit 1
 }
 
-python3 - "$PROFILE_FILE" "$DOC_FILE" "$BUNDLE_FILE" <<'PY'
+python3 - "$PROFILE_FILE" "$DOC_FILE" "$BUNDLE_FILE" "$REPORT_PATH" "$HISTORY_PATH" <<'PY'
+import json
 import pathlib
 import sys
+import time
 
 try:
     import tomllib  # py311+
@@ -33,6 +37,8 @@ except ModuleNotFoundError:
 profile_path = pathlib.Path(sys.argv[1])
 doc_path = pathlib.Path(sys.argv[2])
 bundle_path = pathlib.Path(sys.argv[3])
+report_path = pathlib.Path(sys.argv[4])
+history_path = pathlib.Path(sys.argv[5])
 
 profiles = tomllib.loads(profile_path.read_text(encoding="utf-8"))
 if profiles.get("version") != 1:
@@ -121,8 +127,42 @@ if doc_path.as_posix() not in bundle_text:
         f"assurance-profile-packs: {bundle_path.as_posix()} must include {doc_path.as_posix()}"
     )
 
+profiles_summary = []
+for name in sorted(expected.keys()):
+    entry = profile_table[name]
+    profiles_summary.append(
+        {
+            "name": name,
+            "minimum_coverage_profile": entry.get("minimum_coverage_profile"),
+            "require_independence_attestations": bool(entry.get("require_independence_attestations")),
+            "target_profile_symbol": entry.get("target_profile_symbol"),
+            "require_requirements_trace": bool(entry.get("require_requirements_trace")),
+            "require_tool_qualification": bool(entry.get("require_tool_qualification")),
+            "require_object_equivalence": bool(entry.get("require_object_equivalence")),
+            "require_independent_verifier_runs": bool(entry.get("require_independent_verifier_runs")),
+        }
+    )
+
+report = {
+    "kind": "genesis/assurance-profile-packs-v0.1",
+    "timestamp_unix_s": int(time.time()),
+    "ok": True,
+    "profile_file": profile_path.as_posix(),
+    "doc_file": doc_path.as_posix(),
+    "bundle_file": bundle_path.as_posix(),
+    "profile_count": len(profiles_summary),
+    "profiles": profiles_summary,
+}
+
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+history_path.parent.mkdir(parents=True, exist_ok=True)
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(json.dumps(report, sort_keys=True) + "\n")
+
 print(
     "assurance-profile-packs: ok "
-    f"(profiles={len(expected)} crosswalk={doc_path.as_posix()})"
+    f"(profiles={len(expected)} crosswalk={doc_path.as_posix()} report={report_path.as_posix()})"
 )
 PY

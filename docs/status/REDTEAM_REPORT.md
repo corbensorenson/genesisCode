@@ -1,6 +1,6 @@
 # GenesisCode Red-Team Report (P0/P1 Active Risk Summary)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 Scope:
 - Track unresolved `P0`/`P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.

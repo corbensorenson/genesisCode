@@ -118,13 +118,15 @@ pub(super) fn semantic_workspace_graph_model_from_contract(
                 "missing binding core/cli::semantic-workspace-graph-analyze".to_string(),
             )
         })?;
-    let out = contract.apply(&mut ctx, Value::Data(payload)).map_err(|e| {
-        cli_err(
-            EX_EVAL,
-            "semantic-edit/workspace-graph",
-            format!("core/cli::semantic-workspace-graph-analyze failed: {e}"),
-        )
-    })?;
+    let out = contract
+        .apply(&mut ctx, Value::Data(payload))
+        .map_err(|e| {
+            cli_err(
+                EX_EVAL,
+                "semantic-edit/workspace-graph",
+                format!("core/cli::semantic-workspace-graph-analyze failed: {e}"),
+            )
+        })?;
     let out_term = out.to_term_for_log(ctx.protocol.map(|p| p.error));
     let Term::Map(out_map) = out_term else {
         return Err(cli_err(
@@ -238,7 +240,9 @@ pub(super) fn semantic_workspace_graph_model_from_contract(
                 ));
             }
         };
-        *edge_counts.entry((from_module, to_module, symbol)).or_insert(0) += 1;
+        *edge_counts
+            .entry((from_module, to_module, symbol))
+            .or_insert(0) += 1;
     }
 
     let unresolved_term = term_map_get(&out_map, ":unresolved-symbols").ok_or_else(|| {

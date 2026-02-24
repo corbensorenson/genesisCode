@@ -534,6 +534,51 @@ fn obligation_plan_symbols_rejects_unknown_obligations() {
 }
 
 #[test]
+fn core_obligation_acceptance_ok_contract_folds_result_ok_bits() {
+    let src = r#"
+            {
+              :all-ok
+                (core/obligation::acceptance-ok
+                  [{:name "core/obligation::unit-tests" :ok true}
+                   {:name "core/obligation::determinism" :ok true}])
+              :has-failure
+                (core/obligation::acceptance-ok
+                  [{:name "core/obligation::unit-tests" :ok true}
+                   {:name "core/obligation::determinism" :ok false}])
+            }
+            "#;
+    let term = eval_gc_term(src);
+    let Some(all_ok) = map_get(&term, ":all-ok") else {
+        panic!("all-ok report missing");
+    };
+    let Some(has_failure) = map_get(&term, ":has-failure") else {
+        panic!("has-failure report missing");
+    };
+    assert_eq!(map_get(all_ok, ":ok"), Some(&Term::Bool(true)));
+    assert_eq!(map_get(has_failure, ":ok"), Some(&Term::Bool(false)));
+}
+
+#[test]
+fn obligation_acceptance_ok_routes_through_gc_contract() {
+    let results = vec![
+        ObligationResult {
+            name: "core/obligation::unit-tests".to_string(),
+            ok: true,
+            artifact: None,
+            errors: Vec::new(),
+        },
+        ObligationResult {
+            name: "core/obligation::determinism".to_string(),
+            ok: false,
+            artifact: None,
+            errors: Vec::new(),
+        },
+    ];
+    let ok = obligation_acceptance_ok(&results).expect("acceptance fold should succeed");
+    assert!(!ok, "acceptance fold should reflect failed obligations");
+}
+
+#[test]
 fn lint_autofix_builds_replace_node_patch_for_missing_types() {
     let src = r#"
           (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))

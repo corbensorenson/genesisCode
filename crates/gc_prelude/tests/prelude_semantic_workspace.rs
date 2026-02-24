@@ -16,6 +16,23 @@ fn map_get<'a>(t: &'a Term, key: &str) -> Option<&'a Term> {
     m.get(&TermOrdKey(Term::symbol(key)))
 }
 
+fn conflict_codes(term: &Term) -> Vec<String> {
+    let Some(Term::Vector(conflicts)) = map_get(term, ":conflicts") else {
+        panic!(":conflicts must be vector");
+    };
+    let mut codes = Vec::new();
+    for entry in conflicts {
+        let Term::Map(m) = entry else {
+            panic!("conflict entry must be map");
+        };
+        let Some(Term::Str(code)) = m.get(&TermOrdKey(Term::symbol(":code"))) else {
+            panic!("conflict entry missing :code");
+        };
+        codes.push(code.clone());
+    }
+    codes
+}
+
 #[test]
 fn semantic_workspace_graph_contract_projects_duplicates_edges_and_unresolved() {
     let term = eval_to_term(
@@ -81,4 +98,166 @@ fn semantic_workspace_graph_contract_projects_duplicates_edges_and_unresolved() 
             Term::Str("pkg/a::missing".to_string()),
         ]
     );
+}
+
+#[test]
+fn semantic_refactor_validate_contract_accepts_valid_payload() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-validate
+          (quote
+            {
+              :kind "rename"
+              :from-symbol "my/pkg::foo"
+              :to-symbol "my/pkg::foo_v2"
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::Str(
+            "genesis/semantic-refactor-validation-v0.1".to_string()
+        ))
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(true)));
+    assert_eq!(
+        map_get(&term, ":conflicts"),
+        Some(&Term::Vector(Vec::new()))
+    );
+}
+
+#[test]
+fn semantic_refactor_validate_contract_emits_expected_conflicts() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-validate
+          (quote
+            {
+              :kind "oops"
+              :from-symbol ":kw"
+              :to-symbol ":kw"
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(false)));
+    let codes = conflict_codes(&term);
+    assert_eq!(
+        codes,
+        vec![
+            "refactor/kind-invalid".to_string(),
+            "refactor/symbol-keyword-forbidden".to_string(),
+            "refactor/no-op".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn semantic_refactor_plan_conflicts_contract_accepts_clean_payload() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-plan-conflicts
+          (quote
+            {
+              :from-symbol "my/pkg::foo"
+              :to-symbol "my/pkg::foo_v2"
+              :from-def-modules ["a.gc"]
+              :to-def-module ""
+              :to-def-path-repr ""
+            }))
+        "#,
+    );
+    assert_eq!(
+        map_get(&term, ":kind"),
+        Some(&Term::Str(
+            "genesis/semantic-refactor-plan-conflicts-v0.1".to_string()
+        ))
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(true)));
+    assert_eq!(
+        map_get(&term, ":conflicts"),
+        Some(&Term::Vector(Vec::new()))
+    );
+}
+
+#[test]
+fn semantic_refactor_plan_conflicts_contract_emits_expected_codes() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-plan-conflicts
+          (quote
+            {
+              :from-symbol "my/pkg::foo"
+              :to-symbol "my/pkg::bar"
+              :from-def-modules ["a.gc" "b.gc"]
+              :to-def-module "dest.gc"
+              :to-def-path-repr "(def my/pkg::bar ...)"
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(false)));
+    let codes = conflict_codes(&term);
+    assert_eq!(
+        codes,
+        vec![
+            "refactor/source-symbol-ambiguous".to_string(),
+            "refactor/destination-symbol-exists".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn semantic_refactor_target_conflicts_contract_requires_target_for_move_extract() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-target-conflicts
+          (quote
+            {
+              :kind "move"
+              :target-module-path ""
+              :target-module-valid true
+              :target-module-exists false
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(false)));
+    let codes = conflict_codes(&term);
+    assert_eq!(codes, vec!["refactor/target-module-required".to_string()]);
+}
+
+#[test]
+fn semantic_refactor_target_conflicts_contract_emits_exists_for_existing_target() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-target-conflicts
+          (quote
+            {
+              :kind "extract"
+              :target-module-path "dest.gc"
+              :target-module-valid true
+              :target-module-exists true
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(false)));
+    let codes = conflict_codes(&term);
+    assert_eq!(codes, vec!["refactor/target-module-exists".to_string()]);
+}
+
+#[test]
+fn semantic_refactor_target_conflicts_contract_emits_invalid_path_conflict() {
+    let term = eval_to_term(
+        r#"
+        (core/cli::semantic-refactor-target-conflicts
+          (quote
+            {
+              :kind "move"
+              :target-module-path "../dest.gc"
+              :target-module-valid false
+              :target-module-exists false
+            }))
+        "#,
+    );
+    assert_eq!(map_get(&term, ":ok"), Some(&Term::Bool(false)));
+    let codes = conflict_codes(&term);
+    assert_eq!(codes, vec!["refactor/target-module-invalid".to_string()]);
 }

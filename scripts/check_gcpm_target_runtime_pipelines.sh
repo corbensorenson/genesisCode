@@ -56,21 +56,25 @@ for target in "${targets[@]}"; do
       package_rel="artifact/package.ipa"
       sig_rel="artifact/package.ipa.sig"
       launch_rel="artifact/launch_ios.gc"
+      launch_sh_rel="artifact/launch_ios.sh"
       ;;
     android)
       package_rel="artifact/package.aab"
       sig_rel="artifact/package.aab.sig"
       launch_rel="artifact/launch_android.gc"
+      launch_sh_rel="artifact/launch_android.sh"
       ;;
     edge)
       package_rel="artifact/package.edge.wasm"
       sig_rel="artifact/package.edge.wasm.sig"
       launch_rel="artifact/launch_edge.gc"
+      launch_sh_rel="artifact/launch_edge.sh"
       ;;
     service-runtime)
       package_rel="artifact/package.service-runtime.wasm"
       sig_rel="artifact/package.service-runtime.wasm.sig"
       launch_rel="artifact/launch_service_runtime.gc"
+      launch_sh_rel="artifact/launch_service_runtime.sh"
       ;;
     *)
       echo "gcpm-target-runtime-pipelines: unsupported target=$target" >&2
@@ -86,6 +90,7 @@ for target in "${targets[@]}"; do
     "$bundle_root/$sig_rel"
     "$bundle_root/artifact/entrypoint.gc"
     "$bundle_root/$launch_rel"
+    "$bundle_root/$launch_sh_rel"
   )
   for f in "${required[@]}"; do
     if [[ ! -f "$f" ]]; then
@@ -130,34 +135,20 @@ PY
     exit 1
   fi
 
-  boot_eval="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
-  boot_h="$(python3 - "$boot_eval" <<'PY'
-import hashlib
-import sys
-print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
-PY
-)"
-  boot_out="boot-exec-ok:${target}:${hash_a}:${boot_h}"
+  boot_out="$(bash "$bundle_root/$launch_sh_rel" --boot | tr -d '\n')"
   if [[ ! "$boot_out" =~ ^boot-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
     echo "gcpm-target-runtime-pipelines: boot lane mismatch for target=$target out=$boot_out" >&2
     exit 1
   fi
 
-  smoke_a="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
-  smoke_b="$("$GENESIS_BIN" eval "$bundle_root/artifact/entrypoint.gc" | tr -d '\n')"
-  if [[ "$smoke_a" != "$smoke_b" ]]; then
+  smoke_out_a="$(bash "$bundle_root/$launch_sh_rel" --smoke | tr -d '\n')"
+  smoke_out_b="$(bash "$bundle_root/$launch_sh_rel" --smoke | tr -d '\n')"
+  if [[ "$smoke_out_a" != "$smoke_out_b" ]]; then
     echo "gcpm-target-runtime-pipelines: smoke nondeterministic for target=$target" >&2
     exit 1
   fi
-  smoke_h="$(python3 - "$smoke_a" <<'PY'
-import hashlib
-import sys
-print(hashlib.sha256(sys.argv[1].encode("utf-8")).hexdigest())
-PY
-)"
-  smoke_out="smoke-exec-ok:${target}:${hash_a}:${smoke_h}"
-  if [[ ! "$smoke_out" =~ ^smoke-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
-    echo "gcpm-target-runtime-pipelines: smoke lane mismatch for target=$target out=$smoke_out" >&2
+  if [[ ! "$smoke_out_a" =~ ^smoke-exec-ok:${target}:${hash_a}:[0-9a-f]{64}$ ]]; then
+    echo "gcpm-target-runtime-pipelines: smoke lane mismatch for target=$target out=$smoke_out_a" >&2
     exit 1
   fi
 done

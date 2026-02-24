@@ -48,7 +48,7 @@ AGENT_AUTOMATION_CONTEXT="$(genesis_resolve_agent_automation_context "$GAUNTLET_
 export GENESIS_AGENT_AUTOMATION_CONTEXT="$AGENT_AUTOMATION_CONTEXT"
 if [[ -z "${GENESIS_AGENT_GPU_PROFILE:-}" ]]; then
   case "$GAUNTLET_PROFILE" in
-    release-full|release|full-selfhost-cutover)
+    prepush-standard|release-full|release|full-selfhost-cutover)
       export GENESIS_AGENT_GPU_PROFILE="agent-gpu-strict"
       ;;
     *)
@@ -62,7 +62,7 @@ if [[ -n "${HEALTH_GPU_BACKEND_POLICY_DEFAULT:-}" ]]; then
 fi
 if [[ -z "${GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND+x}" ]]; then
   case "$GAUNTLET_PROFILE" in
-    release-full|release|full-selfhost-cutover)
+    prepush-standard|release-full|release|full-selfhost-cutover)
       export GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND="1"
       ;;
     *)
@@ -241,7 +241,7 @@ profile = env.get("GENESIS_AGENT_GAUNTLET_PROFILE", "dev-fast").strip().lower()
 runtime_profile = env.get("GENESIS_AGENT_GAUNTLET_RUNTIME_PROFILE", "native").strip().lower()
 require_gpu_device_raw = env.get("GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND")
 if require_gpu_device_raw is None:
-    require_gpu_device = profile in {"release-full", "release"}
+    require_gpu_device = profile in {"prepush-standard", "release-full", "release", "full-selfhost-cutover"}
 else:
     require_gpu_device = require_gpu_device_raw.strip().lower() in {"1", "true", "yes", "on"}
 if require_gpu_device:

@@ -1,51 +1,41 @@
 # GenesisCode Feature Matrix (Audit Date: 2026-02-24)
 
-Last updated: 2026-02-24
-Scope: capabilities that matter for AI-first autonomous coding workflows.
+Last updated: 2026-02-24  
+Scope: features that matter for agentic coding autonomy and selfhost reliability.
 
 Legend:
-- `✅` production-usable and verified by active gates
-- `⚠️` present but with closure debt, profile constraints, or maturity limits
-- `❌` not first-class today
+- `✅` production-capable and validated in active gates
+- `⚠️` available but with important closure/hardening debt
+- `❌` not first-class
 
 | Capability | GenesisCode | Rust | Go | TypeScript (Node) | Python | Zig |
 |---|---|---|---|---|---|---|
 | Pure deterministic kernel separated from effects | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Canonical CoreForm + stable semantic hash identity | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Unforgeable sealed effect/error protocol | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Canonical semantic IR + stable content hash identity | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Sealed unforgeable effect/error protocol | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Deny-by-default capability policy runtime | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deterministic effect logs + replay mismatch fail-fast | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Language-native semantic VCS graph (`commit/refs/patch`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Built-in package/project manager (`pkg` / `gcpm`) | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
-| Agent planning schema (`cli-schema`, `agent-index`) | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Semantic edit/refactor CLI (`semantic-edit`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Deterministic task concurrency primitives | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| GPU compute capability independent of graphics surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| GPU device-runtime strict lane in default gauntlets | ✅ (release/full gauntlets are fail-closed `require-device`; dev/test lanes remain explicit fallback profiles) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Graphics/window/input/audio capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deployment target pipeline in core toolchain | ✅ (deterministic target artifacts + contract launch adapters with verified boot/smoke lanes) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Native platform packaging/execution adapters | ⚠️ (target metadata + signatures present, native packager closure incomplete) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Strict selfhost frontend default in production binaries | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Full selfhost closure with minimal bounded Rust TCB | ⚠️ (explicit exception crates remain and migration rows are still in-progress) | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ |
-| WASI CLI parity with native CLI for registry hosting | ✅ (WASI `registry serve` provides deterministic file-contract registry remote) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Type/effect system maturity for large generated codebases | ⚠️ (gradual core remains, but strict-shapes and broader task/effect inference are enforced) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Interactive deterministic debugger surface | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| LSP/editor server for human IDE workflows | ❌ (agent-first schema/edit surfaces are primary) | ✅ | ✅ | ✅ | ✅ | ⚠️ |
-| Policy-gated supply-chain provenance workflow | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Reachability-based artifact GC (refs/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Deterministic effect logs + replay checks | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Built-in semantic VCS (`commit/patch/refs`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Built-in package/project manager (`pkg`/`gcpm`) | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| Selfhost frontend default in production CLIs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Full cutover profile wired into default inner-loop health | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Selfhost guard robustness against stale local binaries | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Agent workflow gauntlet (service/network/data/gfx/gpu/deploy/xr) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Runtime skill-pack conformance breadth across required domains | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Deterministic concurrency/task replay surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute independent from graphics pipeline | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Strict GPU/XR runtime evidence as default productization lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Deployment-target artifact pipeline (ios/android/edge/service-runtime) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Reachability-based artifact GC (`refs`/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Production module decomposition for AI maintainability | ⚠️ (multiple large production Rust modules remain unsplit) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- P2.1 - obligation execution migration remains phase-2 in-progress.
-- P2.2 - semantic workspace mutation path remains phase-2 in-progress.
+- P2.4 - decomposition policy/splitting coverage does not yet include all oversized production modules.
 
 Primary evidence paths:
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/TYPES.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/SELF_HOST_BOUNDARY.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`
-- `/Users/corbensorenson/Documents/genesisCode/policies/source_decomposition_progress.toml`
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/write_genesiscode_skill_conformance_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/policies/source_decomposition_progress.toml`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_capability_gauntlet_report.json`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gpu_gfx_headroom_conformance_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gpu_xr_productization_kits_report.json`

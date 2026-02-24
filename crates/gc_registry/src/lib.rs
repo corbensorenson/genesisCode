@@ -26,6 +26,6 @@ pub use server::{
 };
 
 include!("registry/types_and_client.rs");
-include!("registry/client_impl.rs");
+include!("registry/client_impl/mod.rs");
 include!("registry/remote_helpers.rs");
 include!("registry/file_backend.rs");

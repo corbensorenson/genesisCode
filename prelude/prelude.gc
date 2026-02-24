@@ -5467,6 +5467,32 @@
           :ok ok
           :package package}))))
 
+(def core/obligation::result-entry-ok
+  (fn (r)
+    (if (core/obligation::map? r)
+      (let ((ok ((core/map::get r) (quote :ok))))
+        (if (core/obligation::bool? ok) ok false))
+      false)))
+
+(def core/obligation::acceptance-ok-loop
+  (fn (results)
+    (fn (n)
+      (fn (i)
+        (fn (ok)
+          (if ok
+            (if ((core/int::eq? i) n)
+              true
+              ((((core/obligation::acceptance-ok-loop results) n) ((core/int::add i) 1))
+                (core/obligation::result-entry-ok ((core/vec::get results) i))))
+            false))))))
+
+(def core/obligation::acceptance-ok
+  (fn (results0)
+    (let ((results (core/obligation::vec-or-empty results0)))
+      {
+        :kind "genesis/obligation-acceptance-ok-v0.2"
+        :ok ((((core/obligation::acceptance-ok-loop results) (core/vec::len results)) 0) true)})))
+
 (def core/obligation::plan-contains-str?
   (fn (xs)
     (fn (needle)
@@ -5495,6 +5521,46 @@
         xs
         (if (core/obligation::str? v) ((core/vec::push xs) v) xs)))))
 
+(def core/obligation::known-obligation?
+  (fn (name)
+    (if ((core/eq? name) "core/obligation::unit-tests")
+      true
+      (if ((core/eq? name) "core/obligation::budgets")
+        true
+        (if ((core/eq? name) "core/obligation::property-tests")
+          true
+          (if ((core/eq? name) "core/obligation::coverage")
+            true
+            (if ((core/eq? name) "core/obligation::coverage-decision")
+              true
+              (if ((core/eq? name) "core/obligation::coverage-mcdc")
+                true
+                (if ((core/eq? name) "core/obligation::determinism")
+                  true
+                  (if ((core/eq? name) "core/obligation::capabilities-declared")
+                    true
+                    (if ((core/eq? name) "core/obligation::replayable-tests")
+                      true
+                      (if ((core/eq? name) "core/obligation::concurrency-replay")
+                        true
+                        (if ((core/eq? name) "core/obligation::typecheck")
+                          true
+                          (if ((core/eq? name) "core/obligation::stage1-validation")
+                            true
+                            (if ((core/eq? name) "core/obligation::translation-validation")
+                              true
+                              (if ((core/eq? name) "core/obligation::gfx-golden-images")
+                                true
+                                (if ((core/eq? name) "core/obligation::gfx-frame-budgets")
+                                  true
+                                  (if ((core/eq? name) "core/obligation::gfx-api-stability")
+                                    true
+                                    (if ((core/eq? name) "core/obligation::lint")
+                                      true
+                                      (if ((core/eq? name) "core/obligation::ai-style")
+                                        true
+                                        false))))))))))))))))))))
+
 (def core/obligation::plan-loop
   (fn (obligations)
     (fn (n)
@@ -5506,7 +5572,9 @@
               (let ((next ((((core/obligation::plan-loop obligations) n) ((core/int::add i) 1)))))
                 (let ((ob ((core/vec::get obligations) i)))
                   (if (core/obligation::str? ob)
-                    ((next ((core/obligation::plan-push-unique-str run) ob)) rejected)
+                    (if (core/obligation::known-obligation? ob)
+                      ((next ((core/obligation::plan-push-unique-str run) ob)) rejected)
+                      (next run ((core/obligation::plan-push-unique-str rejected) ob)))
                     (next run ((core/vec::push rejected) (core/sym::to-str (core/data::tag ob))))))))))))))
 
 (def core/obligation::plan
@@ -5995,4 +6063,205 @@
                 (core/cli/ws::vec-or-empty ((core/map::get state) (quote :unresolved-symbols)))})))
       ((core/error::make2 "core/type-error")
         "core/cli::semantic-workspace-graph-analyze expects map payload"))))
+
+(def core/cli/ws::known-refactor-kind?
+  (fn (kind)
+    (if ((core/eq? kind) "rename")
+      true
+      (if ((core/eq? kind) "move") true (if ((core/eq? kind) "extract") true false)))))
+
+(def core/cli/ws::str-empty?
+  (fn (x) (if (core/cli/ws::str? x) ((core/int::eq? (core/str::len x)) 0) true)))
+
+(def core/cli/ws::str-starts-with-colon?
+  (fn (x)
+    (if (if (core/cli/ws::str? x) ((core/int::lt? 0) (core/str::len x)) false)
+      ((core/int::eq? ((core/bytes::get (core/str::to-utf8 x)) 0)) 58)
+      false)))
+
+(def core/cli/ws::push-conflict
+  (fn (conflicts)
+    (fn (code)
+      (fn (message) ((core/vec::push conflicts) {:code code :message message})))))
+
+(def core/cli/ws::push-conflict-context
+  (fn (conflicts)
+    (fn (code)
+      (fn (message)
+        (fn (module-path)
+          (fn (path-repr)
+            ((core/vec::push conflicts)
+              {
+                :code code
+                :message message
+                :module-path module-path
+                :path-repr path-repr})))))))
+
+(def core/cli/ws::maybe-push-conflict
+  (fn (conflicts)
+    (fn (cond)
+      (fn (code)
+        (fn (message)
+          (if cond (((core/cli/ws::push-conflict conflicts) code) message) conflicts))))))
+
+(def core/cli/ws::str-or-empty (fn (x) (if (core/cli/ws::str? x) x "")))
+
+(def core/cli/ws::bool-or-false (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :bool)) x false)))
+
+(def core/cli/ws::bool-or-true (fn (x) (if ((core/sym::eq? (core/data::tag x)) (quote :bool)) x true)))
+
+(def core/cli::semantic-refactor-validate
+  (fn (payload)
+    (if (core/cli/ws::map? payload)
+      (let ((kind ((core/map::get payload) (quote :kind))))
+        (let ((from-symbol ((core/map::get payload) (quote :from-symbol))))
+          (let ((to-symbol ((core/map::get payload) (quote :to-symbol))))
+            (let ((conflicts0 []))
+              (let
+                (
+                  (conflicts1
+                    ((((core/cli/ws::maybe-push-conflict conflicts0)
+                        (if (core/cli/ws::str? kind) (if (core/cli/ws::known-refactor-kind? kind) false true) true))
+                      "refactor/kind-invalid")
+                      "refactor kind must be rename, move, or extract")))
+                (let
+                  (
+                    (conflicts2
+                      ((((core/cli/ws::maybe-push-conflict conflicts1) (core/cli/ws::str-empty? from-symbol))
+                        "refactor/from-symbol-empty")
+                        "source symbol must be non-empty")))
+                  (let
+                    (
+                      (conflicts3
+                        ((((core/cli/ws::maybe-push-conflict conflicts2) (core/cli/ws::str-empty? to-symbol))
+                          "refactor/to-symbol-empty")
+                          "destination symbol must be non-empty")))
+                    (let
+                      (
+                        (conflicts4
+                          ((((core/cli/ws::maybe-push-conflict conflicts3)
+                              (if (core/cli/ws::str-starts-with-colon? from-symbol)
+                                true
+                                (core/cli/ws::str-starts-with-colon? to-symbol)))
+                            "refactor/symbol-keyword-forbidden")
+                            "keyword symbols are not valid refactor targets")))
+                      (let
+                        (
+                          (conflicts5
+                            ((((core/cli/ws::maybe-push-conflict conflicts4)
+                                (if (if (core/cli/ws::str? from-symbol) (core/cli/ws::str? to-symbol) false)
+                                  ((core/eq? from-symbol) to-symbol)
+                                  false))
+                              "refactor/no-op")
+                              "source and destination symbols are identical")))
+                        {
+                          :kind "genesis/semantic-refactor-validation-v0.1"
+                          :ok ((core/int::eq? (core/vec::len conflicts5)) 0)
+                          :conflicts conflicts5})))))))))
+      ((core/error::make2 "core/type-error")
+        "core/cli::semantic-refactor-validate expects map payload"))))
+
+(def core/cli::semantic-refactor-plan-conflicts
+  (fn (payload)
+    (if (core/cli/ws::map? payload)
+      (let ((from-symbol ((core/map::get payload) (quote :from-symbol))))
+        (let ((to-symbol ((core/map::get payload) (quote :to-symbol))))
+          (let ((from-def-modules (core/cli/ws::vec-or-empty ((core/map::get payload) (quote :from-def-modules)))))
+            (let ((to-def-module (core/cli/ws::str-or-empty ((core/map::get payload) (quote :to-def-module))))
+              )
+              (let ((to-def-path-repr (core/cli/ws::str-or-empty ((core/map::get payload) (quote :to-def-path-repr)))))
+                (let ((conflicts0 []))
+                  (let
+                    (
+                      (conflicts1
+                        (if ((core/int::eq? (core/vec::len from-def-modules)) 0)
+                          (((((core/cli/ws::push-conflict-context conflicts0)
+                                "refactor/source-symbol-missing")
+                              "source symbol is not defined in this package")
+                            "")
+                            "")
+                          conflicts0)))
+                    (let
+                      (
+                        (conflicts2
+                          (if ((core/int::lt? 1) (core/vec::len from-def-modules))
+                            (((((core/cli/ws::push-conflict-context conflicts1)
+                                  "refactor/source-symbol-ambiguous")
+                                "source symbol is defined in multiple modules")
+                              "")
+                              "")
+                            conflicts1)))
+                      (let
+                        (
+                          (conflicts3
+                            (if
+                              (if
+                                (if (core/cli/ws::str? from-symbol) (core/cli/ws::str? to-symbol) false)
+                                (if ((core/eq? from-symbol) to-symbol) false true)
+                                false)
+                              (if ((core/int::lt? 0) (core/str::len to-def-module))
+                                (((((core/cli/ws::push-conflict-context conflicts2)
+                                      "refactor/destination-symbol-exists")
+                                    "destination symbol already exists")
+                                  to-def-module)
+                                  to-def-path-repr)
+                                conflicts2)
+                              conflicts2)))
+                        {
+                          :kind "genesis/semantic-refactor-plan-conflicts-v0.1"
+                          :ok ((core/int::eq? (core/vec::len conflicts3)) 0)
+                          :conflicts conflicts3})))))))))
+      ((core/error::make2 "core/type-error")
+        "core/cli::semantic-refactor-plan-conflicts expects map payload"))))
+
+(def core/cli::semantic-refactor-target-conflicts
+  (fn (payload)
+    (if (core/cli/ws::map? payload)
+      (let ((kind (core/cli/ws::str-or-empty ((core/map::get payload) (quote :kind)))))
+        (let ((target-module-path (core/cli/ws::str-or-empty ((core/map::get payload) (quote :target-module-path)))))
+          (let ((target-module-valid (core/cli/ws::bool-or-true ((core/map::get payload) (quote :target-module-valid)))))
+            (let ((target-module-exists (core/cli/ws::bool-or-false ((core/map::get payload) (quote :target-module-exists)))))
+              (let ((requires-target (if ((core/eq? kind) "move") true (if ((core/eq? kind) "extract") true false))))
+                (let ((empty-path (core/cli/ws::str-empty? target-module-path)))
+                  (let ((needs-target (if requires-target empty-path false)))
+                    (let
+                      (
+                        (invalid-target
+                          (if requires-target (if empty-path false (if target-module-valid false true)) false)))
+                      (let
+                        ((existing-target
+                           (if requires-target (if target-module-valid target-module-exists false) false)))
+                        (let ((conflicts0 []))
+                          (let
+                            (
+                              (conflicts1
+                                ((((core/cli/ws::maybe-push-conflict conflicts0) needs-target)
+                                    "refactor/target-module-required")
+                                  "move/extract requires --target-module-path")))
+                            (let
+                              (
+                                (conflicts2
+                                  (if invalid-target
+                                    (((((core/cli/ws::push-conflict-context conflicts1)
+                                          "refactor/target-module-invalid")
+                                        "target module path must be relative and must not contain '.', '..', or '\\'")
+                                      target-module-path)
+                                      "")
+                                    conflicts1)))
+                              (let
+                                (
+                                  (conflicts3
+                                    (if existing-target
+                                      (((((core/cli/ws::push-conflict-context conflicts2)
+                                            "refactor/target-module-exists")
+                                          "target module already exists; add-module would conflict")
+                                        target-module-path)
+                                        "")
+                                      conflicts2)))
+                                {
+                                  :kind "genesis/semantic-refactor-target-conflicts-v0.1"
+                                  :ok ((core/int::eq? (core/vec::len conflicts3)) 0)
+                                  :conflicts conflicts3})))))))))))))
+      ((core/error::make2 "core/type-error")
+        "core/cli::semantic-refactor-target-conflicts expects map payload"))))
 

@@ -85,6 +85,10 @@ pub(super) fn handle_build(
                             Term::Str(artifact_layout.executable_rel.to_string()),
                         ),
                         (
+                            TermOrdKey(Term::symbol(":launcher")),
+                            Term::Str(artifact_layout.launcher_rel.to_string()),
+                        ),
+                        (
                             TermOrdKey(Term::symbol(":entrypoint")),
                             Term::Str(artifact_layout.entrypoint_rel.to_string()),
                         ),
@@ -199,6 +203,10 @@ pub(super) fn handle_build(
                 Term::Str(executable_bundle.entrypoint_path.display().to_string()),
             ),
             (
+                TermOrdKey(Term::symbol(":launcher-path")),
+                Term::Str(executable_bundle.launcher_path.display().to_string()),
+            ),
+            (
                 TermOrdKey(Term::symbol(":entrypoint-h")),
                 Term::Str(executable_bundle.entrypoint_h.clone()),
             ),
@@ -261,6 +269,10 @@ pub(super) fn handle_build(
                         (
                             TermOrdKey(Term::symbol(":sha256")),
                             Term::Str(executable_bundle.package_sha256),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":launcher")),
+                            Term::Str(executable_bundle.launcher_path.display().to_string()),
                         ),
                         (
                             TermOrdKey(Term::symbol(":entrypoint")),

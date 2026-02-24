@@ -314,6 +314,276 @@ fn semantic_edit_refactor_plan_rename_emits_multifile_patch() {
 }
 
 #[test]
+fn semantic_edit_refactor_plan_reports_noop_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "rename",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-refactor-plan-v0.1")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/safe_to_apply")
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts
+            .iter()
+            .any(|c| c.get("code").and_then(|v| v.as_str()) == Some("refactor/no-op")),
+        "expected no-op conflict from semantic-refactor-validate"
+    );
+}
+
+#[test]
+fn semantic_edit_refactor_plan_reports_destination_exists_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "rename",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::use-foo",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-refactor-plan-v0.1")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/safe_to_apply")
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts.iter().any(|c| {
+            c.get("code").and_then(|v| v.as_str()) == Some("refactor/destination-symbol-exists")
+        }),
+        "expected destination-exists conflict from semantic-refactor-plan-conflicts"
+    );
+}
+
+#[test]
+fn semantic_edit_refactor_plan_move_requires_target_module_path_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "move",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo_v2",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-refactor-plan-v0.1")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/safe_to_apply")
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts
+            .iter()
+            .any(|c| c.get("code").and_then(|v| v.as_str())
+                == Some("refactor/target-module-required")),
+        "expected target-module-required conflict from semantic-refactor-target-conflicts"
+    );
+}
+
+#[test]
+fn semantic_edit_refactor_plan_move_reports_target_module_exists_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "move",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo_v2",
+            "--target-module-path",
+            "b.gc",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-refactor-plan-v0.1")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/safe_to_apply")
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts.iter().any(|c| {
+            c.get("code").and_then(|v| v.as_str()) == Some("refactor/target-module-exists")
+        }),
+        "expected target-module-exists conflict from semantic-refactor-target-conflicts"
+    );
+}
+
+#[test]
+fn semantic_edit_refactor_plan_move_reports_target_module_invalid_conflict() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    write_workspace_pkg(dir);
+
+    let out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args([
+            "--json",
+            "--coreform-frontend",
+            "rust",
+            "semantic-edit",
+            "refactor-plan",
+            "--pkg",
+            "package.toml",
+            "--kind",
+            "move",
+            "--from",
+            "my/pkg::foo",
+            "--to",
+            "my/pkg::foo_v2",
+            "--target-module-path",
+            "../b.gc",
+        ])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+
+    let envelope: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        envelope.get("kind").and_then(|x| x.as_str()),
+        Some("genesis/semantic-edit-refactor-plan-v0.1")
+    );
+    assert_eq!(
+        envelope
+            .pointer("/data/safe_to_apply")
+            .and_then(|v| v.as_bool()),
+        Some(false)
+    );
+    let conflicts = envelope
+        .pointer("/data/conflicts")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        conflicts.iter().any(|c| {
+            c.get("code").and_then(|v| v.as_str()) == Some("refactor/target-module-invalid")
+        }),
+        "expected target-module-invalid conflict from semantic-refactor-target-conflicts"
+    );
+}
+
+#[test]
 fn semantic_edit_refactor_plan_selfhost_fails_when_validate_patch_contract_is_poisoned() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

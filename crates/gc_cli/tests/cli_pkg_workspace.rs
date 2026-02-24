@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use blake3::hash as blake3_hash;
 use gc_coreform::{Term, TermOrdKey};
 
 #[path = "support/pkg_workspace_test_support.rs"]
@@ -324,47 +324,55 @@ path = "lib.gc"
             "target {target} artifact-format mismatch"
         );
 
-        let (package_rel, signature_rel, launch_rel) = match target {
+        let (package_rel, signature_rel, launch_rel, launcher_rel) = match target {
             "web" => (
                 "artifact/package.webbundle",
                 "artifact/package.webbundle.sig",
                 "artifact/launch_web.gc",
+                "artifact/launch_web.sh",
             ),
             "desktop" => (
                 "artifact/package.desktop.app",
                 "artifact/package.desktop.app.sig",
                 "artifact/launch_desktop.gc",
+                "artifact/launch_desktop.sh",
             ),
             "service" => (
                 "artifact/package.service.bin",
                 "artifact/package.service.bin.sig",
                 "artifact/launch_service.gc",
+                "artifact/launch_service.sh",
             ),
             "ios" => (
                 "artifact/package.ipa",
                 "artifact/package.ipa.sig",
                 "artifact/launch_ios.gc",
+                "artifact/launch_ios.sh",
             ),
             "android" => (
                 "artifact/package.aab",
                 "artifact/package.aab.sig",
                 "artifact/launch_android.gc",
+                "artifact/launch_android.sh",
             ),
             "edge" => (
                 "artifact/package.edge.wasm",
                 "artifact/package.edge.wasm.sig",
                 "artifact/launch_edge.gc",
+                "artifact/launch_edge.sh",
             ),
             "service-runtime" => (
                 "artifact/package.service-runtime.wasm",
                 "artifact/package.service-runtime.wasm.sig",
                 "artifact/launch_service_runtime.gc",
+                "artifact/launch_service_runtime.sh",
             ),
             other => panic!("unexpected target {other}"),
         };
         let package_path = bundle_root.join(package_rel);
         let signature_path = bundle_root.join(signature_rel);
-        let launch_script = bundle_root.join(launch_rel);
+        let launch_adapter = bundle_root.join(launch_rel);
+        let launch_script = bundle_root.join(launcher_rel);
         let entrypoint_path = bundle_root.join("artifact/entrypoint.gc");
         assert!(
             package_path.is_file(),
@@ -375,15 +383,19 @@ path = "lib.gc"
             "target {target} missing package signature"
         );
         assert!(
-            launch_script.is_file(),
+            launch_adapter.is_file(),
             "target {target} missing launch adapter"
+        );
+        assert!(
+            launch_script.is_file(),
+            "target {target} missing launch script"
         );
         assert!(
             entrypoint_path.is_file(),
             "target {target} missing bundled entrypoint"
         );
 
-        let launch_src = fs::read_to_string(&launch_script).unwrap();
+        let launch_src = fs::read_to_string(&launch_adapter).unwrap();
         let launch_term = gc_coreform::parse_term(&launch_src).expect("parse launch adapter");
         let Term::Map(launch_map) = launch_term else {
             panic!("target {target} launch adapter must be map");
@@ -418,9 +430,9 @@ path = "lib.gc"
         assert_eq!(map_string(launch_entrypoint, ":path"), "entrypoint.gc");
 
         let bundle_h = map_string(&map, ":bundle-h");
-        let boot_out = cargo_bin_cmd!("genesis")
-            .arg("eval")
-            .arg(&entrypoint_path)
+        let boot_out = Command::new("bash")
+            .arg(&launch_script)
+            .arg("--boot")
             .output()
             .expect("run boot lane");
         assert!(
@@ -428,13 +440,11 @@ path = "lib.gc"
             "target {target} boot lane failed: {:?}",
             boot_out
         );
-        let boot_trimmed = String::from_utf8(boot_out.stdout)
+        let boot_prefix = format!("boot-exec-ok:{target}:{bundle_h}:");
+        let boot_msg = String::from_utf8(boot_out.stdout)
             .unwrap()
             .trim()
             .to_string();
-        let boot_hash = blake3_hash(boot_trimmed.as_bytes()).to_hex().to_string();
-        let boot_prefix = format!("boot-exec-ok:{target}:{bundle_h}:");
-        let boot_msg = format!("{boot_prefix}{boot_hash}");
         assert!(
             boot_msg.starts_with(&boot_prefix),
             "target {target} boot lane output mismatch: {boot_msg}"
@@ -444,9 +454,9 @@ path = "lib.gc"
             "target {target} boot lane digest must be hex64: {boot_msg}"
         );
 
-        let smoke_out_a = cargo_bin_cmd!("genesis")
-            .arg("eval")
-            .arg(&entrypoint_path)
+        let smoke_out_a = Command::new("bash")
+            .arg(&launch_script)
+            .arg("--smoke")
             .output()
             .expect("run smoke lane a");
         assert!(
@@ -454,9 +464,9 @@ path = "lib.gc"
             "target {target} smoke lane a failed: {:?}",
             smoke_out_a
         );
-        let smoke_out_b = cargo_bin_cmd!("genesis")
-            .arg("eval")
-            .arg(&entrypoint_path)
+        let smoke_out_b = Command::new("bash")
+            .arg(&launch_script)
+            .arg("--smoke")
             .output()
             .expect("run smoke lane b");
         assert!(
@@ -476,9 +486,8 @@ path = "lib.gc"
             smoke_trimmed_a, smoke_trimmed_b,
             "target {target} smoke lane must be deterministic"
         );
-        let smoke_hash = blake3_hash(smoke_trimmed_a.as_bytes()).to_hex().to_string();
         let smoke_prefix = format!("smoke-exec-ok:{target}:{bundle_h}:");
-        let smoke_msg = format!("{smoke_prefix}{smoke_hash}");
+        let smoke_msg = smoke_trimmed_a;
         assert!(
             smoke_msg.starts_with(&smoke_prefix),
             "target {target} smoke lane output mismatch: {smoke_msg}"

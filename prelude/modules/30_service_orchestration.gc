@@ -123,6 +123,32 @@
           :ok ok
           :package package}))))
 
+(def core/obligation::result-entry-ok
+  (fn (r)
+    (if (core/obligation::map? r)
+      (let ((ok ((core/map::get r) (quote :ok))))
+        (if (core/obligation::bool? ok) ok false))
+      false)))
+
+(def core/obligation::acceptance-ok-loop
+  (fn (results)
+    (fn (n)
+      (fn (i)
+        (fn (ok)
+          (if ok
+            (if ((core/int::eq? i) n)
+              true
+              ((((core/obligation::acceptance-ok-loop results) n) ((core/int::add i) 1))
+                (core/obligation::result-entry-ok ((core/vec::get results) i))))
+            false))))))
+
+(def core/obligation::acceptance-ok
+  (fn (results0)
+    (let ((results (core/obligation::vec-or-empty results0)))
+      {
+        :kind "genesis/obligation-acceptance-ok-v0.2"
+        :ok ((((core/obligation::acceptance-ok-loop results) (core/vec::len results)) 0) true)})))
+
 (def core/obligation::plan-contains-str?
   (fn (xs)
     (fn (needle)

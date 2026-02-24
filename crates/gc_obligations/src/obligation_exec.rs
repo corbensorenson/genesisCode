@@ -152,6 +152,33 @@ pub(super) fn obligation_plan_symbols(
     }
 }
 
+pub(super) fn obligation_acceptance_ok(
+    results: &[ObligationResult],
+) -> Result<bool, ObligationError> {
+    let result_terms = results
+        .iter()
+        .map(|r| {
+            Term::Map(
+                [
+                    (TermOrdKey(Term::symbol(":name")), Term::Str(r.name.clone())),
+                    (TermOrdKey(Term::symbol(":ok")), Term::Bool(r.ok)),
+                ]
+                .into_iter()
+                .collect(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let report = obligation_report_term(
+        "core/obligation::acceptance-ok",
+        &[Term::Vector(result_terms)],
+    )?;
+    term_map_get_bool(&report, ":ok").ok_or_else(|| {
+        ObligationError::Test(
+            "core/obligation::acceptance-ok returned report missing :ok bool".to_string(),
+        )
+    })
+}
+
 pub(super) fn obligation_unit_tests(
     store: &EvidenceStore,
     manifest: &PackageManifest,

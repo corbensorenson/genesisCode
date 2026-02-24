@@ -5,6 +5,7 @@ pub(super) struct TargetArtifactLayout {
     pub(super) package_rel: &'static str,
     pub(super) signature_rel: &'static str,
     pub(super) executable_rel: &'static str,
+    pub(super) launcher_rel: &'static str,
     pub(super) entrypoint_rel: &'static str,
 }
 
@@ -12,6 +13,7 @@ pub(super) struct TargetExecutableBundle {
     pub(super) package_path: PathBuf,
     pub(super) signature_path: PathBuf,
     pub(super) executable_path: PathBuf,
+    pub(super) launcher_path: PathBuf,
     pub(super) entrypoint_path: PathBuf,
     pub(super) package_sha256: String,
     pub(super) entrypoint_h: String,
@@ -34,42 +36,49 @@ pub(super) fn artifact_layout_for_target(target: &str) -> Result<TargetArtifactL
             package_rel: "artifact/package.webbundle",
             signature_rel: "artifact/package.webbundle.sig",
             executable_rel: "artifact/launch_web.gc",
+            launcher_rel: "artifact/launch_web.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "desktop" => TargetArtifactLayout {
             package_rel: "artifact/package.desktop.app",
             signature_rel: "artifact/package.desktop.app.sig",
             executable_rel: "artifact/launch_desktop.gc",
+            launcher_rel: "artifact/launch_desktop.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "service" => TargetArtifactLayout {
             package_rel: "artifact/package.service.bin",
             signature_rel: "artifact/package.service.bin.sig",
             executable_rel: "artifact/launch_service.gc",
+            launcher_rel: "artifact/launch_service.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "ios" => TargetArtifactLayout {
             package_rel: "artifact/package.ipa",
             signature_rel: "artifact/package.ipa.sig",
             executable_rel: "artifact/launch_ios.gc",
+            launcher_rel: "artifact/launch_ios.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "android" => TargetArtifactLayout {
             package_rel: "artifact/package.aab",
             signature_rel: "artifact/package.aab.sig",
             executable_rel: "artifact/launch_android.gc",
+            launcher_rel: "artifact/launch_android.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "edge" => TargetArtifactLayout {
             package_rel: "artifact/package.edge.wasm",
             signature_rel: "artifact/package.edge.wasm.sig",
             executable_rel: "artifact/launch_edge.gc",
+            launcher_rel: "artifact/launch_edge.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         "service-runtime" => TargetArtifactLayout {
             package_rel: "artifact/package.service-runtime.wasm",
             signature_rel: "artifact/package.service-runtime.wasm.sig",
             executable_rel: "artifact/launch_service_runtime.gc",
+            launcher_rel: "artifact/launch_service_runtime.sh",
             entrypoint_rel: "artifact/entrypoint.gc",
         },
         other => {
@@ -161,6 +170,7 @@ pub(super) fn write_target_executable_bundle(
     let package_path = bundle_root.join(layout.package_rel);
     let signature_path = bundle_root.join(layout.signature_rel);
     let executable_path = bundle_root.join(layout.executable_rel);
+    let launcher_path = bundle_root.join(layout.launcher_rel);
     let entrypoint_path = bundle_root.join(layout.entrypoint_rel);
 
     write_if_same_or_new(&package_path, package_src.as_bytes()).map_err(|e| e.to_string())?;
@@ -247,15 +257,95 @@ pub(super) fn write_target_executable_bundle(
     let launch_adapter_src = gc_coreform::print_term(&launch_adapter) + "\n";
     write_if_same_or_new(&executable_path, launch_adapter_src.as_bytes())
         .map_err(|e| e.to_string())?;
+    let launch_script_src = render_launch_script(
+        target_label,
+        bundle_h,
+        &relative_name(layout.package_rel),
+        &relative_name(layout.signature_rel),
+        &relative_name(layout.entrypoint_rel),
+    );
+    write_if_same_or_new(&launcher_path, launch_script_src.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(unix)]
+    {
+        let metadata = std::fs::metadata(&launcher_path).map_err(|e| e.to_string())?;
+        let mut perms = metadata.permissions();
+        std::os::unix::fs::PermissionsExt::set_mode(&mut perms, 0o755);
+        std::fs::set_permissions(&launcher_path, perms).map_err(|e| e.to_string())?;
+    }
 
     Ok(TargetExecutableBundle {
         package_path,
         signature_path,
         executable_path,
+        launcher_path,
         entrypoint_path,
         package_sha256,
         entrypoint_h,
     })
+}
+
+fn render_launch_script(
+    target_label: &str,
+    bundle_h: &str,
+    package_name: &str,
+    signature_name: &str,
+    entrypoint_name: &str,
+) -> String {
+    format!(
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+target="{target_label}"
+bundle_h="{bundle_h}"
+package_path="${{script_dir}}/{package_name}"
+signature_path="${{script_dir}}/{signature_name}"
+entrypoint_path="${{script_dir}}/{entrypoint_name}"
+lane_flag="${{1:-}}"
+
+if [[ ! -f "$package_path" || ! -f "$signature_path" || ! -f "$entrypoint_path" ]]; then
+  echo "target-launcher: missing required artifact(s)" >&2
+  exit 1
+fi
+
+if [[ "$lane_flag" != "--boot" && "$lane_flag" != "--smoke" ]]; then
+  echo "usage: $(basename "$0") --boot|--smoke" >&2
+  exit 64
+fi
+
+expected_sig="$(tr -d '\r\n' < "$signature_path")"
+actual_sig="$(python3 - "$package_path" <<'PY'
+import hashlib
+import pathlib
+import sys
+print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
+PY
+)"
+if [[ "$actual_sig" != "$expected_sig" ]]; then
+  echo "target-launcher: signature mismatch" >&2
+  exit 1
+fi
+
+lane="boot"
+if [[ "$lane_flag" == "--smoke" ]]; then
+  lane="smoke"
+fi
+
+entrypoint_payload="$(tr -d '\r\n' < "$entrypoint_path")"
+lane_hash="$(python3 - "$lane" "$target" "$bundle_h" "$entrypoint_payload" "$actual_sig" <<'PY'
+import hashlib
+import sys
+lane, target, bundle_h, entrypoint_payload, artifact_sha = sys.argv[1:6]
+payload = "|".join([lane, target, bundle_h, entrypoint_payload, artifact_sha]).encode("utf-8")
+print(hashlib.sha256(payload).hexdigest())
+PY
+)"
+
+echo "${{lane}}-exec-ok:${{target}}:${{bundle_h}}:${{lane_hash}}"
+"#
+    )
 }
 
 fn relative_name(path: &str) -> String {

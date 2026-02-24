@@ -1066,6 +1066,7 @@ case "$PROFILE" in
     PROFILE_GATES+=(
       "bash scripts/test_changed_fast.sh --base HEAD --runner auto --budget-ms ${DEV_FAST_BUDGET_MS} --min-history 1 --report .genesis/perf/agent_inner_loop_changed_fast_metrics.json --history .genesis/perf/agent_inner_loop_changed_fast_history.jsonl"
     )
+    PROFILE_GATES+=("GENESIS_FULL_SELFHOST_CUTOVER_REFRESH=0 bash scripts/check_full_selfhost_cutover_profile.sh")
     ;;
   prepush-standard)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
@@ -1078,8 +1079,8 @@ case "$PROFILE" in
       "GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB=1048576 GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=1 GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM=0 bash scripts/check_runtime_backend_feature_matrix.sh"
     )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
-    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT=60 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=3000 bash scripts/check_agent_reference_workflows.sh")
-    PROFILE_GATES+=("bash scripts/check_gpu_xr_productization_kits.sh")
+    PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT=60 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=3000 bash scripts/check_agent_reference_workflows.sh")
+    PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
