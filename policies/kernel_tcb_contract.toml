@@ -7,6 +7,7 @@ kernel_src_dir = "crates/gc_kernel/src"
 expected_kernel_surface_files = [
   "compiled.rs",
   "compiled_blob.rs",
+  "compiled_compile.rs",
   "compiled_coverage.rs",
   "env.rs",
   "error.rs",

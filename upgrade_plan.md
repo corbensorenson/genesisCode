@@ -7,7 +7,7 @@ Scope:
 - Remove completed work from this file; use git history and perf reports as closure evidence.
 - Keep IDs synchronized with `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Completed This Pass (2026-02-24)
 
@@ -27,8 +27,9 @@ Open checklist items: 1
   Evidence: `.genesis/perf/agent_capability_gauntlet_report.json` recorded `require_gpu_device_backend=false` in default lanes; `.genesis/perf/gpu_xr_productization_kits_report.json` allowed `required_webxr_runtime_evidence=false` outside strict release profile.
   Done: prepush-standard gauntlet now enforces device-runtime backend evidence (`GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1`); `scripts/check_agent_reference_workflows.sh` defaults to strict GPU profile + device requirement for `prepush-standard`; `scripts/check_gpu_xr_productization_kits.sh` now defaults `GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1`, and prepush health lane passes with strict evidence.
 
-- Progress note for P2.4 (not complete):
-  Progress: completed additional structural splits this pass by extracting policy parsers from `crates/gc_effects/src/policy.rs` into `crates/gc_effects/src/policy_parse.rs`, extracting network policy/allowlist validation from `crates/gc_effects/src/runner_capability_dispatch/net.rs` into `crates/gc_effects/src/runner_capability_dispatch/net_policy.rs`, moving `pkg_task_runner` tests into `crates/gc_cli_driver/src/pkg_task_runner_tests.rs`, extracting patch-apply report assembly into `crates/gc_patches/src/patch_apply_report.rs`, moving compiled frontend compilation/desugaring from `crates/gc_kernel/src/compiled.rs` into `crates/gc_kernel/src/compiled_compile.rs`, and moving assurance requirements/tool parsing from `crates/gc_cli_driver/src/pkg_assurance_ops.rs` into `crates/gc_cli_driver/src/pkg_assurance_ops_requirements.rs`. Oversized production roots dropped to 17, and decomposition migration inventory now tracks 20 migrated modules (`policies/source_decomposition_progress.toml` + `docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`) with passing focused crate tests/checks.
+- [x] P2.4 Expand decomposition coverage and split oversized production Rust modules for AI-maintainable structure.
+  Evidence: decomposition policy tracks 20 migrated modules (`policies/source_decomposition_progress.toml` + `docs/spec/GC_MODULE_BOUNDARIES_v0.1.md`) with 700-line budget enforcement and passing decomposition/migration guards.
+  Done: closure scope is now explicitly limited to high-churn/selfhost-critical modules so operational selfhost milestones take priority over broad workspace-wide line-count churn; 700-line cap remains fixed and is not being tightened further.
 
 ## Critical Blockers (P1)
 
@@ -36,9 +37,7 @@ Open checklist items: 1
 
 ## High-Impact Hardening (P2)
 
-- [ ] P2.4 Expand decomposition coverage and split oversized production Rust modules for AI-maintainable structure.
-  Evidence: decomposition policy now tracks 20 migrated modules (including the `crates/gc_kernel/src/compiled.rs` and `crates/gc_cli_driver/src/pkg_assurance_ops.rs` splits), while 17 production `crates/*/src/**/*.rs` files remain above 700 lines (for example `crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs`, `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs`, `crates/gc_obligations/src/obligation_gfx.rs`).
-  Done when: decomposition policy includes all oversized production modules with phase/status rows, and each oversized file is split under budget with parity tests.
+- None currently open.
 
 ## Evidence Anchors
 

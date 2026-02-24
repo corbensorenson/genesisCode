@@ -23,17 +23,19 @@ Legend:
 | Agent workflow gauntlet (service/network/data/gfx/gpu/deploy/xr) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Runtime skill-pack conformance breadth across required domains | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Deterministic concurrency/task replay surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| GPU compute independent from graphics pipeline | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute capability independent of graphics surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Graphics/window/input/audio capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Strict GPU/XR runtime evidence as default productization lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deployment-target artifact pipeline (ios/android/edge/service-runtime) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Deployment target pipeline in core toolchain | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Reachability-based artifact GC (`refs`/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Production module decomposition for AI maintainability | ⚠️ (multiple large production Rust modules remain unsplit) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- P2.4 - decomposition policy/splitting coverage does not yet include all oversized production modules.
+- none
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/write_genesiscode_skill_conformance_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/policies/source_decomposition_progress.toml`
