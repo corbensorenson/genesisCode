@@ -35,6 +35,8 @@ HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/b
 HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-}"
 HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-auto}"
 HEALTH_WARMUP_REPORT="${GENESIS_HEALTH_WARMUP_REPORT:-.genesis/perf/upgrade_plan_health_warmup_${PROFILE}.json}"
+HEALTH_PROFILE_GATE_CACHE="${GENESIS_HEALTH_PROFILE_GATE_CACHE:-auto}"
+HEALTH_PROFILE_GATE_CACHE_TTL_SEC="${GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC:-21600}"
 if [[ "${CI:-}" == "true" ]]; then
   ENFORCE_GATES_DEFAULT="1"
 else
@@ -152,6 +154,224 @@ default_health_cargo_gate_shards_for_profile() {
       echo "1"
       ;;
   esac
+}
+
+health_profile_gate_cache_spec() {
+  local cmd="$1"
+  case "$cmd" in
+    *"bash scripts/check_agent_reference_workflows.sh"*)
+      cat <<'EOF'
+agent-reference-workflows
+scripts/check_agent_reference_workflows.sh
+scripts/check_agent_gpu_profile_contract.sh
+scripts/lib/agent_gpu_profile_contract.sh
+prelude/modules/**/*.gc
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_kernel/src/**/*.rs
+crates/gc_prelude/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_gpu_xr_productization_kits.sh"*)
+      cat <<'EOF'
+gpu-xr-productization-kits
+scripts/check_gpu_xr_productization_kits.sh
+scripts/check_agent_reference_workflows.sh
+scripts/check_webxr_browser_conformance.sh
+prelude/modules/**/*.gc
+crates/gc_gfx/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_runtime/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_agent_generative_workloads.sh"*)
+      cat <<'EOF'
+agent-generative-workloads
+scripts/check_agent_generative_workloads.sh
+scripts/check_agent_reference_workflows.sh
+prelude/modules/**/*.gc
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_kernel/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_ai_iteration_slo.sh"*)
+      cat <<'EOF'
+ai-iteration-slo
+scripts/check_ai_iteration_slo.sh
+scripts/test_changed_fast.sh
+scripts/check_disk_headroom.sh
+scripts/lib/**/*.sh
+crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_coreform/src/**/*.rs
+crates/gc_kernel/src/**/*.rs
+crates/gc_types/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_perf_budgets.sh"*)
+      cat <<'EOF'
+perf-budgets
+scripts/check_perf_budgets.sh
+scripts/lib/**/*.sh
+examples/hello_pkg/**/*.gc
+selfhost/**/*.gc
+crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_obligations/src/**/*.rs
+crates/gc_types/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_runtime_microbench_budgets.sh"*)
+      cat <<'EOF'
+runtime-microbench-budgets
+scripts/check_runtime_microbench_budgets.sh
+scripts/lib/**/*.sh
+crates/gc_runtime_bench/src/**/*.rs
+crates/gc_runtime/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_gpu_compute_runtime_profile.sh"*)
+      cat <<'EOF'
+gpu-compute-runtime-profile
+scripts/check_gpu_compute_runtime_profile.sh
+scripts/lib/**/*.sh
+crates/gc_runtime_bench/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_runtime/src/**/*.rs
+prelude/modules/**/*.gc
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_gfx_runtime_profile.sh"*)
+      cat <<'EOF'
+gfx-runtime-profile
+scripts/check_gfx_runtime_profile.sh
+scripts/lib/**/*.sh
+crates/gc_gfx/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_runtime/src/**/*.rs
+prelude/modules/**/*.gc
+EOF
+      return 0
+      ;;
+    *"bash scripts/check_gpu_gfx_headroom_conformance.sh"*)
+      cat <<'EOF'
+gpu-gfx-headroom-conformance
+scripts/check_gpu_gfx_headroom_conformance.sh
+scripts/check_gpu_compute_runtime_profile.sh
+scripts/check_gfx_runtime_profile.sh
+scripts/lib/**/*.sh
+crates/gc_gfx/src/**/*.rs
+crates/gc_effects/src/**/*.rs
+crates/gc_runtime_bench/src/**/*.rs
+prelude/modules/**/*.gc
+EOF
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+compute_health_gate_fingerprint() {
+  local cmd="$1"
+  shift
+  python3 - "$ROOT_DIR" "$cmd" "$@" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+cmd = sys.argv[2]
+patterns = [p for p in sys.argv[3:] if p]
+
+h = hashlib.sha256()
+h.update(cmd.encode("utf-8"))
+h.update(b"\n")
+
+files: set[pathlib.Path] = set()
+for pattern in patterns:
+    for path in root.glob(pattern):
+        if path.is_file():
+            files.add(path)
+
+for path in sorted(files, key=lambda p: p.as_posix()):
+    rel = path.relative_to(root).as_posix()
+    h.update(rel.encode("utf-8"))
+    h.update(b"\0")
+    h.update(path.read_bytes())
+    h.update(b"\0")
+
+h.update(b"patterns\0")
+for pattern in patterns:
+    h.update(pattern.encode("utf-8"))
+    h.update(b"\0")
+
+print(h.hexdigest())
+PY
+}
+
+maybe_wrap_profile_gate_with_cache() {
+  local cmd="$1"
+  if [[ "$HEALTH_PROFILE_GATE_CACHE" != "1" ]]; then
+    echo "$cmd"
+    return 0
+  fi
+  if [[ "$PROFILE" != "prepush-standard" ]]; then
+    echo "$cmd"
+    return 0
+  fi
+
+  local spec
+  if ! spec="$(health_profile_gate_cache_spec "$cmd")"; then
+    echo "$cmd"
+    return 0
+  fi
+
+  local key
+  key="$(printf '%s\n' "$spec" | sed -n '1p')"
+  if [[ -z "$key" ]]; then
+    echo "$cmd"
+    return 0
+  fi
+
+  local -a patterns=()
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" ]] && continue
+    patterns+=("$line")
+  done < <(printf '%s\n' "$spec" | tail -n +2)
+
+  local fingerprint
+  fingerprint="$(compute_health_gate_fingerprint "$cmd" "${patterns[@]}")"
+  local cmd_b64
+  cmd_b64="$(printf '%s' "$cmd" | base64 | tr -d '\n')"
+
+  echo "bash scripts/lib/run_cached_health_gate.sh --profile $PROFILE --key $key --fingerprint $fingerprint --ttl-sec $HEALTH_PROFILE_GATE_CACHE_TTL_SEC --cmd-b64 $cmd_b64"
+}
+
+apply_profile_gate_cache_policy() {
+  if [[ "$HEALTH_PROFILE_GATE_CACHE" != "1" ]]; then
+    return 0
+  fi
+  if [[ "$PROFILE" != "prepush-standard" ]]; then
+    return 0
+  fi
+  local -a wrapped=()
+  local cmd
+  for cmd in "${PROFILE_GATES[@]}"; do
+    wrapped+=("$(maybe_wrap_profile_gate_with_cache "$cmd")")
+  done
+  PROFILE_GATES=("${wrapped[@]}")
 }
 
 enforce_inner_loop_history_budget() {
@@ -589,6 +809,7 @@ if [[ "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" != "require-device" && "$HEALTH_GPU_B
 fi
 export GENESIS_GPU_BACKEND_POLICY_DEFAULT="$HEALTH_GPU_BACKEND_POLICY_DEFAULT"
 echo "upgrade-plan-health: gpu backend fallback default policy=$GENESIS_GPU_BACKEND_POLICY_DEFAULT (profile=$PROFILE)"
+echo "upgrade-plan-health: profile gate cache policy=$HEALTH_PROFILE_GATE_CACHE ttl_sec=$HEALTH_PROFILE_GATE_CACHE_TTL_SEC"
 if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
@@ -624,6 +845,14 @@ if [[ ! "$HEALTH_CARGO_GATE_SHARDS" =~ ^[0-9]+$ || "$HEALTH_CARGO_GATE_SHARDS" -
   echo "upgrade-plan-health: GENESIS_HEALTH_CARGO_GATE_SHARDS must be a positive integer" >&2
   exit 2
 fi
+if [[ "$HEALTH_PROFILE_GATE_CACHE" != "auto" && "$HEALTH_PROFILE_GATE_CACHE" != "0" && "$HEALTH_PROFILE_GATE_CACHE" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PROFILE_GATE_CACHE must be auto, 0, or 1" >&2
+  exit 2
+fi
+if [[ ! "$HEALTH_PROFILE_GATE_CACHE_TTL_SEC" =~ ^[0-9]+$ ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC must be a non-negative integer" >&2
+  exit 2
+fi
 if [[ "$HEALTH_WARM_CARGO_CACHE" == "auto" ]]; then
   if [[ "$PROFILE" == "dev-fast" ]]; then
     HEALTH_WARM_CARGO_CACHE="0"
@@ -631,6 +860,15 @@ if [[ "$HEALTH_WARM_CARGO_CACHE" == "auto" ]]; then
     HEALTH_WARM_CARGO_CACHE="1"
   fi
 fi
+if [[ "$HEALTH_PROFILE_GATE_CACHE" == "auto" ]]; then
+  if [[ "$PROFILE" == "prepush-standard" ]]; then
+    HEALTH_PROFILE_GATE_CACHE="1"
+  else
+    HEALTH_PROFILE_GATE_CACHE="0"
+  fi
+fi
+export GENESIS_HEALTH_PROFILE_GATE_CACHE="$HEALTH_PROFILE_GATE_CACHE"
+export GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC="$HEALTH_PROFILE_GATE_CACHE_TTL_SEC"
 
 PROFILE_SHARDS="${GENESIS_HEALTH_PROFILE_SHARDS:-$HEALTH_SHARDS}"
 if [[ ! "$PROFILE_SHARDS" =~ ^[0-9]+$ || "$PROFILE_SHARDS" -le 0 ]]; then
@@ -914,6 +1152,8 @@ if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   COMMON_GATES=("$TEST_GATE_OVERRIDE")
   PROFILE_GATES=()
 fi
+
+apply_profile_gate_cache_policy
 
 run_health_cargo_warmup "profile:${PROFILE}"
 

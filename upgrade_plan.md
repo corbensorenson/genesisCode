@@ -7,17 +7,13 @@ Scope:
 - Remove completed items; rely on git history and perf artifacts for closure evidence.
 - Machine-readable source of unresolved IDs: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 5
+Open checklist items: 4
 
 ## Selfhost Closure (Rust Ownership Still In Critical Path)
 
 - [ ] P2.1 Move `crates/gc_obligations/src/obligation_exec.rs` from `phase-1 in-progress` to `phase-3 migrated` by routing production obligation orchestration through `.gc` ownership and archiving Rust semantic sidecars to parity-only paths.
 - [ ] P2.2 Move `crates/gc_cli_driver/src/semantic_workspace.rs` from `phase-1 in-progress` to `phase-3 migrated` with GC-owned planning/edit graph logic as source of truth for agent workspace mutation workflows.
 - [ ] P2.3 Move `crates/gc_patches/src/lib.rs` from `phase-1 in-progress` to `phase-3 migrated` so semantic patch construction/normalization is GC-owned in production execution paths.
-
-## Agent-First Capability Depth
-
-- [ ] P2.10 Expand type/effect checking beyond the current gradual subset to improve agent reliability on large generated codebases (stronger row/effect inference and richer declared-shape validation).
 
 ## Iteration Throughput
 

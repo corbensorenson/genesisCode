@@ -249,6 +249,20 @@ fn literal_op_symbol(t: &Term) -> Option<String> {
 
 fn direct_effect_ops(head: &str, arity: usize) -> Option<&'static [&'static str]> {
     match head {
+        // Pure task DSL constructors.
+        "core/task::reduce-seq" if arity >= 1 => Some(&[]),
+        "core/task::program" if arity >= 1 => Some(&[]),
+        "core/task::program-with-initial" if arity >= 1 => Some(&[]),
+        "core/task::step/sleep-ms" if arity >= 1 => Some(&[]),
+        "core/task::step/set" if arity >= 1 => Some(&[]),
+        "core/task::step/int-add" if arity >= 1 => Some(&[]),
+        "core/task::step/int-mul" if arity >= 1 => Some(&[]),
+        "core/task::step/str-append" if arity >= 1 => Some(&[]),
+        "core/task::step/vec-push" if arity >= 1 => Some(&[]),
+        "core/task::step/map-put" if arity >= 2 => Some(&[]),
+        "core/task::step/fail" if arity >= 1 => Some(&[]),
+        "core/task::step/return" if arity >= 1 => Some(&[]),
+
         // Base deterministic task ABI.
         "core/task::spawn" if arity >= 3 => Some(&["core/task::spawn"]),
         "core/task::await" if arity >= 1 => Some(&["core/task::await"]),
@@ -278,6 +292,10 @@ fn direct_effect_ops(head: &str, arity: usize) -> Option<&'static [&'static str]
         }
         "core/task::task-group" if arity >= 4 => Some(&["core/task::spawn"]),
         "core/task::task-group-await" if arity >= 1 => Some(&["core/task::await"]),
+        "core/task::spawn-program" if arity >= 3 => Some(&["core/task::spawn"]),
+        "core/task::spawn-eval" if arity >= 3 => Some(&["core/task::spawn"]),
+        "core/task::spawn-eval1" if arity >= 4 => Some(&["core/task::spawn"]),
+        "core/task::spawn-evaln" if arity >= 4 => Some(&["core/task::spawn"]),
         "core/task::parallel-reduce-bounded" if arity >= 7 => {
             Some(&["core/task::spawn", "core/task::await"])
         }
@@ -363,6 +381,14 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
         Some(x) => x,
     };
     let strict_effects_meta = match meta_strict_effects(&meta) {
+        Ok(v) => v,
+        Err(e) => {
+            ok = false;
+            errors.push(format!("{}: {}", m.path, e));
+            false
+        }
+    };
+    let strict_shapes = match meta_strict_shapes(&meta) {
         Ok(v) => v,
         Err(e) => {
             ok = false;
@@ -482,7 +508,7 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                 };
                 match decl_res {
                     Ok(decl) => {
-                        if !type_compatible(&inferred_ty, &decl) {
+                        if !type_compatible(&inferred_ty, &decl, strict_shapes) {
                             tr_ok = false;
                             tr_errors.push(format!(
                                 "declared type mismatch for {e}: declared {}, inferred {}",
@@ -580,7 +606,7 @@ fn declared_eff_row(ty: &Ty) -> Option<&EffRow> {
     }
 }
 
-fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
+fn type_compatible(inferred: &Ty, declared: &Ty, strict_shapes: bool) -> bool {
     // `?` in the declared position accepts anything.
     if matches!(declared, Ty::Any) {
         return true;
@@ -608,7 +634,7 @@ fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
             {
                 return false;
             }
-            type_compatible(ip, dp)
+            type_compatible(ip, dp, strict_shapes)
         }
         (
             Ty::Fn {
@@ -622,41 +648,69 @@ fn type_compatible(inferred: &Ty, declared: &Ty) -> bool {
                 eff: de,
             },
         ) => {
-            if !type_compatible(ip, dp) {
+            if !type_compatible(ip, dp, strict_shapes) {
                 return false;
             }
-            if !type_compatible(ir, dr) {
+            if !type_compatible(ir, dr, strict_shapes) {
                 return false;
             }
             eff_row_compatible(ie, de)
         }
         (Ty::Prog { ret: ir, eff: ie }, Ty::Prog { ret: dr, eff: de }) => {
-            type_compatible(ir, dr) && eff_row_compatible(ie, de)
+            type_compatible(ir, dr, strict_shapes) && eff_row_compatible(ie, de)
         }
         (
             Ty::Rec {
                 fields: ifs,
-                tail: _,
+                tail: i_tail,
             },
             Ty::Rec {
                 fields: dfs,
-                tail: _,
+                tail: d_tail,
             },
-        ) => dfs
-            .iter()
-            .all(|(k, dt)| ifs.get(k).is_some_and(|it| type_compatible(it, dt))),
+        ) => {
+            if !dfs.iter().all(|(k, dt)| {
+                ifs.get(k)
+                    .is_some_and(|it| type_compatible(it, dt, strict_shapes))
+            }) {
+                return false;
+            }
+            if strict_shapes && matches!(d_tail, RowTail::Closed) {
+                if !matches!(i_tail, RowTail::Closed) {
+                    return false;
+                }
+                if ifs.len() != dfs.len() {
+                    return false;
+                }
+            }
+            true
+        }
         (
             Ty::Contract {
                 methods: ims,
-                tail: _,
+                tail: i_tail,
             },
             Ty::Contract {
                 methods: dms,
-                tail: _,
+                tail: d_tail,
             },
-        ) => dms
-            .iter()
-            .all(|(k, dt)| ims.get(k).is_some_and(|it| type_compatible(it, dt))),
+        ) => {
+            if !dms.iter().all(|(k, dt)| {
+                ims.get(k)
+                    .is_some_and(|it| type_compatible(it, dt, strict_shapes))
+            }) {
+                return false;
+            }
+            if strict_shapes && matches!(d_tail, RowTail::Closed) {
+                if !matches!(i_tail, RowTail::Closed) {
+                    return false;
+                }
+                if ims.len() != dms.len() {
+                    return false;
+                }
+            }
+            true
+        }
         _ => false,
     }
 }
@@ -717,6 +771,22 @@ fn meta_strict_effects(meta: &Term) -> Result<bool, String> {
         Term::Bool(b) => Ok(*b),
         other => Err(format!(
             "::meta :strict-effects must be bool, got {}",
+            print_term(other)
+        )),
+    }
+}
+
+fn meta_strict_shapes(meta: &Term) -> Result<bool, String> {
+    let Term::Map(m) = meta else {
+        return Ok(false);
+    };
+    let Some(v) = m.get(&TermOrdKey(Term::symbol(":strict-shapes"))) else {
+        return Ok(false);
+    };
+    match v {
+        Term::Bool(b) => Ok(*b),
+        other => Err(format!(
+            "::meta :strict-shapes must be bool, got {}",
             print_term(other)
         )),
     }

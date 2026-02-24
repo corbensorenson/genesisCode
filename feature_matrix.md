@@ -28,7 +28,7 @@ Legend:
 | Strict selfhost frontend default in production binaries | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Full selfhost closure with minimal bounded Rust TCB | ⚠️ (explicit exception crates remain and migration rows are still in-progress) | ⚠️ | ⚠️ | ❌ | ❌ | ⚠️ |
 | WASI CLI parity with native CLI for registry hosting | ✅ (WASI `registry serve` provides deterministic file-contract registry remote) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Type/effect system maturity for large generated codebases | ⚠️ (gradual subset; inference intentionally conservative) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Type/effect system maturity for large generated codebases | ⚠️ (gradual core remains, but strict-shapes and broader task/effect inference are enforced) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Interactive deterministic debugger surface | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ |
 | LSP/editor server for human IDE workflows | ❌ (agent-first schema/edit surfaces are primary) | ✅ | ✅ | ✅ | ✅ | ⚠️ |
 | Policy-gated supply-chain provenance workflow | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -38,7 +38,6 @@ Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorens
 - P2.1 - obligation execution migration remains phase-1 in-progress.
 - P2.2 - semantic workspace mutation path remains phase-1 in-progress.
 - P2.3 - patch orchestration path remains phase-1 in-progress.
-- P2.10 - typechecker remains gradual/conservative for large autonomous codegen workloads.
 - P3.1 - strict profile wall-time still needs tighter fast-loop optimization policy.
 
 Primary evidence paths:

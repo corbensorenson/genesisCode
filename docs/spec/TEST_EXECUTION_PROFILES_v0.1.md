@@ -88,6 +88,14 @@ Strict/full profile runtime reports:
     lock contention while preserving full gate coverage.
   - defaults profile gates to serial execution (`GENESIS_HEALTH_PROFILE_SHARDS=1`) to reduce
     cargo build-lock contention while preserving full gate coverage
+  - deterministic heavy-gate cache policy for warm loops:
+    - enabled by default for `prepush-standard` via `GENESIS_HEALTH_PROFILE_GATE_CACHE=auto|1`
+      (default `auto` resolves to `1` on `prepush-standard`, `0` otherwise)
+    - cache keys are content-fingerprinted from gate command + gate-specific input path sets
+      and stored under `.genesis/perf/health_gate_cache/<profile>/`
+    - TTL-bound reuse controlled by `GENESIS_HEALTH_PROFILE_GATE_CACHE_TTL_SEC`
+      (default `21600`, six hours)
+    - implementation wrapper: `scripts/lib/run_cached_health_gate.sh`
   - cargo prebuild orchestration is available via
     `GENESIS_HEALTH_WARM_CARGO_CACHE=auto|1|0` (default `auto`:
     `dev-fast=0`, `prepush-standard/release-full=1`) and reports to

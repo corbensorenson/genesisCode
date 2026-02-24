@@ -40,6 +40,9 @@ Given an inferred type `I` and a declared type `D`:
 - Records and contracts use width compatibility:
   - every declared field/method must exist in the inferred row and be compatible
   - inferred rows may contain additional entries
+- Optional strict shape mode:
+  - if `::meta :strict-shapes true`, declared closed rows (`tail = nil`) become exact:
+    inferred rows must also be closed and must not include undeclared fields/methods
 - Effect rows:
   - closed declared effect rows require inferred ops to be a subset and require `unknown = false`
   - open declared effect rows are permissive (they admit additional and/or unknown ops)
@@ -54,6 +57,9 @@ The typechecker infers types most precisely for:
 - `core/msg::*`
 - `core/contract::*` (including contract-row extraction from override map literals)
 - `core/effect::*` including `core/effect::bind` sequencing (returns a `Prog` type with merged effect rows)
+- task wrapper/op-table inference for `core/task::*` helper families:
+  - spawn wrappers (`spawn-program`, `spawn-eval*`) map to base `core/task::spawn`
+  - pure task DSL constructors (`program*`, `step/*`, `reduce-seq`) do not force `unknown`
 - typed fallback function application for declared/known `Fn` values (including curried application chains)
 
 Applications with unknown/non-function heads are treated conservatively as `?` (but still walked for effect inference).

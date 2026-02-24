@@ -351,3 +351,125 @@ fn strict_effects_require_closed_declared_row_for_task_exports() {
         r.errors
     );
 }
+
+#[test]
+fn task_wrapper_inference_tracks_spawn_wrappers_and_pure_dsl_helpers() {
+    let src = r#"
+          (def ::meta '{:exports [] :caps [core/task::spawn] :types {}})
+          (def m::prog (core/task::program []))
+          (def m::prog2 (core/task::program-with-initial 0 []))
+          (def m::step (core/task::step/map-put ':k 42))
+          (def m::spawn (core/task::spawn-evaln 'scope 'job '(fn (args) args) [1 2 3]))
+          m::spawn
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let inf = infer_effects(&forms);
+    assert!(inf.ops.contains("core/task::spawn"));
+    assert!(!inf.unknown, "unexpected unknown effect ops: {:?}", inf.ops);
+}
+
+#[test]
+fn strict_shapes_reject_open_inferred_contract_for_closed_declared_contract() {
+    let src = r#"
+          (def ::meta
+            '{
+              :exports [pkg/t::c]
+              :strict-shapes true
+              :caps []
+              :types {
+                pkg/t::c
+                  (Contract
+                    [[foo/bar::x (Fn (Msg ?) Int (Eff [] nil))]]
+                    nil)}})
+
+          (def pkg/t::c
+            (core/contract::extend
+              core/contract::genesis
+              {foo/bar::x (fn (m) 10)}
+              {}))
+
+          pkg/t::c
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let meta = extract_meta(&forms);
+    let m = ModuleForTypecheck {
+        path: "strict-shapes-contract.gc".to_string(),
+        forms,
+        meta,
+    };
+    let r = typecheck_package(&[m]);
+    assert!(!r.ok);
+    assert!(
+        r.errors
+            .iter()
+            .any(|e| e.contains("declared type mismatch")),
+        "expected declared type mismatch error, got {:?}",
+        r.errors
+    );
+}
+
+#[test]
+fn strict_shapes_accept_open_declared_contract_tail() {
+    let src = r#"
+          (def ::meta
+            '{
+              :exports [pkg/t::c]
+              :strict-shapes true
+              :caps []
+              :types {
+                pkg/t::c
+                  (Contract
+                    [[foo/bar::x (Fn (Msg ?) Int (Eff [] nil))]]
+                    r)}})
+
+          (def pkg/t::c
+            (core/contract::extend
+              core/contract::genesis
+              {foo/bar::x (fn (m) 10)}
+              {}))
+
+          pkg/t::c
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let meta = extract_meta(&forms);
+    let m = ModuleForTypecheck {
+        path: "strict-shapes-contract-open.gc".to_string(),
+        forms,
+        meta,
+    };
+    let r = typecheck_package(&[m]);
+    assert!(
+        r.ok,
+        "expected open-tail contract to pass, got {:?}",
+        r.errors
+    );
+}
+
+#[test]
+fn strict_shapes_reject_extra_record_fields_for_closed_declared_record() {
+    let src = r#"
+          (def ::meta
+            '{
+              :exports [m::row]
+              :strict-shapes true
+              :caps []
+              :types {m::row (Rec [[:a Int]] nil)}})
+          (def m::row {:a 1 :b 2})
+          m::row
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let m = ModuleForTypecheck {
+        path: "strict-shapes-record.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    };
+    let r = typecheck_package(&[m]);
+    assert!(!r.ok);
+    assert!(
+        r.errors
+            .iter()
+            .any(|e| e.contains("declared type mismatch")),
+        "expected strict closed-row mismatch, got {:?}",
+        r.errors
+    );
+}
