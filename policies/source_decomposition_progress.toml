@@ -18,6 +18,12 @@ module_paths = [
   "crates/gc_effects/src/runner_host_bridge.rs",
   "crates/gc_registry/src/registry/client_impl/ping_and_store.rs",
   "crates/gc_vcs/src/policy.rs",
+  "crates/gc_opt/src/stage2_wasm/collections_lowering.rs",
+  "crates/gc_effects/src/runner_xr_host/advanced.rs",
+  "crates/gc_effects/src/runner_capability_dispatch/net.rs",
+  "crates/gc_patches/src/patch_apply.rs",
+  "crates/gc_kernel/src/compiled.rs",
+  "crates/gc_cli_driver/src/pkg_assurance_ops.rs",
 ]
 
 # Migration contract guardrails:
@@ -122,4 +128,46 @@ module_path = "crates/gc_vcs/src/policy.rs"
 target_gc_modules = ["prelude/modules/32_network_workflow.gc"]
 parity_gate = "cargo test -p gc_vcs --quiet"
 phase = "phase-3"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_opt/src/stage2_wasm/collections_lowering.rs"
+target_gc_modules = ["selfhost/toolchain.gc", "prelude/modules/31_data_pipeline.gc"]
+parity_gate = "cargo test -p gc_opt --lib --quiet"
+phase = "phase-2"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_effects/src/runner_xr_host/advanced.rs"
+target_gc_modules = ["prelude/modules/10_xr_host.gc", "prelude/modules/34_xr_workflow.gc"]
+parity_gate = "cargo test -p gc_effects --lib --quiet"
+phase = "phase-2"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_effects/src/runner_capability_dispatch/net.rs"
+target_gc_modules = ["prelude/modules/32_network_workflow.gc", "prelude/modules/10_browser_host.gc"]
+parity_gate = "cargo test -p gc_effects --lib --quiet"
+phase = "phase-2"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_patches/src/patch_apply.rs"
+target_gc_modules = ["prelude/modules/36_semantic_workspace.gc", "prelude/modules/31_data_pipeline.gc"]
+parity_gate = "cargo test -p gc_patches --quiet"
+phase = "phase-2"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_kernel/src/compiled.rs"
+target_gc_modules = ["selfhost/toolchain.gc", "prelude/modules/00_core_media.gc"]
+parity_gate = "cargo test -p gc_kernel --quiet"
+phase = "phase-2"
+status = "migrated"
+
+[[migration_rows]]
+module_path = "crates/gc_cli_driver/src/pkg_assurance_ops.rs"
+target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/36_semantic_workspace.gc"]
+parity_gate = "cargo test -p gc_cli_driver --quiet"
+phase = "phase-2"
 status = "migrated"

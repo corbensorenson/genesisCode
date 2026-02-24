@@ -81,6 +81,12 @@ Phase model:
 | `crates/gc_effects/src/runner_host_bridge.rs` | `prelude/modules/10_browser_host.gc`, `prelude/modules/10_xr_host.gc` | `bash scripts/check_host_bridge_fault_injection.sh` | `phase-2` | `migrated` |
 | `crates/gc_registry/src/registry/client_impl/ping_and_store.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_registry --quiet` | `phase-2` | `migrated` |
 | `crates/gc_vcs/src/policy.rs` | `prelude/modules/32_network_workflow.gc` | `cargo test -p gc_vcs --quiet` | `phase-3` | `migrated` |
+| `crates/gc_opt/src/stage2_wasm/collections_lowering.rs` | `selfhost/toolchain.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_opt --lib --quiet` | `phase-2` | `migrated` |
+| `crates/gc_effects/src/runner_xr_host/advanced.rs` | `prelude/modules/10_xr_host.gc`, `prelude/modules/34_xr_workflow.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `migrated` |
+| `crates/gc_effects/src/runner_capability_dispatch/net.rs` | `prelude/modules/32_network_workflow.gc`, `prelude/modules/10_browser_host.gc` | `cargo test -p gc_effects --lib --quiet` | `phase-2` | `migrated` |
+| `crates/gc_patches/src/patch_apply.rs` | `prelude/modules/36_semantic_workspace.gc`, `prelude/modules/31_data_pipeline.gc` | `cargo test -p gc_patches --quiet` | `phase-2` | `migrated` |
+| `crates/gc_kernel/src/compiled.rs` | `selfhost/toolchain.gc`, `prelude/modules/00_core_media.gc` | `cargo test -p gc_kernel --quiet` | `phase-2` | `migrated` |
+| `crates/gc_cli_driver/src/pkg_assurance_ops.rs` | `prelude/modules/31_data_pipeline.gc`, `prelude/modules/36_semantic_workspace.gc` | `cargo test -p gc_cli_driver --quiet` | `phase-2` | `migrated` |
 
 Exit criteria:
 

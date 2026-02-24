@@ -1,60 +1,55 @@
 use super::*;
 
-#[path = "collections_len_lowering.rs"]
-mod collections_len_lowering;
-#[path = "collections_map_get_lowering.rs"]
-mod collections_map_get_lowering;
-
-pub(super) fn lower_vec_get_terms(
-    vec_t: &Term,
-    idx_t: &Term,
+pub(super) fn lower_map_get_terms(
+    map_t: &Term,
+    key_t: &Term,
     env: &BTreeMap<String, Local>,
     global_env: &BTreeMap<String, Local>,
     fn_defs: &BTreeMap<String, InlinableFnDef>,
     local_fn_defs: &BTreeMap<String, InlinableFnDef>,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
-    let idx = plan_expr(idx_t, env, global_env, fn_defs, local_fn_defs, planner)?;
-    if idx.ty() != Ty::I64 {
+    let key = plan_expr(key_t, env, global_env, fn_defs, local_fn_defs, planner)?;
+    if !matches!(
+        key.ty(),
+        Ty::NilI32 | Ty::BoolI32 | Ty::I64 | Ty::SymI32 | Ty::StrI32 | Ty::BytesI32
+    ) {
         return Err(Stage2CompileError::Unsupported(
-            "vec/get expects (vector, int) arguments in stage2".to_string(),
+            "map/get expects a scalar data key in stage2".to_string(),
         ));
     }
-    let scope = VecGetScope {
-        env,
-        global_env,
-        fn_defs,
-        local_fn_defs,
-    };
-    let vec_aliases: BTreeMap<String, Vec<Term>> = BTreeMap::new();
-    lower_vec_get_vec_term_with_aliases(vec_t, idx, &scope, &vec_aliases, planner)
+    lower_map_get_map_term(map_t, key, env, global_env, fn_defs, local_fn_defs, planner)
 }
 
-pub(super) fn lower_vec_get_vec_term_with_aliases(
-    vec_t: &Term,
-    idx: PExpr,
-    scope: &VecGetScope<'_>,
-    vec_aliases: &BTreeMap<String, Vec<Term>>,
+pub(super) fn lower_map_get_map_term(
+    map_t: &Term,
+    key: PExpr,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
-    let global_vec_aliases = planner.global_const_vector_aliases.clone();
-    if let Some(items) = term_const_scalar_vector_exprs_with_aliases(
-        vec_t,
-        vec_aliases,
-        &global_vec_aliases,
-        planner,
-    )? {
-        return lower_vec_get_index_expr(items, idx, planner);
+    if !(matches!(map_t, Term::Symbol(sym) if env.contains_key(sym) || local_fn_defs.contains_key(sym)))
+    {
+        let empty_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
+        if let Some(entries) = term_const_map_expr_with_aliases(
+            map_t,
+            &empty_aliases,
+            &planner.global_const_map_aliases,
+        )? {
+            return lower_map_get_key_expr(entries, key, planner);
+        }
     }
 
-    let Some(xs) = vec_t.as_proper_list() else {
+    let Some(xs) = map_t.as_proper_list() else {
         return Err(Stage2CompileError::Unsupported(
-            "vec/get currently requires stage2-known vector literals".to_string(),
+            "map/get currently requires stage2-known map literals".to_string(),
         ));
     };
     if xs.is_empty() {
         return Err(Stage2CompileError::Unsupported(
-            "vec/get currently requires stage2-known vector literals".to_string(),
+            "map/get currently requires stage2-known map literals".to_string(),
         ));
     }
 
@@ -68,28 +63,21 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
         for x in xs.iter().skip(1).take(xs.len().saturating_sub(2)) {
             exprs.push(plan_expr(
                 x,
-                scope.env,
-                scope.global_env,
-                scope.fn_defs,
-                scope.local_fn_defs,
+                env,
+                global_env,
+                fn_defs,
+                local_fn_defs,
                 planner,
             )?);
         }
         let last = xs
             .last()
             .copied()
-            .ok_or_else(|| Stage2CompileError::Internal("vec/get begin had no body".to_string()))?;
-        exprs.push(lower_vec_get_vec_term_with_aliases(
-            last,
-            idx,
-            scope,
-            vec_aliases,
-            planner,
-        )?);
-        let ty = exprs
-            .last()
-            .map(PExpr::ty)
-            .ok_or_else(|| Stage2CompileError::Internal("vec/get begin had no body".to_string()))?;
+            .ok_or_else(|| Stage2CompileError::Internal("map/get begin had no body".to_string()))?;
+        let lowered =
+            lower_map_get_map_term(last, key, env, global_env, fn_defs, local_fn_defs, planner)?;
+        let ty = lowered.ty();
+        exprs.push(lowered);
         return Ok(PExpr::Begin { exprs, ty });
     }
 
@@ -99,23 +87,23 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
                 "if must have exactly 3 arguments".to_string(),
             ));
         }
-        let cond = plan_expr(
-            xs[1],
-            scope.env,
-            scope.global_env,
-            scope.fn_defs,
-            scope.local_fn_defs,
-            planner,
-        )?;
+        let cond = plan_expr(xs[1], env, global_env, fn_defs, local_fn_defs, planner)?;
         let cond_ty = cond.ty();
         ensure_scalar_cond_ty(cond_ty)?;
-        let then_expr =
-            lower_vec_get_vec_term_with_aliases(xs[2], idx.clone(), scope, vec_aliases, planner)?;
+        let then_expr = lower_map_get_map_term(
+            xs[2],
+            key.clone(),
+            env,
+            global_env,
+            fn_defs,
+            local_fn_defs,
+            planner,
+        )?;
         let else_expr =
-            lower_vec_get_vec_term_with_aliases(xs[3], idx, scope, vec_aliases, planner)?;
+            lower_map_get_map_term(xs[3], key, env, global_env, fn_defs, local_fn_defs, planner)?;
         if then_expr.ty() != else_expr.ty() {
             return Err(Stage2CompileError::Unsupported(
-                "vec/get branch variants must resolve to matching scalar result types".to_string(),
+                "map/get branch variants must resolve to matching scalar result types".to_string(),
             ));
         }
         return Ok(PExpr::If {
@@ -138,9 +126,9 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
                 "(let ...) bindings must be a list".to_string(),
             ));
         };
-        let mut env2 = scope.env.clone();
-        let mut local_fn_defs2 = scope.local_fn_defs.clone();
-        let mut vec_aliases2 = vec_aliases.clone();
+        let mut env2 = env.clone();
+        let mut local_fn_defs2 = local_fn_defs.clone();
+        let mut map_aliases: BTreeMap<String, BTreeMap<TermOrdKey, Term>> = BTreeMap::new();
         let mut bindings = Vec::with_capacity(bs.len());
         for b in bs {
             let Some(pair) = b.as_proper_list() else {
@@ -158,30 +146,30 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
                     "(let ...) binding name must be symbol".to_string(),
                 ));
             };
-            if let Some(items) = term_const_vector_expr_with_aliases(
+            if let Some(items) = term_const_map_expr_with_aliases(
                 pair[1],
-                &vec_aliases2,
-                &planner.global_const_vector_aliases,
+                &map_aliases,
+                &planner.global_const_map_aliases,
             )? {
                 env2.remove(name);
                 local_fn_defs2.remove(name);
-                vec_aliases2.insert(name.clone(), items);
+                map_aliases.insert(name.clone(), items);
                 continue;
             }
             if let Term::Symbol(sym) = pair[1]
                 && !env2.contains_key(sym)
                 && !local_fn_defs2.contains_key(sym)
             {
-                if let Some(items) = vec_aliases2.get(sym).cloned() {
+                if let Some(items) = map_aliases.get(sym).cloned() {
                     env2.remove(name);
                     local_fn_defs2.remove(name);
-                    vec_aliases2.insert(name.clone(), items);
+                    map_aliases.insert(name.clone(), items);
                     continue;
                 }
-                if let Some(items) = planner.global_const_vector_aliases.get(sym).cloned() {
+                if let Some(items) = planner.global_const_map_aliases.get(sym).cloned() {
                     env2.remove(name);
                     local_fn_defs2.remove(name);
-                    vec_aliases2.insert(name.clone(), items);
+                    map_aliases.insert(name.clone(), items);
                     continue;
                 }
             }
@@ -199,8 +187,7 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
             }
             if let Term::Symbol(sym) = pair[1]
                 && !env2.contains_key(sym)
-                && let Some(alias_fn) =
-                    resolve_inlinable_symbol(sym, scope.fn_defs, &local_fn_defs2)
+                && let Some(alias_fn) = resolve_inlinable_symbol(sym, fn_defs, &local_fn_defs2)
             {
                 env2.remove(name);
                 local_fn_defs2.insert(name.clone(), alias_fn);
@@ -210,8 +197,8 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
             let rhs = plan_expr(
                 pair[1],
                 &env2,
-                scope.global_env,
-                scope.fn_defs,
+                global_env,
+                fn_defs,
                 &local_fn_defs2,
                 planner,
             )?;
@@ -237,54 +224,50 @@ pub(super) fn lower_vec_get_vec_term_with_aliases(
                 body.push(plan_expr(
                     x,
                     &env2,
-                    scope.global_env,
-                    scope.fn_defs,
+                    global_env,
+                    fn_defs,
                     &local_fn_defs2,
                     planner,
                 )?);
             }
         }
         let last = xs.last().copied().ok_or_else(|| {
-            Stage2CompileError::Internal("vec/get let had empty body".to_string())
+            Stage2CompileError::Internal("map/get let had empty body".to_string())
         })?;
-        let scope2 = VecGetScope {
-            env: &env2,
-            global_env: scope.global_env,
-            fn_defs: scope.fn_defs,
-            local_fn_defs: &local_fn_defs2,
-        };
-        body.push(lower_vec_get_vec_term_with_aliases(
-            last,
-            idx,
-            &scope2,
-            &vec_aliases2,
+        let resolved_last = resolve_map_alias_term(last, &map_aliases);
+        let lowered = lower_map_get_map_term(
+            &resolved_last,
+            key,
+            &env2,
+            global_env,
+            fn_defs,
+            &local_fn_defs2,
             planner,
-        )?);
-        let ty = body.last().map(PExpr::ty).ok_or_else(|| {
-            Stage2CompileError::Internal("vec/get let had empty body".to_string())
-        })?;
+        )?;
+        let ty = lowered.ty();
+        body.push(lowered);
         return Ok(PExpr::Let { bindings, body, ty });
     }
 
     Err(Stage2CompileError::Unsupported(
-        "vec/get currently requires stage2-known vector literals".to_string(),
+        "map/get currently requires stage2-known map literals".to_string(),
     ))
 }
 
-pub(super) fn lower_vec_get_index_expr(
-    items: Vec<PExpr>,
-    idx: PExpr,
+pub(super) fn lower_map_get_key_expr(
+    entries: BTreeMap<TermOrdKey, Term>,
+    key: PExpr,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
-    if let Some(i) = planner_const_int_value(planner, &idx) {
-        return lower_vec_get_const_pair(items, idx, i, planner);
+    if let Some(k) = scalar_term_from_pexpr_const(planner, &key) {
+        return lower_map_get_const_pair(entries, key, k, planner);
     }
-    match idx {
+    match key {
         PExpr::Begin { mut exprs, .. } => {
             let last = exprs.pop().ok_or_else(|| {
-                Stage2CompileError::Internal("vec/get index begin had no expressions".to_string())
+                Stage2CompileError::Internal("map/get key begin had no expressions".to_string())
             })?;
-            let lowered = lower_vec_get_index_expr(items, last, planner)?;
+            let lowered = lower_map_get_key_expr(entries, last, planner)?;
             let ty = lowered.ty();
             exprs.push(lowered);
             Ok(PExpr::Begin { exprs, ty })
@@ -293,9 +276,9 @@ pub(super) fn lower_vec_get_index_expr(
             bindings, mut body, ..
         } => {
             let last = body.pop().ok_or_else(|| {
-                Stage2CompileError::Internal("vec/get index let had empty body".to_string())
+                Stage2CompileError::Internal("map/get key let had empty body".to_string())
             })?;
-            let lowered = lower_vec_get_index_expr(items, last, planner)?;
+            let lowered = lower_map_get_key_expr(entries, last, planner)?;
             let ty = lowered.ty();
             body.push(lowered);
             Ok(PExpr::Let { bindings, body, ty })
@@ -305,14 +288,13 @@ pub(super) fn lower_vec_get_index_expr(
             then_expr,
             else_expr,
             cond_ty,
-            ty: Ty::I64,
+            ty: _,
         } => {
-            let then_lowered = lower_vec_get_index_expr(items.clone(), *then_expr, planner)?;
-            let else_lowered = lower_vec_get_index_expr(items, *else_expr, planner)?;
+            let then_lowered = lower_map_get_key_expr(entries.clone(), *then_expr, planner)?;
+            let else_lowered = lower_map_get_key_expr(entries, *else_expr, planner)?;
             if then_lowered.ty() != else_lowered.ty() {
                 return Err(Stage2CompileError::Unsupported(
-                    "vec/get branch indices must resolve to matching scalar result types"
-                        .to_string(),
+                    "map/get branch keys must resolve to matching scalar result types".to_string(),
                 ));
             }
             let out_ty = then_lowered.ty();
@@ -325,63 +307,34 @@ pub(super) fn lower_vec_get_index_expr(
             })
         }
         _ => Err(Stage2CompileError::Unsupported(
-            "vec/get currently requires stage2-known int indices".to_string(),
+            "map/get currently requires stage2-known scalar keys".to_string(),
         )),
     }
 }
 
-pub(super) fn lower_map_get_terms(
-    map_t: &Term,
-    key_t: &Term,
-    env: &BTreeMap<String, Local>,
-    global_env: &BTreeMap<String, Local>,
-    fn_defs: &BTreeMap<String, InlinableFnDef>,
-    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
+pub(super) fn lower_map_get_const_pair(
+    entries: BTreeMap<TermOrdKey, Term>,
+    key: PExpr,
+    key_term: Term,
     planner: &mut Planner,
 ) -> Result<PExpr, Stage2CompileError> {
-    collections_map_get_lowering::lower_map_get_terms(
-        map_t,
-        key_t,
-        env,
-        global_env,
-        fn_defs,
-        local_fn_defs,
-        planner,
-    )
-}
-
-pub(super) fn lower_vec_len_term(
-    vec_t: &Term,
-    env: &BTreeMap<String, Local>,
-    global_env: &BTreeMap<String, Local>,
-    fn_defs: &BTreeMap<String, InlinableFnDef>,
-    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
-    planner: &mut Planner,
-) -> Result<PExpr, Stage2CompileError> {
-    collections_len_lowering::lower_vec_len_term(
-        vec_t,
-        env,
-        global_env,
-        fn_defs,
-        local_fn_defs,
-        planner,
-    )
-}
-
-pub(super) fn lower_map_len_term(
-    map_t: &Term,
-    env: &BTreeMap<String, Local>,
-    global_env: &BTreeMap<String, Local>,
-    fn_defs: &BTreeMap<String, InlinableFnDef>,
-    local_fn_defs: &BTreeMap<String, InlinableFnDef>,
-    planner: &mut Planner,
-) -> Result<PExpr, Stage2CompileError> {
-    collections_len_lowering::lower_map_len_term(
-        map_t,
-        env,
-        global_env,
-        fn_defs,
-        local_fn_defs,
-        planner,
-    )
+    let chosen_term = entries
+        .get(&TermOrdKey(key_term))
+        .cloned()
+        .unwrap_or(Term::Nil);
+    let chosen = scalar_term_to_pexpr(&chosen_term, planner)?.ok_or_else(|| {
+        Stage2CompileError::Unsupported(
+            "map/get currently requires selected values to be scalar in stage2".to_string(),
+        )
+    })?;
+    let key_local = planner.alloc_local(key.ty())?;
+    let ty = chosen.ty();
+    Ok(PExpr::Let {
+        bindings: vec![LetBinding {
+            idx: key_local,
+            expr: key,
+        }],
+        body: vec![chosen],
+        ty,
+    })
 }
