@@ -16,10 +16,6 @@ pub(super) fn refactor_kind_token(kind: RefactorKind) -> &'static str {
     }
 }
 
-pub(super) fn looks_like_scoped_symbol(symbol: &str) -> bool {
-    symbol.contains("::") || symbol.contains('/')
-}
-
 pub(super) fn term_tag(term: &Term) -> &'static str {
     match term {
         Term::Nil => "nil",

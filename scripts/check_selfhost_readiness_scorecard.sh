@@ -72,6 +72,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any, Optional
 
@@ -87,6 +88,23 @@ strict_mode = sys.argv[9] == "1"
 
 if p95_min_samples < 1:
     raise SystemExit("selfhost-readiness: p95_min_samples must be >= 1")
+
+def write_text_atomic(path: pathlib.Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.tmp-",
+        dir=str(path.parent),
+    )
+    tmp_path = pathlib.Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
 
 dashboard_doc = json.loads(dashboard_path.read_text(encoding="utf-8"))
 if dashboard_doc.get("kind") != "genesis/selfhost-dashboard-v0.2":
@@ -455,9 +473,13 @@ history_entry = {
 
 report_path.parent.mkdir(parents=True, exist_ok=True)
 history_path.parent.mkdir(parents=True, exist_ok=True)
-report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-with history_path.open("a", encoding="utf-8") as fh:
-    fh.write(json.dumps(history_entry, sort_keys=True) + "\n")
+write_text_atomic(report_path, json.dumps(report, indent=2, sort_keys=True) + "\n")
+history_line = json.dumps(history_entry, sort_keys=True) + "\n"
+history_fd = os.open(history_path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o644)
+try:
+    os.write(history_fd, history_line.encode("utf-8"))
+finally:
+    os.close(history_fd)
 
 print(
     "selfhost-readiness: "

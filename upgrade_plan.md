@@ -26,6 +26,8 @@ Open checklist items: 2
   `cargo test -p gc_prelude --test prelude_modularization -- --nocapture`,
   `cargo test -p gc_obligations -- --nocapture`,
   `cargo test -p gc_cli --test cli_semantic_edit -- --nocapture`.
+- [x] P2.1.g Upgraded `core/obligation::plan` in `prelude/modules/30_service_orchestration.gc` to enforce a GC-owned allowlist of supported obligations, reject unknown obligation symbols at plan time, and keep deterministic first-seen ordering for accepted entries.
+- [x] P2.1.h Removed Rust-side unknown-obligation fallback result synthesis in `crates/gc_obligations/src/obligations/types_api.rs`; execution now fails closed if `core/obligation::plan` emits unsupported entries, with regression coverage in `crates/gc_obligations/src/tests/mod.rs` (`core_obligation_plan_contract_rejects_unknown_obligations`, `obligation_plan_symbols_rejects_unknown_obligations`).
 
 - [x] P2.3.a Made selfhost `core/cli::validate-patch` authoritative in `gc_patches` production execution; removed silent Rust fallback on `"unknown :op"` validation failures.
 - [x] P2.3.b Added frontend-aware patch validation API (`validate_patch_term_with_frontend`) and wired semantic workspace refactor-plan validation through the selected CoreForm frontend.
@@ -41,6 +43,7 @@ Open checklist items: 2
   `cargo test -p gc_prelude --test prelude_semantic_workspace -- --nocapture`,
   `cargo test -p gc_cli --test cli_semantic_edit -- --nocapture`,
   `cargo test -p gc_obligations -- --nocapture`.
+- [x] P2.2.g Split production workspace-graph contract encode/decode helpers out of `crates/gc_cli_driver/src/semantic_workspace.rs` into `crates/gc_cli_driver/src/semantic_workspace_contract.rs`, reducing hot-module size under decomposition budget (`490 <= 700`) while preserving fail-closed `core/cli::semantic-workspace-graph-analyze` routing.
 - [x] P2.3.e Migrated production `rename-symbol` and `split-module` refactor transforms to selfhost contracts (`core/cli::rename-symbol-forms`, `core/cli::split-module-forms`) in `selfhost/patch_schema_refactor_v1.gc`.
 - [x] P2.3.f Fixed selfhost refactor contract output-shape root causes (literal vector misuse + malformed curried loop application) and regenerated `selfhost/toolchain.gc` + freshness metadata so `gc_patches` consumes corrected artifact behavior.
 - [x] P2.3.g Added selfhost `core/cli::rewrite-meta-list-forms` implementation plus supporting refactor helpers in `selfhost/patch_schema_refactor_v1.gc`; validated parse via `gc_coreform` diag and regenerated `selfhost/toolchain.gc`.

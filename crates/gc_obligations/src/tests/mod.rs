@@ -468,6 +468,39 @@ fn core_obligation_plan_contract_dedupes_and_preserves_order() {
 }
 
 #[test]
+fn core_obligation_plan_contract_rejects_unknown_obligations() {
+    let src = r#"
+            (core/obligation::plan
+              ["core/obligation::unit-tests"
+               "core/obligation::unknown"
+               "core/obligation::determinism"])
+            "#;
+    let term = eval_gc_term(src);
+    let expected = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/obligation-plan-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":rejected")),
+                Term::Vector(vec![Term::Str("core/obligation::unknown".to_string())]),
+            ),
+            (
+                TermOrdKey(Term::symbol(":run")),
+                Term::Vector(vec![
+                    Term::Str("core/obligation::unit-tests".to_string()),
+                    Term::Str("core/obligation::determinism".to_string()),
+                ]),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    assert_eq!(term, expected);
+}
+
+#[test]
 fn obligation_plan_symbols_routes_through_gc_contract() {
     let obligations = vec![
         "core/obligation::unit-tests".to_string(),
@@ -483,6 +516,20 @@ fn obligation_plan_symbols_routes_through_gc_contract() {
             "core/obligation::determinism".to_string(),
             "core/obligation::capabilities-declared".to_string(),
         ]
+    );
+}
+
+#[test]
+fn obligation_plan_symbols_rejects_unknown_obligations() {
+    let obligations = vec![
+        "core/obligation::unit-tests".to_string(),
+        "core/obligation::unknown".to_string(),
+    ];
+    let err = obligation_plan_symbols(&obligations).expect_err("plan should reject unknown");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("rejected obligation entries: core/obligation::unknown"),
+        "unexpected error: {msg}"
     );
 }
 

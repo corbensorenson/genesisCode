@@ -427,12 +427,11 @@ pub fn test_package_with_step_limit_and_frontend(
             }
             "core/obligation::lint" => obligation_lint(&store, &manifest, &modules, limits),
             "core/obligation::ai-style" => obligation_ai_style(&store, &manifest, &modules, limits),
-            other => Ok(ObligationResult {
-                name: other.to_string(),
-                ok: false,
-                artifact: None,
-                errors: vec![format!("unknown obligation {other}")],
-            }),
+            other => {
+                return Err(ObligationError::Test(format!(
+                    "core/obligation::plan emitted unsupported obligation {other}"
+                )))
+            }
         }?;
         ok_all &= r.ok;
         obligation_results.push(r);

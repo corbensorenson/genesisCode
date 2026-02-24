@@ -35,9 +35,8 @@ Legend:
 | Reachability-based artifact GC (refs/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- P2.1 - obligation execution migration remains phase-1 in-progress.
-- P2.2 - semantic workspace mutation path remains phase-1 in-progress.
-- P2.3 - patch orchestration path remains phase-1 in-progress.
+- P2.1 - obligation execution migration remains phase-2 in-progress.
+- P2.2 - semantic workspace mutation path remains phase-2 in-progress.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CLI.md`

@@ -151,6 +151,46 @@
         xs
         (if (core/obligation::str? v) ((core/vec::push xs) v) xs)))))
 
+(def core/obligation::known-obligation?
+  (fn (name)
+    (if ((core/eq? name) "core/obligation::unit-tests")
+      true
+      (if ((core/eq? name) "core/obligation::budgets")
+        true
+        (if ((core/eq? name) "core/obligation::property-tests")
+          true
+          (if ((core/eq? name) "core/obligation::coverage")
+            true
+            (if ((core/eq? name) "core/obligation::coverage-decision")
+              true
+              (if ((core/eq? name) "core/obligation::coverage-mcdc")
+                true
+                (if ((core/eq? name) "core/obligation::determinism")
+                  true
+                  (if ((core/eq? name) "core/obligation::capabilities-declared")
+                    true
+                    (if ((core/eq? name) "core/obligation::replayable-tests")
+                      true
+                      (if ((core/eq? name) "core/obligation::concurrency-replay")
+                        true
+                        (if ((core/eq? name) "core/obligation::typecheck")
+                          true
+                          (if ((core/eq? name) "core/obligation::stage1-validation")
+                            true
+                            (if ((core/eq? name) "core/obligation::translation-validation")
+                              true
+                              (if ((core/eq? name) "core/obligation::gfx-golden-images")
+                                true
+                                (if ((core/eq? name) "core/obligation::gfx-frame-budgets")
+                                  true
+                                  (if ((core/eq? name) "core/obligation::gfx-api-stability")
+                                    true
+                                    (if ((core/eq? name) "core/obligation::lint")
+                                      true
+                                      (if ((core/eq? name) "core/obligation::ai-style")
+                                        true
+                                        false))))))))))))))))))))
+
 (def core/obligation::plan-loop
   (fn (obligations)
     (fn (n)
@@ -162,7 +202,9 @@
               (let ((next ((((core/obligation::plan-loop obligations) n) ((core/int::add i) 1)))))
                 (let ((ob ((core/vec::get obligations) i)))
                   (if (core/obligation::str? ob)
-                    ((next ((core/obligation::plan-push-unique-str run) ob)) rejected)
+                    (if (core/obligation::known-obligation? ob)
+                      ((next ((core/obligation::plan-push-unique-str run) ob)) rejected)
+                      (next run ((core/obligation::plan-push-unique-str rejected) ob)))
                     (next run ((core/vec::push rejected) (core/sym::to-str (core/data::tag ob))))))))))))))
 
 (def core/obligation::plan
