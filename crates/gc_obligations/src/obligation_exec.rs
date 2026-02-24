@@ -65,15 +65,36 @@ pub(super) fn obligation_budgets(
     obligation_exec_budgets::obligation_budgets(store, manifest, tests)
 }
 
+fn obligation_report_term(contract: &str, args: &[Term]) -> Result<Term, ObligationError> {
+    let mut ctx = EvalCtx::with_step_limit(StepLimit::Default.resolve());
+    ctx.set_mem_limits(MemLimits::default());
+    let prelude = build_prelude(&mut ctx);
+    let mut f = prelude
+        .env
+        .get(contract)
+        .ok_or_else(|| ObligationError::Module(format!("missing prelude binding {contract}")))?;
+    for arg in args {
+        f = f
+            .apply(&mut ctx, Value::Data(arg.clone()))
+            .map_err(|e| ObligationError::Test(format!("{contract} apply failed: {e}")))?;
+    }
+    let out = f.to_term_for_log(ctx.protocol.map(|p| p.error));
+    match out {
+        Term::Map(_) => Ok(out),
+        other => Err(ObligationError::Test(format!(
+            "{contract} returned non-map report: {}",
+            print_term(&other)
+        ))),
+    }
+}
+
 pub(super) fn obligation_unit_tests(
     store: &EvidenceStore,
     manifest: &PackageManifest,
     tests: &[TestRun],
 ) -> Result<ObligationResult, ObligationError> {
-    let mut ok = true;
     let mut test_terms = Vec::new();
     for t in tests {
-        ok &= t.ok;
         let mut m = BTreeMap::new();
         m.insert(
             TermOrdKey(Term::symbol(":suite")),
@@ -97,22 +118,15 @@ pub(super) fn obligation_unit_tests(
         }
         test_terms.push(Term::Map(m));
     }
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/unit-tests-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (TermOrdKey(Term::symbol(":tests")), Term::Vector(test_terms)),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let report = obligation_report_term(
+        "core/obligation::unit-tests-report",
+        &[Term::Str(manifest.name.clone()), Term::Vector(test_terms)],
+    )?;
+    let ok = term_map_get_bool(&report, ":ok").ok_or_else(|| {
+        ObligationError::Test(
+            "core/obligation::unit-tests-report returned report missing :ok bool".to_string(),
+        )
+    })?;
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::unit-tests".to_string(),
@@ -169,25 +183,14 @@ pub(super) fn obligation_determinism(
         }
     }
 
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/determinism-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let report = obligation_report_term(
+        "core/obligation::determinism-report",
+        &[
+            Term::Str(manifest.name.clone()),
+            Term::Bool(ok),
+            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+        ],
+    )?;
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::determinism".to_string(),
@@ -242,25 +245,14 @@ pub(super) fn obligation_caps_declared(
         }
     }
 
-    let report = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::Str("genesis/caps-declared-v0.2".to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(manifest.name.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
-            (
-                TermOrdKey(Term::symbol(":errors")),
-                Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let report = obligation_report_term(
+        "core/obligation::capabilities-declared-report",
+        &[
+            Term::Str(manifest.name.clone()),
+            Term::Bool(ok),
+            Term::Vector(errors.iter().cloned().map(Term::Str).collect()),
+        ],
+    )?;
     let artifact = store.put_term(&report)?;
     Ok(ObligationResult {
         name: "core/obligation::capabilities-declared".to_string(),

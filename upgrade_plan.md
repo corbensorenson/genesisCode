@@ -17,6 +17,10 @@ Open checklist items: 2
 
 ### Current execution batch (2026-02-24)
 
+- [x] P2.1.a Migrated production obligation report assembly for `core/obligation::unit-tests`, `core/obligation::determinism`, and `core/obligation::capabilities-declared` into GC-owned prelude contracts in `prelude/modules/30_service_orchestration.gc` (`core/obligation::unit-tests-report`, `core/obligation::determinism-report`, `core/obligation::capabilities-declared-report`).
+- [x] P2.1.b Routed `crates/gc_obligations/src/obligation_exec.rs` to fail-closed on those prelude contracts (no Rust report-shape fallback) and derive `unit-tests` pass/fail from the contract-produced report payload.
+- [x] P2.1.c Added regression coverage in `crates/gc_obligations/src/tests/mod.rs` (`core_obligation_report_builders_match_exec_report_shapes`) and validated with `cargo test -p gc_obligations -- --nocapture`.
+
 - [x] P2.3.a Made selfhost `core/cli::validate-patch` authoritative in `gc_patches` production execution; removed silent Rust fallback on `"unknown :op"` validation failures.
 - [x] P2.3.b Added frontend-aware patch validation API (`validate_patch_term_with_frontend`) and wired semantic workspace refactor-plan validation through the selected CoreForm frontend.
 - [x] P2.3.c Added regression coverage proving poisoned selfhost `validate-patch` now hard-fails apply-patch instead of falling back to Rust acceptance.

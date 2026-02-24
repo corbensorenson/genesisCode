@@ -312,6 +312,127 @@ fn gfx_obligation_report_builders_are_hash_stable() {
 }
 
 #[test]
+fn core_obligation_report_builders_match_exec_report_shapes() {
+    let src = r#"
+            {
+              :unit
+                ((core/obligation::unit-tests-report "pkg/demo")
+                  [{:suite pkg/tests::unit :name "case-a" :ok true}
+                   {:suite pkg/tests::unit :name "case-b" :ok false}])
+              :det
+                (((core/obligation::determinism-report "pkg/demo") false)
+                  ["determinism mismatch"])
+              :caps
+                (((core/obligation::capabilities-declared-report "pkg/demo") true) [])
+            }
+            "#;
+    let term = eval_gc_term(src);
+    let Some(unit) = map_get(&term, ":unit") else {
+        panic!("unit report missing");
+    };
+    let Some(det) = map_get(&term, ":det") else {
+        panic!("determinism report missing");
+    };
+    let Some(caps) = map_get(&term, ":caps") else {
+        panic!("caps report missing");
+    };
+
+    let expected_unit = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/unit-tests-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str("pkg/demo".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(false)),
+            (
+                TermOrdKey(Term::symbol(":tests")),
+                Term::Vector(vec![
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":suite")),
+                                Term::symbol("pkg/tests::unit"),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str("case-a".to_string()),
+                            ),
+                            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    Term::Map(
+                        [
+                            (
+                                TermOrdKey(Term::symbol(":suite")),
+                                Term::symbol("pkg/tests::unit"),
+                            ),
+                            (
+                                TermOrdKey(Term::symbol(":name")),
+                                Term::Str("case-b".to_string()),
+                            ),
+                            (TermOrdKey(Term::symbol(":ok")), Term::Bool(false)),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ]),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    assert_eq!(unit, &expected_unit);
+
+    let expected_det = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/determinism-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str("pkg/demo".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(false)),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(vec![Term::Str("determinism mismatch".to_string())]),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    assert_eq!(det, &expected_det);
+
+    let expected_caps = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/caps-declared-v0.2".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":package")),
+                Term::Str("pkg/demo".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            (
+                TermOrdKey(Term::symbol(":errors")),
+                Term::Vector(Vec::<Term>::new()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    assert_eq!(caps, &expected_caps);
+}
+
+#[test]
 fn lint_autofix_builds_replace_node_patch_for_missing_types() {
     let src = r#"
           (def ::meta (quote {:exports [pkg/a::x pkg/a::y]}))
