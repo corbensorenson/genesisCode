@@ -7,13 +7,13 @@ Scope:
 - Remove completed items; rely on git history and perf artifacts for closure evidence.
 - Machine-readable source of unresolved IDs: `.genesis/perf/selfhost_readiness_report.json`.
 
-Open checklist items: 3
+Open checklist items: 2
 
 ## Selfhost Closure (Rust Ownership Still In Critical Path)
 
 - [ ] P2.1 Move `crates/gc_obligations/src/obligation_exec.rs` from `phase-1 in-progress` to `phase-3 migrated` by routing production obligation orchestration through `.gc` ownership and archiving Rust semantic sidecars to parity-only paths.
 - [ ] P2.2 Move `crates/gc_cli_driver/src/semantic_workspace.rs` from `phase-1 in-progress` to `phase-3 migrated` with GC-owned planning/edit graph logic as source of truth for agent workspace mutation workflows.
-- [ ] P2.3 Move `crates/gc_patches/src/lib.rs` from `phase-1 in-progress` to `phase-3 migrated` so semantic patch construction/normalization is GC-owned in production execution paths.
+- [x] P2.3 Move `crates/gc_patches/src/lib.rs` from `phase-1 in-progress` to `phase-3 migrated` so semantic patch construction/normalization is GC-owned in production execution paths.
 
 ### Current execution batch (2026-02-24)
 
@@ -26,7 +26,9 @@ Open checklist items: 3
 - [x] P2.3.f Fixed selfhost refactor contract output-shape root causes (literal vector misuse + malformed curried loop application) and regenerated `selfhost/toolchain.gc` + freshness metadata so `gc_patches` consumes corrected artifact behavior.
 - [x] P2.3.g Added selfhost `core/cli::rewrite-meta-list-forms` implementation plus supporting refactor helpers in `selfhost/patch_schema_refactor_v1.gc`; validated parse via `gc_coreform` diag and regenerated `selfhost/toolchain.gc`.
 - [x] P2.3.h Wired production `PatchOp::RewriteMetaList` execution through selfhost contract (`core/cli::rewrite-meta-list-forms`), added poison-regression coverage, and removed Rust runtime fallback for rewrite-imports/exports execution.
-- Next for P2.3 after `P2.3.h`: migrate remaining Rust-owned refactor transforms (`move-module`, `migrate-contract-signature`) into selfhost `.gc` contracts for full phase-3 closure.
+- [x] P2.3.i Added dedicated selfhost manifest move primitive (`core/cli::manifest-apply-move-module`) in `selfhost/patch_schema_manifest_v1.gc`, wired `PatchOp::MoveModule` through selfhost manifest mutation when selfhost frontend is active, and added fail-closed poison regression (`apply_patch_selfhost_move_module_uses_manifest_contract`).
+- [x] P2.3.j Added selfhost `core/cli::migrate-contract-signature-forms` in `selfhost/patch_schema_refactor_v1.gc`, switched production `:migrate-contract-signature` execution to that contract for selfhost frontend, and added fail-closed poison regression (`apply_patch_selfhost_migrate_contract_signature_uses_refactor_contract`).
+- [x] P2.3.k Regenerated `selfhost/toolchain.gc` + freshness metadata and validated end-to-end with `cargo test -p gc_patches -- --nocapture`.
 
 ## Evidence Anchors
 

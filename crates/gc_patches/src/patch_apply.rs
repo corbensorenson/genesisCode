@@ -485,7 +485,23 @@ fn apply_one_op(
                 std::fs::create_dir_all(parent)?;
             }
             std::fs::rename(&from_abs, &to_abs)?;
-            patch_manifest_move_module_path(pkg_toml, from_module_path, to_module_path)?;
+            if let Some(sh) = selfhost.as_mut() {
+                let mut s = std::fs::read_to_string(pkg_toml)?;
+                let v0: toml::Value =
+                    toml::from_str(&s).map_err(|e| PatchError::Parse(e.to_string()))?;
+                let manifest_term = toml_to_coreform(&v0)?;
+                let out_term = sh.manifest_apply_move_module_term(
+                    &manifest_term,
+                    from_module_path,
+                    to_module_path,
+                    step_limit,
+                )?;
+                let v = coreform_to_toml(&out_term)?;
+                s = toml::to_string_pretty(&v).map_err(|e| PatchError::Parse(e.to_string()))?;
+                std::fs::write(pkg_toml, s)?;
+            } else {
+                patch_manifest_move_module_path(pkg_toml, from_module_path, to_module_path)?;
+            }
             let mut detail = BTreeMap::new();
             detail.insert(
                 TermOrdKey(Term::symbol(":from-module-path")),

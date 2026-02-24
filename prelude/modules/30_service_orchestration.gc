@@ -60,3 +60,63 @@
           :name service-name
           :ok ok
           :context context}))))
+
+(def core/obligation::bool? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :bool))))
+
+(def core/obligation::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/obligation::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+
+(def core/obligation::vec-or-empty (fn (x) (if (core/obligation::vec? x) x [])))
+
+(def core/obligation::unit-test-case-ok
+  (fn (t)
+    (if (core/obligation::map? t)
+      (let ((v ((core/map::get t) (quote :ok))))
+        (if (core/obligation::bool? v) v false))
+      false)))
+
+(def core/obligation::unit-tests-ok
+  (fn (tests) ((((core/obligation::unit-tests-ok-loop tests) (core/vec::len tests)) 0) true)))
+
+(def core/obligation::unit-tests-ok-loop
+  (fn (tests)
+    (fn (n)
+      (fn (i)
+        (fn (ok)
+          (if ok
+            (if ((core/int::eq? i) n)
+              true
+              ((((core/obligation::unit-tests-ok-loop tests) n) ((core/int::add i) 1))
+                (core/obligation::unit-test-case-ok ((core/vec::get tests) i))))
+            false))))))
+
+(def core/obligation::unit-tests-report
+  (fn (package)
+    (fn (tests0)
+      (let ((tests (core/obligation::vec-or-empty tests0)))
+        {
+          :kind "genesis/unit-tests-v0.2"
+          :ok (core/obligation::unit-tests-ok tests)
+          :package package
+          :tests tests}))))
+
+(def core/obligation::determinism-report
+  (fn (package)
+    (fn (ok)
+      (fn (errors0)
+        {
+          :errors (core/obligation::vec-or-empty errors0)
+          :kind "genesis/determinism-v0.2"
+          :ok ok
+          :package package}))))
+
+(def core/obligation::capabilities-declared-report
+  (fn (package)
+    (fn (ok)
+      (fn (errors0)
+        {
+          :errors (core/obligation::vec-or-empty errors0)
+          :kind "genesis/caps-declared-v0.2"
+          :ok ok
+          :package package}))))

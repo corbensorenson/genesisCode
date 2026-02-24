@@ -9,6 +9,7 @@ pub(super) struct SelfhostPatchToolchain {
     print_module_from_content: Value,
     manifest_apply_add_module: Value,
     manifest_apply_remove_module: Value,
+    manifest_apply_move_module: Value,
     manifest_apply_update_manifest_op: Value,
     rename_symbol_forms: Value,
     split_module_forms: Value,
@@ -100,6 +101,13 @@ impl SelfhostPatchToolchain {
                     "missing binding core/cli::manifest-apply-remove-module".to_string(),
                 )
             })?;
+        let manifest_apply_move_module = env
+            .get("core/cli::manifest-apply-move-module")
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "missing binding core/cli::manifest-apply-move-module".to_string(),
+                )
+            })?;
         let manifest_apply_update_manifest_op = env
             .get("core/cli::manifest-apply-update-manifest-op")
             .ok_or_else(|| {
@@ -120,14 +128,13 @@ impl SelfhostPatchToolchain {
                         "missing binding core/cli::rewrite-meta-list-forms".to_string(),
                     )
                 })?;
-        let migrate_contract_signature_forms =
-            env.get("core/cli::migrate-contract-signature-forms")
-                .ok_or_else(|| {
-                    PatchError::Validate(
-                        "missing binding core/cli::migrate-contract-signature-forms".to_string(),
-                    )
-                })?;
-
+        let migrate_contract_signature_forms = env
+            .get("core/cli::migrate-contract-signature-forms")
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "missing binding core/cli::migrate-contract-signature-forms".to_string(),
+                )
+            })?;
         Ok(SelfhostPatchToolchain {
             ctx,
             error_token,
@@ -137,6 +144,7 @@ impl SelfhostPatchToolchain {
             print_module_from_content,
             manifest_apply_add_module,
             manifest_apply_remove_module,
+            manifest_apply_move_module,
             manifest_apply_update_manifest_op,
             rename_symbol_forms,
             split_module_forms,
@@ -319,6 +327,47 @@ impl SelfhostPatchToolchain {
         let Value::Data(t) = out else {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli manifest-apply-remove-module must return data term, got {}",
+                out.debug_repr()
+            )));
+        };
+        Ok(t)
+    }
+
+    pub(super) fn manifest_apply_move_module_term(
+        &mut self,
+        manifest: &Term,
+        from_module_path: &str,
+        to_module_path: &str,
+        step_limit: StepLimit,
+    ) -> Result<Term, PatchError> {
+        self.with_limits(step_limit);
+        let out = self
+            .manifest_apply_move_module
+            .clone()
+            .apply(&mut self.ctx, Value::Data(manifest.clone()))
+            .and_then(|f| {
+                f.apply(
+                    &mut self.ctx,
+                    Value::Data(Term::Str(from_module_path.to_string())),
+                )
+            })
+            .and_then(|f| {
+                f.apply(
+                    &mut self.ctx,
+                    Value::Data(Term::Str(to_module_path.to_string())),
+                )
+            })
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost manifest-apply-move-module apply: {e}"))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-move-module failed: {e}"
+            )));
+        }
+        let Value::Data(t) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli manifest-apply-move-module must return data term, got {}",
                 out.debug_repr()
             )));
         };

@@ -1,6 +1,6 @@
+use gc_coreform::{Term, TermOrdKey, parse_term};
 use gc_kernel::{Apply, EvalCtx, Value};
 use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_from_artifact};
-use gc_coreform::{Term, TermOrdKey, parse_term};
 use std::collections::BTreeMap;
 
 #[test]
@@ -19,10 +19,7 @@ fn diag_toolchain_decode() {
 
     let form = parse_term("(def foo (fn (x) foo))").expect("form parse");
     let mut req = BTreeMap::new();
-    req.insert(
-        TermOrdKey(Term::symbol(":forms")),
-        Term::Vector(vec![form]),
-    );
+    req.insert(TermOrdKey(Term::symbol(":forms")), Term::Vector(vec![form]));
     req.insert(
         TermOrdKey(Term::symbol(":from")),
         Term::Symbol("foo".to_string()),

@@ -1,27 +1,18 @@
-; Extracted from patch_schema_v1.gc to isolate manifest patch transforms from path/schema validation.
-; These helpers remain in selfhost/patch_schema namespace and are loaded via toolchain_manifest.gc.
-
 (def selfhost/patch_schema::empty-vec (core/pair::as-proper-list nil))
 
-(def selfhost/patch_schema_manifest::err
-  (fn (msg) ((core/error::make2 "core/patch-schema") msg)))
+(def selfhost/patch_schema_manifest::err (fn (msg) ((core/error::make2 "core/patch-schema") msg)))
 
-(def selfhost/patch_schema::str?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
+(def selfhost/patch_schema::str? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :str))))
 
-(def selfhost/patch_schema::sym?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
+(def selfhost/patch_schema::sym? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :sym))))
 
-(def selfhost/patch_schema::vec?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+(def selfhost/patch_schema::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
 
-(def selfhost/patch_schema::map?
-  (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
+(def selfhost/patch_schema::map? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :map))))
 
 (def selfhost/patch_schema::key->str
   (fn (k)
     (if (selfhost/patch_schema::sym? k)
-      ; symbol keys use leading ':' by convention
       (let ((s (core/sym::to-str k)))
         (let ((b (core/str::to-utf8 s)))
           (let ((n (core/bytes::len b)))
@@ -45,8 +36,8 @@
   (fn (mods)
     (fn (drop-path)
       (let ((n (core/vec::len mods)))
-        (((selfhost/patch_schema::vec-filter-modules-by-path2 mods drop-path n) 0)
-         selfhost/patch_schema::empty-vec)))))
+        (((((selfhost/patch_schema::vec-filter-modules-by-path2 mods) drop-path) n) 0)
+          selfhost/patch_schema::empty-vec)))))
 
 (def selfhost/patch_schema::vec-filter-modules-by-path2
   (fn (mods)
@@ -60,20 +51,15 @@
                 (if (selfhost/patch_schema::map? m)
                   (let ((p ((core/map::get m) "path")))
                     (if (if (selfhost/patch_schema::str? p) ((core/eq? p) drop-path) false)
-                      (((selfhost/patch_schema::vec-filter-modules-by-path2 mods drop-path n)
-                        ((core/int::add i) 1))
-                       out)
-                      (((selfhost/patch_schema::vec-filter-modules-by-path2 mods drop-path n)
-                        ((core/int::add i) 1))
-                       ((core/vec::push out) m))))
-                  (((selfhost/patch_schema::vec-filter-modules-by-path2 mods drop-path n)
-                    ((core/int::add i) 1))
-                   ((core/vec::push out) m)))))))))))
+                      (((((selfhost/patch_schema::vec-filter-modules-by-path2 mods) drop-path) n) ((core/int::add i) 1))
+                        out)
+                      (((((selfhost/patch_schema::vec-filter-modules-by-path2 mods) drop-path) n) ((core/int::add i) 1))
+                        ((core/vec::push out) m))))
+                  (((((selfhost/patch_schema::vec-filter-modules-by-path2 mods) drop-path) n) ((core/int::add i) 1))
+                    ((core/vec::push out) m)))))))))))
 
 (def selfhost/patch_schema::vec-str-set
-  (fn (xs)
-    (let ((n (core/vec::len xs)))
-      (((selfhost/patch_schema::vec-str-set2 xs n) 0) {}))))
+  (fn (xs) (let ((n (core/vec::len xs))) ((((selfhost/patch_schema::vec-str-set2 xs) n) 0) {}))))
 
 (def selfhost/patch_schema::vec-str-set2
   (fn (xs)
@@ -84,15 +70,15 @@
             out
             (let ((x ((core/vec::get xs) i)))
               (if (selfhost/patch_schema::str? x)
-                ((((selfhost/patch_schema::vec-str-set2 xs n) ((core/int::add i) 1))
-                  (((core/map::put out) x) true)))
-                ((((selfhost/patch_schema::vec-str-set2 xs n) ((core/int::add i) 1)) out))))))))))
+                ((((selfhost/patch_schema::vec-str-set2 xs) n) ((core/int::add i) 1))
+                  (((core/map::put out) x) true))
+                ((((selfhost/patch_schema::vec-str-set2 xs) n) ((core/int::add i) 1)) out)))))))))
 
 (def selfhost/patch_schema::set-add-strings
   (fn (set)
     (fn (xs)
       (let ((n (core/vec::len xs)))
-        (((selfhost/patch_schema::set-add-strings2 set xs n) 0) set)))))
+        (((((selfhost/patch_schema::set-add-strings2 set) xs) n) 0) set)))))
 
 (def selfhost/patch_schema::set-add-strings2
   (fn (set)
@@ -104,10 +90,10 @@
               out
               (let ((x ((core/vec::get xs) i)))
                 (if (selfhost/patch_schema::str? x)
-                  (((((selfhost/patch_schema::set-add-strings2 set xs n) ((core/int::add i) 1))
-                     (((core/map::put out) x) true))))
-                  (((((selfhost/patch_schema::set-add-strings2 set xs n) ((core/int::add i) 1))
-                     out))))))))))))
+                  (((((selfhost/patch_schema::set-add-strings2 set) xs) n) ((core/int::add i) 1))
+                    (((core/map::put out) x) true))
+                  (((((selfhost/patch_schema::set-add-strings2 set) xs) n) ((core/int::add i) 1))
+                    out))))))))))
 
 (def selfhost/patch_schema::sym-or-str->str
   (fn (x)
@@ -120,7 +106,7 @@
 (def selfhost/patch_schema::vec-sym-or-str->vec-str
   (fn (xs)
     (let ((n (core/vec::len xs)))
-      (((selfhost/patch_schema::vec-sym-or-str->vec-str2 xs n) 0) selfhost/patch_schema::empty-vec))))
+      ((((selfhost/patch_schema::vec-sym-or-str->vec-str2 xs) n) 0) selfhost/patch_schema::empty-vec))))
 
 (def selfhost/patch_schema::vec-sym-or-str->vec-str2
   (fn (xs)
@@ -133,14 +119,14 @@
               (let ((s (selfhost/patch_schema::sym-or-str->str x)))
                 (if (core/error::is? s)
                   s
-                  (((((selfhost/patch_schema::vec-sym-or-str->vec-str2 xs n) ((core/int::add i) 1))
-                     ((core/vec::push out) s)))))))))))))
+                  ((((selfhost/patch_schema::vec-sym-or-str->vec-str2 xs) n) ((core/int::add i) 1))
+                    ((core/vec::push out) s)))))))))))
 
 (def selfhost/patch_schema::set-keys->vec
   (fn (m)
     (let ((entries (core/map::entries m)))
       (let ((n (core/vec::len entries)))
-        (((selfhost/patch_schema::set-keys->vec2 entries n) 0) selfhost/patch_schema::empty-vec)))))
+        ((((selfhost/patch_schema::set-keys->vec2 entries) n) 0) selfhost/patch_schema::empty-vec)))))
 
 (def selfhost/patch_schema::set-keys->vec2
   (fn (entries)
@@ -151,8 +137,8 @@
             out
             (let ((e ((core/vec::get entries) i)))
               (let ((k ((core/vec::get e) 0)))
-                (((((selfhost/patch_schema::set-keys->vec2 entries n) ((core/int::add i) 1))
-                   ((core/vec::push out) k))))))))))))
+                ((((selfhost/patch_schema::set-keys->vec2 entries) n) ((core/int::add i) 1))
+                  ((core/vec::push out) k))))))))))
 
 (def core/cli::manifest-apply-add-module
   (fn (manifest)
@@ -161,10 +147,10 @@
         (if (selfhost/patch_schema::str? module-path)
           (let ((mods ((core/map::get manifest) "modules")))
             (if (selfhost/patch_schema::vec? mods)
-              (let ((entry {"path" module-path "hash" ""}))
+              (let ((entry {"hash" "" "path" module-path}))
                 (((core/map::put manifest) "modules") ((core/vec::push mods) entry)))
               (selfhost/patch_schema_manifest::err "manifest missing modules array")))
-        (selfhost/patch_schema_manifest::err "module-path must be string"))
+          (selfhost/patch_schema_manifest::err "module-path must be string"))
         (selfhost/patch_schema_manifest::err "manifest must be a map")))))
 
 (def core/cli::manifest-apply-remove-module
@@ -180,13 +166,93 @@
           (selfhost/patch_schema_manifest::err "module-path must be string"))
         (selfhost/patch_schema_manifest::err "manifest must be a map")))))
 
+(def selfhost/patch_schema::vec-has-module-path
+  (fn (mods)
+    (fn (path)
+      (let ((n (core/vec::len mods)))
+        ((((selfhost/patch_schema::vec-has-module-path2 mods) path) n) 0)))))
+
+(def selfhost/patch_schema::vec-has-module-path2
+  (fn (mods)
+    (fn (path)
+      (fn (n)
+        (fn (i)
+          (if ((core/int::eq? i) n)
+            false
+            (let ((m ((core/vec::get mods) i)))
+              (if (selfhost/patch_schema::map? m)
+                (let ((p ((core/map::get m) "path")))
+                  (if (if (selfhost/patch_schema::str? p) ((core/eq? p) path) false)
+                    true
+                    ((((selfhost/patch_schema::vec-has-module-path2 mods) path) n)
+                      ((core/int::add i) 1))))
+                ((((selfhost/patch_schema::vec-has-module-path2 mods) path) n) ((core/int::add i) 1))))))))))
+
+(def selfhost/patch_schema::vec-rewrite-module-path
+  (fn (mods)
+    (fn (from-path)
+      (fn (to-path)
+        (let ((n (core/vec::len mods)))
+          ((((((selfhost/patch_schema::vec-rewrite-module-path2 mods) from-path) to-path) n) 0)
+            selfhost/patch_schema::empty-vec))))))
+
+(def selfhost/patch_schema::vec-rewrite-module-path2
+  (fn (mods)
+    (fn (from-path)
+      (fn (to-path)
+        (fn (n)
+          (fn (i)
+            (fn (out)
+              (if ((core/int::eq? i) n)
+                out
+                (let ((m ((core/vec::get mods) i)))
+                  (if (selfhost/patch_schema::map? m)
+                    (let ((p ((core/map::get m) "path")))
+                      (let
+                        (
+                          (next-m
+                            (if (if (selfhost/patch_schema::str? p) ((core/eq? p) from-path) false)
+                              (((core/map::put m) "path") to-path)
+                              m)))
+                        (
+                          (((((selfhost/patch_schema::vec-rewrite-module-path2 mods) from-path) to-path) n)
+                            ((core/int::add i) 1))
+                          ((core/vec::push out) next-m))))
+                    (
+                      (((((selfhost/patch_schema::vec-rewrite-module-path2 mods) from-path) to-path) n)
+                        ((core/int::add i) 1))
+                      ((core/vec::push out) m))))))))))))
+
+(def core/cli::manifest-apply-move-module
+  (fn (manifest)
+    (fn (from-module-path)
+      (fn (to-module-path)
+        (if (selfhost/patch_schema::map? manifest)
+          (if (selfhost/patch_schema::str? from-module-path)
+            (if (selfhost/patch_schema::str? to-module-path)
+              (let ((mods ((core/map::get manifest) "modules")))
+                (if (selfhost/patch_schema::vec? mods)
+                  (if ((selfhost/patch_schema::vec-has-module-path mods) to-module-path)
+                    (selfhost/patch_schema_manifest::err
+                      "manifest already contains destination module path")
+                    (if ((selfhost/patch_schema::vec-has-module-path mods) from-module-path)
+                      (let
+                        ((mods2 (((selfhost/patch_schema::vec-rewrite-module-path mods) from-module-path) to-module-path)))
+                        (((core/map::put manifest) "modules") mods2))
+                      (selfhost/patch_schema_manifest::err "manifest missing source module path")))
+                  (selfhost/patch_schema_manifest::err "manifest missing modules array")))
+              (selfhost/patch_schema_manifest::err "to-module-path must be string"))
+            (selfhost/patch_schema_manifest::err "from-module-path must be string"))
+          (selfhost/patch_schema_manifest::err "manifest must be a map"))))))
+
 (def selfhost/patch_schema::manifest-patch-string-vec-field
   (fn (manifest)
     (fn (field)
       (fn (add)
         (fn (remove)
           (let ((cur ((core/map::get manifest) field)))
-            (let ((curv (if (selfhost/patch_schema::vec? cur) cur selfhost/patch_schema::empty-vec)))
+            (let
+              ((curv (if (selfhost/patch_schema::vec? cur) cur selfhost/patch_schema::empty-vec)))
               (let ((set0 (selfhost/patch_schema::vec-str-set curv)))
                 (let ((removev (selfhost/patch_schema::vec-sym-or-str->vec-str remove)))
                   (if (core/error::is? removev)
@@ -195,12 +261,13 @@
                       (if (core/error::is? addv)
                         addv
                         (let ((set1 (selfhost/patch_schema::vec-str-set addv)))
-                          ; Build set = (cur \ remove) U add
                           (let ((cur_entries (core/map::entries set0)))
                             (let ((n (core/vec::len cur_entries)))
-                              (let ((keep (((selfhost/patch_schema::manifest-patch-string-vec-field2 cur_entries n removev) 0) {})))
-                                (let ((merged (core/map::merge keep set1)))
-                                  (((core/map::put manifest) field) (selfhost/patch_schema::set-keys->vec merged)))))))))))))))))))
+                              (let
+                                ((keep (((((selfhost/patch_schema::manifest-patch-string-vec-field2 cur_entries) n) removev) 0) {})))
+                                (let ((merged ((core/map::merge keep) set1)))
+                                  (((core/map::put manifest) field)
+                                    (selfhost/patch_schema::set-keys->vec merged)))))))))))))))))))
 
 (def selfhost/patch_schema::manifest-patch-string-vec-field2
   (fn (entries)
@@ -212,22 +279,24 @@
               out
               (let ((e ((core/vec::get entries) i)))
                 (let ((k ((core/vec::get e) 0)))
-                  (let ((drop? (selfhost/patch_schema::vec-contains-str removev k)))
+                  (let ((drop? ((selfhost/patch_schema::vec-contains-str removev) k)))
                     (if (core/error::is? drop?)
                       drop?
                       (if drop?
-                        (((((selfhost/patch_schema::manifest-patch-string-vec-field2 entries n removev)
+                        (
+                          ((((selfhost/patch_schema::manifest-patch-string-vec-field2 entries) n) removev)
                             ((core/int::add i) 1))
-                           out)))
-                        (((((selfhost/patch_schema::manifest-patch-string-vec-field2 entries n removev)
+                          out)
+                        (
+                          ((((selfhost/patch_schema::manifest-patch-string-vec-field2 entries) n) removev)
                             ((core/int::add i) 1))
-                           (((core/map::put out) k) true))))))))))))))))
+                          (((core/map::put out) k) true))))))))))))))
 
 (def selfhost/patch_schema::vec-contains-str
   (fn (xs)
     (fn (needle)
       (let ((n (core/vec::len xs)))
-        (((selfhost/patch_schema::vec-contains-str2 xs needle n) 0) false)))))
+        (((((selfhost/patch_schema::vec-contains-str2 xs) needle) n) 0) false)))))
 
 (def selfhost/patch_schema::vec-contains-str2
   (fn (xs)
@@ -241,10 +310,10 @@
                 false
                 (let ((x ((core/vec::get xs) i)))
                   (if (selfhost/patch_schema::str? x)
-                    (((((selfhost/patch_schema::vec-contains-str2 xs needle n) ((core/int::add i) 1))
-                       ((core/eq? x) needle))))
-                    (((((selfhost/patch_schema::vec-contains-str2 xs needle n) ((core/int::add i) 1))
-                       false)))))))))))))
+                    (((((selfhost/patch_schema::vec-contains-str2 xs) needle) n) ((core/int::add i) 1))
+                      ((core/eq? x) needle))
+                    (((((selfhost/patch_schema::vec-contains-str2 xs) needle) n) ((core/int::add i) 1))
+                      false)))))))))))
 
 (def core/cli::manifest-apply-update-manifest-op
   (fn (manifest)
@@ -252,37 +321,58 @@
       (if (selfhost/patch_schema::map? manifest)
         (if (selfhost/patch_schema::map? op)
           (let ((setv ((core/map::get op) (quote :set))))
-            (let ((manifest2
-                   (if (core/list::is-nil? setv)
-                     manifest
-                     (if (selfhost/patch_schema::map? setv)
-                       (selfhost/patch_schema::manifest-apply-set manifest setv)
-                       (selfhost/patch_schema_manifest::err ":set must be a map")))))
+            (let
+              (
+                (manifest2
+                  (if (core/list::is-nil? setv)
+                    manifest
+                    (if (selfhost/patch_schema::map? setv)
+                      ((selfhost/patch_schema::manifest-apply-set manifest) setv)
+                      (selfhost/patch_schema_manifest::err ":set must be a map")))))
               (if (core/error::is? manifest2)
                 manifest2
-                (let ((ob_add ((core/map::get op) (quote :obligations-add)))
-                      (ob_rm ((core/map::get op) (quote :obligations-remove)))
-                      (t_add ((core/map::get op) (quote :tests-add)))
-                      (t_rm ((core/map::get op) (quote :tests-remove)))
-                      (caps_policy ((core/map::get op) (quote :caps-policy))))
-                  (let ((ob_addv (if (selfhost/patch_schema::vec? ob_add) ob_add selfhost/patch_schema::empty-vec))
-                        (ob_rmv (if (selfhost/patch_schema::vec? ob_rm) ob_rm selfhost/patch_schema::empty-vec))
-                        (t_addv (if (selfhost/patch_schema::vec? t_add) t_add selfhost/patch_schema::empty-vec))
-                        (t_rmv (if (selfhost/patch_schema::vec? t_rm) t_rm selfhost/patch_schema::empty-vec)))
-                    (let ((m3
-                           (if (if ((core/int::eq? (core/vec::len ob_addv)) 0)
-                                 ((core/int::eq? (core/vec::len ob_rmv)) 0)
-                                 false)
-                             manifest2
-                             (((((selfhost/patch_schema::manifest-patch-string-vec-field manifest2) "obligations") ob_addv) ob_rmv)))))
+                (let
+                  ((ob_add ((core/map::get op) (quote :obligations-add)))
+                    (ob_rm ((core/map::get op) (quote :obligations-remove)))
+                    (t_add ((core/map::get op) (quote :tests-add)))
+                    (t_rm ((core/map::get op) (quote :tests-remove)))
+                    (caps_policy ((core/map::get op) (quote :caps-policy))))
+                  (let
+                    ((ob_addv (if (selfhost/patch_schema::vec? ob_add) ob_add selfhost/patch_schema::empty-vec))
+                      (ob_rmv
+                        (if (selfhost/patch_schema::vec? ob_rm)
+                          ob_rm
+                          selfhost/patch_schema::empty-vec))
+                      (t_addv
+                        (if (selfhost/patch_schema::vec? t_add)
+                          t_add
+                          selfhost/patch_schema::empty-vec))
+                      (t_rmv
+                        (if (selfhost/patch_schema::vec? t_rm)
+                          t_rm
+                          selfhost/patch_schema::empty-vec)))
+                    (let
+                      (
+                        (m3
+                          (if
+                            (if ((core/int::eq? (core/vec::len ob_addv)) 0)
+                              ((core/int::eq? (core/vec::len ob_rmv)) 0)
+                              false)
+                            manifest2
+                            ((((selfhost/patch_schema::manifest-patch-string-vec-field manifest2) "obligations") ob_addv)
+                              ob_rmv))))
                       (if (core/error::is? m3)
                         m3
-                        (let ((m4
-                               (if (if ((core/int::eq? (core/vec::len t_addv)) 0)
-                                     ((core/int::eq? (core/vec::len t_rmv)) 0)
-                                     false)
-                                 m3
-                                 (((((selfhost/patch_schema::manifest-patch-string-vec-field m3) "tests") t_addv) t_rmv)))))
+                        (let
+                          (
+                            (m4
+                              (if
+                                (if ((core/int::eq? (core/vec::len t_addv)) 0)
+                                  ((core/int::eq? (core/vec::len t_rmv)) 0)
+                                  false)
+                                m3
+                                ((((selfhost/patch_schema::manifest-patch-string-vec-field m3) "tests") t_addv)
+                                  t_rmv))))
                           (if (core/error::is? m4)
                             m4
                             (if (core/list::is-nil? caps_policy)
@@ -298,7 +388,7 @@
     (fn (setm)
       (let ((entries (core/map::entries setm)))
         (let ((n (core/vec::len entries)))
-          (((selfhost/patch_schema::manifest-apply-set2 entries n) 0) manifest))))))
+          ((((selfhost/patch_schema::manifest-apply-set2 entries) n) 0) manifest))))))
 
 (def selfhost/patch_schema::manifest-apply-set2
   (fn (entries)
@@ -312,5 +402,5 @@
                 (let ((ks (selfhost/patch_schema::key->str k)))
                   (if (core/error::is? ks)
                     ks
-                    (((((selfhost/patch_schema::manifest-apply-set2 entries n) ((core/int::add i) 1))
-                       (((core/map::put out) ks) v))))))))))))))
+                    ((((selfhost/patch_schema::manifest-apply-set2 entries) n) ((core/int::add i) 1))
+                      (((core/map::put out) ks) v))))))))))))

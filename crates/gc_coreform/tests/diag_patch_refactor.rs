@@ -6,7 +6,10 @@ fn diag_patch_refactor_file() {
     let forms = parse_module(&src).unwrap();
     for (i, f) in forms.into_iter().enumerate() {
         if let Err(e) = canonicalize_form(f.clone()) {
-            panic!("form #{i} failed: {e:#}\nraw={}", gc_coreform::print_term(&f));
+            panic!(
+                "form #{i} failed: {e:#}\nraw={}",
+                gc_coreform::print_term(&f)
+            );
         }
     }
 }
@@ -15,8 +18,12 @@ fn diag_patch_refactor_file() {
 fn diag_toolchain_paths() {
     let src = std::fs::read_to_string("../../selfhost/toolchain.gc").unwrap();
     let t = parse_term(&src).unwrap();
-    let Term::Map(root) = t else { panic!("root map") };
-    let Term::Vector(mods) = root.get(&TermOrdKey(Term::symbol(":modules"))).unwrap() else { panic!("mods vec") };
+    let Term::Map(root) = t else {
+        panic!("root map")
+    };
+    let Term::Vector(mods) = root.get(&TermOrdKey(Term::symbol(":modules"))).unwrap() else {
+        panic!("mods vec")
+    };
     let mut found = false;
     let mut total = 0usize;
     for m in mods {
