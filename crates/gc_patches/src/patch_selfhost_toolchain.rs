@@ -12,6 +12,8 @@ pub(super) struct SelfhostPatchToolchain {
     manifest_apply_update_manifest_op: Value,
     rename_symbol_forms: Value,
     split_module_forms: Value,
+    rewrite_meta_list_forms: Value,
+    migrate_contract_signature_forms: Value,
 }
 
 fn summarize_protocol_error_payload(payload: &Value) -> String {
@@ -105,16 +107,26 @@ impl SelfhostPatchToolchain {
                     "missing binding core/cli::manifest-apply-update-manifest-op".to_string(),
                 )
             })?;
-        let rename_symbol_forms = env
-            .get("core/cli::rename-symbol-forms")
-            .ok_or_else(|| {
-                PatchError::Validate(
-                    "missing binding core/cli::rename-symbol-forms".to_string(),
-                )
-            })?;
+        let rename_symbol_forms = env.get("core/cli::rename-symbol-forms").ok_or_else(|| {
+            PatchError::Validate("missing binding core/cli::rename-symbol-forms".to_string())
+        })?;
         let split_module_forms = env.get("core/cli::split-module-forms").ok_or_else(|| {
             PatchError::Validate("missing binding core/cli::split-module-forms".to_string())
         })?;
+        let rewrite_meta_list_forms =
+            env.get("core/cli::rewrite-meta-list-forms")
+                .ok_or_else(|| {
+                    PatchError::Validate(
+                        "missing binding core/cli::rewrite-meta-list-forms".to_string(),
+                    )
+                })?;
+        let migrate_contract_signature_forms =
+            env.get("core/cli::migrate-contract-signature-forms")
+                .ok_or_else(|| {
+                    PatchError::Validate(
+                        "missing binding core/cli::migrate-contract-signature-forms".to_string(),
+                    )
+                })?;
 
         Ok(SelfhostPatchToolchain {
             ctx,
@@ -128,6 +140,8 @@ impl SelfhostPatchToolchain {
             manifest_apply_update_manifest_op,
             rename_symbol_forms,
             split_module_forms,
+            rewrite_meta_list_forms,
+            migrate_contract_signature_forms,
         })
     }
 
@@ -352,12 +366,18 @@ impl SelfhostPatchToolchain {
         self.with_limits(step_limit);
         let req = Term::Map(
             [
-                (TermOrdKey(Term::symbol(":forms")), Term::Vector(forms.to_vec())),
+                (
+                    TermOrdKey(Term::symbol(":forms")),
+                    Term::Vector(forms.to_vec()),
+                ),
                 (
                     TermOrdKey(Term::symbol(":from")),
                     Term::Symbol(from.to_string()),
                 ),
-                (TermOrdKey(Term::symbol(":to")), Term::Symbol(to.to_string())),
+                (
+                    TermOrdKey(Term::symbol(":to")),
+                    Term::Symbol(to.to_string()),
+                ),
             ]
             .into_iter()
             .collect(),
@@ -366,7 +386,9 @@ impl SelfhostPatchToolchain {
             .rename_symbol_forms
             .clone()
             .apply(&mut self.ctx, Value::Data(req))
-            .map_err(|e| PatchError::Validate(format!("selfhost rename-symbol-forms apply: {e}")))?;
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost rename-symbol-forms apply: {e}"))
+            })?;
         if let Some(e) = extract_protocol_error(&out, self.error_token) {
             return Err(PatchError::Validate(format!(
                 "selfhost core/cli rename-symbol-forms failed: {e}"
@@ -378,17 +400,19 @@ impl SelfhostPatchToolchain {
                 out.debug_repr()
             )));
         };
-        let forms_t = m
-            .get(&TermOrdKey(Term::symbol(":forms")))
-            .ok_or_else(|| PatchError::Validate("rename-symbol-forms missing :forms".to_string()))?;
+        let forms_t = m.get(&TermOrdKey(Term::symbol(":forms"))).ok_or_else(|| {
+            PatchError::Validate("rename-symbol-forms missing :forms".to_string())
+        })?;
         let Term::Vector(next_forms) = forms_t else {
             return Err(PatchError::Validate(
                 "rename-symbol-forms :forms must be vector".to_string(),
             ));
         };
-        let count_t = m.get(&TermOrdKey(Term::symbol(":rewrite-count"))).ok_or_else(|| {
-            PatchError::Validate("rename-symbol-forms missing :rewrite-count".to_string())
-        })?;
+        let count_t = m
+            .get(&TermOrdKey(Term::symbol(":rewrite-count")))
+            .ok_or_else(|| {
+                PatchError::Validate("rename-symbol-forms missing :rewrite-count".to_string())
+            })?;
         let Term::Int(i) = count_t else {
             return Err(PatchError::Validate(
                 "rename-symbol-forms :rewrite-count must be int".to_string(),
@@ -410,7 +434,10 @@ impl SelfhostPatchToolchain {
         let symbols_t = Term::Vector(symbols.iter().cloned().map(Term::Symbol).collect());
         let req = Term::Map(
             [
-                (TermOrdKey(Term::symbol(":forms")), Term::Vector(forms.to_vec())),
+                (
+                    TermOrdKey(Term::symbol(":forms")),
+                    Term::Vector(forms.to_vec()),
+                ),
                 (TermOrdKey(Term::symbol(":symbols")), symbols_t),
             ]
             .into_iter()
@@ -440,17 +467,21 @@ impl SelfhostPatchToolchain {
                 "split-module-forms :keep must be vector".to_string(),
             ));
         };
-        let extracted_t = m.get(&TermOrdKey(Term::symbol(":extracted"))).ok_or_else(|| {
-            PatchError::Validate("split-module-forms missing :extracted".to_string())
-        })?;
+        let extracted_t = m
+            .get(&TermOrdKey(Term::symbol(":extracted")))
+            .ok_or_else(|| {
+                PatchError::Validate("split-module-forms missing :extracted".to_string())
+            })?;
         let Term::Vector(extracted) = extracted_t else {
             return Err(PatchError::Validate(
                 "split-module-forms :extracted must be vector".to_string(),
             ));
         };
-        let moved_t = m.get(&TermOrdKey(Term::symbol(":moved-def-count"))).ok_or_else(|| {
-            PatchError::Validate("split-module-forms missing :moved-def-count".to_string())
-        })?;
+        let moved_t = m
+            .get(&TermOrdKey(Term::symbol(":moved-def-count")))
+            .ok_or_else(|| {
+                PatchError::Validate("split-module-forms missing :moved-def-count".to_string())
+            })?;
         let Term::Int(i) = moved_t else {
             return Err(PatchError::Validate(
                 "split-module-forms :moved-def-count must be int".to_string(),
@@ -460,5 +491,161 @@ impl SelfhostPatchToolchain {
             PatchError::Validate("split-module-forms :moved-def-count out of range".to_string())
         })?;
         Ok((keep.clone(), extracted.clone(), moved))
+    }
+
+    pub(super) fn rewrite_meta_list_forms_term(
+        &mut self,
+        forms: &[Term],
+        field: &str,
+        add: &[String],
+        remove: &[String],
+        replace: Option<&[String]>,
+        step_limit: StepLimit,
+    ) -> Result<(Vec<Term>, usize), PatchError> {
+        self.with_limits(step_limit);
+        let mut req = BTreeMap::new();
+        req.insert(
+            TermOrdKey(Term::symbol(":forms")),
+            Term::Vector(forms.to_vec()),
+        );
+        req.insert(
+            TermOrdKey(Term::symbol(":field")),
+            Term::Symbol(field.to_string()),
+        );
+        req.insert(
+            TermOrdKey(Term::symbol(":add")),
+            Term::Vector(add.iter().cloned().map(Term::Symbol).collect()),
+        );
+        req.insert(
+            TermOrdKey(Term::symbol(":remove")),
+            Term::Vector(remove.iter().cloned().map(Term::Symbol).collect()),
+        );
+        if let Some(replace) = replace {
+            req.insert(
+                TermOrdKey(Term::symbol(":replace")),
+                Term::Vector(replace.iter().cloned().map(Term::Symbol).collect()),
+            );
+        }
+        let out = self
+            .rewrite_meta_list_forms
+            .clone()
+            .apply(&mut self.ctx, Value::Data(Term::Map(req)))
+            .map_err(|e| {
+                PatchError::Validate(format!("selfhost rewrite-meta-list-forms apply: {e}"))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli rewrite-meta-list-forms failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Map(m)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli rewrite-meta-list-forms must return map, got {}",
+                out.debug_repr()
+            )));
+        };
+        let forms_t = m.get(&TermOrdKey(Term::symbol(":forms"))).ok_or_else(|| {
+            PatchError::Validate("rewrite-meta-list-forms missing :forms".to_string())
+        })?;
+        let Term::Vector(next_forms) = forms_t else {
+            return Err(PatchError::Validate(
+                "rewrite-meta-list-forms :forms must be vector".to_string(),
+            ));
+        };
+        let changed_t = m
+            .get(&TermOrdKey(Term::symbol(":changed-entries")))
+            .ok_or_else(|| {
+                PatchError::Validate("rewrite-meta-list-forms missing :changed-entries".to_string())
+            })?;
+        let Term::Int(i) = changed_t else {
+            return Err(PatchError::Validate(
+                "rewrite-meta-list-forms :changed-entries must be int".to_string(),
+            ));
+        };
+        let changed = i.to_usize().ok_or_else(|| {
+            PatchError::Validate(
+                "rewrite-meta-list-forms :changed-entries out of range".to_string(),
+            )
+        })?;
+        Ok((next_forms.clone(), changed))
+    }
+
+    pub(super) fn migrate_contract_signature_forms_term(
+        &mut self,
+        forms: &[Term],
+        contract_symbol: &str,
+        from_param: &str,
+        to_param: &str,
+        step_limit: StepLimit,
+    ) -> Result<(Vec<Term>, usize), PatchError> {
+        self.with_limits(step_limit);
+        let req = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":forms")),
+                    Term::Vector(forms.to_vec()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":contract-symbol")),
+                    Term::Symbol(contract_symbol.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":from-param")),
+                    Term::Symbol(from_param.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":to-param")),
+                    Term::Symbol(to_param.to_string()),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let out = self
+            .migrate_contract_signature_forms
+            .clone()
+            .apply(&mut self.ctx, Value::Data(req))
+            .map_err(|e| {
+                PatchError::Validate(format!(
+                    "selfhost migrate-contract-signature-forms apply: {e}"
+                ))
+            })?;
+        if let Some(e) = extract_protocol_error(&out, self.error_token) {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli migrate-contract-signature-forms failed: {e}"
+            )));
+        }
+        let Value::Data(Term::Map(m)) = out else {
+            return Err(PatchError::Validate(format!(
+                "selfhost core/cli migrate-contract-signature-forms must return map, got {}",
+                out.debug_repr()
+            )));
+        };
+        let forms_t = m.get(&TermOrdKey(Term::symbol(":forms"))).ok_or_else(|| {
+            PatchError::Validate("migrate-contract-signature-forms missing :forms".to_string())
+        })?;
+        let Term::Vector(next_forms) = forms_t else {
+            return Err(PatchError::Validate(
+                "migrate-contract-signature-forms :forms must be vector".to_string(),
+            ));
+        };
+        let changed_t = m
+            .get(&TermOrdKey(Term::symbol(":changed-entries")))
+            .ok_or_else(|| {
+                PatchError::Validate(
+                    "migrate-contract-signature-forms missing :changed-entries".to_string(),
+                )
+            })?;
+        let Term::Int(i) = changed_t else {
+            return Err(PatchError::Validate(
+                "migrate-contract-signature-forms :changed-entries must be int".to_string(),
+            ));
+        };
+        let changed = i.to_usize().ok_or_else(|| {
+            PatchError::Validate(
+                "migrate-contract-signature-forms :changed-entries out of range".to_string(),
+            )
+        })?;
+        Ok((next_forms.clone(), changed))
     }
 }

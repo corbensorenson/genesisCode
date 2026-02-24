@@ -597,10 +597,27 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
             let before_module_hash = hash32_hex(hash_module(&forms));
-            let (next, changed_entries) =
-                patch_refactor::rewrite_meta_list(forms, *field, add, remove, replace.as_deref())?;
-            let next =
-                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let (next, changed_entries) = if let Some(sh) = selfhost.as_mut() {
+                sh.rewrite_meta_list_forms_term(
+                    &forms,
+                    field.key_symbol(),
+                    add,
+                    remove,
+                    replace.as_deref(),
+                    step_limit,
+                )?
+            } else {
+                let (next, changed_entries) = patch_refactor::rewrite_meta_list(
+                    forms,
+                    *field,
+                    add,
+                    remove,
+                    replace.as_deref(),
+                )?;
+                let next =
+                    canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+                (next, changed_entries)
+            };
             let after_module_hash = hash32_hex(hash_module(&next));
             if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
@@ -656,14 +673,25 @@ fn apply_one_op(
             let src = std::fs::read_to_string(&abs)?;
             let forms = parse_canonicalize_module_src(&src, frontend, step_limit, mem_limits)?;
             let before_module_hash = hash32_hex(hash_module(&forms));
-            let (next, changed_entries) = patch_refactor::migrate_contract_signature(
-                forms,
-                contract_symbol,
-                from_param,
-                to_param,
-            )?;
-            let next =
-                canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+            let (next, changed_entries) = if let Some(sh) = selfhost.as_mut() {
+                sh.migrate_contract_signature_forms_term(
+                    &forms,
+                    contract_symbol,
+                    from_param,
+                    to_param,
+                    step_limit,
+                )?
+            } else {
+                let (next, changed_entries) = patch_refactor::migrate_contract_signature(
+                    forms,
+                    contract_symbol,
+                    from_param,
+                    to_param,
+                )?;
+                let next =
+                    canonicalize_module(next).map_err(|e| PatchError::Validate(e.to_string()))?;
+                (next, changed_entries)
+            };
             let after_module_hash = hash32_hex(hash_module(&next));
             if let Some(sh) = selfhost.as_mut() {
                 let out = sh.print_module_forms_term(&next, step_limit)?;
