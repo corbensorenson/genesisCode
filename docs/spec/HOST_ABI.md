@@ -459,33 +459,42 @@ Browser-native WebXR runtime conformance:
   - Required payload fields: `:algorithm` (string/symbol), `:data` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `max_input_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `sha256`, `sha512`, `blake3`.
 - `core/crypto::sign`
   - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:message` (bytes|string).
   - Optional payload field: `:context` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_message_bytes`, `max_context_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `ed25519`, `hmac-sha256`.
 - `core/crypto::verify`
   - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:message` (bytes|string), `:signature` (bytes|string).
   - Optional payload field: `:context` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_message_bytes`, `max_signature_bytes`, `max_context_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `ed25519`, `hmac-sha256`.
 - `core/crypto::kdf`
   - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:info` (bytes|string), `:length` (int).
   - Optional payload field: `:salt` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_info_bytes`, `max_salt_bytes`, `max_output_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `hkdf-sha256` (plus compatibility aliases `sha256-kdf`, `blake3-kdf` mapped to HKDF-SHA256).
 - `core/crypto::aead-seal`
   - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:plaintext` (bytes|string).
   - Optional payload fields: `:aad` (bytes|string), `:nonce` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_plaintext_bytes`, `max_aad_bytes`, `max_nonce_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `aes-256-gcm`, `chacha20poly1305`.
 - `core/crypto::aead-open`
   - Required payload fields: `:algorithm` (string/symbol), `:key-id` (string), `:ciphertext` (bytes|string).
   - Optional payload fields: `:aad` (bytes|string), `:nonce` (bytes|string), `:tag` (bytes|string).
   - Required per-op policy controls: `allow_algorithms`, `allow_key_ids`, `max_ciphertext_bytes`, `max_aad_bytes`, `max_nonce_bytes`, `max_tag_bytes`.
   - Execution path is bridge-backed (`bridge_cmd` or WASI bridge profile response config).
+  - First-party backend bridge supports: `aes-256-gcm`, `chacha20poly1305`.
 - Safety guidance:
   - Keep private key material in host key stores; pass only policy-gated `:key-id` references through capability payloads.
+  - First-party bridge key lookup for `:key-id` resolves from:
+    `GENESIS_CRYPTO_KEY_DIR`, `.genesis/runtime/backend/keys/`, `.genesis/keys/`, and `keys/`.
+  - Key file formats: `alg="ed25519"` with `sk_b64`/`pk_b64`, or symmetric `alg="symmetric"` with `key_b64`.
   - Prefer explicit nonce management and authenticated associated data contracts in agent-authored protocols.
   - Treat algorithm/key allowlists and byte bounds as mandatory release-hardening controls, not optional defaults.
 

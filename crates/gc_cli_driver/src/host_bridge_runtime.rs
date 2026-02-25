@@ -2,9 +2,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
+use aes_gcm::Aes256Gcm;
+use aes_gcm::aead::{AeadInPlace, KeyInit};
+use base64ct::{Base64, Encoding};
+use chacha20poly1305::ChaCha20Poly1305;
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use hkdf::Hkdf;
+use hmac::{Hmac, Mac};
 use num_traits::cast::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
@@ -116,7 +123,9 @@ fn dispatch_host_bridge_impl(op: &str, payload: &Term) -> Result<Term, String> {
         | "io/net::ws-close"
         | "io/net::http-listen"
         | "io/net::http-respond"
-        | "io/net::ws-accept" => Err(format!("op `{op}` is not supported by first-party backend bridge")),
+        | "io/net::ws-accept" => Err(format!(
+            "op `{op}` is not supported by first-party backend bridge"
+        )),
         "io/db::connect" => db_connect(payload),
         "io/db::tx-begin" => db_tx_begin(payload),
         "io/db::tx-commit" | "io/db::tx-rollback" => db_tx_finish(op, payload),
@@ -214,16 +223,13 @@ fn opt_bytes(payload: &Term, key: &str) -> Result<Option<Vec<u8>>, String> {
     }
 }
 
-fn now_stamp() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos()
-}
-
 fn state_root() -> Result<PathBuf, String> {
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    let root = cwd.join(".genesis").join("runtime").join("backend").join("state");
+    let root = cwd
+        .join(".genesis")
+        .join("runtime")
+        .join("backend")
+        .join("state");
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     Ok(root)
 }
@@ -325,7 +331,9 @@ fn net_http_request(payload: &Term) -> Result<Term, String> {
         .split_once("\r\n\r\n")
         .ok_or_else(|| "malformed http response".to_string())?;
     let mut lines = head.lines();
-    let status_line = lines.next().ok_or_else(|| "missing status line".to_string())?;
+    let status_line = lines
+        .next()
+        .ok_or_else(|| "missing status line".to_string())?;
     let status = status_line
         .split_whitespace()
         .nth(1)
@@ -711,7 +719,11 @@ fn process_kill(payload: &Term) -> Result<Term, String> {
 fn process_read_stream(payload: &Term, stdout_stream: bool) -> Result<Term, String> {
     let process_id = req_string(payload, ":process-id")?;
     let rec = load_process_record(&process_id)?;
-    let data = if stdout_stream { rec.stdout } else { rec.stderr };
+    let data = if stdout_stream {
+        rec.stdout
+    } else {
+        rec.stderr
+    };
     Ok(ok_term(vec![(
         if stdout_stream { ":stdout" } else { ":stderr" },
         Term::Str(data),
@@ -731,16 +743,179 @@ fn process_stdin_write(payload: &Term) -> Result<Term, String> {
     ]))
 }
 
-fn crypto_key(key_id: &str) -> [u8; 32] {
-    *blake3::hash(key_id.as_bytes()).as_bytes()
+#[derive(Debug, Deserialize)]
+struct BridgeKeyFile {
+    alg: String,
+    sk_b64: Option<String>,
+    pk_b64: Option<String>,
+    key_b64: Option<String>,
 }
 
-fn bytes_xor(input: &[u8], key_stream: &[u8]) -> Vec<u8> {
-    input
-        .iter()
-        .zip(key_stream.iter().cycle())
-        .map(|(a, b)| a ^ b)
+fn sanitize_key_id(raw: &str) -> String {
+    raw.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.') {
+                ch
+            } else {
+                '_'
+            }
+        })
         .collect()
+}
+
+fn decode_b64_vec(raw: &str, field: &str) -> Result<Vec<u8>, String> {
+    Base64::decode_vec(raw).map_err(|e| format!("invalid base64 in `{field}`: {e}"))
+}
+
+fn decode_b64_fixed<const N: usize>(raw: &str, field: &str) -> Result<[u8; N], String> {
+    let bytes = decode_b64_vec(raw, field)?;
+    if bytes.len() != N {
+        return Err(format!(
+            "`{field}` must decode to exactly {N} bytes (got {})",
+            bytes.len()
+        ));
+    }
+    let mut out = [0u8; N];
+    out.copy_from_slice(&bytes);
+    Ok(out)
+}
+
+fn crypto_key_dirs() -> Result<Vec<PathBuf>, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    if let Ok(raw) = std::env::var("GENESIS_CRYPTO_KEY_DIR") {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            let p = PathBuf::from(trimmed);
+            out.push(if p.is_absolute() { p } else { cwd.join(p) });
+        }
+    }
+    out.push(
+        cwd.join(".genesis")
+            .join("runtime")
+            .join("backend")
+            .join("keys"),
+    );
+    out.push(cwd.join(".genesis").join("keys"));
+    out.push(cwd.join("keys"));
+    Ok(out)
+}
+
+fn load_key_file(key_id: &str) -> Result<BridgeKeyFile, String> {
+    let sanitized = sanitize_key_id(key_id);
+    let digest = format!("{:x}", Sha256::digest(key_id.as_bytes()));
+    let mut searched = Vec::new();
+    for dir in crypto_key_dirs()? {
+        let candidates = [
+            dir.join(format!("{sanitized}.toml")),
+            dir.join(format!("{digest}.toml")),
+            dir.join(format!("{sanitized}.key.toml")),
+            dir.join(format!("{digest}.key.toml")),
+        ];
+        for candidate in candidates {
+            searched.push(candidate.display().to_string());
+            if !candidate.is_file() {
+                continue;
+            }
+            let src = std::fs::read_to_string(&candidate).map_err(|e| {
+                format!(
+                    "read key file for key-id `{key_id}` at `{}`: {e}",
+                    candidate.display()
+                )
+            })?;
+            let parsed: BridgeKeyFile = toml::from_str(&src).map_err(|e| {
+                format!(
+                    "parse key file for key-id `{key_id}` at `{}`: {e}",
+                    candidate.display()
+                )
+            })?;
+            return Ok(parsed);
+        }
+    }
+    Err(format!(
+        "missing key material for key-id `{key_id}`; expected one of: {}",
+        searched.join(", ")
+    ))
+}
+
+fn resolve_ed25519_signing_key(key_id: &str) -> Result<SigningKey, String> {
+    let key_file = load_key_file(key_id)?;
+    if !key_file.alg.eq_ignore_ascii_case("ed25519") {
+        return Err(format!(
+            "key-id `{key_id}` uses alg `{}` but ed25519 is required",
+            key_file.alg
+        ));
+    }
+    let sk_raw = key_file
+        .sk_b64
+        .as_deref()
+        .ok_or_else(|| format!("key-id `{key_id}` is missing `sk_b64`"))?;
+    let sk = decode_b64_fixed::<32>(sk_raw, "sk_b64")?;
+    Ok(SigningKey::from_bytes(&sk))
+}
+
+fn resolve_ed25519_verifying_key(key_id: &str) -> Result<VerifyingKey, String> {
+    let key_file = load_key_file(key_id)?;
+    if !key_file.alg.eq_ignore_ascii_case("ed25519") {
+        return Err(format!(
+            "key-id `{key_id}` uses alg `{}` but ed25519 is required",
+            key_file.alg
+        ));
+    }
+    if let Some(pk_raw) = key_file.pk_b64.as_deref() {
+        let pk = decode_b64_fixed::<32>(pk_raw, "pk_b64")?;
+        return VerifyingKey::from_bytes(&pk)
+            .map_err(|e| format!("key-id `{key_id}` has invalid ed25519 public key: {e}"));
+    }
+    let signing = resolve_ed25519_signing_key(key_id)?;
+    Ok(signing.verifying_key())
+}
+
+fn resolve_symmetric_key_bytes(key_id: &str) -> Result<Vec<u8>, String> {
+    let key_file = load_key_file(key_id)?;
+    let alg = key_file.alg.to_ascii_lowercase();
+    if alg == "ed25519" {
+        let signing = resolve_ed25519_signing_key(key_id)?;
+        let mut h = Sha256::new();
+        h.update(signing.to_bytes());
+        return Ok(h.finalize().to_vec());
+    }
+    let raw = key_file
+        .key_b64
+        .as_deref()
+        .ok_or_else(|| format!("key-id `{key_id}` is missing `key_b64`"))?;
+    let decoded = decode_b64_vec(raw, "key_b64")?;
+    if decoded.is_empty() {
+        return Err(format!("key-id `{key_id}` has empty `key_b64` material"));
+    }
+    Ok(decoded)
+}
+
+fn normalize_32_key(material: &[u8]) -> [u8; 32] {
+    if material.len() == 32 {
+        let mut out = [0u8; 32];
+        out.copy_from_slice(material);
+        return out;
+    }
+    let mut h = Sha256::new();
+    h.update(material);
+    let digest = h.finalize();
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&digest[..32]);
+    out
+}
+
+fn crypto_message_with_context(payload: &Term, key: &str) -> Result<Vec<u8>, String> {
+    let message = req_bytes(payload, key)?;
+    if let Some(context) = opt_bytes(payload, ":context")? {
+        let mut out = Vec::with_capacity(context.len() + 1 + message.len());
+        out.extend_from_slice(&context);
+        out.push(0);
+        out.extend_from_slice(&message);
+        Ok(out)
+    } else {
+        Ok(message)
+    }
 }
 
 fn crypto_hash(payload: &Term) -> Result<Term, String> {
@@ -761,19 +936,21 @@ fn crypto_hash(payload: &Term) -> Result<Term, String> {
 fn crypto_sign(payload: &Term) -> Result<Term, String> {
     let algorithm = req_string(payload, ":algorithm")?.to_ascii_lowercase();
     let key_id = req_string(payload, ":key-id")?;
-    let message = req_bytes(payload, ":message")?;
-    let mut ctx = Sha256::new();
-    match algorithm.as_str() {
-        "hmac-sha256" | "sha256" => {
-            ctx.update(crypto_key(&key_id));
-            ctx.update(&message);
-            if let Some(extra) = opt_bytes(payload, ":context")? {
-                ctx.update(extra);
-            }
+    let message = crypto_message_with_context(payload, ":message")?;
+    let signature = match algorithm.as_str() {
+        "ed25519" => {
+            let signing = resolve_ed25519_signing_key(&key_id)?;
+            signing.sign(&message).to_bytes().to_vec()
+        }
+        "hmac-sha256" => {
+            let raw = resolve_symmetric_key_bytes(&key_id)?;
+            let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&raw)
+                .map_err(|e| format!("hmac key error: {e}"))?;
+            mac.update(&message);
+            mac.finalize().into_bytes().to_vec()
         }
         other => return Err(format!("unsupported sign algorithm `{other}`")),
-    }
-    let signature = ctx.finalize().to_vec();
+    };
     Ok(ok_term(vec![
         (":algorithm", Term::Str(algorithm)),
         (":signature", Term::Bytes(signature.into())),
@@ -783,26 +960,36 @@ fn crypto_sign(payload: &Term) -> Result<Term, String> {
 fn crypto_verify(payload: &Term) -> Result<Term, String> {
     let algorithm = req_string(payload, ":algorithm")?.to_ascii_lowercase();
     let key_id = req_string(payload, ":key-id")?;
-    let message = req_bytes(payload, ":message")?;
+    let message = crypto_message_with_context(payload, ":message")?;
     let signature = req_bytes(payload, ":signature")?;
-    let mut ctx = Sha256::new();
-    match algorithm.as_str() {
-        "hmac-sha256" | "sha256" => {
-            ctx.update(crypto_key(&key_id));
-            ctx.update(&message);
-            if let Some(extra) = opt_bytes(payload, ":context")? {
-                ctx.update(extra);
+    let valid = match algorithm.as_str() {
+        "ed25519" => {
+            if signature.len() != 64 {
+                return Err(format!(
+                    "ed25519 signature must be 64 bytes (got {})",
+                    signature.len()
+                ));
             }
+            let verify_key = resolve_ed25519_verifying_key(&key_id)?;
+            let sig = Signature::from_slice(&signature)
+                .map_err(|e| format!("invalid ed25519 signature bytes: {e}"))?;
+            verify_key.verify(&message, &sig).is_ok()
+        }
+        "hmac-sha256" => {
+            let raw = resolve_symmetric_key_bytes(&key_id)?;
+            let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&raw)
+                .map_err(|e| format!("hmac key error: {e}"))?;
+            mac.update(&message);
+            mac.verify_slice(&signature).is_ok()
         }
         other => return Err(format!("unsupported verify algorithm `{other}`")),
-    }
-    let expected = ctx.finalize().to_vec();
-    Ok(ok_term(vec![(":valid", Term::Bool(expected == signature))]))
+    };
+    Ok(ok_term(vec![(":valid", Term::Bool(valid))]))
 }
 
 fn crypto_kdf(payload: &Term) -> Result<Term, String> {
     let algorithm = req_string(payload, ":algorithm")?.to_ascii_lowercase();
-    if algorithm != "blake3-kdf" && algorithm != "sha256-kdf" {
+    if algorithm != "hkdf-sha256" && algorithm != "sha256-kdf" && algorithm != "blake3-kdf" {
         return Err(format!("unsupported kdf algorithm `{algorithm}`"));
     }
     let key_id = req_string(payload, ":key-id")?;
@@ -812,93 +999,148 @@ fn crypto_kdf(payload: &Term) -> Result<Term, String> {
         return Err("`:length` must be > 0".to_string());
     }
     let out_len = out_len as usize;
-    let mut out = Vec::with_capacity(out_len);
-    let mut counter: u64 = 0;
-    while out.len() < out_len {
-        let mut block = Sha256::new();
-        block.update(crypto_key(&key_id));
-        block.update(&info);
-        if let Some(salt) = opt_bytes(payload, ":salt")? {
-            block.update(&salt);
-        }
-        block.update(counter.to_le_bytes());
-        out.extend_from_slice(&block.finalize());
-        counter = counter.saturating_add(1);
-    }
-    out.truncate(out_len);
-    Ok(ok_term(vec![(":key", Term::Bytes(out.into()))]))
+    let ikm = resolve_symmetric_key_bytes(&key_id)?;
+    let salt = opt_bytes(payload, ":salt")?;
+    let hk = Hkdf::<Sha256>::new(salt.as_deref(), &ikm);
+    let mut out = vec![0u8; out_len];
+    hk.expand(&info, &mut out)
+        .map_err(|_| format!("hkdf output length {out_len} exceeds limits"))?;
+    Ok(ok_term(vec![
+        (":algorithm", Term::Str(algorithm)),
+        (":key", Term::Bytes(out.into())),
+        (":length", Term::Int((out_len as i64).into())),
+    ]))
 }
 
-fn crypto_stream_material(key: &[u8], nonce: &[u8], length: usize) -> Vec<u8> {
-    let mut out = Vec::with_capacity(length);
-    let mut counter: u64 = 0;
-    while out.len() < length {
-        let mut hasher = Sha256::new();
-        hasher.update(key);
-        hasher.update(nonce);
-        hasher.update(counter.to_le_bytes());
-        out.extend_from_slice(&hasher.finalize());
-        counter = counter.saturating_add(1);
+fn next_crypto_nonce(
+    algorithm: &str,
+    key_id: &str,
+    payload: &[u8],
+    aad: &[u8],
+) -> Result<[u8; 12], String> {
+    let counter = next_counter("crypto_nonce")?;
+    let mut h = Sha256::new();
+    h.update(algorithm.as_bytes());
+    h.update(key_id.as_bytes());
+    h.update(counter.to_le_bytes());
+    h.update(payload);
+    h.update(aad);
+    let digest = h.finalize();
+    let mut out = [0u8; 12];
+    out.copy_from_slice(&digest[..12]);
+    Ok(out)
+}
+
+fn parse_nonce_12(raw: Vec<u8>) -> Result<[u8; 12], String> {
+    if raw.len() != 12 {
+        return Err(format!("nonce must be 12 bytes (got {})", raw.len()));
     }
-    out.truncate(length);
-    out
+    let mut out = [0u8; 12];
+    out.copy_from_slice(&raw);
+    Ok(out)
+}
+
+fn parse_tag_16(raw: Vec<u8>) -> Result<[u8; 16], String> {
+    if raw.len() != 16 {
+        return Err(format!("tag must be 16 bytes (got {})", raw.len()));
+    }
+    let mut out = [0u8; 16];
+    out.copy_from_slice(&raw);
+    Ok(out)
 }
 
 fn crypto_aead_seal(payload: &Term) -> Result<Term, String> {
     let algorithm = req_string(payload, ":algorithm")?.to_ascii_lowercase();
-    if algorithm != "xor-sha256" {
-        return Err(format!("unsupported aead algorithm `{algorithm}`"));
-    }
     let key_id = req_string(payload, ":key-id")?;
     let plaintext = req_bytes(payload, ":plaintext")?;
     let aad = opt_bytes(payload, ":aad")?.unwrap_or_default();
-    let key = crypto_key(&key_id);
-    let mut nonce_hasher = Sha256::new();
-    nonce_hasher.update(key);
-    nonce_hasher.update(now_stamp().to_le_bytes());
-    nonce_hasher.update(&plaintext);
-    let nonce = nonce_hasher.finalize()[..12].to_vec();
-    let ks = crypto_stream_material(&key, &nonce, plaintext.len());
-    let cipher = bytes_xor(&plaintext, &ks);
-    let mut tag_hasher = Sha256::new();
-    tag_hasher.update(key);
-    tag_hasher.update(&nonce);
-    tag_hasher.update(&aad);
-    tag_hasher.update(&cipher);
-    let tag = tag_hasher.finalize()[..16].to_vec();
-    let mut packed = Vec::with_capacity(12 + 16 + cipher.len());
+    let nonce = match opt_bytes(payload, ":nonce")? {
+        Some(raw) => parse_nonce_12(raw)?,
+        None => next_crypto_nonce(&algorithm, &key_id, &plaintext, &aad)?,
+    };
+    let raw_key = resolve_symmetric_key_bytes(&key_id)?;
+    let key = normalize_32_key(&raw_key);
+    let mut ciphertext = plaintext.clone();
+    let tag = match algorithm.as_str() {
+        "aes-256-gcm" => {
+            let cipher = Aes256Gcm::new_from_slice(&key)
+                .map_err(|e| format!("aes-256-gcm key init: {e}"))?;
+            cipher
+                .encrypt_in_place_detached((&nonce).into(), &aad, &mut ciphertext)
+                .map_err(|e| format!("aes-256-gcm seal failed: {e}"))?
+                .to_vec()
+        }
+        "chacha20poly1305" => {
+            let cipher = ChaCha20Poly1305::new_from_slice(&key)
+                .map_err(|e| format!("chacha20poly1305 key init: {e}"))?;
+            cipher
+                .encrypt_in_place_detached((&nonce).into(), &aad, &mut ciphertext)
+                .map_err(|e| format!("chacha20poly1305 seal failed: {e}"))?
+                .to_vec()
+        }
+        other => return Err(format!("unsupported aead algorithm `{other}`")),
+    };
+    let mut packed = Vec::with_capacity(12 + 16 + ciphertext.len());
     packed.extend_from_slice(&nonce);
     packed.extend_from_slice(&tag);
-    packed.extend_from_slice(&cipher);
-    Ok(ok_term(vec![(":ciphertext", Term::Bytes(packed.into()))]))
+    packed.extend_from_slice(&ciphertext);
+    Ok(ok_term(vec![
+        (":algorithm", Term::Str(algorithm)),
+        (":ciphertext", Term::Bytes(packed.into())),
+        (":nonce", Term::Bytes(nonce.to_vec().into())),
+        (":tag", Term::Bytes(tag.into())),
+    ]))
 }
 
 fn crypto_aead_open(payload: &Term) -> Result<Term, String> {
     let algorithm = req_string(payload, ":algorithm")?.to_ascii_lowercase();
-    if algorithm != "xor-sha256" {
-        return Err(format!("unsupported aead algorithm `{algorithm}`"));
-    }
     let key_id = req_string(payload, ":key-id")?;
-    let packed = req_bytes(payload, ":ciphertext")?;
-    if packed.len() < 28 {
-        return Err("ciphertext is too small".to_string());
-    }
-    let nonce = &packed[..12];
-    let tag = &packed[12..28];
-    let cipher = &packed[28..];
+    let mut ciphertext = req_bytes(payload, ":ciphertext")?;
     let aad = opt_bytes(payload, ":aad")?.unwrap_or_default();
-    let key = crypto_key(&key_id);
-    let mut tag_hasher = Sha256::new();
-    tag_hasher.update(key);
-    tag_hasher.update(nonce);
-    tag_hasher.update(&aad);
-    tag_hasher.update(cipher);
-    let expected = tag_hasher.finalize();
-    if expected[..16] != *tag {
-        return Ok(error_term("crypto/aead-auth-failed", "aead tag verification failed"));
+    let (nonce, tag) = match (opt_bytes(payload, ":nonce")?, opt_bytes(payload, ":tag")?) {
+        (Some(nonce_raw), Some(tag_raw)) => (parse_nonce_12(nonce_raw)?, parse_tag_16(tag_raw)?),
+        (Some(_), None) | (None, Some(_)) => {
+            return Err(
+                "`:nonce` and `:tag` must either both be provided or both be omitted".to_string(),
+            );
+        }
+        (None, None) => {
+            if ciphertext.len() < 28 {
+                return Err(
+                    "ciphertext must contain packed nonce+tag+ciphertext when :nonce/:tag are omitted"
+                        .to_string(),
+                );
+            }
+            let mut nonce = [0u8; 12];
+            nonce.copy_from_slice(&ciphertext[..12]);
+            let mut tag = [0u8; 16];
+            tag.copy_from_slice(&ciphertext[12..28]);
+            ciphertext = ciphertext[28..].to_vec();
+            (nonce, tag)
+        }
+    };
+    let raw_key = resolve_symmetric_key_bytes(&key_id)?;
+    let key = normalize_32_key(&raw_key);
+    let mut plaintext = ciphertext;
+    let open_result = match algorithm.as_str() {
+        "aes-256-gcm" => {
+            let cipher = Aes256Gcm::new_from_slice(&key)
+                .map_err(|e| format!("aes-256-gcm key init: {e}"))?;
+            cipher.decrypt_in_place_detached((&nonce).into(), &aad, &mut plaintext, (&tag).into())
+        }
+        "chacha20poly1305" => {
+            let cipher = ChaCha20Poly1305::new_from_slice(&key)
+                .map_err(|e| format!("chacha20poly1305 key init: {e}"))?;
+            cipher.decrypt_in_place_detached((&nonce).into(), &aad, &mut plaintext, (&tag).into())
+        }
+        other => return Err(format!("unsupported aead algorithm `{other}`")),
+    };
+    if open_result.is_err() {
+        return Ok(error_term(
+            "crypto/aead-auth-failed",
+            "aead tag verification failed",
+        ));
     }
-    let ks = crypto_stream_material(&key, nonce, cipher.len());
-    let plaintext = bytes_xor(cipher, &ks);
     Ok(ok_term(vec![(":plaintext", Term::Bytes(plaintext.into()))]))
 }
 
@@ -953,7 +1195,11 @@ fn ffi_buffer_pin(payload: &Term) -> Result<Term, String> {
     let _abi_id = req_string(payload, ":abi-id")?;
     let bytes = req_bytes(payload, ":bytes")?;
     let digest = format!("{:x}", Sha256::digest(&bytes));
-    let handle = format!("ffi-buffer-{}-{}", &digest[..12], next_counter("ffi_buffer")?);
+    let handle = format!(
+        "ffi-buffer-{}-{}",
+        &digest[..12],
+        next_counter("ffi_buffer")?
+    );
     let path = ffi_buffer_dir()?.join(format!("{handle}.bin"));
     std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
     Ok(ok_term(vec![(":handle", Term::Str(handle))]))
@@ -966,7 +1212,10 @@ fn ffi_buffer_unpin(payload: &Term) -> Result<Term, String> {
     if path.exists() {
         std::fs::remove_file(path).map_err(|e| e.to_string())?;
     }
-    Ok(ok_term(vec![(":status", Term::Str("unpinned".to_string()))]))
+    Ok(ok_term(vec![(
+        ":status",
+        Term::Str("unpinned".to_string()),
+    )]))
 }
 
 fn ffi_call(payload: &Term) -> Result<Term, String> {
@@ -1014,3 +1263,7 @@ fn ffi_call(payload: &Term) -> Result<Term, String> {
         "unsupported ffi call for abi `{abi_id}` symbol `{symbol}`"
     ))
 }
+
+#[cfg(test)]
+#[path = "host_bridge_runtime_tests.rs"]
+mod tests;

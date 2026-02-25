@@ -1,45 +1,69 @@
 # GenesisCode Feature Matrix (Audit Date: 2026-02-25)
 
 Last updated: 2026-02-25  
-Scope: features that matter for agentic coding autonomy and selfhost reliability.
+Scope: capabilities that matter for AI-agent autonomy, selfhost closure, and production-grade runtime trust.
 
 Legend:
 - `✅` production-capable and validated in active gates
-- `⚠️` available but with important closure/hardening debt
+- `⚠️` available with material remaining closure/hardening work
 - `❌` not first-class
 
 | Capability | GenesisCode | Rust | Go | TypeScript (Node) | Python | Zig |
 |---|---|---|---|---|---|---|
 | Pure deterministic kernel separated from effects | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| Canonical semantic IR + stable content hash identity | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Sealed unforgeable effect/error protocol | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Canonical CoreForm IR + stable content hash identity | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Sealed unforgeable `UNHANDLED`/`EFFECT`/`ERROR` protocol | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Deny-by-default capability policy runtime | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deterministic effect logs + replay checks | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Built-in semantic VCS (`commit/patch/refs`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Deterministic effect logs + replay checker | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Built-in package/project manager (`pkg`/`gcpm`) | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| Reachability-based artifact GC (`refs` + locks + pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Obligation/evidence/attestation-gated publish + ref updates | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Native + WASI + wasm-host runtime surfaces | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ |
 | Selfhost frontend default in production CLIs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Full cutover profile wired into default inner-loop health | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Selfhost guard robustness against stale local binaries | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Agent workflow gauntlet (service/network/data/gfx/gpu/deploy/xr) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Runtime skill-pack conformance breadth across required domains | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Deterministic concurrency/task replay surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Full selfhost cutover profile + readiness scorecard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Strict no-production Rust semantic fallback guard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| CLI + GCPM JSON schema contracts for agent automation | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ |
+| Agent index + skill-pack conformance contracts | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Domain starter registry for agent workflows (27 domains) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Agent generative workload parity gates (native vs WASI) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Large-workspace agent iteration SLO lane (>=10k modules) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Concurrency/task replay stress lane | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
 | GPU compute capability independent of graphics surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Graphics/window/input/audio capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Strict GPU/XR runtime evidence as default productization lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Deployment target pipeline in core toolchain | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Reachability-based artifact GC (`refs`/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| XR and browser runtime capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU/XR productization conformance lane | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Host plugin + FFI capability schemas | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| First-party backend bridge for network/process/db/crypto/plugin/ffi | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Stage2 CoreForm->WASM translation-validation path | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| Deployment target pipeline in core toolchain | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Assurance profile packs + standards crosswalk (DO-178C/NASA/IEC) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Tool qualification lineage + evidence closures | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| AI-first modular decomposition + boundary guards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+
+## Competitive Positioning
+
+- GenesisCode’s differentiator is integrated semantics: language runtime, semantic VCS, package manager, obligation/evidence pipeline, and deterministic replay model are one contract surface.
+- It is stronger than mainstream stacks on agent verifiability (machine-readable CLI/GCPM reports, reproducible hashes, replay logs, policy gates, and assurance closures).
+- It is weaker today on some “build anything immediately” host/runtime edges where first-party backends still expose partial or placeholder semantics (tracked below).
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- `P0.1` - turnkey host backend provisioning for agent execution remains incomplete.
-- `P0.2` - stage2 compiler coverage still does not cover arbitrary generated program forms.
-- `P1.1` - WASI remote registry/sync parity still depends on out-of-band bridge bootstrapping.
+- `P0.1` - stage2 translation-validation still rejects valid CoreForm shapes and effectful result classes.
+- `P0.2` - first-party backend bridge does not yet implement full `io/net::*` and `sys/process::*` lifecycle semantics.
+- `P1.1` - deployment target bundles are deterministic wrappers, not full platform-native packagers.
+- `P1.2` - backend bootstrap remains partially manual outside workspace-scaffolded runtime flows.
+- `P1.3` - first-party plugin/ffi bridge support is still narrow relative to general ABI execution needs.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/selfhost_readiness_report.json`
-- `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/write_genesiscode_skill_conformance_report.json`
-- `/Users/corbensorenson/Documents/genesisCode/policies/source_decomposition_progress.toml`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gpu_xr_productization_kits_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_generative_workloads_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/large_workspace_agent_perf_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/domain_starter_registry_bootstrap_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gcpm_operation_contract_pack_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/pipeline_exec.rs`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/host_bridge_runtime.rs`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_cli_driver/src/pkg_workspace_ops_build_artifacts.rs`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`

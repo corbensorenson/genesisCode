@@ -56,6 +56,15 @@ Strict/full profile runtime reports:
   - history: `.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl`
   - baseline seed history: `policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl`
   - enforced by `scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` via elapsed + history p95 wall-time gates.
+- `large-workspace-agent-perf` release lane
+  - report: `.genesis/perf/large_workspace_agent_perf_report.json`
+  - runtime report: `.genesis/perf/large_workspace_agent_runtime_report.json`
+  - runtime history: `.genesis/perf/large_workspace_agent_runtime_history.jsonl`
+  - enforced by `scripts/check_large_workspace_agent_perf.sh` with a generated `>=10000` module workspace and hard budgets for:
+    - `gcpm lock`
+    - `gcpm build`
+    - `gcpm test`
+    - `selfhost-artifact` refresh
 
 ## Runners
 
@@ -141,6 +150,8 @@ Strict/full profile runtime reports:
       for `ios|android|edge|service-runtime` targets).
   - release-full profile also enforces production WASM surface isolation:
     - `scripts/check_wasm_production_surface.sh` (forbids parity-only Rust frontend exports in default-feature wasm-bindgen artifacts).
+  - release-full profile also enforces large-workspace SLO coverage:
+    - `scripts/check_large_workspace_agent_perf.sh` (`>=10000` generated modules; `gcpm lock/build/test` + `selfhost-artifact` refresh budgets).
   - high-churn Rust decomposition progress is fail-closed via:
     - `scripts/check_source_decomposition_progress.sh`
       (enforces target line budgets for tracked production modules).

@@ -1124,6 +1124,12 @@ fn gcpm_env_backend_profile_bridge_runs_host_family_smoke_without_manual_bridge_
     );
     let effective_caps = map_string(&map, ":caps-policy-effective");
 
+    cargo_bin_cmd!("genesis")
+        .current_dir(&app_dir)
+        .args(["keygen", "--out", ".genesis/keys/mirror-key.toml"])
+        .assert()
+        .success();
+
     let smoke_cases = [
         (
             "backend_bridge_dns.gc",
@@ -1146,6 +1152,21 @@ fn gcpm_env_backend_profile_bridge_runs_host_family_smoke_without_manual_bridge_
             ":digest",
         ),
         (
+            "backend_bridge_crypto_sign.gc",
+            r#"(def prog (core/effect::perform 'core/crypto::sign {:algorithm "ed25519" :key-id "mirror-key" :message "abc"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":signature",
+        ),
+        (
+            "backend_bridge_crypto_kdf.gc",
+            r#"(def prog (core/effect::perform 'core/crypto::kdf {:algorithm "hkdf-sha256" :key-id "mirror-key" :info "ctx" :length 32 :salt "s"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":key",
+        ),
+        (
+            "backend_bridge_crypto_aead.gc",
+            r#"(def prog (core/effect::perform 'core/crypto::aead-seal {:algorithm "aes-256-gcm" :key-id "mirror-key" :plaintext "abc" :aad "a" :nonce b"0123456789ab"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":tag",
+        ),
+        (
             "backend_bridge_plugin.gc",
             r#"(def prog (core/effect::perform 'host/plugin::command {:plugin "demo" :command "run" :payload {:ok true}} (fn (x) (core/effect::pure x)))) prog"#,
             ":plugin",
@@ -1162,15 +1183,28 @@ fn gcpm_env_backend_profile_bridge_runs_host_family_smoke_without_manual_bridge_
         let log_name = format!("{file_name}.gclog");
         let run_out = cargo_bin_cmd!("genesis")
             .current_dir(&app_dir)
-            .args(["run", file_name, "--caps", &effective_caps, "--log", &log_name])
+            .args([
+                "run",
+                file_name,
+                "--caps",
+                &effective_caps,
+                "--log",
+                &log_name,
+            ])
             .assert()
             .success()
             .get_output()
             .stdout
             .clone();
         let run_src = String::from_utf8(run_out).unwrap();
-        assert!(run_src.contains(":backend \"first-party-backend-bridge\""));
-        assert!(run_src.contains(expected_marker));
+        assert!(
+            run_src.contains(":backend \"first-party-backend-bridge\""),
+            "missing backend marker for {file_name}: {run_src}"
+        );
+        assert!(
+            run_src.contains(expected_marker),
+            "missing expected marker `{expected_marker}` for {file_name}: {run_src}"
+        );
 
         cargo_bin_cmd!("genesis")
             .current_dir(&app_dir)

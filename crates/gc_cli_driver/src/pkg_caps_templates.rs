@@ -269,6 +269,7 @@ fn append_crypto_policy(
     out.push_str("allow_algorithms = [\"*\"]\n");
     out.push_str("allow_key_ids = [\"*\"]\n");
     out.push_str("max_info_bytes = 4096\n");
+    out.push_str("max_salt_bytes = 4096\n");
     out.push_str("max_output_bytes = 1048576\n");
     append_bridge_policy(out, bridge_cmd, bridge_cmd_sha256);
     out.push('\n');

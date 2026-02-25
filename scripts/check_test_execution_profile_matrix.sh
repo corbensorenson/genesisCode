@@ -97,6 +97,9 @@ require_doc_pattern '.genesis/perf/wasm_cross_host_profile_report.json'
 require_doc_pattern '.genesis/perf/full_cross_host_profile_report.json'
 require_doc_pattern '.genesis/perf/agent_scenario_perf_report.json'
 require_doc_pattern '.genesis/perf/agent_generative_workloads_report.json'
+require_doc_pattern '.genesis/perf/large_workspace_agent_perf_report.json'
+require_doc_pattern '.genesis/perf/large_workspace_agent_runtime_report.json'
+require_doc_pattern 'scripts/check_large_workspace_agent_perf.sh'
 require_doc_pattern 'policies/perf/full_cross_host_profile_seed_history.jsonl'
 require_doc_pattern 'policies/perf/agent_scenario_perf_seed_history.jsonl'
 require_doc_pattern 'scripts/check_full_cross_host_profile_budget.sh'
@@ -224,6 +227,11 @@ fi
 
 if ! grep -Fq 'bash scripts/check_wasm_production_surface.sh' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: release-full profile must run wasm production surface isolation gate" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash scripts/check_large_workspace_agent_perf.sh' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must run large-workspace agent perf gate" >&2
   exit 1
 fi
 

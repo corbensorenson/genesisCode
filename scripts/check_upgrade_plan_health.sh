@@ -222,6 +222,18 @@ crates/gc_types/src/**/*.rs
 EOF
       return 0
       ;;
+    *"bash scripts/check_large_workspace_agent_perf.sh"*)
+      cat <<'EOF'
+large-workspace-agent-perf
+scripts/check_large_workspace_agent_perf.sh
+scripts/lib/**/*.sh
+crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_prelude/src/**/*.rs
+selfhost/**/*.gc
+EOF
+      return 0
+      ;;
     *"bash scripts/check_perf_budgets.sh"*)
       cat <<'EOF'
 perf-budgets
@@ -1288,6 +1300,7 @@ case "$PROFILE" in
     )
     PROFILE_GATES+=("bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_ai_iteration_slo.sh")
+    PROFILE_GATES+=("bash scripts/check_large_workspace_agent_perf.sh")
     PROFILE_GATES+=("bash scripts/check_ai_stress_suite.sh")
     PROFILE_GATES+=("bash scripts/check_hot_path_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")

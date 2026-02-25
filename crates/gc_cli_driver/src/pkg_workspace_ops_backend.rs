@@ -74,13 +74,18 @@ fn detect_backend_bridge_cmd(workspace_root: &Path) -> Option<PathBuf> {
 }
 
 fn provision_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>, String> {
-    let src = std::env::current_exe().map_err(|e| format!("resolve current genesis binary: {e}"))?;
+    let src =
+        std::env::current_exe().map_err(|e| format!("resolve current genesis binary: {e}"))?;
     let runtime_dir = workspace_root
         .join(".genesis")
         .join("runtime")
         .join("backend");
-    std::fs::create_dir_all(&runtime_dir)
-        .map_err(|e| format!("create backend runtime dir `{}`: {e}", runtime_dir.display()))?;
+    std::fs::create_dir_all(&runtime_dir).map_err(|e| {
+        format!(
+            "create backend runtime dir `{}`: {e}",
+            runtime_dir.display()
+        )
+    })?;
     let dst_name = if cfg!(windows) {
         "host_bridge.exe"
     } else {

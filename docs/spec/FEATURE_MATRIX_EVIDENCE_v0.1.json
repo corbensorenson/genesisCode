@@ -13,7 +13,7 @@
       ]
     },
     {
-      "capability": "Canonical semantic IR + stable content hash identity",
+      "capability": "Canonical CoreForm IR + stable content hash identity",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "capability": "Sealed unforgeable effect/error protocol",
+      "capability": "Sealed unforgeable `UNHANDLED`/`EFFECT`/`ERROR` protocol",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "capability": "Deterministic effect logs + replay checks",
+      "capability": "Deterministic effect logs + replay checker",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_no_user_panics.sh"
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "capability": "Built-in semantic VCS (`commit/patch/refs`)",
+      "capability": "Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -77,6 +77,39 @@
       ]
     },
     {
+      "capability": "Reachability-based artifact GC (`refs` + locks + pins)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_foundation_stdlib_conformance.sh",
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/check_selfhost_artifact_fresh.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GCPM_BUNDLE_v0.1.md",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/SELF_HOST_BOUNDARY.md"
+      ]
+    },
+    {
+      "capability": "Obligation/evidence/attestation-gated publish + ref updates",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "Native + WASI + wasm-host runtime surfaces",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
       "capability": "Selfhost frontend default in production CLIs",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
@@ -89,16 +122,7 @@
       ]
     },
     {
-      "capability": "Full cutover profile wired into default inner-loop health",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md"
-      ]
-    },
-    {
-      "capability": "Selfhost guard robustness against stale local binaries",
+      "capability": "Full selfhost cutover profile + readiness scorecard",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_selfhost_boundary.sh",
@@ -110,24 +134,7 @@
       ]
     },
     {
-      "capability": "Agent workflow gauntlet (service/network/data/gfx/gpu/deploy/xr)",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh",
-        "scripts/check_gpu_stack_decoupling.sh",
-        "scripts/check_gfx_runtime_profile.sh",
-        "scripts/check_agent_reference_workflows.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
-        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Runtime skill-pack conformance breadth across required domains",
+      "capability": "Strict no-production Rust semantic fallback guard",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -136,16 +143,81 @@
       ]
     },
     {
-      "capability": "Deterministic concurrency/task replay surface",
+      "capability": "CLI + GCPM JSON schema contracts for agent automation",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_no_user_panics.sh",
+        "scripts/check_foundation_stdlib_conformance.sh",
+        "scripts/check_cli_diagnostics_contract.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GCPM_BUNDLE_v0.1.md",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Agent index + skill-pack conformance contracts",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Domain starter registry for agent workflows (27 domains)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Agent generative workload parity gates (native vs WASI)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Large-workspace agent iteration SLO lane (>=10k modules)",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_foundation_stdlib_conformance.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/GCPM_BUNDLE_v0.1.md",
+        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+        "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Concurrency/task replay stress lane",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
         "scripts/check_task_concurrency_stress.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/SEALS_DISPATCH_REPLAY.md",
-        "docs/spec/DETERMINISM.md",
         "docs/spec/CONCURRENCY_v0.1.md"
       ]
     },
@@ -180,7 +252,19 @@
       ]
     },
     {
-      "capability": "Strict GPU/XR runtime evidence as default productization lane",
+      "capability": "XR and browser runtime capability families",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_webxr_browser_conformance_lane.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/XR_HOST_RUNTIME_v0.1.md",
+        "docs/spec/BROWSER_HOST_RUNTIME_v0.1.md"
+      ]
+    },
+    {
+      "capability": "GPU/XR productization conformance lane",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_gpu_compute_runtime_profile.sh",
@@ -193,6 +277,42 @@
         "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
         "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
         "docs/spec/XR_HOST_RUNTIME_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Host plugin + FFI capability schemas",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_cli_diagnostics_contract.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/HOST_ABI.md",
+        "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md",
+        "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
+      ]
+    },
+    {
+      "capability": "First-party backend bridge for network/process/db/crypto/plugin/ffi",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_host_abi_conformance.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/HOST_ABI.md",
+        "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md"
+      ]
+    },
+    {
+      "capability": "Stage2 CoreForm->WASM translation-validation path",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md",
+        "docs/spec/COREFORM_CANON_HASH.md"
       ]
     },
     {
@@ -209,22 +329,31 @@
       ]
     },
     {
-      "capability": "Reachability-based artifact GC (`refs`/locks/pins)",
+      "capability": "Assurance profile packs + standards crosswalk (DO-178C/NASA/IEC)",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_foundation_stdlib_conformance.sh",
-        "scripts/check_selfhost_boundary.sh",
-        "scripts/check_selfhost_artifact_fresh.sh"
+        "scripts/check_assurance_profile_packs.sh",
+        "scripts/check_assurance_standards_crosswalk.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
-        "docs/spec/GCPM_BUNDLE_v0.1.md",
-        "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
-        "docs/spec/SELF_HOST_BOUNDARY.md"
+        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
+        "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
+        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
+        "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
       ]
     },
     {
-      "capability": "Production module decomposition for AI maintainability",
+      "capability": "Tool qualification lineage + evidence closures",
+      "check_paths": [
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "evidence_paths": [
+        "docs/spec/CLI.md"
+      ]
+    },
+    {
+      "capability": "AI-first modular decomposition + boundary guards",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -233,7 +362,7 @@
       ]
     }
   ],
-  "entry_count": 19,
+  "entry_count": 30,
   "kind": "genesis/feature-matrix-evidence-v0.1",
   "source_feature_matrix": "feature_matrix.md",
   "version": "0.1"
