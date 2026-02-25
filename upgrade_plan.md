@@ -7,23 +7,15 @@ Scope:
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Critical Path
 
-- P1.3 - external ecosystem bridge into GenesisPkg
+- No unresolved critical-path items.
 
 ## Unresolved Backlog
 
-- [ ] P1.3 External ecosystem bridge into GenesisPkg
-Why: language-native package model is strong, but "build anything" adoption still needs deterministic mirror/bridge flows for external ecosystems (e.g., crates/npm/pypi) into GenesisPkg artifacts with provenance.
-Done when:
-  - mirrored external packages are transformed into signed GenesisPkg snapshots/commits.
-  - dependency policy can pin mirrored provenance roots and replay conversion evidence.
-  - bridge operations are capability-gated and auditable.
-Evidence:
-  - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
-  - `.genesis/perf/gcpm_operation_contract_pack_report.json`
+- None.
 
 ## Evidence Anchors
 

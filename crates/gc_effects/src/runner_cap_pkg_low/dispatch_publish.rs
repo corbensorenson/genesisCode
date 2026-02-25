@@ -1112,18 +1112,32 @@ pub(super) fn dispatch_publish(
                         environment_fingerprint: None,
                     },
                 );
+                let dep_key_fragment: String = dep
+                    .chars()
+                    .map(|ch| {
+                        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                            ch
+                        } else {
+                            '_'
+                        }
+                    })
+                    .collect();
+                let dep_key_hash = blake3::hash(dep.as_bytes()).to_hex().to_string();
+                let dep_key = format!("{dep_key_fragment}_{}", &dep_key_hash[..8]);
                 lock.artifacts.insert(
-                    format!("bridge.{dep}.provenance_root"),
+                    format!("bridge_{dep_key}_provenance_root"),
                     provenance_root.clone(),
                 );
                 lock.artifacts.insert(
-                    format!("bridge.{dep}.conversion_evidence"),
+                    format!("bridge_{dep_key}_conversion_evidence"),
                     conversion_evidence.clone(),
                 );
+                lock.artifacts.insert(
+                    format!("bridge_{dep_key}_attestation"),
+                    attestation_h.clone(),
+                );
                 lock.artifacts
-                    .insert(format!("bridge.{dep}.attestation"), attestation_h.clone());
-                lock.artifacts
-                    .insert(format!("bridge.{dep}.commit"), commit_h.clone());
+                    .insert(format!("bridge_{dep_key}_commit"), commit_h.clone());
                 let lock_bytes = lock.to_toml_canonical();
                 let lock_hash = blake3::hash(lock_bytes.as_bytes()).to_hex().to_string();
                 let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {

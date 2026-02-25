@@ -727,20 +727,30 @@ fn pkg_bridge_creates_signed_commit_and_updates_lock() {
     assert_eq!(locked.snapshot, snapshot_h);
     assert_eq!(locked.registry.as_deref(), Some("upstream"));
     assert_eq!(locked.source_selector, format!("commit:{commit_h}"));
+    let dep_key_hash = blake3::hash(b"serde").to_hex().to_string();
+    let dep_key = format!("serde_{}", &dep_key_hash[..8]);
     assert_eq!(
-        lock_after.artifacts.get("bridge.serde.provenance_root"),
+        lock_after
+            .artifacts
+            .get(format!("bridge_{dep_key}_provenance_root").as_str()),
         Some(&provenance_root)
     );
     assert_eq!(
-        lock_after.artifacts.get("bridge.serde.conversion_evidence"),
+        lock_after
+            .artifacts
+            .get(format!("bridge_{dep_key}_conversion_evidence").as_str()),
         Some(&conversion_evidence)
     );
     assert_eq!(
-        lock_after.artifacts.get("bridge.serde.attestation"),
+        lock_after
+            .artifacts
+            .get(format!("bridge_{dep_key}_attestation").as_str()),
         Some(&attestation_h)
     );
     assert_eq!(
-        lock_after.artifacts.get("bridge.serde.commit"),
+        lock_after
+            .artifacts
+            .get(format!("bridge_{dep_key}_commit").as_str()),
         Some(&commit_h)
     );
     let expected_lock_h = blake3::hash(lock_after.to_toml_canonical().as_bytes())
