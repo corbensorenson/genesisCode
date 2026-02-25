@@ -31,7 +31,13 @@ Legend:
 | Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- none currently open.
+- `P0.1` final Rust semantic exception retirement for true selfhost closure
+- `P0.2` readiness critical-gate expansion to include generative + cross-runtime parity truth
+- `P1.1` gcpm operation contract-pack coverage expansion beyond current narrow subset
+- `P1.2` strict device-backed GPU confidence lanes as default productization evidence
+- `P1.3` hot-path runtime gate realism (budget/historical depth/compile-vs-measure separation)
+- `P2.1` deterministic remediation/fix-options expansion across gcpm workflow surface
+- `P2.2` faster default health-profile wall time for tighter agent iteration loops
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

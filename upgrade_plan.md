@@ -3,52 +3,105 @@
 Last updated: 2026-02-25
 
 Scope:
-- Track only unresolved upgrades required for AI-first authoring reliability, selfhost robustness, and productization trust.
+- Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and productization trust.
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 0
+Open checklist items: 7
 
 ## Critical Path
 
-- [x] P2.1 Split oversized production Rust modules that exceed the 700-line maintainability target.
-  Evidence this pass:
-  - [x] `crates/gc_cli_driver/src/cmd_pkg.rs` split via `crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs` (261 + 550 lines).
-  - [x] `crates/gc_opt/src/lib.rs` split via `crates/gc_opt/src/pure_egg.rs` (558 + 336 lines).
-  - [x] `crates/gc_wasm/src/lib.rs` split via `crates/gc_wasm/src/runtime.rs` (415 + 430 lines).
-  - [x] `crates/gc_opt/src/stage2_wasm/planner_helpers.rs` split via `crates/gc_opt/src/stage2_wasm/planner_helpers/collection_aliases.rs` (334 + 436 lines).
-  - [x] `crates/gc_cli_driver/src/cli_args.rs` split via `crates/gc_cli_driver/src/cli_args/command_groups.rs` (559 + 359 lines).
-  - [x] `crates/gc_opt/src/stage2_wasm/strings_bytes_lowering.rs` split via `crates/gc_opt/src/stage2_wasm/strings_bytes_scalar_lowering.rs` and `crates/gc_opt/src/stage2_wasm/strings_bytes_hex_lowering.rs` (302 + 385 + 214 lines).
-  - [x] `crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch/selfhost.rs` split via `crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch/selfhost/init_add.rs` (696 + 173 lines).
-  - [x] `crates/gc_obligations/src/obligation_gfx.rs` split via `crates/gc_obligations/src/obligation_gfx/helpers.rs` (616 + 308 lines).
-  - [x] `crates/gc_prelude/src/selfhost_coreform_v1.rs` split via `crates/gc_prelude/src/selfhost_coreform_manifest.rs` (695 + 210 lines).
-  - [x] `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs` split via `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs` (365 + 577 lines).
-  - [x] `crates/gc_kernel/src/eval_prims.rs` split via `crates/gc_kernel/src/eval_prims/text_bytes.rs` (393 + 443 lines).
-  - [x] `crates/gc_effects/src/runner_cap_gc_gpk_low.rs` split via `crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs` (381 + 559 lines).
-  - [x] `crates/gc_effects/src/runner_cap_vcs_low/dispatch_patch_contract.rs` split via `crates/gc_effects/src/runner_cap_vcs_low/dispatch_patch_contract/merge_ops.rs` and `crates/gc_effects/src/runner_cap_vcs_low/dispatch_patch_contract/resolve_conflict.rs` (139 + 179 + 533 lines).
-  - [x] `crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs` split via `crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs` (675 + 315 lines).
-  - [x] Validation: `cargo check -p gc_opt -p gc_wasm -p gc_cli_driver` passes.
-  - [x] Validation: `cargo check -p gc_cli_driver -p gc_opt` passes.
-  - [x] Validation: `cargo check -p gc_effects -p gc_obligations -p gc_prelude` passes.
-  - [x] Validation: `cargo check -p gc_kernel -p gc_effects` passes.
-  - [x] Validation: `cargo test -p gc_opt -p gc_wasm -p gc_cli_driver --lib` passes.
-  - [x] Validation: `cargo test -p gc_opt -p gc_cli_driver --lib` passes.
-  - [x] Validation: `cargo test -p gc_effects -p gc_obligations -p gc_prelude --lib` passes.
-  - [x] Validation: `cargo test -p gc_kernel -p gc_effects --lib` passes.
-  - [x] Validation: `bash scripts/check_source_decomposition_progress.sh` passes (`observed_max_lines=690`).
-  - [x] Validation: `bash scripts/check_upgrade_plan_health.sh` passes (`elapsed_ms=200750`, `gate_count=55`).
-  Remaining >700-line production files (0):
-  - none
+- [ ] P0.1 Close the final Rust semantic exceptions and reach true selfhost semantic ownership.
+  Why this is still open:
+  - Full-cutover policy still explicitly allows semantic/runtime exceptions in `gc_coreform`, `gc_kernel`, `gc_prelude`, `gc_effects`, and `gc_cli_driver`.
+  Evidence:
+  - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md:16`
+  - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md:20`
+  - `.genesis/perf/full_selfhost_cutover_profile_report.json`
   Exit criteria:
-  - All production modules are <=700 lines through behavior-preserving decomposition.
-  - Cargo checks/tests remain green for touched crates.
-  - Decomposition policy and health gates continue to pass.
+  - `explicit_exceptions` in `.genesis/perf/full_selfhost_cutover_profile_report.json` is empty.
+  - Cutover profile remains `ok=true` with no exception carve-outs.
+  - `old_bootstrap/` remains archival-only and non-semantic.
+
+- [ ] P0.2 Expand readiness scoring to include generative and cross-runtime parity truth, not just fixed critical gates.
+  Why this is still open:
+  - `selfhost-readiness` critical gate list currently omits `agent_generative_workloads` and `agent_workflow_runtime_parity`.
+  Evidence:
+  - `scripts/check_selfhost_readiness_scorecard.sh:381`
+  - `.genesis/perf/agent_generative_workloads_report.json`
+  - `.genesis/perf/agent_workflow_runtime_parity_report.json`
+  Exit criteria:
+  - Readiness critical gate contract includes and validates:
+    - `.genesis/perf/agent_generative_workloads_report.json`
+    - `.genesis/perf/agent_workflow_runtime_parity_report.json`
+  - `selfhost_readiness_report.json` fails closed when either report is stale/failing.
+  - Runtime parity p95 floor is raised from 1-sample enforcement to a stable minimum history floor.
+
+- [ ] P1.1 Expand `gcpm` operation contract pack coverage from 5 operations to full automation-critical surface.
+  Why this is still open:
+  - The contract pack currently tracks only `{build, qualify, run, test, trace}`, while the command surface is much larger.
+  Evidence:
+  - `docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json:11`
+  - `.genesis/perf/gcpm_operation_contract_pack_report.json:15`
+  - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md:29`
+  Exit criteria:
+  - Operation contract pack covers all gcpm commands used by autonomous workflows (`new`, `scaffold`, `add/remove`, `lock/update`, `install/verify`, `publish/sync`, `env/build`, `abi`, `doctor`, `self-optimize`, assurance ops).
+  - Drift gate compares pack coverage directly against CLI schema IDs and fails on gaps.
+
+- [ ] P1.2 Promote strict device-backed GPU truth in default agent confidence lanes; isolate fallback lanes as non-release evidence.
+  Why this is still open:
+  - Current gauntlet allows fallback-backed success (`require_gpu_device_backend=false`, multiple workflows on `deterministic-fallback`).
+  Evidence:
+  - `.genesis/perf/agent_capability_gauntlet_report.json:141`
+  - `.genesis/perf/agent_capability_gauntlet_report.json:201`
+  - `.genesis/perf/agent_capability_gauntlet_report.json:533`
+  - `.genesis/perf/agent_capability_gauntlet_report.json:616`
+  Exit criteria:
+  - Default release-confidence gauntlet profile requires device runtime for GPU domains.
+  - Fallback mode remains available but clearly separated as dev-only evidence.
+  - Readiness and feature evidence consume strict-device lane for productization claims.
+
+- [ ] P1.3 Tighten hot-path runtime gate quality (budget realism, history depth, and compile-vs-measure separation).
+  Why this is still open:
+  - Runtime profile allows very high elapsed budget and currently passes with low history depth despite large jitter.
+  Evidence:
+  - `.genesis/perf/hot_path_runtime_report.json:4`
+  - `.genesis/perf/hot_path_runtime_report.json:7`
+  - `.genesis/perf/hot_path_runtime_report.json:10`
+  - `scripts/check_hot_path_budgets.sh:37`
+  - `scripts/check_hot_path_budgets.sh:73`
+  Exit criteria:
+  - Runtime budget is reduced to an AI-iteration-appropriate envelope.
+  - Cold compile/setup time is reported separately from hot-path measurement time.
+  - History floor and regression checks fail closed on insufficient sample depth.
+
+- [ ] P2.1 Expand deterministic `fix_options`/remediation reports beyond `gcpm lock|update|publish`.
+  Why this is still open:
+  - Workflow report contract documents deterministic remediation only for three commands.
+  Evidence:
+  - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md:8`
+  - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md:12`
+  Exit criteria:
+  - `gcpm add/remove/install/verify/build/run/doctor/env/self-optimize` emit machine-actionable remediation plans with stable IDs.
+  - Agents can continue autonomously after common failures without heuristic prompt repair.
+
+- [ ] P2.2 Reduce default health/profile wall-time for faster agent inner-loop iteration.
+  Why this is still open:
+  - Current dev-fast profile still runs near multi-minute wall time.
+  Evidence:
+  - `.genesis/perf/upgrade_plan_health_profile_report.json`
+  - `.genesis/perf/agent_capability_gauntlet_report.json`
+  Exit criteria:
+  - Default dev-fast health lane hits a tighter wall budget with deterministic pass rates.
+  - Inner-loop profile remains coverage-complete for AI authoring guardrails while reducing latency.
 
 ## Evidence Anchors
 
 - `.genesis/perf/selfhost_readiness_report.json`
 - `.genesis/perf/full_selfhost_cutover_profile_report.json`
-- `.genesis/perf/runtime_microbench_runtime_report.json`
+- `.genesis/perf/agent_capability_gauntlet_report.json`
+- `.genesis/perf/agent_generative_workloads_report.json`
+- `.genesis/perf/agent_workflow_runtime_parity_report.json`
+- `.genesis/perf/gcpm_operation_contract_pack_report.json`
 - `.genesis/perf/hot_path_runtime_report.json`
-- `.genesis/perf/production_cli_help_surface_report.json`
-- `policies/source_decomposition_progress.toml`
+- `.genesis/perf/upgrade_plan_health_profile_report.json`
