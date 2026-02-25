@@ -117,6 +117,53 @@ fn selfhost_artifact_wasi_thresholds_accept_exact_observed_stage2_coverage() {
 }
 
 #[test]
+fn selfhost_artifact_wasi_default_policy_enforces_non_zero_stage2_minima() {
+    let td = tempdir().unwrap();
+    let artifact = td.path().join("policy-defaults.gc");
+
+    let out = cargo_bin_cmd!("genesis_wasi")
+        .args([
+            "selfhost-artifact",
+            "--out",
+            artifact.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    assert!(v["ok"].as_bool().unwrap_or(false), "{v}");
+    let data = v.get("data").expect("data object");
+    let min_supported = data["min_stage2_supported_modules"]
+        .as_u64()
+        .expect("min_stage2_supported_modules");
+    let min_validated = data["min_stage2_validated_modules"]
+        .as_u64()
+        .expect("min_stage2_validated_modules");
+    let policy_supported = data["policy_min_stage2_supported_modules"]
+        .as_u64()
+        .expect("policy_min_stage2_supported_modules");
+    let policy_validated = data["policy_min_stage2_validated_modules"]
+        .as_u64()
+        .expect("policy_min_stage2_validated_modules");
+    assert!(min_supported > 0, "expected non-zero supported minimum");
+    assert!(min_validated > 0, "expected non-zero validated minimum");
+    assert_eq!(
+        data["requested_min_stage2_supported_modules"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        data["requested_min_stage2_validated_modules"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(min_supported, policy_supported);
+    assert_eq!(min_validated, policy_validated);
+    assert!(data["stage2_requirements_ok"].as_bool().unwrap_or(false));
+}
+
+#[test]
 fn selfhost_artifact_wasi_thresholds_fail_when_minimums_exceed_observed_coverage() {
     let td = tempdir().unwrap();
     let failing_artifact = td.path().join("failing.gc");

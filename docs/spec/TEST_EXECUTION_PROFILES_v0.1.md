@@ -103,8 +103,17 @@ Strict/full profile runtime reports:
     (`kind = genesis/upgrade-plan-health-cargo-warmup-v0.1`)
   - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
     `.genesis/perf/upgrade_plan_health_profile_report.json`
-  - enforces prepush wall-time budget `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `1050000`)
-    whenever health gates are enforced
+  - enforces prepush wall-time + history p95 budget
+    `GENESIS_HEALTH_PREPUSH_BUDGET_MS` (default `900000`)
+    via `scripts/lib/profile_runtime_budget.py` using:
+    - `GENESIS_HEALTH_PREPUSH_HISTORY`
+    - `GENESIS_HEALTH_PREPUSH_MIN_HISTORY`
+    - `GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY`
+    - `GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY`
+    - `GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY`
+  - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
+    fail closed on low-disk preflight by default
+    (`GENESIS_HEALTH_STRICT_DISK_POLICY=fail`)
   - GPU device-conformance lane policy:
     - `release-full` profile requires `scripts/check_gpu_compute_device_conformance.sh` by default.
     - `dev-fast` and `prepush-standard` remain opt-in via
@@ -233,7 +242,7 @@ This guard enforces:
 - CI step presence for each matrix lane
 - 120000ms default budget pin for local high-signal workflows
 - prepush strict loop budget/shard defaults (`GENESIS_HEALTH_PREPUSH_BUDGET_MS`,
-  `GENESIS_HEALTH_SHARDS`) and profile report kind
+  `GENESIS_HEALTH_SHARDS`) and profile runtime history controls
 - strict/full measured runtime gate wiring:
   - strict-golden profile runtime report + p95 budget helper
   - wasm cross-host runtime report + p95 budget helper

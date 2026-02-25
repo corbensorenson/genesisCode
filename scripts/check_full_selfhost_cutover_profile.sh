@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 DOC_PATH="docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md"
 REPORT_PATH="${GENESIS_FULL_SELFHOST_CUTOVER_REPORT:-.genesis/perf/full_selfhost_cutover_profile_report.json}"
+HISTORY_PATH="${GENESIS_FULL_SELFHOST_CUTOVER_HISTORY:-.genesis/perf/full_selfhost_cutover_profile_history.jsonl}"
 REFRESH="${GENESIS_FULL_SELFHOST_CUTOVER_REFRESH:-0}"
 READINESS_REPORT="${GENESIS_SELFHOST_READINESS_REPORT:-.genesis/perf/selfhost_readiness_report.json}"
 BOOTSTRAP_REPORT="${GENESIS_BOOTSTRAP_RETIREMENT_REPORT:-.genesis/perf/bootstrap_retirement_gate_report.json}"
@@ -15,6 +16,7 @@ HOST_API_EVOLUTION_REPORT="${GENESIS_HOST_API_EVOLUTION_REPORT:-.genesis/perf/ho
 GCPM_CONTRACT_PACK_REPORT="${GENESIS_GCPM_OPERATION_CONTRACT_PACK_REPORT:-.genesis/perf/gcpm_operation_contract_pack_report.json}"
 VCS_SELFHOST_REPORT="${GENESIS_VCS_SELFHOST_CONTRACT_REPORT:-.genesis/perf/vcs_selfhost_contract_report.json}"
 SELFHOST_SYMBOL_OWNERSHIP_REPORT="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_REPORT:-.genesis/perf/selfhost_symbol_ownership_report.json}"
+SELFHOST_ARTIFACT="${GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT:-selfhost/toolchain.gc}"
 
 if [[ "$REFRESH" != "0" && "$REFRESH" != "1" ]]; then
   echo "full-selfhost-cutover-profile: GENESIS_FULL_SELFHOST_CUTOVER_REFRESH must be 0 or 1" >&2
@@ -69,8 +71,13 @@ fi
   echo "full-selfhost-cutover-profile: missing selfhost symbol ownership report: $SELFHOST_SYMBOL_OWNERSHIP_REPORT" >&2
   exit 1
 }
+[[ -f "$SELFHOST_ARTIFACT" ]] || {
+  echo "full-selfhost-cutover-profile: missing selfhost toolchain artifact: $SELFHOST_ARTIFACT" >&2
+  exit 1
+}
 
-python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$KERNEL_TCB_REPORT" "$HOST_API_EVOLUTION_REPORT" "$GCPM_CONTRACT_PACK_REPORT" "$VCS_SELFHOST_REPORT" "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" "$REPORT_PATH" <<'PY'
+python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$KERNEL_TCB_REPORT" "$HOST_API_EVOLUTION_REPORT" "$GCPM_CONTRACT_PACK_REPORT" "$VCS_SELFHOST_REPORT" "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" "$SELFHOST_ARTIFACT" "$REPORT_PATH" "$HISTORY_PATH" <<'PY'
+import datetime as dt
 import json
 import pathlib
 import re
@@ -86,7 +93,9 @@ host_api_path = root / sys.argv[7]
 gcpm_contract_path = root / sys.argv[8]
 vcs_selfhost_path = root / sys.argv[9]
 selfhost_symbol_path = root / sys.argv[10]
-report_path = root / sys.argv[11]
+selfhost_artifact_path = root / sys.argv[11]
+report_path = root / sys.argv[12]
+history_path = root / sys.argv[13]
 
 doc = doc_path.read_text(encoding="utf-8")
 
@@ -193,6 +202,56 @@ if not bool(dashboard.get("ok", False)):
         "full-selfhost-cutover-profile: dashboard freshness report is not ok"
     )
 
+artifact_text = selfhost_artifact_path.read_text(encoding="utf-8")
+
+def parse_stage2_section(section_label: str) -> str:
+    match = re.search(
+        rf"{re.escape(section_label)}\s*\{{([^{{}}]*)\}}",
+        artifact_text,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        raise SystemExit(
+            f"full-selfhost-cutover-profile: selfhost artifact missing section {section_label}: {selfhost_artifact_path}"
+        )
+    return match.group(1)
+
+def parse_stage2_int(section: str, key: str) -> int:
+    match = re.search(rf"{re.escape(key)}\s+(-?\d+)\b", section)
+    if match is None:
+        raise SystemExit(
+            f"full-selfhost-cutover-profile: selfhost artifact missing integer field {key}"
+        )
+    return int(match.group(1))
+
+summary_section = parse_stage2_section(":stage2-summary")
+requirements_section = parse_stage2_section(":stage2-requirements")
+stage2_supported_modules = parse_stage2_int(summary_section, ":supported-modules")
+stage2_validated_modules = parse_stage2_int(summary_section, ":validated-modules")
+stage2_min_supported_modules = parse_stage2_int(requirements_section, ":min-supported-modules")
+stage2_min_validated_modules = parse_stage2_int(requirements_section, ":min-validated-modules")
+requirements_ok = bool(
+    re.search(r":ok\s+true(?:\b|$)", requirements_section)
+)
+if stage2_min_supported_modules <= 0 or stage2_min_validated_modules <= 0:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 requirement minima must be non-zero in selfhost artifact"
+    )
+if stage2_supported_modules < stage2_min_supported_modules:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 supported modules below enforced minimum "
+        f"({stage2_supported_modules} < {stage2_min_supported_modules})"
+    )
+if stage2_validated_modules < stage2_min_validated_modules:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 validated modules below enforced minimum "
+        f"({stage2_validated_modules} < {stage2_min_validated_modules})"
+    )
+if not requirements_ok:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: selfhost artifact stage2 requirements are not marked ok"
+    )
+
 proof_specs = {
     "kernel_tcb_contract": (
         kernel_tcb_path,
@@ -239,23 +298,50 @@ for name, (path, expected_kind) in proof_specs.items():
         )
     proof_reports[name] = path.relative_to(root).as_posix()
 
+timestamp_utc = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
 report_doc = {
     "kind": "genesis/full-selfhost-cutover-profile-v0.1",
+    "timestamp_utc": timestamp_utc,
     "doc": doc_path.relative_to(root).as_posix(),
     "readiness_report": readiness_path.relative_to(root).as_posix(),
     "bootstrap_report": bootstrap_path.relative_to(root).as_posix(),
     "dashboard_fresh_report": dashboard_path.relative_to(root).as_posix(),
+    "selfhost_artifact": selfhost_artifact_path.relative_to(root).as_posix(),
     "explicit_exceptions": [],
     "readiness_dimension_count": len(dimensions),
     "readiness_fail_reasons": [str(x) for x in fail_reasons],
     "bootstrap_status": bootstrap_status,
+    "stage2_supported_modules": stage2_supported_modules,
+    "stage2_validated_modules": stage2_validated_modules,
+    "stage2_min_supported_modules": stage2_min_supported_modules,
+    "stage2_min_validated_modules": stage2_min_validated_modules,
+    "stage2_requirements_ok": requirements_ok,
     "exception_proof_reports": proof_reports,
     "ok": True,
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)
 report_path.write_text(json.dumps(report_doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+history_path.parent.mkdir(parents=True, exist_ok=True)
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(
+        json.dumps(
+            {
+                "kind": report_doc["kind"],
+                "timestamp_utc": timestamp_utc,
+                "ok": True,
+                "stage2_supported_modules": stage2_supported_modules,
+                "stage2_validated_modules": stage2_validated_modules,
+                "stage2_min_supported_modules": stage2_min_supported_modules,
+                "stage2_min_validated_modules": stage2_min_validated_modules,
+                "stage2_requirements_ok": requirements_ok,
+                "report": report_path.relative_to(root).as_posix(),
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
 print(
     "full-selfhost-cutover-profile: ok "
-    f"(dimensions={len(dimensions)} bootstrap_status={bootstrap_status})"
+    f"(dimensions={len(dimensions)} bootstrap_status={bootstrap_status} stage2_min_supported={stage2_min_supported_modules} stage2_min_validated={stage2_min_validated_modules})"
 )
 PY

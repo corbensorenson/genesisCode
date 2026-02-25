@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use crate::pkg_workspace_ops::LocalPkgResult;
 
 mod bundle;
+mod integration;
 mod parse;
 mod profile;
 mod resolve;
@@ -17,6 +18,7 @@ mod term_helpers;
 mod types;
 
 use bundle::write_bundle_dir;
+use integration::build_external_control_bindings;
 use parse::{
     parse_coverage_export, parse_independence_attestation, parse_independent_verifier_run,
     parse_object_equivalence_evidence,
@@ -275,6 +277,22 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
             )
         })
         .unwrap_or(Term::Nil);
+    let coverage_artifact_hashes: Vec<String> = coverage_exports
+        .iter()
+        .map(|c| c.loaded.hash.clone())
+        .collect();
+    let independent_run_artifact_hashes: Vec<String> = independent_verifier_runs
+        .iter()
+        .map(|run| run.loaded.hash.clone())
+        .collect();
+    let external_control_bindings = build_external_control_bindings(
+        assurance_profile,
+        &trace.hash,
+        &qualification.hash,
+        &coverage_artifact_hashes,
+        object_equivalence.as_ref().map(|e| e.loaded.hash.as_str()),
+        &independent_run_artifact_hashes,
+    )?;
 
     let pack = Term::Map(
         [
@@ -378,6 +396,10 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
             (
                 TermOrdKey(Term::symbol(":independent-verifier-runs")),
                 Term::Vector(independent_verifier_run_terms),
+            ),
+            (
+                TermOrdKey(Term::symbol(":external-control-bindings")),
+                external_control_bindings.clone(),
             ),
             (
                 TermOrdKey(Term::symbol(":summary")),
@@ -497,6 +519,10 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
                 args.bundle_dir
                     .map(|p| Term::Str(p.display().to_string()))
                     .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":external-control-bindings")),
+                external_control_bindings,
             ),
         ]
         .into_iter()

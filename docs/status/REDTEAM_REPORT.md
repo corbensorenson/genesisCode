@@ -8,11 +8,6 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- `P0.1` - `gcpm lock/install` still local-first; missing remote-first dependency closure for autonomous builds.
-- `P0.2` - host ABI has no first-class native FFI family (`host/ffi::*`) for high-throughput interop.
-- `P0.3` - release lane lacks strict-sound type/effect gate; gradual-only checker weakens autonomous safety.
-- `P0.4` - no deterministic intent-to-workflow planner contract in runtime/tooling core.
-- `P1.1` - full profile throughput and disk-headroom behavior still increase autonomous CI latency.
-- `P1.2` - stage2 optimizer coverage floors are not enforced by default artifact policy.
-- `P1.3` - ecosystem bridge into GenesisPkg is not first-class for external dependency onboarding.
-- `P1.4` - regulated assurance still depends on external-control integration outside toolchain closure.
+- P0.1 - `gcpm` remote dependency closure
+- P0.2 - Native FFI ABI family (`host/ffi::*`) with deterministic replay contract
+- P1.3 - External ecosystem bridge into GenesisPkg

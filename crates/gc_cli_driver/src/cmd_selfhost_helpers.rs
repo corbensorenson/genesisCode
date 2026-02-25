@@ -95,6 +95,11 @@ const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
         fast_path_required: false,
     },
     SelfhostCutoverMetadata {
+        cli_name: "agent-plan",
+        dashboard_cmd: "agent-plan",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
         cli_name: "keygen",
         dashboard_cmd: "keygen",
         fast_path_required: false,

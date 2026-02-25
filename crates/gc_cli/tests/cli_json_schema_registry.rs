@@ -36,6 +36,7 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/pack-v0.2",
         "genesis/cli-schema-v0.1",
         "genesis/agent-index-v0.1",
+        "genesis/agent-plan-v0.1",
         "genesis/warm-session-v0.1",
         "genesis/keygen-v0.2",
         "genesis/sign-v0.2",

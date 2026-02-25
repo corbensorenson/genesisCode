@@ -6,7 +6,7 @@ mod effect_inference;
 mod infer;
 mod ty;
 
-use crate::effect_inference::{has_core_task_effect_ops, is_core_task_effect_op};
+use crate::effect_inference::is_core_task_effect_op;
 use crate::infer::{InferSession, infer_module_types};
 use crate::ty::{EffRow, RowTail, Ty, parse_type_term};
 
@@ -271,13 +271,10 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                                 ops: BTreeSet::new(),
                                 unknown: false,
                             });
-                            if strict_effects
-                                && has_core_task_effect_ops(&eff)
-                                && decl_eff.tail.is_open()
-                            {
+                            if strict_effects && decl_eff.tail.is_open() {
                                 tr_ok = false;
                                 tr_errors.push(format!(
-                                    "{e}: strict effect mode requires a closed declared effect row for concurrent task exports"
+                                    "{e}: strict effect mode requires a closed declared effect row"
                                 ));
                             }
                             if eff.unknown && matches!(decl_eff.tail, RowTail::Closed) {
@@ -296,6 +293,12 @@ fn typecheck_one(m: &ModuleForTypecheck) -> ModuleReport {
                                     ));
                                 }
                             }
+                        }
+                        if strict_shapes && has_unresolved_contract_ops(&inferred_ty) {
+                            tr_ok = false;
+                            tr_errors.push(format!(
+                                "{e}: strict shape mode forbids unresolved contract op signatures"
+                            ));
                         }
                     }
                     Err(pe) => {
@@ -352,6 +355,19 @@ fn declared_eff_row(ty: &Ty) -> Option<&EffRow> {
         Ty::Fn { eff, .. } => Some(eff),
         Ty::Prog { eff, .. } => Some(eff),
         _ => None,
+    }
+}
+
+fn has_unresolved_contract_ops(ty: &Ty) -> bool {
+    match ty {
+        Ty::Msg { op, payload } => op.is_none() || has_unresolved_contract_ops(payload),
+        Ty::Fn { param, ret, .. } => {
+            has_unresolved_contract_ops(param) || has_unresolved_contract_ops(ret)
+        }
+        Ty::Prog { ret, .. } => has_unresolved_contract_ops(ret),
+        Ty::Rec { fields, .. } => fields.iter().any(|(_, v)| has_unresolved_contract_ops(v)),
+        Ty::Contract { methods, .. } => methods.iter().any(|(_, v)| has_unresolved_contract_ops(v)),
+        _ => false,
     }
 }
 

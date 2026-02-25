@@ -356,6 +356,14 @@ enum PkgCmd {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
+
+        /// Path to package.toml for strict-sound type/effect diagnostics.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Enforce strict-sound type/effect checks and surface machine-readable diagnostics.
+        #[arg(long)]
+        strict_sound: bool,
     },
 
     /// Diagnose workspace/package lock and capability configuration with deterministic fix hints.
@@ -363,6 +371,14 @@ enum PkgCmd {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
         lock: PathBuf,
+
+        /// Path to package.toml for strict-sound type/effect diagnostics.
+        #[arg(long, default_value = "package.toml")]
+        pkg: PathBuf,
+
+        /// Enforce strict-sound type/effect checks and include diagnostics in doctor report.
+        #[arg(long)]
+        strict_sound: bool,
     },
 
     /// List requirements and locked entries from `genesis.lock`.

@@ -47,6 +47,7 @@ compile_error!(
 mod cli_json;
 mod cli_schema;
 mod cmd_agent_index;
+mod cmd_agent_plan;
 mod cmd_commit;
 mod cmd_core;
 mod cmd_debug;
@@ -92,6 +93,7 @@ mod warm_session;
 use cli_json::*;
 use cli_schema::cmd_cli_schema;
 use cmd_agent_index::cmd_agent_index;
+use cmd_agent_plan::cmd_agent_plan;
 use cmd_commit::cmd_commit;
 use cmd_core::*;
 use cmd_debug::cmd_debug;
@@ -361,6 +363,11 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
         Cmd::Warm { prime_selfhost } => cmd_warm(cli, flavor, *prime_selfhost),
         Cmd::CliSchema => cmd_cli_schema(cli),
         Cmd::AgentIndex => cmd_agent_index(cli),
+        Cmd::AgentPlan {
+            intent,
+            caps,
+            max_workflows,
+        } => cmd_agent_plan(cli, intent, caps, *max_workflows),
         Cmd::Keygen { out } => cmd_keygen(cli, out),
         Cmd::Sign {
             pkg,
@@ -369,7 +376,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             signatures,
         } => cmd_sign(cli, pkg, key, acceptance.as_deref(), signatures.as_deref()),
         Cmd::TransparencyVerify { pkg } => cmd_transparency_verify(cli, pkg),
-        Cmd::Typecheck { pkg } => cmd_typecheck(cli, pkg),
+        Cmd::Typecheck { pkg, strict_sound } => cmd_typecheck(cli, pkg, *strict_sound),
         Cmd::Optimize {
             file,
             out,

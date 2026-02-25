@@ -32,8 +32,8 @@ pub(crate) fn build_pkg_ai_report(
             frozen,
             strict,
         } => Some(build_install_report(caps, lock, *frozen, *strict, value)),
-        PkgCmd::Verify { lock } => Some(build_verify_report(caps, lock, value)),
-        PkgCmd::Doctor { lock } => Some(build_doctor_ai_report(caps, lock)),
+        PkgCmd::Verify { lock, .. } => Some(build_verify_report(caps, lock, value)),
+        PkgCmd::Doctor { lock, .. } => Some(build_doctor_ai_report(caps, lock)),
         PkgCmd::Env {
             profile,
             lock,
@@ -630,12 +630,16 @@ mod tests {
             (
                 PkgCmd::Verify {
                     lock: PathBuf::from("genesis.lock"),
+                    pkg: PathBuf::from("package.toml"),
+                    strict_sound: false,
                 },
                 "genesis/pkg-verify-report-v0.1",
             ),
             (
                 PkgCmd::Doctor {
                     lock: PathBuf::from("genesis.lock"),
+                    pkg: PathBuf::from("package.toml"),
+                    strict_sound: false,
                 },
                 "genesis/pkg-doctor-ai-report-v0.1",
             ),

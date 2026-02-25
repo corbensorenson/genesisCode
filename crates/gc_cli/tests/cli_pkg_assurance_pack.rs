@@ -346,6 +346,57 @@ fn gcpm_assurance_pack_emits_deterministic_profile_gated_bundle() {
         panic!("assurance pack :independence-attestations must be vector");
     };
     assert_eq!(attestations.len(), 1);
+    let bindings = m
+        .get(&TermOrdKey(Term::symbol(":external-control-bindings")))
+        .expect("assurance pack :external-control-bindings");
+    let Term::Map(bindings_m) = bindings else {
+        panic!(":external-control-bindings must be map");
+    };
+    assert_eq!(
+        bindings_m.get(&TermOrdKey(Term::symbol(":contract"))),
+        Some(&Term::Str(
+            "genesis/assurance-external-control-bindings-v0.1".to_string()
+        ))
+    );
+    assert_eq!(
+        bindings_m.get(&TermOrdKey(Term::symbol(":assurance-profile"))),
+        Some(&Term::symbol(":do178c-dal-a"))
+    );
+    let Term::Vector(objective_bindings) = bindings_m
+        .get(&TermOrdKey(Term::symbol(":objective-bindings")))
+        .expect(":objective-bindings")
+    else {
+        panic!(":objective-bindings must be vector");
+    };
+    assert!(
+        !objective_bindings.is_empty(),
+        "expected objective bindings in external control map"
+    );
+    let Term::Map(release_artifacts) = bindings_m
+        .get(&TermOrdKey(Term::symbol(":release-artifacts")))
+        .expect(":release-artifacts")
+    else {
+        panic!(":release-artifacts must be map");
+    };
+    assert_eq!(
+        release_artifacts.get(&TermOrdKey(Term::symbol(":trace-artifact"))),
+        Some(&Term::Str(trace_h.clone()))
+    );
+    assert_eq!(
+        release_artifacts.get(&TermOrdKey(Term::symbol(":qualification-artifact"))),
+        Some(&Term::Str(qualification_h.clone()))
+    );
+    let Term::Int(unresolved_open_count) = bindings_m
+        .get(&TermOrdKey(Term::symbol(":unresolved-open-count")))
+        .expect(":unresolved-open-count")
+    else {
+        panic!(":unresolved-open-count must be int");
+    };
+    assert_eq!(
+        unresolved_open_count.to_string(),
+        "0",
+        "do178c-dal-a control closures should currently have no open unresolved controls"
+    );
 
     assert!(bundle_dir.join("assurance_pack.gc").exists());
     assert!(bundle_dir.join("requirements_trace.gc").exists());

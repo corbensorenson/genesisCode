@@ -320,7 +320,7 @@ fn strict_effects_reject_unknown_effect_ops() {
 }
 
 #[test]
-fn strict_effects_require_closed_declared_row_for_task_exports() {
+fn strict_effects_require_closed_declared_row_for_exports() {
     let src = r#"
           (def ::meta
             '{
@@ -344,10 +344,39 @@ fn strict_effects_require_closed_declared_row_for_task_exports() {
     let r = typecheck_package(&[m]);
     assert!(!r.ok);
     assert!(
-        r.errors.iter().any(|e| e.contains(
-            "strict effect mode requires a closed declared effect row for concurrent task exports"
-        )),
+        r.errors
+            .iter()
+            .any(|e| e.contains("strict effect mode requires a closed declared effect row")),
         "expected strict closed-row error, got {:?}",
+        r.errors
+    );
+}
+
+#[test]
+fn strict_shapes_reject_unresolved_contract_op_signatures() {
+    let src = r#"
+          (def ::meta
+            '{
+              :exports [m::send]
+              :caps []
+              :strict-shapes true
+              :types {m::send (Fn Symbol (Msg Int) (Eff [] nil))}})
+          (def m::send (fn (op) (core/msg::make op 1)))
+          m::send
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let m = ModuleForTypecheck {
+        path: "strict-shapes.gc".to_string(),
+        meta: extract_meta(&forms),
+        forms,
+    };
+    let r = typecheck_package(&[m]);
+    assert!(!r.ok);
+    assert!(
+        r.errors
+            .iter()
+            .any(|e| e.contains("strict shape mode forbids unresolved contract op signatures")),
+        "expected unresolved contract-op signature error, got {:?}",
         r.errors
     );
 }

@@ -26,7 +26,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                 }
                 pkg_task_runner::WorkspaceTaskAction::Pack { pkg } => cmd_pack(cli, &pkg)?,
                 pkg_task_runner::WorkspaceTaskAction::Typecheck { pkg } => {
-                    cmd_typecheck(cli, &pkg)?
+                    cmd_typecheck(cli, &pkg, false)?
                 }
                 pkg_task_runner::WorkspaceTaskAction::Run {
                     file,

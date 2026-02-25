@@ -8,6 +8,12 @@ pub(crate) struct DoctorReport {
     pub(crate) json: serde_json::Value,
 }
 
+pub(crate) struct StrictSoundDoctorInput {
+    pub(crate) pkg: String,
+    pub(crate) ok: bool,
+    pub(crate) error: Option<String>,
+}
+
 struct LockDrift {
     missing_locked: Vec<String>,
     stale_locked: Vec<String>,
@@ -21,6 +27,7 @@ pub(crate) fn build_pkg_doctor_report(
     lock: &Path,
     base_ok: bool,
     exit_code: u8,
+    strict_sound: Option<&StrictSoundDoctorInput>,
 ) -> DoctorReport {
     let mut checks = Vec::<serde_json::Value>::new();
     let mut fixes = Vec::<serde_json::Value>::new();
@@ -176,6 +183,41 @@ pub(crate) fn build_pkg_doctor_report(
                     lock.display()
                 ),
                 "why": "create locked entries for all requirements before install/verify"
+            }));
+        }
+    }
+
+    if let Some(strict) = strict_sound {
+        checks.push(serde_json::json!({
+            "id": "typecheck.strict-sound",
+            "ok": strict.ok,
+            "severity": if strict.ok { "info" } else { "error" },
+            "message": if strict.ok {
+                "strict-sound type/effect diagnostics passed"
+            } else {
+                "strict-sound type/effect diagnostics failed"
+            },
+            "pkg": strict.pkg.as_str(),
+            "error": strict.error.as_deref()
+        }));
+        if !strict.ok {
+            fixes.push(serde_json::json!({
+                "id": "fix-strict-sound",
+                "action": {
+                    "op": "gcpm.verify",
+                    "args": {
+                        "lock": lock.display().to_string(),
+                        "pkg": strict.pkg.as_str(),
+                        "strict_sound": true
+                    }
+                },
+                "command": format!(
+                    "genesis gcpm --caps {} verify --lock {} --pkg {} --strict-sound",
+                    caps.display(),
+                    lock.display(),
+                    strict.pkg.as_str()
+                ),
+                "why": "enforce closed effect rows and resolved contract op signatures for exported APIs"
             }));
         }
     }

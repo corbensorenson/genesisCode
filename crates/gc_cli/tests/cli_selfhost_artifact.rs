@@ -410,6 +410,72 @@ fn selfhost_artifact_thresholds_accept_exact_observed_stage2_coverage() {
 }
 
 #[test]
+fn selfhost_artifact_default_policy_enforces_non_zero_stage2_minima() {
+    let td = tempdir().unwrap();
+    let artifact = td.path().join("policy-defaults.gc");
+
+    let out = cargo_bin_cmd!("genesis")
+        .args([
+            "selfhost-artifact",
+            "--out",
+            artifact.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    assert!(v["ok"].as_bool().unwrap_or(false), "{v}");
+    let data = v.get("data").expect("data object");
+    let min_supported = data["min_stage2_supported_modules"]
+        .as_u64()
+        .expect("min_stage2_supported_modules");
+    let min_validated = data["min_stage2_validated_modules"]
+        .as_u64()
+        .expect("min_stage2_validated_modules");
+    let policy_supported = data["policy_min_stage2_supported_modules"]
+        .as_u64()
+        .expect("policy_min_stage2_supported_modules");
+    let policy_validated = data["policy_min_stage2_validated_modules"]
+        .as_u64()
+        .expect("policy_min_stage2_validated_modules");
+    assert!(min_supported > 0, "expected non-zero supported minimum");
+    assert!(min_validated > 0, "expected non-zero validated minimum");
+    assert_eq!(
+        data["requested_min_stage2_supported_modules"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(
+        data["requested_min_stage2_validated_modules"].as_u64(),
+        Some(0)
+    );
+    assert_eq!(min_supported, policy_supported);
+    assert_eq!(min_validated, policy_validated);
+    assert!(data["stage2_requirements_ok"].as_bool().unwrap_or(false));
+
+    let artifact_s = fs::read_to_string(&artifact).unwrap();
+    let term = parse_term(&artifact_s).unwrap();
+    let Term::Map(root) = term else {
+        panic!("artifact must be a map");
+    };
+    let req = map_get(&root, ":stage2-requirements").expect("requirements map");
+    let Term::Map(req_map) = req else {
+        panic!(":stage2-requirements must be map");
+    };
+    assert!(matches!(
+        map_get(req_map, ":min-supported-modules"),
+        Some(Term::Int(i)) if i.to_string().parse::<u64>().ok().is_some_and(|v| v > 0)
+    ));
+    assert!(matches!(
+        map_get(req_map, ":min-validated-modules"),
+        Some(Term::Int(i)) if i.to_string().parse::<u64>().ok().is_some_and(|v| v > 0)
+    ));
+    assert!(matches!(map_get(req_map, ":ok"), Some(Term::Bool(true))));
+}
+
+#[test]
 fn selfhost_artifact_thresholds_fail_when_minimums_exceed_observed_stage2_coverage() {
     let td = tempdir().unwrap();
     let failing_artifact = td.path().join("failing.gc");

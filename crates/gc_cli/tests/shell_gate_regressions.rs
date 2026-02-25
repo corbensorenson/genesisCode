@@ -303,6 +303,21 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         health.contains("check_full_selfhost_cutover_profile.sh"),
         "release/full selfhost lanes must validate full-selfhost cutover profile contract"
     );
+    assert!(
+        health.contains("GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000"),
+        "upgrade-plan health script must pin stricter prepush wall-time budget defaults"
+    );
+    assert!(
+        health.contains("enforce_prepush_history_budget")
+            && health.contains("GENESIS_HEALTH_PREPUSH_MIN_HISTORY")
+            && health.contains("GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY"),
+        "upgrade-plan health script must enforce history-aware prepush runtime budgets"
+    );
+    assert!(
+        health.contains("GENESIS_HEALTH_STRICT_DISK_POLICY:-fail")
+            && health.contains("strict profile overrides GENESIS_HEALTH_STRICT_DISK_POLICY"),
+        "strict profiles must default and resolve to fail-closed disk preflight policy"
+    );
 }
 
 #[test]

@@ -33,12 +33,7 @@ Legend:
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
 - `P0.1` - gcpm remote dependency closure still constrained by local-first lock/install behavior.
 - `P0.2` - host ABI lacks first-class native FFI family (`host/ffi::*`) for zero-copy interop.
-- `P0.3` - release workflows still depend on gradual type/effect lane; strict-sound closure missing.
-- `P0.4` - no deterministic intent-to-workflow planner contract in core CLI/runtime.
-- `P1.1` - full prepush profile throughput + disk-headroom behavior still slows autonomous CI loops.
-- `P1.2` - stage2 optimizer coverage floors are not enforced by default artifact policy.
 - `P1.3` - deterministic external ecosystem bridge into GenesisPkg is not yet first-class.
-- `P1.4` - assurance crosswalk retains external-control integration gap for regulated domains.
 - `P2.1` - agent reference workflow corpus needs wider domain expansion for "build anything" breadth.
 - `P2.2` - cross-layer time-travel observability is not yet unified end-to-end.
 

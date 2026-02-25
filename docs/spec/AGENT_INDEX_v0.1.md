@@ -70,3 +70,51 @@ genesis --json agent-index
 - Output must be deterministic for identical repository state.
 - `reference_workflows` are sorted lexicographically by workflow directory name.
 - Missing optional indices are represented via `loaded=false` and `index=null` rather than hard failure.
+
+## Agent Plan v0.1
+
+`genesis agent-plan` consumes a structured intent contract and emits a deterministic workflow DAG
+that is policy-checked before execution.
+
+### Command
+
+```bash
+genesis --json agent-plan --intent <agent-intent.json|-> --caps <caps.toml> [--max-workflows <n>]
+```
+
+### Envelope
+
+- success/failure `kind`: `genesis/agent-plan-v0.1`
+- `ok = false` indicates planner closure failure (intent mismatch, policy denial, or missing workflow scripts)
+
+### Intent contract (`genesis/agent-intent-v0.1`)
+
+Expected JSON fields:
+
+- `schema` (optional string, recommended: `genesis/agent-intent-v0.1`)
+- `goal` (string, required)
+- `domains` (optional vector<string>)
+- `required_workflows` (optional vector<string>)
+- `exclude_workflows` (optional vector<string>)
+- `required_ops` (optional vector<string>)
+- `max_workflows` (optional int)
+
+### Success/failure payload
+
+`data` fields include:
+
+- `plan`:
+  - `selected_workflows`
+  - `nodes` + `edges` deterministic DAG
+  - `required_ops`
+  - `policy` precheck results (`ok`, `denied_ops`, optional `error`)
+  - `plan_hash_blake3`
+- `execution`:
+  - `kind = genesis/agent-workflow-dag-v0.1`
+  - deterministic step list and expected `effect_log_op`
+- `lineage`:
+  - `intent_hash_blake3`, `catalog_hash_blake3`, `plan_hash_blake3`
+  - canonical evidence targets for replay/parity gates
+- `failure_taxonomy`:
+  - deterministic planner failure objects with `code`, `message`, `repair_hints`, optional `context`
+- `repair_hints`: deduplicated top-level remediation hints for autonomous retry loops

@@ -290,6 +290,21 @@ enum Cmd {
     /// Emit AI-facing planning index (CLI schema + capability indices + workflow pointers).
     AgentIndex,
 
+    /// Plan a deterministic workflow DAG from structured agent intent with policy prechecks.
+    AgentPlan {
+        /// Intent contract path (`genesis/agent-intent-v0.1` JSON). Use `-` for stdin.
+        #[arg(long)]
+        intent: PathBuf,
+
+        /// Capability policy used for pre-execution allowlist checks.
+        #[arg(long)]
+        caps: PathBuf,
+
+        /// Maximum number of workflows to include in the emitted plan.
+        #[arg(long, default_value_t = 4)]
+        max_workflows: usize,
+    },
+
     /// Generate a new Ed25519 signing key.
     Keygen {
         /// Output key TOML path.
@@ -323,11 +338,15 @@ enum Cmd {
         pkg: PathBuf,
     },
 
-    /// Run the (gradual) type/effect checker for a package.
+    /// Run the type/effect checker for a package.
     Typecheck {
         /// Path to package.toml
         #[arg(long)]
         pkg: PathBuf,
+
+        /// Enforce strict-sound type/effect checks (fail closed on unknown/open effects).
+        #[arg(long)]
+        strict_sound: bool,
     },
 
     /// Optimize a CoreForm module/program (pure subset only).

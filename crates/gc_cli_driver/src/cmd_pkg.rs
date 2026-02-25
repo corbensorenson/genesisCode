@@ -2,6 +2,15 @@ use super::*;
 mod frontend_dispatch;
 mod local_workspace_ops;
 
+#[derive(Debug, Clone)]
+struct StrictSoundCheckResult {
+    requested: bool,
+    pkg: PathBuf,
+    ok: bool,
+    report_coreform: Option<String>,
+    error: Option<String>,
+}
+
 pub(super) fn cmd_pkg(
     cli: &Cli,
     flavor: Flavor,
@@ -76,6 +85,17 @@ pub(super) fn cmd_pkg(
         exit_code = EX_VERIFY;
     }
 
+    let strict_sound = run_pkg_strict_sound_check(cli, cmd, &frontend);
+    if let Some(strict) = &strict_sound
+        && strict.requested
+        && !strict.ok
+    {
+        ok = false;
+        if exit_code == EX_OK {
+            exit_code = EX_VERIFY;
+        }
+    }
+
     let (value, value_format) = render_value_for_cli(&ctx, &contract_value);
     if !ok
         && exit_code == EX_EVAL
@@ -114,6 +134,11 @@ pub(super) fn cmd_pkg(
             PkgCmd::Install { .. } | PkgCmd::Verify { .. } => {
                 if ok {
                     "ok\n".to_string()
+                } else if let Some(strict) = &strict_sound
+                    && strict.requested
+                    && !strict.ok
+                {
+                    strict_sound_stdout(strict)
                 } else {
                     format!("{value}\n")
                 }
@@ -121,6 +146,11 @@ pub(super) fn cmd_pkg(
             PkgCmd::Doctor { .. } => {
                 if ok {
                     "ok\n".to_string()
+                } else if let Some(strict) = &strict_sound
+                    && strict.requested
+                    && !strict.ok
+                {
+                    strict_sound_stdout(strict)
                 } else {
                     format!("{value}\n")
                 }
@@ -149,7 +179,18 @@ pub(super) fn cmd_pkg(
         }
     };
 
-    let doctor_report = if let PkgCmd::Doctor { lock } = cmd {
+    let strict_sound_doctor = strict_sound.as_ref().and_then(|strict| {
+        if strict.requested {
+            Some(pkg_doctor::StrictSoundDoctorInput {
+                pkg: strict.pkg.display().to_string(),
+                ok: strict.ok,
+                error: strict.error.clone(),
+            })
+        } else {
+            None
+        }
+    });
+    let doctor_report = if let PkgCmd::Doctor { lock, .. } = cmd {
         Some(pkg_doctor::build_pkg_doctor_report(
             &ctx,
             &contract_value,
@@ -157,6 +198,7 @@ pub(super) fn cmd_pkg(
             lock,
             ok,
             exit_code,
+            strict_sound_doctor.as_ref(),
         ))
     } else {
         None
@@ -178,6 +220,21 @@ pub(super) fn cmd_pkg(
         "value": value,
         "value_format": value_format,
     });
+    if let Some(strict) = &strict_sound
+        && strict.requested
+        && let Some(obj) = data.as_object_mut()
+    {
+        obj.insert(
+            "strict_sound".to_string(),
+            serde_json::json!({
+                "requested": strict.requested,
+                "pkg": strict.pkg.display().to_string(),
+                "ok": strict.ok,
+                "error": strict.error,
+                "report_coreform": strict.report_coreform,
+            }),
+        );
+    }
     if let Some(report) = doctor_report
         && let Some(obj) = data.as_object_mut()
     {
@@ -238,6 +295,64 @@ fn normalize_pkg_contract_value(cmd: &PkgCmd, value: &Value) -> Value {
     out.entry(gc_coreform::TermOrdKey(Term::symbol(":rationale")))
         .or_insert(Term::Vector(Vec::new()));
     Value::Data(Term::Map(out))
+}
+
+fn run_pkg_strict_sound_check(
+    cli: &Cli,
+    cmd: &PkgCmd,
+    frontend: &gc_obligations::CoreformFrontend,
+) -> Option<StrictSoundCheckResult> {
+    let (pkg, requested) = match cmd {
+        PkgCmd::Verify {
+            pkg, strict_sound, ..
+        }
+        | PkgCmd::Doctor {
+            pkg, strict_sound, ..
+        } => (pkg.clone(), *strict_sound),
+        _ => return None,
+    };
+    if !requested {
+        return None;
+    }
+
+    match gc_obligations::typecheck_package_with_step_limit_and_frontend(
+        &pkg,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+        frontend.clone(),
+        true,
+    ) {
+        Ok(report) => Some(StrictSoundCheckResult {
+            requested: true,
+            pkg,
+            ok: report.ok,
+            report_coreform: Some(report.report_coreform),
+            error: None,
+        }),
+        Err(e) => Some(StrictSoundCheckResult {
+            requested: true,
+            pkg,
+            ok: false,
+            report_coreform: None,
+            error: Some(e.to_string()),
+        }),
+    }
+}
+
+fn strict_sound_stdout(strict: &StrictSoundCheckResult) -> String {
+    if let Some(report) = &strict.report_coreform {
+        format!("{report}\n")
+    } else if let Some(error) = &strict.error {
+        format!(
+            "strict-sound diagnostics failed for {}: {error}\n",
+            strict.pkg.display()
+        )
+    } else {
+        format!(
+            "strict-sound diagnostics failed for {}\n",
+            strict.pkg.display()
+        )
+    }
 }
 
 fn cmd_pkg_local_workspace_ops(

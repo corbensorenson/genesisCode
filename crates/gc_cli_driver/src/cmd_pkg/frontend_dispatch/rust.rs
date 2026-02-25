@@ -82,12 +82,12 @@ pub(super) fn build(
             "genesis/pkg-install-v0.1",
             "pkg-install",
         ),
-        PkgCmd::Verify { lock } => (
+        PkgCmd::Verify { lock, .. } => (
             mk_pkg_verify_program(lock),
             "genesis/pkg-verify-v0.1",
             "pkg-verify",
         ),
-        PkgCmd::Doctor { lock } => (
+        PkgCmd::Doctor { lock, .. } => (
             mk_pkg_verify_program(lock),
             "genesis/pkg-doctor-v0.1",
             "pkg-doctor",

@@ -42,6 +42,17 @@ impl AssuranceProfile {
         }
     }
 
+    pub(super) fn as_name(self) -> &'static str {
+        match self {
+            Self::Custom => "custom",
+            Self::Do178cDalA => "do178c-dal-a",
+            Self::Do178cDalB => "do178c-dal-b",
+            Self::NasaClassA => "nasa-class-a",
+            Self::NasaClassB => "nasa-class-b",
+            Self::Iec62304ClassC => "iec62304-class-c",
+        }
+    }
+
     pub(super) fn requirements(self) -> AssuranceRequirements {
         match self {
             Self::Custom => AssuranceRequirements {

@@ -61,6 +61,11 @@ fn agent_index_emits_expected_schema_and_sources() {
         Some("docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md")
     );
     assert_eq!(
+        json.pointer("/data/docs/agent_plan")
+            .and_then(Value::as_str),
+        Some("docs/spec/AGENT_INDEX_v0.1.md#agent-plan-v01")
+    );
+    assert_eq!(
         json.pointer("/data/docs/write_genesiscode_skill_pack")
             .and_then(Value::as_str),
         Some("docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md")

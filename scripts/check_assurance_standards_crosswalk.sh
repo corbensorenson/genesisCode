@@ -9,6 +9,8 @@ CROSSWALK_JSON="docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"
 CROSSWALK_MD="docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md"
 PROFILE_DOC="docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md"
 BUNDLE_DOC="docs/spec/GCPM_BUNDLE_v0.1.md"
+REPORT_PATH="${GENESIS_ASSURANCE_STANDARDS_CROSSWALK_REPORT:-.genesis/perf/assurance_standards_crosswalk_report.json}"
+HISTORY_PATH="${GENESIS_ASSURANCE_STANDARDS_CROSSWALK_HISTORY:-.genesis/perf/assurance_standards_crosswalk_history.jsonl}"
 
 for path in "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$BUNDLE_DOC"; do
   [[ -f "$path" ]] || {
@@ -17,7 +19,8 @@ for path in "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$B
   }
 done
 
-python3 - "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$BUNDLE_DOC" <<'PY'
+python3 - "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$BUNDLE_DOC" "$REPORT_PATH" "$HISTORY_PATH" <<'PY'
+import datetime as dt
 import hashlib
 import json
 import pathlib
@@ -33,6 +36,8 @@ crosswalk_json_path = pathlib.Path(sys.argv[2])
 crosswalk_md_path = pathlib.Path(sys.argv[3])
 profile_doc_path = pathlib.Path(sys.argv[4])
 bundle_doc_path = pathlib.Path(sys.argv[5])
+report_path = pathlib.Path(sys.argv[6])
+history_path = pathlib.Path(sys.argv[7])
 root = pathlib.Path.cwd()
 
 profiles = tomllib.loads(profile_path.read_text(encoding="utf-8"))
@@ -99,6 +104,8 @@ if not isinstance(entries, list) or not entries:
 
 seen_profiles = set()
 unresolved_count = 0
+unresolved_open_count = 0
+unresolved_status_counts = {}
 allowed_status = {"covered-by-toolchain", "partial", "external"}
 allowed_unresolved_status = {"open", "program-backlog", "closed"}
 for entry in entries:
@@ -216,7 +223,11 @@ for entry in entries:
                     raise SystemExit(
                         f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` has invalid immutable ref `{ref}`"
                     )
+        status = str(control["status"])
         unresolved_count += 1
+        unresolved_status_counts[status] = unresolved_status_counts.get(status, 0) + 1
+        if status != "closed":
+            unresolved_open_count += 1
 
 missing_profiles = sorted(regulated_profiles - seen_profiles)
 extra_profiles = sorted(seen_profiles - regulated_profiles)
@@ -272,12 +283,29 @@ if crosswalk_json_path.as_posix() not in profile_doc:
 bundle_doc = bundle_doc_path.read_text(encoding="utf-8")
 for path in (crosswalk_md_path.as_posix(), crosswalk_json_path.as_posix()):
     if path not in bundle_doc:
-        raise SystemExit(
-            f"assurance-standards-crosswalk: GCPM bundle must include {path}"
-        )
+        raise SystemExit(f"assurance-standards-crosswalk: GCPM bundle must include {path}")
+
+timestamp_utc = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+report = {
+    "kind": "genesis/assurance-standards-crosswalk-report-v0.1",
+    "ok": True,
+    "timestamp_utc": timestamp_utc,
+    "crosswalk_json": crosswalk_json_path.as_posix(),
+    "crosswalk_md": crosswalk_md_path.as_posix(),
+    "profile_file": profile_path.as_posix(),
+    "profile_count": len(seen_profiles),
+    "unresolved_control_count": unresolved_count,
+    "unresolved_open_count": unresolved_open_count,
+    "unresolved_status_counts": unresolved_status_counts,
+}
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+history_path.parent.mkdir(parents=True, exist_ok=True)
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(json.dumps(report, sort_keys=True) + "\n")
 
 print(
     "assurance-standards-crosswalk: ok "
-    f"(profiles={len(seen_profiles)} unresolved_controls={unresolved_count})"
+    f"(profiles={len(seen_profiles)} unresolved_controls={unresolved_count} unresolved_open={unresolved_open_count})"
 )
 PY

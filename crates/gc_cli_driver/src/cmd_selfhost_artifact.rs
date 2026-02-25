@@ -39,6 +39,8 @@ pub(super) fn cmd_selfhost_artifact(
     struct Stage2SeedIndex {
         generated_by: Option<String>,
         modules: std::collections::BTreeMap<String, Stage2Seed>,
+        stage2_supported_modules: Option<u64>,
+        stage2_validated_modules: Option<u64>,
     }
 
     fn load_stage2_seed_index(path: &Path) -> Option<Stage2SeedIndex> {
@@ -53,6 +55,21 @@ pub(super) fn cmd_selfhost_artifact(
             Some(Term::Str(s)) => Some(s.clone()),
             _ => None,
         };
+        let parse_u64 =
+            |m: &std::collections::BTreeMap<TermOrdKey, Term>, key: &str| -> Option<u64> {
+                match m.get(&TermOrdKey(Term::symbol(key))) {
+                    Some(Term::Int(i)) => i.to_string().parse::<u64>().ok(),
+                    _ => None,
+                }
+            };
+        let (stage2_supported_modules, stage2_validated_modules) =
+            match root.get(&TermOrdKey(Term::symbol(":stage2-summary"))) {
+                Some(Term::Map(summary)) => (
+                    parse_u64(summary, ":supported-modules"),
+                    parse_u64(summary, ":validated-modules"),
+                ),
+                _ => (None, None),
+            };
         let modules = match root.get(&TermOrdKey(Term::symbol(":modules"))) {
             Some(Term::Vector(v)) => v,
             _ => return None,
@@ -152,6 +169,8 @@ pub(super) fn cmd_selfhost_artifact(
         Some(Stage2SeedIndex {
             generated_by,
             modules: out,
+            stage2_supported_modules,
+            stage2_validated_modules,
         })
     }
 
@@ -183,7 +202,7 @@ pub(super) fn cmd_selfhost_artifact(
         Ok(out)
     }
 
-    let (out_buf, min_stage2_supported_modules, min_stage2_validated_modules) =
+    let (out_buf, requested_min_stage2_supported_modules, requested_min_stage2_validated_modules) =
         if recover_missing_artifact {
             (
                 out.to_path_buf(),
@@ -283,6 +302,49 @@ pub(super) fn cmd_selfhost_artifact(
     } else {
         selfhost_coreform_toolchain_v1_sources()
             .map_err(|e| cli_err(EX_INTERNAL, "selfhost/sources", format!("{e}")))?
+    };
+    let fallback_stage2_floor = (toolchain_sources.len() as u64).max(1);
+    let seed_policy_floor = stage2_seed_index.as_ref().map(|idx| {
+        let mut supported = idx.stage2_supported_modules.unwrap_or(0);
+        let mut validated = idx.stage2_validated_modules.unwrap_or(0);
+        if supported == 0 || validated == 0 {
+            let mut counted_supported = 0u64;
+            let mut counted_validated = 0u64;
+            for seed in idx.modules.values() {
+                if seed.supported {
+                    counted_supported = counted_supported.saturating_add(1);
+                    if seed.ok {
+                        counted_validated = counted_validated.saturating_add(1);
+                    }
+                }
+            }
+            if supported == 0 {
+                supported = counted_supported;
+            }
+            if validated == 0 {
+                validated = counted_validated;
+            }
+        }
+        (
+            supported.max(fallback_stage2_floor),
+            validated.max(fallback_stage2_floor),
+        )
+    });
+    let policy_min_stage2_supported_modules = seed_policy_floor
+        .map(|(supported, _)| supported)
+        .unwrap_or(fallback_stage2_floor);
+    let policy_min_stage2_validated_modules = seed_policy_floor
+        .map(|(_, validated)| validated)
+        .unwrap_or(fallback_stage2_floor);
+    let min_stage2_supported_modules = if requested_min_stage2_supported_modules > 0 {
+        requested_min_stage2_supported_modules
+    } else {
+        policy_min_stage2_supported_modules
+    };
+    let min_stage2_validated_modules = if requested_min_stage2_validated_modules > 0 {
+        requested_min_stage2_validated_modules
+    } else {
+        policy_min_stage2_validated_modules
     };
     let reuse_seed_results = stage2_seed_index.as_ref().is_some_and(|idx| {
         idx.generated_by.as_deref() == Some(&format!("genesis {}", env!("CARGO_PKG_VERSION")))
@@ -669,6 +731,10 @@ pub(super) fn cmd_selfhost_artifact(
             "stage2_validated_modules": stage2_validated,
             "min_stage2_supported_modules": min_stage2_supported_modules,
             "min_stage2_validated_modules": min_stage2_validated_modules,
+            "requested_min_stage2_supported_modules": requested_min_stage2_supported_modules,
+            "requested_min_stage2_validated_modules": requested_min_stage2_validated_modules,
+            "policy_min_stage2_supported_modules": policy_min_stage2_supported_modules,
+            "policy_min_stage2_validated_modules": policy_min_stage2_validated_modules,
             "stage2_requirements_ok": gate_errors.is_empty(),
             "stage2_requirement_errors": gate_errors,
             "stage2_cache_hits": stage2_seed_hits,

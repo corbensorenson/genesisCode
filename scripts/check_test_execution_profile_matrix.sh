@@ -72,6 +72,11 @@ require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BUDGET_MS'
+require_doc_pattern 'GENESIS_HEALTH_PREPUSH_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_PREPUSH_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_TARGET_DIR'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
@@ -132,8 +137,8 @@ if ! grep -Fq 'GENESIS_FULL_CROSS_HOST_BUDGET_MS:-720000' "$FULL_CROSS_HOST_BUDG
   exit 1
 fi
 
-if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-1050000' scripts/check_upgrade_plan_health.sh; then
-  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 1050000ms (17m30s)" >&2
+if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 900000ms (15m)" >&2
   exit 1
 fi
 
@@ -255,6 +260,18 @@ fi
 
 if ! grep -Fq 'profile_runtime_budget.py' "$FULL_CROSS_HOST_BUDGET_SCRIPT"; then
   echo "test-execution-profile-matrix: full cross-host budget script must emit/enforce aggregate runtime report via shared profile budget helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'enforce_prepush_history_budget' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'GENESIS_HEALTH_PREPUSH_MIN_HISTORY' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: prepush profile must enforce history-aware runtime budget controls" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_STRICT_DISK_POLICY:-fail' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: strict disk preflight policy default must remain fail-closed" >&2
   exit 1
 fi
 

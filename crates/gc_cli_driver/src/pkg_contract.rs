@@ -182,9 +182,13 @@ mod tests {
             },
             PkgCmd::Verify {
                 lock: PathBuf::from("genesis.lock"),
+                pkg: PathBuf::from("package.toml"),
+                strict_sound: false,
             },
             PkgCmd::Doctor {
                 lock: PathBuf::from("genesis.lock"),
+                pkg: PathBuf::from("package.toml"),
+                strict_sound: false,
             },
             PkgCmd::List {
                 lock: PathBuf::from("genesis.lock"),

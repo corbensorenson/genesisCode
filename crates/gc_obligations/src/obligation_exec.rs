@@ -358,12 +358,17 @@ pub(super) fn obligation_typecheck(
     modules: &[LoadedModule],
     frontend: &CoreformFrontend,
     limits: KernelLimits,
+    strict_sound: bool,
 ) -> Result<ObligationResult, ObligationError> {
-    let report = typecheck_report_with_frontend(modules, frontend, limits)?;
+    let report = typecheck_report_with_frontend(modules, frontend, limits, strict_sound)?;
     let ok = report.ok;
     let artifact = store.put_term(&report.to_term())?;
     Ok(ObligationResult {
-        name: "core/obligation::typecheck".to_string(),
+        name: if strict_sound {
+            "core/obligation::typecheck-strict".to_string()
+        } else {
+            "core/obligation::typecheck".to_string()
+        },
         ok,
         artifact: Some(artifact),
         errors: report.errors,
@@ -374,18 +379,37 @@ pub(super) fn typecheck_report_with_frontend(
     modules: &[LoadedModule],
     frontend: &CoreformFrontend,
     limits: KernelLimits,
+    strict_sound: bool,
 ) -> Result<gc_types::TypecheckReport, ObligationError> {
     let mut mods = Vec::new();
     for m in modules {
+        let meta = if strict_sound {
+            strict_sound_meta(m.meta.as_ref())
+        } else {
+            m.meta.clone()
+        };
         mods.push(gc_types::ModuleForTypecheck {
             path: m.entry.path.clone(),
             forms: m.forms.clone(),
-            meta: m.meta.clone(),
+            meta,
         });
     }
     let report = gc_types::typecheck_package(&mods);
     verify_selfhost_infer_effects_parity(modules, frontend, limits)?;
     Ok(report)
+}
+
+fn strict_sound_meta(meta: Option<&Term>) -> Option<Term> {
+    let mut map = match meta {
+        Some(Term::Map(m)) => m.clone(),
+        _ => BTreeMap::new(),
+    };
+    map.insert(
+        TermOrdKey(Term::symbol(":strict-effects")),
+        Term::Bool(true),
+    );
+    map.insert(TermOrdKey(Term::symbol(":strict-shapes")), Term::Bool(true));
+    Some(Term::Map(map))
 }
 
 pub(super) fn verify_selfhost_infer_effects_parity(

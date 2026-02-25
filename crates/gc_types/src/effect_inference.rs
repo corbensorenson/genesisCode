@@ -272,7 +272,3 @@ pub fn is_core_task_effect_op(op: &str) -> bool {
             | "core/task::channel-status"
     )
 }
-
-pub fn has_core_task_effect_ops(eff: &InferredEffects) -> bool {
-    eff.ops.iter().any(|op| is_core_task_effect_op(op))
-}

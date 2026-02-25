@@ -401,7 +401,10 @@ pub fn test_package_with_step_limit_and_frontend(
                 &store, &pkg_dir, &manifest, &modules, &test_runs, limits,
             ),
             "core/obligation::typecheck" => {
-                obligation_typecheck(&store, &modules, &frontend, limits)
+                obligation_typecheck(&store, &modules, &frontend, limits, false)
+            }
+            "core/obligation::typecheck-strict" => {
+                obligation_typecheck(&store, &modules, &frontend, limits, true)
             }
             "core/obligation::stage1-validation" => {
                 obligation_stage1_validation(&store, &manifest, &modules)
@@ -447,6 +450,7 @@ pub fn typecheck_package_with_step_limit_and_frontend(
     step_limit: StepLimit,
     mem_limits: MemLimits,
     frontend: CoreformFrontend,
+    strict_sound: bool,
 ) -> Result<PackageTypecheckResult, ObligationError> {
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
@@ -455,7 +459,7 @@ pub fn typecheck_package_with_step_limit_and_frontend(
         mem_limits,
     };
     let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
-    let report = typecheck_report_with_frontend(&modules, &frontend, limits)?;
+    let report = typecheck_report_with_frontend(&modules, &frontend, limits, strict_sound)?;
     let report_coreform = print_term(&report.to_term());
     Ok(PackageTypecheckResult {
         ok: report.ok,

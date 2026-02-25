@@ -37,6 +37,11 @@ Profile packs are executed through a stable deterministic flow:
 3. Emit assurance pack evidence + optional reproducible bundle mirror:
    - `genesis gcpm assurance-pack --pkg <package.toml> --assurance-profile <profile> --snapshot <hex64> [--commit <hex64>] [--policy <hex64>] [--trace <path-or-hash>] [--qualification <path-or-hash>] [--coverage <path-or-hash> ...] [--object-equivalence <path-or-hash>] [--independence-attestation <left:right@attestor> ...] [--independent-verifier-run <path-or-hash> ...] [--bundle-dir <dir>]`
 
+Assurance-pack artifacts include deterministic external-control bindings under
+`:external-control-bindings`, mapping each profile objective/control in
+`docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json` to concrete Genesis evidence
+artifact hashes for export into external QMS/regulator workflows.
+
 When `--bundle-dir` is supplied, output is reproducible and must contain:
 - `assurance_pack.gc`
 - `requirements_trace.gc`

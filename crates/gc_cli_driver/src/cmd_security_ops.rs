@@ -230,7 +230,7 @@ pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, C
     })
 }
 
-pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
+pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path, strict_sound: bool) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
     let result = gc_obligations::typecheck_package_with_step_limit_and_frontend(
@@ -238,6 +238,7 @@ pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         resolved_step_limit(cli),
         resolved_mem_limits(cli),
         frontend,
+        strict_sound,
     )
     .map_err(obligation_err)?;
     let report_s = result.report_coreform;
@@ -248,6 +249,7 @@ pub(super) fn cmd_typecheck(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
         kind: "genesis/typecheck-v0.2",
         data: Some(serde_json::json!({
             "pkg": pkg.display().to_string(),
+            "strict_sound": strict_sound,
             "coreform_frontend": frontend_info,
             "report_coreform": report_s,
         })),

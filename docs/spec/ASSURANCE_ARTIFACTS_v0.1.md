@@ -158,6 +158,37 @@ Required fields:
   - `:runner <string>`
   - `:roles [<symbol> ...]`
   - `:source <string>`
+- `:external-control-bindings` map:
+  - `:contract "genesis/assurance-external-control-bindings-v0.1"`
+  - `:assurance-profile <symbol>`
+  - `:standard-family <string>`
+  - `:workflow-target <string>` deterministic external workflow lane hint
+  - `:crosswalk` map:
+    - `:kind "genesis/assurance-standards-crosswalk-v0.1"`
+    - `:version "0.1"`
+    - `:source "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json"`
+  - `:release-artifacts` map:
+    - `:trace-artifact <hex64>`
+    - `:qualification-artifact <hex64>`
+    - `:coverage-artifacts [<hex64> ...]`
+    - `:object-equivalence-artifact <hex64>|nil`
+    - `:independent-verifier-run-artifacts [<hex64> ...]`
+  - `:objective-bindings` vector of maps:
+    - `:objective-id <string>`
+    - `:status <string>`
+    - `:summary <string>`
+    - `:evidence-refs [<string> ...]`
+    - `:evidence-artifacts [<hex64> ...]`
+  - `:external-controls` vector of maps:
+    - `:control-id <string>`
+    - `:status <string>`
+    - `:summary <string>`
+    - `:owner <string>`
+    - `:tracked-in <string>`
+    - `:closure-bundle <string>|nil`
+    - `:immutable-refs [<string> ...]`
+  - `:unresolved-control-count <int>`
+  - `:unresolved-open-count <int>`
 
 Profile gate behavior:
 - `:do178c-dal-a` and `:nasa-class-a` require at least one independence attestation and minimum `:mcdc` coverage rank.
@@ -166,6 +197,7 @@ Profile gate behavior:
 - regulated profiles (`:do178c-dal-a`, `:do178c-dal-b`, `:nasa-class-a`, `:nasa-class-b`, `:iec62304-class-c`) require:
   - one valid object-equivalence artifact (`genesis/object-equivalence-v0.1`),
   - at least one independent verifier run artifact (`genesis/independent-verifier-run-v0.1`) with `:result :pass`, profile binding, and hash linkage to trace/qualification/object-equivalence artifacts.
+- all profiles require `:external-control-bindings` and the crosswalk source kind/version contract.
 - `:custom` has no additional profile constraints beyond valid trace/qualification artifacts.
 
 Deterministic bundle mirror behavior:

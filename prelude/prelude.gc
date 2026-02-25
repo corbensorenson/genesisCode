@@ -5545,21 +5545,23 @@
                         true
                         (if ((core/eq? name) "core/obligation::typecheck")
                           true
-                          (if ((core/eq? name) "core/obligation::stage1-validation")
+                          (if ((core/eq? name) "core/obligation::typecheck-strict")
                             true
-                            (if ((core/eq? name) "core/obligation::translation-validation")
+                            (if ((core/eq? name) "core/obligation::stage1-validation")
                               true
-                              (if ((core/eq? name) "core/obligation::gfx-golden-images")
+                              (if ((core/eq? name) "core/obligation::translation-validation")
                                 true
-                                (if ((core/eq? name) "core/obligation::gfx-frame-budgets")
+                                (if ((core/eq? name) "core/obligation::gfx-golden-images")
                                   true
-                                  (if ((core/eq? name) "core/obligation::gfx-api-stability")
+                                  (if ((core/eq? name) "core/obligation::gfx-frame-budgets")
                                     true
-                                    (if ((core/eq? name) "core/obligation::lint")
+                                    (if ((core/eq? name) "core/obligation::gfx-api-stability")
                                       true
-                                      (if ((core/eq? name) "core/obligation::ai-style")
+                                      (if ((core/eq? name) "core/obligation::lint")
                                         true
-                                        false))))))))))))))))))))
+                                        (if ((core/eq? name) "core/obligation::ai-style")
+                                          true
+                                          false)))))))))))))))))))))
 
 (def core/obligation::plan-loop
   (fn (obligations)
@@ -6264,4 +6266,3 @@
                                   :conflicts conflicts3})))))))))))))
       ((core/error::make2 "core/type-error")
         "core/cli::semantic-refactor-target-conflicts expects map payload"))))
-

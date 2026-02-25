@@ -30,7 +30,12 @@ HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_pl
 # prepush-standard includes end-to-end agent/runtime/perf conformance lanes with
 # selfhost-strict compilation + microbench suites; keep a bounded default that
 # reflects full strict scope on clean runs.
-PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-1050000}"
+PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000}"
+PREPUSH_HISTORY="${GENESIS_HEALTH_PREPUSH_HISTORY:-.genesis/perf/upgrade_plan_health_prepush_history.jsonl}"
+PREPUSH_BASELINE_HISTORY="${GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY:-}"
+PREPUSH_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_MIN_HISTORY:-3}"
+PREPUSH_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY:-0}"
+PREPUSH_HISTORY_SCOPE_KEY="${GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY:-prepush-standard-v1}"
 HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
 HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-}"
 HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-auto}"
@@ -49,12 +54,10 @@ HEALTH_RECLAIM_MAX_AGE_DAYS="${GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS:-7}"
 HEALTH_MIN_FREE_KB="${GENESIS_HEALTH_MIN_FREE_KB:-1048576}"
 HEALTH_PARALLEL_CARGO_MIN_FREE_KB="${GENESIS_HEALTH_PARALLEL_CARGO_MIN_FREE_KB:-2097152}"
 HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK="${GENESIS_HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK:-1}"
-HEALTH_STRICT_DISK_POLICY="${GENESIS_HEALTH_STRICT_DISK_POLICY:-classify}"
+HEALTH_STRICT_DISK_POLICY="${GENESIS_HEALTH_STRICT_DISK_POLICY:-fail}"
 HEALTH_STRICT_RUNTIME_MIN_FREE_KB="${GENESIS_HEALTH_STRICT_RUNTIME_MIN_FREE_KB:-3145728}"
 HEALTH_DISK_PREFLIGHT_REPORT="${GENESIS_HEALTH_DISK_PREFLIGHT_REPORT:-.genesis/perf/upgrade_plan_health_disk_preflight_report.json}"
-HEALTH_SKIP_DISK_INTENSIVE_GATES=0
 HEALTH_DISK_PREFLIGHT_REASON="ok"
-HEALTH_DISK_PREFLIGHT_SKIPPED_GATES=()
 GPU_DEVICE_CONFORMANCE=""
 NON_CARGO_PARTITION=()
 CARGO_PARTITION=()
@@ -395,6 +398,12 @@ apply_profile_gate_cache_policy() {
   if [[ "$PROFILE" != "prepush-standard" ]]; then
     return 0
   fi
+  if ! declare -p PROFILE_GATES >/dev/null 2>&1; then
+    return 0
+  fi
+  if (( ${#PROFILE_GATES[@]} == 0 )); then
+    return 0
+  fi
   local -a wrapped=()
   local cmd
   for cmd in "${PROFILE_GATES[@]}"; do
@@ -406,21 +415,46 @@ apply_profile_gate_cache_policy() {
 enforce_inner_loop_history_budget() {
   local elapsed_ms="$1"
   local gate_count="$2"
-  local require_min_history=()
-  if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" == "1" ]]; then
-    require_min_history+=(--require-min-history)
-  fi
-  python3 scripts/lib/profile_runtime_budget.py \
-    --profile "$PROFILE" \
-    --kind "genesis/upgrade-plan-health-profile-v0.1" \
-    --report "$HEALTH_PROFILE_REPORT" \
-    --history "$AGENT_INNER_LOOP_HISTORY" \
-    --elapsed-ms "$elapsed_ms" \
-    --budget-ms "$AGENT_INNER_LOOP_BUDGET_MS" \
-    --min-history "$AGENT_INNER_LOOP_MIN_HISTORY" \
-    --baseline-history "$AGENT_INNER_LOOP_BASELINE_HISTORY" \
-    "${require_min_history[@]}" \
+  local -a args=(
+    scripts/lib/profile_runtime_budget.py
+    --profile "$PROFILE"
+    --kind "genesis/upgrade-plan-health-profile-v0.1"
+    --report "$HEALTH_PROFILE_REPORT"
+    --history "$AGENT_INNER_LOOP_HISTORY"
+    --elapsed-ms "$elapsed_ms"
+    --budget-ms "$AGENT_INNER_LOOP_BUDGET_MS"
+    --min-history "$AGENT_INNER_LOOP_MIN_HISTORY"
+    --baseline-history "$AGENT_INNER_LOOP_BASELINE_HISTORY"
     --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"gate_count\":$gate_count,\"wall_budget_ms\":$AGENT_INNER_LOOP_BUDGET_MS}"
+  )
+  if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" == "1" ]]; then
+    args+=(--require-min-history)
+  fi
+  python3 "${args[@]}"
+}
+
+enforce_prepush_history_budget() {
+  local elapsed_ms="$1"
+  local gate_count="$2"
+  local -a args=(
+    scripts/lib/profile_runtime_budget.py
+    --profile "$PROFILE"
+    --kind "genesis/upgrade-plan-health-profile-v0.1"
+    --report "$HEALTH_PROFILE_REPORT"
+    --history "$PREPUSH_HISTORY"
+    --elapsed-ms "$elapsed_ms"
+    --budget-ms "$PREPUSH_WALL_BUDGET_MS"
+    --min-history "$PREPUSH_MIN_HISTORY"
+    --baseline-history "$PREPUSH_BASELINE_HISTORY"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"wall_budget_ms\":$PREPUSH_WALL_BUDGET_MS}"
+  )
+  if [[ -n "$PREPUSH_HISTORY_SCOPE_KEY" ]]; then
+    args+=(--history-scope-key "$PREPUSH_HISTORY_SCOPE_KEY")
+  fi
+  if [[ "$PREPUSH_REQUIRE_MIN_HISTORY" == "1" ]]; then
+    args+=(--require-min-history)
+  fi
+  python3 "${args[@]}"
 }
 
 write_health_profile_report() {
@@ -738,18 +772,6 @@ health_profile_is_strict() {
   [[ "$profile" == "prepush-standard" || "$profile" == "release-full" || "$profile" == "full-selfhost-cutover" ]]
 }
 
-is_disk_intensive_profile_gate() {
-  local cmd="$1"
-  case "$cmd" in
-    *"bash scripts/check_gpu_compute_runtime_profile.sh"*) return 0 ;;
-    *"bash scripts/check_gfx_runtime_profile.sh"*) return 0 ;;
-    *"bash scripts/check_gpu_gfx_headroom_conformance.sh"*) return 0 ;;
-    *"bash scripts/check_gpu_compute_device_conformance.sh"*) return 0 ;;
-    *"bash scripts/check_gpu_device_conformance_lane_parity.sh"*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 write_health_disk_preflight_report() {
   local free_kb="$1"
   local strict_profile="$2"
@@ -892,6 +914,10 @@ if [[ -n "$AGENT_GPU_PROFILE" ]]; then
 fi
 if [[ "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" || "$PROFILE" == "full-selfhost-cutover" ]]; then
   # Strict profiles must fail closed on disk headroom checks, even in local runs.
+  if [[ "$HEALTH_STRICT_DISK_POLICY" != "fail" ]]; then
+    echo "upgrade-plan-health: strict profile overrides GENESIS_HEALTH_STRICT_DISK_POLICY=$HEALTH_STRICT_DISK_POLICY -> fail"
+    HEALTH_STRICT_DISK_POLICY="fail"
+  fi
   export GENESIS_PERF_DISK_STRICT_MODE="1"
   export GENESIS_RUNTIME_BACKEND_MATRIX_DISK_STRICT_MODE="1"
   export GENESIS_DISK_STRICT_MODE="1"
@@ -915,6 +941,14 @@ export GENESIS_GPU_BACKEND_POLICY_DEFAULT="$HEALTH_GPU_BACKEND_POLICY_DEFAULT"
 echo "upgrade-plan-health: gpu backend fallback default policy=$GENESIS_GPU_BACKEND_POLICY_DEFAULT (profile=$PROFILE)"
 if [[ ! "$PREPUSH_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$PREPUSH_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
+if [[ ! "$PREPUSH_MIN_HISTORY" =~ ^[0-9]+$ || "$PREPUSH_MIN_HISTORY" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$PREPUSH_REQUIRE_MIN_HISTORY" != "0" && "$PREPUSH_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
   exit 2
 fi
 if [[ ! "$DEV_FAST_PROFILE_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$DEV_FAST_PROFILE_WALL_BUDGET_MS" -le 0 ]]; then
@@ -993,21 +1027,18 @@ run_health_proactive_reclaim
 FREE_KB_AFTER_RECLAIM="$(free_kb_root)"
 if health_profile_is_strict "$PROFILE" && (( FREE_KB_AFTER_RECLAIM < HEALTH_STRICT_RUNTIME_MIN_FREE_KB )); then
   HEALTH_DISK_PREFLIGHT_REASON="strict-runtime-headroom-low"
-  if [[ "$HEALTH_STRICT_DISK_POLICY" == "fail" ]]; then
-    write_health_disk_preflight_report \
-      "$FREE_KB_AFTER_RECLAIM" \
-      "1" \
-      "0" \
-      "$HEALTH_STRICT_DISK_POLICY" \
-      "$HEALTH_DISK_PREFLIGHT_REASON" \
-      "$HEALTH_DISK_PREFLIGHT_REPORT" \
-      "0" \
-      ""
-    echo "upgrade-plan-health: strict runtime lanes require ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB free, found ${FREE_KB_AFTER_RECLAIM}KB (policy=fail)" >&2
-    exit 1
-  fi
-  HEALTH_SKIP_DISK_INTENSIVE_GATES=1
-  echo "upgrade-plan-health: strict runtime headroom below threshold (${FREE_KB_AFTER_RECLAIM}KB < ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB); classifying and skipping disk-intensive strict lanes (policy=classify)"
+  write_health_disk_preflight_report \
+    "$FREE_KB_AFTER_RECLAIM" \
+    "1" \
+    "0" \
+    "$HEALTH_STRICT_DISK_POLICY" \
+    "$HEALTH_DISK_PREFLIGHT_REASON" \
+    "$HEALTH_DISK_PREFLIGHT_REPORT" \
+    "0" \
+    ""
+  echo "upgrade-plan-health: strict runtime lanes require ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB free, found ${FREE_KB_AFTER_RECLAIM}KB." >&2
+  echo "upgrade-plan-health: remediation: free disk and rerun, or lower strict lane reclaim caps via GENESIS_HEALTH_RECLAIM_MAX_BUILD_KB / GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS." >&2
+  exit 1
 else
   HEALTH_DISK_PREFLIGHT_REASON="ok"
 fi
@@ -1276,34 +1307,15 @@ if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
   )
 fi
 
-if (( HEALTH_SKIP_DISK_INTENSIVE_GATES == 1 )); then
-  filtered_profile_gates=()
-  HEALTH_DISK_PREFLIGHT_SKIPPED_GATES=()
-  for gate_cmd in "${PROFILE_GATES[@]}"; do
-    if is_disk_intensive_profile_gate "$gate_cmd"; then
-      HEALTH_DISK_PREFLIGHT_SKIPPED_GATES+=("$gate_cmd")
-      continue
-    fi
-    filtered_profile_gates+=("$gate_cmd")
-  done
-  PROFILE_GATES=("${filtered_profile_gates[@]}")
-  echo "upgrade-plan-health: skipped ${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]} disk-intensive profile gates due strict disk preflight classification"
-fi
-
-skipped_csv=""
-if (( ${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]} > 0 )); then
-  skipped_csv="$(printf '%s|||' "${HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]}")"
-  skipped_csv="${skipped_csv%|||}"
-fi
 write_health_disk_preflight_report \
   "$FREE_KB_AFTER_RECLAIM" \
   "$(health_profile_is_strict "$PROFILE" && echo 1 || echo 0)" \
-  "${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]}" \
+  "0" \
   "$HEALTH_STRICT_DISK_POLICY" \
   "$HEALTH_DISK_PREFLIGHT_REASON" \
   "$HEALTH_DISK_PREFLIGHT_REPORT" \
   "1" \
-  "$skipped_csv"
+  ""
 
 if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   COMMON_GATES=("$TEST_GATE_OVERRIDE")
@@ -1375,6 +1387,8 @@ fi
 
 if [[ "$PROFILE" == "agent-inner-loop" ]]; then
   enforce_inner_loop_history_budget "$elapsed_ms" "$gate_count"
+elif [[ "$PROFILE" == "prepush-standard" ]]; then
+  enforce_prepush_history_budget "$elapsed_ms" "$gate_count"
 else
   write_health_profile_report \
     "$PROFILE" \

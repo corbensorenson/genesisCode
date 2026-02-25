@@ -364,6 +364,7 @@ pub(super) fn cmd_agent_index(cli: &Cli) -> Result<CmdOut, CliError> {
                 "host_abi_schema": "docs/spec/HOST_ABI.md",
                 "foundation_stdlib": "docs/FOUNDATION_STDLIB_v0.2.md",
                 "agent_index": "docs/spec/AGENT_INDEX_v0.1.md",
+                "agent_plan": "docs/spec/AGENT_INDEX_v0.1.md#agent-plan-v01",
                 "agent_authoring_bundle": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
                 "write_genesiscode_skill_pack": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
                 "write_genesiscode_skill_distribution": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",

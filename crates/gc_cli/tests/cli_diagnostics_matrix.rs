@@ -164,8 +164,22 @@ fn diagnostics_contract_covers_all_cli_command_families() {
     let missing_store = td.path().join("missing-store");
     let key_out_dir = td.path().join("new-key-dir");
     let key_out = key_out_dir.join("agent-key.toml");
+    let agent_intent = td.path().join("agent-intent.json");
+    let agent_caps = td.path().join("agent-caps.toml");
     let registry_root = td.path().join("registry-root");
     fs::create_dir_all(&registry_root).expect("create registry root");
+    fs::write(
+        &agent_intent,
+        r#"{
+  "schema": "genesis/agent-intent-v0.1",
+  "goal": "validate deterministic time-control workflow",
+  "required_workflows": ["agent_time_control_workflow"],
+  "domains": ["time"]
+}
+"#,
+    )
+    .expect("write agent intent");
+    fs::write(&agent_caps, "allow = [\"sys/time::now\"]\n").expect("write agent caps");
 
     let h = hash64();
 
@@ -461,6 +475,18 @@ fn diagnostics_contract_covers_all_cli_command_families() {
             family: "agent-index",
             expect: Expect::Success,
             argv: as_strings(&["--json", "agent-index"]),
+        },
+        Case {
+            family: "agent-plan",
+            expect: Expect::Success,
+            argv: vec![
+                "--json".into(),
+                "agent-plan".into(),
+                "--intent".into(),
+                agent_intent.display().to_string(),
+                "--caps".into(),
+                agent_caps.display().to_string(),
+            ],
         },
         Case {
             family: "selfhost-dashboard",

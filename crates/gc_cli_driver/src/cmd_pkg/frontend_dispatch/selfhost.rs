@@ -198,7 +198,7 @@ pub(super) fn build(
             );
             (prog, "genesis/pkg-install-v0.1", "pkg-install", desc)
         }
-        PkgCmd::Verify { lock } => {
+        PkgCmd::Verify { lock, .. } => {
             let f = env.get("core/cli::pkg-verify-program").ok_or_else(|| {
                 cli_err(
                     EX_INTERNAL,
@@ -237,7 +237,7 @@ pub(super) fn build(
             );
             (prog, "genesis/pkg-verify-v0.1", "pkg-verify", desc)
         }
-        PkgCmd::Doctor { lock } => {
+        PkgCmd::Doctor { lock, .. } => {
             let f = env.get("core/cli::pkg-verify-program").ok_or_else(|| {
                 cli_err(
                     EX_INTERNAL,
