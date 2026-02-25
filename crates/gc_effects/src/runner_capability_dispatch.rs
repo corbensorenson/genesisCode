@@ -261,6 +261,68 @@ fn parse_nonempty_string_array(
     Ok(out)
 }
 
+fn allowlist_contains_exact_or_glob(allowlist: &[String], value: &str) -> bool {
+    allowlist
+        .iter()
+        .any(|rule| allowlist_rule_exact_or_glob_matches(rule, value))
+}
+
+fn allowlist_contains_exact_or_glob_ci(allowlist: &[String], value: &str) -> bool {
+    allowlist
+        .iter()
+        .any(|rule| allowlist_rule_exact_or_glob_matches_ci(rule, value))
+}
+
+fn allowlist_contains_prefix_or_glob(allowlist: &[String], value: &str) -> bool {
+    allowlist
+        .iter()
+        .any(|rule| allowlist_rule_prefix_or_glob_matches(rule, value))
+}
+
+fn allowlist_rule_exact_or_glob_matches(rule: &str, value: &str) -> bool {
+    let trimmed = rule.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    if trimmed == "*" {
+        return true;
+    }
+    if let Some(prefix) = trimmed.strip_suffix('*') {
+        return value.starts_with(prefix);
+    }
+    value == trimmed
+}
+
+fn allowlist_rule_exact_or_glob_matches_ci(rule: &str, value: &str) -> bool {
+    let trimmed = rule.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    if trimmed == "*" {
+        return true;
+    }
+    if let Some(prefix) = trimmed.strip_suffix('*') {
+        return value
+            .to_ascii_lowercase()
+            .starts_with(&prefix.to_ascii_lowercase());
+    }
+    trimmed.eq_ignore_ascii_case(value)
+}
+
+fn allowlist_rule_prefix_or_glob_matches(rule: &str, value: &str) -> bool {
+    let trimmed = rule.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    if trimmed == "*" {
+        return true;
+    }
+    if let Some(prefix) = trimmed.strip_suffix('*') {
+        return value.starts_with(prefix);
+    }
+    value.starts_with(trimmed)
+}
+
 fn parse_url_scheme<'a>(url: &'a str, op: &str, field: &str) -> Result<&'a str, String> {
     let Some((scheme, _rest)) = url.split_once("://") else {
         return Err(format!(

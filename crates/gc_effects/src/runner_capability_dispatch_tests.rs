@@ -2,6 +2,7 @@ use super::{ArtifactBudgetState, backend_unavailable_message, call_capability};
 use crate::CapsPolicy;
 use gc_coreform::{Term, TermOrdKey};
 use gc_kernel::{SealId, Value};
+use std::collections::BTreeMap;
 use tempfile::tempdir;
 
 fn code_from_error(v: Value) -> String {
@@ -323,6 +324,133 @@ wasi_bridge_response = "{:ok true :closed true}"
     };
     assert_eq!(
         close_map.get(&TermOrdKey(Term::symbol(":closed"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
+fn process_allow_programs_supports_wildcard() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["sys/process::exec"]
+
+[op."sys/process::exec"]
+allow_programs = ["*"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :exit 0 :stdout \"ok\" :stderr \"\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (Term::symbol(":program"), Term::Str("any-tool".to_string())),
+        (Term::symbol(":args"), Term::Vector(vec![])),
+    ]);
+    let out = call_capability(
+        "sys/process::exec",
+        &payload,
+        policy.op_policy("sys/process::exec"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(91),
+    )
+    .expect("process exec");
+    let Value::Data(Term::Map(mm)) = out else {
+        panic!("expected process data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":exit"))),
+        Some(&Term::Int(0_i64.into()))
+    );
+}
+
+#[test]
+fn plugin_allowlists_support_wildcard() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/plugin::command"]
+
+[op."host/plugin::command"]
+allow_plugins = ["*"]
+allow_commands = ["*"]
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :status \"ok\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (Term::symbol(":plugin"), Term::symbol("demo.custom")),
+        (Term::symbol(":command"), Term::symbol("lint/run")),
+        (Term::symbol(":payload"), Term::Map(BTreeMap::new())),
+    ]);
+    let out = call_capability(
+        "host/plugin::command",
+        &payload,
+        policy.op_policy("host/plugin::command"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(92),
+    )
+    .expect("plugin command");
+    let Value::Data(Term::Map(mm)) = out else {
+        panic!("expected plugin data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
+fn crypto_allowlists_support_wildcard() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["core/crypto::sign"]
+
+[op."core/crypto::sign"]
+allow_algorithms = ["*"]
+allow_key_ids = ["*"]
+max_message_bytes = 1024
+max_signature_bytes = 1024
+max_context_bytes = 256
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :signature b\"\x01\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (Term::symbol(":algorithm"), Term::symbol("ed25519")),
+        (
+            Term::symbol(":key-id"),
+            Term::Str("tenant/key-1".to_string()),
+        ),
+        (
+            Term::symbol(":message"),
+            Term::Bytes(b"hello".to_vec().into()),
+        ),
+    ]);
+    let out = call_capability(
+        "core/crypto::sign",
+        &payload,
+        policy.op_policy("core/crypto::sign"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(93),
+    )
+    .expect("crypto sign");
+    let Value::Data(Term::Map(mm)) = out else {
+        panic!("expected crypto data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":ok"))),
         Some(&Term::Bool(true))
     );
 }
@@ -962,6 +1090,48 @@ wasi_bridge_response = "{:ok true :sent true}"
     assert_eq!(
         mm.get(&TermOrdKey(Term::symbol(":sent"))),
         Some(&Term::Bool(true))
+    );
+}
+
+#[test]
+fn net_bind_policy_supports_wildcard_host_and_port() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["io/net::tcp-listen"]
+
+[op."io/net::tcp-listen"]
+url_allow = ["*"]
+allow_bind_hosts = ["*"]
+allow_bind_ports = ["*"]
+max_request_bytes = 4096
+wasi_network_profile = "preview2"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :listener-id \"tcp-1\"}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([(
+        Term::symbol(":local"),
+        Term::Str("tcp://127.0.0.1:9001".to_string()),
+    )]);
+    let out = call_capability(
+        "io/net::tcp-listen",
+        &payload,
+        policy.op_policy("io/net::tcp-listen"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(94),
+    )
+    .expect("tcp listen");
+    let Value::Data(Term::Map(mm)) = out else {
+        panic!("expected tcp-listen data map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":listener-id"))),
+        Some(&Term::Str("tcp-1".to_string()))
     );
 }
 

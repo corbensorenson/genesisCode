@@ -148,7 +148,7 @@ fn ffi_policy_allowlist_check(
     key: &str,
     error_tok: SealId,
 ) -> Result<(), Value> {
-    if allowlist.iter().any(|allowed| allowed == value) {
+    if allowlist_contains_exact_or_glob(allowlist, value) {
         return Ok(());
     }
     Err(mk_error(

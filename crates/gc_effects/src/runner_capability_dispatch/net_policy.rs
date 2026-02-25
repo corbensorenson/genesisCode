@@ -73,11 +73,17 @@ fn net_bind_hosts_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<St
     )
 }
 
+#[derive(Debug, Clone)]
+struct BindPortAllowlist {
+    any: bool,
+    ports: Vec<u16>,
+}
+
 fn parse_nonempty_u16_array(
     pol: Option<&OpPolicy>,
     key: &str,
     missing_msg: &str,
-) -> Result<Vec<u16>, String> {
+) -> Result<BindPortAllowlist, String> {
     let Some(pol) = pol else {
         return Err(missing_msg.to_string());
     };
@@ -88,22 +94,33 @@ fn parse_nonempty_u16_array(
         return Err(format!("{key} must be an array of integers"));
     };
     let mut out = Vec::with_capacity(arr.len());
+    let mut any = false;
     for x in arr {
-        let Some(raw) = x.as_integer() else {
-            return Err(format!("{key} entries must be integers"));
-        };
-        if !(1..=65535).contains(&raw) {
-            return Err(format!("{key} entries must be between 1 and 65535"));
+        if let Some(raw) = x.as_integer() {
+            if !(1..=65535).contains(&raw) {
+                return Err(format!("{key} entries must be between 1 and 65535"));
+            }
+            out.push(raw as u16);
+            continue;
         }
-        out.push(raw as u16);
+        if let Some(raw) = x.as_str() {
+            if raw.trim() == "*" {
+                any = true;
+                continue;
+            }
+        }
+        return Err(format!("{key} entries must be integers or \"*\""));
     }
-    if out.is_empty() {
+    if out.is_empty() && !any {
         return Err(format!("{key} must contain at least one entry"));
     }
-    Ok(out)
+    Ok(BindPortAllowlist { any, ports: out })
 }
 
-fn net_bind_ports_from_policy(pol: Option<&OpPolicy>, op: &str) -> Result<Vec<u16>, String> {
+fn net_bind_ports_from_policy(
+    pol: Option<&OpPolicy>,
+    op: &str,
+) -> Result<BindPortAllowlist, String> {
     parse_nonempty_u16_array(
         pol,
         "allow_bind_ports",
@@ -223,13 +240,13 @@ pub(super) fn validate_net_bind_policy(
     let allow_ports = net_bind_ports_from_policy(pol, op)?;
     let host_ok = allow_hosts
         .iter()
-        .any(|candidate| candidate.trim().eq_ignore_ascii_case(&bind_host));
+        .any(|candidate| allowlist_rule_exact_or_glob_matches_ci(candidate, &bind_host));
     if !host_ok {
         return Err(format!(
             "bind host `{bind_host}` is not in allow_bind_hosts policy"
         ));
     }
-    if !allow_ports.contains(&bind_port) {
+    if !allow_ports.any && !allow_ports.ports.contains(&bind_port) {
         return Err(format!(
             "bind port `{bind_port}` is not in allow_bind_ports policy"
         ));
@@ -239,10 +256,13 @@ pub(super) fn validate_net_bind_policy(
 
 fn url_matches_allowlist(url: &str, allow: &str, scheme: &str) -> bool {
     let rule = allow.trim();
+    if rule == "*" {
+        return true;
+    }
     if rule.ends_with("://") {
         return scheme == rule.trim_end_matches("://");
     }
-    url.starts_with(rule)
+    allowlist_rule_prefix_or_glob_matches(rule, url)
 }
 
 pub(super) fn validate_net_target_policy(

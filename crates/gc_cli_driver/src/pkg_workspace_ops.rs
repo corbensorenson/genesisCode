@@ -7,6 +7,8 @@ use gc_pkg::{
     WorkspaceTask, normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
 };
 
+#[path = "pkg_workspace_ops_backend.rs"]
+mod pkg_workspace_ops_backend;
 #[path = "pkg_workspace_ops_build.rs"]
 mod pkg_workspace_ops_build;
 #[path = "pkg_workspace_ops_env.rs"]

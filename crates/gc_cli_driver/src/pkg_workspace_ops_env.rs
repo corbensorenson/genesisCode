@@ -194,6 +194,18 @@ pub(crate) fn handle_env(
     let caps_policy_h = blake3::hash(&caps_policy_bytes).to_hex().to_string();
     write_if_same_or_new(&env_root.join("caps-policy.toml"), &caps_policy_bytes)
         .map_err(|e| e.to_string())?;
+    let backend_bundle = if profile.eq_ignore_ascii_case("backend")
+        || selected_runtime_backend == gc_pkg::RUNTIME_BACKEND_BACKEND
+    {
+        Some(
+            super::pkg_workspace_ops_backend::materialize_backend_env_bundle(
+                workspace_file,
+                &env_root,
+            )?,
+        )
+    } else {
+        None
+    };
 
     if let Some(tp) = &toolchain_path {
         let bytes = std::fs::read(tp).map_err(|e| e.to_string())?;
@@ -293,6 +305,40 @@ pub(crate) fn handle_env(
             (
                 TermOrdKey(Term::symbol(":caps-policy-h")),
                 Term::Str(caps_policy_h),
+            ),
+            (
+                TermOrdKey(Term::symbol(":caps-policy-effective")),
+                backend_bundle
+                    .as_ref()
+                    .map(|b| Term::Str(b.effective_caps_path.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":caps-policy-effective-h")),
+                backend_bundle
+                    .as_ref()
+                    .map(|b| Term::Str(b.effective_caps_hash.clone()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":backend-bridge-cmd")),
+                backend_bundle
+                    .as_ref()
+                    .and_then(|b| b.bridge_cmd.as_ref())
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":backend-bridge-sha256")),
+                backend_bundle
+                    .as_ref()
+                    .and_then(|b| b.bridge_sha256.as_ref())
+                    .map(|s| Term::Str(format!("sha256:{s}")))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":backend-bridge-ready")),
+                Term::Bool(backend_bundle.as_ref().is_some_and(|b| b.bridge_ready)),
             ),
             (TermOrdKey(Term::symbol(":env-h")), Term::Str(env_h)),
             (TermOrdKey(Term::symbol(":profile-h")), Term::Str(profile_h)),

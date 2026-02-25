@@ -222,6 +222,11 @@ Supported keys:
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
 - `mtls_identity_pem` (string): optional PEM path for client cert+key.
 
+String allowlist wildcard semantics:
+- For string allowlists, `*` matches any value.
+- A trailing `*` performs prefix matching (for example `https://registry.example.com/*`).
+- `allow_bind_ports` also accepts `"*"` (string) to allow any bind port.
+
 Note: the effect log (`.gclog`) does not record `base_dir` values.
 
 Example:

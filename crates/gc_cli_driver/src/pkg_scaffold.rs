@@ -8,6 +8,9 @@ use gc_pkg::{
     normalize_runtime_backend_profile,
 };
 
+use crate::pkg_caps_templates::{
+    CAPS_CI_DEFAULT, CAPS_DEV_DEFAULT, CAPS_RELEASE_DEFAULT, render_backend_caps_policy,
+};
 use crate::pkg_workspace_ops::LocalPkgResult;
 
 pub(crate) struct PkgScaffoldArgs<'a> {
@@ -66,6 +69,7 @@ pub(crate) fn handle_scaffold(args: PkgScaffoldArgs<'_>) -> Result<LocalPkgResul
         archetype,
         runtime_backend.as_str(),
     );
+    let backend_caps_body = render_backend_caps_policy(None, None);
 
     let files: Vec<(PathBuf, String)> = vec![
         (PathBuf::from("genesis.workspace.toml"), ws_body),
@@ -73,9 +77,13 @@ pub(crate) fn handle_scaffold(args: PkgScaffoldArgs<'_>) -> Result<LocalPkgResul
         (PathBuf::from("package.toml"), package_body),
         (PathBuf::from("src/main.gc"), module_body),
         (PathBuf::from("deploy/presets.toml"), deploy_body),
-        (PathBuf::from("caps.toml"), CAPS_DEV.to_string()),
-        (PathBuf::from("caps.ci.toml"), CAPS_CI.to_string()),
-        (PathBuf::from("caps.release.toml"), CAPS_RELEASE.to_string()),
+        (PathBuf::from("caps.toml"), CAPS_DEV_DEFAULT.to_string()),
+        (PathBuf::from("caps.ci.toml"), CAPS_CI_DEFAULT.to_string()),
+        (
+            PathBuf::from("caps.release.toml"),
+            CAPS_RELEASE_DEFAULT.to_string(),
+        ),
+        (PathBuf::from("caps.backend.toml"), backend_caps_body),
         (PathBuf::from("README.gcpm.md"), readme_body),
     ];
 
@@ -225,6 +233,16 @@ fn build_workspace_profiles(
             policy: Some(policy.to_string()),
             toolchain: None,
             runtime_backend: Some(runtime_backend.to_string()),
+        },
+    );
+    profiles.insert(
+        "backend".to_string(),
+        WorkspaceProfile {
+            caps_policy: Some("caps.backend.toml".to_string()),
+            registry: registry_default.map(|s| s.to_string()),
+            policy: Some(policy.to_string()),
+            toolchain: None,
+            runtime_backend: Some(RUNTIME_BACKEND_BACKEND.to_string()),
         },
     );
     profiles.insert(
@@ -458,15 +476,6 @@ fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(&tmp, path)
 }
-
-const CAPS_DEV: &str = r#"allow = []
-"#;
-
-const CAPS_CI: &str = r#"allow = []
-"#;
-
-const CAPS_RELEASE: &str = r#"allow = []
-"#;
 
 #[cfg(test)]
 mod tests {

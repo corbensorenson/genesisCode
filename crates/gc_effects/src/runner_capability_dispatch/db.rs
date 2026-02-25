@@ -50,7 +50,7 @@ fn validate_db_target_policy(
 ) -> Result<(), String> {
     let _scheme = parse_url_scheme(target, op, field)?;
     let allowlist = db_target_allowlist_from_policy(pol, op)?;
-    if allowlist.iter().any(|rule| target.starts_with(rule.trim())) {
+    if allowlist_contains_prefix_or_glob(&allowlist, target) {
         return Ok(());
     }
     Err("target is not in policy db_target_allow allowlist".to_string())
@@ -62,10 +62,7 @@ fn validate_db_query_class_policy(
     query_class: &str,
 ) -> Result<(), String> {
     let allowlist = db_query_class_allowlist_from_policy(pol, op)?;
-    if allowlist
-        .iter()
-        .any(|allowed| allowed.trim().eq_ignore_ascii_case(query_class))
-    {
+    if allowlist_contains_exact_or_glob_ci(&allowlist, query_class) {
         return Ok(());
     }
     Err(format!(

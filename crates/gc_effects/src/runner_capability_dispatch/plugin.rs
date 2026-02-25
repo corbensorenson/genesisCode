@@ -87,7 +87,7 @@ pub(super) fn capability_host_plugin_command(
             return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
         }
     };
-    if !allow_plugins.iter().any(|allowed| allowed == &plugin) {
+    if !allowlist_contains_exact_or_glob(&allow_plugins, &plugin) {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
@@ -103,7 +103,7 @@ pub(super) fn capability_host_plugin_command(
             return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
         }
     };
-    if !allow_commands.iter().any(|allowed| allowed == &command) {
+    if !allowlist_contains_exact_or_glob(&allow_commands, &command) {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
@@ -143,7 +143,7 @@ pub(super) fn capability_host_plugin_command(
             }
         };
         if let Some(schema_id) = schema_ids.request_schema_id.as_deref()
-            && !allow_schema_ids.iter().any(|allowed| allowed == schema_id)
+            && !allowlist_contains_exact_or_glob(&allow_schema_ids, schema_id)
         {
             return Ok(mk_error(
                 error_tok,
@@ -155,7 +155,7 @@ pub(super) fn capability_host_plugin_command(
             ));
         }
         if let Some(schema_id) = schema_ids.response_schema_id.as_deref()
-            && !allow_schema_ids.iter().any(|allowed| allowed == schema_id)
+            && !allowlist_contains_exact_or_glob(&allow_schema_ids, schema_id)
         {
             return Ok(mk_error(
                 error_tok,

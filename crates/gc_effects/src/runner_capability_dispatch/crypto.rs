@@ -100,7 +100,7 @@ fn validate_crypto_algorithm_policy(
     algorithm: &str,
 ) -> Result<(), String> {
     let allow = crypto_allow_algorithms_from_policy(pol, op)?;
-    if allow.iter().any(|allowed| allowed == algorithm) {
+    if allowlist_contains_exact_or_glob_ci(&allow, algorithm) {
         return Ok(());
     }
     Err(format!(
@@ -114,7 +114,7 @@ fn validate_crypto_key_id_policy(
     key_id: &str,
 ) -> Result<(), String> {
     let allow = crypto_allow_key_ids_from_policy(pol, op)?;
-    if allow.iter().any(|allowed| allowed == key_id) {
+    if allowlist_contains_exact_or_glob(&allow, key_id) {
         return Ok(());
     }
     Err(format!("key id `{key_id}` is not in allow_key_ids policy"))

@@ -1009,3 +1009,84 @@ fn gcpm_env_runtime_backend_profile_contract_is_machine_readable() {
             ));
     }
 }
+
+#[test]
+fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "service",
+            "--name",
+            "backend-demo",
+            "--root",
+            "app",
+        ])
+        .assert()
+        .success();
+
+    let app_dir = dir.join("app");
+    let tools_dir = app_dir.join("tools");
+    fs::create_dir_all(&tools_dir).unwrap();
+    let bridge = tools_dir.join("host_bridge.sh");
+    fs::write(
+        &bridge,
+        "#!/usr/bin/env sh\nset -eu\nop=\"${GENESIS_HOST_BRIDGE_OP:-}\"\nIFS= read -r n\ndd bs=1 count=\"$n\" status=none >/dev/null 2>/dev/null || true\nresp=\"{:ok true :bridge-op \\\"$op\\\"}\"\nprintf '%s\\n%s' \"${#resp}\" \"$resp\"\n",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&bridge).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&bridge, perms).unwrap();
+    }
+
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(&app_dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(app_dir.join("caps.toml"))
+        .args([
+            "env",
+            "--profile",
+            "backend",
+            "--runtime-backend",
+            "profile-headless",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let map = parse_coreform_value_map(&out);
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":backend-bridge-ready"))),
+        Some(&Term::Bool(true))
+    );
+    let effective_caps = map_string(&map, ":caps-policy-effective");
+    assert!(effective_caps.ends_with("caps-policy.backend.effective.toml"));
+    let bridge_cmd = map_string(&map, ":backend-bridge-cmd");
+    assert!(bridge_cmd.ends_with("tools/host_bridge.sh"));
+    let bridge_sha = map_string(&map, ":backend-bridge-sha256");
+    assert!(bridge_sha.starts_with("sha256:"));
+
+    let env_root = map_string(&map, ":env-root");
+    let effective_caps_src = fs::read_to_string(
+        if PathBuf::from(&env_root).is_absolute() {
+            PathBuf::from(env_root)
+        } else {
+            app_dir.join(env_root)
+        }
+        .join("caps-policy.backend.effective.toml"),
+    )
+    .unwrap();
+    assert!(effective_caps_src.contains("allow_programs = [\"*\"]"));
+    assert!(effective_caps_src.contains("bridge_cmd_sha256 = \"sha256:"));
+}

@@ -46,7 +46,7 @@ pub(super) fn capability_sys_process_spawn_or_exec(
             return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
         }
     };
-    if !allow_programs.iter().any(|allowed| allowed == &program) {
+    if !allowlist_contains_exact_or_glob(&allow_programs, &program) {
         return Ok(mk_error(
             error_tok,
             "core/caps/policy-error",

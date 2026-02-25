@@ -47,6 +47,7 @@ fn gcpm_scaffold_creates_archetype_workspace_package_and_presets() {
         "caps.toml",
         "caps.ci.toml",
         "caps.release.toml",
+        "caps.backend.toml",
         "README.gcpm.md",
     ] {
         assert!(root.join(rel).is_file(), "missing scaffold file {rel}");
@@ -55,7 +56,14 @@ fn gcpm_scaffold_creates_archetype_workspace_package_and_presets() {
     let ws_src = fs::read_to_string(root.join("genesis.workspace.toml")).unwrap();
     assert!(ws_src.contains("workspace = \"ai-web-demo\""));
     assert!(ws_src.contains("runtime_backend = \"gfx\""));
+    assert!(ws_src.contains("[profiles.\"backend\"]"));
+    assert!(ws_src.contains("caps_policy = \"caps.backend.toml\""));
+    assert!(ws_src.contains("runtime_backend = \"backend\""));
     assert!(ws_src.contains("[tasks.\"build-primary\"]"));
+    let backend_caps_src = fs::read_to_string(root.join("caps.backend.toml")).unwrap();
+    assert!(backend_caps_src.contains("io/net::http-request"));
+    assert!(backend_caps_src.contains("host/ffi::call"));
+    assert!(backend_caps_src.contains("allow_programs = [\"*\"]"));
     let preset_src = fs::read_to_string(root.join("deploy/presets.toml")).unwrap();
     assert!(preset_src.contains("archetype = \"web\""));
     assert!(preset_src.contains("primary_target = \"web\""));
