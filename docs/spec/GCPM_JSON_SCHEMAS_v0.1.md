@@ -23,7 +23,8 @@ All commands return:
 `gcpm doctor` additionally includes `data.doctor` with schema
 `genesis/pkg-doctor-report-v0.2` (defined in this document).
 
-`gcpm lock/update/publish` additionally include `data.report` workflow artifacts
+`gcpm add/remove/lock/update/run/build/install/verify/doctor/env/publish/self-optimize`
+additionally include `data.report` workflow artifacts
 (see `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`).
 
 All `gcpm` commands include prompt-safe deterministic telemetry under `data.telemetry`

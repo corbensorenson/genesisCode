@@ -221,7 +221,7 @@ CI strict selfhost gates:
     - `docs/spec/GCPM_BUNDLE_v0.1.md`
   - Assurance evidence schemas: `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`.
   - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
-- `genesis gcpm lock|update|publish --json` emit deterministic AI workflow reports under `data.report`.
+- `genesis gcpm add|remove|lock|update|run|build|install|verify|doctor|env|publish|self-optimize --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.
   - See `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.

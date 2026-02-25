@@ -244,6 +244,11 @@ if require_gpu_device_raw is None:
     require_gpu_device = profile in {"prepush-standard", "release-full", "release", "full-selfhost-cutover"}
 else:
     require_gpu_device = require_gpu_device_raw.strip().lower() in {"1", "true", "yes", "on"}
+confidence_lane = (
+    "release-confidence-device"
+    if require_gpu_device
+    else "dev-fallback-evidence"
+)
 if require_gpu_device:
     env["GENESIS_AGENT_GPU_REQUIRE_DEVICE"] = "1"
 p95_default_max_ms = int(
@@ -553,6 +558,9 @@ report = {
     "profile": profile,
     "runtime_profile": runtime_profile,
     "require_gpu_device_backend": require_gpu_device,
+    "confidence_lane": confidence_lane,
+    "release_confidence_lane": require_gpu_device,
+    "fallback_evidence_lane": not require_gpu_device,
     "genesis_bin": genesis_bin,
     "domains": domain_reports,
     "workflows": workflow_reports,

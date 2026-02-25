@@ -31,13 +31,16 @@ Legend:
 | Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- `P0.1` final Rust semantic exception retirement for true selfhost closure
-- `P0.2` readiness critical-gate expansion to include generative + cross-runtime parity truth
-- `P1.1` gcpm operation contract-pack coverage expansion beyond current narrow subset
-- `P1.2` strict device-backed GPU confidence lanes as default productization evidence
-- `P1.3` hot-path runtime gate realism (budget/historical depth/compile-vs-measure separation)
-- `P2.1` deterministic remediation/fix-options expansion across gcpm workflow surface
-- `P2.2` faster default health-profile wall time for tighter agent iteration loops
+- `P0.1` - gcpm remote dependency closure still constrained by local-first lock/install behavior.
+- `P0.2` - host ABI lacks first-class native FFI family (`host/ffi::*`) for zero-copy interop.
+- `P0.3` - release workflows still depend on gradual type/effect lane; strict-sound closure missing.
+- `P0.4` - no deterministic intent-to-workflow planner contract in core CLI/runtime.
+- `P1.1` - full prepush profile throughput + disk-headroom behavior still slows autonomous CI loops.
+- `P1.2` - stage2 optimizer coverage floors are not enforced by default artifact policy.
+- `P1.3` - deterministic external ecosystem bridge into GenesisPkg is not yet first-class.
+- `P1.4` - assurance crosswalk retains external-control integration gap for regulated domains.
+- `P2.1` - agent reference workflow corpus needs wider domain expansion for "build anything" breadth.
+- `P2.2` - cross-layer time-travel observability is not yet unified end-to-end.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
@@ -45,5 +48,5 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/docs/skill_pack/write_genesiscode_v1/manifest.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/write_genesiscode_skill_conformance_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/policies/source_decomposition_progress.toml`
-- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_capability_gauntlet_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gpu_xr_productization_kits_report.json`

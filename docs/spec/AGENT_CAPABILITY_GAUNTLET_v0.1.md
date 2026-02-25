@@ -29,6 +29,9 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `baseline_history_path`, `require_min_history`
 - `regression_percent`, `regression_failures`, `history_min_failures`
 - `profile`, `runtime_profile`, `genesis_bin`
+- `require_gpu_device_backend`
+- `confidence_lane` (`release-confidence-device` or `dev-fallback-evidence`)
+- `release_confidence_lane`, `fallback_evidence_lane`
 - `domains`:
   - `domain`
   - `required_successes`
@@ -81,6 +84,11 @@ If any required domain misses its minimum success threshold, the script exits no
 - `GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY` default `policies/perf/agent_capability_gauntlet_seed_history.jsonl`
 - `GENESIS_AGENT_GAUNTLET_REQUIRE_MIN_HISTORY` fail-closed on insufficient per-workflow history (default `1`)
 - `GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT` per-workflow regression budget over baseline p95 (default `25`)
+
+## Confidence Lanes
+
+- `release-confidence-device`: `require_gpu_device_backend=true`; GPU workflows must prove `device-runtime`.
+- `dev-fallback-evidence`: fallback-enabled lane for local development evidence only.
 
 ## CI Expectations
 

@@ -7,99 +7,121 @@ Scope:
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 7
+Open checklist items: 10
 
 ## Critical Path
 
-- [ ] P0.1 Close the final Rust semantic exceptions and reach true selfhost semantic ownership.
-  Why this is still open:
-  - Full-cutover policy still explicitly allows semantic/runtime exceptions in `gc_coreform`, `gc_kernel`, `gc_prelude`, `gc_effects`, and `gc_cli_driver`.
-  Evidence:
-  - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md:16`
-  - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md:20`
-  - `.genesis/perf/full_selfhost_cutover_profile_report.json`
-  Exit criteria:
-  - `explicit_exceptions` in `.genesis/perf/full_selfhost_cutover_profile_report.json` is empty.
-  - Cutover profile remains `ok=true` with no exception carve-outs.
-  - `old_bootstrap/` remains archival-only and non-semantic.
+- P0.1 - gcpm remote-first lock/install closure (remove local-only constraint)
+- P0.2 - native FFI ABI family for high-throughput host interop
+- P0.3 - strict-sound type/effect lane for protected refs and release workflows
+- P0.4 - first-class agent intent-to-workflow planner contract (deterministic, policy-gated)
 
-- [ ] P0.2 Expand readiness scoring to include generative and cross-runtime parity truth, not just fixed critical gates.
-  Why this is still open:
-  - `selfhost-readiness` critical gate list currently omits `agent_generative_workloads` and `agent_workflow_runtime_parity`.
-  Evidence:
-  - `scripts/check_selfhost_readiness_scorecard.sh:381`
-  - `.genesis/perf/agent_generative_workloads_report.json`
+## Unresolved Backlog
+
+- [ ] P0.1 `gcpm` remote dependency closure
+Why: `genesis pkg lock --help` still advertises "local-only v0.1", and `genesis pkg install` verifies local presence instead of resolving/fetching missing lock entries from registries by default.
+Done when:
+  - `pkg lock` resolves/fetches missing refs/commits/snapshots from configured registries under policy.
+  - `pkg install` can hydrate missing lock artifacts without separate manual sync steps.
+  - deterministic lock-update rationale remains replayable and evidence-backed.
+Evidence:
+  - `.genesis/perf/domain_starter_registry_bootstrap_report.json`
+  - `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
+
+- [ ] P0.2 Native FFI ABI family (`host/ffi::*`) with deterministic replay contract
+Why: `docs/spec/HOST_ABI_INDEX_v0.1.json` currently has no `ffi` family; plugin surface is command-oriented (`host/plugin::command`) and does not provide zero-copy, typed native-call semantics needed for broad external ecosystem leverage.
+Done when:
+  - host ABI index includes `host/ffi` operations with schema IDs and capability policy gates.
+  - replay logs encode FFI call boundaries deterministically (hash-anchored payload/result envelopes).
+  - first-party docs define safety model (memory ownership, pinning, lifetime, deterministic mode limits).
+Evidence:
+  - `docs/spec/HOST_ABI_INDEX_v0.1.json`
+  - `docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md`
+
+- [ ] P0.3 Strict-sound type/effect lane (not gradual-only) for release gates
+Why: `genesis typecheck --help` advertises a gradual checker; for autonomous high-scale refactors, protected refs need a fail-closed strict mode that rejects unknown/open effects and unresolved contract op signatures.
+Done when:
+  - `genesis typecheck` supports strict-sound mode with no unknown effect ops on release profiles.
+  - `gcpm verify`/`gcpm doctor` expose strict-sound findings with deterministic machine-readable diagnostics.
+  - strict-sound obligations are enforceable via policy for protected refs/tags.
+Evidence:
+  - `.genesis/perf/host_api_evolution_contract_report.json`
+  - `.genesis/perf/gcpm_operation_contract_pack_report.json`
+
+- [ ] P0.4 Agent intent-to-workflow planner contract
+Why: `genesis --json agent-index` provides schemas/indices/workflows, but no built-in deterministic planner that maps an intent contract to executable workflow DAGs with capability and policy validation.
+Done when:
+  - a planner command/API emits deterministic workflow plans from structured intent input.
+  - plans are policy-checked before execution and linked to effect-log/evidence lineage.
+  - failure taxonomy includes deterministic repair hints for autonomous retries.
+Evidence:
+  - `docs/spec/AGENT_INDEX_v0.1.md`
   - `.genesis/perf/agent_workflow_runtime_parity_report.json`
-  Exit criteria:
-  - Readiness critical gate contract includes and validates:
-    - `.genesis/perf/agent_generative_workloads_report.json`
-    - `.genesis/perf/agent_workflow_runtime_parity_report.json`
-  - `selfhost_readiness_report.json` fails closed when either report is stale/failing.
-  - Runtime parity p95 floor is raised from 1-sample enforcement to a stable minimum history floor.
 
-- [ ] P1.1 Expand `gcpm` operation contract pack coverage from 5 operations to full automation-critical surface.
-  Why this is still open:
-  - The contract pack currently tracks only `{build, qualify, run, test, trace}`, while the command surface is much larger.
-  Evidence:
-  - `docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json:11`
-  - `.genesis/perf/gcpm_operation_contract_pack_report.json:15`
-  - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md:29`
-  Exit criteria:
-  - Operation contract pack covers all gcpm commands used by autonomous workflows (`new`, `scaffold`, `add/remove`, `lock/update`, `install/verify`, `publish/sync`, `env/build`, `abi`, `doctor`, `self-optimize`, assurance ops).
-  - Drift gate compares pack coverage directly against CLI schema IDs and fails on gaps.
-
-- [ ] P1.2 Promote strict device-backed GPU truth in default agent confidence lanes; isolate fallback lanes as non-release evidence.
-  Why this is still open:
-  - Current gauntlet allows fallback-backed success (`require_gpu_device_backend=false`, multiple workflows on `deterministic-fallback`).
-  Evidence:
-  - `.genesis/perf/agent_capability_gauntlet_report.json:141`
-  - `.genesis/perf/agent_capability_gauntlet_report.json:201`
-  - `.genesis/perf/agent_capability_gauntlet_report.json:533`
-  - `.genesis/perf/agent_capability_gauntlet_report.json:616`
-  Exit criteria:
-  - Default release-confidence gauntlet profile requires device runtime for GPU domains.
-  - Fallback mode remains available but clearly separated as dev-only evidence.
-  - Readiness and feature evidence consume strict-device lane for productization claims.
-
-- [ ] P1.3 Tighten hot-path runtime gate quality (budget realism, history depth, and compile-vs-measure separation).
-  Why this is still open:
-  - Runtime profile allows very high elapsed budget and currently passes with low history depth despite large jitter.
-  Evidence:
-  - `.genesis/perf/hot_path_runtime_report.json:4`
-  - `.genesis/perf/hot_path_runtime_report.json:7`
-  - `.genesis/perf/hot_path_runtime_report.json:10`
-  - `scripts/check_hot_path_budgets.sh:37`
-  - `scripts/check_hot_path_budgets.sh:73`
-  Exit criteria:
-  - Runtime budget is reduced to an AI-iteration-appropriate envelope.
-  - Cold compile/setup time is reported separately from hot-path measurement time.
-  - History floor and regression checks fail closed on insufficient sample depth.
-
-- [ ] P2.1 Expand deterministic `fix_options`/remediation reports beyond `gcpm lock|update|publish`.
-  Why this is still open:
-  - Workflow report contract documents deterministic remediation only for three commands.
-  Evidence:
-  - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md:8`
-  - `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md:12`
-  Exit criteria:
-  - `gcpm add/remove/install/verify/build/run/doctor/env/self-optimize` emit machine-actionable remediation plans with stable IDs.
-  - Agents can continue autonomously after common failures without heuristic prompt repair.
-
-- [ ] P2.2 Reduce default health/profile wall-time for faster agent inner-loop iteration.
-  Why this is still open:
-  - Current dev-fast profile still runs near multi-minute wall time.
-  Evidence:
+- [ ] P1.1 Full-profile throughput and disk headroom hardening
+Why: latest strict prepush profile run showed high wall-clock and disk-headroom soft-continue behavior (`.genesis/perf/prepush_standard_latest.log`), which slows autonomous CI loops.
+Done when:
+  - prepush-standard profile p95 is reduced and enforced under a tighter target.
+  - low-disk paths fail predictably with guided remediation, not soft-continue in strict lanes.
+  - gate sharding/caching policy minimizes lock contention regressions.
+Evidence:
   - `.genesis/perf/upgrade_plan_health_profile_report.json`
-  - `.genesis/perf/agent_capability_gauntlet_report.json`
-  Exit criteria:
-  - Default dev-fast health lane hits a tighter wall budget with deterministic pass rates.
-  - Inner-loop profile remains coverage-complete for AI authoring guardrails while reducing latency.
+  - `.genesis/perf/prepush_standard_latest.log`
+
+- [ ] P1.2 Stage2 optimizer coverage floors in artifact policy
+Why: selfhost artifact requirements currently permit zero minimum coverage floors (`:min-supported-modules 0`, `:min-validated-modules 0`), weakening release confidence against optimizer regressions.
+Done when:
+  - production artifact policy enforces non-zero minimum stage2 supported/validated module counts.
+  - release profiles fail closed on stage2 coverage regression.
+  - coverage floors are tracked historically in perf artifacts.
+Evidence:
+  - `selfhost/toolchain.gc`
+  - `.genesis/perf/full_selfhost_cutover_profile_report.json`
+
+- [ ] P1.3 External ecosystem bridge into GenesisPkg
+Why: language-native package model is strong, but "build anything" adoption still needs deterministic mirror/bridge flows for external ecosystems (e.g., crates/npm/pypi) into GenesisPkg artifacts with provenance.
+Done when:
+  - mirrored external packages are transformed into signed GenesisPkg snapshots/commits.
+  - dependency policy can pin mirrored provenance roots and replay conversion evidence.
+  - bridge operations are capability-gated and auditable.
+Evidence:
+  - `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`
+  - `.genesis/perf/gcpm_operation_contract_pack_report.json`
+
+- [ ] P1.4 Regulated assurance integration closure for external controls
+Why: assurance crosswalk still carries external objectives (e.g., IEC62304 device/QMS controls) that are outside current toolchain evidence closure.
+Done when:
+  - exportable integration contract maps Genesis evidence artifacts into external QMS/regulator workflows.
+  - assurance-pack outputs include machine-readable bindings for those external controls.
+  - unresolved external-control count is explicitly tracked and trended.
+Evidence:
+  - `docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`
+  - `.genesis/perf/assurance_profile_packs_report.json`
+
+- [ ] P2.1 Domain kit/workflow expansion for wider autonomous build coverage
+Why: current agent reference workflow set is broad but still finite; expanding tested domain kits improves "agent can build anything requested" practical coverage.
+Done when:
+  - workflow corpus adds new high-impact domains (multi-agent orchestration, realtime collaboration, data/ML pipeline variants, large-scale backend topologies).
+  - new workflows are included in gauntlet/runtime parity gates.
+Evidence:
+  - `docs/spec/DOMAIN_KITS_v0.1.md`
+  - `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
+
+- [ ] P2.2 Time-travel observability beyond dispatch traces
+Why: current debug surface is strong for dispatch traces, but autonomous large-system repair needs deeper deterministic cross-layer traceability (planner -> compiler -> effect runner -> host responses).
+Done when:
+  - trace frames unify planner decisions, type/effect decisions, optimizer transforms, and host effect boundaries.
+  - replay tooling can bisect nondeterministic-seeming failures deterministically across layers.
+  - machine-readable diagnostics preserve stable schemas for agent remediation loops.
+Evidence:
+  - `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+  - `.genesis/perf/agent_scenario_perf_report.json`
 
 ## Evidence Anchors
 
 - `.genesis/perf/selfhost_readiness_report.json`
 - `.genesis/perf/full_selfhost_cutover_profile_report.json`
-- `.genesis/perf/agent_capability_gauntlet_report.json`
+- `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
 - `.genesis/perf/agent_generative_workloads_report.json`
 - `.genesis/perf/agent_workflow_runtime_parity_report.json`
 - `.genesis/perf/gcpm_operation_contract_pack_report.json`

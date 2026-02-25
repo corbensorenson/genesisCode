@@ -93,7 +93,7 @@ if open_ids_sorted != readiness_ids_sorted:
 critical_specs = [
     (
         "agent-capability-gauntlet",
-        pathlib.Path(".genesis/perf/agent_capability_gauntlet_report.json"),
+        pathlib.Path(".genesis/perf/agent_capability_gauntlet_release_confidence_report.json"),
         "genesis/agent-capability-gauntlet-v0.1",
     ),
     (

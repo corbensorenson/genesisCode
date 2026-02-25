@@ -59,11 +59,33 @@ const_matches = {
 }
 
 required_operations = {
-    "build": "Build",
+    "new": "New",
+    "scaffold": "Scaffold",
+    "init": "Init",
+    "add": "Add",
+    "remove": "Remove",
+    "lock": "Lock",
+    "update": "Update",
     "run": "Run",
+    "build": "Build",
     "test": "Test",
+    "self-optimize": "SelfOptimize",
     "trace": "Trace",
     "qualify": "Qualify",
+    "assurance-pack": "AssurancePack",
+    "install": "Install",
+    "verify": "Verify",
+    "doctor": "Doctor",
+    "list": "List",
+    "info": "Info",
+    "abi": "Abi",
+    "snapshot": "Snapshot",
+    "export": "Export",
+    "import": "Import",
+    "publish": "Publish",
+    "migrate": "Migrate",
+    "env": "Env",
+    "profile-runtime": "ProfileRuntime",
 }
 
 schema_doc_aliases = {
@@ -98,6 +120,24 @@ for op_key, variant in required_operations.items():
         errors.append(
             f"GCPM schema doc missing schema ID for {op_key}; expected one of: {expected}"
         )
+
+expected_variants = set(required_operations.values())
+kind_variants = set(kind_matches.keys())
+log_variants = set(log_op_matches.keys())
+
+missing_kind_variants = sorted(expected_variants - kind_variants)
+missing_log_variants = sorted(expected_variants - log_variants)
+extra_kind_variants = sorted(kind_variants - expected_variants)
+extra_log_variants = sorted(log_variants - expected_variants)
+
+if missing_kind_variants:
+    errors.append("missing kind variants: " + ", ".join(missing_kind_variants))
+if missing_log_variants:
+    errors.append("missing log_op variants: " + ", ".join(missing_log_variants))
+if extra_kind_variants:
+    errors.append("unexpected kind variants: " + ", ".join(extra_kind_variants))
+if extra_log_variants:
+    errors.append("unexpected log_op variants: " + ", ".join(extra_log_variants))
 
 failure_taxonomy: dict[str, int] = {}
 for code_name, expected in expected_failure_taxonomy.items():

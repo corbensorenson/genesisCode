@@ -79,7 +79,7 @@ if unresolved_ids != readiness_ids:
 critical_specs = [
     (
         "agent-capability-gauntlet",
-        pathlib.Path(".genesis/perf/agent_capability_gauntlet_report.json"),
+        pathlib.Path(".genesis/perf/agent_capability_gauntlet_release_confidence_report.json"),
         "genesis/agent-capability-gauntlet-v0.1",
     ),
     (

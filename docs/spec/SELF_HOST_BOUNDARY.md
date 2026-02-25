@@ -79,8 +79,7 @@ Contract:
 This contract is the canonical boundary for feature-matrix selfhost claims and release readiness.
 
 Full-selfhost closure profile:
-- `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md` defines the explicit remaining exceptions,
-  closure path, and gate contract.
+- `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md` defines the no-exception closure path and gate contract.
 - `scripts/check_full_selfhost_cutover_profile.sh` enforces that contract and emits
   `.genesis/perf/full_selfhost_cutover_profile_report.json`.
 

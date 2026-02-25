@@ -104,19 +104,29 @@ if missing_headings:
         + ", ".join(missing_headings)
     )
 
-required_exceptions = {
-    "gc_coreform",
-    "gc_kernel",
-    "gc_prelude",
-    "gc_effects",
-    "gc_cli_driver",
-}
-found_exceptions = set(re.findall(r"- `([^`]+)`", doc))
-missing_exceptions = sorted(required_exceptions - found_exceptions)
-if missing_exceptions:
+exception_section_match = re.search(
+    r"## Remaining Exceptions \(Explicit\)\s*(.*?)(?:\n## |\Z)",
+    doc,
+    flags=re.DOTALL,
+)
+if exception_section_match is None:
     raise SystemExit(
-        "full-selfhost-cutover-profile: missing required explicit exceptions: "
-        + ", ".join(missing_exceptions)
+        "full-selfhost-cutover-profile: explicit exception section missing"
+    )
+exception_section = exception_section_match.group(1)
+explicit_exception_rows = re.findall(
+    r"^\s*-\s+`([^`]+)`\s*$",
+    exception_section,
+    flags=re.MULTILINE,
+)
+if explicit_exception_rows:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: explicit exception carve-outs are not allowed: "
+        + ", ".join(sorted(set(explicit_exception_rows)))
+    )
+if re.search(r"^\s*-\s+none\b", exception_section, flags=re.IGNORECASE | re.MULTILINE) is None:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: explicit exception section must declare `- none`"
     )
 
 if "scripts/check_full_selfhost_cutover_profile.sh" not in doc:
@@ -235,7 +245,7 @@ report_doc = {
     "readiness_report": readiness_path.relative_to(root).as_posix(),
     "bootstrap_report": bootstrap_path.relative_to(root).as_posix(),
     "dashboard_fresh_report": dashboard_path.relative_to(root).as_posix(),
-    "explicit_exceptions": sorted(required_exceptions),
+    "explicit_exceptions": [],
     "readiness_dimension_count": len(dimensions),
     "readiness_fail_reasons": [str(x) for x in fail_reasons],
     "bootstrap_status": bootstrap_status,

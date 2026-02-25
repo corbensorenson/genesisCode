@@ -6,8 +6,8 @@ Status: normative release-candidate profile for proving the final selfhost bound
 
 ## Purpose
 
-Define a single verification profile that proves GenesisCode is operating in selfhost-first mode,
-with only explicit, bounded Rust host exceptions remaining.
+Define a single verification profile that proves GenesisCode is operating in selfhost-first mode
+with zero explicit Rust semantic/runtime exception carve-outs.
 
 This profile is intended to answer one question deterministically:
 
@@ -15,31 +15,19 @@ This profile is intended to answer one question deterministically:
 
 ## Remaining Exceptions (Explicit)
 
-These are the only allowed semantic/runtime exceptions during v1 selfhost closure:
-
-- `gc_coreform`
-- `gc_kernel`
-- `gc_prelude`
-- `gc_effects`
-- `gc_cli_driver`
-
-No additional Rust semantic ownership is permitted without updating:
-
-- `docs/spec/SELF_HOST_BOUNDARY.md`
-- `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
-- `scripts/check_full_selfhost_cutover_profile.sh`
+- none
 
 ## Exception Ownership + No-Semantic-Drift Proofs
 
-Each explicit exception is allowed only while its ownership boundary and no-drift proof stays green.
+The no-exception closure contract is only valid while ownership boundary and no-drift proofs stay green.
 The full-cutover gate requires all of the following reports to exist, match expected kinds, and be `ok=true`.
 
-- `gc_coreform` + `gc_kernel` + `gc_prelude`:
+- kernel TCB ownership (`gc_coreform` + `gc_kernel` + `gc_prelude`):
   - `.genesis/perf/kernel_tcb_contract_report.json`
   - `.genesis/perf/selfhost_symbol_ownership_report.json`
-- `gc_effects`:
+- host capability/runtime bridge (`gc_effects`):
   - `.genesis/perf/host_api_evolution_contract_report.json`
-- `gc_cli_driver`:
+- operation/driver contract stability (`gc_cli_driver`):
   - `.genesis/perf/vcs_selfhost_contract_report.json`
   - `.genesis/perf/gcpm_operation_contract_pack_report.json`
 

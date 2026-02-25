@@ -11,11 +11,45 @@ pub(crate) fn build_pkg_ai_report(
     caps: &Path,
 ) -> Option<serde_json::Value> {
     match cmd {
+        PkgCmd::Add { spec, lock, .. } => Some(build_add_report(caps, spec, lock)),
+        PkgCmd::Remove { name, lock } => Some(build_remove_report(caps, name, lock, value)),
         PkgCmd::Lock { lock, strict } => Some(build_lock_report(value, caps, lock, *strict)),
         PkgCmd::Update { lock, only } => Some(build_update_report(value, caps, lock, only)),
+        PkgCmd::Run {
+            task,
+            workspace_file,
+        } => Some(build_run_report(caps, task, workspace_file)),
+        PkgCmd::Build {
+            pkg,
+            target,
+            out_dir,
+        } => Some(build_build_report(caps, pkg, target, out_dir, value)),
         PkgCmd::SelfOptimize { pkg, dry_run, .. } => {
             Some(build_self_optimize_report(value, caps, pkg, *dry_run))
         }
+        PkgCmd::Install {
+            lock,
+            frozen,
+            strict,
+        } => Some(build_install_report(caps, lock, *frozen, *strict, value)),
+        PkgCmd::Verify { lock } => Some(build_verify_report(caps, lock, value)),
+        PkgCmd::Doctor { lock } => Some(build_doctor_ai_report(caps, lock)),
+        PkgCmd::Env {
+            profile,
+            lock,
+            workspace_file,
+            out_dir,
+            hydrate,
+            ..
+        } => Some(build_env_report(
+            caps,
+            profile,
+            lock,
+            workspace_file,
+            out_dir,
+            *hydrate,
+            value,
+        )),
         PkgCmd::Publish {
             remote,
             refname,
@@ -35,6 +69,57 @@ pub(crate) fn build_pkg_ai_report(
         )),
         _ => None,
     }
+}
+
+fn build_add_report(caps: &Path, spec: &str, lock: &Path) -> serde_json::Value {
+    serde_json::json!({
+        "schema": "genesis/pkg-add-report-v0.1",
+        "workflow": "add",
+        "changed": true,
+        "spec": spec,
+        "lock": lock.display().to_string(),
+        "why": "registered deterministic dependency requirement selector in lock requirements",
+        "fix_options": [
+            {
+                "id": "lock-now",
+                "command": format!("genesis gcpm --caps {} lock --lock {} --strict", caps.display(), lock.display()),
+                "why": "resolve and pin the new requirement into deterministic commit/snapshot entries"
+            },
+            {
+                "id": "doctor-lock",
+                "command": format!("genesis gcpm --caps {} doctor --lock {}", caps.display(), lock.display()),
+                "why": "surface deterministic remediation if requirement metadata is inconsistent"
+            }
+        ]
+    })
+}
+
+fn build_remove_report(caps: &Path, name: &str, lock: &Path, value: &Value) -> serde_json::Value {
+    let removed = map_get_bool(value, ":removed").unwrap_or(false);
+    serde_json::json!({
+        "schema": "genesis/pkg-remove-report-v0.1",
+        "workflow": "remove",
+        "changed": removed,
+        "name": name,
+        "lock": lock.display().to_string(),
+        "why": if removed {
+            "removed requirement and associated locked entry from deterministic lock state"
+        } else {
+            "dependency entry was not present in lock requirements"
+        },
+        "fix_options": [
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock {}", caps.display(), lock.display()),
+                "why": "confirm lock closure remains valid after removal"
+            },
+            {
+                "id": "doctor-lock",
+                "command": format!("genesis gcpm --caps {} doctor --lock {}", caps.display(), lock.display()),
+                "why": "emit deterministic remediation if removal exposed stale references"
+            }
+        ]
+    })
 }
 
 fn build_self_optimize_report(
@@ -81,6 +166,61 @@ fn build_self_optimize_report(
                 "id": "rerun",
                 "command": format!("genesis gcpm --caps {} self-optimize --pkg {}", caps.display(), pkg.display()),
                 "why": "retry optimization promotion with current package state"
+            }
+        ]
+    })
+}
+
+fn build_run_report(caps: &Path, task: &str, workspace_file: &Path) -> serde_json::Value {
+    serde_json::json!({
+        "schema": "genesis/pkg-run-report-v0.1",
+        "workflow": "run",
+        "changed": false,
+        "task": task,
+        "workspace_file": workspace_file.display().to_string(),
+        "why": "executed deterministic workspace task contract",
+        "fix_options": [
+            {
+                "id": "doctor-lock",
+                "command": format!("genesis gcpm --caps {} doctor --lock genesis.lock", caps.display()),
+                "why": "collect deterministic diagnostics when a task fails due to dependency/capability drift"
+            },
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock genesis.lock", caps.display()),
+                "why": "verify that run-time task inputs remain lock-consistent"
+            }
+        ]
+    })
+}
+
+fn build_build_report(
+    caps: &Path,
+    pkg: &Path,
+    target: &str,
+    out_dir: &Path,
+    value: &Value,
+) -> serde_json::Value {
+    let bundle_hash = map_get_str(value, ":bundle-h");
+    serde_json::json!({
+        "schema": "genesis/pkg-build-report-v0.1",
+        "workflow": "build",
+        "changed": true,
+        "pkg": pkg.display().to_string(),
+        "target": target,
+        "out_dir": out_dir.display().to_string(),
+        "bundle_hash": bundle_hash,
+        "why": "emitted deterministic target bundle + provenance metadata for deployment/runtime handoff",
+        "fix_options": [
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock genesis.lock", caps.display()),
+                "why": "ensure build inputs remain pinned and reproducible"
+            },
+            {
+                "id": "rebuild-target",
+                "command": format!("genesis gcpm --caps {} build --pkg {} --target {} --out-dir {}", caps.display(), pkg.display(), target, out_dir.display()),
+                "why": "re-run deterministic bundle production after addressing target/runtime mismatch"
             }
         ]
     })
@@ -152,6 +292,128 @@ fn build_update_report(
                 "id": "install-lock",
                 "command": format!("genesis gcpm --caps {} install --lock {} --strict", caps.display(), lock.display()),
                 "why": "materialize and strictly validate updated artifacts"
+            }
+        ]
+    })
+}
+
+fn build_install_report(
+    caps: &Path,
+    lock: &Path,
+    frozen: bool,
+    strict: bool,
+    value: &Value,
+) -> serde_json::Value {
+    let ok = map_get_bool(value, ":ok").unwrap_or(true);
+    serde_json::json!({
+        "schema": "genesis/pkg-install-report-v0.1",
+        "workflow": "install",
+        "changed": false,
+        "lock": lock.display().to_string(),
+        "frozen": frozen,
+        "strict": strict,
+        "ok": ok,
+        "why": if ok {
+            "verified and materialized deterministic lock closure into local store state"
+        } else {
+            "install verification failed for one or more locked artifacts"
+        },
+        "fix_options": [
+            {
+                "id": "doctor-lock",
+                "command": format!("genesis gcpm --caps {} doctor --lock {}", caps.display(), lock.display()),
+                "why": "emit deterministic remediation for missing or invalid lock artifacts"
+            },
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock {}", caps.display(), lock.display()),
+                "why": "re-run strict lock integrity checks before retrying install"
+            }
+        ]
+    })
+}
+
+fn build_verify_report(caps: &Path, lock: &Path, value: &Value) -> serde_json::Value {
+    let ok = map_get_bool(value, ":ok").unwrap_or(true);
+    serde_json::json!({
+        "schema": "genesis/pkg-verify-report-v0.1",
+        "workflow": "verify",
+        "changed": false,
+        "lock": lock.display().to_string(),
+        "ok": ok,
+        "why": if ok {
+            "validated deterministic lock closure and artifact references"
+        } else {
+            "verification found deterministic lock/artifact integrity failures"
+        },
+        "fix_options": [
+            {
+                "id": "doctor-lock",
+                "command": format!("genesis gcpm --caps {} doctor --lock {}", caps.display(), lock.display()),
+                "why": "produce deterministic remediation plan for verification failures"
+            },
+            {
+                "id": "install-strict",
+                "command": format!("genesis gcpm --caps {} install --lock {} --strict", caps.display(), lock.display()),
+                "why": "attempt strict materialization path to close missing artifact gaps"
+            }
+        ]
+    })
+}
+
+fn build_doctor_ai_report(caps: &Path, lock: &Path) -> serde_json::Value {
+    serde_json::json!({
+        "schema": "genesis/pkg-doctor-ai-report-v0.1",
+        "workflow": "doctor",
+        "changed": false,
+        "lock": lock.display().to_string(),
+        "why": "generated deterministic diagnostics and machine-actionable remediation hints",
+        "fix_options": [
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock {}", caps.display(), lock.display()),
+                "why": "confirm doctor-advised remediations repaired lock/artifact integrity"
+            },
+            {
+                "id": "install-strict",
+                "command": format!("genesis gcpm --caps {} install --lock {} --strict", caps.display(), lock.display()),
+                "why": "materialize and validate deterministic closure after remediation"
+            }
+        ]
+    })
+}
+
+fn build_env_report(
+    caps: &Path,
+    profile: &str,
+    lock: &Path,
+    workspace_file: &Path,
+    out_dir: &Path,
+    hydrate: bool,
+    value: &Value,
+) -> serde_json::Value {
+    let env_root = map_get_str(value, ":env-root");
+    serde_json::json!({
+        "schema": "genesis/pkg-env-report-v0.1",
+        "workflow": "env",
+        "changed": true,
+        "profile": profile,
+        "lock": lock.display().to_string(),
+        "workspace_file": workspace_file.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "hydrate": hydrate,
+        "env_root": env_root,
+        "why": "realized deterministic workspace environment profile for agent/runtime execution",
+        "fix_options": [
+            {
+                "id": "verify-lock",
+                "command": format!("genesis gcpm --caps {} verify --lock {}", caps.display(), lock.display()),
+                "why": "confirm lock and artifact closure before re-materializing environment"
+            },
+            {
+                "id": "rebuild-env",
+                "command": format!("genesis gcpm --caps {} env --profile {} --lock {} --workspace-file {} --out-dir {}{}", caps.display(), profile, lock.display(), workspace_file.display(), out_dir.display(), if hydrate { " --hydrate" } else { "" }),
+                "why": "re-run deterministic environment realization after remediation"
             }
         ]
     })
@@ -317,5 +579,93 @@ mod tests {
             report.pointer("/only/0").and_then(|v| v.as_str()),
             Some("missing-dep")
         );
+    }
+
+    #[test]
+    fn extended_workflow_reports_cover_operational_surface() {
+        let caps = PathBuf::from("caps.toml");
+        let value = Value::Data(Term::Map(BTreeMap::new()));
+        let cmds = vec![
+            (
+                PkgCmd::Add {
+                    spec: "dep@refs/heads/main".to_string(),
+                    lock: PathBuf::from("genesis.lock"),
+                    update_policy: "manual".to_string(),
+                    registry: None,
+                    strategy: None,
+                    tag_policy: None,
+                },
+                "genesis/pkg-add-report-v0.1",
+            ),
+            (
+                PkgCmd::Remove {
+                    name: "dep".to_string(),
+                    lock: PathBuf::from("genesis.lock"),
+                },
+                "genesis/pkg-remove-report-v0.1",
+            ),
+            (
+                PkgCmd::Run {
+                    task: "check".to_string(),
+                    workspace_file: PathBuf::from("genesis.workspace.toml"),
+                },
+                "genesis/pkg-run-report-v0.1",
+            ),
+            (
+                PkgCmd::Build {
+                    pkg: PathBuf::from("package.toml"),
+                    target: "web".to_string(),
+                    out_dir: PathBuf::from(".genesis/build"),
+                },
+                "genesis/pkg-build-report-v0.1",
+            ),
+            (
+                PkgCmd::Install {
+                    lock: PathBuf::from("genesis.lock"),
+                    frozen: true,
+                    strict: true,
+                },
+                "genesis/pkg-install-report-v0.1",
+            ),
+            (
+                PkgCmd::Verify {
+                    lock: PathBuf::from("genesis.lock"),
+                },
+                "genesis/pkg-verify-report-v0.1",
+            ),
+            (
+                PkgCmd::Doctor {
+                    lock: PathBuf::from("genesis.lock"),
+                },
+                "genesis/pkg-doctor-ai-report-v0.1",
+            ),
+            (
+                PkgCmd::Env {
+                    profile: "dev".to_string(),
+                    runtime_backend: None,
+                    lock: PathBuf::from("genesis.lock"),
+                    workspace_file: PathBuf::from("genesis.workspace.toml"),
+                    out_dir: PathBuf::from(".genesis/env"),
+                    hydrate: false,
+                },
+                "genesis/pkg-env-report-v0.1",
+            ),
+        ];
+
+        for (cmd, expected_schema) in cmds {
+            let report = build_pkg_ai_report(&cmd, &value, &caps).expect("expected report");
+            assert_eq!(
+                report.get("schema").and_then(|v| v.as_str()),
+                Some(expected_schema)
+            );
+            let fix_options = report
+                .get("fix_options")
+                .and_then(|v| v.as_array())
+                .expect("fix_options array");
+            assert!(
+                !fix_options.is_empty(),
+                "expected deterministic fix_options for schema {expected_schema}"
+            );
+        }
     }
 }

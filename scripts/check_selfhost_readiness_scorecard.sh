@@ -373,6 +373,10 @@ def read_critical_report(
         "kind": doc.get("kind"),
         "freshness": freshness,
     }
+    if isinstance(doc.get("require_gpu_device_backend"), bool):
+        detail["require_gpu_device_backend"] = bool(doc.get("require_gpu_device_backend"))
+    if isinstance(doc.get("confidence_lane"), str):
+        detail["confidence_lane"] = doc.get("confidence_lane")
     if not report_ok:
         detail["fail_reasons"] = doc.get("fail_reasons")
         return False, detail, f"{label}:report-not-ok"
@@ -385,10 +389,32 @@ def dim_critical_gate_truth() -> dict[str, Any]:
     critical_specs = [
         (
             "agent_capability_gauntlet",
-            ".genesis/perf/agent_capability_gauntlet_report.json",
+            ".genesis/perf/agent_capability_gauntlet_release_confidence_report.json",
             "genesis/agent-capability-gauntlet-v0.1",
             "agent-capability-gauntlet",
-            ["bash", str(root / "scripts/check_agent_reference_workflows.sh")],
+            [
+                "bash",
+                "-lc",
+                "GENESIS_AGENT_GAUNTLET_PROFILE=release-full "
+                "GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 "
+                "GENESIS_AGENT_GAUNTLET_REPORT=.genesis/perf/agent_capability_gauntlet_release_confidence_report.json "
+                "GENESIS_AGENT_GAUNTLET_HISTORY=.genesis/perf/agent_capability_gauntlet_release_confidence_history.jsonl "
+                "bash scripts/check_agent_reference_workflows.sh",
+            ],
+        ),
+        (
+            "agent_generative_workloads",
+            ".genesis/perf/agent_generative_workloads_report.json",
+            "genesis/agent-generative-workloads-v0.1",
+            "agent-generative-workloads",
+            ["bash", str(root / "scripts/check_agent_generative_workloads.sh")],
+        ),
+        (
+            "agent_workflow_runtime_parity",
+            ".genesis/perf/agent_workflow_runtime_parity_report.json",
+            "genesis/agent-workflow-runtime-parity-v0.1",
+            "agent-workflow-runtime-parity",
+            ["bash", str(root / "scripts/check_agent_workflow_runtime_parity.sh")],
         ),
         (
             "production_cli_help_surface",
@@ -423,6 +449,12 @@ def dim_critical_gate_truth() -> dict[str, Any]:
         reports[key] = detail
         if not ok and error is not None:
             errors.append(error)
+            continue
+        if key == "agent_capability_gauntlet":
+            if detail.get("require_gpu_device_backend") is not True:
+                errors.append("agent-capability-gauntlet:non-strict-gpu-lane")
+            if detail.get("confidence_lane") != "release-confidence-device":
+                errors.append("agent-capability-gauntlet:confidence-lane-mismatch")
 
     runtime_pipeline_cmd = [
         "bash",

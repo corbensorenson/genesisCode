@@ -42,6 +42,23 @@ Default history floor:
 - `.genesis/perf/task_concurrency_stress_report.json`
 - `.genesis/perf/host_api_evolution_contract_report.json`
 
+`critical_gate_truth` is a fail-closed aggregate over machine reports:
+
+- `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
+- `.genesis/perf/agent_generative_workloads_report.json`
+- `.genesis/perf/agent_workflow_runtime_parity_report.json`
+- `.genesis/perf/production_cli_help_surface_report.json`
+- `.genesis/perf/gpu_gfx_headroom_conformance_report.json`
+- `.genesis/perf/domain_starter_registry_bootstrap_report.json`
+- `scripts/check_gcpm_target_runtime_pipelines.sh` result
+
+Readiness refresh runs the gauntlet in strict release-confidence mode:
+
+- `GENESIS_AGENT_GAUNTLET_PROFILE=release-full`
+- `GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1`
+- `require_gpu_device_backend=true`
+- `confidence_lane="release-confidence-device"`
+
 Each dimension records at least:
 
 - `ok`

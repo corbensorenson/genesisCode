@@ -16,7 +16,7 @@ source "$ROOT_DIR/scripts/lib/gcpm_caps_fixture.sh"
 source "$ROOT_DIR/scripts/lib/perf_disk_mode.sh"
 source "$ROOT_DIR/scripts/lib/profile_gate_timing.sh"
 
-START_MS="$(genesis_profile_gate_now_ms)"
+SCRIPT_START_MS="$(genesis_profile_gate_now_ms)"
 
 # Conservative defaults for shared CI runners.
 BUDGET_FMT_CANON_MS="${GENESIS_BUDGET_FMT_CANON_MS:-15000}"
@@ -34,8 +34,8 @@ DISK_MIN_FREE_KB="${GENESIS_HOT_PATH_MIN_FREE_KB:-3145728}"
 RUNTIME_REPORT="${GENESIS_HOT_PATH_RUNTIME_REPORT_OUT:-.genesis/perf/hot_path_runtime_report.json}"
 RUNTIME_HISTORY="${GENESIS_HOT_PATH_RUNTIME_HISTORY_OUT:-.genesis/perf/hot_path_runtime_history.jsonl}"
 RUNTIME_BASELINE_HISTORY="${GENESIS_HOT_PATH_RUNTIME_BASELINE_HISTORY_OUT:-policies/perf/hot_path_runtime_seed_history.jsonl}"
-RUNTIME_BUDGET_MS="${GENESIS_HOT_PATH_RUNTIME_BUDGET_MS:-1200000}"
-RUNTIME_MIN_HISTORY="${GENESIS_HOT_PATH_RUNTIME_MIN_HISTORY:-5}"
+RUNTIME_BUDGET_MS="${GENESIS_HOT_PATH_RUNTIME_BUDGET_MS:-300000}"
+RUNTIME_MIN_HISTORY="${GENESIS_HOT_PATH_RUNTIME_MIN_HISTORY:-8}"
 RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_HOT_PATH_RUNTIME_REQUIRE_MIN_HISTORY:-1}"
 
 if [[ ! "$RUNTIME_MIN_HISTORY" =~ ^[0-9]+$ || "$RUNTIME_MIN_HISTORY" -le 0 ]]; then
@@ -121,6 +121,11 @@ run_gcpm_tmp() {
   )
 }
 
+run_gcpm_tmp new --workspace "perf-hot-paths" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
+
+MEASURE_START_MS="$(genesis_profile_gate_now_ms)"
+COMPILE_SETUP_MS=$((MEASURE_START_MS - SCRIPT_START_MS))
+
 echo "hot-path-budgets: measuring parser/canonicalizer path (fmt)"
 genesis_measure_best_of_ms \
   fmt_canon_ms \
@@ -158,7 +163,6 @@ genesis_measure_best_of_ms \
 SYNC_PULL_MS="$MEASURE_LAST_MS"
 
 echo "hot-path-budgets: measuring gcpm lock/install/update flows"
-run_gcpm_tmp new --workspace "perf-hot-paths" --policy "policy:default-v0.1" --registry-default "gen://registry" >/dev/null
 genesis_measure_best_of_ms gcpm_lock_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" run_gcpm_tmp lock --strict
 GCPM_LOCK_MS="$MEASURE_LAST_MS"
 genesis_measure_best_of_ms gcpm_install_ms "$MEASURE_WARMUPS" "$MEASURE_REPEATS" run_gcpm_tmp install --frozen
@@ -174,6 +178,7 @@ echo "  sync_pull_ms=$SYNC_PULL_MS (budget=$BUDGET_SYNC_PULL_MS)"
 echo "  gcpm_lock_ms=$GCPM_LOCK_MS (budget=$BUDGET_GCPM_LOCK_MS)"
 echo "  gcpm_install_ms=$GCPM_INSTALL_MS (budget=$BUDGET_GCPM_INSTALL_MS)"
 echo "  gcpm_update_ms=$GCPM_UPDATE_MS (budget=$BUDGET_GCPM_UPDATE_MS)"
+echo "  compile_setup_ms=$COMPILE_SETUP_MS (separate from hot-path measure window)"
 echo "  warmups=$MEASURE_WARMUPS"
 echo "  repeats=$MEASURE_REPEATS"
 
@@ -191,6 +196,7 @@ cat > "$ARTIFACT_JSON" <<EOF
   "gcpm_lock_ms": $GCPM_LOCK_MS,
   "gcpm_install_ms": $GCPM_INSTALL_MS,
   "gcpm_update_ms": $GCPM_UPDATE_MS,
+  "compile_setup_ms": $COMPILE_SETUP_MS,
   "measure_warmups": $MEASURE_WARMUPS,
   "measure_repeats": $MEASURE_REPEATS,
   "budgets": {
@@ -218,10 +224,10 @@ genesis_profile_gate_emit_runtime_report \
   "genesis/hot-path-runtime-v0.1" \
   "$RUNTIME_REPORT" \
   "$RUNTIME_HISTORY" \
-  "$START_MS" \
+  "$MEASURE_START_MS" \
   "$RUNTIME_BUDGET_MS" \
   "$RUNTIME_MIN_HISTORY" \
-  "{\"metrics_report\":\"$ARTIFACT_JSON\",\"build_profile\":\"$CARGO_PROFILE\"}" \
+  "{\"metrics_report\":\"$ARTIFACT_JSON\",\"build_profile\":\"$CARGO_PROFILE\",\"compile_setup_ms\":$COMPILE_SETUP_MS,\"measurement_scope\":\"hot-path-only\"}" \
   "" \
   "$RUNTIME_BASELINE_HISTORY" \
   "$RUNTIME_REQUIRE_MIN_HISTORY"

@@ -9,20 +9,120 @@
   },
   "kind": "genesis/gcpm-operation-contract-pack-v0.1",
   "operations": {
+    "abi": {
+      "kind": "genesis/pkg-abi-v0.1",
+      "log_op": "pkg-abi",
+      "variant": "Abi"
+    },
+    "add": {
+      "kind": "genesis/pkg-add-v0.1",
+      "log_op": "pkg-add",
+      "variant": "Add"
+    },
+    "assurance-pack": {
+      "kind": "genesis/pkg-assurance-pack-v0.1",
+      "log_op": "pkg-assurance-pack",
+      "variant": "AssurancePack"
+    },
     "build": {
       "kind": "genesis/pkg-build-v0.1",
       "log_op": "pkg-build",
       "variant": "Build"
+    },
+    "doctor": {
+      "kind": "genesis/pkg-doctor-v0.1",
+      "log_op": "pkg-doctor",
+      "variant": "Doctor"
+    },
+    "env": {
+      "kind": "genesis/pkg-env-v0.1",
+      "log_op": "pkg-env",
+      "variant": "Env"
+    },
+    "export": {
+      "kind": "genesis/pkg-export-v0.1",
+      "log_op": "pkg-export",
+      "variant": "Export"
+    },
+    "import": {
+      "kind": "genesis/pkg-import-v0.1",
+      "log_op": "pkg-import",
+      "variant": "Import"
+    },
+    "info": {
+      "kind": "genesis/pkg-info-v0.1",
+      "log_op": "pkg-info",
+      "variant": "Info"
+    },
+    "init": {
+      "kind": "genesis/pkg-init-v0.1",
+      "log_op": "pkg-init",
+      "variant": "Init"
+    },
+    "install": {
+      "kind": "genesis/pkg-install-v0.1",
+      "log_op": "pkg-install",
+      "variant": "Install"
+    },
+    "list": {
+      "kind": "genesis/pkg-list-v0.1",
+      "log_op": "pkg-list",
+      "variant": "List"
+    },
+    "lock": {
+      "kind": "genesis/pkg-lock-v0.1",
+      "log_op": "pkg-lock",
+      "variant": "Lock"
+    },
+    "migrate": {
+      "kind": "genesis/pkg-migrate-v0.1",
+      "log_op": "pkg-migrate",
+      "variant": "Migrate"
+    },
+    "new": {
+      "kind": "genesis/pkg-new-v0.1",
+      "log_op": "pkg-new",
+      "variant": "New"
+    },
+    "profile-runtime": {
+      "kind": "genesis/pkg-runtime-profile-v0.1",
+      "log_op": "pkg-runtime-profile",
+      "variant": "ProfileRuntime"
+    },
+    "publish": {
+      "kind": "genesis/pkg-publish-v0.1",
+      "log_op": "pkg-publish",
+      "variant": "Publish"
     },
     "qualify": {
       "kind": "genesis/pkg-tool-qualification-v0.1",
       "log_op": "pkg-tool-qualification",
       "variant": "Qualify"
     },
+    "remove": {
+      "kind": "genesis/pkg-remove-v0.1",
+      "log_op": "pkg-remove",
+      "variant": "Remove"
+    },
     "run": {
       "kind": "genesis/pkg-run-v0.1",
       "log_op": "pkg-run",
       "variant": "Run"
+    },
+    "scaffold": {
+      "kind": "genesis/pkg-scaffold-v0.1",
+      "log_op": "pkg-scaffold",
+      "variant": "Scaffold"
+    },
+    "self-optimize": {
+      "kind": "genesis/pkg-self-optimize-v0.1",
+      "log_op": "pkg-self-optimize",
+      "variant": "SelfOptimize"
+    },
+    "snapshot": {
+      "kind": "genesis/pkg-snapshot-v0.1",
+      "log_op": "pkg-snapshot",
+      "variant": "Snapshot"
     },
     "test": {
       "kind": "genesis/pkg-test-v0.1",
@@ -33,6 +133,16 @@
       "kind": "genesis/pkg-requirements-trace-v0.1",
       "log_op": "pkg-requirements-trace",
       "variant": "Trace"
+    },
+    "update": {
+      "kind": "genesis/pkg-update-v0.1",
+      "log_op": "pkg-update",
+      "variant": "Update"
+    },
+    "verify": {
+      "kind": "genesis/pkg-verify-v0.1",
+      "log_op": "pkg-verify",
+      "variant": "Verify"
     }
   },
   "version": 1

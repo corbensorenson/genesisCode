@@ -5,9 +5,18 @@
 
 Deterministic AI-facing workflow summaries are emitted in `--json` under `data.report` for:
 
+- `gcpm add` -> `genesis/pkg-add-report-v0.1`
+- `gcpm remove` -> `genesis/pkg-remove-report-v0.1`
 - `gcpm lock` -> `genesis/pkg-lock-report-v0.1`
 - `gcpm update` -> `genesis/pkg-update-report-v0.1`
+- `gcpm run` -> `genesis/pkg-run-report-v0.1`
+- `gcpm build` -> `genesis/pkg-build-report-v0.1`
+- `gcpm install` -> `genesis/pkg-install-report-v0.1`
+- `gcpm verify` -> `genesis/pkg-verify-report-v0.1`
+- `gcpm doctor` -> `genesis/pkg-doctor-ai-report-v0.1`
+- `gcpm env` -> `genesis/pkg-env-report-v0.1`
 - `gcpm publish` -> `genesis/pkg-publish-report-v0.1`
+- `gcpm self-optimize` -> `genesis/pkg-self-optimize-report-v0.1`
 
 ## Purpose
 
@@ -51,3 +60,7 @@ All report objects include:
 - `expected_old`
 
 Reports are emitted even when publish fails, so AI agents can continue with deterministic remediation planning.
+
+## Operational Expansion
+
+The report surface now covers dependency mutation (`add/remove`), execution/build (`run/build`), environment realization (`env`), and verification/remediation loops (`install/verify/doctor`). This keeps agents on deterministic command-level remediation paths instead of prompt-level heuristics.

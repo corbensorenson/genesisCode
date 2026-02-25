@@ -15,6 +15,7 @@ This is a strict parity gate, not a smoke test.
 - Primary report: `.genesis/perf/agent_workflow_runtime_parity_report.json`
 - History: `.genesis/perf/agent_workflow_runtime_parity_history.jsonl`
 - Mutation parity companion report: `.genesis/perf/agent_generative_workloads_parity_report.json`
+- Default minimum history floor for p95 enforcement: `GENESIS_AGENT_PARITY_P95_MIN_SAMPLES=8`
 
 ## Inputs
 
