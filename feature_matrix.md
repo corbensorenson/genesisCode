@@ -31,11 +31,7 @@ Legend:
 | Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- `P0.1` - gcpm remote dependency closure still constrained by local-first lock/install behavior.
-- `P0.2` - host ABI lacks first-class native FFI family (`host/ffi::*`) for zero-copy interop.
 - `P1.3` - deterministic external ecosystem bridge into GenesisPkg is not yet first-class.
-- `P2.1` - agent reference workflow corpus needs wider domain expansion for "build anything" breadth.
-- `P2.2` - cross-layer time-travel observability is not yet unified end-to-end.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

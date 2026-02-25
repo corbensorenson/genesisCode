@@ -40,6 +40,10 @@ modules = [
   "34_xr_workflow.gc",
   "35_media_pipeline.gc",
   "36_semantic_workspace.gc",
+  "37_multi_agent_orchestration.gc",
+  "38_realtime_collaboration.gc",
+  "39_ml_pipeline.gc",
+  "40_backend_topology.gc",
 ]
 
 [deps]
@@ -82,3 +86,7 @@ modules = [
 "34_xr_workflow.gc" = ["00_core.gc", "10_xr_host.gc"]
 "35_media_pipeline.gc" = ["00_core.gc", "00_core_media.gc"]
 "36_semantic_workspace.gc" = ["00_core.gc", "30_service_orchestration.gc"]
+"37_multi_agent_orchestration.gc" = ["00_core.gc", "30_service_orchestration.gc"]
+"38_realtime_collaboration.gc" = ["00_core.gc"]
+"39_ml_pipeline.gc" = ["00_core.gc", "31_data_pipeline.gc"]
+"40_backend_topology.gc" = ["00_core.gc", "30_service_orchestration.gc", "32_network_workflow.gc"]

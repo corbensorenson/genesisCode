@@ -226,7 +226,14 @@
             (strict0 ((core/map::get req) (quote :strict)))
             (frozen (if ((core/sym::eq? (core/data::tag frozen0)) (quote :bool)) frozen0 false))
             (strict (if ((core/sym::eq? (core/data::tag strict0)) (quote :bool)) strict0 false)))
-          (((core/cli::pkg-verify-lock-program lock) frozen) strict)))
+          (
+            (core/effect::perform
+              (quote core/pkg-low::install)
+              {
+                :lock lock
+                :frozen frozen
+                :strict strict})
+            (fn (r) (core/effect::pure r)))))
       ((core/error::make2 "core/type-error") "core/cli::pkg-install-program expects map"))))
 
 (def core/cli::pkg-verify-program
@@ -234,4 +241,3 @@
     (if (core/cli::map? req)
       (((core/cli::pkg-verify-lock-program ((core/map::get req) (quote :lock))) false) true)
       ((core/error::make2 "core/type-error") "core/cli::pkg-verify-program expects map"))))
-

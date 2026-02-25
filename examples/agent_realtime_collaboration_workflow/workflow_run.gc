@@ -1,0 +1,20 @@
+(def base/doc ((core/vec::push []) "seed"))
+
+(def op/a ((core/kit/realtime::op-v1 (quote :append)) "agent-a:update"))
+(def op/b ((core/kit/realtime::op-v1 (quote :append)) "agent-b:update"))
+(def op/c ((core/kit/realtime::op-v1 (quote :append)) "agent-c:update"))
+
+(def ops
+  ((core/vec::push
+     ((core/vec::push
+        ((core/vec::push []) op/a))
+       op/b))
+    op/c))
+
+(def workflow/session
+  ((((core/kit/realtime::session-v1 "agent_realtime_collaboration_workflow") 3) base/doc)
+    ops))
+
+(def prog (core/kit/realtime::run-session workflow/session))
+
+prog

@@ -3,7 +3,11 @@ use super::*;
 pub(super) fn handle_pkg_install(
     payload: &Term,
     pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
+    refs: Option<&RefsDb>,
+    budget: &mut ArtifactBudgetState,
+    timeout_ms: Option<u64>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
@@ -63,27 +67,51 @@ pub(super) fn handle_pkg_install(
     let mut ok = true;
     let mut missing_hashes: Vec<Term> = Vec::new();
     let mut checked: u64 = 0;
-    let deps_provenance = match locked_dependency_provenance(store, &l.locked, false, error_tok, op)
-    {
-        Ok(v) => v,
-        Err(v) => return Ok(v),
-    };
     let workspace_root = l.artifacts.get("root_workspace_snapshot").cloned();
 
     for (name, le) in &l.locked {
+        let registry_alias = dependency_registry_alias(&l, name, le);
         let snapshot_hex = &le.snapshot;
-        if !store.path_for(snapshot_hex).exists() {
+        if !store.path_for(snapshot_hex).exists()
+            && let (Some(req), Some(refs_db)) = (l.requirements.get(name), refs)
+        {
+            match resolve_requirement(
+                store,
+                refs_db,
+                &l.registries,
+                policy,
+                pol,
+                budget,
+                timeout_ms,
+                name,
+                req,
+                error_tok,
+                op,
+            ) {
+                Ok(_) => {}
+                Err(v) if is_not_found_error(&v) => {}
+                Err(v) => return Ok(v),
+            }
+        }
+        let snapshot_present = match try_hydrate_locked_hash(
+            store,
+            &l.registries,
+            registry_alias,
+            policy,
+            pol,
+            budget,
+            timeout_ms,
+            snapshot_hex,
+            error_tok,
+            op,
+        ) {
+            Ok(present) => present,
+            Err(v) => return Ok(v),
+        };
+        if !snapshot_present {
             ok = false;
             missing_hashes.push(Term::Str(snapshot_hex.clone()));
             continue;
-        }
-        if store.verify_hex(snapshot_hex).is_err() {
-            return Ok(mk_error(
-                error_tok,
-                "core/store/corruption",
-                format!("artifact store corruption: {snapshot_hex}"),
-                Some(op),
-            ));
         }
         let snap_term = match store_get_term(store, snapshot_hex) {
             Ok(t) => t,
@@ -115,37 +143,88 @@ pub(super) fn handle_pkg_install(
         hashes.dedup();
 
         for h in hashes {
-            if !store.path_for(&h).exists() {
+            let present = match try_hydrate_locked_hash(
+                store,
+                &l.registries,
+                registry_alias,
+                policy,
+                pol,
+                budget,
+                timeout_ms,
+                &h,
+                error_tok,
+                op,
+            ) {
+                Ok(present) => present,
+                Err(v) => return Ok(v),
+            };
+            if !present {
                 ok = false;
                 missing_hashes.push(Term::Str(h));
                 continue;
             }
-            if store.verify_hex(&h).is_err() {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/store/corruption",
-                    format!("artifact store corruption: {h}"),
-                    Some(op),
-                ));
-            }
             checked = checked.saturating_add(1);
         }
 
-        if strict && let Some(commit_hex) = &le.commit {
-            match validate_commit_artifact_closure(
+        if let Some(commit_hex) = &le.commit {
+            let commit_present = match try_hydrate_locked_hash(
                 store,
-                name,
-                snapshot_hex,
+                &l.registries,
+                registry_alias,
+                policy,
+                pol,
+                budget,
+                timeout_ms,
                 commit_hex,
-                true,
                 error_tok,
                 op,
             ) {
-                Ok(n) => checked = checked.saturating_add(n),
+                Ok(present) => present,
                 Err(v) => return Ok(v),
+            };
+            if !commit_present {
+                ok = false;
+                missing_hashes.push(Term::Str(commit_hex.clone()));
+                continue;
+            }
+            checked = checked.saturating_add(1);
+
+            if strict {
+                if let Err(v) = hydrate_commit_closure(
+                    store,
+                    &l.registries,
+                    registry_alias,
+                    policy,
+                    pol,
+                    budget,
+                    timeout_ms,
+                    commit_hex,
+                    error_tok,
+                    op,
+                ) {
+                    return Ok(v);
+                }
+                match validate_commit_artifact_closure(
+                    store,
+                    name,
+                    snapshot_hex,
+                    commit_hex,
+                    true,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(n) => checked = checked.saturating_add(n),
+                    Err(v) => return Ok(v),
+                }
             }
         }
     }
+
+    let deps_provenance =
+        match locked_dependency_provenance(store, &l.locked, strict, error_tok, op) {
+            Ok(v) => v,
+            Err(v) => return Ok(v),
+        };
 
     let mut m = BTreeMap::new();
     m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
@@ -180,6 +259,164 @@ pub(super) fn handle_pkg_install(
         ),
     );
     Ok(Value::Data(Term::Map(m)))
+}
+
+fn dependency_registry_alias<'a>(
+    lock: &'a gc_pkg::GenesisLock,
+    name: &str,
+    locked: &'a gc_pkg::LockedEntry,
+) -> Option<&'a str> {
+    locked.registry.as_deref().or_else(|| {
+        lock.requirements
+            .get(name)
+            .and_then(|r| r.registry.as_deref())
+    })
+}
+
+fn try_hydrate_locked_hash(
+    store: &ArtifactStore,
+    registries: &BTreeMap<String, String>,
+    registry_alias: Option<&str>,
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    budget: &mut ArtifactBudgetState,
+    timeout_ms: Option<u64>,
+    hash: &str,
+    error_tok: SealId,
+    op: &str,
+) -> Result<bool, Value> {
+    match ensure_artifact_hash_available(
+        store,
+        registries,
+        registry_alias,
+        policy,
+        op_pol,
+        budget,
+        timeout_ms,
+        hash,
+        error_tok,
+        op,
+    ) {
+        Ok(()) => Ok(true),
+        Err(v) if is_not_found_error(&v) => Ok(false),
+        Err(v) => Err(v),
+    }
+}
+
+fn hydrate_commit_closure(
+    store: &ArtifactStore,
+    registries: &BTreeMap<String, String>,
+    registry_alias: Option<&str>,
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    budget: &mut ArtifactBudgetState,
+    timeout_ms: Option<u64>,
+    commit_hex: &str,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    ensure_artifact_hash_available(
+        store,
+        registries,
+        registry_alias,
+        policy,
+        op_pol,
+        budget,
+        timeout_ms,
+        commit_hex,
+        error_tok,
+        op,
+    )?;
+    let commit_term = store_get_term(store, commit_hex).map_err(|e| {
+        mk_error(
+            error_tok,
+            "core/pkg/bad-commit",
+            format!("{commit_hex}: {e}"),
+            Some(op),
+        )
+    })?;
+    let commit = gc_vcs::Commit::from_term(&commit_term)
+        .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
+    if let Some(base_h) = commit.base.as_deref() {
+        ensure_artifact_hash_available(
+            store,
+            registries,
+            registry_alias,
+            policy,
+            op_pol,
+            budget,
+            timeout_ms,
+            base_h,
+            error_tok,
+            op,
+        )?;
+    }
+    ensure_artifact_hash_available(
+        store,
+        registries,
+        registry_alias,
+        policy,
+        op_pol,
+        budget,
+        timeout_ms,
+        &commit.patch,
+        error_tok,
+        op,
+    )?;
+    ensure_artifact_hash_available(
+        store,
+        registries,
+        registry_alias,
+        policy,
+        op_pol,
+        budget,
+        timeout_ms,
+        &commit.result,
+        error_tok,
+        op,
+    )?;
+    for ev_h in &commit.evidence {
+        ensure_artifact_hash_available(
+            store,
+            registries,
+            registry_alias,
+            policy,
+            op_pol,
+            budget,
+            timeout_ms,
+            ev_h,
+            error_tok,
+            op,
+        )?;
+    }
+    for at_h in &commit.attestations {
+        ensure_artifact_hash_available(
+            store,
+            registries,
+            registry_alias,
+            policy,
+            op_pol,
+            budget,
+            timeout_ms,
+            at_h,
+            error_tok,
+            op,
+        )?;
+    }
+    Ok(())
+}
+
+fn is_not_found_error(v: &Value) -> bool {
+    let Value::Sealed { payload, .. } = v else {
+        return false;
+    };
+    let Value::Data(Term::Map(mm)) = payload.as_ref() else {
+        return false;
+    };
+    matches!(
+        mm.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(Term::Str(code)) if code == "core/store/not-found"
+    )
 }
 
 pub(super) fn handle_pkg_verify(

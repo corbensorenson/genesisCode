@@ -30,6 +30,8 @@ fn non_gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/debug-inspect-v0.1",
         "genesis/debug-continue-v0.1",
         "genesis/debug-frames-v0.1",
+        "genesis/debug-timeline-v0.1",
+        "genesis/debug-bisect-v0.1",
         "genesis/run-v0.2",
         "genesis/replay-v0.2",
         "genesis/test-v0.2",

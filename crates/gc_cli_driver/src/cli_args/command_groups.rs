@@ -87,6 +87,22 @@ struct DebugTraceArgs {
     trace_out: Option<PathBuf>,
 }
 
+#[derive(Args, Clone)]
+struct DebugLayerArtifactArgs {
+    /// Optional planner JSON envelope (`genesis/agent-plan-v0.1`) included as timeline layer.
+    #[arg(long)]
+    planner_json: Option<PathBuf>,
+    /// Optional typecheck JSON envelope (`genesis/typecheck-v0.2`) included as timeline layer.
+    #[arg(long)]
+    typecheck_json: Option<PathBuf>,
+    /// Optional optimize JSON envelope (`genesis/optimize-v0.2`) included as timeline layer.
+    #[arg(long)]
+    optimize_json: Option<PathBuf>,
+    /// Optional effect log (`.gclog`) included as timeline effect-boundary layer.
+    #[arg(long)]
+    effect_log: Option<PathBuf>,
+}
+
 #[derive(Subcommand)]
 enum DebugCmd {
     /// Advance a deterministic trace cursor by N steps and return the selected frame.
@@ -146,6 +162,31 @@ enum DebugCmd {
         /// Maximum number of frames in the window.
         #[arg(long)]
         limit: Option<u64>,
+    },
+    /// Build a deterministic cross-layer timeline artifact for agent remediation loops.
+    Timeline {
+        #[command(flatten)]
+        trace: DebugTraceArgs,
+        #[command(flatten)]
+        layers: DebugLayerArtifactArgs,
+        /// Window start index (0-based) over unified timeline frames.
+        #[arg(long, default_value_t = 0)]
+        start: u64,
+        /// Maximum number of timeline frames in the output window.
+        #[arg(long)]
+        limit: Option<u64>,
+        /// Optional output path for canonical timeline artifact.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Deterministically bisect two timeline artifacts and return first mismatch frame.
+    Bisect {
+        /// Baseline timeline artifact path produced by `debug timeline --out`.
+        #[arg(long)]
+        baseline: PathBuf,
+        /// Candidate timeline artifact path produced by `debug timeline --out`.
+        #[arg(long)]
+        candidate: PathBuf,
     },
 }
 

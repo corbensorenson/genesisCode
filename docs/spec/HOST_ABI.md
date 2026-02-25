@@ -50,6 +50,8 @@ Compatibility notes:
 - Explicit per-op bridge policy (`bridge_cmd`, `bridge_args`, or WASI bridge response
   profile) overrides first-party backends and uses bridge transport.
 - Bridge-mediated extension domains without first-party runtime:
+  - `host/ffi::call`, `host/ffi::buffer-pin`, `host/ffi::buffer-unpin`
+    (typed native-call bridge ABI with deterministic boundary hashing and policy-gated ABI/library/symbol allowlists)
   - `host/plugin::command` (generic host extension ABI)
   - `editor/plugin::command` (editor-domain wrapper over `host/plugin::command`)
   return deterministic sealed bridge errors when bridge policy is missing.
@@ -203,6 +205,9 @@ Compatibility notes:
 - `gpu/compute::read-buffer`
 - `gpu/compute::submit`
 - `gpu/compute::write-buffer`
+- `host/ffi::buffer-pin`
+- `host/ffi::buffer-unpin`
+- `host/ffi::call`
 - `host/plugin::command`
 - `io/db::connect`
 - `io/db::exec`
@@ -271,6 +276,7 @@ The following high-churn surfaces are version-locked by machine-readable indices
 - `gfx/xr::*`
 - `editor/*`
 - `io/net::*`
+- `host/ffi::*`
 - `host/plugin::*` and `editor/plugin::*`
 
 Canonical sources:
@@ -288,6 +294,9 @@ Canonical sources:
    - sealed error envelope (`response_envelope.error.sealed = true`,
      `response_envelope.error.code_prefix` under `core/caps/*`).
 3. Plugin gateway continuity is mandatory:
+   - `host/ffi::call`
+   - `host/ffi::buffer-pin`
+   - `host/ffi::buffer-unpin`
    - `host/plugin::command`
    - `editor/plugin::command`
 4. Backward-incompatible changes require a version bump in the impacted schema ID and
@@ -327,6 +336,10 @@ Generation and verification:
 - `generated_from` (`string[]` of Rust source paths)
 - `operations` (`string[]`, sorted unique)
 - `families` (`map<string, string[]>`, sorted keys and values)
+- `operation_contracts` (`map<string, contract-entry>`, optional sparse map for ops that publish schema-id and policy-gate contracts)
+  - `schema_fields` (`request`, `response` payload keys carrying schema IDs)
+  - `schema_ids` (`request[]`, `response[]` allowed schema IDs)
+  - `policy_gates` (`string[]` required per-op policy controls)
 
 `HOST_ABI_SCHEMA_INDEX_v0.1.json` top-level keys:
 
@@ -669,6 +682,70 @@ Browser-native WebXR runtime conformance:
 Determinism:
 - Run-time responses for these ops are effect-logged as normal capability outcomes.
 - Replay uses logged responses and does not re-invoke host network/process side effects.
+
+## Host FFI Capability Contracts
+
+- `host/ffi::call`
+  - Required payload fields:
+    - `:abi-id` (string or symbol)
+    - `:library` (string or symbol)
+    - `:symbol` (string or symbol)
+  - Optional payload fields:
+    - `:payload` (term)
+    - `:mode` (string or symbol)
+    - `:request-schema-id` / `:response-schema-id` (string or symbol)
+  - Required per-op policy controls:
+    - `allow_abi_ids` (array<string>)
+    - `allow_libraries` (array<string>)
+    - `allow_symbols` (array<string>)
+  - Optional typed schema controls:
+    - `allow_schema_ids` required whenever request/response schema IDs are present.
+  - Deterministic response envelope:
+    - `{:ok true :ffi-op <symbol> :request-h <hex64> :result-h <hex64> :result <term>}`
+    - `:request-h` and `:result-h` are canonical CoreForm hashes used for replay-stable
+      FFI boundary tracing.
+
+- `host/ffi::buffer-pin`
+  - Required payload fields:
+    - `:abi-id` (string or symbol)
+    - `:bytes` (bytes or string)
+  - Optional payload fields:
+    - `:read-only` (bool)
+    - `:lifetime` (string or symbol)
+    - `:owner` (string)
+    - `:request-schema-id` / `:response-schema-id` (string or symbol)
+  - Required per-op policy controls:
+    - `allow_abi_ids` (array<string>)
+    - `max_buffer_bytes` (positive int bound)
+  - Optional typed schema controls:
+    - `allow_schema_ids` required whenever request/response schema IDs are present.
+  - Deterministic response envelope uses the same `:request-h` / `:result-h` boundary map as `host/ffi::call`.
+
+- `host/ffi::buffer-unpin`
+  - Required payload fields:
+    - `:abi-id` (string or symbol)
+    - `:handle` (string or symbol)
+  - Optional payload fields:
+    - `:reason` (string or symbol)
+    - `:request-schema-id` / `:response-schema-id` (string or symbol)
+  - Required per-op policy controls:
+    - `allow_abi_ids` (array<string>)
+  - Optional typed schema controls:
+    - `allow_schema_ids` required whenever request/response schema IDs are present.
+  - Deterministic response envelope uses the same `:request-h` / `:result-h` boundary map as `host/ffi::call`.
+
+### FFI Safety Model
+
+- Ownership is explicit and handle-based: pinned memory is represented by opaque handles
+  returned from the host bridge, never by raw pointers in kernel-visible terms.
+- Lifetime is explicit at the payload layer (`:lifetime`, `:owner`) and policy-gated by
+  `max_buffer_bytes`; runtimes must refuse oversized pin requests deterministically.
+- Bridge integrity is fail-closed for spawned bridges: `bridge_cmd_sha256` digest pin is
+  required when `bridge_cmd` transport is used.
+- Deterministic mode limit:
+  - FFI calls must execute only through capability runner boundaries.
+  - Replay never re-executes host native code; it consumes logged deterministic envelopes.
+  - Boundary hashes (`:request-h`, `:result-h`) make cross-layer bisecting stable.
 
 ## Host Extension Capability Contract
 

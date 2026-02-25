@@ -15,6 +15,10 @@ compose workflows from stable kits instead of ad-hoc effect chains.
 - `prelude/modules/33_game_loop.gc`
 - `prelude/modules/34_xr_workflow.gc`
 - `prelude/modules/35_media_pipeline.gc`
+- `prelude/modules/37_multi_agent_orchestration.gc`
+- `prelude/modules/38_realtime_collaboration.gc`
+- `prelude/modules/39_ml_pipeline.gc`
+- `prelude/modules/40_backend_topology.gc`
 
 ## Contract Schemas
 
@@ -49,6 +53,28 @@ Media pipeline:
 - `:core/kit/media-asset-result.v1`
 - `:core/kit/media-build-result.v1`
 
+Multi-agent orchestration:
+- `:core/kit/multi-agent-role.v1`
+- `:core/kit/multi-agent-spec.v1`
+- `:core/kit/multi-agent-assignment.v1`
+- `:core/kit/multi-agent-run-result.v1`
+
+Realtime collaboration:
+- `:core/kit/realtime-op.v1`
+- `:core/kit/realtime-session.v1`
+- `:core/kit/realtime-merge-result.v1`
+
+ML pipeline variants:
+- `:core/kit/ml-stage.v1`
+- `:core/kit/ml-pipeline.v1`
+- `:core/kit/ml-run-result.v1`
+
+Backend topology:
+- `:core/kit/backend-node.v1`
+- `:core/kit/backend-edge.v1`
+- `:core/kit/backend-topology.v1`
+- `:core/kit/backend-plan-result.v1`
+
 ## Determinism Rules
 
 - Kits define only data contracts + deterministic orchestration helpers.
@@ -66,6 +92,10 @@ Reference workflow entrypoints now use kit APIs:
 - `examples/agent_xr_runtime_workflow/workflow_run.gc` -> deterministic XR runtime lane (`gfx/xr::*`); XR kit contracts are validated in `crates/gc_prelude/tests/prelude_xr_wrappers.rs`
 - `examples/agent_media_asset_workflow/workflow_run.gc` -> deterministic media import/build lane (image/audio transcode + asset hashing via `core/media::*`)
 - `examples/agent_service_workflow/workflow.sh` generated check program -> service kit
+- `examples/agent_multi_agent_orchestration_workflow/workflow_run.gc` -> multi-agent role/spec orchestration kit
+- `examples/agent_realtime_collaboration_workflow/workflow_run.gc` -> deterministic realtime collaboration merge kit
+- `examples/agent_ml_pipeline_variant_workflow/workflow_run.gc` -> ML pipeline variant kit over pipeline runner
+- `examples/agent_backend_topology_workflow/workflow_run.gc` -> backend topology planning kit
 
 ## Drift Guard
 

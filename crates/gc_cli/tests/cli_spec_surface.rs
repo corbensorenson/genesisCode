@@ -91,6 +91,29 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
             "debug step --help output missing {needle}"
         );
     }
+    let s = stdout_str(&["debug", "timeline", "--help"]);
+    for needle in [
+        "--engine",
+        "--contract",
+        "--msg",
+        "--planner-json",
+        "--typecheck-json",
+        "--optimize-json",
+        "--effect-log",
+        "--out",
+    ] {
+        assert!(
+            s.contains(needle),
+            "debug timeline --help output missing {needle}"
+        );
+    }
+    let s = stdout_str(&["debug", "bisect", "--help"]);
+    for needle in ["--baseline", "--candidate"] {
+        assert!(
+            s.contains(needle),
+            "debug bisect --help output missing {needle}"
+        );
+    }
 
     let s = stdout_str(&["run", "--help"]);
     assert!(s.contains("--engine"), "run --help output missing --engine");

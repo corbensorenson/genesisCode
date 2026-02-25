@@ -127,6 +127,11 @@ fn collect_available_semver_tags(refs: &[RefEntry]) -> Vec<Term> {
 pub(crate) fn resolve_requirement(
     store: &ArtifactStore,
     refs: &RefsDb,
+    registries: &BTreeMap<String, String>,
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    budget: &mut ArtifactBudgetState,
+    timeout_ms: Option<u64>,
     _name: &str,
     req: &gc_pkg::Requirement,
     error_tok: SealId,
@@ -176,6 +181,18 @@ pub(crate) fn resolve_requirement(
             if let Err(e) = gc_vcs::validate_hex_hash(&h) {
                 return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
             }
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &h,
+                error_tok,
+                op,
+            )?;
             let fp = compute_requirement_fingerprint(req, Some(&h), None);
             Ok(gc_pkg::LockedEntry {
                 commit: None,
@@ -191,19 +208,35 @@ pub(crate) fn resolve_requirement(
             if let Err(e) = gc_vcs::validate_hex_hash(&h) {
                 return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
             }
-            if !store.path_for(&h).exists() {
-                return Err(mk_error(
-                    error_tok,
-                    "core/store/not-found",
-                    format!("artifact not found: {h}"),
-                    Some(op),
-                ));
-            }
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &h,
+                error_tok,
+                op,
+            )?;
             let t = store_get_term(store, &h)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let c = gc_vcs::Commit::from_term(&t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &snapshot,
+                error_tok,
+                op,
+            )?;
             let fp = compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&h));
             Ok(gc_pkg::LockedEntry {
                 commit: Some(h),
@@ -216,30 +249,74 @@ pub(crate) fn resolve_requirement(
             })
         }
         Selector::Ref(rn) => {
-            let h = refs
+            let local_h = refs
                 .get(&rn)
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
-            let Some(commit_hex) = h else {
-                return Err(mk_error(
+            let commit_hex = if let Some(h) = local_h {
+                h
+            } else {
+                let Some(client) = registry_client_for_requirement(
+                    registries,
+                    req.registry.as_deref(),
+                    policy,
+                    op_pol,
+                    timeout_ms,
                     error_tok,
-                    "core/pkg/ref-not-found",
-                    format!("ref not found: {rn}"),
-                    Some(op),
-                ));
+                    op,
+                )?
+                .map(|(client, _base)| client) else {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/pkg/ref-not-found",
+                        format!("ref not found: {rn}"),
+                        Some(op),
+                    ));
+                };
+                match client.refs_get(&rn) {
+                    Ok(Some(h)) => h,
+                    Ok(None) => {
+                        return Err(mk_error(
+                            error_tok,
+                            "core/pkg/ref-not-found",
+                            format!("ref not found: {rn}"),
+                            Some(op),
+                        ));
+                    }
+                    Err(e) => {
+                        let code = registry_error_code(&e, "core/store/remote-auth");
+                        return Err(mk_error(error_tok, code, e.to_string(), Some(op)));
+                    }
+                }
             };
-            if !store.path_for(&commit_hex).exists() {
-                return Err(mk_error(
-                    error_tok,
-                    "core/store/not-found",
-                    format!("artifact not found: {commit_hex}"),
-                    Some(op),
-                ));
-            }
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &commit_hex,
+                error_tok,
+                op,
+            )?;
             let t = store_get_term(store, &commit_hex)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let c = gc_vcs::Commit::from_term(&t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &snapshot,
+                error_tok,
+                op,
+            )?;
             let fp =
                 compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&commit_hex));
             Ok(gc_pkg::LockedEntry {
@@ -261,14 +338,46 @@ pub(crate) fn resolve_requirement(
                     Some(op),
                 )
             })?;
-            let policy = semver_selection_policy(req.tag_policy.as_deref())
+            let selection_policy = semver_selection_policy(req.tag_policy.as_deref())
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)))?;
-            let refs_list = refs
+            let local_refs_list = refs
                 .list(Some("refs/tags/"))
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
-            let Some((resolved_ref, commit_hex)) =
-                select_semver_tag_ref(&refs_list, &req_range, policy)
-            else {
+            let mut resolved =
+                select_semver_tag_ref(&local_refs_list, &req_range, selection_policy);
+            let mut available_tags = collect_available_semver_tags(&local_refs_list);
+            if resolved.is_none()
+                && let Some(client) = registry_client_for_requirement(
+                    registries,
+                    req.registry.as_deref(),
+                    policy,
+                    op_pol,
+                    timeout_ms,
+                    error_tok,
+                    op,
+                )?
+                .map(|(client, _base)| client)
+            {
+                match client.refs_list(Some("refs/tags/")) {
+                    Ok(remote_refs) => {
+                        let remote_refs: Vec<RefEntry> = remote_refs
+                            .into_iter()
+                            .map(|entry| RefEntry {
+                                name: entry.name,
+                                hash: entry.hash,
+                            })
+                            .collect();
+                        available_tags = collect_available_semver_tags(&remote_refs);
+                        resolved =
+                            select_semver_tag_ref(&remote_refs, &req_range, selection_policy);
+                    }
+                    Err(e) => {
+                        let code = registry_error_code(&e, "core/store/remote-auth");
+                        return Err(mk_error(error_tok, code, e.to_string(), Some(op)));
+                    }
+                }
+            }
+            let Some((resolved_ref, commit_hex)) = resolved else {
                 return Err(mk_error_with_ctx(
                     error_tok,
                     "core/pkg/semver-no-match",
@@ -291,7 +400,7 @@ pub(crate) fn resolve_requirement(
                             ),
                             (
                                 TermOrdKey(Term::symbol(":available-tags")),
-                                Term::Vector(collect_available_semver_tags(&refs_list)),
+                                Term::Vector(available_tags),
                             ),
                         ]
                         .into_iter()
@@ -299,19 +408,35 @@ pub(crate) fn resolve_requirement(
                     ),
                 ));
             };
-            if !store.path_for(&commit_hex).exists() {
-                return Err(mk_error(
-                    error_tok,
-                    "core/store/not-found",
-                    format!("artifact not found: {commit_hex}"),
-                    Some(op),
-                ));
-            }
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &commit_hex,
+                error_tok,
+                op,
+            )?;
             let t = store_get_term(store, &commit_hex)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let c = gc_vcs::Commit::from_term(&t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
+            ensure_artifact_hash_available(
+                store,
+                registries,
+                req.registry.as_deref(),
+                policy,
+                op_pol,
+                budget,
+                timeout_ms,
+                &snapshot,
+                error_tok,
+                op,
+            )?;
             let fp =
                 compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&commit_hex));
             Ok(gc_pkg::LockedEntry {
@@ -324,6 +449,130 @@ pub(crate) fn resolve_requirement(
                 environment_fingerprint: Some(fp),
             })
         }
+    }
+}
+
+fn registry_remote_for_requirement(
+    registries: &BTreeMap<String, String>,
+    registry_alias: Option<&str>,
+    policy: &CapsPolicy,
+) -> Option<String> {
+    match registry_alias {
+        Some(alias) => registries.get(alias).cloned().or_else(|| {
+            if alias == "default" {
+                policy.store.remote.clone()
+            } else {
+                None
+            }
+        }),
+        None => registries
+            .get("default")
+            .cloned()
+            .or_else(|| policy.store.remote.clone()),
+    }
+}
+
+fn registry_client_for_requirement(
+    registries: &BTreeMap<String, String>,
+    registry_alias: Option<&str>,
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    timeout_ms: Option<u64>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Option<(gc_registry::RegistryClient, String)>, Value> {
+    let Some(remote) = registry_remote_for_requirement(registries, registry_alias, policy) else {
+        return Ok(None);
+    };
+    let base = store_normalize_and_check_remote(policy, op_pol, &remote)
+        .map_err(|e| mk_error(error_tok, "core/store/remote-denied", e, Some(op)))?;
+    let auth = store_registry_auth(policy)
+        .map_err(|e| mk_error(error_tok, "core/caps/policy-error", e, Some(op)))?;
+    let client = gc_registry::RegistryClient::new_with_auth(
+        &base,
+        timeout_ms.map(std::time::Duration::from_millis),
+        auth,
+    )
+    .map_err(|e| {
+        let code = registry_error_code(&e, "core/store/remote-auth");
+        mk_error(error_tok, code, e.to_string(), Some(op))
+    })?;
+    Ok(Some((client, base)))
+}
+
+pub(crate) fn ensure_artifact_hash_available(
+    store: &ArtifactStore,
+    registries: &BTreeMap<String, String>,
+    registry_alias: Option<&str>,
+    policy: &CapsPolicy,
+    op_pol: Option<&OpPolicy>,
+    budget: &mut ArtifactBudgetState,
+    timeout_ms: Option<u64>,
+    hash: &str,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    if store.path_for(hash).exists() {
+        if let Err(e) = store.verify_hex(hash) {
+            return Err(mk_error(
+                error_tok,
+                "core/store/corruption",
+                e.to_string(),
+                Some(op),
+            ));
+        }
+        return Ok(());
+    }
+    let Some((client, _base)) = registry_client_for_requirement(
+        registries,
+        registry_alias,
+        policy,
+        op_pol,
+        timeout_ms,
+        error_tok,
+        op,
+    )?
+    else {
+        return Err(mk_error(
+            error_tok,
+            "core/store/not-found",
+            format!("artifact not found: {hash}"),
+            Some(op),
+        ));
+    };
+    let bytes = match client.store_get_opt_bounded(hash, Some(HARD_REMOTE_ARTIFACT_MAX_BYTES)) {
+        Ok(Some(bytes)) => bytes,
+        Ok(None) => {
+            return Err(mk_error(
+                error_tok,
+                "core/store/not-found",
+                format!("artifact not found: {hash}"),
+                Some(op),
+            ));
+        }
+        Err(e) => {
+            let code = registry_error_code(&e, "core/store/remote-auth");
+            return Err(mk_error(error_tok, code, e.to_string(), Some(op)));
+        }
+    };
+    let got = hash_bytes_hex(&bytes);
+    if got != hash {
+        return Err(mk_error(
+            error_tok,
+            "core/store/hash-mismatch",
+            "remote bytes hash mismatch".to_string(),
+            Some(op),
+        ));
+    }
+    match store_put_with_budget(store, &bytes, policy, budget, error_tok, op) {
+        Ok(stored_h) if stored_h == hash => Ok(()),
+        Ok(_) => Err(mk_error(
+            error_tok,
+            "core/store/hash-mismatch",
+            "local store wrote under different hash".to_string(),
+            Some(op),
+        )),
+        Err(v) => Err(v),
     }
 }
 

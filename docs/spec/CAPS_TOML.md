@@ -187,6 +187,7 @@ Supported keys:
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
 - `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).
   - required for `host/plugin::command` and `editor/plugin::command` when `bridge_cmd` transport is configured.
+  - required for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin` when `bridge_cmd` transport is configured.
   - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
 - `wasi_bridge_profile` (bool): when true, enables deterministic WASI bridge response mode for this op (also always enabled on actual WASI targets).
 - `wasi_bridge_response` (string): optional CoreForm term used as deterministic host response for bridge-backed ops under WASI bridge profile.
@@ -212,6 +213,10 @@ Supported keys:
 - `allow_plugins` (array<string>): required allowlist for `host/plugin::command` and `editor/plugin::command` plugin identifiers.
 - `allow_commands` (array<string>): required command allowlist for `host/plugin::command` and `editor/plugin::command`.
 - `allow_schema_ids` (array<string>): required when typed plugin schemas are used (`:request-schema-id` / `:response-schema-id`); every schema id must be allowlisted.
+- `allow_abi_ids` (array<string>): required ABI allowlist for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin`.
+- `allow_libraries` (array<string>): required allowlist for `host/ffi::call` library names.
+- `allow_symbols` (array<string>): required allowlist for `host/ffi::call` symbols.
+- `max_buffer_bytes` (int): required positive payload bound for `host/ffi::buffer-pin`.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -241,6 +246,39 @@ allow_commands = ["run", "health"]
 allow_schema_ids = [
   "genesis/plugin.request.exec.v1",
   "genesis/plugin.response.result.v1",
+]
+
+[op."host/ffi::call"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_sha256 = "sha256:4f85c19e5f0f7e3fef58e31e0f4bb3ad73df0b1b2e27fe8f79c2fbe4f6f4cfd2"
+allow_abi_ids = ["abi.math.v1"]
+allow_libraries = ["libmath.so"]
+allow_symbols = ["sum_f64"]
+allow_schema_ids = [
+  "genesis/ffi.request.call.v1",
+  "genesis/ffi.response.call.v1",
+]
+
+[op."host/ffi::buffer-pin"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_sha256 = "sha256:4f85c19e5f0f7e3fef58e31e0f4bb3ad73df0b1b2e27fe8f79c2fbe4f6f4cfd2"
+allow_abi_ids = ["abi.math.v1"]
+allow_schema_ids = [
+  "genesis/ffi.request.buffer-pin.v1",
+  "genesis/ffi.response.buffer-handle.v1",
+]
+max_buffer_bytes = 1048576
+
+[op."host/ffi::buffer-unpin"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_sha256 = "sha256:4f85c19e5f0f7e3fef58e31e0f4bb3ad73df0b1b2e27fe8f79c2fbe4f6f4cfd2"
+allow_abi_ids = ["abi.math.v1"]
+allow_schema_ids = [
+  "genesis/ffi.request.buffer-unpin.v1",
+  "genesis/ffi.response.status.v1",
 ]
 
 [op."gfx/gpu::create-buffer"]

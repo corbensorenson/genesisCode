@@ -3854,6 +3854,191 @@
         }
       }
     },
+    "host/ffi::buffer-pin": {
+      "operation": "host/ffi::buffer-pin",
+      "payload": {
+        "constraints": [
+          "max_buffer_bytes policy bound required",
+          "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+          "result envelope includes deterministic :request-h and :result-h fields"
+        ],
+        "optional_fields": [
+          {
+            "name": ":read-only",
+            "type": "bool"
+          },
+          {
+            "name": ":lifetime",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":owner",
+            "type": "string"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":request-schema-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":response-schema-id",
+            "type": "string|symbol"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_abi_ids policy required"
+            ],
+            "name": ":abi-id",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":bytes",
+            "type": "bytes|string"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "host/ffi::buffer-unpin": {
+      "operation": "host/ffi::buffer-unpin",
+      "payload": {
+        "constraints": [
+          "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+          "result envelope includes deterministic :request-h and :result-h fields"
+        ],
+        "optional_fields": [
+          {
+            "name": ":reason",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":request-schema-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":response-schema-id",
+            "type": "string|symbol"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_abi_ids policy required"
+            ],
+            "name": ":abi-id",
+            "type": "string|symbol"
+          },
+          {
+            "name": ":handle",
+            "type": "string|symbol"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+          "value_kind": "map"
+        }
+      }
+    },
+    "host/ffi::call": {
+      "operation": "host/ffi::call",
+      "payload": {
+        "constraints": [
+          "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+          "result envelope includes deterministic :request-h and :result-h fields"
+        ],
+        "optional_fields": [
+          {
+            "name": ":payload",
+            "type": "term"
+          },
+          {
+            "name": ":mode",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":request-schema-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "requires allow_schema_ids when present"
+            ],
+            "name": ":response-schema-id",
+            "type": "string|symbol"
+          }
+        ],
+        "required_fields": [
+          {
+            "constraints": [
+              "allow_abi_ids policy required"
+            ],
+            "name": ":abi-id",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "allow_libraries policy required"
+            ],
+            "name": ":library",
+            "type": "string|symbol"
+          },
+          {
+            "constraints": [
+              "allow_symbols policy required"
+            ],
+            "name": ":symbol",
+            "type": "string|symbol"
+          }
+        ],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+          "value_kind": "map"
+        }
+      }
+    },
     "host/plugin::command": {
       "operation": "host/plugin::command",
       "payload": {

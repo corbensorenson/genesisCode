@@ -916,6 +916,104 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
                 ],
             }
         },
+        "host/ffi::call": {
+            "payload": {
+                "required_fields": [
+                    field(":abi-id", "string|symbol", ["allow_abi_ids policy required"]),
+                    field(":library", "string|symbol", ["allow_libraries policy required"]),
+                    field(":symbol", "string|symbol", ["allow_symbols policy required"]),
+                ],
+                "optional_fields": [
+                    field(":payload", "term"),
+                    field(":mode", "string|symbol"),
+                    field(
+                        ":request-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                    field(
+                        ":response-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                ],
+                "constraints": [
+                    "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+                    "result envelope includes deterministic :request-h and :result-h fields",
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+                }
+            },
+        },
+        "host/ffi::buffer-pin": {
+            "payload": {
+                "required_fields": [
+                    field(":abi-id", "string|symbol", ["allow_abi_ids policy required"]),
+                    field(":bytes", "bytes|string"),
+                ],
+                "optional_fields": [
+                    field(":read-only", "bool"),
+                    field(":lifetime", "string|symbol"),
+                    field(":owner", "string"),
+                    field(
+                        ":request-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                    field(
+                        ":response-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                ],
+                "constraints": [
+                    "max_buffer_bytes policy bound required",
+                    "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+                    "result envelope includes deterministic :request-h and :result-h fields",
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+                }
+            },
+        },
+        "host/ffi::buffer-unpin": {
+            "payload": {
+                "required_fields": [
+                    field(":abi-id", "string|symbol", ["allow_abi_ids policy required"]),
+                    field(":handle", "string|symbol"),
+                ],
+                "optional_fields": [
+                    field(":reason", "string|symbol"),
+                    field(
+                        ":request-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                    field(
+                        ":response-schema-id",
+                        "string|symbol",
+                        ["requires allow_schema_ids when present"],
+                    ),
+                ],
+                "constraints": [
+                    "bridge_cmd transport requires bridge_cmd_sha256 digest pin",
+                    "result envelope includes deterministic :request-h and :result-h fields",
+                ],
+            },
+            "response_envelope": {
+                "success": {
+                    "value_kind": "map",
+                    "shape": "{:ok bool :ffi-op symbol :request-h hex64 :result-h hex64 :result term}",
+                }
+            },
+        },
         "core/store::put": {
             "payload": {"required_fields": [field(":artifact", "term")], "optional_fields": []},
             "response_envelope": {"success": {"value_kind": "map", "shape": "{:hash hex64}"}},
@@ -1002,6 +1100,103 @@ def explicit_host_schema_overrides() -> dict[str, dict[str, object]]:
     }
 
 
+def explicit_host_operation_contracts() -> dict[str, dict[str, object]]:
+    return {
+        "host/plugin::command": {
+            "schema_fields": {
+                "request": ":request-schema-id",
+                "response": ":response-schema-id",
+            },
+            "schema_ids": {
+                "request": [
+                    "genesis/plugin.request.exec.v1",
+                    "genesis/plugin.request.jsonrpc.v1",
+                ],
+                "response": [
+                    "genesis/plugin.response.result.v1",
+                    "genesis/plugin.response.bytes.v1",
+                ],
+            },
+            "policy_gates": [
+                "allow_plugins",
+                "allow_commands",
+                "allow_schema_ids (required when schema ids are present)",
+                "bridge_cmd_sha256 (required when bridge_cmd transport is configured)",
+            ],
+        },
+        "editor/plugin::command": {
+            "schema_fields": {
+                "request": ":request-schema-id",
+                "response": ":response-schema-id",
+            },
+            "schema_ids": {
+                "request": [
+                    "genesis/plugin.request.exec.v1",
+                    "genesis/plugin.request.jsonrpc.v1",
+                ],
+                "response": [
+                    "genesis/plugin.response.result.v1",
+                    "genesis/plugin.response.bytes.v1",
+                ],
+            },
+            "policy_gates": [
+                "allow_plugins",
+                "allow_commands",
+                "allow_schema_ids (required when schema ids are present)",
+                "bridge_cmd_sha256 (required when bridge_cmd transport is configured)",
+            ],
+        },
+        "host/ffi::call": {
+            "schema_fields": {
+                "request": ":request-schema-id",
+                "response": ":response-schema-id",
+            },
+            "schema_ids": {
+                "request": ["genesis/ffi.request.call.v1"],
+                "response": ["genesis/ffi.response.call.v1"],
+            },
+            "policy_gates": [
+                "allow_abi_ids",
+                "allow_libraries",
+                "allow_symbols",
+                "allow_schema_ids (required when schema ids are present)",
+                "bridge_cmd_sha256 (required when bridge_cmd transport is configured)",
+            ],
+        },
+        "host/ffi::buffer-pin": {
+            "schema_fields": {
+                "request": ":request-schema-id",
+                "response": ":response-schema-id",
+            },
+            "schema_ids": {
+                "request": ["genesis/ffi.request.buffer-pin.v1"],
+                "response": ["genesis/ffi.response.buffer-handle.v1"],
+            },
+            "policy_gates": [
+                "allow_abi_ids",
+                "max_buffer_bytes",
+                "allow_schema_ids (required when schema ids are present)",
+                "bridge_cmd_sha256 (required when bridge_cmd transport is configured)",
+            ],
+        },
+        "host/ffi::buffer-unpin": {
+            "schema_fields": {
+                "request": ":request-schema-id",
+                "response": ":response-schema-id",
+            },
+            "schema_ids": {
+                "request": ["genesis/ffi.request.buffer-unpin.v1"],
+                "response": ["genesis/ffi.response.status.v1"],
+            },
+            "policy_gates": [
+                "allow_abi_ids",
+                "allow_schema_ids (required when schema ids are present)",
+                "bridge_cmd_sha256 (required when bridge_cmd transport is configured)",
+            ],
+        },
+    }
+
+
 def build_host_schema_index(host_ops: list[str]) -> dict[str, object]:
     overrides = explicit_host_schema_overrides()
     schemas: dict[str, dict[str, object]] = {}
@@ -1043,6 +1238,7 @@ def main() -> int:
 
     host_ops = extract_host_ops(root)
     prelude_ops = extract_prelude_capability_ops(root)
+    operation_contracts = explicit_host_operation_contracts()
 
     host_payload = {
         "kind": "genesis/host-abi-index-v0.1",
@@ -1055,6 +1251,11 @@ def main() -> int:
         ],
         "operations": host_ops,
         "families": stable_ops_by_family(host_ops),
+        "operation_contracts": {
+            op: operation_contracts[op]
+            for op in sorted(operation_contracts)
+            if op in host_ops
+        },
     }
     out_host.write_text(json.dumps(host_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     out_host_schema.write_text(

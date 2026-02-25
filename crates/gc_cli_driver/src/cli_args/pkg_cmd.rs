@@ -117,7 +117,7 @@ enum PkgCmd {
         lock: PathBuf,
     },
 
-    /// Resolve requirements into pinned commits/snapshots in `genesis.lock` (local-only v0.1).
+    /// Resolve requirements into pinned commits/snapshots in `genesis.lock`.
     Lock {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]
@@ -336,7 +336,7 @@ enum PkgCmd {
         no_store: bool,
     },
 
-    /// Verify that all locked snapshots are present in the local store, and optionally verify commit evidence.
+    /// Hydrate and verify locked artifacts from configured registries; optionally validate commit/evidence closure.
     Install {
         /// Lock path (relative to the capability base_dir).
         #[arg(long, default_value = "genesis.lock")]

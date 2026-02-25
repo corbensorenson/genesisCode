@@ -1,0 +1,47 @@
+(def ml/stage-ingest
+  ((core/kit/ml::stage-v1 "ingest")
+    (fn (_state)
+      (core/effect::pure
+        {
+          :rows 8
+          :features 0
+          :score 0
+          :variant "tabular-fast"}))))
+
+(def ml/stage-featureize
+  ((core/kit/ml::stage-v1 "featureize")
+    (fn (state)
+      (let ((rows ((core/map::get state) (quote :rows))))
+        (core/effect::pure
+          {
+            :rows rows
+            :features ((core/int::add rows) rows)
+            :score 0
+            :variant ((core/map::get state) (quote :variant))})))))
+
+(def ml/stage-infer
+  ((core/kit/ml::stage-v1 "infer")
+    (fn (state)
+      (let ((rows ((core/map::get state) (quote :rows))))
+        (let ((features ((core/map::get state) (quote :features))))
+          (core/effect::pure
+            {
+              :rows rows
+              :features features
+              :score ((core/int::add rows) features)
+              :variant ((core/map::get state) (quote :variant))}))))))
+
+(def ml/stages
+  ((core/vec::push
+     ((core/vec::push
+        ((core/vec::push []) ml/stage-ingest))
+       ml/stage-featureize))
+    ml/stage-infer))
+
+(def ml/spec
+  (((core/kit/ml::spec-v1 "agent_ml_pipeline_variant_workflow") "tabular-fast")
+    ml/stages))
+
+(def prog (core/kit/ml::run-spec ml/spec))
+
+prog

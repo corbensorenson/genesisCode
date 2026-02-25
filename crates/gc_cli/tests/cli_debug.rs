@@ -1,5 +1,5 @@
 use assert_cmd::cargo::cargo_bin_cmd;
-use gc_coreform::{Term, TermOrdKey, parse_term};
+use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use serde_json::Value;
 use tempfile::tempdir;
 
@@ -220,6 +220,127 @@ fn debug_break_and_continue_support_key_value_matching() {
     assert_eq!(
         continue_json
             .pointer("/data/selected_step_index")
+            .and_then(Value::as_u64),
+        Some(0)
+    );
+}
+
+#[test]
+fn debug_timeline_and_bisect_detect_first_mismatch() {
+    let td = tempdir().unwrap();
+    let file = write_contract_module(td.path());
+    let baseline = td.path().join("baseline.timeline.gc");
+    let candidate = td.path().join("candidate.timeline.gc");
+
+    let timeline_out = cmd()
+        .args([
+            "--json",
+            "debug",
+            "timeline",
+            file.to_str().unwrap(),
+            "--engine",
+            "rust",
+            "--contract",
+            "c",
+            "--msg",
+            "(msg foo nil)",
+            "--out",
+            baseline.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let timeline_json: Value = serde_json::from_slice(&timeline_out).expect("timeline json");
+    assert_eq!(
+        timeline_json.get("kind").and_then(Value::as_str),
+        Some("genesis/debug-timeline-v0.1")
+    );
+    assert!(
+        timeline_json
+            .pointer("/data/timeline_frame_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            >= 1
+    );
+
+    let baseline_src = std::fs::read_to_string(&baseline).expect("read baseline timeline");
+    let mut baseline_term = parse_term(&baseline_src).expect("parse baseline timeline");
+    let Term::Map(root) = &mut baseline_term else {
+        panic!("timeline artifact must be map");
+    };
+    let k_frames = TermOrdKey(Term::symbol(":frames"));
+    let Some(Term::Vector(frames)) = root.get_mut(&k_frames) else {
+        panic!("timeline artifact missing :frames");
+    };
+    let Some(Term::Map(first)) = frames.first_mut() else {
+        panic!("timeline must contain at least one frame map");
+    };
+    first.insert(
+        TermOrdKey(Term::symbol(":redteam-mutation")),
+        Term::Bool(true),
+    );
+    std::fs::write(&candidate, format!("{}\n", print_term(&baseline_term)))
+        .expect("write candidate timeline");
+
+    let bisect_match_out = cmd()
+        .args([
+            "--json",
+            "debug",
+            "bisect",
+            "--baseline",
+            baseline.to_str().unwrap(),
+            "--candidate",
+            baseline.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let bisect_match_json: Value =
+        serde_json::from_slice(&bisect_match_out).expect("bisect match json");
+    assert_eq!(
+        bisect_match_json.get("kind").and_then(Value::as_str),
+        Some("genesis/debug-bisect-v0.1")
+    );
+    assert_eq!(
+        bisect_match_json
+            .pointer("/data/match")
+            .and_then(Value::as_bool),
+        Some(true)
+    );
+    assert!(
+        bisect_match_json
+            .pointer("/data/mismatch_index")
+            .map(Value::is_null)
+            .unwrap_or(false)
+    );
+
+    let bisect_out = cmd()
+        .args([
+            "--json",
+            "debug",
+            "bisect",
+            "--baseline",
+            baseline.to_str().unwrap(),
+            "--candidate",
+            candidate.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let bisect_json: Value = serde_json::from_slice(&bisect_out).expect("bisect json");
+    assert_eq!(
+        bisect_json.pointer("/data/match").and_then(Value::as_bool),
+        Some(false)
+    );
+    assert_eq!(
+        bisect_json
+            .pointer("/data/mismatch_index")
             .and_then(Value::as_u64),
         Some(0)
     );

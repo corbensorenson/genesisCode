@@ -76,6 +76,7 @@ domain_contracts = (
         10,
     ),
     DomainContract("network", ("io/net::",), 12),
+    DomainContract("ffi", ("host/ffi::",), 3),
     DomainContract("plugin", ("host/plugin::", "editor/plugin::"), 2),
 )
 
@@ -83,6 +84,8 @@ errors: list[str] = []
 domain_summaries: dict[str, dict[str, object]] = {}
 required_plugin_ops = {"host/plugin::command", "editor/plugin::command"}
 seen_plugin_ops: set[str] = set()
+required_ffi_ops = {"host/ffi::call", "host/ffi::buffer-pin", "host/ffi::buffer-unpin"}
+seen_ffi_ops: set[str] = set()
 
 for domain in domain_contracts:
     matched_ops = sorted(
@@ -133,6 +136,8 @@ for domain in domain_contracts:
         op_fingerprints.append(f"{op}:{op_hash}")
         if op in required_plugin_ops:
             seen_plugin_ops.add(op)
+        if op in required_ffi_ops:
+            seen_ffi_ops.add(op)
 
     domain_hash = hashlib.sha256(
         "\n".join(op_fingerprints).encode("utf-8")
@@ -148,6 +153,12 @@ missing_plugin_ops = sorted(required_plugin_ops - seen_plugin_ops)
 if missing_plugin_ops:
     errors.append(
         "plugin: missing required plugin evolution op(s): " + ", ".join(missing_plugin_ops)
+    )
+
+missing_ffi_ops = sorted(required_ffi_ops - seen_ffi_ops)
+if missing_ffi_ops:
+    errors.append(
+        "ffi: missing required ffi evolution op(s): " + ", ".join(missing_ffi_ops)
     )
 
 overall_hash = hashlib.sha256(

@@ -8,6 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.1 - `gcpm` remote dependency closure
-- P0.2 - Native FFI ABI family (`host/ffi::*`) with deterministic replay contract
 - P1.3 - External ecosystem bridge into GenesisPkg

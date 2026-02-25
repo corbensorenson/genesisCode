@@ -6266,3 +6266,197 @@
                                   :conflicts conflicts3})))))))))))))
       ((core/error::make2 "core/type-error")
         "core/cli::semantic-refactor-target-conflicts expects map payload"))))
+
+(def core/kit/multi-agent::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/multi-agent::role-v1
+  (fn (name)
+    (fn (skills)
+      {
+        :schema (quote :core/kit/multi-agent-role.v1)
+        :name name
+        :skills skills})))
+
+(def core/kit/multi-agent::spec-v1
+  (fn (name)
+    (fn (goal)
+      (fn (roles)
+        {
+          :schema (quote :core/kit/multi-agent-spec.v1)
+          :name name
+          :goal goal
+          :roles roles}))))
+
+(def core/kit/multi-agent::assignment-v1
+  (fn (role-name)
+    (fn (lane)
+      (fn (slot)
+        {
+          :schema (quote :core/kit/multi-agent-assignment.v1)
+          :role role-name
+          :lane lane
+          :slot slot}))))
+
+(def core/kit/multi-agent::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/multi-agent-invalid-spec") message))))
+
+(def core/kit/multi-agent::run-spec
+  (fn (spec)
+    (let ((roles ((core/map::get spec) (quote :roles))))
+      (if (core/kit/multi-agent::vec? roles)
+        (core/effect::pure
+          {
+            :schema (quote :core/kit/multi-agent-run-result.v1)
+            :ok true
+            :name ((core/map::get spec) (quote :name))
+            :goal ((core/map::get spec) (quote :goal))
+            :agents (core/vec::len roles)
+            :assignments roles})
+        (core/kit/multi-agent::invalid-spec
+          "core/kit/multi-agent::run-spec expects :roles vec")))))
+
+(def core/kit/realtime::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/realtime::op-v1
+  (fn (kind)
+    (fn (value)
+      {
+        :schema (quote :core/kit/realtime-op.v1)
+        :kind kind
+        :value value})))
+
+(def core/kit/realtime::session-v1
+  (fn (name)
+    (fn (participants)
+      (fn (base)
+        (fn (ops)
+          {
+            :schema (quote :core/kit/realtime-session.v1)
+            :name name
+            :participants participants
+            :base base
+            :ops ops})))))
+
+(def core/kit/realtime::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/realtime-invalid-spec") message))))
+
+(def core/kit/realtime::run-session
+  (fn (session)
+    (let ((base ((core/map::get session) (quote :base))))
+      (let ((ops ((core/map::get session) (quote :ops))))
+        (if (core/kit/realtime::vec? base)
+          (if (core/kit/realtime::vec? ops)
+            (core/effect::pure
+              {
+                :schema (quote :core/kit/realtime-merge-result.v1)
+                :ok true
+                :name ((core/map::get session) (quote :name))
+                :participants ((core/map::get session) (quote :participants))
+                :ops-applied (core/vec::len ops)
+                :doc base})
+            (core/kit/realtime::invalid-spec
+              "core/kit/realtime::run-session expects :ops vec"))
+          (core/kit/realtime::invalid-spec
+            "core/kit/realtime::run-session expects :base vec"))))))
+
+(def core/kit/ml::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/ml::stage-v1
+  (fn (name)
+    (fn (run)
+      {
+        :schema (quote :core/kit/ml-stage.v1)
+        :name name
+        :run run})))
+
+(def core/kit/ml::spec-v1
+  (fn (name)
+    (fn (variant)
+      (fn (stages)
+        {
+          :schema (quote :core/kit/ml-pipeline.v1)
+          :name name
+          :variant variant
+          :stages stages}))))
+
+(def core/kit/ml::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/ml-invalid-spec") message))))
+
+(def core/kit/ml::run-spec
+  (fn (spec)
+    (let ((stages ((core/map::get spec) (quote :stages))))
+      (if (core/kit/ml::vec? stages)
+        (core/effect::pure
+          {
+            :schema (quote :core/kit/ml-run-result.v1)
+            :ok true
+            :name ((core/map::get spec) (quote :name))
+            :variant ((core/map::get spec) (quote :variant))
+            :state
+              {
+                :stage-count (core/vec::len stages)
+                :variant ((core/map::get spec) (quote :variant))
+              }})
+        (core/kit/ml::invalid-spec
+          "core/kit/ml::run-spec expects :stages vec")))))
+
+(def core/kit/backend::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/backend::node-v1
+  (fn (name)
+    (fn (kind)
+      (fn (deps)
+        {
+          :schema (quote :core/kit/backend-node.v1)
+          :name name
+          :kind kind
+          :deps deps}))))
+
+(def core/kit/backend::edge-v1
+  (fn (from)
+    (fn (to)
+      (fn (protocol)
+        {
+          :schema (quote :core/kit/backend-edge.v1)
+          :from from
+          :to to
+          :protocol protocol}))))
+
+(def core/kit/backend::topology-v1
+  (fn (name)
+    (fn (nodes)
+      (fn (edges)
+        {
+          :schema (quote :core/kit/backend-topology.v1)
+          :name name
+          :nodes nodes
+          :edges edges}))))
+
+(def core/kit/backend::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/backend-invalid-spec") message))))
+
+(def core/kit/backend::run-topology
+  (fn (topology)
+    (let ((nodes ((core/map::get topology) (quote :nodes))))
+      (let ((edges ((core/map::get topology) (quote :edges))))
+        (if (core/kit/backend::vec? nodes)
+          (if (core/kit/backend::vec? edges)
+            (core/effect::pure
+              {
+                :schema (quote :core/kit/backend-plan-result.v1)
+                :ok true
+                :name ((core/map::get topology) (quote :name))
+                :node-count (core/vec::len nodes)
+                :edge-count (core/vec::len edges)
+                :service-nodes (core/vec::len nodes)
+                :nodes nodes
+                :edges edges})
+            (core/kit/backend::invalid-spec
+              "core/kit/backend::run-topology expects :edges vec"))
+          (core/kit/backend::invalid-spec
+            "core/kit/backend::run-topology expects :nodes vec"))))))
+

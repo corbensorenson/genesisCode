@@ -19,7 +19,6 @@ pub(super) fn dispatch_resolution(
     op: &str,
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
-    let _ = (policy, budget, timeout_ms);
     match op_eff {
         "core/pkg-low::info" => {
             let lock_s = match payload_pkg_lock(payload) {
@@ -171,7 +170,19 @@ pub(super) fn dispatch_resolution(
                 if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
                     return Ok(v);
                 }
-                match resolve_requirement(store, refs, name, req, error_tok, op) {
+                match resolve_requirement(
+                    store,
+                    refs,
+                    &l.registries,
+                    policy,
+                    pol,
+                    budget,
+                    timeout_ms,
+                    name,
+                    req,
+                    error_tok,
+                    op,
+                ) {
                     Ok(le) => {
                         out_locked.insert(name.clone(), le);
                     }
@@ -342,7 +353,19 @@ pub(super) fn dispatch_resolution(
                     continue;
                 }
                 let previous = l.locked.get(name).cloned();
-                match resolve_requirement(store, refs, name, req, error_tok, op) {
+                match resolve_requirement(
+                    store,
+                    refs,
+                    &l.registries,
+                    policy,
+                    pol,
+                    budget,
+                    timeout_ms,
+                    name,
+                    req,
+                    error_tok,
+                    op,
+                ) {
                     Ok(le) => {
                         let changed = previous
                             .as_ref()
@@ -483,9 +506,9 @@ pub(super) fn dispatch_resolution(
             Ok(Value::Data(Term::Map(m)))
         }
 
-        "core/pkg-low::install" => {
-            install_verify::handle_pkg_install(payload, pol, store, error_tok, op)
-        }
+        "core/pkg-low::install" => install_verify::handle_pkg_install(
+            payload, pol, policy, store, refs, budget, timeout_ms, error_tok, op,
+        ),
 
         "core/pkg-low::verify" => {
             install_verify::handle_pkg_verify(payload, pol, store, error_tok, op)

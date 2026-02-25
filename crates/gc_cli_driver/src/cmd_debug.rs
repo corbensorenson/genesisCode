@@ -1,3 +1,6 @@
+use std::collections::BTreeMap;
+use std::path::Path;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -49,6 +52,17 @@ pub(super) fn cmd_debug(cli: &Cli, cmd: &DebugCmd) -> Result<CmdOut, CliError> {
             start,
             limit,
         } => cmd_debug_frames(cli, trace, *start, *limit),
+        DebugCmd::Timeline {
+            trace,
+            layers,
+            start,
+            limit,
+            out,
+        } => cmd_debug_timeline(cli, trace, layers, *start, *limit, out.as_deref()),
+        DebugCmd::Bisect {
+            baseline,
+            candidate,
+        } => cmd_debug_bisect(cli, baseline, candidate),
     }
 }
 
@@ -331,6 +345,486 @@ fn cmd_debug_frames(
         },
         json: json_envelope_value(env)?,
     })
+}
+
+fn cmd_debug_timeline(
+    cli: &Cli,
+    trace_args: &DebugTraceArgs,
+    layer_args: &DebugLayerArtifactArgs,
+    start: u64,
+    limit: Option<u64>,
+    out: Option<&Path>,
+) -> Result<CmdOut, CliError> {
+    let bundle = build_debug_trace(cli, trace_args, "debug timeline")?;
+    let timeline_frames = build_timeline_frames(&bundle, layer_args)?;
+    let start_index = parse_cursor(start, timeline_frames.len(), "debug/timeline", true)?;
+    let max = timeline_frames.len().saturating_sub(start_index);
+    let limit = match limit {
+        Some(v) => usize::try_from(v).map_err(|_| {
+            cli_err(
+                EX_PARSE,
+                "debug/timeline",
+                format!("--limit `{v}` does not fit on this host"),
+            )
+        })?,
+        None => max,
+    };
+    let window = limit.min(max);
+    let end = start_index + window;
+    let timeline_window_term = Term::Vector(timeline_frames[start_index..end].to_vec());
+    let timeline_window_render = gc_coreform::print_term(&timeline_window_term);
+    let timeline_term = build_timeline_artifact(&bundle, &timeline_frames);
+    let timeline_hash_hex = hex32(gc_coreform::hash_term(&timeline_term));
+    let timeline_out = write_optional_term_artifact(out, &timeline_term, "debug/timeline")?;
+    let layer_counts = timeline_layer_counts(&timeline_frames);
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-timeline-v0.1",
+        data: Some(serde_json::json!({
+            "file": bundle.file,
+            "engine": bundle.engine,
+            "kernel_eval_backend": bundle.kernel_eval_backend,
+            "contract": bundle.contract,
+            "msg": bundle.msg,
+            "trace_hash_hex": bundle.trace_hash_hex,
+            "trace_out": bundle.trace_out,
+            "timeline_hash_hex": timeline_hash_hex,
+            "timeline_out": timeline_out,
+            "timeline_frame_count": timeline_frames.len(),
+            "window_start": start_index,
+            "window_end": end,
+            "window_count": window,
+            "timeline_window": timeline_window_render,
+            "timeline_window_format": "coreform",
+            "layer_counts": layer_counts,
+            "planner_json": layer_args.planner_json.as_ref().map(|p| p.display().to_string()),
+            "typecheck_json": layer_args.typecheck_json.as_ref().map(|p| p.display().to_string()),
+            "optimize_json": layer_args.optimize_json.as_ref().map(|p| p.display().to_string()),
+            "effect_log": layer_args.effect_log.as_ref().map(|p| p.display().to_string()),
+        })),
+        error: None,
+    };
+
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout: if cli.json {
+            String::new()
+        } else {
+            format!("{timeline_window_render}\n")
+        },
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn cmd_debug_bisect(
+    cli: &Cli,
+    baseline: &PathBuf,
+    candidate: &PathBuf,
+) -> Result<CmdOut, CliError> {
+    let baseline_term = read_timeline_artifact(baseline, "debug/bisect")?;
+    let candidate_term = read_timeline_artifact(candidate, "debug/bisect")?;
+    let baseline_frames = extract_timeline_frames(&baseline_term, "debug/bisect baseline")?;
+    let candidate_frames = extract_timeline_frames(&candidate_term, "debug/bisect candidate")?;
+
+    let (mismatch_index, reason) = first_timeline_mismatch(&baseline_frames, &candidate_frames);
+    let baseline_frame = mismatch_index
+        .and_then(|idx| baseline_frames.get(idx))
+        .cloned();
+    let candidate_frame = mismatch_index
+        .and_then(|idx| candidate_frames.get(idx))
+        .cloned();
+    let baseline_frame_render = baseline_frame
+        .as_ref()
+        .map(gc_coreform::print_term)
+        .unwrap_or_else(|| "nil".to_string());
+    let candidate_frame_render = candidate_frame
+        .as_ref()
+        .map(gc_coreform::print_term)
+        .unwrap_or_else(|| "nil".to_string());
+    let baseline_layer = baseline_frame
+        .as_ref()
+        .and_then(extract_timeline_frame_layer);
+    let candidate_layer = candidate_frame
+        .as_ref()
+        .and_then(extract_timeline_frame_layer);
+
+    let env = JsonEnvelope {
+        ok: true,
+        kind: "genesis/debug-bisect-v0.1",
+        data: Some(serde_json::json!({
+            "baseline": baseline.display().to_string(),
+            "candidate": candidate.display().to_string(),
+            "baseline_frame_count": baseline_frames.len(),
+            "candidate_frame_count": candidate_frames.len(),
+            "mismatch_index": mismatch_index,
+            "mismatch_reason": reason,
+            "baseline_layer": baseline_layer,
+            "candidate_layer": candidate_layer,
+            "baseline_frame": baseline_frame_render,
+            "candidate_frame": candidate_frame_render,
+            "frame_format": "coreform",
+            "match": mismatch_index.is_none(),
+        })),
+        error: None,
+    };
+
+    let stdout = if cli.json {
+        String::new()
+    } else if mismatch_index.is_none() {
+        "match\n".to_string()
+    } else {
+        format!("{baseline_frame_render}\n{candidate_frame_render}\n")
+    };
+
+    Ok(CmdOut {
+        exit_code: EX_OK,
+        stdout,
+        json: json_envelope_value(env)?,
+    })
+}
+
+fn build_timeline_frames(
+    bundle: &DebugTraceBundle,
+    layer_args: &DebugLayerArtifactArgs,
+) -> Result<Vec<Term>, CliError> {
+    let mut frames: Vec<Term> = Vec::new();
+    append_layer_json_frame(
+        &mut frames,
+        ":planner",
+        layer_args.planner_json.as_deref(),
+        "debug/timeline",
+    )?;
+    append_layer_json_frame(
+        &mut frames,
+        ":typecheck",
+        layer_args.typecheck_json.as_deref(),
+        "debug/timeline",
+    )?;
+    append_layer_json_frame(
+        &mut frames,
+        ":optimizer",
+        layer_args.optimize_json.as_deref(),
+        "debug/timeline",
+    )?;
+
+    let steps = extract_trace_steps(&bundle.trace_term)?;
+    let mut req_index: BTreeMap<[u8; 32], usize> = BTreeMap::new();
+    for (idx, step) in steps.iter().enumerate() {
+        if let Some(req_h) = extract_step_hash_bytes(step, ":req-h") {
+            req_index.insert(req_h, idx);
+        }
+        frames.push(build_dispatch_frame(idx, step));
+    }
+
+    if let Some(effect_log_path) = layer_args.effect_log.as_deref() {
+        let log = load_effect_log(effect_log_path, "debug/timeline")?;
+        for (idx, entry) in log.entries.iter().enumerate() {
+            let dispatch_idx = req_index.get(&entry.req_h).copied();
+            frames.push(build_effect_frame(idx, entry, dispatch_idx));
+        }
+    }
+
+    Ok(annotate_timeline_frame_ids(frames))
+}
+
+fn append_layer_json_frame(
+    frames: &mut Vec<Term>,
+    layer: &str,
+    path: Option<&Path>,
+    code: &'static str,
+) -> Result<(), CliError> {
+    let Some(path) = path else {
+        return Ok(());
+    };
+    let src = std::fs::read_to_string(path)
+        .with_context(|| format!("read {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let parsed: serde_json::Value = serde_json::from_str(&src)
+        .map_err(|e| cli_err(EX_PARSE, code, format!("parse {}: {e}", path.display())))?;
+    let canonical = json_canonical_string(&parsed);
+    let payload_term = Term::Str(canonical);
+    let kind = parsed
+        .get("kind")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("unknown");
+    let ok = parsed
+        .get("ok")
+        .and_then(serde_json::Value::as_bool)
+        .map(Term::Bool)
+        .unwrap_or(Term::Nil);
+    let frame = Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":layer")), Term::symbol(layer)),
+            (
+                TermOrdKey(Term::symbol(":source")),
+                Term::Str(path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str(kind.to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":ok")), ok),
+            (TermOrdKey(Term::symbol(":payload")), payload_term.clone()),
+            (
+                TermOrdKey(Term::symbol(":payload-h")),
+                Term::Bytes(gc_coreform::hash_term(&payload_term).to_vec().into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    frames.push(frame);
+    Ok(())
+}
+
+fn build_dispatch_frame(index: usize, step: &Term) -> Term {
+    let mut map = BTreeMap::new();
+    map.insert(
+        TermOrdKey(Term::symbol(":layer")),
+        Term::symbol(":dispatch"),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":dispatch-index")),
+        Term::Int((index as i64).into()),
+    );
+    map.insert(TermOrdKey(Term::symbol(":step")), step.clone());
+    map.insert(
+        TermOrdKey(Term::symbol(":content-h")),
+        Term::Bytes(gc_coreform::hash_term(step).to_vec().into()),
+    );
+    if let Some(req_h) = extract_step_hash_bytes(step, ":req-h") {
+        map.insert(
+            TermOrdKey(Term::symbol(":req-h")),
+            Term::Bytes(req_h.to_vec().into()),
+        );
+    }
+    Term::Map(map)
+}
+
+fn build_effect_frame(
+    index: usize,
+    entry: &gc_effects::EffectLogEntry,
+    dispatch_idx: Option<usize>,
+) -> Term {
+    let entry_term = entry.to_term();
+    let mut map = BTreeMap::new();
+    map.insert(TermOrdKey(Term::symbol(":layer")), Term::symbol(":effect"));
+    map.insert(
+        TermOrdKey(Term::symbol(":effect-index")),
+        Term::Int((index as i64).into()),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":op")),
+        Term::symbol(entry.op.clone()),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":decision")),
+        Term::symbol(match entry.decision {
+            gc_effects::Decision::Allow => ":allow",
+            gc_effects::Decision::Deny => ":deny",
+        }),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":req-h")),
+        Term::Bytes(entry.req_h.to_vec().into()),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":payload-h")),
+        Term::Bytes(entry.payload_h.to_vec().into()),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":resp-h")),
+        Term::Bytes(entry.resp_h.to_vec().into()),
+    );
+    map.insert(TermOrdKey(Term::symbol(":entry")), entry_term.clone());
+    map.insert(
+        TermOrdKey(Term::symbol(":content-h")),
+        Term::Bytes(gc_coreform::hash_term(&entry_term).to_vec().into()),
+    );
+    map.insert(
+        TermOrdKey(Term::symbol(":dispatch-index")),
+        dispatch_idx
+            .map(|v| Term::Int((v as i64).into()))
+            .unwrap_or(Term::Nil),
+    );
+    Term::Map(map)
+}
+
+fn annotate_timeline_frame_ids(mut frames: Vec<Term>) -> Vec<Term> {
+    for (idx, frame) in frames.iter_mut().enumerate() {
+        if let Term::Map(map) = frame {
+            map.insert(
+                TermOrdKey(Term::symbol(":frame-id")),
+                Term::Int((idx as i64).into()),
+            );
+        }
+    }
+    frames
+}
+
+fn build_timeline_artifact(bundle: &DebugTraceBundle, frames: &[Term]) -> Term {
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":schema")),
+                Term::Str("genesis/debug-timeline-v0.1".to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":file")),
+                Term::Str(bundle.file.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":engine")),
+                Term::Str(bundle.engine.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":kernel-eval-backend")),
+                Term::Str(bundle.kernel_eval_backend.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":trace-hash-hex")),
+                Term::Str(bundle.trace_hash_hex.clone()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":frame-count")),
+                Term::Int((frames.len() as i64).into()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":frames")),
+                Term::Vector(frames.to_vec()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn timeline_layer_counts(frames: &[Term]) -> serde_json::Value {
+    let mut counts: BTreeMap<String, u64> = BTreeMap::new();
+    for frame in frames {
+        if let Some(layer) = extract_timeline_frame_layer(frame) {
+            *counts.entry(layer).or_insert(0) += 1;
+        }
+    }
+    serde_json::to_value(counts).unwrap_or_else(|_| serde_json::json!({}))
+}
+
+fn extract_timeline_frame_layer(frame: &Term) -> Option<String> {
+    let Term::Map(map) = frame else {
+        return None;
+    };
+    let key = TermOrdKey(Term::symbol(":layer"));
+    match map.get(&key) {
+        Some(Term::Symbol(s)) => Some(s.clone()),
+        Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn extract_step_hash_bytes(step: &Term, key: &str) -> Option<[u8; 32]> {
+    let Term::Map(map) = step else {
+        return None;
+    };
+    let k = TermOrdKey(Term::symbol(key));
+    let bytes = map.get(&k).and_then(|v| match v {
+        Term::Bytes(b) if b.len() == 32 => Some(b.as_ref()),
+        _ => None,
+    })?;
+    let mut out = [0u8; 32];
+    out.copy_from_slice(bytes);
+    Some(out)
+}
+
+fn load_effect_log(path: &Path, code: &'static str) -> Result<gc_effects::EffectLog, CliError> {
+    let src = std::fs::read_to_string(path)
+        .with_context(|| format!("read {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    let log_term =
+        parse_term(&src).map_err(|e| cli_err(EX_PARSE, code, format!("parse log: {e}")))?;
+    gc_effects::EffectLog::from_term(&log_term)
+        .map_err(|e| cli_err(EX_PARSE, code, format!("decode log: {e}")))
+}
+
+fn write_optional_term_artifact(
+    out: Option<&Path>,
+    term: &Term,
+    code: &'static str,
+) -> Result<Option<String>, CliError> {
+    let Some(path) = out else {
+        return Ok(None);
+    };
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("mkdir {}", parent.display()))
+            .map_err(|e| cli_err(EX_IO, "io/write", format!("{e}")))?;
+    }
+    std::fs::write(path, format!("{}\n", gc_coreform::print_term(term)))
+        .with_context(|| format!("write {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, code, format!("{e}")))?;
+    Ok(Some(path.display().to_string()))
+}
+
+fn read_timeline_artifact(path: &Path, code: &'static str) -> Result<Term, CliError> {
+    let src = std::fs::read_to_string(path)
+        .with_context(|| format!("read {}", path.display()))
+        .map_err(|e| cli_err(EX_IO, "io/read", format!("{e}")))?;
+    parse_term(&src).map_err(|e| cli_err(EX_PARSE, code, format!("parse timeline: {e}")))
+}
+
+fn extract_timeline_frames<'a>(
+    timeline: &'a Term,
+    code: &'static str,
+) -> Result<&'a Vec<Term>, CliError> {
+    let Term::Map(map) = timeline else {
+        return Err(cli_err(EX_PARSE, code, "timeline artifact must be a map"));
+    };
+    let Some(Term::Vector(frames)) = map.get(&TermOrdKey(Term::symbol(":frames"))) else {
+        return Err(cli_err(
+            EX_PARSE,
+            code,
+            "timeline artifact missing :frames vector",
+        ));
+    };
+    for (idx, frame) in frames.iter().enumerate() {
+        if !matches!(frame, Term::Map(_)) {
+            return Err(cli_err(
+                EX_PARSE,
+                code,
+                format!("timeline :frames[{idx}] must be map"),
+            ));
+        }
+    }
+    Ok(frames)
+}
+
+fn first_timeline_mismatch(
+    baseline_frames: &[Term],
+    candidate_frames: &[Term],
+) -> (Option<usize>, &'static str) {
+    let shared = baseline_frames.len().min(candidate_frames.len());
+    for idx in 0..shared {
+        let left = normalize_timeline_frame_for_compare(&baseline_frames[idx]);
+        let right = normalize_timeline_frame_for_compare(&candidate_frames[idx]);
+        if left != right {
+            return (Some(idx), "frame-mismatch");
+        }
+    }
+    if baseline_frames.len() != candidate_frames.len() {
+        return (Some(shared), "length-mismatch");
+    }
+    (None, "match")
+}
+
+fn normalize_timeline_frame_for_compare(frame: &Term) -> Term {
+    let Term::Map(map) = frame else {
+        return frame.clone();
+    };
+    let mut out = map.clone();
+    out.remove(&TermOrdKey(Term::symbol(":frame-id")));
+    Term::Map(out)
 }
 
 fn build_debug_trace(

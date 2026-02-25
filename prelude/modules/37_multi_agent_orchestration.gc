@@ -1,0 +1,48 @@
+(def core/kit/multi-agent::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/multi-agent::role-v1
+  (fn (name)
+    (fn (skills)
+      {
+        :schema (quote :core/kit/multi-agent-role.v1)
+        :name name
+        :skills skills})))
+
+(def core/kit/multi-agent::spec-v1
+  (fn (name)
+    (fn (goal)
+      (fn (roles)
+        {
+          :schema (quote :core/kit/multi-agent-spec.v1)
+          :name name
+          :goal goal
+          :roles roles}))))
+
+(def core/kit/multi-agent::assignment-v1
+  (fn (role-name)
+    (fn (lane)
+      (fn (slot)
+        {
+          :schema (quote :core/kit/multi-agent-assignment.v1)
+          :role role-name
+          :lane lane
+          :slot slot}))))
+
+(def core/kit/multi-agent::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/multi-agent-invalid-spec") message))))
+
+(def core/kit/multi-agent::run-spec
+  (fn (spec)
+    (let ((roles ((core/map::get spec) (quote :roles))))
+      (if (core/kit/multi-agent::vec? roles)
+        (core/effect::pure
+          {
+            :schema (quote :core/kit/multi-agent-run-result.v1)
+            :ok true
+            :name ((core/map::get spec) (quote :name))
+            :goal ((core/map::get spec) (quote :goal))
+            :agents (core/vec::len roles)
+            :assignments roles})
+        (core/kit/multi-agent::invalid-spec
+          "core/kit/multi-agent::run-spec expects :roles vec")))))

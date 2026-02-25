@@ -107,20 +107,26 @@ Dedicated compatibility harness entrypoints:
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize for the input module and self-hosted parse for `--contract`/`--msg`.
   - JSON output includes `data.kernel_eval_backend` (`"compiled"`).
-- `genesis debug <step|break|inspect|continue|frames> <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost] [...]`
+- `genesis debug <step|break|inspect|continue|frames|timeline> <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost] [...]`
   - deterministic trace-debug command family over `core/contract::explain` artifacts.
   - `step`: advances a cursor by `--count` and returns selected frame.
   - `break`: finds first frame matching `--match-key` / `--match-value`.
   - `inspect`: returns frame at `--index`.
   - `continue`: advances to EOF or first matching breakpoint predicate.
   - `frames`: returns deterministic frame window (`--start`, `--limit`).
+  - `timeline`: emits deterministic cross-layer timeline windows and optional canonical timeline artifacts (`--out`) combining dispatch steps with optional planner/typecheck/optimize JSON envelopes and effect-log boundaries.
+    - optional layer inputs: `--planner-json`, `--typecheck-json`, `--optimize-json`, `--effect-log`.
   - all debug commands emit `trace_hash_hex` and optional canonical trace artifact via `--trace-out`.
+  - `genesis debug bisect --baseline <timeline.gc> --candidate <timeline.gc>`:
+    - deterministically returns first mismatching frame index/layer between two timeline artifacts.
   - JSON output kinds:
     - `genesis/debug-step-v0.1`
     - `genesis/debug-break-v0.1`
     - `genesis/debug-inspect-v0.1`
     - `genesis/debug-continue-v0.1`
     - `genesis/debug-frames-v0.1`
+    - `genesis/debug-timeline-v0.1`
+    - `genesis/debug-bisect-v0.1`
 - `genesis run <file> --caps <policy.toml> [--log <out.gclog>] [--engine rust|selfhost]`
   - when `--engine` is omitted, engine defaults to `selfhost`.
   - `--engine selfhost` runs self-hosted parse/canonicalize before evaluating the effect program.

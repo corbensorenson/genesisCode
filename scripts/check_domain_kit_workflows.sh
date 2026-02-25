@@ -20,6 +20,10 @@ required_modules=(
   "33_game_loop.gc"
   "34_xr_workflow.gc"
   "35_media_pipeline.gc"
+  "37_multi_agent_orchestration.gc"
+  "38_realtime_collaboration.gc"
+  "39_ml_pipeline.gc"
+  "40_backend_topology.gc"
 )
 
 for module in "${required_modules[@]}"; do
@@ -70,6 +74,10 @@ check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "gfx/xr::session-
 check_ref "examples/agent_xr_runtime_workflow/workflow_run.gc" "gfx/xr::haptics-pulse"
 check_ref "examples/agent_xr_runtime_workflow/caps.toml" "xr_backend = \"webxr-device\""
 check_ref "examples/agent_media_asset_workflow/workflow_run.gc" "core/kit/media::run-build"
+check_ref "examples/agent_multi_agent_orchestration_workflow/workflow_run.gc" "core/kit/multi-agent::run-spec"
+check_ref "examples/agent_realtime_collaboration_workflow/workflow_run.gc" "core/kit/realtime::run-session"
+check_ref "examples/agent_ml_pipeline_variant_workflow/workflow_run.gc" "core/kit/ml::run-spec"
+check_ref "examples/agent_backend_topology_workflow/workflow_run.gc" "core/kit/backend::run-topology"
 check_ref "examples/agent_deploy_bundle_workflow/workflow.sh" "gcpm --caps"
 
 echo "domain-kit-workflows: ok"

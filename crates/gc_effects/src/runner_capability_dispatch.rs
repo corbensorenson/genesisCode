@@ -8,6 +8,8 @@ use crate::runner_plugin_schema::{
 mod crypto;
 #[path = "runner_capability_dispatch/db.rs"]
 mod db;
+#[path = "runner_capability_dispatch/ffi.rs"]
+mod ffi;
 #[path = "runner_capability_dispatch/fs.rs"]
 mod fs;
 #[path = "runner_capability_dispatch/media.rs"]
@@ -21,6 +23,7 @@ mod process;
 
 use crypto::*;
 use db::*;
+use ffi::*;
 use fs::*;
 use media::*;
 use net::*;
@@ -53,6 +56,12 @@ and requires explicit per-op bridge policy"
         return format!(
             "capability backend unavailable for {op}; configure per-op bridge policy \
 (bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and plugin/command allowlists"
+        );
+    }
+    if op.starts_with("host/ffi::") {
+        return format!(
+            "capability backend unavailable for {op}; configure per-op bridge policy \
+(bridge_cmd/bridge_args/bridge_cmd_sha256 or WASI bridge profile) and ffi allowlists/schemas"
         );
     }
     if op.starts_with("io/net::") {
@@ -339,6 +348,9 @@ pub(super) fn call_capability(
         }
         "host/plugin::command" | "editor/plugin::command" => {
             capability_host_plugin_command(op, payload, pol, error_tok)
+        }
+        "host/ffi::call" | "host/ffi::buffer-pin" | "host/ffi::buffer-unpin" => {
+            capability_host_ffi(op, payload, pol, error_tok)
         }
         "io/net::http-request" => capability_io_net_http_request(op, payload, pol, error_tok),
         "io/net::dns-resolve" => capability_io_net_dns_resolve(op, payload, pol, error_tok),

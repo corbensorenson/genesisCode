@@ -71,6 +71,10 @@ The gate requires at least one successful workflow for each:
 - `deploy_android`
 - `deploy_edge`
 - `deploy_service_runtime`
+- `multi_agent_orchestration`
+- `realtime_collaboration`
+- `ml_pipeline_variant`
+- `backend_topology`
 
 If any required domain misses its minimum success threshold, the script exits non-zero.
 

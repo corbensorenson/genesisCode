@@ -578,6 +578,16 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
                     ..
                 },
         } => enforce_selfhost_engine(cli, "debug frames", *engine),
+        Cmd::Debug {
+            cmd:
+                DebugCmd::Timeline {
+                    trace: DebugTraceArgs { engine, .. },
+                    ..
+                },
+        } => enforce_selfhost_engine(cli, "debug timeline", *engine),
+        Cmd::Debug {
+            cmd: DebugCmd::Bisect { .. },
+        } => Ok(()),
         Cmd::Run { engine, .. } => enforce_selfhost_engine(cli, "run", *engine),
         Cmd::Replay { engine, .. } => enforce_selfhost_engine(cli, "replay", *engine),
         Cmd::Optimize { engine, .. } => enforce_selfhost_engine(cli, "optimize", *engine),

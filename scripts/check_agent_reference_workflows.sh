@@ -211,6 +211,26 @@ workflows = [
         "path": "examples/agent_multi_package_publish_workflow/workflow.sh",
         "domains": ["package_publish_sync"],
     },
+    {
+        "name": "agent_multi_agent_orchestration_workflow",
+        "path": "examples/agent_multi_agent_orchestration_workflow/workflow.sh",
+        "domains": ["multi_agent_orchestration"],
+    },
+    {
+        "name": "agent_realtime_collaboration_workflow",
+        "path": "examples/agent_realtime_collaboration_workflow/workflow.sh",
+        "domains": ["realtime_collaboration"],
+    },
+    {
+        "name": "agent_ml_pipeline_variant_workflow",
+        "path": "examples/agent_ml_pipeline_variant_workflow/workflow.sh",
+        "domains": ["ml_pipeline_variant"],
+    },
+    {
+        "name": "agent_backend_topology_workflow",
+        "path": "examples/agent_backend_topology_workflow/workflow.sh",
+        "domains": ["backend_topology"],
+    },
 ]
 
 required_domains = {
@@ -233,6 +253,10 @@ required_domains = {
     "deploy_android": 1,
     "deploy_edge": 1,
     "deploy_service_runtime": 1,
+    "multi_agent_orchestration": 1,
+    "realtime_collaboration": 1,
+    "ml_pipeline_variant": 1,
+    "backend_topology": 1,
 }
 
 env = dict(os.environ)

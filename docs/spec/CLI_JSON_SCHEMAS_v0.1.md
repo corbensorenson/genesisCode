@@ -34,6 +34,8 @@ Failure envelopes always use:
 - `debug inspect` -> `genesis/debug-inspect-v0.1`
 - `debug continue` -> `genesis/debug-continue-v0.1`
 - `debug frames` -> `genesis/debug-frames-v0.1`
+- `debug timeline` -> `genesis/debug-timeline-v0.1`
+- `debug bisect` -> `genesis/debug-bisect-v0.1`
 - `run` -> `genesis/run-v0.2`
 - `replay` -> `genesis/replay-v0.2`
 - `test` -> `genesis/test-v0.2`

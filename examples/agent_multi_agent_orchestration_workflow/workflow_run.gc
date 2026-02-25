@@ -1,0 +1,19 @@
+(def role/planner ((core/kit/multi-agent::role-v1 "planner") ["plan" "spec"]))
+(def role/builder ((core/kit/multi-agent::role-v1 "builder") ["implement" "verify"]))
+(def role/reviewer ((core/kit/multi-agent::role-v1 "reviewer") ["audit" "acceptance"]))
+
+(def roles
+  ((core/vec::push
+     ((core/vec::push
+        ((core/vec::push []) role/planner))
+       role/builder))
+    role/reviewer))
+
+(def workflow/spec
+  (((core/kit/multi-agent::spec-v1 "agent_multi_agent_orchestration_workflow")
+     "deliver feature safely")
+    roles))
+
+(def prog (core/kit/multi-agent::run-spec workflow/spec))
+
+prog

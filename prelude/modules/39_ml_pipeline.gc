@@ -1,0 +1,41 @@
+(def core/kit/ml::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/ml::stage-v1
+  (fn (name)
+    (fn (run)
+      {
+        :schema (quote :core/kit/ml-stage.v1)
+        :name name
+        :run run})))
+
+(def core/kit/ml::spec-v1
+  (fn (name)
+    (fn (variant)
+      (fn (stages)
+        {
+          :schema (quote :core/kit/ml-pipeline.v1)
+          :name name
+          :variant variant
+          :stages stages}))))
+
+(def core/kit/ml::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/ml-invalid-spec") message))))
+
+(def core/kit/ml::run-spec
+  (fn (spec)
+    (let ((stages ((core/map::get spec) (quote :stages))))
+      (if (core/kit/ml::vec? stages)
+        (core/effect::pure
+          {
+            :schema (quote :core/kit/ml-run-result.v1)
+            :ok true
+            :name ((core/map::get spec) (quote :name))
+            :variant ((core/map::get spec) (quote :variant))
+            :state
+              {
+                :stage-count (core/vec::len stages)
+                :variant ((core/map::get spec) (quote :variant))
+              }})
+        (core/kit/ml::invalid-spec
+          "core/kit/ml::run-spec expects :stages vec")))))

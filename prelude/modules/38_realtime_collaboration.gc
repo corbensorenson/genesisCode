@@ -1,0 +1,44 @@
+(def core/kit/realtime::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/realtime::op-v1
+  (fn (kind)
+    (fn (value)
+      {
+        :schema (quote :core/kit/realtime-op.v1)
+        :kind kind
+        :value value})))
+
+(def core/kit/realtime::session-v1
+  (fn (name)
+    (fn (participants)
+      (fn (base)
+        (fn (ops)
+          {
+            :schema (quote :core/kit/realtime-session.v1)
+            :name name
+            :participants participants
+            :base base
+            :ops ops})))))
+
+(def core/kit/realtime::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/realtime-invalid-spec") message))))
+
+(def core/kit/realtime::run-session
+  (fn (session)
+    (let ((base ((core/map::get session) (quote :base))))
+      (let ((ops ((core/map::get session) (quote :ops))))
+        (if (core/kit/realtime::vec? base)
+          (if (core/kit/realtime::vec? ops)
+            (core/effect::pure
+              {
+                :schema (quote :core/kit/realtime-merge-result.v1)
+                :ok true
+                :name ((core/map::get session) (quote :name))
+                :participants ((core/map::get session) (quote :participants))
+                :ops-applied (core/vec::len ops)
+                :doc base})
+            (core/kit/realtime::invalid-spec
+              "core/kit/realtime::run-session expects :ops vec"))
+          (core/kit/realtime::invalid-spec
+            "core/kit/realtime::run-session expects :base vec"))))))

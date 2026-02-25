@@ -1,0 +1,56 @@
+(def core/kit/backend::vec? (fn (x) ((core/sym::eq? (core/data::tag x)) (quote :vec))))
+
+(def core/kit/backend::node-v1
+  (fn (name)
+    (fn (kind)
+      (fn (deps)
+        {
+          :schema (quote :core/kit/backend-node.v1)
+          :name name
+          :kind kind
+          :deps deps}))))
+
+(def core/kit/backend::edge-v1
+  (fn (from)
+    (fn (to)
+      (fn (protocol)
+        {
+          :schema (quote :core/kit/backend-edge.v1)
+          :from from
+          :to to
+          :protocol protocol}))))
+
+(def core/kit/backend::topology-v1
+  (fn (name)
+    (fn (nodes)
+      (fn (edges)
+        {
+          :schema (quote :core/kit/backend-topology.v1)
+          :name name
+          :nodes nodes
+          :edges edges}))))
+
+(def core/kit/backend::invalid-spec
+  (fn (message)
+    (core/effect::pure ((core/error::make2 "core/kit/backend-invalid-spec") message))))
+
+(def core/kit/backend::run-topology
+  (fn (topology)
+    (let ((nodes ((core/map::get topology) (quote :nodes))))
+      (let ((edges ((core/map::get topology) (quote :edges))))
+        (if (core/kit/backend::vec? nodes)
+          (if (core/kit/backend::vec? edges)
+            (core/effect::pure
+              {
+                :schema (quote :core/kit/backend-plan-result.v1)
+                :ok true
+                :name ((core/map::get topology) (quote :name))
+                :node-count (core/vec::len nodes)
+                :edge-count (core/vec::len edges)
+                :service-nodes (core/vec::len nodes)
+                :nodes nodes
+                :edges edges})
+            (core/kit/backend::invalid-spec
+              "core/kit/backend::run-topology expects :edges vec"))
+          (core/kit/backend::invalid-spec
+            "core/kit/backend::run-topology expects :nodes vec"))))))

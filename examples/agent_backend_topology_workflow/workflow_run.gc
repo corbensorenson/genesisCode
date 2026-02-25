@@ -1,0 +1,25 @@
+(def node/api (((core/kit/backend::node-v1 "api") (quote :service)) ["db"]))
+(def node/worker (((core/kit/backend::node-v1 "worker") (quote :service)) ["queue"]))
+(def node/db (((core/kit/backend::node-v1 "db") (quote :database)) []))
+
+(def nodes
+  ((core/vec::push
+     ((core/vec::push
+        ((core/vec::push []) node/api))
+       node/worker))
+    node/db))
+
+(def edge/api-db ((((core/kit/backend::edge-v1 "api") "db") "postgres")))
+(def edge/worker-api ((((core/kit/backend::edge-v1 "worker") "api") "grpc")))
+
+(def edges
+  ((core/vec::push
+     ((core/vec::push []) edge/api-db))
+    edge/worker-api))
+
+(def topology/spec
+  (((core/kit/backend::topology-v1 "agent_backend_topology_workflow") nodes) edges))
+
+(def prog (core/kit/backend::run-topology topology/spec))
+
+prog

@@ -20,6 +20,7 @@ allow = [
   "core/pkg-low::verify",
   "core/pkg-low::list",
   "core/pkg-low::info",
+  "core/pkg-low::load-package",
   "core/pkg-low::save-lock",
   "core/pkg-low::load-lock",
 
@@ -59,6 +60,9 @@ base_dir = "."
 [op."core/pkg-low::info"]
 base_dir = "."
 
+[op."core/pkg-low::load-package"]
+base_dir = "."
+
 [op."core/pkg-low::save-lock"]
 base_dir = "."
 
@@ -71,6 +75,119 @@ base_dir = "."
     )
     .unwrap();
     caps
+}
+
+fn write_caps_with_store_remote_allow(dir: &Path, remote_allow: &str) -> PathBuf {
+    let caps = dir.join("caps.toml");
+    fs::write(
+        &caps,
+        format!(
+            r#"
+allow = [
+  "core/store::put",
+  "core/pkg-low::init",
+  "core/pkg-low::add",
+  "core/pkg-low::lock",
+  "core/pkg-low::update",
+  "core/pkg-low::install",
+  "core/pkg-low::verify",
+  "core/pkg-low::list",
+  "core/pkg-low::info",
+  "core/pkg-low::load-package",
+  "core/pkg-low::save-lock",
+  "core/pkg-low::load-lock",
+
+  "core/pkg-low::snapshot",
+  "core/store::has",
+  "core/store::get"
+]
+
+[store]
+dir = "./.genesis/store"
+remote_allow = ["{remote_allow}"]
+
+[refs]
+path = "./.genesis/refs.gc"
+
+[op."core/pkg-low::init"]
+base_dir = "."
+create_dirs = true
+
+[op."core/pkg-low::add"]
+base_dir = "."
+
+[op."core/pkg-low::lock"]
+base_dir = "."
+
+[op."core/pkg-low::update"]
+base_dir = "."
+
+[op."core/pkg-low::install"]
+base_dir = "."
+
+[op."core/pkg-low::verify"]
+base_dir = "."
+
+[op."core/pkg-low::list"]
+base_dir = "."
+
+[op."core/pkg-low::info"]
+base_dir = "."
+
+[op."core/pkg-low::load-package"]
+base_dir = "."
+
+[op."core/pkg-low::save-lock"]
+base_dir = "."
+
+[op."core/pkg-low::load-lock"]
+base_dir = "."
+
+[op."core/pkg-low::snapshot"]
+base_dir = "."
+"#
+        ),
+    )
+    .unwrap();
+    caps
+}
+
+fn put_remote_artifact(remote_dir: &Path, hex: &str, bytes: &[u8]) {
+    let store = remote_dir.join("v1").join("store");
+    fs::create_dir_all(&store).unwrap();
+    fs::write(store.join(hex), bytes).unwrap();
+}
+
+fn write_remote_ref(remote_dir: &Path, name: &str, hash: &str) {
+    let refs_dir = remote_dir.join("v1");
+    fs::create_dir_all(&refs_dir).unwrap();
+    let refs_term = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str("genesis/refs-db-v0.1".to_string()),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (
+                TermOrdKey(Term::symbol(":refs")),
+                Term::Map(
+                    [(
+                        TermOrdKey(Term::Str(name.to_string())),
+                        Term::Str(hash.to_string()),
+                    )]
+                    .into_iter()
+                    .collect(),
+                ),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    fs::write(
+        refs_dir.join("refs.gc"),
+        format!("{}\n", gc_coreform::print_term(&refs_term)),
+    )
+    .unwrap();
 }
 
 fn store_put(dir: &Path, caps: &Path, term_src: &str, filename: &str) -> String {
@@ -611,4 +728,178 @@ fn pkg_verify_rejects_commit_with_missing_patch_closure() {
         .assert()
         .failure()
         .code(20);
+}
+
+#[test]
+fn pkg_lock_fetches_missing_ref_commit_and_snapshot_from_registry() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps_with_store_remote_allow(dir, &remote_allow);
+
+    let snapshot = gc_coreform::parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "dep" :pkg/version "1" :modules [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_bytes = gc_coreform::print_term(&snapshot).into_bytes();
+    let snapshot_h = blake3::hash(&snapshot_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &snapshot_h, &snapshot_bytes);
+
+    let patch = gc_coreform::parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_bytes = gc_coreform::print_term(&patch).into_bytes();
+    let patch_h = blake3::hash(&patch_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &patch_h, &patch_bytes);
+
+    let commit = gc_coreform::parse_term(&format!(
+        r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "dep" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snapshot_h}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "remote-head"
+}}"#
+    ))
+    .unwrap();
+    let commit_bytes = gc_coreform::print_term(&commit).into_bytes();
+    let commit_h = blake3::hash(&commit_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &commit_h, &commit_bytes);
+    write_remote_ref(&remote_dir, "refs/heads/main", &commit_h);
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws", "--registry-default"])
+        .arg(&remote)
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["add", "dep@refs/heads/main"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock"])
+        .assert()
+        .success();
+
+    assert!(dir.join(".genesis").join("store").join(&commit_h).is_file());
+    assert!(
+        dir.join(".genesis")
+            .join("store")
+            .join(&snapshot_h)
+            .is_file()
+    );
+}
+
+#[test]
+fn pkg_install_hydrates_locked_closure_from_registry_after_store_wipe() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let remote_dir = dir.join("remote-registry");
+    fs::create_dir_all(&remote_dir).unwrap();
+    let remote = format!("file://{}/", remote_dir.display());
+    let remote_allow = format!("{remote}v1/");
+    let caps = write_caps_with_store_remote_allow(dir, &remote_allow);
+
+    let snapshot = gc_coreform::parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "dep" :pkg/version "1" :modules [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_bytes = gc_coreform::print_term(&snapshot).into_bytes();
+    let snapshot_h = blake3::hash(&snapshot_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &snapshot_h, &snapshot_bytes);
+
+    let patch = gc_coreform::parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_bytes = gc_coreform::print_term(&patch).into_bytes();
+    let patch_h = blake3::hash(&patch_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &patch_h, &patch_bytes);
+
+    let commit = gc_coreform::parse_term(&format!(
+        r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "dep" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snapshot_h}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "remote-head"
+}}"#
+    ))
+    .unwrap();
+    let commit_bytes = gc_coreform::print_term(&commit).into_bytes();
+    let commit_h = blake3::hash(&commit_bytes).to_hex().to_string();
+    put_remote_artifact(&remote_dir, &commit_h, &commit_bytes);
+    write_remote_ref(&remote_dir, "refs/heads/main", &commit_h);
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws", "--registry-default"])
+        .arg(&remote)
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["add", "dep@refs/heads/main"])
+        .assert()
+        .success();
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["lock"])
+        .assert()
+        .success();
+
+    fs::remove_dir_all(dir.join(".genesis").join("store")).unwrap();
+
+    let install_out = cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["--json", "pkg", "--caps"])
+        .arg(&caps)
+        .args(["install", "--frozen", "--strict"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let install_t = json_value_term(&install_out);
+    let Term::Map(install_m) = install_t else {
+        panic!("expected map install value");
+    };
+    assert_eq!(
+        install_m.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+
+    let store_dir = dir.join(".genesis").join("store");
+    assert!(store_dir.join(&commit_h).is_file());
+    assert!(store_dir.join(&snapshot_h).is_file());
+    assert!(store_dir.join(&patch_h).is_file());
 }

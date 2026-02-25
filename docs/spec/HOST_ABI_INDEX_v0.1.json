@@ -191,6 +191,11 @@
       "gpu/compute::submit",
       "gpu/compute::write-buffer"
     ],
+    "host/ffi": [
+      "host/ffi::buffer-pin",
+      "host/ffi::buffer-unpin",
+      "host/ffi::call"
+    ],
     "host/plugin": [
       "host/plugin::command"
     ],
@@ -257,6 +262,112 @@
     "crates/gc_effects/src/runner_cap_gc_gpk_low.rs"
   ],
   "kind": "genesis/host-abi-index-v0.1",
+  "operation_contracts": {
+    "editor/plugin::command": {
+      "policy_gates": [
+        "allow_plugins",
+        "allow_commands",
+        "allow_schema_ids (required when schema ids are present)",
+        "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+      ],
+      "schema_fields": {
+        "request": ":request-schema-id",
+        "response": ":response-schema-id"
+      },
+      "schema_ids": {
+        "request": [
+          "genesis/plugin.request.exec.v1",
+          "genesis/plugin.request.jsonrpc.v1"
+        ],
+        "response": [
+          "genesis/plugin.response.result.v1",
+          "genesis/plugin.response.bytes.v1"
+        ]
+      }
+    },
+    "host/ffi::buffer-pin": {
+      "policy_gates": [
+        "allow_abi_ids",
+        "max_buffer_bytes",
+        "allow_schema_ids (required when schema ids are present)",
+        "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+      ],
+      "schema_fields": {
+        "request": ":request-schema-id",
+        "response": ":response-schema-id"
+      },
+      "schema_ids": {
+        "request": [
+          "genesis/ffi.request.buffer-pin.v1"
+        ],
+        "response": [
+          "genesis/ffi.response.buffer-handle.v1"
+        ]
+      }
+    },
+    "host/ffi::buffer-unpin": {
+      "policy_gates": [
+        "allow_abi_ids",
+        "allow_schema_ids (required when schema ids are present)",
+        "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+      ],
+      "schema_fields": {
+        "request": ":request-schema-id",
+        "response": ":response-schema-id"
+      },
+      "schema_ids": {
+        "request": [
+          "genesis/ffi.request.buffer-unpin.v1"
+        ],
+        "response": [
+          "genesis/ffi.response.status.v1"
+        ]
+      }
+    },
+    "host/ffi::call": {
+      "policy_gates": [
+        "allow_abi_ids",
+        "allow_libraries",
+        "allow_symbols",
+        "allow_schema_ids (required when schema ids are present)",
+        "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+      ],
+      "schema_fields": {
+        "request": ":request-schema-id",
+        "response": ":response-schema-id"
+      },
+      "schema_ids": {
+        "request": [
+          "genesis/ffi.request.call.v1"
+        ],
+        "response": [
+          "genesis/ffi.response.call.v1"
+        ]
+      }
+    },
+    "host/plugin::command": {
+      "policy_gates": [
+        "allow_plugins",
+        "allow_commands",
+        "allow_schema_ids (required when schema ids are present)",
+        "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+      ],
+      "schema_fields": {
+        "request": ":request-schema-id",
+        "response": ":response-schema-id"
+      },
+      "schema_ids": {
+        "request": [
+          "genesis/plugin.request.exec.v1",
+          "genesis/plugin.request.jsonrpc.v1"
+        ],
+        "response": [
+          "genesis/plugin.response.result.v1",
+          "genesis/plugin.response.bytes.v1"
+        ]
+      }
+    }
+  },
   "operations": [
     "browser/audio::enqueue",
     "browser/audio::set-master",
@@ -397,6 +508,9 @@
     "gpu/compute::read-buffer",
     "gpu/compute::submit",
     "gpu/compute::write-buffer",
+    "host/ffi::buffer-pin",
+    "host/ffi::buffer-unpin",
+    "host/ffi::call",
     "host/plugin::command",
     "io/db::connect",
     "io/db::exec",
