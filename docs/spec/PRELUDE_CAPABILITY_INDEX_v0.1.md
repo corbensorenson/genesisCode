@@ -1,29 +1,23 @@
 # Prelude Capability Index v0.1
 
-Machine-readable prelude capability wrapper index:
+Deprecated Top-Level Doc: true  
+Bundle Entry: `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`  
+Legacy Split Doc: true
 
-- `/Users/corbensorenson/Documents/genesisCode/docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
+## Status
 
-Generation + drift checks:
+This leaf markdown capability index is deprecated and retained only as a
+redirect stub. The authoritative capability index is the machine-readable JSON
+artifact produced by the capability-index generation pipeline.
 
-- regenerate: `bash scripts/update_capability_indices.sh`
-- verify: `bash scripts/check_capability_indices.sh`
+## Canonical Replacements
 
-The index is extracted from `core/caps::perform` and `core/effect::perform` wrappers in `prelude/modules/*.gc`.
+- `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`
+- `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md`
 
-## Schema
+## Migration Guidance
 
-Top-level keys:
-
-- `kind = "genesis/prelude-capability-index-v0.1"`
-- `generated_from_glob = "prelude/modules/*.gc"`
-- `operations` (`string[]`, sorted unique)
-- `families` (`map<string, string[]>`, sorted keys and values)
-
-## Usage in Agent Workflows
-
-- Choose capability policies from `operations` directly.
-- Build family-level allowlists from `families` (e.g. allow all `gpu/compute` ops in compute pipelines).
-- Cross-check prelude wrappers against host ABI index:
-  - wrappers should exist in host ABI for effectful execution
-  - host-only ops without wrappers should be treated as low-level/runtime-only.
+- Use `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json` as the canonical source
+  for capability operations/families in automation and tooling.
+- Use `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` for agent-facing capability
+  authoring and policy workflow guidance.

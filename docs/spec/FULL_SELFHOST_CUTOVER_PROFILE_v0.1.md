@@ -29,6 +29,22 @@ No additional Rust semantic ownership is permitted without updating:
 - `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`
 - `scripts/check_full_selfhost_cutover_profile.sh`
 
+## Exception Ownership + No-Semantic-Drift Proofs
+
+Each explicit exception is allowed only while its ownership boundary and no-drift proof stays green.
+The full-cutover gate requires all of the following reports to exist, match expected kinds, and be `ok=true`.
+
+- `gc_coreform` + `gc_kernel` + `gc_prelude`:
+  - `.genesis/perf/kernel_tcb_contract_report.json`
+  - `.genesis/perf/selfhost_symbol_ownership_report.json`
+- `gc_effects`:
+  - `.genesis/perf/host_api_evolution_contract_report.json`
+- `gc_cli_driver`:
+  - `.genesis/perf/vcs_selfhost_contract_report.json`
+  - `.genesis/perf/gcpm_operation_contract_pack_report.json`
+
+If any proof report fails, the cutover profile fails closed.
+
 ## Closure Path
 
 The closure path to a full selfhost posture is:
@@ -52,6 +68,12 @@ This gate must verify:
 3. `scripts/check_bootstrap_retirement_gate.sh` report is valid and non-failing.
 4. `scripts/check_selfhost_dashboard_fresh.sh` report is valid.
 5. `scripts/check_selfhost_readiness_scorecard.sh` report is valid and only blocked by unresolved upgrade IDs, if any.
+6. Exception proof reports are present and pass:
+   - `scripts/check_kernel_tcb_contract.sh`
+   - `scripts/check_host_api_evolution_contracts.sh`
+   - `scripts/check_gcpm_operation_contract_pack.sh`
+   - `scripts/check_vcs_selfhost_contract.sh`
+   - `scripts/check_selfhost_symbol_ownership.sh`
 
 ## Health Profile Wiring
 

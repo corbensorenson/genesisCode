@@ -59,8 +59,9 @@ Optional environment knobs:
 - `GENESIS_GPU_BACKEND_POLICY_DEFAULT`
   - global runtime default for per-op GPU backend fallback when `caps.toml` does not set
     `gpu_backend_policy`.
-  - strict health lanes (`prepush-standard`, `release-full`, `full-selfhost-cutover`) set this to
-    `require-device`; inner-loop profiles keep `allow-fallback`.
+  - strict/default high-confidence health lanes (`agent-inner-loop`, `prepush-standard`,
+    `release-full`, `full-selfhost-cutover`) set this to `require-device`.
+  - fallback behavior is opt-in through explicit `GENESIS_AGENT_GPU_PROFILE=agent-gpu-fallback`.
 - `GENESIS_AGENT_GPU_PROFILE`
   - explicit automation contract selection:
     - `agent-gpu-strict` -> fail-closed (`require-device`)

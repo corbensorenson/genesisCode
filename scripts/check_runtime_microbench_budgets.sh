@@ -29,7 +29,10 @@ MICROBENCH_FEATURES="${GENESIS_RUNTIME_MICROBENCH_FEATURES:-}"
 GPU_BACKEND_POLICY="${GENESIS_GPU_COMPUTE_BACKEND_POLICY:-}"
 RUNTIME_REPORT="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_REPORT_OUT:-.genesis/perf/runtime_microbench_runtime_report.json}"
 RUNTIME_HISTORY="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_HISTORY_OUT:-.genesis/perf/runtime_microbench_runtime_history.jsonl}"
+RUNTIME_BASELINE_HISTORY="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_BASELINE_HISTORY_OUT:-policies/perf/runtime_microbench_runtime_seed_history.jsonl}"
 RUNTIME_BUDGET_MS="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_BUDGET_MS:-900000}"
+RUNTIME_MIN_HISTORY="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_MIN_HISTORY:-5}"
+RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_RUNTIME_MICROBENCH_RUNTIME_REQUIRE_MIN_HISTORY:-1}"
 if [[ -z "$GPU_BACKEND_POLICY" ]]; then
   case "$CARGO_PROFILE" in
     selfhost-strict|release|release-*|production|prod)
@@ -45,6 +48,14 @@ if [[ -z "$REQUIRED_GPU_BACKEND" && "$GPU_BACKEND_POLICY" == "require-device" ]]
 fi
 if [[ -z "$MICROBENCH_FEATURES" && "$GPU_BACKEND_POLICY" == "require-device" ]]; then
   MICROBENCH_FEATURES="device-bridge"
+fi
+if [[ ! "$RUNTIME_MIN_HISTORY" =~ ^[0-9]+$ || "$RUNTIME_MIN_HISTORY" -le 0 ]]; then
+  echo "runtime-microbench: GENESIS_RUNTIME_MICROBENCH_RUNTIME_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$RUNTIME_REQUIRE_MIN_HISTORY" != "0" && "$RUNTIME_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "runtime-microbench: GENESIS_RUNTIME_MICROBENCH_RUNTIME_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
+  exit 2
 fi
 
 bash scripts/check_disk_headroom.sh \
@@ -213,5 +224,8 @@ genesis_profile_gate_emit_runtime_report \
   "$RUNTIME_HISTORY" \
   "$START_MS" \
   "$RUNTIME_BUDGET_MS" \
-  "1" \
-  "{\"metrics_report\":\"$OUT\",\"slo_report\":\"$SLO_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}"
+  "$RUNTIME_MIN_HISTORY" \
+  "{\"metrics_report\":\"$OUT\",\"slo_report\":\"$SLO_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}" \
+  "" \
+  "$RUNTIME_BASELINE_HISTORY" \
+  "$RUNTIME_REQUIRE_MIN_HISTORY"

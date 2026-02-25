@@ -31,6 +31,18 @@ REPORT_OUT="${GENESIS_PERF_BUDGET_REPORT_OUT:-.genesis/perf/perf_budget_metrics.
 HISTORY_OUT="${GENESIS_PERF_BUDGET_HISTORY_OUT:-.genesis/perf/perf_budget_metrics_history.jsonl}"
 RUNTIME_REPORT="${GENESIS_PERF_BUDGET_RUNTIME_REPORT_OUT:-.genesis/perf/perf_budget_runtime_report.json}"
 RUNTIME_BUDGET_MS="${GENESIS_PERF_BUDGET_RUNTIME_BUDGET_MS:-900000}"
+RUNTIME_BASELINE_HISTORY="${GENESIS_PERF_BUDGET_RUNTIME_BASELINE_HISTORY_OUT:-policies/perf/perf_budget_runtime_seed_history.jsonl}"
+RUNTIME_MIN_HISTORY="${GENESIS_PERF_BUDGET_RUNTIME_MIN_HISTORY:-5}"
+RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_PERF_BUDGET_RUNTIME_REQUIRE_MIN_HISTORY:-1}"
+
+if [[ ! "$RUNTIME_MIN_HISTORY" =~ ^[0-9]+$ || "$RUNTIME_MIN_HISTORY" -le 0 ]]; then
+  echo "perf-budgets: GENESIS_PERF_BUDGET_RUNTIME_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$RUNTIME_REQUIRE_MIN_HISTORY" != "0" && "$RUNTIME_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "perf-budgets: GENESIS_PERF_BUDGET_RUNTIME_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
+  exit 2
+fi
 
 fail() {
   echo "perf-budgets: $*" >&2
@@ -138,7 +150,10 @@ genesis_profile_gate_emit_runtime_report \
   "$HISTORY_OUT" \
   "$START_MS" \
   "$RUNTIME_BUDGET_MS" \
-  "1" \
-  "{\"metrics_report\":\"$REPORT_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}"
+  "$RUNTIME_MIN_HISTORY" \
+  "{\"metrics_report\":\"$REPORT_OUT\",\"build_profile\":\"$CARGO_PROFILE\"}" \
+  "" \
+  "$RUNTIME_BASELINE_HISTORY" \
+  "$RUNTIME_REQUIRE_MIN_HISTORY"
 
 echo "perf-budgets: ok"

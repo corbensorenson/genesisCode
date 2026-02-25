@@ -10,6 +10,11 @@ REFRESH="${GENESIS_FULL_SELFHOST_CUTOVER_REFRESH:-0}"
 READINESS_REPORT="${GENESIS_SELFHOST_READINESS_REPORT:-.genesis/perf/selfhost_readiness_report.json}"
 BOOTSTRAP_REPORT="${GENESIS_BOOTSTRAP_RETIREMENT_REPORT:-.genesis/perf/bootstrap_retirement_gate_report.json}"
 DASHBOARD_FRESH_REPORT="${GENESIS_SELFHOST_DASHBOARD_FRESH_REPORT:-.genesis/perf/selfhost_dashboard_fresh_report.json}"
+KERNEL_TCB_REPORT="${GENESIS_KERNEL_TCB_REPORT:-.genesis/perf/kernel_tcb_contract_report.json}"
+HOST_API_EVOLUTION_REPORT="${GENESIS_HOST_API_EVOLUTION_REPORT:-.genesis/perf/host_api_evolution_contract_report.json}"
+GCPM_CONTRACT_PACK_REPORT="${GENESIS_GCPM_OPERATION_CONTRACT_PACK_REPORT:-.genesis/perf/gcpm_operation_contract_pack_report.json}"
+VCS_SELFHOST_REPORT="${GENESIS_VCS_SELFHOST_CONTRACT_REPORT:-.genesis/perf/vcs_selfhost_contract_report.json}"
+SELFHOST_SYMBOL_OWNERSHIP_REPORT="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_REPORT:-.genesis/perf/selfhost_symbol_ownership_report.json}"
 
 if [[ "$REFRESH" != "0" && "$REFRESH" != "1" ]]; then
   echo "full-selfhost-cutover-profile: GENESIS_FULL_SELFHOST_CUTOVER_REFRESH must be 0 or 1" >&2
@@ -21,6 +26,11 @@ if [[ "$REFRESH" == "1" ]]; then
   bash scripts/check_bootstrap_retirement_gate.sh
   bash scripts/check_selfhost_dashboard_fresh.sh
   bash scripts/check_selfhost_readiness_scorecard.sh
+  bash scripts/check_kernel_tcb_contract.sh
+  bash scripts/check_host_api_evolution_contracts.sh
+  bash scripts/check_gcpm_operation_contract_pack.sh
+  bash scripts/check_vcs_selfhost_contract.sh
+  bash scripts/check_selfhost_symbol_ownership.sh
 fi
 
 [[ -f "$DOC_PATH" ]] || {
@@ -39,8 +49,28 @@ fi
   echo "full-selfhost-cutover-profile: missing selfhost dashboard freshness report: $DASHBOARD_FRESH_REPORT" >&2
   exit 1
 }
+[[ -f "$KERNEL_TCB_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing kernel tcb report: $KERNEL_TCB_REPORT" >&2
+  exit 1
+}
+[[ -f "$HOST_API_EVOLUTION_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing host api evolution report: $HOST_API_EVOLUTION_REPORT" >&2
+  exit 1
+}
+[[ -f "$GCPM_CONTRACT_PACK_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing gcpm operation contract pack report: $GCPM_CONTRACT_PACK_REPORT" >&2
+  exit 1
+}
+[[ -f "$VCS_SELFHOST_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing vcs selfhost contract report: $VCS_SELFHOST_REPORT" >&2
+  exit 1
+}
+[[ -f "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing selfhost symbol ownership report: $SELFHOST_SYMBOL_OWNERSHIP_REPORT" >&2
+  exit 1
+}
 
-python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$REPORT_PATH" <<'PY'
+python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$KERNEL_TCB_REPORT" "$HOST_API_EVOLUTION_REPORT" "$GCPM_CONTRACT_PACK_REPORT" "$VCS_SELFHOST_REPORT" "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" "$REPORT_PATH" <<'PY'
 import json
 import pathlib
 import re
@@ -51,13 +81,19 @@ doc_path = root / sys.argv[2]
 readiness_path = root / sys.argv[3]
 bootstrap_path = root / sys.argv[4]
 dashboard_path = root / sys.argv[5]
-report_path = root / sys.argv[6]
+kernel_tcb_path = root / sys.argv[6]
+host_api_path = root / sys.argv[7]
+gcpm_contract_path = root / sys.argv[8]
+vcs_selfhost_path = root / sys.argv[9]
+selfhost_symbol_path = root / sys.argv[10]
+report_path = root / sys.argv[11]
 
 doc = doc_path.read_text(encoding="utf-8")
 
 required_headings = [
     "# Full-Selfhost Cutover Profile v0.1",
     "## Remaining Exceptions (Explicit)",
+    "## Exception Ownership + No-Semantic-Drift Proofs",
     "## Closure Path",
     "## Gate Contract",
 ]
@@ -147,6 +183,52 @@ if not bool(dashboard.get("ok", False)):
         "full-selfhost-cutover-profile: dashboard freshness report is not ok"
     )
 
+proof_specs = {
+    "kernel_tcb_contract": (
+        kernel_tcb_path,
+        "genesis/kernel-tcb-contract-v0.1",
+    ),
+    "host_api_evolution_contract": (
+        host_api_path,
+        "genesis/host-api-evolution-contract-report-v0.1",
+    ),
+    "gcpm_operation_contract_pack": (
+        gcpm_contract_path,
+        "genesis/gcpm-operation-contract-pack-report-v0.1",
+    ),
+    "vcs_selfhost_contract": (
+        vcs_selfhost_path,
+        "genesis/vcs-selfhost-contract-v0.1",
+    ),
+    "selfhost_symbol_ownership": (
+        selfhost_symbol_path,
+        "genesis/selfhost-symbol-ownership-v0.1",
+    ),
+}
+
+proof_reports = {}
+for name, (path, expected_kind) in proof_specs.items():
+    if not path.is_file():
+        raise SystemExit(
+            f"full-selfhost-cutover-profile: required proof report missing for {name}: {path}"
+        )
+    try:
+        proof_doc = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"full-selfhost-cutover-profile: proof report {name} is invalid JSON: {path}"
+        ) from exc
+    if proof_doc.get("kind") != expected_kind:
+        raise SystemExit(
+            "full-selfhost-cutover-profile: proof report kind mismatch for "
+            f"{name}: expected {expected_kind!r}, got {proof_doc.get('kind')!r}"
+        )
+    if not bool(proof_doc.get("ok", False)):
+        raise SystemExit(
+            f"full-selfhost-cutover-profile: proof report {name} is not ok: {path}"
+        )
+    proof_reports[name] = path.relative_to(root).as_posix()
+
 report_doc = {
     "kind": "genesis/full-selfhost-cutover-profile-v0.1",
     "doc": doc_path.relative_to(root).as_posix(),
@@ -157,6 +239,7 @@ report_doc = {
     "readiness_dimension_count": len(dimensions),
     "readiness_fail_reasons": [str(x) for x in fail_reasons],
     "bootstrap_status": bootstrap_status,
+    "exception_proof_reports": proof_reports,
     "ok": True,
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)

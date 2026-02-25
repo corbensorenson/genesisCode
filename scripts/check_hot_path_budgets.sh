@@ -33,7 +33,19 @@ DISK_STRICT_MODE="$(genesis_resolve_perf_disk_strict_mode)"
 DISK_MIN_FREE_KB="${GENESIS_HOT_PATH_MIN_FREE_KB:-3145728}"
 RUNTIME_REPORT="${GENESIS_HOT_PATH_RUNTIME_REPORT_OUT:-.genesis/perf/hot_path_runtime_report.json}"
 RUNTIME_HISTORY="${GENESIS_HOT_PATH_RUNTIME_HISTORY_OUT:-.genesis/perf/hot_path_runtime_history.jsonl}"
+RUNTIME_BASELINE_HISTORY="${GENESIS_HOT_PATH_RUNTIME_BASELINE_HISTORY_OUT:-policies/perf/hot_path_runtime_seed_history.jsonl}"
 RUNTIME_BUDGET_MS="${GENESIS_HOT_PATH_RUNTIME_BUDGET_MS:-1200000}"
+RUNTIME_MIN_HISTORY="${GENESIS_HOT_PATH_RUNTIME_MIN_HISTORY:-5}"
+RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_HOT_PATH_RUNTIME_REQUIRE_MIN_HISTORY:-1}"
+
+if [[ ! "$RUNTIME_MIN_HISTORY" =~ ^[0-9]+$ || "$RUNTIME_MIN_HISTORY" -le 0 ]]; then
+  echo "hot-path-budgets: GENESIS_HOT_PATH_RUNTIME_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$RUNTIME_REQUIRE_MIN_HISTORY" != "0" && "$RUNTIME_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "hot-path-budgets: GENESIS_HOT_PATH_RUNTIME_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
+  exit 2
+fi
 
 fail() {
   echo "hot-path-budgets: $*" >&2
@@ -208,7 +220,10 @@ genesis_profile_gate_emit_runtime_report \
   "$RUNTIME_HISTORY" \
   "$START_MS" \
   "$RUNTIME_BUDGET_MS" \
-  "1" \
-  "{\"metrics_report\":\"$ARTIFACT_JSON\",\"build_profile\":\"$CARGO_PROFILE\"}"
+  "$RUNTIME_MIN_HISTORY" \
+  "{\"metrics_report\":\"$ARTIFACT_JSON\",\"build_profile\":\"$CARGO_PROFILE\"}" \
+  "" \
+  "$RUNTIME_BASELINE_HISTORY" \
+  "$RUNTIME_REQUIRE_MIN_HISTORY"
 
 echo "hot-path-budgets: ok"

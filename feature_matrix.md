@@ -1,6 +1,6 @@
-# GenesisCode Feature Matrix (Audit Date: 2026-02-24)
+# GenesisCode Feature Matrix (Audit Date: 2026-02-25)
 
-Last updated: 2026-02-24  
+Last updated: 2026-02-25  
 Scope: features that matter for agentic coding autonomy and selfhost reliability.
 
 Legend:
@@ -28,10 +28,10 @@ Legend:
 | Strict GPU/XR runtime evidence as default productization lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deployment target pipeline in core toolchain | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Reachability-based artifact GC (`refs`/locks/pins) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Production module decomposition for AI maintainability | ⚠️ (multiple large production Rust modules remain unsplit) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- none (open checklist items = 0).
+- none currently open.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

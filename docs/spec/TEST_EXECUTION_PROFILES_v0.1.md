@@ -98,7 +98,7 @@ Strict/full profile runtime reports:
     - implementation wrapper: `scripts/lib/run_cached_health_gate.sh`
   - cargo prebuild orchestration is available via
     `GENESIS_HEALTH_WARM_CARGO_CACHE=auto|1|0` (default `auto`:
-    `dev-fast=0`, `prepush-standard/release-full=1`) and reports to
+    `dev-fast/agent-inner-loop=0`, `prepush-standard/release-full=1`) and reports to
     `.genesis/perf/upgrade_plan_health_warmup_<profile>.json`
     (`kind = genesis/upgrade-plan-health-cargo-warmup-v0.1`)
   - emits profile report `kind = genesis/upgrade-plan-health-profile-v0.1` at
@@ -141,6 +141,7 @@ Strict/full profile runtime reports:
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY`
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY`
     - `GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY`
+  - default fail-closed history floor: `GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY=5`.
 - Full-selfhost closure lane: `scripts/check_upgrade_plan_health.sh --profile full-selfhost-cutover`
   - runs `scripts/check_full_selfhost_cutover_profile.sh` with strict refresh enabled.
   - enforces explicit closure-contract verification from `docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md`.

@@ -19,8 +19,20 @@ WORKFLOW_SCRIPT="${GENESIS_GFX_RUNTIME_PROFILE_WORKFLOW:-$ROOT_DIR/examples/agen
 REPORT_PATH="${GENESIS_GFX_RUNTIME_PROFILE_OUT:-.genesis/perf/gfx_runtime_profile_report.json}"
 RUNTIME_REPORT="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_REPORT_OUT:-.genesis/perf/gfx_runtime_profile_runtime_report.json}"
 RUNTIME_HISTORY="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_HISTORY_OUT:-.genesis/perf/gfx_runtime_profile_runtime_history.jsonl}"
+RUNTIME_BASELINE_HISTORY="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_BASELINE_HISTORY_OUT:-policies/perf/gfx_runtime_profile_runtime_seed_history.jsonl}"
 RUNTIME_BUDGET_MS="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_BUDGET_MS:-900000}"
+RUNTIME_MIN_HISTORY="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_MIN_HISTORY:-5}"
+RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_REQUIRE_MIN_HISTORY:-1}"
 SKIP_RUN="${GENESIS_GFX_RUNTIME_PROFILE_SKIP_RUN:-0}"
+
+if [[ ! "$RUNTIME_MIN_HISTORY" =~ ^[0-9]+$ || "$RUNTIME_MIN_HISTORY" -le 0 ]]; then
+  echo "gfx-runtime-profile: GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$RUNTIME_REQUIRE_MIN_HISTORY" != "0" && "$RUNTIME_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "gfx-runtime-profile: GENESIS_GFX_RUNTIME_PROFILE_RUNTIME_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
+  exit 2
+fi
 
 if [[ "$SKIP_RUN" == "1" ]]; then
   [[ -f "$REPORT_PATH" ]] || {
@@ -101,7 +113,10 @@ genesis_profile_gate_emit_runtime_report \
   "$RUNTIME_HISTORY" \
   "$START_MS" \
   "$RUNTIME_BUDGET_MS" \
-  "1" \
-  "{\"profile_report\":\"$REPORT_PATH\"}"
+  "$RUNTIME_MIN_HISTORY" \
+  "{\"profile_report\":\"$REPORT_PATH\"}" \
+  "" \
+  "$RUNTIME_BASELINE_HISTORY" \
+  "$RUNTIME_REQUIRE_MIN_HISTORY"
 
 echo "gfx-runtime-profile: ok"

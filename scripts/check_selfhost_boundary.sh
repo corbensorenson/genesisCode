@@ -28,6 +28,7 @@ is_allowed_path() {
     crates/gc_cli/src/main.rs) return 0 ;;
     crates/gc_wasi_cli/src/main.rs) return 0 ;;
     crates/gc_wasm/src/lib.rs) return 0 ;;
+    crates/gc_wasm/src/runtime.rs) return 0 ;;
     crates/*/tests/*) return 0 ;;
     *) return 1 ;;
   esac

@@ -14,7 +14,7 @@ genesis_configure_cargo_target_dir \
 REPORT_PATH="${GENESIS_SELFHOST_READINESS_REPORT:-.genesis/perf/selfhost_readiness_report.json}"
 HISTORY_PATH="${GENESIS_SELFHOST_READINESS_HISTORY:-.genesis/perf/selfhost_readiness_history.jsonl}"
 BUDGET_MS="${GENESIS_SELFHOST_READINESS_BUDGET_MS:-600000}"
-P95_MIN_SAMPLES="${GENESIS_SELFHOST_READINESS_P95_MIN_SAMPLES:-1}"
+P95_MIN_SAMPLES="${GENESIS_SELFHOST_READINESS_P95_MIN_SAMPLES:-5}"
 STRICT_MODE="${GENESIS_SELFHOST_READINESS_STRICT:-0}"
 CRITICAL_TTL_SEC="${GENESIS_SELFHOST_READINESS_CRITICAL_TTL_SEC:-21600}"
 REFRESH_CRITICAL_REPORTS="${GENESIS_SELFHOST_READINESS_REFRESH_CRITICAL_REPORTS:-1}"
@@ -455,6 +455,114 @@ def dim_critical_gate_truth() -> dict[str, Any]:
         "reports": reports,
     }
 
+def read_static_report(
+    report_rel: str,
+    expected_kind: str,
+    label: str,
+) -> tuple[bool, dict[str, Any], Optional[str]]:
+    report_path = root / report_rel
+    if not report_path.is_file():
+        return (
+            False,
+            {
+                "path": report_rel,
+                "ok": False,
+                "missing": True,
+            },
+            f"{label}:missing",
+        )
+
+    try:
+        doc = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return (
+            False,
+            {
+                "path": report_rel,
+                "ok": False,
+                "decode_error": True,
+            },
+            f"{label}:json-decode",
+        )
+
+    if doc.get("kind") != expected_kind:
+        return (
+            False,
+            {
+                "path": report_rel,
+                "ok": False,
+                "kind": doc.get("kind"),
+                "expected_kind": expected_kind,
+            },
+            f"{label}:kind-mismatch",
+        )
+
+    report_ok = bool(doc.get("ok", False))
+    detail = {
+        "path": report_rel,
+        "ok": report_ok,
+        "kind": doc.get("kind"),
+    }
+    if "elapsed_ms" in doc:
+        detail["elapsed_ms"] = doc.get("elapsed_ms")
+    if "budget_ms" in doc:
+        detail["budget_ms"] = doc.get("budget_ms")
+    if "history_samples" in doc:
+        detail["history_samples"] = doc.get("history_samples")
+    if not report_ok:
+        detail["fail_reasons"] = doc.get("fail_reasons")
+        return False, detail, f"{label}:report-not-ok"
+
+    return True, detail, None
+
+def dim_runtime_quality_truth() -> dict[str, Any]:
+    checks: list[str] = []
+    errors: list[str] = []
+    reports: dict[str, Any] = {}
+    specs = [
+        (
+            "runtime_microbench_runtime",
+            ".genesis/perf/runtime_microbench_runtime_report.json",
+            "genesis/runtime-microbench-runtime-v0.1",
+            "runtime-microbench-runtime",
+        ),
+        (
+            "hot_path_runtime",
+            ".genesis/perf/hot_path_runtime_report.json",
+            "genesis/hot-path-runtime-v0.1",
+            "hot-path-runtime",
+        ),
+        (
+            "task_concurrency_stress",
+            ".genesis/perf/task_concurrency_stress_report.json",
+            "genesis/task-concurrency-stress-v0.1",
+            "task-concurrency-stress",
+        ),
+        (
+            "host_api_evolution_contract",
+            ".genesis/perf/host_api_evolution_contract_report.json",
+            "genesis/host-api-evolution-contract-report-v0.1",
+            "host-api-evolution-contract",
+        ),
+    ]
+
+    for key, report_rel, expected_kind, label in specs:
+        checks.append(label)
+        ok, detail, error = read_static_report(report_rel, expected_kind, label)
+        reports[key] = detail
+        if not ok and error is not None:
+            errors.append(error)
+
+    ok = not errors
+    return {
+        "ok": ok,
+        "score": 100 if ok else 0,
+        "max_score": 100,
+        "checks": checks,
+        "errors": errors,
+        "reports": reports,
+    }
+
 open_upgrade_ids = sorted(
     set(
         re.findall(
@@ -471,6 +579,7 @@ dimensions = {
     "bootstrap_mode_strictness": dim_bootstrap_mode_strictness(),
     "deprecated_bootstrap_reference_count": dim_deprecated_bootstrap_refs(),
     "critical_gate_truth": dim_critical_gate_truth(),
+    "runtime_quality_truth": dim_runtime_quality_truth(),
 }
 dimension_ok = all(bool(row.get("ok")) for row in dimensions.values())
 score = int(round(sum(int(row["score"]) for row in dimensions.values()) / len(dimensions)))

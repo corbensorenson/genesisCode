@@ -26,6 +26,28 @@ module_paths = [
   "crates/gc_cli_driver/src/pkg_assurance_ops.rs",
 ]
 
+# Fail-closed coverage list for high-churn modules currently above target_max_lines.
+# These modules are explicitly tracked even before they are split under the line budget.
+coverage_module_paths = [
+  "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+  "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
+  "crates/gc_obligations/src/obligation_gfx.rs",
+  "crates/gc_cli_driver/src/cli_args.rs",
+  "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+  "crates/gc_opt/src/stage2_wasm/strings_bytes_lowering.rs",
+  "crates/gc_prelude/src/selfhost_coreform_v1.rs",
+  "crates/gc_opt/src/lib.rs",
+  "crates/gc_wasm/src/lib.rs",
+  "crates/gc_cli_driver/src/cmd_pkg/frontend_dispatch/selfhost.rs",
+  "crates/gc_effects/src/runner_cap_vcs_low/dispatch_patch_contract.rs",
+  "crates/gc_cli_driver/src/cmd_pkg.rs",
+  "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
+  "crates/gc_effects/src/runner_xr_host.rs",
+  "crates/gc_effects/src/runner_gfx_host.rs",
+  "crates/gc_kernel/src/eval_prims.rs",
+  "crates/gc_opt/src/stage2_wasm/planner_helpers.rs",
+]
+
 # Migration contract guardrails:
 # - planned/status placeholders are disallowed once a module enters this table
 # - minimum required phase is phase-1 (shared contract/data model migrated to GC modules)

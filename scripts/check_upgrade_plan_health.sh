@@ -23,7 +23,7 @@ DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-30000
 AGENT_INNER_LOOP_BUDGET_MS="${GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS:-300000}"
 AGENT_INNER_LOOP_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_HISTORY:-.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl}"
 AGENT_INNER_LOOP_BASELINE_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY:-policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl}"
-AGENT_INNER_LOOP_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY:-3}"
+AGENT_INNER_LOOP_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY:-5}"
 AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY:-1}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
@@ -230,6 +230,29 @@ crates/gc_cli/src/**/*.rs
 crates/gc_cli_driver/src/**/*.rs
 crates/gc_obligations/src/**/*.rs
 crates/gc_types/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=0 bash scripts/check_production_cli_help_surface.sh"*)
+      cat <<'EOF'
+production-cli-help-surface
+scripts/check_production_cli_help_surface.sh
+scripts/lib/**/*.sh
+crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_wasi_cli/src/**/*.rs
+EOF
+      return 0
+      ;;
+    *"GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1 "*)
+      cat <<'EOF'
+production-cli-help-surface-parity
+scripts/check_production_cli_help_surface.sh
+scripts/lib/**/*.sh
+crates/gc_cli/src/**/*.rs
+crates/gc_cli_driver/src/**/*.rs
+crates/gc_cli_driver_parity/src/**/*.rs
+crates/gc_wasi_cli/src/**/*.rs
 EOF
       return 0
       ;;
@@ -876,7 +899,7 @@ if [[ "$PROFILE" == "prepush-standard" || "$PROFILE" == "release-full" || "$PROF
 fi
 if [[ -z "$HEALTH_GPU_BACKEND_POLICY_DEFAULT" ]]; then
   case "$PROFILE" in
-    prepush-standard|release-full|full-selfhost-cutover)
+    prepush-standard|release-full|full-selfhost-cutover|agent-inner-loop)
       HEALTH_GPU_BACKEND_POLICY_DEFAULT="require-device"
       ;;
     *)
@@ -934,7 +957,7 @@ if [[ ! "$HEALTH_PROFILE_GATE_CACHE_TTL_SEC" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 if [[ "$HEALTH_WARM_CARGO_CACHE" == "auto" ]]; then
-  if [[ "$PROFILE" == "dev-fast" ]]; then
+  if [[ "$PROFILE" == "dev-fast" || "$PROFILE" == "agent-inner-loop" ]]; then
     HEALTH_WARM_CARGO_CACHE="0"
   else
     HEALTH_WARM_CARGO_CACHE="1"

@@ -1,6 +1,6 @@
 # Documentation Deprecation Map v0.1
 
-Last updated: 2026-02-22
+Last updated: 2026-02-25
 
 Purpose: explicitly mark superseded/overlapping docs and point to canonical replacements.
 
@@ -25,6 +25,7 @@ and removed from active retrieval paths:
 | `docs/POLICY_DEFAULTS_v0.1.md` | `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`, `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`, `docs/spec/REGISTRY_POLICY.md` | Redirect stub only |
 | `docs/STACKS_v0.2.md` | `docs/PAPER_v0.2.md`, `docs/FOUNDATION_STDLIB_v0.2.md`, `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` | Redirect stub only |
 | `docs/STYLE_GUIDE_v0.2.md` | `docs/spec/AI_STYLE.md`, `docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md`, `docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md` | Redirect stub only |
+| `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.md` | `docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json`, `docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md` | Redirect stub only |
 
 ## Stub Contract (Deprecated Docs)
 

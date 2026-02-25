@@ -29,10 +29,21 @@ REPORT_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT:-.genesis/perf/product
 HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY:-.genesis/perf/production_cli_help_surface_history.jsonl}"
 BUDGET_MS="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BUDGET_MS:-180000}"
 HISTORY_SCOPE_KEY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY:-production-only-v1}"
+BASELINE_HISTORY_PATH="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_BASELINE_HISTORY:-policies/perf/production_cli_help_surface_seed_history.jsonl}"
+MIN_HISTORY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_MIN_HISTORY:-5}"
+REQUIRE_MIN_HISTORY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_REQUIRE_MIN_HISTORY:-1}"
 INCLUDE_PARITY="${GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY:-0}"
 
 if [[ "$INCLUDE_PARITY" != "0" && "$INCLUDE_PARITY" != "1" ]]; then
   echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$MIN_HISTORY" =~ ^[0-9]+$ || "$MIN_HISTORY" -le 0 ]]; then
+  echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$REQUIRE_MIN_HISTORY" != "0" && "$REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "help-surface: GENESIS_PRODUCTION_CLI_HELP_SURFACE_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
   exit 2
 fi
 
@@ -129,8 +140,10 @@ genesis_profile_gate_emit_runtime_report \
   "$HISTORY_PATH" \
   "$START_MS" \
   "$BUDGET_MS" \
-  "1" \
+  "$MIN_HISTORY" \
   "{\"build_strategy\":\"single-cargo-build\",\"include_parity\":$INCLUDE_PARITY,\"checked_bins\":$checked_bins_json}" \
-  "$HISTORY_SCOPE_KEY"
+  "$HISTORY_SCOPE_KEY" \
+  "$BASELINE_HISTORY_PATH" \
+  "$REQUIRE_MIN_HISTORY"
 
 echo "help-surface: ok"
