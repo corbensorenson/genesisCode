@@ -1033,22 +1033,6 @@ fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
         .success();
 
     let app_dir = dir.join("app");
-    let tools_dir = app_dir.join("tools");
-    fs::create_dir_all(&tools_dir).unwrap();
-    let bridge = tools_dir.join("host_bridge.sh");
-    fs::write(
-        &bridge,
-        "#!/usr/bin/env sh\nset -eu\nop=\"${GENESIS_HOST_BRIDGE_OP:-}\"\nIFS= read -r n\ndd bs=1 count=\"$n\" status=none >/dev/null 2>/dev/null || true\nresp=\"{:ok true :bridge-op \\\"$op\\\"}\"\nprintf '%s\\n%s' \"${#resp}\" \"$resp\"\n",
-    )
-    .unwrap();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&bridge).unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&bridge, perms).unwrap();
-    }
-
     let out = cargo_bin_cmd!("genesis")
         .current_dir(&app_dir)
         .args(["--json", "gcpm", "--caps"])
@@ -1073,7 +1057,10 @@ fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
     let effective_caps = map_string(&map, ":caps-policy-effective");
     assert!(effective_caps.ends_with("caps-policy.backend.effective.toml"));
     let bridge_cmd = map_string(&map, ":backend-bridge-cmd");
-    assert!(bridge_cmd.ends_with("tools/host_bridge.sh"));
+    assert!(
+        bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge")
+            || bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge.exe")
+    );
     let bridge_sha = map_string(&map, ":backend-bridge-sha256");
     assert!(bridge_sha.starts_with("sha256:"));
 
@@ -1089,4 +1076,106 @@ fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
     .unwrap();
     assert!(effective_caps_src.contains("allow_programs = [\"*\"]"));
     assert!(effective_caps_src.contains("bridge_cmd_sha256 = \"sha256:"));
+}
+
+#[test]
+fn gcpm_env_backend_profile_bridge_runs_host_family_smoke_without_manual_bridge_setup() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "service",
+            "--name",
+            "backend-smoke",
+            "--root",
+            "app",
+        ])
+        .assert()
+        .success();
+
+    let app_dir = dir.join("app");
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(&app_dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(app_dir.join("caps.toml"))
+        .args([
+            "env",
+            "--profile",
+            "backend",
+            "--runtime-backend",
+            "profile-headless",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let map = parse_coreform_value_map(&out);
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":backend-bridge-ready"))),
+        Some(&Term::Bool(true))
+    );
+    let effective_caps = map_string(&map, ":caps-policy-effective");
+
+    let smoke_cases = [
+        (
+            "backend_bridge_dns.gc",
+            r#"(def prog (core/effect::perform 'io/net::dns-resolve {:name "localhost"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":addrs",
+        ),
+        (
+            "backend_bridge_db.gc",
+            r#"(def prog (core/effect::perform 'io/db::connect {:target "sqlite://data/backend_smoke.db"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":connection-id",
+        ),
+        (
+            "backend_bridge_process.gc",
+            r#"(def prog (core/effect::perform 'sys/process::exec {:program "echo" :args ["bridge-ok"] :env {}} (fn (x) (core/effect::pure x)))) prog"#,
+            ":stdout",
+        ),
+        (
+            "backend_bridge_crypto.gc",
+            r#"(def prog (core/effect::perform 'core/crypto::hash {:algorithm "sha256" :data "abc"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":digest",
+        ),
+        (
+            "backend_bridge_plugin.gc",
+            r#"(def prog (core/effect::perform 'host/plugin::command {:plugin "demo" :command "run" :payload {:ok true}} (fn (x) (core/effect::pure x)))) prog"#,
+            ":plugin",
+        ),
+        (
+            "backend_bridge_ffi.gc",
+            r#"(def prog (core/effect::perform 'host/ffi::buffer-pin {:abi-id "genesis/ffi.memory.v1" :bytes "abc"} (fn (x) (core/effect::pure x)))) prog"#,
+            ":handle",
+        ),
+    ];
+
+    for (file_name, src, expected_marker) in smoke_cases {
+        fs::write(app_dir.join(file_name), src).unwrap();
+        let log_name = format!("{file_name}.gclog");
+        let run_out = cargo_bin_cmd!("genesis")
+            .current_dir(&app_dir)
+            .args(["run", file_name, "--caps", &effective_caps, "--log", &log_name])
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let run_src = String::from_utf8(run_out).unwrap();
+        assert!(run_src.contains(":backend \"first-party-backend-bridge\""));
+        assert!(run_src.contains(expected_marker));
+
+        cargo_bin_cmd!("genesis")
+            .current_dir(&app_dir)
+            .args(["replay", file_name, "--log", &log_name])
+            .assert()
+            .success();
+    }
 }

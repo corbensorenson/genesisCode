@@ -64,6 +64,7 @@ mod cmd_vcs;
 mod commit_contract;
 mod diagnostics;
 mod gc_contract;
+mod host_bridge_runtime;
 mod kernel_exec;
 mod package_obligation_cmds;
 mod pkg_abi;
@@ -197,6 +198,9 @@ pub fn run(flavor: Flavor) -> std::process::ExitCode {
     set_runtime_profile(RuntimeProfile::Production);
     configure_profile_flags(false);
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
+    if let Some(code) = host_bridge_runtime::maybe_run_host_bridge_mode() {
+        return code;
+    }
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {
         Ok(out) => {
@@ -249,6 +253,9 @@ pub fn run_with_profile(flavor: Flavor, profile: RuntimeProfile) -> std::process
     let parity = matches!(profile, RuntimeProfile::ParityHarness);
     configure_profile_flags(parity);
     gc_effects::set_force_wasi_remote_profile(matches!(flavor, Flavor::Wasi));
+    if let Some(code) = host_bridge_runtime::maybe_run_host_bridge_mode() {
+        return code;
+    }
     let cli = Cli::parse();
     match dispatch(&cli, flavor) {
         Ok(out) => {

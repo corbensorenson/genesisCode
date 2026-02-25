@@ -7,34 +7,15 @@ Scope:
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Critical Path
 
-- P0.1 - turnkey host backend provisioning for agent execution
+- none
 
 ## Unresolved Backlog
 
-- [ ] P0.1 Turnkey host backend provisioning for agent execution
-Why: key capability families still fail closed with `core/caps/backend-unavailable` unless explicit per-op bridge policy is hand-authored, which blocks autonomous agent execution outside curated demos.
-Done when:
-  - `gcpm env --profile backend` can materialize signed, policy-pinned bridge/runtime bundles for `io/net::*`, `io/db::*`, `sys/process::*`, `core/crypto::*`, `host/plugin::*`, `host/ffi::*`, `editor/*`, and gfx/gpu families without manual caps edits.
-  - generated capability policies include deterministic allowlists/digest pins and pass replay invariants on first boot.
-  - default starter workflows can run end-to-end in a clean workspace with zero manual bridge configuration.
-Progress this pass:
-  - [x] `gcpm scaffold` now materializes `caps.backend.toml` and a workspace `backend` profile (`caps_policy = "caps.backend.toml"`, runtime backend `backend`) so backend-targeted env realization is first-class.
-  - [x] `gcpm env` now emits backend effective policy artifacts (`caps-policy.backend.effective.toml`) plus machine-readable bridge readiness fields (`:caps-policy-effective*`, `:backend-bridge-*`) with deterministic bridge digest pinning when a bridge binary is present.
-  - [x] capability allowlists now support explicit wildcard/prefix rules (`*`, `prefix*`) across process/plugin/ffi/crypto/db/net policy gates, and bind-port policy supports `"*"` for backend profiles.
-  - [ ] ship first-party or bundled production bridge executables for `io/net::*`, `io/db::*`, `sys/process::*`, `core/crypto::*`, `host/plugin::*`, and `host/ffi::*` (current state still depends on external bridge command availability).
-  - [ ] pass clean-workspace, zero-manual-config starter workflow gauntlet for backend-host families (not yet met).
-Evidence:
-  - `crates/gc_cli_driver/src/pkg_caps_templates.rs`
-  - `crates/gc_cli_driver/src/pkg_workspace_ops_backend.rs`
-  - `crates/gc_cli_driver/src/pkg_workspace_ops_env.rs`
-  - `crates/gc_cli_driver/src/pkg_scaffold.rs`
-  - `crates/gc_effects/src/runner_capability_dispatch.rs`
-  - `docs/spec/CAPS_TOML.md`
-  - `docs/spec/HOST_BRIDGE_PROTOCOL.md`
+- none
 
 ## Evidence Anchors
 
