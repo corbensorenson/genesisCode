@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EXAMPLE_DIR="$ROOT_DIR/examples/agent_media_asset_workflow"
-GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
+DEFAULT_DEBUG_DIR="${CARGO_TARGET_DIR:-$ROOT_DIR/target}/debug"
+GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_DEBUG_DIR/genesis}"
 
 if [[ ! -x "$GENESIS_BIN" ]]; then
   cargo build -p gc_cli >/dev/null

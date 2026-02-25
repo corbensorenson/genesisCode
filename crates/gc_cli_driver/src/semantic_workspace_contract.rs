@@ -2,6 +2,14 @@ use super::semantic_workspace_types::WorkspaceAnalysis;
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
+type WorkspaceGraphEdgeCounts = BTreeMap<(String, String, String), u64>;
+type WorkspaceGraphUnresolvedSymbols = BTreeSet<String>;
+type WorkspaceGraphModel = (
+    Vec<serde_json::Value>,
+    WorkspaceGraphEdgeCounts,
+    WorkspaceGraphUnresolvedSymbols,
+);
+
 fn term_map_get<'a>(m: &'a BTreeMap<TermOrdKey, Term>, key: &str) -> Option<&'a Term> {
     m.get(&TermOrdKey(Term::symbol(key)))
 }
@@ -95,14 +103,7 @@ fn semantic_workspace_graph_contract_payload(analysis: &WorkspaceAnalysis) -> Te
 pub(super) fn semantic_workspace_graph_model_from_contract(
     cli: &Cli,
     analysis: &WorkspaceAnalysis,
-) -> Result<
-    (
-        Vec<serde_json::Value>,
-        BTreeMap<(String, String, String), u64>,
-        BTreeSet<String>,
-    ),
-    CliError,
-> {
+) -> Result<WorkspaceGraphModel, CliError> {
     let mut ctx = EvalCtx::with_step_limit(resolved_step_limit(cli).resolve());
     ctx.set_mem_limits(resolved_mem_limits(cli));
     let prelude = build_prelude(&mut ctx);
@@ -201,7 +202,7 @@ pub(super) fn semantic_workspace_graph_model_from_contract(
         ));
     };
 
-    let mut edge_counts: BTreeMap<(String, String, String), u64> = BTreeMap::new();
+    let mut edge_counts: WorkspaceGraphEdgeCounts = BTreeMap::new();
     for edge in edge_events {
         let Term::Map(m) = edge else {
             return Err(cli_err(
@@ -253,7 +254,9 @@ pub(super) fn semantic_workspace_graph_model_from_contract(
         )
     })?;
     let unresolved_vec = term_vec_strings(unresolved_term, ":unresolved-symbols")?;
-    let unresolved_symbols = unresolved_vec.into_iter().collect::<BTreeSet<_>>();
+    let unresolved_symbols = unresolved_vec
+        .into_iter()
+        .collect::<WorkspaceGraphUnresolvedSymbols>();
 
     Ok((duplicate_symbol_owners, edge_counts, unresolved_symbols))
 }

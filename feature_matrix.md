@@ -31,7 +31,7 @@ Legend:
 | Production module decomposition for AI maintainability | ⚠️ (multiple large production Rust modules remain unsplit) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- none
+- none (open checklist items = 0).
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

@@ -49,6 +49,12 @@ HEALTH_RECLAIM_MAX_AGE_DAYS="${GENESIS_HEALTH_RECLAIM_MAX_AGE_DAYS:-7}"
 HEALTH_MIN_FREE_KB="${GENESIS_HEALTH_MIN_FREE_KB:-1048576}"
 HEALTH_PARALLEL_CARGO_MIN_FREE_KB="${GENESIS_HEALTH_PARALLEL_CARGO_MIN_FREE_KB:-2097152}"
 HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK="${GENESIS_HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK:-1}"
+HEALTH_STRICT_DISK_POLICY="${GENESIS_HEALTH_STRICT_DISK_POLICY:-classify}"
+HEALTH_STRICT_RUNTIME_MIN_FREE_KB="${GENESIS_HEALTH_STRICT_RUNTIME_MIN_FREE_KB:-3145728}"
+HEALTH_DISK_PREFLIGHT_REPORT="${GENESIS_HEALTH_DISK_PREFLIGHT_REPORT:-.genesis/perf/upgrade_plan_health_disk_preflight_report.json}"
+HEALTH_SKIP_DISK_INTENSIVE_GATES=0
+HEALTH_DISK_PREFLIGHT_REASON="ok"
+HEALTH_DISK_PREFLIGHT_SKIPPED_GATES=()
 GPU_DEVICE_CONFORMANCE=""
 NON_CARGO_PARTITION=()
 CARGO_PARTITION=()
@@ -704,6 +710,73 @@ run_health_proactive_reclaim() {
   fi
 }
 
+health_profile_is_strict() {
+  local profile="$1"
+  [[ "$profile" == "prepush-standard" || "$profile" == "release-full" || "$profile" == "full-selfhost-cutover" ]]
+}
+
+is_disk_intensive_profile_gate() {
+  local cmd="$1"
+  case "$cmd" in
+    *"bash scripts/check_gpu_compute_runtime_profile.sh"*) return 0 ;;
+    *"bash scripts/check_gfx_runtime_profile.sh"*) return 0 ;;
+    *"bash scripts/check_gpu_gfx_headroom_conformance.sh"*) return 0 ;;
+    *"bash scripts/check_gpu_compute_device_conformance.sh"*) return 0 ;;
+    *"bash scripts/check_gpu_device_conformance_lane_parity.sh"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+write_health_disk_preflight_report() {
+  local free_kb="$1"
+  local strict_profile="$2"
+  local skip_count="$3"
+  local policy="$4"
+  local reason="$5"
+  local out_path="$6"
+  local status_ok="$7"
+  local skipped_csv="$8"
+  python3 - "$PROFILE" "$free_kb" "$strict_profile" "$HEALTH_MIN_FREE_KB" "$HEALTH_STRICT_RUNTIME_MIN_FREE_KB" "$policy" "$reason" "$skip_count" "$out_path" "$status_ok" "$skipped_csv" <<'PY'
+import datetime as dt
+import json
+import pathlib
+import sys
+
+profile = sys.argv[1]
+free_kb = int(sys.argv[2])
+strict_profile = sys.argv[3] == "1"
+minimum_kb = int(sys.argv[4])
+strict_runtime_min_kb = int(sys.argv[5])
+policy = sys.argv[6]
+reason = sys.argv[7]
+skip_count = int(sys.argv[8])
+out_path = pathlib.Path(sys.argv[9])
+status_ok = sys.argv[10] == "1"
+skipped_csv = sys.argv[11]
+
+skipped_gates = [entry for entry in skipped_csv.split("|||") if entry]
+
+doc = {
+    "kind": "genesis/upgrade-plan-health-disk-preflight-v0.1",
+    "ok": status_ok,
+    "profile": profile,
+    "strict_profile": strict_profile,
+    "policy": policy,
+    "free_kb": free_kb,
+    "minimum_kb": minimum_kb,
+    "strict_runtime_min_kb": strict_runtime_min_kb,
+    "skip_disk_intensive_gates": skip_count > 0,
+    "skip_count": skip_count,
+    "reason": reason,
+    "skipped_gates": skipped_gates,
+    "timestamp_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+}
+
+out_path.parent.mkdir(parents=True, exist_ok=True)
+out_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/check_upgrade_plan_health.sh [--profile <dev-fast|agent-inner-loop|prepush-standard|release-full|full-selfhost-cutover>]
@@ -776,6 +849,14 @@ if [[ ! "$HEALTH_PARALLEL_CARGO_MIN_FREE_KB" =~ ^[0-9]+$ || "$HEALTH_PARALLEL_CA
 fi
 if [[ "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" != "0" && "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" != "1" ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK must be 0 or 1" >&2
+  exit 2
+fi
+if [[ "$HEALTH_STRICT_DISK_POLICY" != "classify" && "$HEALTH_STRICT_DISK_POLICY" != "fail" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_STRICT_DISK_POLICY must be classify or fail" >&2
+  exit 2
+fi
+if [[ ! "$HEALTH_STRICT_RUNTIME_MIN_FREE_KB" =~ ^[0-9]+$ || "$HEALTH_STRICT_RUNTIME_MIN_FREE_KB" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_STRICT_RUNTIME_MIN_FREE_KB must be a positive integer" >&2
   exit 2
 fi
 if [[ "$GPU_DEVICE_CONFORMANCE" != "0" && "$GPU_DEVICE_CONFORMANCE" != "1" ]]; then
@@ -886,6 +967,28 @@ export CARGO_TARGET_DIR="$HEALTH_CARGO_TARGET_DIR"
 echo "upgrade-plan-health: using shared cargo target dir: $CARGO_TARGET_DIR"
 run_health_proactive_reclaim
 
+FREE_KB_AFTER_RECLAIM="$(free_kb_root)"
+if health_profile_is_strict "$PROFILE" && (( FREE_KB_AFTER_RECLAIM < HEALTH_STRICT_RUNTIME_MIN_FREE_KB )); then
+  HEALTH_DISK_PREFLIGHT_REASON="strict-runtime-headroom-low"
+  if [[ "$HEALTH_STRICT_DISK_POLICY" == "fail" ]]; then
+    write_health_disk_preflight_report \
+      "$FREE_KB_AFTER_RECLAIM" \
+      "1" \
+      "0" \
+      "$HEALTH_STRICT_DISK_POLICY" \
+      "$HEALTH_DISK_PREFLIGHT_REASON" \
+      "$HEALTH_DISK_PREFLIGHT_REPORT" \
+      "0" \
+      ""
+    echo "upgrade-plan-health: strict runtime lanes require ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB free, found ${FREE_KB_AFTER_RECLAIM}KB (policy=fail)" >&2
+    exit 1
+  fi
+  HEALTH_SKIP_DISK_INTENSIVE_GATES=1
+  echo "upgrade-plan-health: strict runtime headroom below threshold (${FREE_KB_AFTER_RECLAIM}KB < ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB); classifying and skipping disk-intensive strict lanes (policy=classify)"
+else
+  HEALTH_DISK_PREFLIGHT_REASON="ok"
+fi
+
 declared_open="$(awk -F: '/^Open checklist items:/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "$PLAN_FILE")"
 if [[ -z "$declared_open" || ! "$declared_open" =~ ^[0-9]+$ ]]; then
   echo "upgrade-plan-health: could not parse integer from 'Open checklist items:' line"
@@ -995,6 +1098,7 @@ COMMON_GATES=(
   "bash scripts/check_agent_authoring_bundle.sh"
   "bash scripts/check_genesiscode_authoring_skill.sh"
   "bash scripts/check_domain_kit_workflows.sh"
+  "bash scripts/check_domain_starter_registry_bootstrap.sh"
   "bash scripts/check_selfhost_refactor_guard.sh"
   "bash scripts/check_selfhost_artifact_fresh.sh"
   "bash scripts/check_selfhost_toolchain_review_fresh.sh"
@@ -1148,6 +1252,35 @@ if [[ "$GPU_DEVICE_CONFORMANCE" == "1" ]]; then
     "bash scripts/check_gpu_device_conformance_lane_parity.sh --lane-a .genesis/perf/gpu_device_conformance_report.json --lane-b .genesis/perf/gpu_device_conformance_deterministic_report.json --out .genesis/perf/gpu_device_lane_parity_report.json"
   )
 fi
+
+if (( HEALTH_SKIP_DISK_INTENSIVE_GATES == 1 )); then
+  filtered_profile_gates=()
+  HEALTH_DISK_PREFLIGHT_SKIPPED_GATES=()
+  for gate_cmd in "${PROFILE_GATES[@]}"; do
+    if is_disk_intensive_profile_gate "$gate_cmd"; then
+      HEALTH_DISK_PREFLIGHT_SKIPPED_GATES+=("$gate_cmd")
+      continue
+    fi
+    filtered_profile_gates+=("$gate_cmd")
+  done
+  PROFILE_GATES=("${filtered_profile_gates[@]}")
+  echo "upgrade-plan-health: skipped ${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]} disk-intensive profile gates due strict disk preflight classification"
+fi
+
+skipped_csv=""
+if (( ${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]} > 0 )); then
+  skipped_csv="$(printf '%s|||' "${HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]}")"
+  skipped_csv="${skipped_csv%|||}"
+fi
+write_health_disk_preflight_report \
+  "$FREE_KB_AFTER_RECLAIM" \
+  "$(health_profile_is_strict "$PROFILE" && echo 1 || echo 0)" \
+  "${#HEALTH_DISK_PREFLIGHT_SKIPPED_GATES[@]}" \
+  "$HEALTH_STRICT_DISK_POLICY" \
+  "$HEALTH_DISK_PREFLIGHT_REASON" \
+  "$HEALTH_DISK_PREFLIGHT_REPORT" \
+  "1" \
+  "$skipped_csv"
 
 if [[ -n "$TEST_GATE_OVERRIDE" ]]; then
   COMMON_GATES=("$TEST_GATE_OVERRIDE")

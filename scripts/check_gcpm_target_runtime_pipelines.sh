@@ -11,7 +11,7 @@ genesis_configure_cargo_target_dir \
   ".genesis/build/cargo" \
   "GENESIS_GCPM_TARGET_RUNTIME_PIPELINES_CARGO_TARGET_DIR"
 
-GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis}"
+GENESIS_BIN="${GENESIS_BIN:-$CARGO_TARGET_DIR/debug/genesis}"
 cargo build -p gc_cli --bin genesis >/dev/null
 
 tmp_dir="$(mktemp -d)"

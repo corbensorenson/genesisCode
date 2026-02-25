@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENESIS_BIN="${GENESIS_BIN:-$ROOT_DIR/target/debug/genesis_parity}"
+DEFAULT_DEBUG_DIR="${CARGO_TARGET_DIR:-$ROOT_DIR/target}/debug"
+GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_DEBUG_DIR/genesis_parity}"
 
 if [[ ! -x "$GENESIS_BIN" ]]; then
   cargo build -p gc_cli --bin genesis_parity >/dev/null

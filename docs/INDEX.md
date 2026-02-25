@@ -18,6 +18,9 @@ This is the canonical entrypoint for project documentation.
 - `docs/status/REDTEAM_REPORT.md` - active P0/P1 risk summary.
 - `docs/status/SELFHOST_CUTOVER.md` - generated selfhost cutover dashboard.
 - `.genesis/perf/selfhost_readiness_report.json` - machine-readable selfhost readiness scorecard.
+- `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md` - governance-control status register (program backlog/closed state).
+- `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md` - signed closure bundle index + immutable reference map.
+- `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.json` - canonical machine-readable closure registry.
 - `.genesis/perf/doc_complexity_report.json` - machine-readable docs complexity budget report.
 - `.genesis/perf/selfhost_gc_migration_plan_report.json` - machine-readable migration-plan drift report for high-churn selfhost surfaces.
 - `feature_matrix.md` - capability comparison vs common languages.

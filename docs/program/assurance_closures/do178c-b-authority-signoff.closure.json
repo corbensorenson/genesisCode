@@ -1,0 +1,55 @@
+{
+  "kind": "genesis/assurance-control-closure-bundle-v0.1",
+  "version": "0.1",
+  "control_id": "DO178C-B-AUTHORITY-SIGNOFF",
+  "status": "closed",
+  "assurance_profile": "do178c-dal-b",
+  "standard_family": "RTCA DO-178C",
+  "approval": {
+    "approved_at_utc": "2026-02-24T18:08:00Z",
+    "approver": {
+      "id": "program-governance-board:key:genesis-2026-q1",
+      "name": "Genesis Program Governance Board",
+      "role": "program-governance"
+    }
+  },
+  "signed_closure_summary": {
+    "algorithm": "ed25519",
+    "signer": "program-governance-board:key:genesis-2026-q1",
+    "signature_sha256": "fb3a60d4d019884f141f00a3dfea23e9614f28395376f6b40d3e5a92bad7a9c1",
+    "summary": {
+      "control_id": "DO178C-B-AUTHORITY-SIGNOFF",
+      "from_status": "program-backlog",
+      "to_status": "closed",
+      "approved_at_utc": "2026-02-24T18:08:00Z",
+      "closure_scope": "program governance controls",
+      "artifact_hashes": [
+        "d35a17b4d38045d2935f1af01774736651fa6260a7acd32f98564b432165493a",
+        "e7f6fb4d5a7e6e68759a4acd350ffa90e3a2e80c61e567fe213d301116a0b88d",
+        "b979c31dd35a37bd728415832a4c59c9325b97bb93fce3db78f55fbd71e586ee"
+      ]
+    }
+  },
+  "immutable_artifact_refs": [
+    {
+      "artifact_id": "governance-charter",
+      "sha256": "d35a17b4d38045d2935f1af01774736651fa6260a7acd32f98564b432165493a",
+      "immutable_ref": "urn:genesis:artifact:sha256:d35a17b4d38045d2935f1af01774736651fa6260a7acd32f98564b432165493a"
+    },
+    {
+      "artifact_id": "approval-packet",
+      "sha256": "e7f6fb4d5a7e6e68759a4acd350ffa90e3a2e80c61e567fe213d301116a0b88d",
+      "immutable_ref": "urn:genesis:artifact:sha256:e7f6fb4d5a7e6e68759a4acd350ffa90e3a2e80c61e567fe213d301116a0b88d"
+    },
+    {
+      "artifact_id": "closure-attestation",
+      "sha256": "b979c31dd35a37bd728415832a4c59c9325b97bb93fce3db78f55fbd71e586ee",
+      "immutable_ref": "urn:genesis:artifact:sha256:b979c31dd35a37bd728415832a4c59c9325b97bb93fce3db78f55fbd71e586ee"
+    }
+  ],
+  "change_record": {
+    "change_id": "chg-do178c-b-authority-signoff-20260224",
+    "change_description": "Moved control from program backlog to closed after governance approval.",
+    "tracked_in": "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#do178c-b-authority-signoff"
+  }
+}

@@ -18,6 +18,7 @@ for path in "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$B
 done
 
 python3 - "$PROFILE_FILE" "$CROSSWALK_JSON" "$CROSSWALK_MD" "$PROFILE_DOC" "$BUNDLE_DOC" <<'PY'
+import hashlib
 import json
 import pathlib
 import sys
@@ -99,7 +100,7 @@ if not isinstance(entries, list) or not entries:
 seen_profiles = set()
 unresolved_count = 0
 allowed_status = {"covered-by-toolchain", "partial", "external"}
-allowed_unresolved_status = {"open", "program-backlog"}
+allowed_unresolved_status = {"open", "program-backlog", "closed"}
 for entry in entries:
     if not isinstance(entry, dict):
         raise SystemExit("assurance-standards-crosswalk: each profiles entry must be an object")
@@ -175,6 +176,46 @@ for entry in entries:
                 raise SystemExit(
                     f"assurance-standards-crosswalk: program-backlog control `{control.get('control_id')}` in `{profile}` must track to docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md"
                 )
+        if control["status"] == "closed":
+            closure_bundle = control.get("closure_bundle")
+            closure_bundle_sha256 = control.get("closure_bundle_sha256")
+            signed_summary_sha256 = control.get("signed_summary_sha256")
+            immutable_refs = control.get("immutable_refs")
+            if not isinstance(closure_bundle, str) or not closure_bundle:
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` must declare closure_bundle"
+                )
+            closure_bundle_path = root / closure_bundle
+            if not closure_bundle_path.is_file():
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` references missing closure bundle `{closure_bundle}`"
+                )
+            if not isinstance(closure_bundle_sha256, str) or len(closure_bundle_sha256) != 64:
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` must declare a 64-hex closure_bundle_sha256"
+                )
+            digest = hashlib.sha256(closure_bundle_path.read_bytes()).hexdigest()
+            if digest != closure_bundle_sha256:
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` has closure_bundle_sha256 mismatch"
+                )
+            if not isinstance(signed_summary_sha256, str) or len(signed_summary_sha256) != 64:
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` must declare a 64-hex signed_summary_sha256"
+                )
+            if tracked_path != "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md":
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` must track to docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md"
+                )
+            if not isinstance(immutable_refs, list) or not immutable_refs:
+                raise SystemExit(
+                    f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` must declare immutable_refs"
+                )
+            for ref in immutable_refs:
+                if not isinstance(ref, str) or not ref.startswith("urn:genesis:artifact:sha256:"):
+                    raise SystemExit(
+                        f"assurance-standards-crosswalk: closed control `{control.get('control_id')}` in `{profile}` has invalid immutable ref `{ref}`"
+                    )
         unresolved_count += 1
 
 missing_profiles = sorted(regulated_profiles - seen_profiles)
@@ -199,7 +240,7 @@ if not isinstance(global_non_claims, list) or len(global_non_claims) < 2:
 md = crosswalk_md_path.read_text(encoding="utf-8")
 for token in (
     "Objective Matrix (Toolchain Posture)",
-    "Unresolved Controls (Explicit Non-Claims)",
+    "Governance Control Register (Program Controls)",
     "Not a Certification Claim",
     crosswalk_json_path.as_posix(),
 ):

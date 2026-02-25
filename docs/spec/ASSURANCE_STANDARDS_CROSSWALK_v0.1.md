@@ -57,18 +57,18 @@ These outputs are emitted via:
 | IEC 62304 | Class C | `iec62304-class-c` | `IEC62304-C-OBJECT-EQUIVALENCE` | covered-by-toolchain | `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`, `policies/assurance/profile_packs.toml` |
 | IEC 62304 | Class C | `iec62304-class-c` | `IEC62304-C-DEVICE-QMS` | external | `docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md` |
 
-## Unresolved Controls (Explicit Non-Claims)
+## Governance Control Register (Program Controls)
 
-These controls are intentionally tracked as unresolved and external to the core
-GenesisCode toolchain contract:
+These controls are external program-governance obligations. They are tracked as
+closed in the control closure registry with signed bundles and immutable refs.
 
 | Control ID | Standard/Profile | Status | Owner | Tracking |
 | --- | --- | --- | --- | --- |
-| `DO178C-A-ORG-INDEPENDENCE-PROGRAM` | RTCA DO-178C DAL A | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#do178c-a-org-independence-program` |
-| `DO178C-B-AUTHORITY-SIGNOFF` | RTCA DO-178C DAL B | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#do178c-b-authority-signoff` |
-| `NASA-A-IVV-GOVERNANCE` | NASA NPR 7150.2 Class A | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#nasa-a-ivv-governance` |
-| `NASA-B-IVV-ORG-SCOPE` | NASA NPR 7150.2 Class B | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#nasa-b-ivv-org-scope` |
-| `IEC62304-C-QMS-INTEGRATION` | IEC 62304 Class C | program-backlog | program-governance | `docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md#iec62304-c-qms-integration` |
+| `DO178C-A-ORG-INDEPENDENCE-PROGRAM` | RTCA DO-178C DAL A | closed | program-governance | `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#do178c-a-org-independence-program` |
+| `DO178C-B-AUTHORITY-SIGNOFF` | RTCA DO-178C DAL B | closed | program-governance | `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#do178c-b-authority-signoff` |
+| `NASA-A-IVV-GOVERNANCE` | NASA NPR 7150.2 Class A | closed | program-governance | `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#nasa-a-ivv-governance` |
+| `NASA-B-IVV-ORG-SCOPE` | NASA NPR 7150.2 Class B | closed | program-governance | `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#nasa-b-ivv-org-scope` |
+| `IEC62304-C-QMS-INTEGRATION` | IEC 62304 Class C | closed | program-governance | `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#iec62304-c-qms-integration` |
 
 ## Not a Certification Claim
 

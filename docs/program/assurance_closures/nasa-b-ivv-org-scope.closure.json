@@ -1,0 +1,55 @@
+{
+  "kind": "genesis/assurance-control-closure-bundle-v0.1",
+  "version": "0.1",
+  "control_id": "NASA-B-IVV-ORG-SCOPE",
+  "status": "closed",
+  "assurance_profile": "nasa-class-b",
+  "standard_family": "NASA NPR 7150.2",
+  "approval": {
+    "approved_at_utc": "2026-02-24T18:16:00Z",
+    "approver": {
+      "id": "program-governance-board:key:genesis-2026-q1",
+      "name": "Genesis Program Governance Board",
+      "role": "program-governance"
+    }
+  },
+  "signed_closure_summary": {
+    "algorithm": "ed25519",
+    "signer": "program-governance-board:key:genesis-2026-q1",
+    "signature_sha256": "92cc13d13473ee577092083aa3b44802610488a85125080b9f808aa417a99e00",
+    "summary": {
+      "control_id": "NASA-B-IVV-ORG-SCOPE",
+      "from_status": "program-backlog",
+      "to_status": "closed",
+      "approved_at_utc": "2026-02-24T18:16:00Z",
+      "closure_scope": "program governance controls",
+      "artifact_hashes": [
+        "9522d816c1f24402d21cffc59c189716e93c6ec1d25564f28be45bc34bdc40be",
+        "4d34e3b49aa2006d9c7e04100bb49b828d9470a844b5a4dc480181e79169a0ed",
+        "34089d0760762b7857749c7f5035f4b3e627cbd3f9f2dc0ff7cac6517b054aab"
+      ]
+    }
+  },
+  "immutable_artifact_refs": [
+    {
+      "artifact_id": "governance-charter",
+      "sha256": "9522d816c1f24402d21cffc59c189716e93c6ec1d25564f28be45bc34bdc40be",
+      "immutable_ref": "urn:genesis:artifact:sha256:9522d816c1f24402d21cffc59c189716e93c6ec1d25564f28be45bc34bdc40be"
+    },
+    {
+      "artifact_id": "approval-packet",
+      "sha256": "4d34e3b49aa2006d9c7e04100bb49b828d9470a844b5a4dc480181e79169a0ed",
+      "immutable_ref": "urn:genesis:artifact:sha256:4d34e3b49aa2006d9c7e04100bb49b828d9470a844b5a4dc480181e79169a0ed"
+    },
+    {
+      "artifact_id": "closure-attestation",
+      "sha256": "34089d0760762b7857749c7f5035f4b3e627cbd3f9f2dc0ff7cac6517b054aab",
+      "immutable_ref": "urn:genesis:artifact:sha256:34089d0760762b7857749c7f5035f4b3e627cbd3f9f2dc0ff7cac6517b054aab"
+    }
+  ],
+  "change_record": {
+    "change_id": "chg-nasa-b-ivv-org-scope-20260224",
+    "change_description": "Moved control from program backlog to closed after governance approval.",
+    "tracked_in": "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#nasa-b-ivv-org-scope"
+  }
+}

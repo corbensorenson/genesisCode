@@ -16,6 +16,8 @@ HISTORY_PATH="${GENESIS_SELFHOST_READINESS_HISTORY:-.genesis/perf/selfhost_readi
 BUDGET_MS="${GENESIS_SELFHOST_READINESS_BUDGET_MS:-600000}"
 P95_MIN_SAMPLES="${GENESIS_SELFHOST_READINESS_P95_MIN_SAMPLES:-1}"
 STRICT_MODE="${GENESIS_SELFHOST_READINESS_STRICT:-0}"
+CRITICAL_TTL_SEC="${GENESIS_SELFHOST_READINESS_CRITICAL_TTL_SEC:-21600}"
+REFRESH_CRITICAL_REPORTS="${GENESIS_SELFHOST_READINESS_REFRESH_CRITICAL_REPORTS:-1}"
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "selfhost-readiness: GENESIS_SELFHOST_READINESS_BUDGET_MS must be a positive integer" >&2
@@ -27,6 +29,14 @@ if [[ ! "$P95_MIN_SAMPLES" =~ ^[0-9]+$ || "$P95_MIN_SAMPLES" -le 0 ]]; then
 fi
 if [[ "$STRICT_MODE" != "0" && "$STRICT_MODE" != "1" ]]; then
   echo "selfhost-readiness: GENESIS_SELFHOST_READINESS_STRICT must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$CRITICAL_TTL_SEC" =~ ^[0-9]+$ ]]; then
+  echo "selfhost-readiness: GENESIS_SELFHOST_READINESS_CRITICAL_TTL_SEC must be a non-negative integer" >&2
+  exit 2
+fi
+if [[ "$REFRESH_CRITICAL_REPORTS" != "0" && "$REFRESH_CRITICAL_REPORTS" != "1" ]]; then
+  echo "selfhost-readiness: GENESIS_SELFHOST_READINESS_REFRESH_CRITICAL_REPORTS must be 0 or 1" >&2
   exit 2
 fi
 
@@ -63,7 +73,7 @@ print(time.time_ns())
 PY
 )"
 
-python3 - "$ROOT_DIR" "$REPORT_PATH" "$HISTORY_PATH" "$BUDGET_MS" "$P95_MIN_SAMPLES" "$GENESIS_BIN" "$DASHBOARD_JSON" "$START_NS" "$STRICT_MODE" <<'PY'
+python3 - "$ROOT_DIR" "$REPORT_PATH" "$HISTORY_PATH" "$BUDGET_MS" "$P95_MIN_SAMPLES" "$GENESIS_BIN" "$DASHBOARD_JSON" "$START_NS" "$STRICT_MODE" "$CRITICAL_TTL_SEC" "$REFRESH_CRITICAL_REPORTS" <<'PY'
 import datetime as dt
 import json
 import math
@@ -85,6 +95,8 @@ genesis_bin = pathlib.Path(sys.argv[6])
 dashboard_path = pathlib.Path(sys.argv[7])
 start_ns = int(sys.argv[8])
 strict_mode = sys.argv[9] == "1"
+critical_ttl_sec = int(sys.argv[10])
+refresh_critical_reports = sys.argv[11] == "1"
 
 if p95_min_samples < 1:
     raise SystemExit("selfhost-readiness: p95_min_samples must be >= 1")
@@ -265,20 +277,81 @@ def tail_text(raw: str, max_chars: int = 320) -> str:
         return text
     return text[-max_chars:]
 
+def report_age_sec(path: pathlib.Path) -> Optional[int]:
+    if not path.is_file():
+        return None
+    try:
+        return max(0, int(time.time() - path.stat().st_mtime))
+    except OSError:
+        return None
+
 def read_critical_report(
     report_rel: str,
     expected_kind: str,
     label: str,
+    producer_cmd: list[str],
 ) -> tuple[bool, dict[str, Any], Optional[str]]:
     report_path = root / report_rel
-    if not report_path.is_file():
-        return False, {"path": report_rel, "ok": False, "missing": True}, f"{label}:missing"
+    freshness: dict[str, Any] = {"path": report_rel}
+    age_before = report_age_sec(report_path)
+    missing_before = not report_path.is_file()
+    stale_before = (
+        age_before is not None
+        and critical_ttl_sec > 0
+        and age_before > critical_ttl_sec
+    )
+    freshness["age_sec_before"] = age_before
+    freshness["missing_before"] = missing_before
+    freshness["stale_before"] = stale_before
+
+    if missing_before or stale_before:
+        if not refresh_critical_reports:
+            freshness["freshness_ok"] = False
+            freshness["refresh_skipped"] = True
+            reason = "missing" if missing_before else "stale"
+            return False, freshness, f"{label}:freshness-{reason}"
+        producer_env = os.environ.copy()
+        producer_env["GENESIS_BIN"] = str(genesis_bin)
+        refresh = subprocess.run(
+            producer_cmd,
+            cwd=root,
+            env=producer_env,
+            capture_output=True,
+            text=True,
+        )
+        freshness["refresh_exit_code"] = refresh.returncode
+        freshness["refresh_stdout_tail"] = tail_text(refresh.stdout)
+        freshness["refresh_stderr_tail"] = tail_text(refresh.stderr)
+        if refresh.returncode != 0:
+            freshness["freshness_ok"] = False
+            return False, freshness, f"{label}:refresh-failed"
+        if not report_path.is_file():
+            freshness["freshness_ok"] = False
+            return False, freshness, f"{label}:missing-after-refresh"
+
+    age_after = report_age_sec(report_path)
+    stale_after = (
+        age_after is not None
+        and critical_ttl_sec > 0
+        and age_after > critical_ttl_sec
+    )
+    freshness["age_sec_after"] = age_after
+    freshness["stale_after"] = stale_after
+    freshness["freshness_ok"] = not stale_after
+    if stale_after:
+        return False, freshness, f"{label}:stale-after-refresh"
+
     try:
         doc = json.loads(report_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return (
             False,
-            {"path": report_rel, "ok": False, "decode_error": True},
+            {
+                "path": report_rel,
+                "ok": False,
+                "decode_error": True,
+                "freshness": freshness,
+            },
             f"{label}:json-decode",
         )
     if doc.get("kind") != expected_kind:
@@ -289,6 +362,7 @@ def read_critical_report(
                 "ok": False,
                 "kind": doc.get("kind"),
                 "expected_kind": expected_kind,
+                "freshness": freshness,
             },
             f"{label}:kind-mismatch",
         )
@@ -297,6 +371,7 @@ def read_critical_report(
         "path": report_rel,
         "ok": report_ok,
         "kind": doc.get("kind"),
+        "freshness": freshness,
     }
     if not report_ok:
         detail["fail_reasons"] = doc.get("fail_reasons")
@@ -313,23 +388,38 @@ def dim_critical_gate_truth() -> dict[str, Any]:
             ".genesis/perf/agent_capability_gauntlet_report.json",
             "genesis/agent-capability-gauntlet-v0.1",
             "agent-capability-gauntlet",
+            ["bash", str(root / "scripts/check_agent_reference_workflows.sh")],
         ),
         (
             "production_cli_help_surface",
             ".genesis/perf/production_cli_help_surface_report.json",
             "genesis/production-cli-help-surface-v0.1",
             "production-cli-help-surface",
+            ["bash", str(root / "scripts/check_production_cli_help_surface.sh")],
         ),
         (
             "gpu_gfx_headroom_conformance",
             ".genesis/perf/gpu_gfx_headroom_conformance_report.json",
             "genesis/gpu-gfx-headroom-conformance-v0.1",
             "gpu-gfx-headroom-conformance",
+            ["bash", str(root / "scripts/check_gpu_gfx_headroom_conformance.sh")],
+        ),
+        (
+            "domain_starter_registry_bootstrap",
+            ".genesis/perf/domain_starter_registry_bootstrap_report.json",
+            "genesis/domain-starter-registry-bootstrap-v0.1",
+            "domain-starter-registry-bootstrap",
+            ["bash", str(root / "scripts/check_domain_starter_registry_bootstrap.sh")],
         ),
     ]
-    for key, report_rel, expected_kind, label in critical_specs:
+    for key, report_rel, expected_kind, label, producer_cmd in critical_specs:
         checks.append(label)
-        ok, detail, error = read_critical_report(report_rel, expected_kind, label)
+        ok, detail, error = read_critical_report(
+            report_rel,
+            expected_kind,
+            label,
+            producer_cmd,
+        )
         reports[key] = detail
         if not ok and error is not None:
             errors.append(error)

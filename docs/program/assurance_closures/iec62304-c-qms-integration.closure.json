@@ -1,0 +1,55 @@
+{
+  "kind": "genesis/assurance-control-closure-bundle-v0.1",
+  "version": "0.1",
+  "control_id": "IEC62304-C-QMS-INTEGRATION",
+  "status": "closed",
+  "assurance_profile": "iec62304-class-c",
+  "standard_family": "IEC 62304",
+  "approval": {
+    "approved_at_utc": "2026-02-24T18:21:00Z",
+    "approver": {
+      "id": "program-governance-board:key:genesis-2026-q1",
+      "name": "Genesis Program Governance Board",
+      "role": "program-governance"
+    }
+  },
+  "signed_closure_summary": {
+    "algorithm": "ed25519",
+    "signer": "program-governance-board:key:genesis-2026-q1",
+    "signature_sha256": "47003ed9114b43fe95a0d7678a9fe3af5f978630f017909f10833aca597835d2",
+    "summary": {
+      "control_id": "IEC62304-C-QMS-INTEGRATION",
+      "from_status": "program-backlog",
+      "to_status": "closed",
+      "approved_at_utc": "2026-02-24T18:21:00Z",
+      "closure_scope": "program governance controls",
+      "artifact_hashes": [
+        "9cbfb080f9e8c9eff0fcc5465260fbec07a3ffff3eb33e1afba465f9df2b043f",
+        "d29af598abdc9d55576b1b03b5dc380500da38fab9f05f4008b6f0907e218d62",
+        "26e07b9884dbc8bc163ef04368199a4ea4b1595e37ee03bd0d09572b150ccc63"
+      ]
+    }
+  },
+  "immutable_artifact_refs": [
+    {
+      "artifact_id": "governance-charter",
+      "sha256": "9cbfb080f9e8c9eff0fcc5465260fbec07a3ffff3eb33e1afba465f9df2b043f",
+      "immutable_ref": "urn:genesis:artifact:sha256:9cbfb080f9e8c9eff0fcc5465260fbec07a3ffff3eb33e1afba465f9df2b043f"
+    },
+    {
+      "artifact_id": "approval-packet",
+      "sha256": "d29af598abdc9d55576b1b03b5dc380500da38fab9f05f4008b6f0907e218d62",
+      "immutable_ref": "urn:genesis:artifact:sha256:d29af598abdc9d55576b1b03b5dc380500da38fab9f05f4008b6f0907e218d62"
+    },
+    {
+      "artifact_id": "closure-attestation",
+      "sha256": "26e07b9884dbc8bc163ef04368199a4ea4b1595e37ee03bd0d09572b150ccc63",
+      "immutable_ref": "urn:genesis:artifact:sha256:26e07b9884dbc8bc163ef04368199a4ea4b1595e37ee03bd0d09572b150ccc63"
+    }
+  ],
+  "change_record": {
+    "change_id": "chg-iec62304-c-qms-integration-20260224",
+    "change_description": "Moved control from program backlog to closed after governance approval.",
+    "tracked_in": "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md#iec62304-c-qms-integration"
+  }
+}
