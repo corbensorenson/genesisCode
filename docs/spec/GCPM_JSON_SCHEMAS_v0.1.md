@@ -32,6 +32,9 @@ All `gcpm` commands include prompt-safe deterministic telemetry under `data.tele
 
 `gcpm env` embeds runtime backend profile contract fields in canonical CoreForm `data.value`
 (`:runtime-backend-profile`, `:active-runtime-backend-profile`, `:runtime-backend-compatible`).
+`gcpm env` also embeds WASI HTTP bridge runtime provisioning fields for wasm-hosted package/sync
+flows:
+(`:wasi-http-bridge-root`, `:wasi-http-bridge-remote`, `:wasi-http-bridge-remote-root`).
 
 ## Command -> Kind
 

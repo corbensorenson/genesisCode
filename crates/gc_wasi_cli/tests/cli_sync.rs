@@ -536,7 +536,12 @@ fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
     let src = root.join("src");
     let dst_a = root.join("dst_a");
     let dst_b = root.join("dst_b");
-    let remote_dir = root.join("remote-registry");
+    let remote_dir = root
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge")
+        .join("http")
+        .join("bridge.test_80");
     let remote_v1 = remote_dir.join("v1");
     fs::create_dir_all(&src).unwrap();
     fs::create_dir_all(&dst_a).unwrap();
@@ -596,7 +601,6 @@ fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
 
     cmd()
         .current_dir(&src)
-        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
         .args(["sync", "--caps"])
         .arg(&src_caps)
         .args([
@@ -619,7 +623,6 @@ fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
     let log_b = dst_b.join("pull_b.gclog");
     cmd()
         .current_dir(&dst_a)
-        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
         .args(["sync", "--caps"])
         .arg(&dst_a_caps)
         .args(["--log", log_a.to_str().unwrap()])
@@ -628,7 +631,6 @@ fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
         .success();
     cmd()
         .current_dir(&dst_b)
-        .env("GENESIS_WASI_HTTP_BRIDGE_ROOT", &remote_v1)
         .args(["sync", "--caps"])
         .arg(&dst_b_caps)
         .args(["--log", log_b.to_str().unwrap()])

@@ -179,6 +179,20 @@ starters=(
   "starter-xr-runtime|xr_runtime|core/kit/xr::runtime-session-v1"
   "starter-xr-productization|xr_productization|core/kit/xr::productization-kit-v1"
   "starter-durable-data|durable_data|core/kit/data::durable-pipeline-v1"
+  "starter-process-lifecycle|process_lifecycle|core/kit/process::lifecycle-v1"
+  "starter-filesystem|filesystem|core/kit/fs::workspace-io-v1"
+  "starter-network-process|network_process|core/kit/net::service-process-v1"
+  "starter-raw-network-sockets|raw_network_sockets|core/kit/net::raw-socket-v1"
+  "starter-inbound-server|inbound_server|core/kit/net::inbound-server-v1"
+  "starter-time-control|time_control|core/kit/time::deterministic-control-v1"
+  "starter-multi-agent-orchestration|multi_agent_orchestration|core/kit/agent::orchestration-v1"
+  "starter-realtime-collaboration|realtime_collaboration|core/kit/collab::realtime-session-v1"
+  "starter-backend-topology|backend_topology|core/kit/backend::topology-v1"
+  "starter-browser-runtime|browser_runtime|core/kit/browser::runtime-v1"
+  "starter-ml-data-engineering|ml_data_engineering|core/kit/ml::data-engineering-v1"
+  "starter-complex-ui-app-stacks|complex_ui_app_stacks|core/kit/ui::complex-stack-v1"
+  "starter-hardware-device-integration|hardware_device_integration|core/kit/hardware::device-integration-v1"
+  "starter-security-auth-services|security_auth_services|core/kit/security::auth-service-v1"
 )
 
 for spec in "${starters[@]}"; do

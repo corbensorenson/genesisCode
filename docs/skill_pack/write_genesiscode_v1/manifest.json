@@ -2,8 +2,8 @@
   "kind": "genesis/write-genesiscode-skill-distribution-v1",
   "version": "1",
   "distribution_requirements": {
-    "min_prompts": 10,
-    "min_recipes": 13,
+    "min_prompts": 14,
+    "min_recipes": 27,
     "required_recipe_domains": [
       "service",
       "graphics",
@@ -17,7 +17,21 @@
       "plugin_ffi",
       "xr_runtime",
       "xr_productization",
-      "durable_data"
+      "durable_data",
+      "process_lifecycle",
+      "filesystem",
+      "network_process",
+      "raw_network_sockets",
+      "inbound_server",
+      "time_control",
+      "multi_agent_orchestration",
+      "realtime_collaboration",
+      "backend_topology",
+      "browser_runtime",
+      "ml_data_engineering",
+      "complex_ui_app_stacks",
+      "hardware_device_integration",
+      "security_auth_services"
     ],
     "require_fault_injection_recipe": true,
     "min_report_score": 100
@@ -62,6 +76,22 @@
     {
       "id": "data_pipeline",
       "path": "prompts/data_pipeline.md"
+    },
+    {
+      "id": "ml_data_engineering",
+      "path": "prompts/ml_data_engineering.md"
+    },
+    {
+      "id": "complex_ui_app_stacks",
+      "path": "prompts/complex_ui_app_stacks.md"
+    },
+    {
+      "id": "hardware_device_integration",
+      "path": "prompts/hardware_device_integration.md"
+    },
+    {
+      "id": "security_auth_services",
+      "path": "prompts/security_auth_services.md"
     }
   ],
   "recipes": [
@@ -154,6 +184,104 @@
       "path": "recipes/xr_workflow.md",
       "workflow": "scripts/check_gpu_xr_productization_kits.sh",
       "domain": "xr_productization",
+      "mode": "standard"
+    },
+    {
+      "id": "process_lifecycle_workflow",
+      "path": "recipes/process_lifecycle_workflow.md",
+      "workflow": "examples/agent_process_lifecycle_workflow/workflow.sh",
+      "domain": "process_lifecycle",
+      "mode": "standard"
+    },
+    {
+      "id": "filesystem_workflow",
+      "path": "recipes/filesystem_workflow.md",
+      "workflow": "examples/agent_filesystem_workflow/workflow.sh",
+      "domain": "filesystem",
+      "mode": "standard"
+    },
+    {
+      "id": "network_process_workflow",
+      "path": "recipes/network_process_workflow.md",
+      "workflow": "examples/agent_network_process_workflow/workflow.sh",
+      "domain": "network_process",
+      "mode": "standard"
+    },
+    {
+      "id": "raw_network_sockets_workflow",
+      "path": "recipes/raw_network_sockets_workflow.md",
+      "workflow": "examples/agent_raw_network_sockets_workflow/workflow.sh",
+      "domain": "raw_network_sockets",
+      "mode": "standard"
+    },
+    {
+      "id": "inbound_server_workflow",
+      "path": "recipes/inbound_server_workflow.md",
+      "workflow": "examples/agent_inbound_server_workflow/workflow.sh",
+      "domain": "inbound_server",
+      "mode": "standard"
+    },
+    {
+      "id": "time_control_workflow",
+      "path": "recipes/time_control_workflow.md",
+      "workflow": "examples/agent_time_control_workflow/workflow.sh",
+      "domain": "time_control",
+      "mode": "standard"
+    },
+    {
+      "id": "multi_agent_orchestration_workflow",
+      "path": "recipes/multi_agent_orchestration_workflow.md",
+      "workflow": "examples/agent_multi_agent_orchestration_workflow/workflow.sh",
+      "domain": "multi_agent_orchestration",
+      "mode": "standard"
+    },
+    {
+      "id": "realtime_collaboration_workflow",
+      "path": "recipes/realtime_collaboration_workflow.md",
+      "workflow": "examples/agent_realtime_collaboration_workflow/workflow.sh",
+      "domain": "realtime_collaboration",
+      "mode": "standard"
+    },
+    {
+      "id": "backend_topology_workflow",
+      "path": "recipes/backend_topology_workflow.md",
+      "workflow": "examples/agent_backend_topology_workflow/workflow.sh",
+      "domain": "backend_topology",
+      "mode": "standard"
+    },
+    {
+      "id": "browser_runtime_workflow",
+      "path": "recipes/browser_runtime_workflow.md",
+      "workflow": "examples/agent_browser_runtime_workflow/workflow.sh",
+      "domain": "browser_runtime",
+      "mode": "standard"
+    },
+    {
+      "id": "ml_data_engineering_workflow",
+      "path": "recipes/ml_data_engineering_workflow.md",
+      "workflow": "examples/agent_ml_pipeline_variant_workflow/workflow.sh",
+      "domain": "ml_data_engineering",
+      "mode": "standard"
+    },
+    {
+      "id": "complex_ui_app_stacks_workflow",
+      "path": "recipes/complex_ui_app_stacks_workflow.md",
+      "workflow": "examples/agent_browser_runtime_workflow/workflow.sh",
+      "domain": "complex_ui_app_stacks",
+      "mode": "standard"
+    },
+    {
+      "id": "hardware_device_integration_workflow",
+      "path": "recipes/hardware_device_integration_workflow.md",
+      "workflow": "examples/agent_gpu_compute_workflow/workflow.sh",
+      "domain": "hardware_device_integration",
+      "mode": "standard"
+    },
+    {
+      "id": "security_auth_services_workflow",
+      "path": "recipes/security_auth_services_workflow.md",
+      "workflow": "examples/agent_backend_topology_workflow/workflow.sh",
+      "domain": "security_auth_services",
       "mode": "standard"
     }
   ],

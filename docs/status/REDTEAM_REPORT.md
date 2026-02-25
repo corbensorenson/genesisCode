@@ -8,4 +8,6 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-No active P0/P1 risks.
+- P0.1 - Turnkey host backend provisioning for agent execution
+- P0.2 - Stage2 compiler coverage for arbitrary agent-generated programs
+- P1.1 - WASI remote registry/sync parity without out-of-band bridge bootstrapping

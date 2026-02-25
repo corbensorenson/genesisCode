@@ -64,7 +64,12 @@ Notes:
   - `file://` and `inproc://` remotes are supported for `store/refs/sync` workflows when capability policy allowlists them.
   - `wasi_network_profile = "local"` allows:
     - `file://` and `inproc://` remotes directly.
-    - `http(s)` remotes only when `GENESIS_WASI_HTTP_BRIDGE_ROOT` is configured (HTTP bridge adapter path), with policy allowlist checks still enforced.
+    - `http(s)` remotes through deterministic HTTP bridge adapter roots:
+      - explicit root via `GENESIS_WASI_HTTP_BRIDGE_ROOT`
+      - or auto-discovered workspace runtime root at
+        `.genesis/runtime/wasi-http-bridge/<scheme>/<host>_<port>/v1`
+        (materialized by `gcpm env`).
+      policy allowlist checks are still enforced.
   - `wasi_network_profile = "preview2"` permits policy-allowlisted `http(s)` remotes (plus `file://` / `inproc://`), while remaining deny-by-default without explicit allowlist and profile grants.
   - op-level `wasi_network_profile` policy must explicitly permit the selected remote profile.
   - `genesis_wasi` enforces this profile in parity test runs as well (even when executed on non-WASI hosts), so CI/runtime behavior matches `wasm32-wasip1` policy semantics.

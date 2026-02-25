@@ -31,7 +31,9 @@ Legend:
 | Production module decomposition for AI maintainability | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- none currently open.
+- `P0.1` - turnkey host backend provisioning for agent execution remains incomplete.
+- `P0.2` - stage2 compiler coverage still does not cover arbitrary generated program forms.
+- `P1.1` - WASI remote registry/sync parity still depends on out-of-band bridge bootstrapping.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

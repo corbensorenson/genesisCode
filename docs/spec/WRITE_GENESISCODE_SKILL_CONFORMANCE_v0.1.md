@@ -17,13 +17,17 @@ Executable quality gate for AI-authored GenesisCode workflows.
 
 ## Rubric (100 points)
 
-- `service` (20): `agent_service_workflow` must pass deterministic run/replay and include `service` + `package_publish_sync`.
-- `game_loop` (20): `agent_long_running_gfx_loop_workflow` (or fallback `agent_interactive_gfx_compute_workflow`) must pass deterministic run/replay and include `graphics`.
-- `gpu_compute` (20): `agent_gpu_compute_workflow` (or fallback `agent_compute_workflow`) must pass deterministic run/replay and include `gpu_compute`.
-- `package_workflow` (20): `agent_multi_package_publish_workflow` must pass deterministic run/replay and include `package_publish_sync`.
-- `generative_mutation_suite` (20): generated mutation report must be `ok`, have minimum case count, and have no parity/history-min failures.
+- Domain checks are manifest-driven from:
+  - `docs/skill_pack/write_genesiscode_v1/manifest.json`
+  - `distribution_requirements.required_recipe_domains`
+- Each required domain maps to a deterministic workflow/report handler in
+  `scripts/check_write_genesiscode_skill_conformance.sh`.
+- Domain points are weighted evenly across all required domains.
+- `generative_mutation_suite` is a strict pass/fail companion gate:
+  generated mutation report must be `ok`, meet minimum case count, and have
+  no parity/history-min failures.
 
-Default pass threshold is `100/100` (`GENESIS_WRITE_SKILL_CONFORMANCE_MIN_SCORE`).
+Default pass threshold remains `100/100` (`GENESIS_WRITE_SKILL_CONFORMANCE_MIN_SCORE`).
 
 ## Contract
 

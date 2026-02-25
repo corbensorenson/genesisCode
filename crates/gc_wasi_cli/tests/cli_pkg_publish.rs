@@ -21,6 +21,7 @@ fn write_caps(dir: &Path, remote_allow: &str, include_pkg_publish: bool) -> Path
             r#"
 [op."core/pkg-low::publish"]
 remote_allow = ["{remote_allow}"]
+allow_http = true
 wasi_network_profile = "local"
 "#
         )
@@ -48,6 +49,7 @@ path = "./.genesis/refs.gc"
 
 [op."core/sync::push"]
 remote_allow = ["{remote_allow}"]
+allow_http = true
 wasi_network_profile = "local"
 {publish_op}
 "#
@@ -256,6 +258,104 @@ fn wasi_pkg_publish_is_policy_gated_and_advances_remote_ref_on_success() {
 }}"#
         ),
         "commit_ok.gc",
+    );
+    set_local_ref(dir, &commit_ok);
+
+    cmd()
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args([
+            "publish",
+            "--remote",
+            &remote,
+            "--ref",
+            "refs/heads/main",
+            "--policy",
+            &policy_hex,
+        ])
+        .assert()
+        .success()
+        .stdout(predicates::str::is_match("^[0-9a-f]{64}\n$").unwrap());
+
+    assert_eq!(
+        get_remote_ref(&remote_dir, "refs/heads/main"),
+        Some(commit_ok)
+    );
+}
+
+#[test]
+fn wasi_pkg_publish_local_profile_http_bridge_autodiscovery_roundtrip() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+
+    let remote = "http://bridge.test/".to_string();
+    let remote_allow = "http://bridge.test/v1/".to_string();
+    let remote_dir = dir
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge")
+        .join("http")
+        .join("bridge.test_80");
+    fs::create_dir_all(remote_dir.join("v1")).unwrap();
+    let caps = write_caps(dir, &remote_allow, true);
+
+    let policy_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"
+{
+  :type :vcs/policy
+  :v 1
+  :name "policy:test"
+  :refs { :frozen-prefixes [] }
+  :classes {
+    :dev  { :patterns ["refs/**/heads/*"] :exclude ["refs/**/heads/main"] :required-obligations [] }
+    :main { :patterns ["refs/**/heads/main"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+    :tags { :patterns ["refs/**/tags/*"] :required-obligations [core/obligation::unit-tests] :require-signatures false }
+  }
+}
+"#,
+        "policy_http_bridge.gc",
+    );
+
+    let patch_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "patch_http_bridge.gc",
+    );
+    let snap_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "x" :pkg/version "0" :modules [] :obligations []}"#,
+        "snap_http_bridge.gc",
+    );
+    let evidence_hex = cli_store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/evidence :v 1 :kind :unit-tests :inputs [] :outputs [] :data nil}"#,
+        "evidence_http_bridge.gc",
+    );
+    let commit_ok = cli_store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "x" }}
+  :base nil
+  :patch "{patch_hex}"
+  :result "{snap_hex}"
+  :obligations [core/obligation::unit-tests]
+  :evidence ["{evidence_hex}"]
+  :attestations []
+  :message "ok-http-bridge"
+}}"#
+        ),
+        "commit_http_bridge.gc",
     );
     set_local_ref(dir, &commit_ok);
 

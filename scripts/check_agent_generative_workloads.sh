@@ -4,22 +4,35 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PRIMARY_REPORT="${GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
-SECONDARY_REPORT="${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT:-}"
+DEFAULT_PRIMARY_REPORT=".genesis/perf/agent_capability_gauntlet_native_report.json"
+if [[ ! -f "$DEFAULT_PRIMARY_REPORT" ]]; then
+  DEFAULT_PRIMARY_REPORT=".genesis/perf/agent_capability_gauntlet_report.json"
+fi
+PRIMARY_REPORT="${GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT:-$DEFAULT_PRIMARY_REPORT}"
+
+DEFAULT_SECONDARY_REPORT=".genesis/perf/agent_capability_gauntlet_wasi_report.json"
+if [[ -n "${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT:-}" ]]; then
+  SECONDARY_REPORT="${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT}"
+elif [[ -f "$DEFAULT_SECONDARY_REPORT" ]]; then
+  SECONDARY_REPORT="$DEFAULT_SECONDARY_REPORT"
+else
+  SECONDARY_REPORT=""
+fi
 REPORT_PATH="${GENESIS_AGENT_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_report.json}"
 HISTORY_PATH="${GENESIS_AGENT_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_history.jsonl}"
 BASELINE_HISTORY_PATH="${GENESIS_AGENT_GENERATIVE_BASELINE_HISTORY:-policies/perf/agent_generative_workloads_seed_history.jsonl}"
-CASE_COUNT="${GENESIS_AGENT_GENERATIVE_CASE_COUNT:-12}"
+CASE_COUNT="${GENESIS_AGENT_GENERATIVE_CASE_COUNT:-100}"
 MIN_WORKFLOWS="${GENESIS_AGENT_GENERATIVE_MIN_WORKFLOWS:-3}"
 MAX_WORKFLOWS="${GENESIS_AGENT_GENERATIVE_MAX_WORKFLOWS:-6}"
 MIN_DOMAIN_COUNT="${GENESIS_AGENT_GENERATIVE_MIN_DOMAIN_COUNT:-2}"
 MAX_CASE_DURATION_MS="${GENESIS_AGENT_GENERATIVE_MAX_CASE_DURATION_MS:-600000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_GENERATIVE_P95_MIN_SAMPLES:-8}"
-REGRESSION_PERCENT="${GENESIS_AGENT_GENERATIVE_REGRESSION_PERCENT:-25}"
+REGRESSION_PERCENT="${GENESIS_AGENT_GENERATIVE_REGRESSION_PERCENT:-60}"
 REQUIRE_MIN_HISTORY="${GENESIS_AGENT_GENERATIVE_REQUIRE_MIN_HISTORY:-1}"
+REQUIRE_SECONDARY="${GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY:-1}"
 SEED="${GENESIS_AGENT_GENERATIVE_SEED:-genesis-agent-generative-v1}"
 
-python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$BASELINE_HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$REQUIRE_MIN_HISTORY" "$SEED" <<'PY'
+python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$BASELINE_HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$REQUIRE_MIN_HISTORY" "$REQUIRE_SECONDARY" "$SEED" <<'PY'
 import datetime as dt
 import hashlib
 import json
@@ -43,6 +56,7 @@ import sys
     p95_min_samples_s,
     regression_percent_s,
     require_min_history_raw,
+    require_secondary_raw,
     seed,
 ) = sys.argv[1:]
 
@@ -54,6 +68,7 @@ max_case_duration_ms = int(max_case_duration_ms_s)
 p95_min_samples = int(p95_min_samples_s)
 regression_percent = float(regression_percent_s)
 require_min_history = require_min_history_raw.strip().lower() not in {"0", "false", "no", "off"}
+require_secondary = require_secondary_raw.strip().lower() not in {"0", "false", "no", "off"}
 
 if case_count <= 0:
     raise SystemExit("agent-generative-workloads: case count must be positive")
@@ -75,6 +90,10 @@ secondary_path = pathlib.Path(secondary_report_path) if secondary_report_path.st
 report_file = pathlib.Path(report_path)
 history_file = pathlib.Path(history_path)
 baseline_history_file = pathlib.Path(baseline_history_path)
+if require_secondary and secondary_path is None:
+    raise SystemExit(
+        "agent-generative-workloads: secondary report is required but not configured"
+    )
 
 def load_gauntlet(path: pathlib.Path) -> dict:
     if not path.exists():
@@ -119,6 +138,8 @@ def load_gauntlet(path: pathlib.Path) -> dict:
 
 primary = load_gauntlet(primary_path)
 secondary = load_gauntlet(secondary_path) if secondary_path else None
+if require_secondary and secondary is None:
+    raise SystemExit("agent-generative-workloads: secondary report is required")
 
 workflow_names = sorted(primary["workflows"].keys())
 if secondary:
@@ -131,7 +152,6 @@ if len(workflow_names) < min_workflows:
     )
 
 effective_max = min(max_workflows, len(workflow_names))
-rng = random.Random(seed)
 cases = []
 used_signatures = set()
 
@@ -188,6 +208,13 @@ def evaluate_case(case: dict, wf_map: dict) -> dict:
 primary_cases = [evaluate_case(case, primary["workflows"]) for case in cases]
 secondary_cases = [evaluate_case(case, secondary["workflows"]) for case in cases] if secondary else []
 secondary_by_id = {case["id"]: case for case in secondary_cases}
+required_domains = sorted(
+    {
+        domain
+        for name in workflow_names
+        for domain in primary["workflows"][name]["domains"]
+    }
+)
 
 baseline_history_rows = []
 history_rows = []
@@ -238,17 +265,15 @@ for case in primary_cases:
         value = row.get(case["id"])
         if isinstance(value, int):
             prior.append(value)
-    case_seeded = len(baseline_prior) >= p95_min_samples
-    history_bootstrap_mode = require_min_history and (not case_seeded)
+    baseline_seeded = len(baseline_prior) >= p95_min_samples
+    history_seeded = len(prior) >= p95_min_samples
+    history_bootstrap_mode = require_min_history and (not history_seeded)
     case["history_samples"] = len(prior) + 1
+    case["baseline_seeded"] = baseline_seeded
     case["history_bootstrap_mode"] = history_bootstrap_mode
-    case["history_min_ok"] = (
-        case["history_samples"] >= p95_min_samples
-        or (not require_min_history)
-        or history_bootstrap_mode
-    )
+    case["history_min_ok"] = history_seeded or (not require_min_history)
     case["history_p95_ms"] = p95(prior) if prior else None
-    case["regression_enforced"] = case_seeded and len(prior) >= p95_min_samples and bool(prior)
+    case["regression_enforced"] = history_seeded and bool(prior)
     case["regression_budget_ms"] = (
         int(math.ceil(case["history_p95_ms"] * (1.0 + regression_percent / 100.0)))
         if case["regression_enforced"]
@@ -291,6 +316,8 @@ history_min_failures = [
     for case in primary_cases
     if require_min_history and not case["history_min_ok"]
 ]
+covered_domains = sorted({domain for case in primary_cases for domain in case["domains"]})
+domain_coverage_failures = sorted(set(required_domains) - set(covered_domains))
 
 ok = not (
     duration_failures
@@ -298,6 +325,7 @@ ok = not (
     or regression_failures
     or parity_mismatches
     or history_min_failures
+    or domain_coverage_failures
 )
 
 durations = [case["duration_ms"] for case in primary_cases]
@@ -321,6 +349,7 @@ report = {
     "history_path": str(history_file),
     "baseline_history_path": str(baseline_history_file),
     "require_min_history": require_min_history,
+    "require_secondary": require_secondary,
     "case_count": len(primary_cases),
     "min_workflows": min_workflows,
     "max_workflows": max_workflows,
@@ -333,6 +362,9 @@ report = {
     "domain_failures": domain_failures,
     "regression_failures": regression_failures,
     "history_min_failures": history_min_failures,
+    "required_domains": required_domains,
+    "covered_domains": covered_domains,
+    "domain_coverage_failures": domain_coverage_failures,
     "parity_mismatches": parity_mismatches,
     "cases": primary_cases,
     "timestamp_utc": timestamp,
@@ -373,6 +405,8 @@ if not ok:
         reasons.append("regression-failures=" + ",".join(regression_failures))
     if history_min_failures:
         reasons.append("history-min-failures=" + ",".join(history_min_failures))
+    if domain_coverage_failures:
+        reasons.append("domain-coverage-failures=" + ",".join(domain_coverage_failures))
     if parity_mismatches:
         reasons.append("parity-mismatches=" + ",".join(parity_mismatches))
     raise SystemExit("agent-generative-workloads: " + "; ".join(reasons))

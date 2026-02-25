@@ -798,6 +798,21 @@ fn gcpm_env_materializes_deterministic_profile_record() {
     assert!(entries[0].join("members.gc").is_file());
     assert!(entries[0].join("deps.gc").is_file());
     assert!(entries[0].join("caps-policy.toml").is_file());
+    assert!(entries[0].join("wasi-http-bridge.gc").is_file());
+    assert!(
+        dir.join(".genesis")
+            .join("runtime")
+            .join("wasi-http-bridge")
+            .join("http")
+            .is_dir()
+    );
+    assert!(
+        dir.join(".genesis")
+            .join("runtime")
+            .join("wasi-http-bridge")
+            .join("https")
+            .is_dir()
+    );
 }
 
 #[test]

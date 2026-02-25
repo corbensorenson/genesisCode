@@ -403,18 +403,25 @@ def dim_critical_gate_truth() -> dict[str, Any]:
             ],
         ),
         (
-            "agent_generative_workloads",
-            ".genesis/perf/agent_generative_workloads_report.json",
-            "genesis/agent-generative-workloads-v0.1",
-            "agent-generative-workloads",
-            ["bash", str(root / "scripts/check_agent_generative_workloads.sh")],
-        ),
-        (
             "agent_workflow_runtime_parity",
             ".genesis/perf/agent_workflow_runtime_parity_report.json",
             "genesis/agent-workflow-runtime-parity-v0.1",
             "agent-workflow-runtime-parity",
             ["bash", str(root / "scripts/check_agent_workflow_runtime_parity.sh")],
+        ),
+        (
+            "agent_generative_workloads",
+            ".genesis/perf/agent_generative_workloads_report.json",
+            "genesis/agent-generative-workloads-v0.1",
+            "agent-generative-workloads",
+            [
+                "bash",
+                "-lc",
+                "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json "
+                "GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=.genesis/perf/agent_capability_gauntlet_wasi_report.json "
+                "GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 "
+                "bash scripts/check_agent_generative_workloads.sh",
+            ],
         ),
         (
             "production_cli_help_surface",

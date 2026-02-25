@@ -1240,7 +1240,9 @@ case "$PROFILE" in
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT=60 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=3000 bash scripts/check_agent_reference_workflows.sh")
     PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
-    PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
+    PROFILE_GATES+=(
+      "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_report.json GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=0 bash scripts/check_agent_generative_workloads.sh"
+    )
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("GENESIS_BUDGET_WARMUPS=0 GENESIS_BUDGET_REPEATS=1 bash scripts/check_perf_budgets.sh")
@@ -1268,10 +1270,12 @@ case "$PROFILE" in
     PROFILE_GATES+=("GENESIS_GPU_XR_REQUIRE_WEBXR_RUNTIME_EVIDENCE=1 bash scripts/check_gpu_xr_productization_kits.sh")
     PROFILE_GATES+=("bash scripts/check_slo_report_contracts.sh")
     PROFILE_GATES+=("bash scripts/check_agent_scenario_perf.sh")
-    PROFILE_GATES+=("bash scripts/check_agent_generative_workloads.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=release-full bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
     PROFILE_GATES+=("GENESIS_AGENT_PARITY_GAUNTLET_PROFILE=prepush-standard bash scripts/check_agent_workflow_runtime_parity.sh")
+    PROFILE_GATES+=(
+      "GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=.genesis/perf/agent_capability_gauntlet_native_report.json GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=.genesis/perf/agent_capability_gauntlet_wasi_report.json GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 bash scripts/check_agent_generative_workloads.sh"
+    )
     PROFILE_GATES+=(
       "GENESIS_PRODUCTION_CLI_HELP_SURFACE_INCLUDE_PARITY=1 GENESIS_PRODUCTION_CLI_HELP_SURFACE_REPORT=.genesis/perf/production_cli_help_surface_parity_report.json GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY=.genesis/perf/production_cli_help_surface_parity_history.jsonl GENESIS_PRODUCTION_CLI_HELP_SURFACE_HISTORY_SCOPE_KEY=production-plus-parity-v1 bash scripts/check_production_cli_help_surface.sh"
     )

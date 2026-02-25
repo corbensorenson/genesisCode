@@ -1,24 +1,96 @@
 pub fn wasi_http_bridge_configured() -> bool {
-    std::env::var(WASI_HTTP_BRIDGE_ROOT_ENV)
-        .ok()
-        .map(|v| !v.trim().is_empty())
-        .unwrap_or(false)
+    wasi_http_bridge_root_from_env().is_some() || discover_workspace_runtime_wasi_bridge_root().is_some()
 }
 
-fn wasi_http_bridge_root_for_base(_base: &Url) -> Option<PathBuf> {
+fn wasi_http_bridge_root_for_base(base: &Url) -> Option<PathBuf> {
+    if let Some(root) = wasi_http_bridge_root_from_env() {
+        return Some(resolve_wasi_http_bridge_root_for_remote(&root, base));
+    }
+    discover_workspace_runtime_wasi_bridge_root()
+        .map(|root| resolve_wasi_http_bridge_root_for_remote(&root, base))
+}
+
+fn wasi_http_bridge_root_from_env() -> Option<PathBuf> {
     let raw = std::env::var(WASI_HTTP_BRIDGE_ROOT_ENV).ok()?;
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return None;
     }
-    let mut root = PathBuf::from(trimmed);
-    if !root.file_name().map(|n| n == "v1").unwrap_or(false) {
-        let candidate = root.join("v1");
-        if candidate.exists() {
-            root = candidate;
+    Some(PathBuf::from(trimmed))
+}
+
+fn discover_workspace_runtime_wasi_bridge_root() -> Option<PathBuf> {
+    let mut cur = std::env::current_dir().ok()?;
+    loop {
+        let candidate = cur
+            .join(".genesis")
+            .join("runtime")
+            .join("wasi-http-bridge");
+        if candidate.is_dir() {
+            return Some(candidate);
+        }
+        if !cur.pop() {
+            return None;
         }
     }
-    Some(root)
+}
+
+fn resolve_wasi_http_bridge_root_for_remote(root: &Path, base: &Url) -> PathBuf {
+    if root.file_name().map(|n| n == "v1").unwrap_or(false) {
+        return root.to_path_buf();
+    }
+
+    if let Some(host_token) = bridge_host_token(base)
+        && (root.join(base.scheme()).is_dir()
+            || root.file_name().map(|n| n == "wasi-http-bridge").unwrap_or(false))
+    {
+        return root.join(base.scheme()).join(host_token).join("v1");
+    }
+
+    let legacy_candidate = root.join("v1");
+    if legacy_candidate.exists() {
+        return legacy_candidate;
+    }
+    root.to_path_buf()
+}
+
+fn bridge_host_token(base: &Url) -> Option<String> {
+    let host = base.host_str()?;
+    let port = base.port_or_known_default().unwrap_or_else(|| {
+        if base.scheme() == "https" {
+            443
+        } else {
+            80
+        }
+    });
+    Some(format!(
+        "{}_{}",
+        sanitize_bridge_token_segment(host),
+        port
+    ))
+}
+
+fn sanitize_bridge_token_segment(raw: &str) -> String {
+    raw.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+pub fn wasi_http_bridge_resolve_remote_root(
+    bridge_root: &Path,
+    remote: &str,
+) -> Result<PathBuf, RegistryError> {
+    let base = normalize_remote_base(remote)?;
+    Ok(resolve_wasi_http_bridge_root_for_remote(
+        bridge_root,
+        &base,
+    ))
 }
 
 #[cfg(target_os = "wasi")]
@@ -133,4 +205,3 @@ pub fn normalize_remote_base(remote: &str) -> Result<Url, RegistryError> {
     u.set_query(None);
     Ok(u)
 }
-

@@ -29,7 +29,11 @@ if [[ "$AUTO_RUN" == "1" ]]; then
       bash scripts/check_agent_reference_workflows.sh
   fi
   if [[ ! -f "$GENERATIVE_REPORT" ]]; then
-    GENESIS_AGENT_GAUNTLET_PROFILE="$PROFILE" \
+    GENESIS_AGENT_PARITY_GAUNTLET_PROFILE="$PROFILE" \
+      bash scripts/check_agent_workflow_runtime_parity.sh
+    GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT=".genesis/perf/agent_capability_gauntlet_native_report.json" \
+    GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT=".genesis/perf/agent_capability_gauntlet_wasi_report.json" \
+    GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 \
       bash scripts/check_agent_generative_workloads.sh
   fi
   if [[ ! -f "$RUNTIME_BACKEND_REPORT" ]]; then
@@ -269,16 +273,10 @@ def check_package_publish_sync() -> dict:
     )
 
 
-def check_deployment_targets() -> dict:
-    workflow_specs = [
-        ("agent_deploy_ios_workflow", {"deployment", "deploy_ios"}),
-        ("agent_deploy_android_workflow", {"deployment", "deploy_android"}),
-        ("agent_deploy_edge_workflow", {"deployment", "deploy_edge"}),
-        ("agent_deploy_service_runtime_workflow", {"deployment", "deploy_service_runtime"}),
-    ]
+def check_required_workflows(*, rubric_id: str, workflow_specs: list[tuple[str, set[str]]]) -> dict:
     checks = [
         workflow_detail(
-            rubric_id="deployment_targets",
+            rubric_id=rubric_id,
             workflow_name=wf,
             required_domains=domains,
         )
@@ -286,11 +284,144 @@ def check_deployment_targets() -> dict:
     ]
     ok = all(bool(item.get("ok", False)) for item in checks)
     return {
-        "rubric_id": "deployment_targets",
+        "rubric_id": rubric_id,
         "ok": ok,
         "checks": checks,
         "required_workflows": [wf for wf, _ in workflow_specs],
     }
+
+
+def check_process_lifecycle() -> dict:
+    return any_workflow_detail(
+        rubric_id="process_lifecycle",
+        workflow_names=["agent_process_lifecycle_workflow"],
+        required_domains={"process_lifecycle"},
+    )
+
+
+def check_filesystem() -> dict:
+    return any_workflow_detail(
+        rubric_id="filesystem",
+        workflow_names=["agent_filesystem_workflow"],
+        required_domains={"filesystem"},
+    )
+
+
+def check_network_process() -> dict:
+    return any_workflow_detail(
+        rubric_id="network_process",
+        workflow_names=["agent_network_process_workflow"],
+        required_domains={"network_process", "service"},
+    )
+
+
+def check_raw_network_sockets() -> dict:
+    return any_workflow_detail(
+        rubric_id="raw_network_sockets",
+        workflow_names=["agent_raw_network_sockets_workflow"],
+        required_domains={"raw_network_sockets"},
+    )
+
+
+def check_inbound_server() -> dict:
+    return any_workflow_detail(
+        rubric_id="inbound_server",
+        workflow_names=["agent_inbound_server_workflow"],
+        required_domains={"inbound_server"},
+    )
+
+
+def check_time_control() -> dict:
+    return any_workflow_detail(
+        rubric_id="time_control",
+        workflow_names=["agent_time_control_workflow"],
+        required_domains={"time_control"},
+    )
+
+
+def check_multi_agent_orchestration() -> dict:
+    return any_workflow_detail(
+        rubric_id="multi_agent_orchestration",
+        workflow_names=["agent_multi_agent_orchestration_workflow"],
+        required_domains={"multi_agent_orchestration"},
+    )
+
+
+def check_realtime_collaboration() -> dict:
+    return any_workflow_detail(
+        rubric_id="realtime_collaboration",
+        workflow_names=["agent_realtime_collaboration_workflow"],
+        required_domains={"realtime_collaboration"},
+    )
+
+
+def check_backend_topology() -> dict:
+    return any_workflow_detail(
+        rubric_id="backend_topology",
+        workflow_names=["agent_backend_topology_workflow"],
+        required_domains={"backend_topology"},
+    )
+
+
+def check_browser_runtime() -> dict:
+    return any_workflow_detail(
+        rubric_id="browser_runtime",
+        workflow_names=["agent_browser_runtime_workflow"],
+        required_domains={"browser_runtime"},
+    )
+
+
+def check_ml_data_engineering() -> dict:
+    return check_required_workflows(
+        rubric_id="ml_data_engineering",
+        workflow_specs=[
+            ("agent_ml_pipeline_variant_workflow", {"ml_pipeline_variant"}),
+            ("agent_durable_data_workflow", {"durable_data"}),
+        ],
+    )
+
+
+def check_complex_ui_app_stacks() -> dict:
+    return check_required_workflows(
+        rubric_id="complex_ui_app_stacks",
+        workflow_specs=[
+            ("agent_browser_runtime_workflow", {"browser_runtime"}),
+            ("agent_interactive_gfx_compute_workflow", {"graphics", "gpu_compute"}),
+            ("agent_xr_runtime_workflow", {"xr_runtime"}),
+        ],
+    )
+
+
+def check_hardware_device_integration() -> dict:
+    return check_required_workflows(
+        rubric_id="hardware_device_integration",
+        workflow_specs=[
+            ("agent_gpu_compute_workflow", {"gpu_compute"}),
+            ("agent_xr_runtime_workflow", {"xr_runtime"}),
+            ("agent_plugin_runtime_workflow", {"plugin_runtime"}),
+        ],
+    )
+
+
+def check_security_auth_services() -> dict:
+    return check_required_workflows(
+        rubric_id="security_auth_services",
+        workflow_specs=[
+            ("agent_backend_topology_workflow", {"backend_topology"}),
+            ("agent_service_workflow", {"service", "package_publish_sync"}),
+            ("agent_plugin_runtime_workflow", {"plugin_runtime"}),
+        ],
+    )
+
+
+def check_deployment_targets() -> dict:
+    workflow_specs = [
+        ("agent_deploy_ios_workflow", {"deployment", "deploy_ios"}),
+        ("agent_deploy_android_workflow", {"deployment", "deploy_android"}),
+        ("agent_deploy_edge_workflow", {"deployment", "deploy_edge"}),
+        ("agent_deploy_service_runtime_workflow", {"deployment", "deploy_service_runtime"}),
+    ]
+    return check_required_workflows(rubric_id="deployment_targets", workflow_specs=workflow_specs)
 
 
 def check_failure_recovery() -> dict:
@@ -446,6 +577,20 @@ domain_handlers: dict[str, Callable[[], dict]] = {
     "xr_runtime": check_xr_runtime,
     "xr_productization": check_xr_productization,
     "durable_data": check_durable_data,
+    "process_lifecycle": check_process_lifecycle,
+    "filesystem": check_filesystem,
+    "network_process": check_network_process,
+    "raw_network_sockets": check_raw_network_sockets,
+    "inbound_server": check_inbound_server,
+    "time_control": check_time_control,
+    "multi_agent_orchestration": check_multi_agent_orchestration,
+    "realtime_collaboration": check_realtime_collaboration,
+    "backend_topology": check_backend_topology,
+    "browser_runtime": check_browser_runtime,
+    "ml_data_engineering": check_ml_data_engineering,
+    "complex_ui_app_stacks": check_complex_ui_app_stacks,
+    "hardware_device_integration": check_hardware_device_integration,
+    "security_auth_services": check_security_auth_services,
 }
 
 required_domains_ordered = []

@@ -74,6 +74,7 @@ pub(crate) fn handle_env(
     let deps_term = build_env_deps_term(workspace_file, &l)?;
     let deps_body = gc_coreform::print_term(&deps_term) + "\n";
     let deps_h = blake3::hash(deps_body.as_bytes()).to_hex().to_string();
+    let wasi_http_bridge_plan = build_wasi_http_bridge_plan(workspace_file, &ws, prof)?;
 
     let env_term = Term::Map(
         [
@@ -132,6 +133,26 @@ pub(crate) fn handle_env(
                 TermOrdKey(Term::symbol(":caps-policy")),
                 Term::Str(caps_policy_path.display().to_string()),
             ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
+                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
+                wasi_http_bridge_plan
+                    .remote
+                    .as_ref()
+                    .map(|s| Term::Str(s.clone()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
+                wasi_http_bridge_plan
+                    .remote_root
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
             (TermOrdKey(Term::symbol(":members-h")), Term::Str(members_h)),
             (TermOrdKey(Term::symbol(":deps-h")), Term::Str(deps_h)),
             (
@@ -151,6 +172,12 @@ pub(crate) fn handle_env(
     let env_h = blake3::hash(env_body.as_bytes()).to_hex().to_string();
     let env_root = out_dir.join(&env_h);
     std::fs::create_dir_all(&env_root).map_err(|e| e.to_string())?;
+    materialize_wasi_http_bridge_plan(
+        &wasi_http_bridge_plan,
+        &env_root,
+        profile,
+        &selected_runtime_backend,
+    )?;
 
     write_if_same_or_new(&env_root.join("env.gcenv"), env_body.as_bytes())
         .map_err(|e| e.to_string())?;
@@ -185,6 +212,7 @@ pub(crate) fn handle_env(
         &caps_policy_path,
         &toolchain_path,
         runtime_backend_contract,
+        &wasi_http_bridge_plan,
     );
     let profile_body = gc_coreform::print_term(&profile_term) + "\n";
     let profile_h = blake3::hash(profile_body.as_bytes()).to_hex().to_string();
@@ -229,6 +257,26 @@ pub(crate) fn handle_env(
             (
                 TermOrdKey(Term::symbol(":caps-policy")),
                 Term::Str(caps_policy_path.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
+                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
+                wasi_http_bridge_plan
+                    .remote
+                    .as_ref()
+                    .map(|s| Term::Str(s.clone()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
+                wasi_http_bridge_plan
+                    .remote_root
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
             ),
             (
                 TermOrdKey(Term::symbol(":runtime-backend-profile")),
@@ -298,6 +346,7 @@ fn build_env_profile_term(
     caps_policy_path: &Path,
     toolchain_path: &Option<PathBuf>,
     runtime_backend: RuntimeBackendContract<'_>,
+    wasi_http_bridge_plan: &WasiHttpBridgePlan,
 ) -> Term {
     Term::Map(
         [
@@ -335,6 +384,26 @@ fn build_env_profile_term(
                 Term::Str(caps_policy_path.display().to_string()),
             ),
             (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
+                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
+                wasi_http_bridge_plan
+                    .remote
+                    .as_ref()
+                    .map(|s| Term::Str(s.clone()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
+                wasi_http_bridge_plan
+                    .remote_root
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
                 TermOrdKey(Term::symbol(":runtime-backend-profile")),
                 Term::Str(runtime_backend.selected.to_string()),
             ),
@@ -357,6 +426,105 @@ fn build_env_profile_term(
         .into_iter()
         .collect(),
     )
+}
+
+struct WasiHttpBridgePlan {
+    root: PathBuf,
+    remote: Option<String>,
+    remote_root: Option<PathBuf>,
+}
+
+fn build_wasi_http_bridge_plan(
+    workspace_file: &Path,
+    ws: &WorkspaceConfig,
+    prof: &gc_pkg::WorkspaceProfile,
+) -> Result<WasiHttpBridgePlan, String> {
+    let workspace_root = workspace_file
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+    let root = workspace_root
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge");
+    let remote = prof
+        .registry
+        .clone()
+        .or_else(|| ws.defaults.registry.clone());
+
+    let remote_root = match remote.as_deref() {
+        Some(r) if r.starts_with("http://") || r.starts_with("https://") => Some(
+            gc_registry::wasi_http_bridge_resolve_remote_root(&root, r)
+                .map_err(|e| format!("resolve wasi http bridge root for registry `{r}`: {e}"))?,
+        ),
+        _ => None,
+    };
+
+    Ok(WasiHttpBridgePlan {
+        root,
+        remote,
+        remote_root,
+    })
+}
+
+fn materialize_wasi_http_bridge_plan(
+    plan: &WasiHttpBridgePlan,
+    env_root: &Path,
+    profile: &str,
+    runtime_backend: &str,
+) -> Result<(), String> {
+    std::fs::create_dir_all(plan.root.join("http")).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(plan.root.join("https")).map_err(|e| e.to_string())?;
+    if let Some(remote_root) = &plan.remote_root {
+        std::fs::create_dir_all(remote_root).map_err(|e| e.to_string())?;
+    }
+
+    let descriptor = Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":type")),
+                Term::symbol(":gcpm/wasi-http-bridge-runtime"),
+            ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+            (
+                TermOrdKey(Term::symbol(":profile")),
+                Term::Str(profile.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":runtime-backend-profile")),
+                Term::Str(runtime_backend.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":root")),
+                Term::Str(plan.root.display().to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":remote")),
+                plan.remote
+                    .as_ref()
+                    .map(|s| Term::Str(s.clone()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":remote-root")),
+                plan.remote_root
+                    .as_ref()
+                    .map(|p| Term::Str(p.display().to_string()))
+                    .unwrap_or_else(|| Term::symbol(":none")),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let descriptor_body = gc_coreform::print_term(&descriptor) + "\n";
+    write_if_same_or_new(
+        &env_root.join("wasi-http-bridge.gc"),
+        descriptor_body.as_bytes(),
+    )
+    .map_err(|e| e.to_string())?;
+    atomic_write_text(&plan.root.join("runtime.gc"), descriptor_body.as_bytes())
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub(super) fn resolve_env_runtime_backend_profile(
