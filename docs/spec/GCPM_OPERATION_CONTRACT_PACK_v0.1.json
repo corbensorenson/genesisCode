@@ -29,6 +29,11 @@
       "log_op": "pkg-build",
       "variant": "Build"
     },
+    "bridge": {
+      "kind": "genesis/pkg-bridge-v0.1",
+      "log_op": "pkg-bridge",
+      "variant": "Bridge"
+    },
     "doctor": {
       "kind": "genesis/pkg-doctor-v0.1",
       "log_op": "pkg-doctor",

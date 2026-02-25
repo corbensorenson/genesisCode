@@ -176,6 +176,9 @@ pub(super) fn cmd_pkg(
                         format!("{value}\n")
                     }
                 }),
+            PkgCmd::Bridge { .. } => extract_pkg_publish_commit(&contract_value)
+                .map(|h| format!("{h}\n"))
+                .unwrap_or_else(|| format!("{value}\n")),
         }
     };
 

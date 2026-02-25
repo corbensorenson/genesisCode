@@ -177,6 +177,10 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         s.contains("scaffold"),
         "pkg --help output missing scaffold subcommand"
     );
+    assert!(
+        s.contains("bridge"),
+        "pkg --help output missing bridge subcommand"
+    );
 
     let s = stdout_str(&["pkg", "abi", "--help"]);
     assert!(s.contains("--pkg"), "pkg abi --help output missing --pkg");
@@ -191,6 +195,21 @@ fn cli_help_surface_contains_recent_spec_alignment_flags() {
         assert!(
             s.contains(needle),
             "pkg export --help output missing {needle}"
+        );
+    }
+    let s = stdout_str(&["pkg", "bridge", "--help"]);
+    for needle in [
+        "--ecosystem",
+        "--name",
+        "--version",
+        "--source",
+        "--source-hash",
+        "--key-id",
+        "--public-key",
+    ] {
+        assert!(
+            s.contains(needle),
+            "pkg bridge --help output missing {needle}"
         );
     }
 

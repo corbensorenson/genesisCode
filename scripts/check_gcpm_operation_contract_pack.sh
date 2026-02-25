@@ -83,6 +83,7 @@ required_operations = {
     "export": "Export",
     "import": "Import",
     "publish": "Publish",
+    "bridge": "Bridge",
     "migrate": "Migrate",
     "env": "Env",
     "profile-runtime": "ProfileRuntime",

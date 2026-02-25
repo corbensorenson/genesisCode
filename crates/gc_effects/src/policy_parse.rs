@@ -17,6 +17,7 @@ pub(super) fn retired_high_level_op_replacement(op: &str) -> Option<&'static str
         "core/pkg::verify" => Some("core/pkg-low::verify"),
         "core/pkg::snapshot" => Some("core/pkg-low::snapshot"),
         "core/pkg::publish" => Some("core/pkg-low::publish"),
+        "core/pkg::bridge" => Some("core/pkg-low::bridge"),
         "core/gpk::export" => Some("core/gpk-low::export"),
         "core/gpk::import" => Some("core/gpk-low::import"),
         "core/gc::plan" => Some("core/gc-low::plan"),

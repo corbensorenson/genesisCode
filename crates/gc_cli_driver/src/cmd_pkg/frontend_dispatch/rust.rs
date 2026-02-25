@@ -159,6 +159,33 @@ pub(super) fn build(
             "genesis/pkg-publish-v0.1",
             "pkg-publish",
         ),
+        PkgCmd::Bridge {
+            ecosystem,
+            name,
+            version,
+            source,
+            source_hash,
+            key_id,
+            public_key,
+            lock,
+            dep_name,
+            registry,
+        } => (
+            mk_pkg_bridge_program(
+                ecosystem,
+                name,
+                version,
+                source,
+                source_hash,
+                key_id,
+                public_key,
+                lock.as_deref(),
+                dep_name.as_deref(),
+                registry.as_deref(),
+            ),
+            "genesis/pkg-bridge-v0.1",
+            "pkg-bridge",
+        ),
     };
     debug_assert_eq!(kind, pkg_contract::kind(cmd));
     debug_assert_eq!(log_op, pkg_contract::log_op(cmd));

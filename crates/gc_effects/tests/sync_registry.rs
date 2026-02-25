@@ -676,6 +676,39 @@ remote_allow = ["{remote_allow}"]
     CapsPolicy::from_toml_str(&s).expect("caps")
 }
 
+fn mk_caps_for_pkg_bridge(
+    base_dir: &std::path::Path,
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+) -> CapsPolicy {
+    let s = format!(
+        r#"
+allow = ["core/pkg-low::bridge", "core/crypto::sign"]
+
+[store]
+dir = "{store_dir}"
+
+[refs]
+path = "{refs_path}"
+
+[op."core/pkg-low::bridge"]
+base_dir = "{base_dir}"
+
+[op."core/crypto::sign"]
+allow_algorithms = ["ed25519"]
+allow_key_ids = ["mirror-key"]
+max_message_bytes = 4096
+max_context_bytes = 256
+wasi_bridge_profile = true
+wasi_bridge_response = "{{:ok true :signature b\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}}"
+"#,
+        base_dir = base_dir.display(),
+        store_dir = store_dir.display(),
+        refs_path = refs_path.display(),
+    );
+    CapsPolicy::from_toml_str(&s).expect("caps")
+}
+
 fn mk_prog(op: &str, payload: &Term) -> (Vec<Term>, [u8; 32]) {
     // (def prog (core/effect::perform 'op (quote payload) (fn (r) (core/effect::pure r)))) prog
     let op_t = Term::list(vec![Term::symbol("quote"), Term::symbol(op)]);

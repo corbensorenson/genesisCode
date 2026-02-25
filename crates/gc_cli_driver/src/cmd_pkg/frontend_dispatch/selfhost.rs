@@ -690,6 +690,85 @@ pub(super) fn build(
             );
             (prog, "genesis/pkg-publish-v0.1", "pkg-publish", desc)
         }
+        PkgCmd::Bridge {
+            ecosystem,
+            name,
+            version,
+            source,
+            source_hash,
+            key_id,
+            public_key,
+            lock,
+            dep_name,
+            registry,
+        } => {
+            let forms = canonicalize_module(mk_pkg_bridge_program(
+                ecosystem,
+                name,
+                version,
+                source,
+                source_hash,
+                key_id,
+                public_key,
+                lock.as_deref(),
+                dep_name.as_deref(),
+                registry.as_deref(),
+            ))
+            .map_err(|e| cli_err(EX_PARSE, "canon/coreform", e.to_string()))?;
+            let prog = eval_module(ctx, env, &forms)
+                .map_err(|e| cli_err(EX_EVAL, "eval/error", format!("{e}")))?;
+            let desc = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":cmd")),
+                        Term::Str("pkg/bridge".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":ecosystem")),
+                        Term::Str(ecosystem.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":name")),
+                        Term::Str(name.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":version")),
+                        Term::Str(version.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source")),
+                        Term::Str(source.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source-hash")),
+                        Term::Str(source_hash.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":key-id")),
+                        Term::Str(key_id.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":public-key")),
+                        Term::Str(public_key.to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":lock-present")),
+                        Term::Bool(lock.is_some()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":dep-name-present")),
+                        Term::Bool(dep_name.is_some()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":registry-present")),
+                        Term::Bool(registry.is_some()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            (prog, "genesis/pkg-bridge-v0.1", "pkg-bridge", desc)
+        }
     };
     debug_assert_eq!(kind, pkg_contract::kind(cmd));
     debug_assert_eq!(log_op, pkg_contract::log_op(cmd));

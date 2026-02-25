@@ -16,6 +16,7 @@ Deterministic AI-facing workflow summaries are emitted in `--json` under `data.r
 - `gcpm doctor` -> `genesis/pkg-doctor-ai-report-v0.1`
 - `gcpm env` -> `genesis/pkg-env-report-v0.1`
 - `gcpm publish` -> `genesis/pkg-publish-report-v0.1`
+- `gcpm bridge` -> `genesis/pkg-bridge-report-v0.1`
 - `gcpm self-optimize` -> `genesis/pkg-self-optimize-report-v0.1`
 
 ## Purpose
@@ -60,6 +61,22 @@ All report objects include:
 - `expected_old`
 
 Reports are emitted even when publish fails, so AI agents can continue with deterministic remediation planning.
+
+## Bridge Report
+
+- `ecosystem`
+- `name`
+- `version`
+- `source`
+- `source_hash`
+- `commit`
+- `snapshot`
+- `provenance_root`
+- `conversion_evidence`
+- `attestation`
+- `lock`
+- `dep_name`
+- `registry`
 
 ## Operational Expansion
 

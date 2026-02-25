@@ -490,6 +490,49 @@ enum PkgCmd {
         commit: Option<String>,
     },
 
+    /// Bridge an external ecosystem package into signed GenesisPkg commit/snapshot artifacts.
+    Bridge {
+        /// External ecosystem kind (e.g. crates|npm|pypi).
+        #[arg(long)]
+        ecosystem: String,
+
+        /// Genesis package name for the mirrored artifact.
+        #[arg(long)]
+        name: String,
+
+        /// External package version string.
+        #[arg(long)]
+        version: String,
+
+        /// External source coordinate (for example `serde@1.0.216`).
+        #[arg(long)]
+        source: String,
+
+        /// Deterministic external source content hash (64-hex).
+        #[arg(long)]
+        source_hash: String,
+
+        /// Signing key id used with `core/crypto::sign`.
+        #[arg(long)]
+        key_id: String,
+
+        /// Ed25519 public key as 64-hex; embedded into attestation artifact.
+        #[arg(long)]
+        public_key: String,
+
+        /// Optional lock path to pin mirrored provenance roots/evidence under `[artifacts]`.
+        #[arg(long)]
+        lock: Option<PathBuf>,
+
+        /// Optional dependency key to upsert in `requirements`/`locked` when `--lock` is provided.
+        #[arg(long)]
+        dep_name: Option<String>,
+
+        /// Optional registry alias for lock `requirements`/`locked` entry.
+        #[arg(long)]
+        registry: Option<String>,
+    },
+
     /// Realize a deterministic workspace environment profile under `.genesis/env/<profile-hash>/`.
     Env {
         /// Profile name (e.g. dev|ci|release).

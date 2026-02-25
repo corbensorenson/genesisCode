@@ -505,6 +505,688 @@ pub(super) fn dispatch_publish(
             };
             Ok(out)
         }
+        "core/pkg-low::bridge" => {
+            let store = store.ok_or_else(|| {
+                EffectsError::Log("missing artifact store for core/pkg-low::bridge".to_string())
+            })?;
+            let ecosystem = match payload_pkg_bridge_ecosystem(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let name = match payload_pkg_name(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let version = match payload_pkg_bridge_version(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let source = match payload_pkg_bridge_source(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let source_hash = match payload_pkg_bridge_source_hash(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let key_id = match payload_pkg_bridge_key_id(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let public_key_hex = match payload_pkg_bridge_public_key(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let lock_path = match payload_pkg_bridge_lock(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let dep_name = match payload_pkg_bridge_dep_name(payload) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op)));
+                }
+            };
+            let registry_alias = payload_pkg_registry(payload);
+
+            if lock_path.is_some() && dep_name.is_none() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-payload",
+                    "bridge lock updates require :dep-name when :lock is provided".to_string(),
+                    Some(op),
+                ));
+            }
+            if dep_name.is_some() && lock_path.is_none() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-payload",
+                    "bridge :dep-name requires :lock".to_string(),
+                    Some(op),
+                ));
+            }
+
+            let provenance_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":gcpm/external-provenance"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":ecosystem")),
+                        Term::Str(ecosystem.clone()),
+                    ),
+                    (TermOrdKey(Term::symbol(":name")), Term::Str(name.clone())),
+                    (
+                        TermOrdKey(Term::symbol(":version")),
+                        Term::Str(version.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source")),
+                        Term::Str(source.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source-hash")),
+                        Term::Str(source_hash.clone()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let provenance_root = match store_put_with_budget(
+                store,
+                print_term(&provenance_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let conversion_data_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":gcpm/bridge-conversion"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":toolchain")),
+                        Term::Str("genesis/pkg-low::bridge-v0.1".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":ecosystem")),
+                        Term::Str(ecosystem.clone()),
+                    ),
+                    (TermOrdKey(Term::symbol(":name")), Term::Str(name.clone())),
+                    (
+                        TermOrdKey(Term::symbol(":version")),
+                        Term::Str(version.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source")),
+                        Term::Str(source.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":source-hash")),
+                        Term::Str(source_hash.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":provenance-root")),
+                        Term::Str(provenance_root.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":replay")),
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":algorithm")),
+                                    Term::Str("identity-source-hash".to_string()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":input-hash")),
+                                    Term::Str(source_hash.clone()),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let conversion_data_h = match store_put_with_budget(
+                store,
+                print_term(&conversion_data_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let conversion_evidence_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/evidence"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":kind")),
+                        Term::symbol(":equivalence"),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":inputs")),
+                        Term::Vector(vec![Term::Str(provenance_root.clone())]),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":outputs")),
+                        Term::Vector(Vec::new()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":data")),
+                        Term::Str(conversion_data_h.clone()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let conversion_evidence = match store_put_with_budget(
+                store,
+                print_term(&conversion_evidence_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let patch_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/patch"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (TermOrdKey(Term::symbol(":ops")), Term::Vector(Vec::new())),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let patch_h = match store_put_with_budget(
+                store,
+                print_term(&patch_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let obligations = vec![
+                "core/obligation::external-provenance".to_string(),
+                "core/obligation::replayable-conversion".to_string(),
+            ];
+            let snapshot_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/snapshot"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (TermOrdKey(Term::symbol(":kind")), Term::symbol(":package")),
+                    (
+                        TermOrdKey(Term::symbol(":pkg/name")),
+                        Term::Str(name.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":pkg/version")),
+                        Term::Str(version.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":modules")),
+                        Term::Vector(Vec::new()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":obligations")),
+                        Term::Vector(obligations.iter().cloned().map(Term::Symbol).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":meta")),
+                        Term::Map(
+                            [
+                                (
+                                    TermOrdKey(Term::symbol(":bridge/ecosystem")),
+                                    Term::Str(ecosystem.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":bridge/source")),
+                                    Term::Str(source.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":bridge/source-hash")),
+                                    Term::Str(source_hash.clone()),
+                                ),
+                                (
+                                    TermOrdKey(Term::symbol(":bridge/provenance-root")),
+                                    Term::Str(provenance_root.clone()),
+                                ),
+                            ]
+                            .into_iter()
+                            .collect(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let snapshot_h = match store_put_with_budget(
+                store,
+                print_term(&snapshot_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let commit_term_without_attestation = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/commit"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":parents")),
+                        Term::Vector(Vec::new()),
+                    ),
+                    (TermOrdKey(Term::symbol(":base")), Term::Nil),
+                    (
+                        TermOrdKey(Term::symbol(":patch")),
+                        Term::Str(patch_h.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":result")),
+                        Term::Str(snapshot_h.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":obligations")),
+                        Term::Vector(obligations.iter().cloned().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":evidence")),
+                        Term::Vector(vec![Term::Str(conversion_evidence.clone())]),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":attestations")),
+                        Term::Vector(Vec::new()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":message")),
+                        Term::Str(format!(
+                            "bridge {} {} {}",
+                            ecosystem.as_str(),
+                            name.as_str(),
+                            version.as_str()
+                        )),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let signing_h = match gc_vcs::commit_signing_hash(&commit_term_without_attestation) {
+                Ok(h) => h,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bridge-signing-hash",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+            };
+            let public_key = match gc_vcs::hex_to_bytes32(&public_key_hex) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        format!(":public-key: {e}"),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let sign_payload = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":algorithm")),
+                        Term::Str("ed25519".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":key-id")),
+                        Term::Str(key_id.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":message")),
+                        Term::Bytes(signing_h.to_vec().into()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let sign_pol = policy.op_policy("core/crypto::sign").or(pol);
+            let sign_out = call_capability(
+                "core/crypto::sign",
+                &sign_payload,
+                sign_pol,
+                policy,
+                Some(store),
+                refs,
+                budget,
+                error_tok,
+            )?;
+            let signature = match sign_out {
+                Value::Sealed { .. } => return Ok(sign_out),
+                Value::Data(Term::Map(mm)) => match mm.get(&TermOrdKey(Term::symbol(":signature")))
+                {
+                    Some(Term::Bytes(sig)) if sig.len() == 64 => sig.to_vec(),
+                    Some(Term::Bytes(sig)) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bridge-signature",
+                            format!("signature must be 64 bytes, got {}", sig.len()),
+                            Some(op),
+                        ));
+                    }
+                    Some(other) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bridge-signature",
+                            format!("signature must be bytes, got {}", print_term(other)),
+                            Some(op),
+                        ));
+                    }
+                    None => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bridge-signature",
+                            "core/crypto::sign response missing :signature".to_string(),
+                            Some(op),
+                        ));
+                    }
+                },
+                other => {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bridge-signature",
+                        format!(
+                            "unexpected core/crypto::sign response: {}",
+                            other.debug_repr()
+                        ),
+                        Some(op),
+                    ));
+                }
+            };
+
+            let attestation_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/attestation"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":alg")),
+                        Term::Str("ed25519".to_string()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":signing-h")),
+                        Term::Bytes(signing_h.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":pk")),
+                        Term::Bytes(public_key.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":sig")),
+                        Term::Bytes(signature.into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":role")),
+                        Term::Symbol(":mirror-converter".to_string()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let attestation_h = match store_put_with_budget(
+                store,
+                print_term(&attestation_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let commit_term = Term::Map(
+                [
+                    (
+                        TermOrdKey(Term::symbol(":type")),
+                        Term::symbol(":vcs/commit"),
+                    ),
+                    (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
+                    (
+                        TermOrdKey(Term::symbol(":parents")),
+                        Term::Vector(Vec::new()),
+                    ),
+                    (TermOrdKey(Term::symbol(":base")), Term::Nil),
+                    (
+                        TermOrdKey(Term::symbol(":patch")),
+                        Term::Str(patch_h.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":result")),
+                        Term::Str(snapshot_h.clone()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":obligations")),
+                        Term::Vector(obligations.iter().cloned().map(Term::Str).collect()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":evidence")),
+                        Term::Vector(vec![Term::Str(conversion_evidence.clone())]),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":attestations")),
+                        Term::Vector(vec![Term::Str(attestation_h.clone())]),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":message")),
+                        Term::Str(format!(
+                            "bridge {} {} {}",
+                            ecosystem.as_str(),
+                            name.as_str(),
+                            version.as_str()
+                        )),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            );
+            let commit_h = match store_put_with_budget(
+                store,
+                print_term(&commit_term).as_bytes(),
+                policy,
+                budget,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+
+            let mut lock_h: Option<String> = None;
+            if let Some(lock_s) = lock_path {
+                let Some(dep) = dep_name.clone() else {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/bad-payload",
+                        "bridge lock updates require :dep-name when :lock is provided".to_string(),
+                        Some(op),
+                    ));
+                };
+                let base_dir = effective_base_dir(pol)?;
+                let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/missing-lock",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                let mut lock = match gc_pkg::GenesisLock::load(&lock_path) {
+                    Ok(l) => l,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/bad-lock",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                lock.set_requirement_with_metadata(
+                    &dep,
+                    &format!("commit:{commit_h}"),
+                    gc_pkg::UpdatePolicy::Manual,
+                    registry_alias.clone(),
+                    Some(gc_pkg::ResolutionStrategy::Pinned),
+                    None,
+                );
+                lock.locked.insert(
+                    dep.clone(),
+                    gc_pkg::LockedEntry {
+                        commit: Some(commit_h.clone()),
+                        snapshot: snapshot_h.clone(),
+                        registry: registry_alias.clone(),
+                        source_selector: format!("commit:{commit_h}"),
+                        resolved_ref: None,
+                        exports_hash: None,
+                        environment_fingerprint: None,
+                    },
+                );
+                lock.artifacts.insert(
+                    format!("bridge.{dep}.provenance_root"),
+                    provenance_root.clone(),
+                );
+                lock.artifacts.insert(
+                    format!("bridge.{dep}.conversion_evidence"),
+                    conversion_evidence.clone(),
+                );
+                lock.artifacts
+                    .insert(format!("bridge.{dep}.attestation"), attestation_h.clone());
+                lock.artifacts
+                    .insert(format!("bridge.{dep}.commit"), commit_h.clone());
+                let lock_bytes = lock.to_toml_canonical();
+                let lock_hash = blake3::hash(lock_bytes.as_bytes()).to_hex().to_string();
+                let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/caps/path-escape",
+                            format!("{e}"),
+                            Some(op),
+                        ));
+                    }
+                };
+                if let Err(e) = atomic_write_text(&lock_write_path, lock_bytes.as_bytes()) {
+                    return Ok(mk_error(
+                        error_tok,
+                        "core/pkg/io-error",
+                        e.to_string(),
+                        Some(op),
+                    ));
+                }
+                lock_h = Some(lock_hash);
+            }
+
+            let mut out = BTreeMap::new();
+            out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+            out.insert(TermOrdKey(Term::symbol(":ecosystem")), Term::Str(ecosystem));
+            out.insert(TermOrdKey(Term::symbol(":name")), Term::Str(name));
+            out.insert(TermOrdKey(Term::symbol(":version")), Term::Str(version));
+            out.insert(TermOrdKey(Term::symbol(":source")), Term::Str(source));
+            out.insert(
+                TermOrdKey(Term::symbol(":source-hash")),
+                Term::Str(source_hash),
+            );
+            out.insert(
+                TermOrdKey(Term::symbol(":provenance-root")),
+                Term::Str(provenance_root),
+            );
+            out.insert(
+                TermOrdKey(Term::symbol(":conversion-evidence")),
+                Term::Str(conversion_evidence),
+            );
+            out.insert(TermOrdKey(Term::symbol(":snapshot")), Term::Str(snapshot_h));
+            out.insert(TermOrdKey(Term::symbol(":patch")), Term::Str(patch_h));
+            out.insert(
+                TermOrdKey(Term::symbol(":attestation")),
+                Term::Str(attestation_h),
+            );
+            out.insert(TermOrdKey(Term::symbol(":commit")), Term::Str(commit_h));
+            out.insert(
+                TermOrdKey(Term::symbol(":dep-name")),
+                dep_name.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            out.insert(
+                TermOrdKey(Term::symbol(":registry")),
+                registry_alias.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            out.insert(
+                TermOrdKey(Term::symbol(":lock-h")),
+                lock_h.map(Term::Str).unwrap_or(Term::Nil),
+            );
+            Ok(Value::Data(Term::Map(out)))
+        }
         _ => Ok(mk_error(
             error_tok,
             "core/caps/unknown-op-eff",

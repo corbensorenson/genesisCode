@@ -134,6 +134,7 @@ fn gcpm_cli_schema_registry_covers_all_stable_command_kinds() {
         "genesis/pkg-export-v0.1",
         "genesis/pkg-import-v0.1",
         "genesis/pkg-publish-v0.1",
+        "genesis/pkg-bridge-v0.1",
         "genesis/pkg-migrate-v0.1",
         "genesis/pkg-env-v0.1",
     ];

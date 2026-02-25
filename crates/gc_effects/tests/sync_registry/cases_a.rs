@@ -610,3 +610,172 @@ fn pkg_publish_enforces_obligation_bound_evidence_kinds() {
     );
     assert_eq!(reg.ref_get("refs/heads/main"), Some(commit_ok_hex));
 }
+
+#[test]
+fn pkg_bridge_creates_signed_commit_and_updates_lock() {
+    let td = tempfile::tempdir().unwrap();
+    let workspace_dir = td.path().join("workspace");
+    std::fs::create_dir_all(&workspace_dir).unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
+
+    let lock_path = workspace_dir.join("genesis.lock");
+    let lock = gc_pkg::GenesisLock::empty("workspace");
+    std::fs::write(&lock_path, lock.to_toml_canonical()).unwrap();
+
+    let payload = parse_term(
+        r#"{
+          :ecosystem "crates"
+          :name "serde"
+          :version "1.0.217"
+          :source "serde@1.0.217"
+          :source-hash "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          :key-id "mirror-key"
+          :public-key "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+          :lock "genesis.lock"
+          :dep-name "serde"
+          :registry "upstream"
+        }"#,
+    )
+    .unwrap();
+    let (forms, h) = mk_prog("core/pkg-low::bridge", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(
+        !matches!(r.value, Value::Sealed { .. }),
+        "bridge returned error: {}",
+        r.value.debug_repr()
+    );
+
+    let Term::Map(mm) = r.value.to_term_for_log(None) else {
+        panic!("bridge result should be a map");
+    };
+    let get_str = |key: &str| -> String {
+        let Some(Term::Str(value)) = mm.get(&TermOrdKey(Term::symbol(key))) else {
+            panic!("bridge result missing {key}");
+        };
+        value.clone()
+    };
+
+    let commit_h = get_str(":commit");
+    let snapshot_h = get_str(":snapshot");
+    let provenance_root = get_str(":provenance-root");
+    let conversion_evidence = get_str(":conversion-evidence");
+    let attestation_h = get_str(":attestation");
+    let lock_h = get_str(":lock-h");
+    assert_eq!(commit_h.len(), 64);
+    assert_eq!(snapshot_h.len(), 64);
+    assert_eq!(provenance_root.len(), 64);
+    assert_eq!(conversion_evidence.len(), 64);
+    assert_eq!(attestation_h.len(), 64);
+    assert_eq!(lock_h.len(), 64);
+
+    let store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let commit_bytes = store.get_bytes(&commit_h).unwrap();
+    let commit_t = parse_term(&String::from_utf8(commit_bytes).unwrap()).unwrap();
+    let Term::Map(commit_mm) = commit_t else {
+        panic!("commit should be a map");
+    };
+    assert_eq!(
+        commit_mm.get(&TermOrdKey(Term::symbol(":result"))),
+        Some(&Term::Str(snapshot_h.clone()))
+    );
+    assert_eq!(
+        commit_mm.get(&TermOrdKey(Term::symbol(":evidence"))),
+        Some(&Term::Vector(vec![Term::Str(conversion_evidence.clone())]))
+    );
+    assert_eq!(
+        commit_mm.get(&TermOrdKey(Term::symbol(":attestations"))),
+        Some(&Term::Vector(vec![Term::Str(attestation_h.clone())]))
+    );
+
+    let snapshot_bytes = store.get_bytes(&snapshot_h).unwrap();
+    let snapshot_t = parse_term(&String::from_utf8(snapshot_bytes).unwrap()).unwrap();
+    let Term::Map(snapshot_mm) = snapshot_t else {
+        panic!("snapshot should be a map");
+    };
+    assert_eq!(
+        snapshot_mm.get(&TermOrdKey(Term::symbol(":pkg/name"))),
+        Some(&Term::Str("serde".to_string()))
+    );
+    let Some(Term::Map(meta_mm)) = snapshot_mm.get(&TermOrdKey(Term::symbol(":meta"))) else {
+        panic!("snapshot meta should be a map");
+    };
+    assert_eq!(
+        meta_mm.get(&TermOrdKey(Term::symbol(":bridge/provenance-root"))),
+        Some(&Term::Str(provenance_root.clone()))
+    );
+
+    let lock_after = gc_pkg::GenesisLock::load(&lock_path).unwrap();
+    let req = lock_after
+        .requirements
+        .get("serde")
+        .expect("missing serde requirement");
+    assert_eq!(req.selector, format!("commit:{commit_h}"));
+    assert_eq!(req.update_policy, gc_pkg::UpdatePolicy::Manual);
+    assert_eq!(req.strategy, gc_pkg::ResolutionStrategy::Pinned);
+    assert_eq!(req.registry.as_deref(), Some("upstream"));
+    let locked = lock_after
+        .locked
+        .get("serde")
+        .expect("missing locked serde");
+    assert_eq!(locked.commit.as_deref(), Some(commit_h.as_str()));
+    assert_eq!(locked.snapshot, snapshot_h);
+    assert_eq!(locked.registry.as_deref(), Some("upstream"));
+    assert_eq!(locked.source_selector, format!("commit:{commit_h}"));
+    assert_eq!(
+        lock_after.artifacts.get("bridge.serde.provenance_root"),
+        Some(&provenance_root)
+    );
+    assert_eq!(
+        lock_after.artifacts.get("bridge.serde.conversion_evidence"),
+        Some(&conversion_evidence)
+    );
+    assert_eq!(
+        lock_after.artifacts.get("bridge.serde.attestation"),
+        Some(&attestation_h)
+    );
+    assert_eq!(
+        lock_after.artifacts.get("bridge.serde.commit"),
+        Some(&commit_h)
+    );
+    let expected_lock_h = blake3::hash(lock_after.to_toml_canonical().as_bytes())
+        .to_hex()
+        .to_string();
+    assert_eq!(lock_h, expected_lock_h);
+}
+
+#[test]
+fn pkg_bridge_rejects_lock_without_dep_name() {
+    let td = tempfile::tempdir().unwrap();
+    let workspace_dir = td.path().join("workspace");
+    std::fs::create_dir_all(&workspace_dir).unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
+
+    let payload = parse_term(
+        r#"{
+          :ecosystem "crates"
+          :name "serde"
+          :version "1.0.217"
+          :source "serde@1.0.217"
+          :source-hash "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          :key-id "mirror-key"
+          :public-key "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+          :lock "genesis.lock"
+        }"#,
+    )
+    .unwrap();
+    let (forms, h) = mk_prog("core/pkg-low::bridge", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
+    assert!(is_sealed_error(&ctx, &r.value, "core/pkg/bad-payload"));
+}

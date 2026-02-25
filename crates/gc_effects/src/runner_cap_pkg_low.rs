@@ -69,7 +69,10 @@ pub(super) fn capability_pkg_low(
             _timeout_ms,
         );
     }
-    if matches!(op_eff, "core/pkg-low::snapshot" | "core/pkg-low::publish") {
+    if matches!(
+        op_eff,
+        "core/pkg-low::snapshot" | "core/pkg-low::publish" | "core/pkg-low::bridge"
+    ) {
         return dispatch_publish::dispatch_publish(
             op_eff,
             payload,

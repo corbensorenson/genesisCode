@@ -67,6 +67,28 @@ pub(crate) fn build_pkg_ai_report(
             *depth,
             commit.as_deref(),
         )),
+        PkgCmd::Bridge {
+            ecosystem,
+            name,
+            version,
+            source,
+            source_hash,
+            lock,
+            dep_name,
+            registry,
+            ..
+        } => Some(build_bridge_report(
+            value,
+            caps,
+            ecosystem,
+            name,
+            version,
+            source,
+            source_hash,
+            lock.as_deref(),
+            dep_name.as_deref(),
+            registry.as_deref(),
+        )),
         _ => None,
     }
 }
@@ -460,6 +482,59 @@ fn build_publish_report(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+fn build_bridge_report(
+    value: &Value,
+    caps: &Path,
+    ecosystem: &str,
+    name: &str,
+    version: &str,
+    source: &str,
+    source_hash: &str,
+    lock: Option<&Path>,
+    dep_name: Option<&str>,
+    registry: Option<&str>,
+) -> serde_json::Value {
+    let commit = map_get_str(value, ":commit");
+    let snapshot = map_get_str(value, ":snapshot");
+    let provenance_root = map_get_str(value, ":provenance-root");
+    let evidence = map_get_str(value, ":conversion-evidence");
+    let attestation = map_get_str(value, ":attestation");
+    serde_json::json!({
+        "schema": "genesis/pkg-bridge-report-v0.1",
+        "workflow": "bridge",
+        "changed": commit.is_some(),
+        "ecosystem": ecosystem,
+        "name": name,
+        "version": version,
+        "source": source,
+        "source_hash": source_hash,
+        "commit": commit,
+        "snapshot": snapshot,
+        "provenance_root": provenance_root,
+        "conversion_evidence": evidence,
+        "attestation": attestation,
+        "lock": lock.map(|p| p.display().to_string()),
+        "dep_name": dep_name,
+        "registry": registry,
+        "why": "transformed external package coordinate into deterministic signed GenesisPkg commit/snapshot artifacts with replayable conversion evidence",
+        "fix_options": [
+            {
+                "id": "verify-lock",
+                "command": lock
+                    .map(|p| format!("genesis gcpm --caps {} verify --lock {}", caps.display(), p.display()))
+                    .unwrap_or_else(|| format!("genesis gcpm --caps {} verify --lock genesis.lock", caps.display())),
+                "why": "verify pinned lock closure after bridge conversion"
+            },
+            {
+                "id": "publish-bridge",
+                "command": "genesis gcpm --caps <caps> publish --remote <remote> --ref refs/heads/main --policy <policy-h> --commit <bridge-commit-h>".to_string(),
+                "why": "promote mirrored artifact lineage into registry refs after policy review"
+            }
+        ]
+    })
+}
+
 fn map_get_str(value: &Value, key: &str) -> Option<String> {
     let term = value.to_term_for_log(None);
     let Term::Map(m) = term else {
@@ -653,6 +728,21 @@ mod tests {
                     hydrate: false,
                 },
                 "genesis/pkg-env-report-v0.1",
+            ),
+            (
+                PkgCmd::Bridge {
+                    ecosystem: "crates".to_string(),
+                    name: "serde".to_string(),
+                    version: "1.0.0".to_string(),
+                    source: "serde@1.0.0".to_string(),
+                    source_hash: "a".repeat(64),
+                    key_id: "mirror-key".to_string(),
+                    public_key: "b".repeat(64),
+                    lock: Some(PathBuf::from("genesis.lock")),
+                    dep_name: Some("serde".to_string()),
+                    registry: Some("default".to_string()),
+                },
+                "genesis/pkg-bridge-report-v0.1",
             ),
         ];
 

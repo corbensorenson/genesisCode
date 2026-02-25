@@ -228,3 +228,98 @@ pub(crate) fn payload_pkg_publish_commit(payload: &Term) -> Result<Option<String
         )),
     }
 }
+
+fn payload_pkg_bridge_required_string(payload: &Term, key: &str) -> Result<String, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(key))) {
+        Some(Term::Str(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                Err(format!("{key} must not be empty"))
+            } else {
+                Ok(trimmed.to_string())
+            }
+        }
+        _ => Err(format!("missing {key} string")),
+    }
+}
+
+fn is_hex_len(s: &str, len: usize) -> bool {
+    s.len() == len && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
+}
+
+pub(crate) fn payload_pkg_bridge_ecosystem(payload: &Term) -> Result<String, String> {
+    payload_pkg_bridge_required_string(payload, ":ecosystem")
+}
+
+pub(crate) fn payload_pkg_bridge_version(payload: &Term) -> Result<String, String> {
+    payload_pkg_bridge_required_string(payload, ":version")
+}
+
+pub(crate) fn payload_pkg_bridge_source(payload: &Term) -> Result<String, String> {
+    payload_pkg_bridge_required_string(payload, ":source")
+}
+
+pub(crate) fn payload_pkg_bridge_source_hash(payload: &Term) -> Result<String, String> {
+    let h = payload_pkg_bridge_required_string(payload, ":source-hash")?;
+    if !is_hex_len(&h, 64) {
+        return Err(":source-hash must be 64-hex".to_string());
+    }
+    Ok(h.to_ascii_lowercase())
+}
+
+pub(crate) fn payload_pkg_bridge_key_id(payload: &Term) -> Result<String, String> {
+    payload_pkg_bridge_required_string(payload, ":key-id")
+}
+
+pub(crate) fn payload_pkg_bridge_public_key(payload: &Term) -> Result<String, String> {
+    let pk = payload_pkg_bridge_required_string(payload, ":public-key")?;
+    if !is_hex_len(&pk, 64) {
+        return Err(":public-key must be 64-hex".to_string());
+    }
+    Ok(pk.to_ascii_lowercase())
+}
+
+pub(crate) fn payload_pkg_bridge_lock(payload: &Term) -> Result<Option<String>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":lock"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                Err(":lock must not be empty when provided".to_string())
+            } else {
+                Ok(Some(trimmed.to_string()))
+            }
+        }
+        Some(other) => Err(format!(
+            ":lock must be string or nil, got {}",
+            print_term(other)
+        )),
+    }
+}
+
+pub(crate) fn payload_pkg_bridge_dep_name(payload: &Term) -> Result<Option<String>, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
+    match m.get(&TermOrdKey(Term::symbol(":dep-name"))) {
+        None | Some(Term::Nil) => Ok(None),
+        Some(Term::Str(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                Err(":dep-name must not be empty when provided".to_string())
+            } else {
+                Ok(Some(trimmed.to_string()))
+            }
+        }
+        Some(other) => Err(format!(
+            ":dep-name must be string or nil, got {}",
+            print_term(other)
+        )),
+    }
+}

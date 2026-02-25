@@ -211,6 +211,8 @@ CI strict selfhost gates:
   - `genesis gcpm env --profile <dev|ci|release> [--runtime-backend <headless|gpu|gfx|backend|profile-*>] [--hydrate]` realizes deterministic profile artifacts under `.genesis/env/<profile-hash>/`,
     including profile/workspace/lock/caps/dependency/member state required for reproducible workspace execution.
     - `--hydrate` fetches missing locked artifacts deterministically through policy-gated `core/store::get` before materialization.
+  - `genesis gcpm bridge --ecosystem <crates|npm|pypi|...> --name <pkg> --version <version> --source <coordinate> --source-hash <hex64> --key-id <key-id> --public-key <hex64> [--lock <path>] [--dep-name <name>] [--registry <alias>]`
+    converts external ecosystem coordinates into signed GenesisPkg commit/snapshot artifacts, emits replayable conversion evidence, and can pin mirrored provenance/evidence into a lock file.
   - `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]` runs a closed-loop propose/optimize/validate/apply flow and only promotes rewrites when `core/obligation::translation-validation` and package obligations succeed.
   - `genesis gcpm profile-runtime [--out <path>] [--history <path>] [--min-history <n>] [--max-regression-percent <n>] [--no-history-append] [--task-budget-us <n>] [--io-budget-us <n>] [--memory-budget-us <n>]`
     emits deterministic non-gfx runtime profile artifacts (`:task-scheduler`, `:io-store-cycle`, `:memory-pressure`) and enforces absolute + p95 regression budgets in fail-closed mode.
@@ -232,7 +234,7 @@ CI strict selfhost gates:
     - `docs/spec/GCPM_BUNDLE_v0.1.md`
   - Assurance evidence schemas: `docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`.
   - JSON output for `test` includes `data.kernel_eval_backend_default = "compiled"`.
-- `genesis gcpm add|remove|lock|update|run|build|install|verify|doctor|env|publish|self-optimize --json` emit deterministic AI workflow reports under `data.report`.
+- `genesis gcpm add|remove|lock|update|run|build|install|verify|doctor|env|publish|bridge|self-optimize --json` emit deterministic AI workflow reports under `data.report`.
   - See `docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md`.
 - `genesis gcpm --json` emits prompt-safe deterministic telemetry under `data.telemetry`.
   - See `docs/spec/GCPM_JSON_SCHEMAS_v0.1.md`.

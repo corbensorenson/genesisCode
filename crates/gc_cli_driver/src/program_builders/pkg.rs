@@ -426,6 +426,87 @@ pub(crate) fn mk_pkg_publish_program(
     ]
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn mk_pkg_bridge_program(
+    ecosystem: &str,
+    name: &str,
+    version: &str,
+    source: &str,
+    source_hash: &str,
+    key_id: &str,
+    public_key: &str,
+    lock: Option<&Path>,
+    dep_name: Option<&str>,
+    registry: Option<&str>,
+) -> Vec<Term> {
+    let op = Term::list(vec![
+        Term::symbol("quote"),
+        Term::symbol("core/pkg-low::bridge"),
+    ]);
+    let mut payload = std::collections::BTreeMap::new();
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":ecosystem")),
+        Term::Str(ecosystem.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":name")),
+        Term::Str(name.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":version")),
+        Term::Str(version.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":source")),
+        Term::Str(source.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":source-hash")),
+        Term::Str(source_hash.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":key-id")),
+        Term::Str(key_id.to_string()),
+    );
+    payload.insert(
+        gc_coreform::TermOrdKey(Term::symbol(":public-key")),
+        Term::Str(public_key.to_string()),
+    );
+    if let Some(lock_path) = lock {
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":lock")),
+            Term::Str(lock_path.display().to_string()),
+        );
+    }
+    if let Some(dep) = dep_name {
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":dep-name")),
+            Term::Str(dep.to_string()),
+        );
+    }
+    if let Some(registry_alias) = registry {
+        payload.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":registry")),
+            Term::Str(registry_alias.to_string()),
+        );
+    }
+    let k = Term::list(vec![
+        Term::symbol("fn"),
+        Term::list(vec![Term::symbol("r")]),
+        Term::list(vec![Term::symbol("core/effect::pure"), Term::symbol("r")]),
+    ]);
+    let perform = Term::list(vec![
+        Term::symbol("core/effect::perform"),
+        op,
+        Term::Map(payload),
+        k,
+    ]);
+    vec![
+        Term::list(vec![Term::symbol("def"), Term::symbol("prog"), perform]),
+        Term::symbol("prog"),
+    ]
+}
+
 pub(crate) fn mk_gpk_export_program(
     root: &str,
     out: &Path,
