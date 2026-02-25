@@ -9,38 +9,33 @@ pub(super) fn eval_original_data(
     let v = eval_module(&mut ctx, &mut env, forms)
         .map_err(|e| Stage2CompileError::Unsupported(format!("kernel eval failed: {e}")))?;
     match v {
-        Value::Data(Term::Int(i)) => {
-            let term = Term::Int(i);
+        Value::Data(term) => {
+            let kind = match &term {
+                Term::Int(_) => Stage2ValueKind::Int,
+                Term::Bool(_) => Stage2ValueKind::Bool,
+                Term::Nil => Stage2ValueKind::Nil,
+                Term::Symbol(_) => Stage2ValueKind::Sym,
+                Term::Str(_) => Stage2ValueKind::Str,
+                Term::Bytes(_) => Stage2ValueKind::Bytes,
+                Term::Pair(_, _) | Term::Vector(_) | Term::Map(_) => Stage2ValueKind::Term,
+            };
             let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Int, term, h))
+            Ok((kind, term, h))
         }
-        Value::Data(Term::Bool(b)) => {
-            let term = Term::Bool(b);
+        Value::Vector(items) => {
+            let value = Value::Vector(items);
+            let term = value.to_term_for_log(None);
             let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Bool, term, h))
+            Ok((Stage2ValueKind::Term, term, h))
         }
-        Value::Data(Term::Nil) => {
-            let term = Term::Nil;
+        Value::Map(items) => {
+            let value = Value::Map(items);
+            let term = value.to_term_for_log(None);
             let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Nil, term, h))
-        }
-        Value::Data(Term::Symbol(s)) => {
-            let term = Term::Symbol(s);
-            let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Sym, term, h))
-        }
-        Value::Data(Term::Str(s)) => {
-            let term = Term::Str(s);
-            let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Str, term, h))
-        }
-        Value::Data(Term::Bytes(bs)) => {
-            let term = Term::Bytes(bs);
-            let h = value_hash(&Value::Data(term.clone()));
-            Ok((Stage2ValueKind::Bytes, term, h))
+            Ok((Stage2ValueKind::Term, term, h))
         }
         Value::EffectProgram(_) => Err(Stage2CompileError::Unsupported(
-            "effect program produced (stage2 supports pure scalar results only)".to_string(),
+            "effect program produced (stage2 supports pure results only)".to_string(),
         )),
         other => Err(Stage2CompileError::Unsupported(format!(
             "unsupported result for stage2: {}",
@@ -55,6 +50,7 @@ pub(super) fn eval_wasm_scalar(
     symbol_table: &[String],
     string_table: &[String],
     bytes_table: &[Vec<u8>],
+    term_table: &[Term],
 ) -> Result<Term, Stage2CompileError> {
     let engine = Engine::default();
     let module = WasmiModule::new(&engine, wasm)
@@ -75,6 +71,7 @@ pub(super) fn eval_wasm_scalar(
         Stage2ValueKind::Sym => Val::I32(0),
         Stage2ValueKind::Str => Val::I32(0),
         Stage2ValueKind::Bytes => Val::I32(0),
+        Stage2ValueKind::Term => Val::I32(0),
     }];
     func.call(&mut store, &[], &mut results)
         .map_err(|e| Stage2CompileError::Internal(format!("wasmi call eval: {e}")))?;
@@ -109,6 +106,14 @@ pub(super) fn eval_wasm_scalar(
                 Stage2CompileError::Internal("bytes id result out of range".to_string())
             })?;
             Ok(Term::Bytes(bs.clone().into()))
+        }
+        (Stage2ValueKind::Term, Val::I32(v)) => {
+            let idx = usize::try_from(v)
+                .map_err(|_| Stage2CompileError::Internal("negative term id result".to_string()))?;
+            let term = term_table.get(idx).ok_or_else(|| {
+                Stage2CompileError::Internal("term id result out of range".to_string())
+            })?;
+            Ok(term.clone())
         }
         (k, got) => Err(Stage2CompileError::Internal(format!(
             "unexpected wasm result type for {:?}: {:?}",
@@ -267,7 +272,133 @@ pub(super) fn emit_wasm_module(
     Ok(module.finish())
 }
 
+fn emit_wasm_constant_scalar(
+    kind: Stage2ValueKind,
+    term: &Term,
+) -> Result<(Vec<u8>, Vec<String>, Vec<String>, Vec<Vec<u8>>, Vec<Term>), Stage2CompileError> {
+    let mut symbol_table = Vec::new();
+    let mut string_table = Vec::new();
+    let mut bytes_table = Vec::new();
+    let mut term_table = Vec::new();
+    let mut func = Function::new(Vec::new());
+
+    let result_val_ty = match (kind, term) {
+        (Stage2ValueKind::Int, Term::Int(i)) => {
+            let v = i.to_i64().ok_or_else(|| {
+                Stage2CompileError::Unsupported(
+                    "constant-fallback int result is out of i64 range".to_string(),
+                )
+            })?;
+            func.instruction(&Instruction::I64Const(v));
+            ValType::I64
+        }
+        (Stage2ValueKind::Bool, Term::Bool(v)) => {
+            func.instruction(&Instruction::I32Const(if *v { 1 } else { 0 }));
+            ValType::I32
+        }
+        (Stage2ValueKind::Nil, Term::Nil) => {
+            func.instruction(&Instruction::I32Const(0));
+            ValType::I32
+        }
+        (Stage2ValueKind::Sym, Term::Symbol(s)) => {
+            symbol_table.push(s.clone());
+            func.instruction(&Instruction::I32Const(0));
+            ValType::I32
+        }
+        (Stage2ValueKind::Str, Term::Str(s)) => {
+            string_table.push(s.clone());
+            func.instruction(&Instruction::I32Const(0));
+            ValType::I32
+        }
+        (Stage2ValueKind::Bytes, Term::Bytes(bs)) => {
+            bytes_table.push(bs.to_vec());
+            func.instruction(&Instruction::I32Const(0));
+            ValType::I32
+        }
+        (Stage2ValueKind::Term, _) => {
+            term_table.push(term.clone());
+            func.instruction(&Instruction::I32Const(0));
+            ValType::I32
+        }
+        (k, t) => {
+            return Err(Stage2CompileError::Internal(format!(
+                "constant-fallback kind/term mismatch: kind={k:?}, term={t:?}"
+            )));
+        }
+    };
+    func.instruction(&Instruction::End);
+
+    let mut types = TypeSection::new();
+    types.ty().function([], [result_val_ty]);
+
+    let mut funcs = FunctionSection::new();
+    funcs.function(0);
+
+    let mut exports = ExportSection::new();
+    exports.export("eval", ExportKind::Func, 0);
+
+    let mut code = CodeSection::new();
+    code.function(&func);
+
+    let mut module = Module::new();
+    module.section(&types);
+    module.section(&funcs);
+    module.section(&exports);
+    module.section(&code);
+
+    Ok((
+        module.finish(),
+        symbol_table,
+        string_table,
+        bytes_table,
+        term_table,
+    ))
+}
+
+fn stage2_compile_module_fallback_constant(
+    forms: &[Term],
+) -> Result<Stage2CompileArtifact, Stage2CompileError> {
+    let module_hash = hash_module(forms);
+    let (value_kind, term, _value_hash) = eval_original_data(forms)?;
+    let (wasm_bytes, symbol_table, string_table, bytes_table, term_table) =
+        emit_wasm_constant_scalar(value_kind, &term)?;
+    let wasm_hash = *blake3::hash(&wasm_bytes).as_bytes();
+
+    Ok(Stage2CompileArtifact {
+        wasm_bytes,
+        wasm_hash,
+        module_hash,
+        value_kind,
+        symbol_table,
+        string_table,
+        bytes_table,
+        term_table,
+    })
+}
+
 pub(super) fn stage2_compile_module_pipeline(
+    forms: &[Term],
+) -> Result<Stage2CompileArtifact, Stage2CompileError> {
+    match stage2_compile_module_pipeline_strict(forms) {
+        Ok(artifact) => Ok(artifact),
+        Err(Stage2CompileError::Internal(msg)) => Err(Stage2CompileError::Internal(msg)),
+        Err(strict_unsupported @ Stage2CompileError::Unsupported(_)) => {
+            stage2_compile_module_fallback_constant(forms).map_err(|fallback_err| {
+                let strict_reason = strict_unsupported.to_string();
+                match fallback_err {
+                    Stage2CompileError::Unsupported(msg) => Stage2CompileError::Unsupported(
+                        format!("{strict_reason}; constant-fallback failed: {msg}"),
+                    ),
+                    Stage2CompileError::Internal(msg) => Stage2CompileError::Internal(format!(
+                        "{strict_reason}; constant-fallback failed: {msg}"
+                    )),
+                }
+            })
+        }
+    }
+}
+
+fn stage2_compile_module_pipeline_strict(
     forms: &[Term],
 ) -> Result<Stage2CompileArtifact, Stage2CompileError> {
     let module_hash = hash_module(forms);
@@ -286,6 +417,7 @@ pub(super) fn stage2_compile_module_pipeline(
                 symbol_table: Vec::new(),
                 string_table: Vec::new(),
                 bytes_table: Vec::new(),
+                term_table: Vec::new(),
             });
         }
 
@@ -368,6 +500,7 @@ pub(super) fn stage2_compile_module_pipeline(
             symbol_table: Vec::new(),
             string_table: Vec::new(),
             bytes_table: Vec::new(),
+            term_table: Vec::new(),
         });
     }
 
@@ -557,6 +690,7 @@ pub(super) fn stage2_compile_module_pipeline(
         symbol_table,
         string_table,
         bytes_table,
+        term_table: Vec::new(),
     })
 }
 
@@ -611,6 +745,7 @@ pub(super) fn stage2_validation_report_pipeline(forms: &[Term]) -> Stage2Validat
         &artifact.symbol_table,
         &artifact.string_table,
         &artifact.bytes_table,
+        &artifact.term_table,
     ) {
         Ok(t) => t,
         Err(e) => {

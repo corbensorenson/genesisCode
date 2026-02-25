@@ -62,6 +62,9 @@ This gate must verify:
    - `scripts/check_gcpm_operation_contract_pack.sh`
    - `scripts/check_vcs_selfhost_contract.sh`
    - `scripts/check_selfhost_symbol_ownership.sh`
+7. Stage2 minima in `selfhost/toolchain.gc` are policy-enforced against refreshed generative corpus coverage:
+   - `.genesis/perf/agent_generative_workloads_report.json` must be `ok=true`
+   - `:stage2-requirements/:min-supported-modules` and `:min-validated-modules` must be at least `required_domains + 2`.
 
 ## Health Profile Wiring
 

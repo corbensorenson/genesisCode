@@ -43,6 +43,7 @@ pub enum Stage2ValueKind {
     Sym,
     Str,
     Bytes,
+    Term,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ pub struct Stage2CompileArtifact {
     pub symbol_table: Vec<String>,
     pub string_table: Vec<String>,
     pub bytes_table: Vec<Vec<u8>>,
+    pub term_table: Vec<Term>,
 }
 
 #[derive(Debug, Error, Clone)]

@@ -17,6 +17,7 @@ GCPM_CONTRACT_PACK_REPORT="${GENESIS_GCPM_OPERATION_CONTRACT_PACK_REPORT:-.genes
 VCS_SELFHOST_REPORT="${GENESIS_VCS_SELFHOST_CONTRACT_REPORT:-.genesis/perf/vcs_selfhost_contract_report.json}"
 SELFHOST_SYMBOL_OWNERSHIP_REPORT="${GENESIS_SELFHOST_SYMBOL_OWNERSHIP_REPORT:-.genesis/perf/selfhost_symbol_ownership_report.json}"
 SELFHOST_ARTIFACT="${GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT:-selfhost/toolchain.gc}"
+AGENT_GENERATIVE_REPORT="${GENESIS_AGENT_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_report.json}"
 
 if [[ "$REFRESH" != "0" && "$REFRESH" != "1" ]]; then
   echo "full-selfhost-cutover-profile: GENESIS_FULL_SELFHOST_CUTOVER_REFRESH must be 0 or 1" >&2
@@ -75,8 +76,12 @@ fi
   echo "full-selfhost-cutover-profile: missing selfhost toolchain artifact: $SELFHOST_ARTIFACT" >&2
   exit 1
 }
+[[ -f "$AGENT_GENERATIVE_REPORT" ]] || {
+  echo "full-selfhost-cutover-profile: missing agent generative workloads report: $AGENT_GENERATIVE_REPORT" >&2
+  exit 1
+}
 
-python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$KERNEL_TCB_REPORT" "$HOST_API_EVOLUTION_REPORT" "$GCPM_CONTRACT_PACK_REPORT" "$VCS_SELFHOST_REPORT" "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" "$SELFHOST_ARTIFACT" "$REPORT_PATH" "$HISTORY_PATH" <<'PY'
+python3 - "$ROOT_DIR" "$DOC_PATH" "$READINESS_REPORT" "$BOOTSTRAP_REPORT" "$DASHBOARD_FRESH_REPORT" "$KERNEL_TCB_REPORT" "$HOST_API_EVOLUTION_REPORT" "$GCPM_CONTRACT_PACK_REPORT" "$VCS_SELFHOST_REPORT" "$SELFHOST_SYMBOL_OWNERSHIP_REPORT" "$SELFHOST_ARTIFACT" "$AGENT_GENERATIVE_REPORT" "$REPORT_PATH" "$HISTORY_PATH" <<'PY'
 import datetime as dt
 import json
 import pathlib
@@ -94,8 +99,9 @@ gcpm_contract_path = root / sys.argv[8]
 vcs_selfhost_path = root / sys.argv[9]
 selfhost_symbol_path = root / sys.argv[10]
 selfhost_artifact_path = root / sys.argv[11]
-report_path = root / sys.argv[12]
-history_path = root / sys.argv[13]
+agent_generative_path = root / sys.argv[12]
+report_path = root / sys.argv[13]
+history_path = root / sys.argv[14]
 
 doc = doc_path.read_text(encoding="utf-8")
 
@@ -202,6 +208,29 @@ if not bool(dashboard.get("ok", False)):
         "full-selfhost-cutover-profile: dashboard freshness report is not ok"
     )
 
+agent_generative = json.loads(agent_generative_path.read_text(encoding="utf-8"))
+if agent_generative.get("kind") != "genesis/agent-generative-workloads-v0.1":
+    raise SystemExit(
+        "full-selfhost-cutover-profile: agent generative workloads report kind mismatch"
+    )
+if not bool(agent_generative.get("ok", False)):
+    raise SystemExit(
+        "full-selfhost-cutover-profile: agent generative workloads report is not ok"
+    )
+required_domains = agent_generative.get("required_domains")
+if not isinstance(required_domains, list) or not required_domains:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: agent generative workloads required_domains missing/invalid"
+    )
+if not all(isinstance(d, str) and d for d in required_domains):
+    raise SystemExit(
+        "full-selfhost-cutover-profile: agent generative workloads required_domains must be non-empty strings"
+    )
+generative_domain_count = len(set(required_domains))
+# Stage2 minima must scale with the active generative corpus surface. The +2 margin
+# reserves headroom for non-domain utility modules in the selfhost toolchain.
+generative_stage2_minimum = generative_domain_count + 2
+
 artifact_text = selfhost_artifact_path.read_text(encoding="utf-8")
 
 def parse_stage2_section(section_label: str) -> str:
@@ -250,6 +279,16 @@ if stage2_validated_modules < stage2_min_validated_modules:
 if not requirements_ok:
     raise SystemExit(
         "full-selfhost-cutover-profile: selfhost artifact stage2 requirements are not marked ok"
+    )
+if stage2_min_supported_modules < generative_stage2_minimum:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 supported minimum is below generative corpus floor "
+        f"({stage2_min_supported_modules} < {generative_stage2_minimum})"
+    )
+if stage2_min_validated_modules < generative_stage2_minimum:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 validated minimum is below generative corpus floor "
+        f"({stage2_min_validated_modules} < {generative_stage2_minimum})"
     )
 
 proof_specs = {
@@ -307,6 +346,7 @@ report_doc = {
     "bootstrap_report": bootstrap_path.relative_to(root).as_posix(),
     "dashboard_fresh_report": dashboard_path.relative_to(root).as_posix(),
     "selfhost_artifact": selfhost_artifact_path.relative_to(root).as_posix(),
+    "agent_generative_report": agent_generative_path.relative_to(root).as_posix(),
     "explicit_exceptions": [],
     "readiness_dimension_count": len(dimensions),
     "readiness_fail_reasons": [str(x) for x in fail_reasons],
@@ -315,6 +355,8 @@ report_doc = {
     "stage2_validated_modules": stage2_validated_modules,
     "stage2_min_supported_modules": stage2_min_supported_modules,
     "stage2_min_validated_modules": stage2_min_validated_modules,
+    "stage2_generative_domain_count": generative_domain_count,
+    "stage2_generative_minimum": generative_stage2_minimum,
     "stage2_requirements_ok": requirements_ok,
     "exception_proof_reports": proof_reports,
     "ok": True,
@@ -333,6 +375,8 @@ with history_path.open("a", encoding="utf-8") as fh:
                 "stage2_validated_modules": stage2_validated_modules,
                 "stage2_min_supported_modules": stage2_min_supported_modules,
                 "stage2_min_validated_modules": stage2_min_validated_modules,
+                "stage2_generative_domain_count": generative_domain_count,
+                "stage2_generative_minimum": generative_stage2_minimum,
                 "stage2_requirements_ok": requirements_ok,
                 "report": report_path.relative_to(root).as_posix(),
             },
@@ -342,6 +386,6 @@ with history_path.open("a", encoding="utf-8") as fh:
     )
 print(
     "full-selfhost-cutover-profile: ok "
-    f"(dimensions={len(dimensions)} bootstrap_status={bootstrap_status} stage2_min_supported={stage2_min_supported_modules} stage2_min_validated={stage2_min_validated_modules})"
+    f"(dimensions={len(dimensions)} bootstrap_status={bootstrap_status} stage2_min_supported={stage2_min_supported_modules} stage2_min_validated={stage2_min_validated_modules} generative_floor={generative_stage2_minimum})"
 )
 PY

@@ -290,6 +290,7 @@ pub(super) fn obligation_translation_validation(
                         Some(gc_opt::Stage2ValueKind::Sym) => Term::Symbol(":sym".to_string()),
                         Some(gc_opt::Stage2ValueKind::Str) => Term::Symbol(":str".to_string()),
                         Some(gc_opt::Stage2ValueKind::Bytes) => Term::Symbol(":bytes".to_string()),
+                        Some(gc_opt::Stage2ValueKind::Term) => Term::Symbol(":term".to_string()),
                         None => Term::Nil,
                     },
                 ),

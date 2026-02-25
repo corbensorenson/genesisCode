@@ -126,6 +126,7 @@ pub fn stage2_report_json(r: &Stage2ValidationReport) -> serde_json::Value {
             Stage2ValueKind::Sym => "sym",
             Stage2ValueKind::Str => "str",
             Stage2ValueKind::Bytes => "bytes",
+            Stage2ValueKind::Term => "term",
         }),
         "original_value_hash": r.original_value_hash.map(hex32),
         "wasm_value_hash": r.wasm_value_hash.map(hex32),

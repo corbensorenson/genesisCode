@@ -329,6 +329,40 @@ fn stage2_rejects_recursive_def_bound_function_call() {
 }
 
 #[test]
+fn stage2_validates_terminating_recursive_def_bound_function_via_constant_fallback() {
+    let src = r#"
+          (def countdown
+            (fn (x)
+              (if (prim int/lt? x 1)
+                0
+                (countdown (prim int/sub x 1)))))
+          (countdown 6)
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let r = stage2_validation_report(&forms);
+    assert!(r.supported, "{r:?}");
+    assert!(r.ok, "{r:?}");
+    assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+}
+
+#[test]
+fn stage2_validates_recursive_non_scalar_result_via_constant_fallback() {
+    let src = r#"
+          (def build
+            (fn (x)
+              (if (prim int/lt? x 1)
+                [0]
+                (prim vec/push (build (prim int/sub x 1)) x))))
+          (build 3)
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let r = stage2_validation_report(&forms);
+    assert!(r.supported, "{r:?}");
+    assert!(r.ok, "{r:?}");
+    assert_eq!(r.value_kind, Some(Stage2ValueKind::Term));
+}
+
+#[test]
 fn stage2_validates_curried_core_int_wrapper_calls() {
     let src = r#"
           (def x ((core/int::add 40) 2))

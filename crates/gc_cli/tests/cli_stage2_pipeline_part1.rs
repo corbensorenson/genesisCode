@@ -127,6 +127,72 @@ fn eval_stage2_gate_uses_stage1_transformed_input_for_stage2_report() {
 }
 
 #[test]
+fn eval_stage2_gate_accepts_terminating_recursive_module_via_fallback_lowering() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("recursive_fallback.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def countdown
+            (fn (x)
+              (if (prim int/lt? x 1)
+                0
+                (countdown (prim int/sub x 1)))))
+          (countdown 6)
+        "#,
+    )
+    .unwrap();
+
+    let out = genesis_cmd()
+        .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["value_kind"].as_str(), Some("int"), "{v}");
+    assert_eq!(v["data"]["value"].as_str(), Some("0"), "{v}");
+}
+
+#[test]
+fn eval_stage2_gate_accepts_recursive_non_scalar_module_via_fallback_lowering() {
+    let dir = tempdir().unwrap();
+    let file = dir.path().join("recursive_vector_fallback.gc");
+    std::fs::write(
+        &file,
+        r#"
+          (def build
+            (fn (x)
+              (if (prim int/lt? x 1)
+                [0]
+                (prim vec/push (build (prim int/sub x 1)) x))))
+          (build 3)
+        "#,
+    )
+    .unwrap();
+
+    let out = genesis_cmd()
+        .args(["--json", "eval", file.to_str().unwrap(), "--stage2-gate"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: JsonValue = serde_json::from_slice(&out).unwrap();
+    let stage2 = &v["data"]["stage2"];
+    assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["value_kind"].as_str(), Some("term"), "{v}");
+    let rendered = v["data"]["value"].as_str().expect("string value");
+    let normalized: String = rendered.chars().filter(|c| !c.is_whitespace()).collect();
+    assert_eq!(normalized, "[0123]", "{v}");
+}
+
+#[test]
 fn eval_stage2_gate_reports_string_value_kind_in_json() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("s.gc");
