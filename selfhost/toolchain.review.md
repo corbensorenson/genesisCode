@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `8e00f170156e96364d1b9be03376465733597a98735b7d09637fd50be6bfef61`
-- Freshness artifact hash: `8e00f170156e96364d1b9be03376465733597a98735b7d09637fd50be6bfef61`
-- Freshness source hash: `fd84beb25cc89f09715f2a081f1ae873d55a8cb31acbd6e90451a891c627214d`
-- Source aggregate hash (module path + module sha256): `e07e47e7019d2e69f9d0243032bde104e6fe004d517cc9f94abbcbd00fb4a0cc`
+- Artifact sha256: `2fe60d3b4890789794fefc1eb56b3bbcdf9211992ffc4d8cf12501dbd34d4851`
+- Freshness artifact hash: `2fe60d3b4890789794fefc1eb56b3bbcdf9211992ffc4d8cf12501dbd34d4851`
+- Freshness source hash: `d9c34d162f0856cbf68f94b039e85f18e20c3e6f716d7c6e64accbf6030f75c6`
+- Source aggregate hash (module path + module sha256): `baac85d67cae860be87e784d3cacc89f7fad528f5f8f5a69f6a4c4767a2843c5`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `25`
 
@@ -31,7 +31,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_coreform_vcs_pkg_v1.gc` | 465 | 22278 | 21 | `befd359a9422d577` |
 | `selfhost/cli_pkg_runtime_v1.gc` | 233 | 13168 | 8 | `7f05a6398597ecdd` |
 | `selfhost/cli_pkg_runtime_updates_v1.gc` | 201 | 10219 | 8 | `d872ba3597eda520` |
-| `selfhost/cli_pkg_runtime_verify_v1.gc` | 237 | 11535 | 14 | `4673d497fcb0e2ad` |
+| `selfhost/cli_pkg_runtime_verify_v1.gc` | 243 | 11706 | 14 | `5267629fe45699a5` |
 | `selfhost/cli_pkg_ops_v1.gc` | 421 | 21222 | 21 | `7bd3d718d554a167` |
 | `selfhost/cli_reachability_v1.gc` | 398 | 14168 | 24 | `2dae442240dbd8b8` |
 | `selfhost/cli_reachability_rules_v1.gc` | 218 | 9499 | 17 | `bfc421a3bc682517` |

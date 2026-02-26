@@ -27,6 +27,8 @@ AGENT_INNER_LOOP_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_MIN_HISTORY:-5}"
 AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY:-1}"
 TEST_GATE_OVERRIDE="${GENESIS_HEALTH_TEST_GATE_OVERRIDE:-}"
 HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_plan_health_profile_report.json}"
+HEALTH_PROFILE_HISTORY="${GENESIS_HEALTH_PROFILE_HISTORY:-.genesis/perf/upgrade_plan_health_profile_history.jsonl}"
+HEALTH_PROFILE_MIN_HISTORY="${GENESIS_HEALTH_PROFILE_MIN_HISTORY:-5}"
 # prepush-standard includes end-to-end agent/runtime/perf conformance lanes with
 # selfhost-strict compilation + microbench suites; keep a bounded default that
 # reflects full strict scope on clean runs.
@@ -477,10 +479,13 @@ write_health_profile_report() {
   local budget_ms="$5"
   local ok="$6"
   local report_path="$7"
+  local history_path="$8"
+  local min_history="$9"
 
-  python3 - "$profile" "$configured_shards" "$gate_count" "$elapsed_ms" "$budget_ms" "$ok" "$report_path" <<'PY'
+  python3 - "$profile" "$configured_shards" "$gate_count" "$elapsed_ms" "$budget_ms" "$ok" "$report_path" "$history_path" "$min_history" <<'PY'
 import json
 import pathlib
+import math
 import sys
 
 profile = sys.argv[1]
@@ -490,6 +495,8 @@ elapsed_ms = int(sys.argv[4])
 budget_ms_raw = sys.argv[5].strip()
 ok = sys.argv[6].strip() == "1"
 report_path = pathlib.Path(sys.argv[7])
+history_path = pathlib.Path(sys.argv[8])
+min_history = int(sys.argv[9])
 budget_ms = int(budget_ms_raw) if budget_ms_raw else None
 
 doc = {
@@ -501,6 +508,70 @@ doc = {
     "budget_ms": budget_ms,
     "ok": ok,
 }
+history_path.parent.mkdir(parents=True, exist_ok=True)
+history_rows = []
+if history_path.is_file():
+    for raw in history_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(row, dict)
+            and row.get("kind") == "genesis/upgrade-plan-health-profile-v0.1"
+            and row.get("profile") == profile
+            and isinstance(row.get("elapsed_ms"), int)
+            and ((budget_ms is None) or int(row.get("budget_ms", -1)) == budget_ms)
+        ):
+            history_rows.append(row)
+
+history_entry = {
+    "kind": "genesis/upgrade-plan-health-profile-v0.1",
+    "profile": profile,
+    "elapsed_ms": elapsed_ms,
+    "budget_ms": budget_ms,
+}
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(json.dumps(history_entry, sort_keys=True) + "\n")
+
+elapsed_samples = sorted([int(row["elapsed_ms"]) for row in history_rows] + [elapsed_ms])
+p95_idx = max(0, math.ceil(0.95 * len(elapsed_samples)) - 1)
+history_p95_ms = elapsed_samples[p95_idx]
+history_samples = len(elapsed_samples)
+history_p95_enforced = history_samples >= min_history
+history_p95_ok = (not history_p95_enforced) or (budget_ms is None) or (history_p95_ms <= budget_ms)
+
+elapsed_fail = (budget_ms is not None) and (elapsed_ms > budget_ms)
+p95_fail = (budget_ms is not None) and history_p95_enforced and (history_p95_ms > budget_ms)
+fail_reasons = []
+if elapsed_fail:
+    fail_reasons.append("elapsed-budget")
+if p95_fail:
+    fail_reasons.append("history-p95-budget")
+
+total_checks = 2 if budget_ms is not None else 1
+passed_checks = 0
+if budget_ms is None:
+    passed_checks = 1
+else:
+    if not elapsed_fail:
+        passed_checks += 1
+    if not p95_fail:
+        passed_checks += 1
+score_percent = round((passed_checks / total_checks) * 100.0, 2)
+
+doc["history_file"] = str(history_path)
+doc["history_samples"] = history_samples
+doc["history_p95_ms"] = history_p95_ms
+doc["history_p95_enforced"] = history_p95_enforced
+doc["history_p95_ok"] = history_p95_ok
+doc["score_percent"] = score_percent
+doc["fail_reasons"] = fail_reasons
+doc["ok"] = ok and (not elapsed_fail) and (not p95_fail)
+
 if report_path.is_file():
     try:
         prev = json.loads(report_path.read_text(encoding="utf-8"))
@@ -513,6 +584,7 @@ if report_path.is_file():
             if isinstance(prev_elapsed, int):
                 doc["previous_elapsed_ms"] = prev_elapsed
                 doc["elapsed_delta_ms"] = elapsed_ms - prev_elapsed
+                doc["wall_time_trend_ms"] = doc["elapsed_delta_ms"]
     except Exception:
         pass
 report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -979,6 +1051,10 @@ if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" != "0" && "$AGENT_INNER_LOOP_REQUI
   echo "upgrade-plan-health: GENESIS_HEALTH_AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
   exit 2
 fi
+if [[ ! "$HEALTH_PROFILE_MIN_HISTORY" =~ ^[0-9]+$ || "$HEALTH_PROFILE_MIN_HISTORY" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_PROFILE_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
 
 DEFAULT_HEALTH_SHARDS="$(default_health_shards_for_profile "$PROFILE")"
 HEALTH_SHARDS="${GENESIS_HEALTH_SHARDS:-$DEFAULT_HEALTH_SHARDS}"
@@ -1127,7 +1203,9 @@ if [[ "$declared_open" -gt 0 ]]; then
       "$elapsed_ms" \
       "$mandatory_budget" \
       "$mandatory_ok" \
-      "$HEALTH_PROFILE_REPORT"
+      "$HEALTH_PROFILE_REPORT" \
+      "$HEALTH_PROFILE_HISTORY" \
+      "$HEALTH_PROFILE_MIN_HISTORY"
     echo "upgrade-plan-health: mandatory-local elapsed_ms=${elapsed_ms} gate_count=${gate_count}"
     if (( mandatory_ok == 0 )); then
       echo "upgrade-plan-health: dev-fast mandatory-local wall-time exceeded budget (${elapsed_ms}ms > ${DEV_FAST_PROFILE_WALL_BUDGET_MS}ms)" >&2
@@ -1414,7 +1492,9 @@ else
     "$elapsed_ms" \
     "$profile_budget" \
     "$profile_ok" \
-    "$HEALTH_PROFILE_REPORT"
+    "$HEALTH_PROFILE_REPORT" \
+    "$HEALTH_PROFILE_HISTORY" \
+    "$HEALTH_PROFILE_MIN_HISTORY"
 fi
 
 if (( profile_ok == 0 )); then

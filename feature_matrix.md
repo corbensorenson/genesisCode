@@ -21,24 +21,24 @@ Legend:
 | Obligation/evidence/attestation-gated publish + ref updates | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Native + WASI + wasm-host runtime surfaces | ⚠️ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ |
 | Selfhost frontend default in production CLIs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Selfhost readiness scorecard + cutover profile | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Full selfhost cutover profile + readiness scorecard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Strict no-production Rust semantic fallback guard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| CLI + GCPM machine-readable JSON contracts | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ |
+| CLI + GCPM JSON schema contracts for agent automation | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ |
 | Agent index + skill-pack conformance contracts | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Domain starter registry for agent workflows | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Domain starter registry for agent workflows (27 domains) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Agent generative workload parity gates (native vs WASI) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Large-workspace (>=10k module) perf lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Large-workspace agent iteration SLO lane (>=10k modules) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Concurrency/task replay stress lane | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
-| GPU compute surface independent from gfx API | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute capability independent of graphics surface | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Graphics/window/input/audio capability families | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Browser + XR capability families | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| XR and browser runtime capability families | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | GPU/XR productization conformance lane | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Host plugin + FFI capability schemas | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
-| First-party bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| First-party backend bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Stage2 CoreForm->WASM translation-validation path | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
 | Deployment target pipeline in core toolchain | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| Assurance profile packs + standards crosswalk | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Tool qualification lineage + evidence closure support | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Assurance profile packs + standards crosswalk (DO-178C/NASA/IEC) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Tool qualification lineage + evidence closures | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | AI-first modular decomposition + boundary guards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 
 ## Competitive Positioning

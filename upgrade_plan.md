@@ -1,6 +1,6 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-02-25
+Last updated: 2026-02-26
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
@@ -49,7 +49,8 @@ Open checklist items: 11
 - [ ] P1.4 Cut full test/gate iteration time to agent-inner-loop targets without losing coverage.
   - Done when:
   - Baseline full validation runtime is reduced from current multi-minute profile to an enforced SLO with sharded execution and cache reuse.
-  - Reports in `.genesis/perf/` include stable `score_percent` and wall-time trend data for all major lanes (`large_workspace`, `health_profile`, `gauntlet`).
+  - [x] Reports in `.genesis/perf/` include stable `score_percent` and wall-time trend data for all major lanes (`large_workspace`, `health_profile`, `gauntlet`).
+  - [x] `scripts/lib/profile_runtime_budget.py`, `scripts/check_upgrade_plan_health.sh`, and `scripts/check_large_workspace_agent_perf.sh` now emit history-backed trend + p95 metadata (`history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`, delta/trend fields) for agent iteration analysis.
 
 ## Agent Productization
 

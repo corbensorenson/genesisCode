@@ -149,17 +149,50 @@ def main() -> None:
         except json.JSONDecodeError:
             previous_elapsed = None
 
+    history_samples = len(elapsed_samples)
+    history_p95_enforced = history_samples >= args.min_history
+    history_p95_ok = (not history_p95_enforced) or (p95_ms <= args.budget_ms)
+    history_min_ok = history_samples >= args.min_history
+
+    elapsed_fail = args.elapsed_ms > args.budget_ms
+    p95_fail = history_p95_enforced and p95_ms > args.budget_ms
+    min_history_fail = args.require_min_history and not history_min_ok
+
+    fail_reasons: list[str] = []
+    if elapsed_fail:
+        fail_reasons.append("elapsed-budget")
+    if p95_fail:
+        fail_reasons.append("history-p95-budget")
+    if min_history_fail:
+        fail_reasons.append("insufficient-history")
+
+    total_checks = 2 + (1 if args.require_min_history else 0)
+    passed_checks = 0
+    if not elapsed_fail:
+        passed_checks += 1
+    if not p95_fail:
+        passed_checks += 1
+    if not min_history_fail and args.require_min_history:
+        passed_checks += 1
+    score_percent = round((passed_checks / total_checks) * 100.0, 2)
+    ok = not (elapsed_fail or p95_fail or min_history_fail)
+
     report_doc = {
         "kind": args.kind,
         "profile": args.profile,
         "elapsed_ms": args.elapsed_ms,
         "budget_ms": args.budget_ms,
-        "history_samples": len(elapsed_samples),
+        "history_samples": history_samples,
         "history_p95_ms": p95_ms,
+        "history_p95_enforced": history_p95_enforced,
+        "history_p95_ok": history_p95_ok,
+        "history_min_ok": history_min_ok,
         "history_file": str(history_path),
         "baseline_history_file": str(baseline_history_path) if baseline_history_path else None,
         "baseline_history_samples": len(baseline_rows),
-        "ok": True,
+        "ok": ok,
+        "score_percent": score_percent,
+        "fail_reasons": fail_reasons,
         "timestamp_utc": now_utc,
     }
     if history_scope_key:
@@ -167,13 +200,8 @@ def main() -> None:
     if previous_elapsed is not None:
         report_doc["previous_elapsed_ms"] = previous_elapsed
         report_doc["elapsed_delta_ms"] = args.elapsed_ms - previous_elapsed
+        report_doc["wall_time_trend_ms"] = report_doc["elapsed_delta_ms"]
     report_doc.update(extra)
-
-    elapsed_fail = args.elapsed_ms > args.budget_ms
-    p95_fail = len(elapsed_samples) >= args.min_history and p95_ms > args.budget_ms
-    min_history_fail = args.require_min_history and len(elapsed_samples) < args.min_history
-    if elapsed_fail or p95_fail or min_history_fail:
-        report_doc["ok"] = False
 
     report_path.write_text(
         json.dumps(report_doc, indent=2, sort_keys=True) + "\n",

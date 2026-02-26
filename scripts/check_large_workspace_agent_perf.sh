@@ -38,6 +38,8 @@ RUNTIME_BUDGET_MS="${GENESIS_LARGE_WORKSPACE_RUNTIME_BUDGET_MS:-900000}"
 RUNTIME_MIN_HISTORY="${GENESIS_LARGE_WORKSPACE_RUNTIME_MIN_HISTORY:-5}"
 RUNTIME_REQUIRE_MIN_HISTORY="${GENESIS_LARGE_WORKSPACE_RUNTIME_REQUIRE_MIN_HISTORY:-0}"
 RUNTIME_HISTORY_SCOPE_KEY="${GENESIS_LARGE_WORKSPACE_RUNTIME_HISTORY_SCOPE_KEY:-large-workspace-v1}"
+METRICS_HISTORY="${GENESIS_LARGE_WORKSPACE_METRICS_HISTORY:-.genesis/perf/large_workspace_agent_perf_history.jsonl}"
+METRICS_MIN_HISTORY="${GENESIS_LARGE_WORKSPACE_METRICS_MIN_HISTORY:-5}"
 
 fail() {
   echo "large-workspace-agent-perf: $*" >&2
@@ -74,6 +76,7 @@ require_positive_int "GENESIS_LARGE_WORKSPACE_BUDGET_GCPM_TEST_MS" "$BUDGET_GCPM
 require_positive_int "GENESIS_LARGE_WORKSPACE_BUDGET_SELFHOST_REFRESH_MS" "$BUDGET_SELFHOST_REFRESH_MS"
 require_positive_int "GENESIS_LARGE_WORKSPACE_RUNTIME_BUDGET_MS" "$RUNTIME_BUDGET_MS"
 require_positive_int "GENESIS_LARGE_WORKSPACE_RUNTIME_MIN_HISTORY" "$RUNTIME_MIN_HISTORY"
+require_positive_int "GENESIS_LARGE_WORKSPACE_METRICS_MIN_HISTORY" "$METRICS_MIN_HISTORY"
 if [[ "$RUNTIME_REQUIRE_MIN_HISTORY" != "0" && "$RUNTIME_REQUIRE_MIN_HISTORY" != "1" ]]; then
   fail "GENESIS_LARGE_WORKSPACE_RUNTIME_REQUIRE_MIN_HISTORY must be 0 or 1"
 fi
@@ -183,28 +186,181 @@ SELFHOST_REFRESH_MS="$MEASURE_LAST_MS"
 [[ -f "$REFRESH_ARTIFACT" ]] || fail "selfhost artifact refresh did not produce $REFRESH_ARTIFACT"
 
 mkdir -p "$ROOT_DIR/.genesis/perf"
-cat > "$REPORT_OUT" <<EOF
-{
-  "kind": "genesis/large-workspace-agent-perf-v0.1",
-  "ok": true,
-  "module_count": $MODULE_COUNT,
-  "build_target": "$BUILD_TARGET",
-  "build_profile": "$CARGO_PROFILE",
-  "disk_strict_mode": "$DISK_STRICT_MODE",
-  "measure_warmups": $MEASURE_WARMUPS,
-  "measure_repeats": $MEASURE_REPEATS,
-  "gcpm_lock_ms": $GCPM_LOCK_MS,
-  "gcpm_build_ms": $GCPM_BUILD_MS,
-  "gcpm_test_ms": $GCPM_TEST_MS,
-  "selfhost_artifact_refresh_ms": $SELFHOST_REFRESH_MS,
-  "budgets": {
-    "gcpm_lock_ms": $BUDGET_GCPM_LOCK_MS,
-    "gcpm_build_ms": $BUDGET_GCPM_BUILD_MS,
-    "gcpm_test_ms": $BUDGET_GCPM_TEST_MS,
-    "selfhost_artifact_refresh_ms": $BUDGET_SELFHOST_REFRESH_MS
-  }
+python3 - \
+  "$REPORT_OUT" \
+  "$METRICS_HISTORY" \
+  "$MODULE_COUNT" \
+  "$BUILD_TARGET" \
+  "$CARGO_PROFILE" \
+  "$DISK_STRICT_MODE" \
+  "$MEASURE_WARMUPS" \
+  "$MEASURE_REPEATS" \
+  "$GCPM_LOCK_MS" \
+  "$GCPM_BUILD_MS" \
+  "$GCPM_TEST_MS" \
+  "$SELFHOST_REFRESH_MS" \
+  "$BUDGET_GCPM_LOCK_MS" \
+  "$BUDGET_GCPM_BUILD_MS" \
+  "$BUDGET_GCPM_TEST_MS" \
+  "$BUDGET_SELFHOST_REFRESH_MS" \
+  "$METRICS_MIN_HISTORY" <<'PY'
+import datetime as dt
+import json
+import math
+import pathlib
+import sys
+
+(
+    report_out,
+    metrics_history,
+    module_count,
+    build_target,
+    build_profile,
+    disk_strict_mode,
+    measure_warmups,
+    measure_repeats,
+    gcpm_lock_ms,
+    gcpm_build_ms,
+    gcpm_test_ms,
+    selfhost_refresh_ms,
+    budget_lock_ms,
+    budget_build_ms,
+    budget_test_ms,
+    budget_refresh_ms,
+    metrics_min_history,
+) = sys.argv[1:]
+
+module_count = int(module_count)
+measure_warmups = int(measure_warmups)
+measure_repeats = int(measure_repeats)
+gcpm_lock_ms = int(gcpm_lock_ms)
+gcpm_build_ms = int(gcpm_build_ms)
+gcpm_test_ms = int(gcpm_test_ms)
+selfhost_refresh_ms = int(selfhost_refresh_ms)
+budget_lock_ms = int(budget_lock_ms)
+budget_build_ms = int(budget_build_ms)
+budget_test_ms = int(budget_test_ms)
+budget_refresh_ms = int(budget_refresh_ms)
+metrics_min_history = int(metrics_min_history)
+
+report_path = pathlib.Path(report_out)
+history_path = pathlib.Path(metrics_history)
+kind = "genesis/large-workspace-agent-perf-v0.1"
+elapsed_total_ms = gcpm_lock_ms + gcpm_build_ms + gcpm_test_ms + selfhost_refresh_ms
+budget_total_ms = budget_lock_ms + budget_build_ms + budget_test_ms + budget_refresh_ms
+timestamp_utc = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+
+checks = {
+    "gcpm_lock_ms": gcpm_lock_ms <= budget_lock_ms,
+    "gcpm_build_ms": gcpm_build_ms <= budget_build_ms,
+    "gcpm_test_ms": gcpm_test_ms <= budget_test_ms,
+    "selfhost_artifact_refresh_ms": selfhost_refresh_ms <= budget_refresh_ms,
 }
-EOF
+total_checks = len(checks)
+passed_checks = sum(1 for ok in checks.values() if ok)
+score_percent = round((passed_checks / total_checks) * 100.0, 2)
+
+history_rows = []
+if history_path.is_file():
+    for raw in history_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(row, dict)
+            and row.get("kind") == kind
+            and row.get("build_target") == build_target
+            and row.get("build_profile") == build_profile
+            and int(row.get("module_count", -1)) == module_count
+            and isinstance(row.get("elapsed_total_ms"), int)
+            and int(row.get("budget_total_ms", -1)) == budget_total_ms
+        ):
+            history_rows.append(row)
+
+history_path.parent.mkdir(parents=True, exist_ok=True)
+history_entry = {
+    "kind": kind,
+    "timestamp_utc": timestamp_utc,
+    "module_count": module_count,
+    "build_target": build_target,
+    "build_profile": build_profile,
+    "elapsed_total_ms": elapsed_total_ms,
+    "budget_total_ms": budget_total_ms,
+    "score_percent": score_percent,
+    "ok": passed_checks == total_checks,
+}
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(json.dumps(history_entry, sort_keys=True) + "\n")
+
+elapsed_samples = sorted([int(row["elapsed_total_ms"]) for row in history_rows] + [elapsed_total_ms])
+history_samples = len(elapsed_samples)
+p95_idx = max(0, math.ceil(0.95 * history_samples) - 1)
+history_p95_ms = elapsed_samples[p95_idx]
+history_p95_enforced = history_samples >= metrics_min_history
+history_p95_ok = (not history_p95_enforced) or (history_p95_ms <= budget_total_ms)
+
+fail_reasons = []
+for metric, ok in checks.items():
+    if not ok:
+        fail_reasons.append(f"{metric}-budget")
+if not history_p95_ok:
+    fail_reasons.append("history-p95-budget")
+
+doc = {
+    "kind": kind,
+    "ok": (passed_checks == total_checks) and history_p95_ok,
+    "score_percent": score_percent,
+    "fail_reasons": fail_reasons,
+    "timestamp_utc": timestamp_utc,
+    "module_count": module_count,
+    "build_target": build_target,
+    "build_profile": build_profile,
+    "disk_strict_mode": disk_strict_mode,
+    "measure_warmups": measure_warmups,
+    "measure_repeats": measure_repeats,
+    "gcpm_lock_ms": gcpm_lock_ms,
+    "gcpm_build_ms": gcpm_build_ms,
+    "gcpm_test_ms": gcpm_test_ms,
+    "selfhost_artifact_refresh_ms": selfhost_refresh_ms,
+    "elapsed_total_ms": elapsed_total_ms,
+    "budget_total_ms": budget_total_ms,
+    "history_samples": history_samples,
+    "history_p95_ms": history_p95_ms,
+    "history_p95_enforced": history_p95_enforced,
+    "history_p95_ok": history_p95_ok,
+    "history_file": str(history_path),
+    "budgets": {
+        "gcpm_lock_ms": budget_lock_ms,
+        "gcpm_build_ms": budget_build_ms,
+        "gcpm_test_ms": budget_test_ms,
+        "selfhost_artifact_refresh_ms": budget_refresh_ms,
+    },
+}
+if report_path.is_file():
+    try:
+        prev = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        prev = None
+    if (
+        isinstance(prev, dict)
+        and prev.get("kind") == kind
+        and prev.get("build_target") == build_target
+        and prev.get("build_profile") == build_profile
+        and int(prev.get("module_count", -1)) == module_count
+        and isinstance(prev.get("elapsed_total_ms"), int)
+    ):
+        previous_elapsed = int(prev["elapsed_total_ms"])
+        doc["previous_elapsed_total_ms"] = previous_elapsed
+        doc["elapsed_total_delta_ms"] = elapsed_total_ms - previous_elapsed
+        doc["wall_time_trend_ms"] = doc["elapsed_total_delta_ms"]
+
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
 
 echo "large-workspace-agent-perf: metrics"
 echo "  module_count=$MODULE_COUNT"
