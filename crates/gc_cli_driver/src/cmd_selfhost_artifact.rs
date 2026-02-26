@@ -16,6 +16,7 @@ pub(super) fn cmd_selfhost_artifact(
         forms: Vec<Term>,
         module_hash: [u8; 32],
         stage2_module_hash: [u8; 32],
+        lowering_mode: Option<gc_opt::Stage2LoweringMode>,
         stage1_ok: bool,
         stage1_errors: Vec<String>,
         supported: bool,
@@ -28,6 +29,7 @@ pub(super) fn cmd_selfhost_artifact(
     #[derive(Debug, Clone)]
     struct Stage2Summary {
         module_hash: [u8; 32],
+        lowering_mode: Option<gc_opt::Stage2LoweringMode>,
         supported: bool,
         ok: bool,
         errors: Vec<String>,
@@ -41,6 +43,44 @@ pub(super) fn cmd_selfhost_artifact(
         modules: std::collections::BTreeMap<String, Stage2Seed>,
         stage2_supported_modules: Option<u64>,
         stage2_validated_modules: Option<u64>,
+        stage2_strict_modules: Option<u64>,
+        stage2_constant_fallback_modules: Option<u64>,
+    }
+
+    fn parse_stage2_lowering_mode(t: &Term) -> Option<gc_opt::Stage2LoweringMode> {
+        match t {
+            Term::Str(s) if s == "strict" => Some(gc_opt::Stage2LoweringMode::Strict),
+            Term::Str(s) if s == "constant-fallback" => {
+                Some(gc_opt::Stage2LoweringMode::ConstantFallback)
+            }
+            _ => None,
+        }
+    }
+
+    fn stage2_lowering_mode_term(mode: Option<gc_opt::Stage2LoweringMode>) -> Term {
+        match mode {
+            Some(gc_opt::Stage2LoweringMode::Strict) => Term::Str("strict".to_string()),
+            Some(gc_opt::Stage2LoweringMode::ConstantFallback) => {
+                Term::Str("constant-fallback".to_string())
+            }
+            None => Term::Nil,
+        }
+    }
+
+    fn normalize_stage2_lowering_mode(
+        mode: Option<gc_opt::Stage2LoweringMode>,
+        supported: bool,
+        ok: bool,
+    ) -> Option<gc_opt::Stage2LoweringMode> {
+        if mode.is_some() {
+            return mode;
+        }
+        if supported && ok {
+            // Legacy seed artifacts predate lowering-mode accounting.
+            // For deterministic accounting, treat successful supported modules as strict by default.
+            return Some(gc_opt::Stage2LoweringMode::Strict);
+        }
+        None
     }
 
     fn load_stage2_seed_index(path: &Path) -> Option<Stage2SeedIndex> {
@@ -62,14 +102,20 @@ pub(super) fn cmd_selfhost_artifact(
                     _ => None,
                 }
             };
-        let (stage2_supported_modules, stage2_validated_modules) =
-            match root.get(&TermOrdKey(Term::symbol(":stage2-summary"))) {
-                Some(Term::Map(summary)) => (
-                    parse_u64(summary, ":supported-modules"),
-                    parse_u64(summary, ":validated-modules"),
-                ),
-                _ => (None, None),
-            };
+        let (
+            stage2_supported_modules,
+            stage2_validated_modules,
+            stage2_strict_modules,
+            stage2_constant_fallback_modules,
+        ) = match root.get(&TermOrdKey(Term::symbol(":stage2-summary"))) {
+            Some(Term::Map(summary)) => (
+                parse_u64(summary, ":supported-modules"),
+                parse_u64(summary, ":validated-modules"),
+                parse_u64(summary, ":strict-modules"),
+                parse_u64(summary, ":constant-fallback-modules"),
+            ),
+            _ => (None, None, None, None),
+        };
         let modules = match root.get(&TermOrdKey(Term::symbol(":modules"))) {
             Some(Term::Vector(v)) => v,
             _ => return None,
@@ -105,6 +151,9 @@ pub(super) fn cmd_selfhost_artifact(
                 }
                 _ => module_hash,
             };
+            let lowering_mode = mm
+                .get(&TermOrdKey(Term::symbol(":stage2-lowering-mode")))
+                .and_then(parse_stage2_lowering_mode);
             let stage1_ok = matches!(
                 mm.get(&TermOrdKey(Term::symbol(":stage1-ok"))),
                 Some(Term::Bool(true))
@@ -156,6 +205,7 @@ pub(super) fn cmd_selfhost_artifact(
                     forms,
                     module_hash,
                     stage2_module_hash,
+                    lowering_mode,
                     stage1_ok,
                     stage1_errors,
                     supported,
@@ -171,6 +221,8 @@ pub(super) fn cmd_selfhost_artifact(
             modules: out,
             stage2_supported_modules,
             stage2_validated_modules,
+            stage2_strict_modules,
+            stage2_constant_fallback_modules,
         })
     }
 
@@ -305,6 +357,10 @@ pub(super) fn cmd_selfhost_artifact(
     };
     let fallback_stage2_floor = (toolchain_sources.len() as u64).max(1);
     let seed_policy_floor = stage2_seed_index.as_ref().map(|idx| {
+        let _seed_mode_counts = (
+            idx.stage2_strict_modules.unwrap_or(0),
+            idx.stage2_constant_fallback_modules.unwrap_or(0),
+        );
         let mut supported = idx.stage2_supported_modules.unwrap_or(0);
         let mut validated = idx.stage2_validated_modules.unwrap_or(0);
         if supported == 0 || validated == 0 {
@@ -365,6 +421,8 @@ pub(super) fn cmd_selfhost_artifact(
     let mut all_ok = true;
     let mut stage2_supported = 0u64;
     let mut stage2_validated = 0u64;
+    let mut stage2_strict_modules = 0u64;
+    let mut stage2_constant_fallback_modules = 0u64;
     let mut gate_errors: Vec<String> = Vec::new();
 
     if full_seed_reuse {
@@ -386,6 +444,11 @@ pub(super) fn cmd_selfhost_artifact(
             stage2_seed_hits = stage2_seed_hits.saturating_add(1);
             let stage2 = Stage2Summary {
                 module_hash: seed.stage2_module_hash,
+                lowering_mode: normalize_stage2_lowering_mode(
+                    seed.lowering_mode,
+                    seed.supported,
+                    seed.ok,
+                ),
                 supported: seed.supported,
                 ok: seed.ok,
                 errors: seed.errors.clone(),
@@ -399,6 +462,16 @@ pub(super) fn cmd_selfhost_artifact(
                 stage2_supported = stage2_supported.saturating_add(1);
                 if stage2.ok {
                     stage2_validated = stage2_validated.saturating_add(1);
+                }
+                match stage2.lowering_mode {
+                    Some(gc_opt::Stage2LoweringMode::Strict) => {
+                        stage2_strict_modules = stage2_strict_modules.saturating_add(1);
+                    }
+                    Some(gc_opt::Stage2LoweringMode::ConstantFallback) => {
+                        stage2_constant_fallback_modules =
+                            stage2_constant_fallback_modules.saturating_add(1);
+                    }
+                    None => {}
                 }
             }
             modules.push(Term::Map(
@@ -436,6 +509,10 @@ pub(super) fn cmd_selfhost_artifact(
                     (
                         TermOrdKey(Term::symbol(":stage2-module-h")),
                         Term::Bytes(stage2.module_hash.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-lowering-mode")),
+                        stage2_lowering_mode_term(stage2.lowering_mode),
                     ),
                     (
                         TermOrdKey(Term::symbol(":stage2-wasm-h")),
@@ -496,6 +573,11 @@ pub(super) fn cmd_selfhost_artifact(
                     seed.stage1_errors,
                     Stage2Summary {
                         module_hash: seed.stage2_module_hash,
+                        lowering_mode: normalize_stage2_lowering_mode(
+                            seed.lowering_mode,
+                            seed.supported,
+                            seed.ok,
+                        ),
                         supported: seed.supported,
                         ok: seed.ok,
                         errors: seed.errors,
@@ -521,6 +603,11 @@ pub(super) fn cmd_selfhost_artifact(
                     stage1.gate_report.errors,
                     Stage2Summary {
                         module_hash: report.module_hash,
+                        lowering_mode: normalize_stage2_lowering_mode(
+                            report.lowering_mode,
+                            report.supported,
+                            report.ok,
+                        ),
                         supported: report.supported,
                         ok: report.ok,
                         errors: report.errors,
@@ -562,6 +649,11 @@ pub(super) fn cmd_selfhost_artifact(
                     gate_report.errors,
                     Stage2Summary {
                         module_hash: report.module_hash,
+                        lowering_mode: normalize_stage2_lowering_mode(
+                            report.lowering_mode,
+                            report.supported,
+                            report.ok,
+                        ),
                         supported: report.supported,
                         ok: report.ok,
                         errors: report.errors,
@@ -578,6 +670,16 @@ pub(super) fn cmd_selfhost_artifact(
                 stage2_supported = stage2_supported.saturating_add(1);
                 if stage2.ok {
                     stage2_validated = stage2_validated.saturating_add(1);
+                }
+                match stage2.lowering_mode {
+                    Some(gc_opt::Stage2LoweringMode::Strict) => {
+                        stage2_strict_modules = stage2_strict_modules.saturating_add(1);
+                    }
+                    Some(gc_opt::Stage2LoweringMode::ConstantFallback) => {
+                        stage2_constant_fallback_modules =
+                            stage2_constant_fallback_modules.saturating_add(1);
+                    }
+                    None => {}
                 }
             }
 
@@ -616,6 +718,10 @@ pub(super) fn cmd_selfhost_artifact(
                     (
                         TermOrdKey(Term::symbol(":stage2-module-h")),
                         Term::Bytes(stage2.module_hash.to_vec().into()),
+                    ),
+                    (
+                        TermOrdKey(Term::symbol(":stage2-lowering-mode")),
+                        stage2_lowering_mode_term(stage2.lowering_mode),
                     ),
                     (
                         TermOrdKey(Term::symbol(":stage2-wasm-h")),
@@ -677,6 +783,14 @@ pub(super) fn cmd_selfhost_artifact(
                             TermOrdKey(Term::symbol(":validated-modules")),
                             Term::Int((stage2_validated as i64).into()),
                         ),
+                        (
+                            TermOrdKey(Term::symbol(":strict-modules")),
+                            Term::Int((stage2_strict_modules as i64).into()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":constant-fallback-modules")),
+                            Term::Int((stage2_constant_fallback_modules as i64).into()),
+                        ),
                     ]
                     .into_iter()
                     .collect(),
@@ -729,6 +843,8 @@ pub(super) fn cmd_selfhost_artifact(
             "artifact_hash": hex32(artifact_hash),
             "stage2_supported_modules": stage2_supported,
             "stage2_validated_modules": stage2_validated,
+            "stage2_strict_modules": stage2_strict_modules,
+            "stage2_constant_fallback_modules": stage2_constant_fallback_modules,
             "min_stage2_supported_modules": min_stage2_supported_modules,
             "min_stage2_validated_modules": min_stage2_validated_modules,
             "requested_min_stage2_supported_modules": requested_min_stage2_supported_modules,

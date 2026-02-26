@@ -27,6 +27,13 @@ pub(super) fn resolve_callable_head(
     fn_defs: &BTreeMap<String, InlinableFnDef>,
     local_fn_defs: &BTreeMap<String, InlinableFnDef>,
 ) -> Result<Option<CallableHead>, Stage2CompileError> {
+    if let Some(xs) = head.as_proper_list()
+        && !xs.is_empty()
+        && matches!(xs[0], Term::Symbol(s) if s == "begin")
+        && let Some(last) = xs.last()
+    {
+        return resolve_callable_head(last, env, global_env, fn_defs, local_fn_defs);
+    }
     if let Some((param, body)) = desugar_fn_literal_to_unary(head)? {
         return Ok(Some(CallableHead {
             param,

@@ -2,6 +2,16 @@ fn file_store_path(root: &Path, hash: &str) -> PathBuf {
     root.join("store").join(hash)
 }
 
+const FILE_UPLOAD_CHUNK_BYTES: u64 = 4 * 1024 * 1024;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct FileUploadSession {
+    hash: String,
+    size_bytes: u64,
+    chunk_bytes: u64,
+    received_chunks: Vec<u64>,
+}
+
 fn file_refs_path(root: &Path) -> PathBuf {
     root.join("refs.gc")
 }
@@ -14,6 +24,202 @@ fn file_ensure_dirs(root: &Path) -> Result<(), RegistryError> {
     std::fs::create_dir_all(root.join("store"))
         .map_err(|e| RegistryError::Http(format!("file registry mkdir: {e}")))?;
     Ok(())
+}
+
+fn file_store_put_bytes(root: &Path, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
+    let got = blake3::hash(bytes).to_hex().to_string();
+    if got != hash {
+        return Err(RegistryError::Protocol(
+            "store/put: hash mismatch".to_string(),
+        ));
+    }
+    let p = file_store_path(root, hash);
+    if p.exists() {
+        let cur = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
+        let cur_h = blake3::hash(&cur).to_hex().to_string();
+        if cur_h != hash {
+            return Err(RegistryError::Protocol("store/put: corruption".to_string()));
+        }
+        return Ok(());
+    }
+    file_atomic_write(&p, bytes)
+}
+
+fn file_uploads_root(root: &Path) -> PathBuf {
+    root.join("uploads")
+}
+
+fn file_upload_lock_path(root: &Path) -> PathBuf {
+    root.join("uploads.lock")
+}
+
+fn file_upload_seq_path(root: &Path) -> PathBuf {
+    root.join("uploads.seq")
+}
+
+fn file_upload_session_dir(root: &Path, upload_id: &str) -> PathBuf {
+    file_uploads_root(root).join(upload_id)
+}
+
+fn file_upload_session_meta_path(root: &Path, upload_id: &str) -> PathBuf {
+    file_upload_session_dir(root, upload_id).join("session.json")
+}
+
+fn file_upload_chunk_path(root: &Path, upload_id: &str, index: u64) -> PathBuf {
+    file_upload_session_dir(root, upload_id).join(format!("chunk-{index}.bin"))
+}
+
+fn file_upload_lock(root: &Path) -> Result<std::fs::File, RegistryError> {
+    let p = file_upload_lock_path(root);
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| RegistryError::Http(format!("mkdir: {e}")))?;
+    }
+    let f = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&p)
+        .map_err(|e| RegistryError::Http(format!("open uploads lock: {e}")))?;
+    #[cfg(not(target_os = "wasi"))]
+    {
+        f.lock_exclusive()
+            .map_err(|e| RegistryError::Http(format!("lock uploads: {e}")))?;
+    }
+    Ok(f)
+}
+
+fn file_next_upload_id(root: &Path, _lk: &mut std::fs::File) -> Result<String, RegistryError> {
+    let seq_path = file_upload_seq_path(root);
+    let cur = if seq_path.exists() {
+        let src = std::fs::read_to_string(&seq_path)
+            .map_err(|e| RegistryError::Http(format!("read uploads seq: {e}")))?;
+        src.trim()
+            .parse::<u64>()
+            .map_err(|e| RegistryError::Protocol(format!("uploads seq parse: {e}")))?
+    } else {
+        0
+    };
+    let next = cur.saturating_add(1);
+    file_atomic_write(&seq_path, next.to_string().as_bytes())?;
+    Ok(format!("u_{next}"))
+}
+
+fn file_read_upload_session(root: &Path, upload_id: &str) -> Result<FileUploadSession, RegistryError> {
+    let meta_path = file_upload_session_meta_path(root, upload_id);
+    if !meta_path.exists() {
+        return Err(RegistryError::Http("store/upload: status 404".to_string()));
+    }
+    let src = std::fs::read_to_string(&meta_path)
+        .map_err(|e| RegistryError::Http(format!("store/upload/read session: {e}")))?;
+    serde_json::from_str(&src)
+        .map_err(|e| RegistryError::Protocol(format!("store/upload/session decode: {e}")))
+}
+
+fn file_write_upload_session(
+    root: &Path,
+    upload_id: &str,
+    session: &FileUploadSession,
+) -> Result<(), RegistryError> {
+    let meta_path = file_upload_session_meta_path(root, upload_id);
+    let encoded = serde_json::to_vec(session)
+        .map_err(|e| RegistryError::Protocol(format!("store/upload/session encode: {e}")))?;
+    file_atomic_write(&meta_path, &encoded)
+}
+
+fn file_store_upload_start(
+    root: &Path,
+    hash: &str,
+    size_bytes: u64,
+) -> Result<StoreUploadStartResp, RegistryError> {
+    file_ensure_dirs(root)?;
+    std::fs::create_dir_all(file_uploads_root(root))
+        .map_err(|e| RegistryError::Http(format!("store/upload/start mkdir: {e}")))?;
+    let mut lk = file_upload_lock(root)?;
+    let upload_id = file_next_upload_id(root, &mut lk)?;
+    let session_dir = file_upload_session_dir(root, &upload_id);
+    std::fs::create_dir_all(&session_dir)
+        .map_err(|e| RegistryError::Http(format!("store/upload/start session mkdir: {e}")))?;
+    let session = FileUploadSession {
+        hash: hash.to_string(),
+        size_bytes,
+        chunk_bytes: FILE_UPLOAD_CHUNK_BYTES,
+        received_chunks: Vec::new(),
+    };
+    file_write_upload_session(root, &upload_id, &session)?;
+    Ok(StoreUploadStartResp {
+        upload_id,
+        chunk_bytes: FILE_UPLOAD_CHUNK_BYTES,
+    })
+}
+
+fn file_store_upload_chunk(
+    root: &Path,
+    upload_id: &str,
+    index: u64,
+    bytes: &[u8],
+) -> Result<StoreUploadChunkResp, RegistryError> {
+    let mut session = file_read_upload_session(root, upload_id)?;
+    if bytes.len() as u64 > session.chunk_bytes {
+        return Err(RegistryError::Protocol(
+            "store/upload/chunk: exceeds max_chunk_bytes".to_string(),
+        ));
+    }
+    let chunk_path = file_upload_chunk_path(root, upload_id, index);
+    file_atomic_write(&chunk_path, bytes)?;
+    if !session.received_chunks.contains(&index) {
+        session.received_chunks.push(index);
+        session.received_chunks.sort_unstable();
+    }
+    file_write_upload_session(root, upload_id, &session)?;
+    Ok(StoreUploadChunkResp {
+        ok: true,
+        received: bytes.len() as u64,
+    })
+}
+
+fn file_store_upload_finish(
+    root: &Path,
+    upload_id: &str,
+) -> Result<StoreUploadFinishResp, RegistryError> {
+    let mut session = file_read_upload_session(root, upload_id)?;
+    session.received_chunks.sort_unstable();
+    for (expected, idx) in session.received_chunks.iter().enumerate() {
+        if *idx != expected as u64 {
+            return Err(RegistryError::Protocol(
+                "store/upload/finish: missing chunk index".to_string(),
+            ));
+        }
+    }
+    let mut payload = Vec::new();
+    for idx in &session.received_chunks {
+        let chunk = std::fs::read(file_upload_chunk_path(root, upload_id, *idx))
+            .map_err(|_| RegistryError::Protocol("store/upload/finish: missing chunk".to_string()))?;
+        payload.extend_from_slice(&chunk);
+    }
+    if payload.len() as u64 != session.size_bytes {
+        return Err(RegistryError::Protocol(
+            "store/upload/finish: size mismatch".to_string(),
+        ));
+    }
+    let got = blake3::hash(&payload).to_hex().to_string();
+    if got != session.hash {
+        return Err(RegistryError::Protocol(
+            "store/upload/finish: hash mismatch".to_string(),
+        ));
+    }
+    file_store_put_bytes(root, &session.hash, &payload)?;
+    std::fs::remove_dir_all(file_upload_session_dir(root, upload_id))
+        .map_err(|e| RegistryError::Http(format!("store/upload/finish cleanup: {e}")))?;
+    Ok(StoreUploadFinishResp { ok: true })
+}
+
+fn file_store_upload_status(root: &Path, upload_id: &str) -> Result<StoreUploadStatusResp, RegistryError> {
+    let mut session = file_read_upload_session(root, upload_id)?;
+    session.received_chunks.sort_unstable();
+    Ok(StoreUploadStatusResp {
+        received_chunks: session.received_chunks,
+    })
 }
 
 fn file_atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RegistryError> {

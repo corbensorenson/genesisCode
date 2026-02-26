@@ -8,12 +8,7 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.ping();
         }
-        if let RegistryKind::File { .. } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
+        if let Some(_root) = self.file_transport_root_for_op("ping")? {
             return Ok(PingResp {
                 ok: true,
                 version: "0.1".to_string(),
@@ -23,7 +18,7 @@ impl RegistryClient {
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("ping"));
+            return Err(wasi_http_bridge_required("ping", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -52,22 +47,17 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_has(hashes);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
+        if let Some(root) = self.file_transport_root_for_op("store/has")? {
+            file_ensure_dirs(&root)?;
             let mut out = BTreeMap::new();
             for h in hashes {
-                out.insert(h.clone(), file_store_path(root, h).exists());
+                out.insert(h.clone(), file_store_path(&root, h).exists());
             }
             return Ok(out);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/has"));
+            return Err(wasi_http_bridge_required("store/has", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -109,14 +99,9 @@ impl RegistryClient {
             enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
             return Ok(bytes);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let p = file_store_path(root, hash);
+        if let Some(root) = self.file_transport_root_for_op("store/get")? {
+            file_ensure_dirs(&root)?;
+            let p = file_store_path(&root, hash);
             if !p.exists() {
                 return Err(RegistryError::Http("store/get: status 404".to_string()));
             }
@@ -132,7 +117,7 @@ impl RegistryClient {
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/get"));
+            return Err(wasi_http_bridge_required("store/get", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -175,14 +160,9 @@ impl RegistryClient {
                 Err(e) => Err(e),
             };
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let p = file_store_path(root, hash);
+        if let Some(root) = self.file_transport_root_for_op("store/get")? {
+            file_ensure_dirs(&root)?;
+            let p = file_store_path(&root, hash);
             if !p.exists() {
                 return Ok(None);
             }
@@ -198,7 +178,7 @@ impl RegistryClient {
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/get"));
+            return Err(wasi_http_bridge_required("store/get", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -229,34 +209,13 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_put(hash, bytes);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let got = blake3::hash(bytes).to_hex().to_string();
-            if got != hash {
-                return Err(RegistryError::Protocol(
-                    "store/put: hash mismatch".to_string(),
-                ));
-            }
-            let p = file_store_path(root, hash);
-            if p.exists() {
-                let cur = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
-                let cur_h = blake3::hash(&cur).to_hex().to_string();
-                if cur_h != hash {
-                    return Err(RegistryError::Protocol("store/put: corruption".to_string()));
-                }
-                return Ok(());
-            }
-            file_atomic_write(&p, bytes)?;
-            return Ok(());
+        if let Some(root) = self.file_transport_root_for_op("store/put")? {
+            file_ensure_dirs(&root)?;
+            return file_store_put_bytes(&root, hash, bytes);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/put"));
+            return Err(wasi_http_bridge_required("store/put", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -336,14 +295,12 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_upload_start(hash, size_bytes);
         }
-        if let RegistryKind::File { .. } = &self.kind {
-            return Err(RegistryError::Protocol(
-                "store/upload/start: not supported for file:// remotes".to_string(),
-            ));
+        if let Some(root) = self.file_transport_root_for_op("store/upload/start")? {
+            return file_store_upload_start(&root, hash, size_bytes);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/upload/start"));
+            return Err(wasi_http_bridge_required("store/upload/start", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -378,14 +335,12 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_upload_chunk(upload_id, index, bytes);
         }
-        if let RegistryKind::File { .. } = &self.kind {
-            return Err(RegistryError::Protocol(
-                "store/upload/chunk: not supported for file:// remotes".to_string(),
-            ));
+        if let Some(root) = self.file_transport_root_for_op("store/upload/chunk")? {
+            return file_store_upload_chunk(&root, upload_id, index, bytes);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/upload/chunk"));
+            return Err(wasi_http_bridge_required("store/upload/chunk", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -418,14 +373,12 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_upload_finish(upload_id);
         }
-        if let RegistryKind::File { .. } = &self.kind {
-            return Err(RegistryError::Protocol(
-                "store/upload/finish: not supported for file:// remotes".to_string(),
-            ));
+        if let Some(root) = self.file_transport_root_for_op("store/upload/finish")? {
+            return file_store_upload_finish(&root, upload_id);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/upload/finish"));
+            return Err(wasi_http_bridge_required("store/upload/finish", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -458,14 +411,12 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.store_upload_status(upload_id);
         }
-        if let RegistryKind::File { .. } = &self.kind {
-            return Err(RegistryError::Protocol(
-                "store/upload/status: not supported for file:// remotes".to_string(),
-            ));
+        if let Some(root) = self.file_transport_root_for_op("store/upload/status")? {
+            return file_store_upload_status(&root, upload_id);
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("store/upload/status"));
+            return Err(wasi_http_bridge_required("store/upload/status", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {

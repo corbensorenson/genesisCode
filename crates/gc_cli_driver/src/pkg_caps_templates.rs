@@ -1,8 +1,79 @@
 use std::path::Path;
 
-pub(crate) const CAPS_DEV_DEFAULT: &str = "allow = []\n";
-pub(crate) const CAPS_CI_DEFAULT: &str = "allow = []\n";
-pub(crate) const CAPS_RELEASE_DEFAULT: &str = "allow = []\n";
+pub(crate) const CAPS_DEV_DEFAULT: &str = r#"allow = []
+
+[task]
+default_workers = 2
+max_tasks = 64
+max_workers = 4
+max_queue = 128
+max_steps_per_task = 200000
+max_time_ms_per_task = 4000
+
+[runtime]
+max_effect_ops = 1024
+max_payload_bytes_per_op = 262144
+max_payload_bytes_per_run = 4194304
+max_response_bytes_per_op = 262144
+max_response_bytes_per_run = 4194304
+
+[store]
+max_run_bytes = 16777216
+
+[log]
+inline_max_bytes = 65536
+max_artifact_bytes_per_run = 16777216
+"#;
+
+pub(crate) const CAPS_CI_DEFAULT: &str = r#"allow = []
+
+[task]
+default_workers = 1
+max_tasks = 16
+max_workers = 1
+max_queue = 32
+max_steps_per_task = 100000
+max_time_ms_per_task = 2000
+
+[runtime]
+max_effect_ops = 256
+max_payload_bytes_per_op = 131072
+max_payload_bytes_per_run = 1048576
+max_response_bytes_per_op = 131072
+max_response_bytes_per_run = 1048576
+
+[store]
+max_run_bytes = 8388608
+
+[log]
+inline_max_bytes = 32768
+max_artifact_bytes_per_run = 8388608
+"#;
+
+pub(crate) const CAPS_RELEASE_DEFAULT: &str = r#"allow = []
+
+[task]
+default_workers = 2
+max_tasks = 48
+max_workers = 4
+max_queue = 96
+max_steps_per_task = 150000
+max_time_ms_per_task = 3000
+
+[runtime]
+max_effect_ops = 768
+max_payload_bytes_per_op = 262144
+max_payload_bytes_per_run = 2097152
+max_response_bytes_per_op = 262144
+max_response_bytes_per_run = 2097152
+
+[store]
+max_run_bytes = 12582912
+
+[log]
+inline_max_bytes = 65536
+max_artifact_bytes_per_run = 12582912
+"#;
 
 const BACKEND_ALLOW_OPS: &[&str] = &[
     "io/net::http-request",

@@ -46,11 +46,18 @@ pub enum Stage2ValueKind {
     Term,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stage2LoweringMode {
+    Strict,
+    ConstantFallback,
+}
+
 #[derive(Debug, Clone)]
 pub struct Stage2CompileArtifact {
     pub wasm_bytes: Vec<u8>,
     pub wasm_hash: [u8; 32],
     pub module_hash: [u8; 32],
+    pub lowering_mode: Stage2LoweringMode,
     pub value_kind: Stage2ValueKind,
     pub symbol_table: Vec<String>,
     pub string_table: Vec<String>,
@@ -72,6 +79,7 @@ pub struct Stage2ValidationReport {
     pub supported: bool,
     pub ok: bool,
     pub module_hash: [u8; 32],
+    pub lowering_mode: Option<Stage2LoweringMode>,
     pub wasm_hash: Option<[u8; 32]>,
     pub value_kind: Option<Stage2ValueKind>,
     pub original_value_hash: Option<[u8; 32]>,

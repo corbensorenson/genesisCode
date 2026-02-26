@@ -7,9 +7,9 @@ Generated from:
 - `upgrade_plan.md`
 
 Summary:
-- Families: 33 (implemented=16, policy-disabled=1, planned=16)
+- Families: 33 (implemented=18, policy-disabled=1, planned=14)
 - Operations: host=187 prelude=184
-- Planned upgrade IDs: P0.2, P0.3, P0.4, P1.1, P1.2
+- Planned upgrade IDs: P0.2, P0.3, P0.4
 
 ## Coverage Table
 
@@ -22,7 +22,7 @@ Summary:
 | `core/crypto` | `implemented` | `-` | 6 | 6 | 0 | - |
 | `core/gc-low` | `implemented` | `-` | 5 | 5 | 0 | - |
 | `core/gpk-low` | `implemented` | `-` | 2 | 2 | 0 | - |
-| `core/media` | `planned` | `P1.1` | 3 | 3 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_upgrade_plan_health.sh |
+| `core/media` | `implemented` | `-` | 3 | 3 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_upgrade_plan_health.sh |
 | `core/pkg-low` | `planned` | `P0.2` | 13 | 13 | 0 | scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_upgrade_plan_health.sh |
 | `core/refs` | `implemented` | `-` | 4 | 4 | 0 | - |
 | `core/store` | `planned` | `P0.2` | 4 | 4 | 0 | scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_upgrade_plan_health.sh |
@@ -32,7 +32,7 @@ Summary:
 | `editor/clipboard` | `implemented` | `-` | 2 | 2 | 0 | - |
 | `editor/dialog` | `implemented` | `-` | 2 | 2 | 0 | - |
 | `editor/plugin` | `implemented` | `-` | 1 | 1 | 0 | - |
-| `editor/task` | `planned` | `P1.2` | 9 | 9 | 0 | scripts/check_task_concurrency_stress.sh<br>scripts/check_upgrade_plan_health.sh |
+| `editor/task` | `implemented` | `-` | 9 | 9 | 0 | scripts/check_task_concurrency_stress.sh<br>scripts/check_upgrade_plan_health.sh |
 | `editor/watch` | `implemented` | `-` | 3 | 3 | 0 | - |
 | `gfx/audio` | `planned` | `P0.4` | 2 | 2 | 0 | scripts/check_gfx_runtime_profile.sh<br>scripts/check_upgrade_plan_health.sh |
 | `gfx/gpu` | `planned` | `P0.3` | 16 | 16 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_gpu_compute_runtime_profile.sh |

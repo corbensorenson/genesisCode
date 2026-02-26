@@ -10,8 +10,8 @@ use num_traits::ToPrimitive;
 mod pure_egg;
 mod stage2_wasm;
 pub use stage2_wasm::{
-    Stage2CompileArtifact, Stage2CompileError, Stage2ValidationReport, Stage2ValueKind,
-    stage2_compile_module, stage2_validation_report,
+    Stage2CompileArtifact, Stage2CompileError, Stage2LoweringMode, Stage2ValidationReport,
+    Stage2ValueKind, stage2_compile_module, stage2_validation_report,
 };
 
 /// Aggregate statistics from optimizer runs.
@@ -118,6 +118,10 @@ pub fn stage2_report_json(r: &Stage2ValidationReport) -> serde_json::Value {
         "supported": r.supported,
         "ok": r.ok,
         "module_hash": hex32(r.module_hash),
+        "lowering_mode": r.lowering_mode.map(|m| match m {
+            Stage2LoweringMode::Strict => "strict",
+            Stage2LoweringMode::ConstantFallback => "constant-fallback",
+        }),
         "wasm_hash": r.wasm_hash.map(hex32),
         "value_kind": r.value_kind.map(|k| match k {
             Stage2ValueKind::Int => "int",

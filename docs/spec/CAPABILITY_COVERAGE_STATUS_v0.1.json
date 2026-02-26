@@ -38,13 +38,12 @@
       "notes": "Production browser runtime realism still tracks P0.4."
     },
     "core/media": {
-      "status": "planned",
-      "plan_id": "P1.1",
+      "status": "implemented",
       "release_gates": [
         "scripts/check_agent_reference_workflows.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "notes": "Mainstream media conversion parity remains open in P1.1."
+      "notes": "Deterministic, policy-gated image/audio format families are implemented for mainstream transcoding workflows."
     },
     "core/pkg-low": {
       "status": "planned",
@@ -74,13 +73,12 @@
       "notes": "Full WASI remote-registry parity still tracks P0.2."
     },
     "editor/task": {
-      "status": "planned",
-      "plan_id": "P1.2",
+      "status": "implemented",
       "release_gates": [
         "scripts/check_task_concurrency_stress.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "notes": "Extensible editor task orchestration remains open in P1.2."
+      "notes": "Schema-driven task orchestration and workflow task kinds are implemented with deterministic partial-output contracts."
     },
     "gfx/audio": {
       "status": "planned",

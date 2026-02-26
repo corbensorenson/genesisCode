@@ -52,17 +52,40 @@ Determinism:
 
 ## `editor/task::*`
 
-Background worker tasks (lint/typecheck/optimize/indexing).
+Background worker tasks (lint/typecheck/optimize/indexing + workflow orchestration).
 
 - `editor/task::spawn`
   - payload: `{ :task-kind sym :input term :budget-ms int|nil }`
-  - response: `{ :ok true :task-id str } | ERROR`
+  - response: `{ :ok true :task-id str :task-kind str :state :running|:done|:failed :task-contract map :partial-count int } | ERROR`
 - `editor/task::poll`
   - payload: `{ :task-id str }`
-  - response: `{ :state :pending|:running|:done|:failed :result term|nil } | ERROR`
+  - response: `{ :state :running|:done|:failed :result term|nil :task-contract map :partial term|nil :partial-emitted bool :partial-seq int :partial-total int } | ERROR`
 - `editor/task::cancel`
   - payload: `{ :task-id str }`
   - response: `{ :ok true } | ERROR`
+
+Schema-driven first-party task kinds:
+- `editor/task::parse-module`
+- `editor/task::fmt-coreform`
+- `editor/task::lint-module`
+- `editor/task::optimize-module`
+- `editor/task::typecheck-pkg`
+- `editor/task::test-pkg`
+- `editor/task::build-pkg`
+- `editor/task::run-pkg`
+- `editor/task::debug-pkg`
+- `editor/task::refactor-module`
+- `editor/task::index-workspace`
+
+Each task exposes a deterministic `:task-contract` map:
+- `:task-kind` (symbol)
+- `:schema-version` (currently `1`)
+- `:schema/required` (vector of required input keys)
+- `:schema/optional` (vector of optional input keys)
+- `:schema/output-keys` (vector of stable output keys)
+
+For long-running workflows (`build/run/debug/refactor/index`), `editor/task::poll`
+emits structured `:partial` payloads with deterministic phase progress metadata.
 
 Determinism:
 - all poll transitions are replayed from logs.

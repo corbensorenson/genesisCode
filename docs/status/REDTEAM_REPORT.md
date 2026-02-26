@@ -9,8 +9,3 @@ Scope:
 ## Active Risks (P0/P1)
 
 - P0.1 - Close Stage2 coverage gaps that still reject valid CoreForm programs required by deploy targets.
-- P0.2 - Deliver full WASI remote registry parity (http/https remotes) without `wasi_http_unsupported` hard failures.
-- P0.3 - Replace first-party GPU placeholder semantics with production-capable device-runtime parity.
-- P0.4 - Close host runtime realism gap for gfx/browser/xr in production profiles.
-- P1.1 - Expand media capability coverage beyond current narrow conversion matrix.
-- P1.2 - Expand first-party editor task runtime from fixed task set to extensible AI workflow orchestration.

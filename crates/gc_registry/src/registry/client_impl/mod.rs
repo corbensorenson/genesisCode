@@ -92,6 +92,7 @@ impl RegistryClient {
     }
 }
 
+include!("file_transport.rs");
 include!("ping_and_store.rs");
 include!("refs.rs");
 include!("auth.rs");

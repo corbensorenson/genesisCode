@@ -532,6 +532,121 @@ wasi_bridge_response = "{:ok true :session-id \"xr-webxr-1\" :closed true}"
 }
 
 #[test]
+fn xr_production_profile_defaults_to_webxr_device_when_bridge_is_present() {
+    let src = r#"
+        (def prog
+          (core/effect::perform
+            'gfx/xr::session-open
+            {:opts {:app "prod-webxr" :mode "immersive-vr" :reference-space "local-floor"}}
+            (fn (x) (core/effect::pure x))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gfx/xr::session-open"]
+
+[op."gfx/xr::session-open"]
+runtime_profile = "production"
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :session-id \"xr-prod-1\" :mode \"immersive-vr\" :reference-space \"local-floor\"}"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+    assert_eq!(run_out.log.entries.len(), 1);
+    assert_eq!(run_out.log.entries[0].op, "gfx/xr::session-open");
+
+    let Value::Data(Term::Map(open_map)) = &run_out.value else {
+        panic!("expected session-open map");
+    };
+    assert_eq!(
+        open_map.get(&TermOrdKey(Term::symbol(":backend"))),
+        Some(&Term::Str("xr-webxr-device-runtime".to_string()))
+    );
+    assert_eq!(
+        open_map.get(&TermOrdKey(Term::symbol(":adapter"))),
+        Some(&Term::Str("webxr-device".to_string()))
+    );
+    let Some(Term::Map(envelope)) = open_map.get(&TermOrdKey(Term::symbol(":replay-envelope")))
+    else {
+        panic!("expected replay envelope");
+    };
+    assert_eq!(
+        envelope.get(&TermOrdKey(Term::symbol(":source"))),
+        Some(&Term::symbol(":webxr-device"))
+    );
+
+    let log_term = run_out.log.to_term();
+    let replay_log = EffectLog::from_term(&log_term).expect("log decode");
+    let mut ctx_rep = EvalCtx::new();
+    let prelude_rep = build_prelude(&mut ctx_rep);
+    let mut env_rep = prelude_rep.env;
+    let prog_rep = eval_module(&mut ctx_rep, &mut env_rep, &forms).expect("eval replay");
+    let replay_value = replay(&mut ctx_rep, prog_rep, &replay_log).expect("replay");
+    assert_eq!(value_hash(&run_out.value), value_hash(&replay_value));
+}
+
+#[test]
+fn xr_production_profile_without_bridge_is_policy_disabled() {
+    let (forms, h) = {
+        let src = r#"
+            (def prog
+              (core/effect::perform
+                'gfx/xr::session-open
+                {:opts {:app "prod-webxr" :mode "immersive-vr" :reference-space "local-floor"}}
+                (fn (x) (core/effect::pure x))))
+            prog
+        "#;
+        let forms = parse_module(src).expect("parse module");
+        let h = hash_module(&forms);
+        (forms, h)
+    };
+
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gfx/xr::session-open"]
+
+[op."gfx/xr::session-open"]
+runtime_profile = "production"
+"#,
+    )
+    .expect("policy");
+
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).expect("eval");
+    let run_out = run(&mut ctx, &policy, prog, h, "host-abi-test".to_string()).expect("run");
+
+    let Value::Data(Term::Map(err)) = &run_out.value else {
+        panic!("expected policy-disabled map");
+    };
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(false))
+    );
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":error/code"))),
+        Some(&Term::Str("gfx/xr-policy-disabled".to_string()))
+    );
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":schema"))),
+        Some(&Term::symbol(":core/host-policy-disabled.v1"))
+    );
+    assert_eq!(
+        err.get(&TermOrdKey(Term::symbol(":policy-disabled"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
 fn xr_advanced_ops_are_replay_deterministic_without_bridge() {
     let src = r#"
         (def prog

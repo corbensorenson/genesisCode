@@ -8,20 +8,15 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.refs_get(name);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let _lk = file_refs_lock(root)?;
-            let refs = file_load_refs_locked(root)?;
+        if let Some(root) = self.file_transport_root_for_op("refs/get")? {
+            file_ensure_dirs(&root)?;
+            let _lk = file_refs_lock(&root)?;
+            let refs = file_load_refs_locked(&root)?;
             return Ok(refs.get(name).cloned());
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("refs/get"));
+            return Err(wasi_http_bridge_required("refs/get", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -53,15 +48,10 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.refs_list(prefix);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let _lk = file_refs_lock(root)?;
-            let refs = file_load_refs_locked(root)?;
+        if let Some(root) = self.file_transport_root_for_op("refs/list")? {
+            file_ensure_dirs(&root)?;
+            let _lk = file_refs_lock(&root)?;
+            let refs = file_load_refs_locked(&root)?;
             let mut out = Vec::new();
             for (name, hash) in refs {
                 if let Some(p) = prefix
@@ -79,7 +69,7 @@ impl RegistryClient {
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("refs/list"));
+            return Err(wasi_http_bridge_required("refs/list", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -113,17 +103,12 @@ impl RegistryClient {
             reg.authorize(&self.auth)?;
             return reg.refs_set(req);
         }
-        if let RegistryKind::File { root } = &self.kind {
-            if self.auth.has_any() {
-                return Err(RegistryError::Auth(
-                    "file registry does not support transport auth".to_string(),
-                ));
-            }
-            file_ensure_dirs(root)?;
-            let mut lk = file_refs_lock(root)?;
-            let mut refs = file_load_refs_locked(root)?;
+        if let Some(root) = self.file_transport_root_for_op("refs/set")? {
+            file_ensure_dirs(&root)?;
+            let mut lk = file_refs_lock(&root)?;
+            let mut refs = file_load_refs_locked(&root)?;
 
-            file_gate_refs_set(root, req.name, req.hash, req.policy)?;
+            file_gate_refs_set(&root, req.name, req.hash, req.policy)?;
 
             let cur = refs.get(req.name).cloned();
             if let Some(exp) = req.expected_old
@@ -132,7 +117,7 @@ impl RegistryClient {
                 return Err(RegistryError::Http("refs/set: status 409".to_string()));
             }
             refs.insert(req.name.to_string(), req.hash.to_string());
-            file_write_refs_locked(root, &refs, &mut lk)?;
+            file_write_refs_locked(&root, &refs, &mut lk)?;
             return Ok(RefsSetResp {
                 ok: true,
                 name: req.name.to_string(),
@@ -141,7 +126,7 @@ impl RegistryClient {
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_unsupported("refs/set"));
+            return Err(wasi_http_bridge_required("refs/set", &self.base));
         }
         #[cfg(not(target_os = "wasi"))]
         {

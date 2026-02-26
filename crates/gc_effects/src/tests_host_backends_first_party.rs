@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::BTreeMap;
 
 #[test]
 fn gfx_gpu_first_party_backend_runs_without_bridge_profile_and_replays() {
@@ -613,6 +614,77 @@ first_party_profile = "browser"
 }
 
 #[test]
+fn gfx_production_profile_defaults_to_non_headless_adapter() {
+    let pol = CapsPolicy::from_toml_str(
+        r#"
+allow = ["gfx/window::create-surface"]
+
+[op."gfx/window::create-surface"]
+runtime_profile = "production"
+"#,
+    )
+    .expect("policy");
+
+    let src = r#"
+        (def prog
+          (core/effect::perform
+            'gfx/window::create-surface
+            {:opts {:height 600 :title "prod-surface" :width 800}}
+            (fn (x) (core/effect::pure x))))
+        prog
+    "#;
+    let forms = parse_module(src).expect("parse module");
+    let h = hash_module(&forms);
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+    let run_out = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+    let replay_v = replay(&mut ctx2, prog2, &run_out.log).expect("replay");
+    assert_eq!(value_hash(&run_out.value), value_hash(&replay_v));
+
+    let Value::Data(Term::Map(resp)) = run_out.value else {
+        panic!("expected create-surface map response");
+    };
+    let Some(Term::Str(adapter)) = resp.get(&TermOrdKey(Term::symbol(":adapter"))) else {
+        panic!("expected :adapter in create-surface response");
+    };
+    assert_ne!(adapter, "headless-sim");
+    assert_ne!(adapter, "noop");
+    let Some(Term::Str(profile)) = resp.get(&TermOrdKey(Term::symbol(":profile"))) else {
+        panic!("expected :profile in create-surface response");
+    };
+    assert_ne!(profile, "headless");
+
+    #[cfg(target_os = "wasi")]
+    {
+        assert_eq!(adapter, "browser-host");
+        assert_eq!(profile, "browser");
+        assert_eq!(
+            resp.get(&TermOrdKey(Term::symbol(":backend"))),
+            Some(&Term::Str("browser-first-party-runtime".to_string()))
+        );
+    }
+
+    #[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+    {
+        assert_eq!(adapter, "desktop-host");
+        assert_eq!(profile, "desktop");
+    }
+
+    #[cfg(all(not(target_os = "wasi"), not(feature = "gfx-desktop-backend")))]
+    {
+        assert_eq!(adapter, "terminal-host");
+        assert_eq!(profile, "interactive");
+    }
+}
+
+#[test]
 fn editor_first_party_core_ops_are_replayable_without_bridge() {
     let td = tempfile::tempdir().expect("tempdir");
     let root = td.path();
@@ -877,5 +949,208 @@ create_dirs = true
     assert_eq!(
         test_result.get(&TermOrdKey(Term::symbol(":passed"))),
         Some(&Term::Bool(true))
+    );
+
+    fn value_to_term(value: &Value) -> Term {
+        match value {
+            Value::Data(term) => term.clone(),
+            Value::Map(map) => Term::Map(
+                map.iter()
+                    .map(|(key, value)| (key.clone(), value_to_term(value)))
+                    .collect(),
+            ),
+            _ => Term::Str(value.debug_repr()),
+        }
+    }
+
+    let run_spawn_with_three_polls = |task_kind: &str,
+                                      task_input: String|
+     -> BTreeMap<TermOrdKey, Term> {
+        let src = format!(
+            r#"
+        (def prog
+          ((core/effect::bind (core/effect::perform
+                                'editor/task::spawn
+                                {{:task-kind '{task_kind}
+                                  :input {task_input}}}
+                                (fn (x) (core/effect::pure x))))
+            (fn (spawn-resp)
+              (let ((task-id ((core/map::get spawn-resp) ':task-id)))
+                ((core/effect::bind (core/effect::perform
+                                      'editor/task::poll
+                                      {{:task-id task-id}}
+                                      (fn (x) (core/effect::pure x))))
+                  (fn (poll-1)
+                    ((core/effect::bind (core/effect::perform
+                                          'editor/task::poll
+                                          {{:task-id task-id}}
+                                          (fn (x) (core/effect::pure x))))
+                      (fn (poll-2)
+                        (core/effect::perform
+                          'editor/task::poll
+                          {{:task-id task-id}}
+                          (fn (poll-3)
+                            (core/effect::pure {{:spawn spawn-resp :poll-1 poll-1 :poll-2 poll-2 :poll-3 poll-3}})))))))))))
+        prog
+    "#
+        );
+        let value = run_once(&src);
+        match value {
+            Value::Data(Term::Map(resp)) => resp,
+            Value::Map(resp) => resp
+                .iter()
+                .map(|(key, value)| (key.clone(), value_to_term(value)))
+                .collect(),
+            _ => panic!("expected workflow response map, got {}", value.debug_repr()),
+        }
+    };
+
+    let build_resp = run_spawn_with_three_polls(
+        "editor/task::build-pkg",
+        format!("{{:pkg \"{}/package.toml\"}}", root.display()),
+    );
+    let Some(Term::Map(build_spawn)) = build_resp.get(&TermOrdKey(Term::symbol(":spawn"))) else {
+        panic!("build workflow missing :spawn");
+    };
+    assert_eq!(
+        build_spawn.get(&TermOrdKey(Term::symbol(":state"))),
+        Some(&Term::symbol(":running"))
+    );
+    let Some(Term::Map(build_poll_1)) = build_resp.get(&TermOrdKey(Term::symbol(":poll-1"))) else {
+        panic!("build workflow missing :poll-1");
+    };
+    assert_eq!(
+        build_poll_1.get(&TermOrdKey(Term::symbol(":partial-emitted"))),
+        Some(&Term::Bool(true))
+    );
+    assert_eq!(
+        build_poll_1.get(&TermOrdKey(Term::symbol(":state"))),
+        Some(&Term::symbol(":running"))
+    );
+    assert_eq!(
+        build_poll_1.get(&TermOrdKey(Term::symbol(":result"))),
+        Some(&Term::Nil)
+    );
+    let Some(Term::Map(build_poll_3)) = build_resp.get(&TermOrdKey(Term::symbol(":poll-3"))) else {
+        panic!("build workflow missing :poll-3");
+    };
+    assert_eq!(
+        build_poll_3.get(&TermOrdKey(Term::symbol(":state"))),
+        Some(&Term::symbol(":done"))
+    );
+    let Some(Term::Map(build_result)) = build_poll_3.get(&TermOrdKey(Term::symbol(":result")))
+    else {
+        panic!("build workflow missing final result");
+    };
+    assert!(
+        build_result.contains_key(&TermOrdKey(Term::symbol(":build/targets"))),
+        "build result should include :build/targets"
+    );
+    let Some(Term::Map(build_contract)) =
+        build_poll_3.get(&TermOrdKey(Term::symbol(":task-contract")))
+    else {
+        panic!("build workflow missing :task-contract");
+    };
+    let Some(Term::Vector(build_required)) =
+        build_contract.get(&TermOrdKey(Term::symbol(":schema/required")))
+    else {
+        panic!("build contract missing :schema/required");
+    };
+    assert!(
+        build_required
+            .iter()
+            .any(|item| item == &Term::symbol(":pkg")),
+        "build contract should require :pkg"
+    );
+
+    let run_resp = run_spawn_with_three_polls(
+        "editor/task::run-pkg",
+        format!(
+            "{{:pkg \"{}/package.toml\" :entry \"pkg/a::x\" :args [\"--smoke\"]}}",
+            root.display()
+        ),
+    );
+    let Some(Term::Map(run_poll_3)) = run_resp.get(&TermOrdKey(Term::symbol(":poll-3"))) else {
+        panic!("run workflow missing :poll-3");
+    };
+    assert_eq!(
+        run_poll_3.get(&TermOrdKey(Term::symbol(":state"))),
+        Some(&Term::symbol(":done"))
+    );
+    let Some(Term::Map(run_result)) = run_poll_3.get(&TermOrdKey(Term::symbol(":result"))) else {
+        panic!("run workflow missing final result");
+    };
+    assert_eq!(
+        run_result.get(&TermOrdKey(Term::symbol(":ok"))),
+        Some(&Term::Bool(true))
+    );
+    assert!(
+        run_result.contains_key(&TermOrdKey(Term::symbol(":run/launch-contract"))),
+        "run result should include :run/launch-contract"
+    );
+
+    let debug_resp = run_spawn_with_three_polls(
+        "editor/task::debug-pkg",
+        format!(
+            "{{:pkg \"{}/package.toml\" :entry \"pkg/a::x\" :breakpoints [\"pkg/a::x\"]}}",
+            root.display()
+        ),
+    );
+    let Some(Term::Map(debug_poll_3)) = debug_resp.get(&TermOrdKey(Term::symbol(":poll-3"))) else {
+        panic!("debug workflow missing :poll-3");
+    };
+    let Some(Term::Map(debug_result)) = debug_poll_3.get(&TermOrdKey(Term::symbol(":result")))
+    else {
+        panic!("debug workflow missing final result");
+    };
+    assert!(
+        debug_result.contains_key(&TermOrdKey(Term::symbol(":debug/session-id"))),
+        "debug result should include :debug/session-id"
+    );
+
+    let refactor_resp = run_spawn_with_three_polls(
+        "editor/task::refactor-module",
+        "{:source \"(def old/name 1)\\n(def pkg/a::y old/name)\\n\" :from \"old/name\" :to \"new/name\"}".to_string(),
+    );
+    let Some(Term::Map(refactor_poll_3)) = refactor_resp.get(&TermOrdKey(Term::symbol(":poll-3")))
+    else {
+        panic!("refactor workflow missing :poll-3");
+    };
+    let Some(Term::Map(refactor_result)) =
+        refactor_poll_3.get(&TermOrdKey(Term::symbol(":result")))
+    else {
+        panic!("refactor workflow missing final result");
+    };
+    let Some(Term::Str(updated_source)) =
+        refactor_result.get(&TermOrdKey(Term::symbol(":updated")))
+    else {
+        panic!("refactor workflow missing :updated");
+    };
+    assert!(
+        updated_source.contains("new/name"),
+        "refactor result should rewrite old symbol references"
+    );
+
+    let index_resp = run_spawn_with_three_polls(
+        "editor/task::index-workspace",
+        format!(
+            "{{:root \"{}\" :max-packages 8 :max-partials 4}}",
+            root.display()
+        ),
+    );
+    let Some(Term::Map(index_poll_3)) = index_resp.get(&TermOrdKey(Term::symbol(":poll-3"))) else {
+        panic!("index workflow missing :poll-3");
+    };
+    let Some(Term::Map(index_result)) = index_poll_3.get(&TermOrdKey(Term::symbol(":result")))
+    else {
+        panic!("index workflow missing final result");
+    };
+    let Some(Term::Int(pkg_count)) = index_result.get(&TermOrdKey(Term::symbol(":package-count")))
+    else {
+        panic!("index workflow missing :package-count");
+    };
+    assert!(
+        pkg_count >= &1_i64.into(),
+        "index workspace result should include at least one package"
     );
 }

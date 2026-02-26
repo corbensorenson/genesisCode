@@ -160,6 +160,28 @@ fn stage2_validates_collection_ops_on_let_bound_alias_chains() {
 }
 
 #[test]
+fn stage2_validates_collection_ops_on_begin_let_wrapped_alias_pipelines() {
+    let src = r#"
+          (let ((v (begin
+                     0
+                     (let ((base [1 2]))
+                       (prim vec/push base 3))))
+                (m (begin
+                     0
+                     (let ((base {:a 1}))
+                       (prim map/put base (quote :b) 2)))))
+            (if (prim int/eq? (prim vec/get v 2) 3)
+              (prim int/eq? (prim map/get m (quote :b)) 2)
+              false))
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let r = stage2_validation_report(&forms);
+    assert!(r.supported, "{r:?}");
+    assert!(r.ok, "{r:?}");
+    assert_eq!(r.value_kind, Some(Stage2ValueKind::Bool));
+}
+
+#[test]
 fn stage2_validates_generic_let_collection_alias_flow() {
     let src = r#"
           (let ((v [1 2 3])

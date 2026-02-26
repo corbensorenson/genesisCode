@@ -14,6 +14,7 @@ Legend:
 | Canonical CoreForm IR + stable content hash identity | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Sealed unforgeable `UNHANDLED`/`EFFECT`/`ERROR` protocol | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Deny-by-default capability policy runtime | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Untrusted-agent safety defaults (dev/ci/release caps budgets + abuse-case guard tests) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Deterministic effect logs + replay checker | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Built-in semantic VCS (`commit`/`patch`/`refs`/`merge3`) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Built-in package/project manager (`pkg`/`gcpm`) | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
@@ -33,6 +34,7 @@ Legend:
 | Graphics/window/input/audio capability families | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | XR and browser runtime capability families | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | GPU/XR productization conformance lane | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Media capability coverage with policy-gated deterministic image/audio families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Host plugin + FFI capability schemas | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
 | First-party backend bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Stage2 CoreForm->WASM translation-validation path | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
@@ -50,12 +52,6 @@ GenesisCode is competitive where other languages require assembling multiple ext
 
 Known GenesisCode gaps (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
 - `P0.1` Stage2 coverage still rejects supported CoreForm patterns required by deploy targets.
-- `P0.2` WASI remote registry parity is incomplete for http(s) remotes.
-- `P0.3` GPU device backend lacks full resource lifecycle parity.
-- `P0.4` GFX/browser/XR production runtime paths still include simulation/unsupported-op gaps.
-- `P1.1` Media conversion support is narrower than production “build anything” needs.
-- `P1.2` Editor task runtime remains fixed-task and not fully extensible for agent orchestration.
-- `P2.3` Untrusted-agent execution safety hardening needs additional enforcement depth.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
@@ -75,5 +71,6 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_browser_host.rs`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_xr_host.rs`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_tasks.rs`
+- `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_editor_task_workflows.rs`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_effects/src/runner_capability_dispatch/media.rs`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/HOST_ABI.md`

@@ -253,10 +253,22 @@ def parse_stage2_int(section: str, key: str) -> int:
         )
     return int(match.group(1))
 
+def parse_stage2_int_optional(section: str, key: str, default: int) -> int:
+    match = re.search(rf"{re.escape(key)}\s+(-?\d+)\b", section)
+    if match is None:
+        return default
+    return int(match.group(1))
+
 summary_section = parse_stage2_section(":stage2-summary")
 requirements_section = parse_stage2_section(":stage2-requirements")
 stage2_supported_modules = parse_stage2_int(summary_section, ":supported-modules")
 stage2_validated_modules = parse_stage2_int(summary_section, ":validated-modules")
+stage2_strict_modules = parse_stage2_int_optional(
+    summary_section, ":strict-modules", stage2_supported_modules
+)
+stage2_constant_fallback_modules = parse_stage2_int_optional(
+    summary_section, ":constant-fallback-modules", 0
+)
 stage2_min_supported_modules = parse_stage2_int(requirements_section, ":min-supported-modules")
 stage2_min_validated_modules = parse_stage2_int(requirements_section, ":min-validated-modules")
 requirements_ok = bool(
@@ -275,6 +287,20 @@ if stage2_validated_modules < stage2_min_validated_modules:
     raise SystemExit(
         "full-selfhost-cutover-profile: stage2 validated modules below enforced minimum "
         f"({stage2_validated_modules} < {stage2_min_validated_modules})"
+    )
+if stage2_strict_modules < 0 or stage2_constant_fallback_modules < 0:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 lowering-mode counts must be non-negative"
+    )
+if stage2_strict_modules + stage2_constant_fallback_modules > stage2_supported_modules:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 lowering-mode counts exceed supported-module count "
+        f"({stage2_strict_modules}+{stage2_constant_fallback_modules} > {stage2_supported_modules})"
+    )
+if stage2_strict_modules <= 0:
+    raise SystemExit(
+        "full-selfhost-cutover-profile: stage2 strict-lowered module count must be non-zero "
+        "(fallback-only lowering is not allowed)"
     )
 if not requirements_ok:
     raise SystemExit(
@@ -353,6 +379,8 @@ report_doc = {
     "bootstrap_status": bootstrap_status,
     "stage2_supported_modules": stage2_supported_modules,
     "stage2_validated_modules": stage2_validated_modules,
+    "stage2_strict_modules": stage2_strict_modules,
+    "stage2_constant_fallback_modules": stage2_constant_fallback_modules,
     "stage2_min_supported_modules": stage2_min_supported_modules,
     "stage2_min_validated_modules": stage2_min_validated_modules,
     "stage2_generative_domain_count": generative_domain_count,

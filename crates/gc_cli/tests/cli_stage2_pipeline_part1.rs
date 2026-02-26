@@ -77,14 +77,12 @@ fn eval_stage2_gate_matches_baseline_for_scalar_pure_module() {
 #[test]
 fn eval_stage2_gate_rejects_unsupported_module() {
     let dir = tempdir().unwrap();
-    let file = dir.path().join("effect.gc");
+    let file = dir.path().join("recursive_unsupported.gc");
     std::fs::write(
         &file,
         r#"
-          (core/effect::perform
-            'sys/time::now
-            nil
-            (fn (t) (core/effect::pure t)))
+          (def f (fn (x) (f x)))
+          (f 1)
         "#,
     )
     .unwrap();
@@ -154,6 +152,7 @@ fn eval_stage2_gate_accepts_terminating_recursive_module_via_fallback_lowering()
     let stage2 = &v["data"]["stage2"];
     assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
     assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(stage2["lowering_mode"].as_str(), Some("strict"), "{v}");
     assert_eq!(stage2["value_kind"].as_str(), Some("int"), "{v}");
     assert_eq!(v["data"]["value"].as_str(), Some("0"), "{v}");
 }
@@ -186,6 +185,11 @@ fn eval_stage2_gate_accepts_recursive_non_scalar_module_via_fallback_lowering() 
     let stage2 = &v["data"]["stage2"];
     assert_eq!(stage2["supported"].as_bool(), Some(true), "{v}");
     assert_eq!(stage2["ok"].as_bool(), Some(true), "{v}");
+    assert_eq!(
+        stage2["lowering_mode"].as_str(),
+        Some("constant-fallback"),
+        "{v}"
+    );
     assert_eq!(stage2["value_kind"].as_str(), Some("term"), "{v}");
     let rendered = v["data"]["value"].as_str().expect("string value");
     let normalized: String = rendered.chars().filter(|c| !c.is_whitespace()).collect();

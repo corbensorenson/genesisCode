@@ -92,6 +92,7 @@ Compatibility notes:
 - `core/media::audio-transcode`
 - `core/media::image-transcode`
 - `core/pkg-low::add`
+- `core/pkg-low::bridge`
 - `core/pkg-low::info`
 - `core/pkg-low::init`
 - `core/pkg-low::install`
@@ -674,14 +675,14 @@ Browser-native WebXR runtime conformance:
   - Deterministic semantics: returns stable hash envelope `{:ok true :algorithm "blake3" :hash <hex64> :bytes <int> ...}`.
 - `core/media::image-transcode`
   - Required payload fields: `:data` (bytes|string), `:source-format` (string/symbol), `:target-format` (string/symbol), `:width` (int), `:height` (int).
-  - Supported formats: `rgba8`, `gray8`.
+  - Supported formats: `rgba8`, `bgra8`, `rgb8`, `bgr8`, `gray8`, `gray16le`, `rgba16le`.
   - Optional per-op policy controls:
     - `allow_source_formats`, `allow_target_formats` (string arrays)
     - `max_input_bytes`, `max_output_bytes`, `max_pixels` (positive integers)
   - Deterministic semantics: policy-gated format conversion with stable grayscale coefficients and deterministic hash/byte metadata in response.
 - `core/media::audio-transcode`
   - Required payload fields: `:data` (bytes|string), `:source-format` (string/symbol), `:target-format` (string/symbol), `:channels` (int), `:sample-rate` (int).
-  - Supported formats: `pcm-s16le`, `pcm-f32le`.
+  - Supported formats: `pcm-u8`, `pcm-s16le`, `pcm-s24le`, `pcm-s32le`, `pcm-f32le`, `pcm-f64le`.
   - Optional per-op policy controls:
     - `allow_source_formats`, `allow_target_formats` (string arrays)
     - `max_input_bytes`, `max_output_bytes`, `max_frames` (positive integers)

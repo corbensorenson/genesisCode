@@ -122,15 +122,46 @@ fn first_party_profile(pol: Option<&OpPolicy>) -> GfxFirstPartyProfile {
                 .get("first_party_profile")
                 .or_else(|| p.extra.get("gfx_first_party_profile"))
         })
-        .and_then(|v| v.as_str())
-        .unwrap_or("headless")
-        .to_ascii_lowercase();
-    match profile.as_str() {
-        "interactive" => GfxFirstPartyProfile::Interactive,
-        "desktop" => GfxFirstPartyProfile::Desktop,
-        "browser" => GfxFirstPartyProfile::Browser,
-        _ => GfxFirstPartyProfile::Headless,
+        .and_then(|v| v.as_str());
+
+    match profile.map(|raw| raw.trim().to_ascii_lowercase()) {
+        Some(value) if value == "interactive" => GfxFirstPartyProfile::Interactive,
+        Some(value) if value == "desktop" => GfxFirstPartyProfile::Desktop,
+        Some(value) if value == "browser" => GfxFirstPartyProfile::Browser,
+        Some(value) if value == "headless" => GfxFirstPartyProfile::Headless,
+        Some(value) if value == "production" || value == "prod" => production_default_profile(),
+        Some(_) => GfxFirstPartyProfile::Headless,
+        None if is_production_runtime_profile(pol) => production_default_profile(),
+        None => GfxFirstPartyProfile::Headless,
     }
+}
+
+fn is_production_runtime_profile(pol: Option<&OpPolicy>) -> bool {
+    pol.and_then(|p| {
+        p.extra
+            .get("runtime_profile")
+            .or_else(|| p.extra.get("host_runtime_profile"))
+            .and_then(|v| v.as_str())
+    })
+    .is_some_and(|raw| {
+        let normalized = raw.trim().to_ascii_lowercase();
+        normalized == "production" || normalized == "prod" || normalized == "release"
+    })
+}
+
+#[cfg(target_os = "wasi")]
+fn production_default_profile() -> GfxFirstPartyProfile {
+    GfxFirstPartyProfile::Browser
+}
+
+#[cfg(all(not(target_os = "wasi"), feature = "gfx-desktop-backend"))]
+fn production_default_profile() -> GfxFirstPartyProfile {
+    GfxFirstPartyProfile::Desktop
+}
+
+#[cfg(all(not(target_os = "wasi"), not(feature = "gfx-desktop-backend")))]
+fn production_default_profile() -> GfxFirstPartyProfile {
+    GfxFirstPartyProfile::Interactive
 }
 
 fn first_party_gfx_response(
@@ -154,9 +185,11 @@ fn first_party_gfx_response(
             (":ok", Term::Bool(false)),
             (
                 ":error/code",
-                Term::Str("gfx/first-party-unsupported-op".to_string()),
+                Term::Str("gfx/first-party-policy-disabled-op".to_string()),
             ),
             (":error/op", Term::symbol(op)),
+            (":schema", Term::symbol(":core/host-policy-disabled.v1")),
+            (":policy-disabled", Term::Bool(true)),
         ]),
     }
 }

@@ -29,7 +29,7 @@ struct GpuTextureState {
 enum GpuResourceState {
     Buffer(GpuBufferState),
     Texture(GpuTextureState),
-    Opaque { kind: String, payload_h: String },
+    Opaque { kind: String, descriptor: Term },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -199,14 +199,12 @@ fn first_party_create_opaque(
     kind: &str,
 ) -> Term {
     let id = alloc_resource_id(runtime, kind);
-    let payload_h = blake3::hash(gc_coreform::print_term(payload).as_bytes())
-        .to_hex()
-        .to_string();
+    let descriptor = payload_descriptor(payload);
     runtime.resources.insert(
         id.clone(),
         GpuResourceState::Opaque {
             kind: kind.to_string(),
-            payload_h: payload_h.clone(),
+            descriptor: descriptor.clone(),
         },
     );
     map_term(vec![
@@ -215,7 +213,7 @@ fn first_party_create_opaque(
         (":id", Term::Str(id)),
         (":kind", Term::Str(kind.to_string())),
         (":op", Term::symbol(op)),
-        (":payload-h", Term::Str(payload_h)),
+        (":descriptor", descriptor),
     ])
 }
 
@@ -382,13 +380,13 @@ fn first_party_destroy_resource(runtime: &mut GpuHostRuntime, op: &str, payload:
     let kind = match resource {
         GpuResourceState::Buffer(_) => Term::symbol(":buffer"),
         GpuResourceState::Texture(_) => Term::symbol(":texture"),
-        GpuResourceState::Opaque { kind, payload_h } => {
+        GpuResourceState::Opaque { kind, descriptor } => {
             return map_term(vec![
                 (":ok", Term::Bool(true)),
                 (":backend", Term::Str("first-party-runtime".to_string())),
                 (":id", Term::Str(id)),
                 (":kind", Term::Str(kind)),
-                (":payload-h", Term::Str(payload_h)),
+                (":descriptor", descriptor),
                 (":destroyed", Term::Bool(true)),
             ]);
         }
@@ -522,6 +520,16 @@ fn map_get_nonnegative_usize(map: &BTreeMap<TermOrdKey, Term>, key: &str) -> Opt
             Term::Int(v) => v.to_usize(),
             _ => None,
         })
+}
+
+fn payload_descriptor(payload: &Term) -> Term {
+    let Some(payload_map) = payload_map(payload) else {
+        return payload.clone();
+    };
+    payload_map
+        .get(&TermOrdKey(Term::symbol(":desc")))
+        .cloned()
+        .unwrap_or_else(|| payload.clone())
 }
 
 fn term_to_bytes(term: &Term) -> Option<Vec<u8>> {

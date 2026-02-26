@@ -12,6 +12,20 @@ fn hash_bytes_hex(bytes: &[u8]) -> String {
     blake3::hash(bytes).to_hex().to_string()
 }
 
+fn make_temp_dir(prefix: &str) -> std::path::PathBuf {
+    let mut dir = std::env::temp_dir();
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock drift")
+        .as_nanos();
+    dir.push(format!(
+        "genesis-gc-registry-{prefix}-{}-{nanos}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&dir).expect("mkdir temp test dir");
+    dir
+}
+
 #[derive(Debug)]
 struct UploadSession {
     hash: String,
@@ -296,4 +310,69 @@ fn chunk_upload_finish_hash_mismatch_fails_close() {
     assert!(got.is_none(), "mismatched upload must not store bytes");
 
     gc_registry::unregister_inproc("chunk_mismatch").expect("unregister inproc");
+}
+
+#[test]
+fn chunk_upload_roundtrip_over_file_remote() {
+    let test_root = make_temp_dir("file-chunk-roundtrip");
+    let remote_dir = test_root.join("remote");
+    std::fs::create_dir_all(&remote_dir).expect("mkdir");
+    let remote = format!("file://{}/", remote_dir.display());
+
+    let client = RegistryClient::new(&remote, None).expect("create file client");
+    let payload = b"abcdefghijklmnopqrstuvwxyz0123456789".to_vec();
+    let hash = hash_bytes_hex(&payload);
+
+    client
+        .store_put_chunked(&hash, &payload, 8)
+        .expect("chunked file put should succeed");
+
+    let got = client.store_get(&hash).expect("store_get");
+    assert_eq!(got, payload);
+    std::fs::remove_dir_all(&test_root).expect("cleanup");
+}
+
+#[test]
+fn chunk_upload_status_resume_over_file_remote() {
+    let test_root = make_temp_dir("file-chunk-resume");
+    let remote_dir = test_root.join("remote");
+    std::fs::create_dir_all(&remote_dir).expect("mkdir");
+    let remote = format!("file://{}/", remote_dir.display());
+
+    let client = RegistryClient::new(&remote, None).expect("create file client");
+    let payload = b"abcdefghijklmnopqrstuvwxyz0123456789".to_vec();
+    let hash = hash_bytes_hex(&payload);
+
+    let start = client
+        .store_upload_start(&hash, payload.len() as u64)
+        .expect("start upload");
+    client
+        .store_upload_chunk(&start.upload_id, 0, &payload[0..8])
+        .expect("chunk 0");
+
+    let st = client
+        .store_upload_status(&start.upload_id)
+        .expect("upload status");
+    assert_eq!(st.received_chunks, vec![0]);
+
+    let client2 = RegistryClient::new(&remote, None).expect("create client2");
+    client2
+        .store_upload_chunk(&start.upload_id, 1, &payload[8..16])
+        .expect("chunk 1");
+    client2
+        .store_upload_chunk(&start.upload_id, 2, &payload[16..24])
+        .expect("chunk 2");
+    client2
+        .store_upload_chunk(&start.upload_id, 3, &payload[24..32])
+        .expect("chunk 3");
+    client2
+        .store_upload_chunk(&start.upload_id, 4, &payload[32..])
+        .expect("chunk 4");
+    client2
+        .store_upload_finish(&start.upload_id)
+        .expect("finish upload");
+
+    let got = client2.store_get(&hash).expect("store_get");
+    assert_eq!(got, payload);
+    std::fs::remove_dir_all(&test_root).expect("cleanup");
 }

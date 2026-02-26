@@ -41,10 +41,79 @@ pub(in super::super) fn term_const_quoted_data_term(t: &Term) -> Option<Term> {
 }
 
 pub(in super::super) fn term_const_data_expr(t: &Term) -> Option<Term> {
-    term_const_quoted_data_term(t).or_else(|| term_const_data_term(t))
+    term_const_data_expr_with_aliases(t, &BTreeMap::new())
 }
 
 pub(in super::super) fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
+    term_const_if_condition_expr_with_aliases(t, &BTreeMap::new())
+}
+
+fn term_const_data_expr_with_aliases(
+    t: &Term,
+    scalar_aliases: &BTreeMap<String, Term>,
+) -> Option<Term> {
+    if let Term::Symbol(sym) = t
+        && let Some(v) = scalar_aliases.get(sym)
+    {
+        return Some(v.clone());
+    }
+    if let Some(quoted) = term_const_quoted_data_term(t) {
+        return Some(quoted);
+    }
+    if let Some(data) = term_const_data_term(t) {
+        return Some(data);
+    }
+    let xs = t.as_proper_list()?;
+    if xs.is_empty() {
+        return None;
+    }
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        let mut last = None;
+        for expr in xs.iter().skip(1) {
+            last = term_const_data_expr_with_aliases(expr, scalar_aliases);
+        }
+        return last;
+    }
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return None;
+        }
+        let bindings = xs[1].as_proper_list()?;
+        let mut scoped = scalar_aliases.clone();
+        for binding in bindings {
+            let pair = binding.as_proper_list()?;
+            if pair.len() != 2 {
+                return None;
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return None;
+            };
+            let rhs = term_const_data_expr_with_aliases(pair[1], &scoped)?;
+            scoped.insert(name.clone(), rhs);
+        }
+        let mut last = None;
+        for expr in xs.iter().skip(2) {
+            last = term_const_data_expr_with_aliases(expr, &scoped);
+        }
+        return last;
+    }
+    if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
+        let cond = term_const_if_condition_expr_with_aliases(xs[1], scalar_aliases)?;
+        let branch = if term_truthy(&cond) { xs[2] } else { xs[3] };
+        return term_const_data_expr_with_aliases(branch, scalar_aliases);
+    }
+    None
+}
+
+fn term_const_if_condition_expr_with_aliases(
+    t: &Term,
+    scalar_aliases: &BTreeMap<String, Term>,
+) -> Option<Term> {
+    if let Term::Symbol(sym) = t
+        && let Some(v) = scalar_aliases.get(sym)
+    {
+        return Some(v.clone());
+    }
     if let Some(quoted) = term_const_quoted_data_term(t) {
         return Some(quoted);
     }
@@ -52,41 +121,76 @@ pub(in super::super) fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
         Term::Nil | Term::Bool(_) | Term::Int(_) | Term::Str(_) | Term::Bytes(_) => Some(t.clone()),
         _ => {
             let xs = t.as_proper_list()?;
+            if xs.is_empty() {
+                return None;
+            }
+            if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+                let mut last = None;
+                for expr in xs.iter().skip(1) {
+                    last = term_const_if_condition_expr_with_aliases(expr, scalar_aliases)
+                        .or_else(|| term_const_data_expr_with_aliases(expr, scalar_aliases));
+                }
+                return last;
+            }
+            if matches!(xs[0], Term::Symbol(s) if s == "let") {
+                if xs.len() < 3 {
+                    return None;
+                }
+                let bindings = xs[1].as_proper_list()?;
+                let mut scoped = scalar_aliases.clone();
+                for binding in bindings {
+                    let pair = binding.as_proper_list()?;
+                    if pair.len() != 2 {
+                        return None;
+                    }
+                    let Term::Symbol(name) = pair[0] else {
+                        return None;
+                    };
+                    let rhs = term_const_data_expr_with_aliases(pair[1], &scoped)?;
+                    scoped.insert(name.clone(), rhs);
+                }
+                let mut last = None;
+                for expr in xs.iter().skip(2) {
+                    last = term_const_if_condition_expr_with_aliases(expr, &scoped)
+                        .or_else(|| term_const_data_expr_with_aliases(expr, &scoped));
+                }
+                return last;
+            }
             if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
-                let cond = term_const_if_condition_expr(xs[1])?;
+                let cond = term_const_if_condition_expr_with_aliases(xs[1], scalar_aliases)?;
                 let branch = if term_truthy(&cond) { xs[2] } else { xs[3] };
-                return term_const_if_condition_expr(branch)
-                    .or_else(|| term_const_data_expr(branch));
+                return term_const_if_condition_expr_with_aliases(branch, scalar_aliases)
+                    .or_else(|| term_const_data_expr_with_aliases(branch, scalar_aliases));
             }
             if xs.len() == 4
                 && matches!(xs[0], Term::Symbol(s) if s == "prim")
                 && matches!(xs[1], Term::Symbol(s) if s == "int/lt?")
             {
-                let a = term_const_i64_expr(xs[2])?;
-                let b = term_const_i64_expr(xs[3])?;
+                let a = term_const_i64_expr_with_aliases(xs[2], scalar_aliases)?;
+                let b = term_const_i64_expr_with_aliases(xs[3], scalar_aliases)?;
                 return Some(Term::Bool(a < b));
             }
             if xs.len() == 4
                 && matches!(xs[0], Term::Symbol(s) if s == "prim")
                 && matches!(xs[1], Term::Symbol(s) if s == "int/eq?")
             {
-                let a = term_const_i64_expr(xs[2])?;
-                let b = term_const_i64_expr(xs[3])?;
+                let a = term_const_i64_expr_with_aliases(xs[2], scalar_aliases)?;
+                let b = term_const_i64_expr_with_aliases(xs[3], scalar_aliases)?;
                 return Some(Term::Bool(a == b));
             }
             if xs.len() == 4
                 && matches!(xs[0], Term::Symbol(s) if s == "prim")
                 && matches!(xs[1], Term::Symbol(s) if s == "core/eq?")
             {
-                let a = term_const_data_expr(xs[2])?;
-                let b = term_const_data_expr(xs[3])?;
+                let a = term_const_data_expr_with_aliases(xs[2], scalar_aliases)?;
+                let b = term_const_data_expr_with_aliases(xs[3], scalar_aliases)?;
                 return Some(Term::Bool(a == b));
             }
             if xs.len() == 3
                 && matches!(xs[0], Term::Symbol(s) if s == "prim")
                 && matches!(xs[1], Term::Symbol(s) if s == "list/is-nil?")
             {
-                let x = term_const_data_expr(xs[2])?;
+                let x = term_const_data_expr_with_aliases(xs[2], scalar_aliases)?;
                 return Some(Term::Bool(matches!(x, Term::Nil)));
             }
             if xs.len() == 2
@@ -94,8 +198,8 @@ pub(in super::super) fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
                 && inner.len() == 2
                 && matches!(inner[0], Term::Symbol(s) if s == "core/int::lt?")
             {
-                let a = term_const_i64_expr(inner[1])?;
-                let b = term_const_i64_expr(xs[1])?;
+                let a = term_const_i64_expr_with_aliases(inner[1], scalar_aliases)?;
+                let b = term_const_i64_expr_with_aliases(xs[1], scalar_aliases)?;
                 return Some(Term::Bool(a < b));
             }
             if xs.len() == 2
@@ -103,8 +207,8 @@ pub(in super::super) fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
                 && inner.len() == 2
                 && matches!(inner[0], Term::Symbol(s) if s == "core/int::eq?")
             {
-                let a = term_const_i64_expr(inner[1])?;
-                let b = term_const_i64_expr(xs[1])?;
+                let a = term_const_i64_expr_with_aliases(inner[1], scalar_aliases)?;
+                let b = term_const_i64_expr_with_aliases(xs[1], scalar_aliases)?;
                 return Some(Term::Bool(a == b));
             }
             if xs.len() == 2
@@ -112,12 +216,12 @@ pub(in super::super) fn term_const_if_condition_expr(t: &Term) -> Option<Term> {
                 && inner.len() == 2
                 && matches!(inner[0], Term::Symbol(s) if s == "core/eq?")
             {
-                let a = term_const_data_expr(inner[1])?;
-                let b = term_const_data_expr(xs[1])?;
+                let a = term_const_data_expr_with_aliases(inner[1], scalar_aliases)?;
+                let b = term_const_data_expr_with_aliases(xs[1], scalar_aliases)?;
                 return Some(Term::Bool(a == b));
             }
             if xs.len() == 2 && matches!(xs[0], Term::Symbol(s) if s == "core/list::is-nil?") {
-                let x = term_const_data_expr(xs[1])?;
+                let x = term_const_data_expr_with_aliases(xs[1], scalar_aliases)?;
                 return Some(Term::Bool(matches!(x, Term::Nil)));
             }
             None
@@ -129,8 +233,11 @@ pub(in super::super) fn term_truthy(t: &Term) -> bool {
     !matches!(t, Term::Nil | Term::Bool(false))
 }
 
-pub(in super::super) fn term_const_i64_expr(t: &Term) -> Option<i64> {
-    let Term::Int(i) = term_const_data_expr(t)? else {
+fn term_const_i64_expr_with_aliases(
+    t: &Term,
+    scalar_aliases: &BTreeMap<String, Term>,
+) -> Option<i64> {
+    let Term::Int(i) = term_const_data_expr_with_aliases(t, scalar_aliases)? else {
         return None;
     };
     i.to_i64()
@@ -157,6 +264,47 @@ pub(in super::super) fn term_const_map_expr_with_aliases(
     };
     if xs.is_empty() {
         return Ok(None);
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        let mut last = None;
+        for expr in xs.iter().skip(1) {
+            last = term_const_map_expr_with_aliases(expr, local_aliases, global_aliases)?;
+        }
+        return Ok(last);
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Ok(None);
+        }
+        let Some(bindings) = xs[1].as_proper_list() else {
+            return Ok(None);
+        };
+        let mut scoped_aliases = local_aliases.clone();
+        for binding in bindings {
+            let Some(pair) = binding.as_proper_list() else {
+                return Ok(None);
+            };
+            if pair.len() != 2 {
+                return Ok(None);
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Ok(None);
+            };
+            if let Some(items) =
+                term_const_map_expr_with_aliases(pair[1], &scoped_aliases, global_aliases)?
+            {
+                scoped_aliases.insert(name.clone(), items);
+            } else {
+                scoped_aliases.remove(name);
+            }
+        }
+        let mut last = None;
+        for expr in xs.iter().skip(2) {
+            last = term_const_map_expr_with_aliases(expr, &scoped_aliases, global_aliases)?;
+        }
+        return Ok(last);
     }
 
     if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {

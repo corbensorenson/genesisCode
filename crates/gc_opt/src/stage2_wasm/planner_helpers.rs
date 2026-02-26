@@ -189,6 +189,47 @@ pub(super) fn term_const_vector_expr_with_aliases(
         return Ok(None);
     }
 
+    if matches!(xs[0], Term::Symbol(s) if s == "begin") {
+        let mut last = None;
+        for expr in xs.iter().skip(1) {
+            last = term_const_vector_expr_with_aliases(expr, local_aliases, global_aliases)?;
+        }
+        return Ok(last);
+    }
+
+    if matches!(xs[0], Term::Symbol(s) if s == "let") {
+        if xs.len() < 3 {
+            return Ok(None);
+        }
+        let Some(bindings) = xs[1].as_proper_list() else {
+            return Ok(None);
+        };
+        let mut scoped_aliases = local_aliases.clone();
+        for binding in bindings {
+            let Some(pair) = binding.as_proper_list() else {
+                return Ok(None);
+            };
+            if pair.len() != 2 {
+                return Ok(None);
+            }
+            let Term::Symbol(name) = pair[0] else {
+                return Ok(None);
+            };
+            if let Some(items) =
+                term_const_vector_expr_with_aliases(pair[1], &scoped_aliases, global_aliases)?
+            {
+                scoped_aliases.insert(name.clone(), items);
+            } else {
+                scoped_aliases.remove(name);
+            }
+        }
+        let mut last = None;
+        for expr in xs.iter().skip(2) {
+            last = term_const_vector_expr_with_aliases(expr, &scoped_aliases, global_aliases)?;
+        }
+        return Ok(last);
+    }
+
     if xs.len() == 4 && matches!(xs[0], Term::Symbol(s) if s == "if") {
         let Some(cond) = term_const_if_condition_expr(xs[1]) else {
             return Ok(None);

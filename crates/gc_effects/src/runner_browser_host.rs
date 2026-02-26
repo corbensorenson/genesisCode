@@ -102,9 +102,11 @@ fn first_party_browser_response(
             (":ok", Term::Bool(false)),
             (
                 ":error/code",
-                Term::Str("browser/first-party-unsupported-op".to_string()),
+                Term::Str("browser/first-party-policy-disabled-op".to_string()),
             ),
             (":error/op", Term::symbol(op)),
+            (":schema", Term::symbol(":core/host-policy-disabled.v1")),
+            (":policy-disabled", Term::Bool(true)),
         ]),
     }
 }

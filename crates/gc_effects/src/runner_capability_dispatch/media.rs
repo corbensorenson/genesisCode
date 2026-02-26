@@ -1,4 +1,10 @@
 use super::*;
+#[path = "media_formats.rs"]
+mod media_formats;
+use media_formats::{
+    audio_bytes_per_sample, audio_supported_formats, audio_transcode, image_bytes_per_pixel,
+    image_supported_formats, image_transcode,
+};
 
 fn payload_error_value(error_tok: SealId, op: &str, err: EffectsError) -> Value {
     mk_error(
@@ -226,12 +232,12 @@ pub(super) fn capability_core_media_image_transcode(
         Err(e) => return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op))),
     };
     let allow_source =
-        match media_policy_allowlist(pol, "allow_source_formats", &["rgba8", "gray8"]) {
+        match media_policy_allowlist(pol, "allow_source_formats", image_supported_formats()) {
             Ok(v) => v,
             Err(e) => return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op))),
         };
     let allow_target =
-        match media_policy_allowlist(pol, "allow_target_formats", &["rgba8", "gray8"]) {
+        match media_policy_allowlist(pol, "allow_target_formats", image_supported_formats()) {
             Ok(v) => v,
             Err(e) => return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op))),
         };
@@ -269,32 +275,24 @@ pub(super) fn capability_core_media_image_transcode(
         ));
     }
 
-    let src_channels = match source_format.as_str() {
-        "rgba8" => 4usize,
-        "gray8" => 1usize,
-        _ => {
-            return Ok(mk_error(
-                error_tok,
-                "core/caps/payload-error",
-                format!("{op} unsupported source format `{source_format}`"),
-                Some(op),
-            ));
-        }
+    let Some(source_bpp) = image_bytes_per_pixel(&source_format) else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/payload-error",
+            format!("{op} unsupported source format `{source_format}`"),
+            Some(op),
+        ));
     };
-    let dst_channels = match target_format.as_str() {
-        "rgba8" => 4usize,
-        "gray8" => 1usize,
-        _ => {
-            return Ok(mk_error(
-                error_tok,
-                "core/caps/payload-error",
-                format!("{op} unsupported target format `{target_format}`"),
-                Some(op),
-            ));
-        }
+    let Some(target_bpp) = image_bytes_per_pixel(&target_format) else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/payload-error",
+            format!("{op} unsupported target format `{target_format}`"),
+            Some(op),
+        ));
     };
 
-    let Some(expected_input_len) = pixel_count.checked_mul(src_channels) else {
+    let Some(expected_input_len) = pixel_count.checked_mul(source_bpp) else {
         return Ok(mk_error(
             error_tok,
             "core/caps/resource-limit",
@@ -314,34 +312,24 @@ pub(super) fn capability_core_media_image_transcode(
         ));
     }
 
-    let mut output = if source_format == target_format {
-        data.clone()
-    } else if source_format == "rgba8" && target_format == "gray8" {
-        let mut out = Vec::with_capacity(pixel_count);
-        for px in data.chunks_exact(4) {
-            let r = px[0] as u16;
-            let g = px[1] as u16;
-            let b = px[2] as u16;
-            let gray = ((77 * r + 150 * g + 29 * b + 128) >> 8) as u8;
-            out.push(gray);
+    let mut output = match image_transcode(&source_format, &target_format, width, height, &data) {
+        Ok(transcoded) => transcoded,
+        Err(detail) => {
+            let code = if detail.contains("overflow") {
+                "core/caps/resource-limit"
+            } else {
+                "core/caps/payload-error"
+            };
+            return Ok(mk_error(
+                error_tok,
+                code,
+                format!("{op} {detail}"),
+                Some(op),
+            ));
         }
-        out
-    } else if source_format == "gray8" && target_format == "rgba8" {
-        let mut out = Vec::with_capacity(pixel_count.saturating_mul(4));
-        for gray in &data {
-            out.extend_from_slice(&[*gray, *gray, *gray, 255u8]);
-        }
-        out
-    } else {
-        return Ok(mk_error(
-            error_tok,
-            "core/caps/payload-error",
-            format!("{op} unsupported conversion `{source_format}` -> `{target_format}`"),
-            Some(op),
-        ));
     };
 
-    let Some(expected_output_len) = pixel_count.checked_mul(dst_channels) else {
+    let Some(expected_output_len) = pixel_count.checked_mul(target_bpp) else {
         return Ok(mk_error(
             error_tok,
             "core/caps/resource-limit",
@@ -493,12 +481,12 @@ pub(super) fn capability_core_media_audio_transcode(
     }
 
     let allow_source =
-        match media_policy_allowlist(pol, "allow_source_formats", &["pcm-s16le", "pcm-f32le"]) {
+        match media_policy_allowlist(pol, "allow_source_formats", audio_supported_formats()) {
             Ok(v) => v,
             Err(e) => return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op))),
         };
     let allow_target =
-        match media_policy_allowlist(pol, "allow_target_formats", &["pcm-s16le", "pcm-f32le"]) {
+        match media_policy_allowlist(pol, "allow_target_formats", audio_supported_formats()) {
             Ok(v) => v,
             Err(e) => return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op))),
         };
@@ -519,29 +507,21 @@ pub(super) fn capability_core_media_audio_transcode(
         ));
     }
 
-    let source_sample_bytes = match source_format.as_str() {
-        "pcm-s16le" => 2usize,
-        "pcm-f32le" => 4usize,
-        _ => {
-            return Ok(mk_error(
-                error_tok,
-                "core/caps/payload-error",
-                format!("{op} unsupported source format `{source_format}`"),
-                Some(op),
-            ));
-        }
+    let Some(source_sample_bytes) = audio_bytes_per_sample(&source_format) else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/payload-error",
+            format!("{op} unsupported source format `{source_format}`"),
+            Some(op),
+        ));
     };
-    let target_sample_bytes = match target_format.as_str() {
-        "pcm-s16le" => 2usize,
-        "pcm-f32le" => 4usize,
-        _ => {
-            return Ok(mk_error(
-                error_tok,
-                "core/caps/payload-error",
-                format!("{op} unsupported target format `{target_format}`"),
-                Some(op),
-            ));
-        }
+    let Some(target_sample_bytes) = audio_bytes_per_sample(&target_format) else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/payload-error",
+            format!("{op} unsupported target format `{target_format}`"),
+            Some(op),
+        ));
     };
 
     let Some(input_frame_bytes) = source_sample_bytes.checked_mul(channels) else {
@@ -564,48 +544,32 @@ pub(super) fn capability_core_media_audio_transcode(
             Some(op),
         ));
     }
-    let frames = data.len() / input_frame_bytes;
-    if frames > max_frames {
+    let expected_frames = data.len() / input_frame_bytes;
+    if expected_frames > max_frames {
         return Ok(mk_error(
             error_tok,
             "core/caps/resource-limit",
-            format!("{op} frame count exceeds policy limit ({frames} > {max_frames})"),
+            format!("{op} frame count exceeds policy limit ({expected_frames} > {max_frames})"),
             Some(op),
         ));
     }
 
-    let mut output = Vec::new();
-    if source_format == target_format {
-        output = data.clone();
-    } else if source_format == "pcm-s16le" && target_format == "pcm-f32le" {
-        output.reserve(frames.saturating_mul(channels).saturating_mul(4));
-        for chunk in data.chunks_exact(2) {
-            let sample = i16::from_le_bytes([chunk[0], chunk[1]]) as f32 / 32768.0;
-            output.extend_from_slice(&sample.to_le_bytes());
+    let (output, frames) = match audio_transcode(&source_format, &target_format, channels, &data) {
+        Ok(result) => result,
+        Err(detail) => {
+            let code = if detail.contains("overflow") {
+                "core/caps/resource-limit"
+            } else {
+                "core/caps/payload-error"
+            };
+            return Ok(mk_error(
+                error_tok,
+                code,
+                format!("{op} {detail}"),
+                Some(op),
+            ));
         }
-    } else if source_format == "pcm-f32le" && target_format == "pcm-s16le" {
-        output.reserve(frames.saturating_mul(channels).saturating_mul(2));
-        for chunk in data.chunks_exact(4) {
-            let sample = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-            if !sample.is_finite() {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/caps/payload-error",
-                    format!("{op} input contains non-finite pcm-f32 sample"),
-                    Some(op),
-                ));
-            }
-            let scaled = (sample.clamp(-1.0, 1.0) * 32767.0).round() as i16;
-            output.extend_from_slice(&scaled.to_le_bytes());
-        }
-    } else {
-        return Ok(mk_error(
-            error_tok,
-            "core/caps/payload-error",
-            format!("{op} unsupported conversion `{source_format}` -> `{target_format}`"),
-            Some(op),
-        ));
-    }
+    };
 
     let Some(expected_output) = frames
         .checked_mul(channels)

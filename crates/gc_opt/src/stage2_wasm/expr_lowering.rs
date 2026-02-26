@@ -106,9 +106,12 @@ pub(super) fn try_plan_application_chain(
     let mut pushed_name = None;
     if let Some(name) = callable.def_name.as_ref() {
         if planner.expanding_fn_defs.iter().any(|n| n == name) {
-            return Err(Stage2CompileError::Unsupported(format!(
-                "recursive function call is unsupported in stage2: {name}"
-            )));
+            if let Some(folded) =
+                fold_recursive_fn_call_to_scalar(t, env, global_env, fn_defs, planner)?
+            {
+                return Ok(Some(folded));
+            }
+            return Ok(None);
         }
         planner.expanding_fn_defs.push(name.clone());
         pushed_name = Some(name.clone());
@@ -197,6 +200,103 @@ pub(super) fn try_plan_application_chain(
         };
     }
     Ok(Some(out))
+}
+
+fn local_const_data_term(
+    planner: &Planner,
+    local: Local,
+) -> Result<Option<Term>, Stage2CompileError> {
+    let out = match local.ty {
+        Ty::NilI32 => Some(Term::Nil),
+        Ty::BoolI32 => None,
+        Ty::I64 => planner
+            .local_const_int_values
+            .get(&local.idx)
+            .copied()
+            .map(|n| Term::Int(n.into())),
+        Ty::SymI32 => {
+            if let Some(id) = planner.local_const_symbol_ids.get(&local.idx).copied() {
+                Some(Term::Symbol(planner_symbol_for_id(planner, id)?))
+            } else {
+                None
+            }
+        }
+        Ty::StrI32 => {
+            if let Some(id) = planner.local_const_string_ids.get(&local.idx).copied() {
+                Some(Term::Str(planner_string_for_id(planner, id)?))
+            } else {
+                None
+            }
+        }
+        Ty::BytesI32 => {
+            if let Some(id) = planner.local_const_bytes_ids.get(&local.idx).copied() {
+                Some(Term::Bytes(planner_bytes_for_id(planner, id)?.into()))
+            } else {
+                None
+            }
+        }
+    };
+    Ok(out)
+}
+
+fn fold_recursive_fn_call_to_scalar(
+    t: &Term,
+    env: &BTreeMap<String, Local>,
+    global_env: &BTreeMap<String, Local>,
+    fn_defs: &BTreeMap<String, InlinableFnDef>,
+    planner: &mut Planner,
+) -> Result<Option<PExpr>, Stage2CompileError> {
+    let mut scalar_aliases: BTreeMap<String, Term> = BTreeMap::new();
+    for (name, local) in env {
+        if let Some(term) = local_const_data_term(planner, *local)? {
+            scalar_aliases.insert(name.clone(), term);
+        }
+    }
+    for (name, local) in global_env {
+        if let Some(term) = local_const_data_term(planner, *local)? {
+            scalar_aliases.insert(name.clone(), term);
+        }
+    }
+    let expr = resolve_scalar_aliases_term(t, &scalar_aliases);
+
+    let mut forms: Vec<Term> = Vec::new();
+    for (name, local) in global_env {
+        if let Some(term) = local_const_data_term(planner, *local)? {
+            forms.push(Term::list(vec![
+                Term::Symbol("def".to_string()),
+                Term::Symbol(name.clone()),
+                term,
+            ]));
+        }
+    }
+    for (name, fndef) in fn_defs {
+        if !matches!(fndef.capture, FnCapture::GlobalFrame) {
+            continue;
+        }
+        let rhs = Term::list(vec![
+            Term::Symbol("fn".to_string()),
+            Term::list(vec![Term::Symbol(fndef.param.clone())]),
+            fndef.body.clone(),
+        ]);
+        forms.push(Term::list(vec![
+            Term::Symbol("def".to_string()),
+            Term::Symbol(name.clone()),
+            rhs,
+        ]));
+    }
+    forms.push(expr);
+
+    let mut ctx = EvalCtx::with_step_limit(Some(STAGE2_BASELINE_STEP_LIMIT));
+    let prelude = build_prelude(&mut ctx);
+    let mut eval_env = prelude.env;
+    let value = match eval_module(&mut ctx, &mut eval_env, &forms) {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    let Value::Data(term) = value else {
+        return Ok(None);
+    };
+    scalar_term_to_pexpr(&term, planner)
 }
 
 pub(super) fn is_safe_defs_only_rhs(t: &Term) -> bool {

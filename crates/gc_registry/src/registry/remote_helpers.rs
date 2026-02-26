@@ -94,9 +94,9 @@ pub fn wasi_http_bridge_resolve_remote_root(
 }
 
 #[cfg(target_os = "wasi")]
-fn wasi_http_unsupported(op: &str) -> RegistryError {
+fn wasi_http_bridge_required(op: &str, base: &Url) -> RegistryError {
     RegistryError::Http(format!(
-        "{op}: http(s) registry remotes are not supported in WASI builds; use file:// or inproc://"
+        "{op}: deterministic WASI registry bridge not configured for remote `{base}`; set {WASI_HTTP_BRIDGE_ROOT_ENV} or materialize `.genesis/runtime/wasi-http-bridge` via `genesis gcpm env --profile dev`"
     ))
 }
 

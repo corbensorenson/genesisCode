@@ -19,7 +19,10 @@ use runner_editor_tasks::{execute_editor_task, result_ok, task_diagnostic_error}
 
 #[derive(Debug, Clone)]
 struct TaskState {
+    contract: Term,
     kind: String,
+    next_partial_idx: usize,
+    partials: Vec<Term>,
     state: String,
     result: Term,
 }
@@ -309,8 +312,12 @@ fn first_party_watch_unsubscribe(runtime: &mut EditorHostRuntime, payload: &Term
 fn first_party_task_spawn(runtime: &mut EditorHostRuntime, op: &str, payload: &Term) -> Term {
     let task_kind = requested_task_kind(op, payload);
     let task_input = requested_task_input(op, payload);
-    let result = execute_editor_task(&task_kind, &task_input);
-    let state = if result_ok(&result) {
+    let execution = execute_editor_task(&task_kind, &task_input);
+    let partial_count = execution.partials.len();
+    let result = execution.result;
+    let state = if !execution.partials.is_empty() {
+        ":running".to_string()
+    } else if result_ok(&result) {
         ":done".to_string()
     } else {
         ":failed".to_string()
@@ -320,7 +327,10 @@ fn first_party_task_spawn(runtime: &mut EditorHostRuntime, op: &str, payload: &T
     runtime.tasks.insert(
         task_id.clone(),
         TaskState {
+            contract: execution.contract.clone(),
             kind: task_kind.clone(),
+            next_partial_idx: 0,
+            partials: execution.partials,
             state: state.clone(),
             result,
         },
@@ -330,19 +340,42 @@ fn first_party_task_spawn(runtime: &mut EditorHostRuntime, op: &str, payload: &T
         (":backend", Term::Str("first-party-runtime".to_string())),
         (":task-id", Term::Str(task_id)),
         (":task-kind", Term::Str(task_kind)),
+        (":task-contract", execution.contract),
+        (":partial-count", Term::Int((partial_count as i64).into())),
         (":state", Term::symbol(state)),
     ])
 }
 
-fn first_party_task_poll(runtime: &EditorHostRuntime, payload: &Term) -> Term {
+fn first_party_task_poll(runtime: &mut EditorHostRuntime, payload: &Term) -> Term {
     let Some(m) = payload_map(payload) else {
         return editor_error("editor/task::poll", "editor/first-party-invalid-payload");
     };
     let Some(task_id) = map_get_string(m, ":task-id") else {
         return editor_error("editor/task::poll", "editor/first-party-missing-task-id");
     };
-    let Some(task) = runtime.tasks.get(&task_id) else {
+    let Some(task) = runtime.tasks.get_mut(&task_id) else {
         return editor_error("editor/task::poll", "editor/first-party-task-not-found");
+    };
+    let mut partial = Term::Nil;
+    let mut partial_emitted = false;
+    if task.state == ":running" {
+        if let Some(next_partial) = task.partials.get(task.next_partial_idx).cloned() {
+            task.next_partial_idx = task.next_partial_idx.saturating_add(1);
+            partial = next_partial;
+            partial_emitted = true;
+        }
+        if task.next_partial_idx >= task.partials.len() {
+            task.state = if result_ok(&task.result) {
+                ":done".to_string()
+            } else {
+                ":failed".to_string()
+            };
+        }
+    }
+    let result = if task.state == ":running" {
+        Term::Nil
+    } else {
+        task.result.clone()
     };
     map_term(vec![
         (":ok", Term::Bool(true)),
@@ -350,7 +383,18 @@ fn first_party_task_poll(runtime: &EditorHostRuntime, payload: &Term) -> Term {
         (":task-id", Term::Str(task_id)),
         (":task-kind", Term::Str(task.kind.clone())),
         (":state", Term::symbol(task.state.clone())),
-        (":result", task.result.clone()),
+        (":task-contract", task.contract.clone()),
+        (":partial", partial),
+        (":partial-emitted", Term::Bool(partial_emitted)),
+        (
+            ":partial-seq",
+            Term::Int((task.next_partial_idx as i64).into()),
+        ),
+        (
+            ":partial-total",
+            Term::Int((task.partials.len() as i64).into()),
+        ),
+        (":result", result),
     ])
 }
 

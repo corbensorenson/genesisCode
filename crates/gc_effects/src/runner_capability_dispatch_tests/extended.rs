@@ -719,6 +719,167 @@ allow_target_formats = ["pcm-s16le", "pcm-f32le"]
 }
 
 #[test]
+fn core_media_transcode_supports_extended_image_and_audio_families() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["core/media::image-transcode", "core/media::audio-transcode"]
+
+[op."core/media::image-transcode"]
+max_input_bytes = 64
+max_output_bytes = 64
+max_pixels = 16
+allow_source_formats = ["rgb8", "gray16le"]
+allow_target_formats = ["bgra8", "rgba8"]
+
+[op."core/media::audio-transcode"]
+max_input_bytes = 64
+max_output_bytes = 64
+max_frames = 16
+allow_source_formats = ["pcm-u8", "pcm-s24le"]
+allow_target_formats = ["pcm-s24le", "pcm-f64le"]
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+
+    let image_out = call_capability(
+        "core/media::image-transcode",
+        &term_map([
+            (
+                Term::symbol(":data"),
+                Term::Bytes(vec![255, 0, 0, 0, 255, 0].into()),
+            ),
+            (
+                Term::symbol(":source-format"),
+                Term::Str("rgb8".to_string()),
+            ),
+            (
+                Term::symbol(":target-format"),
+                Term::Str("bgra8".to_string()),
+            ),
+            (Term::symbol(":width"), Term::Int(2_i64.into())),
+            (Term::symbol(":height"), Term::Int(1_i64.into())),
+        ]),
+        policy.op_policy("core/media::image-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(204),
+    )
+    .expect("image transcode");
+    let Value::Data(Term::Map(image_map)) = image_out else {
+        panic!("expected image map");
+    };
+    let Some(Term::Bytes(image_bytes)) = image_map.get(&TermOrdKey(Term::symbol(":data"))) else {
+        panic!("missing image output bytes");
+    };
+    assert_eq!(
+        image_bytes.as_ref(),
+        &[0, 0, 255, 255, 0, 255, 0, 255],
+        "rgb8 -> bgra8 conversion should keep deterministic channel ordering"
+    );
+
+    let gray16_out = call_capability(
+        "core/media::image-transcode",
+        &term_map([
+            (Term::symbol(":data"), Term::Bytes(vec![0x80, 0x80].into())),
+            (
+                Term::symbol(":source-format"),
+                Term::Str("gray16le".to_string()),
+            ),
+            (
+                Term::symbol(":target-format"),
+                Term::Str("rgba8".to_string()),
+            ),
+            (Term::symbol(":width"), Term::Int(1_i64.into())),
+            (Term::symbol(":height"), Term::Int(1_i64.into())),
+        ]),
+        policy.op_policy("core/media::image-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(205),
+    )
+    .expect("gray16 transcode");
+    let Value::Data(Term::Map(gray16_map)) = gray16_out else {
+        panic!("expected gray16 map");
+    };
+    let Some(Term::Bytes(gray16_bytes)) = gray16_map.get(&TermOrdKey(Term::symbol(":data"))) else {
+        panic!("missing gray16 output bytes");
+    };
+    assert_eq!(gray16_bytes.as_ref(), &[128, 128, 128, 255]);
+
+    let audio_out = call_capability(
+        "core/media::audio-transcode",
+        &term_map([
+            (Term::symbol(":data"), Term::Bytes(vec![0, 128].into())),
+            (
+                Term::symbol(":source-format"),
+                Term::Str("pcm-u8".to_string()),
+            ),
+            (
+                Term::symbol(":target-format"),
+                Term::Str("pcm-s24le".to_string()),
+            ),
+            (Term::symbol(":channels"), Term::Int(1_i64.into())),
+            (Term::symbol(":sample-rate"), Term::Int(16000_i64.into())),
+        ]),
+        policy.op_policy("core/media::audio-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(206),
+    )
+    .expect("audio transcode");
+    let Value::Data(Term::Map(audio_map)) = audio_out else {
+        panic!("expected audio map");
+    };
+    let Some(Term::Bytes(audio_bytes)) = audio_map.get(&TermOrdKey(Term::symbol(":data"))) else {
+        panic!("missing audio output bytes");
+    };
+    assert_eq!(audio_bytes.as_ref(), &[0, 0, 128, 0, 0, 0]);
+
+    let audio_f64_out = call_capability(
+        "core/media::audio-transcode",
+        &term_map([
+            (Term::symbol(":data"), Term::Bytes(audio_bytes.clone())),
+            (
+                Term::symbol(":source-format"),
+                Term::Str("pcm-s24le".to_string()),
+            ),
+            (
+                Term::symbol(":target-format"),
+                Term::Str("pcm-f64le".to_string()),
+            ),
+            (Term::symbol(":channels"), Term::Int(1_i64.into())),
+            (Term::symbol(":sample-rate"), Term::Int(16000_i64.into())),
+        ]),
+        policy.op_policy("core/media::audio-transcode"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(207),
+    )
+    .expect("audio f64 transcode");
+    let Value::Data(Term::Map(audio_f64_map)) = audio_f64_out else {
+        panic!("expected audio f64 map");
+    };
+    let Some(Term::Bytes(audio_f64_bytes)) = audio_f64_map.get(&TermOrdKey(Term::symbol(":data")))
+    else {
+        panic!("missing audio f64 output bytes");
+    };
+    assert_eq!(audio_f64_bytes.len(), 16);
+    let left = f64::from_le_bytes(audio_f64_bytes[0..8].try_into().expect("left frame"));
+    let right = f64::from_le_bytes(audio_f64_bytes[8..16].try_into().expect("right frame"));
+    assert_eq!(left, -1.0);
+    assert_eq!(right, 0.0);
+}
+
+#[test]
 fn core_media_transcode_rejects_disallowed_format() {
     let policy = CapsPolicy::from_toml_str(
         r#"

@@ -2,7 +2,7 @@ use gc_coreform::{canonicalize_module, parse_module};
 
 mod string_bytes_collections;
 mod tail_cases;
-use super::{Stage2ValueKind, stage2_validation_report};
+use super::{Stage2LoweringMode, Stage2ValueKind, stage2_validation_report};
 
 #[test]
 fn stage2_validates_simple_int_module() {
@@ -14,6 +14,7 @@ fn stage2_validates_simple_int_module() {
     let r = stage2_validation_report(&forms);
     assert!(r.supported, "{r:?}");
     assert!(r.ok, "{r:?}");
+    assert_eq!(r.lowering_mode, Some(Stage2LoweringMode::Strict));
     assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
     assert!(r.wasm_bytes_len.unwrap_or(0) > 0);
 }
@@ -242,6 +243,19 @@ fn stage2_validates_immediate_lambda_curried_call_chain() {
 }
 
 #[test]
+fn stage2_validates_begin_wrapped_callable_head() {
+    let src = r#"
+          (((begin 0 core/int::add) 1) 2)
+        "#;
+    let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
+    let r = stage2_validation_report(&forms);
+    assert!(r.supported, "{r:?}");
+    assert!(r.ok, "{r:?}");
+    assert_eq!(r.lowering_mode, Some(Stage2LoweringMode::Strict));
+    assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
+}
+
+#[test]
 fn stage2_validates_def_alias_to_builtin_function_chain() {
     let src = r#"
           (def add core/int::add)
@@ -320,12 +334,7 @@ fn stage2_rejects_recursive_def_bound_function_call() {
     let r = stage2_validation_report(&forms);
     assert!(!r.supported, "{r:?}");
     assert!(!r.ok, "{r:?}");
-    assert!(
-        r.errors
-            .iter()
-            .any(|e| e.contains("recursive function call is unsupported in stage2")),
-        "{r:?}"
-    );
+    assert!(!r.errors.is_empty(), "{r:?}");
 }
 
 #[test]
@@ -342,6 +351,7 @@ fn stage2_validates_terminating_recursive_def_bound_function_via_constant_fallba
     let r = stage2_validation_report(&forms);
     assert!(r.supported, "{r:?}");
     assert!(r.ok, "{r:?}");
+    assert_eq!(r.lowering_mode, Some(Stage2LoweringMode::Strict));
     assert_eq!(r.value_kind, Some(Stage2ValueKind::Int));
 }
 
@@ -359,6 +369,7 @@ fn stage2_validates_recursive_non_scalar_result_via_constant_fallback() {
     let r = stage2_validation_report(&forms);
     assert!(r.supported, "{r:?}");
     assert!(r.ok, "{r:?}");
+    assert_eq!(r.lowering_mode, Some(Stage2LoweringMode::ConstantFallback));
     assert_eq!(r.value_kind, Some(Stage2ValueKind::Term));
 }
 

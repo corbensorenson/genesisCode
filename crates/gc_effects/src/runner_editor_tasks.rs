@@ -1,20 +1,32 @@
 use super::*;
 
-pub(super) fn execute_editor_task(kind: &str, input: &Term) -> Term {
-    match kind {
-        "editor/task::parse-module" => task_parse_module(input),
-        "editor/task::fmt-coreform" => task_fmt_coreform(input),
-        "editor/task::lint-module" => task_lint_module(input),
-        "editor/task::optimize-module" => task_optimize_module(input),
-        "editor/task::typecheck-pkg" => task_typecheck_pkg(input),
-        "editor/task::test-pkg" => task_test_pkg(input),
-        _ => task_diagnostic_error(
-            kind,
-            "editor/first-party-task-kind-unsupported",
-            "<task>",
-            format!("unsupported task kind: {kind}"),
-        ),
+#[path = "runner_editor_task_registry.rs"]
+mod runner_editor_task_registry;
+#[path = "runner_editor_task_workflows.rs"]
+mod runner_editor_task_workflows;
+
+pub(super) struct TaskExecution {
+    pub(super) contract: Term,
+    pub(super) partials: Vec<Term>,
+    pub(super) result: Term,
+}
+
+pub(super) struct TaskOutcome {
+    pub(super) partials: Vec<Term>,
+    pub(super) result: Term,
+}
+
+impl TaskOutcome {
+    fn immediate(result: Term) -> Self {
+        Self {
+            partials: Vec::new(),
+            result,
+        }
     }
+}
+
+pub(super) fn execute_editor_task(kind: &str, input: &Term) -> TaskExecution {
+    runner_editor_task_registry::execute_editor_task(kind, input)
 }
 
 fn task_parse_module(input: &Term) -> Term {
@@ -381,6 +393,14 @@ fn analyze_package(
     out.insert(
         TermOrdKey(Term::symbol(":module-count")),
         Term::Int((manifest.modules.len() as i64).into()),
+    );
+    out.insert(
+        TermOrdKey(Term::symbol(":defined-symbol-count")),
+        Term::Int((symbols.len() as i64).into()),
+    );
+    out.insert(
+        TermOrdKey(Term::symbol(":defined-symbols")),
+        Term::Vector(symbols.iter().cloned().map(Term::Str).collect::<Vec<_>>()),
     );
     out.insert(
         TermOrdKey(Term::symbol(":test-declaration-count")),

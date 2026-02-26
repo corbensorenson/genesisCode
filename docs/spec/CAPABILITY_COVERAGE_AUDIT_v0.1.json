@@ -86,14 +86,14 @@
       "family": "core/media",
       "host_only_ops": [],
       "host_ops_count": 3,
-      "notes": "Mainstream media conversion parity remains open in P1.1.",
-      "plan_id": "P1.1",
+      "notes": "Deterministic, policy-gated image/audio format families are implemented for mainstream transcoding workflows.",
+      "plan_id": null,
       "prelude_ops_count": 3,
       "release_gates": [
         "scripts/check_agent_reference_workflows.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "core/pkg-low",
@@ -198,14 +198,14 @@
       "family": "editor/task",
       "host_only_ops": [],
       "host_ops_count": 9,
-      "notes": "Extensible editor task orchestration remains open in P1.2.",
-      "plan_id": "P1.2",
+      "notes": "Schema-driven task orchestration and workflow task kinds are implemented with deterministic partial-output contracts.",
+      "plan_id": null,
       "prelude_ops_count": 9,
       "release_gates": [
         "scripts/check_task_concurrency_stress.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "editor/watch",
@@ -396,14 +396,12 @@
   "summary": {
     "family_count": 33,
     "host_operation_count": 187,
-    "implemented_families": 16,
-    "planned_families": 16,
+    "implemented_families": 18,
+    "planned_families": 14,
     "planned_upgrade_ids": [
       "P0.2",
       "P0.3",
-      "P0.4",
-      "P1.1",
-      "P1.2"
+      "P0.4"
     ],
     "policy_disabled_families": 1,
     "prelude_operation_count": 184
