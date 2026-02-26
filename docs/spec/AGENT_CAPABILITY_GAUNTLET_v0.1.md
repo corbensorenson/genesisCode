@@ -21,6 +21,8 @@ This gate is stricter than workflow smoke checks: it produces a scored report an
 - `ok` boolean
 - `workflow_count`, `workflow_successes`, `score_percent`
 - `domain_count`, `domain_successes`
+- `required_domains` (sorted domain id list)
+- `required_domain_thresholds` (domain -> minimum success count)
 - `elapsed_ms`, `budget_ms`
 - `history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`
 - `fail_reasons` (string list)
@@ -65,7 +67,11 @@ The gate requires at least one successful workflow for each:
 - `plugin_runtime`
 - `time_control`
 - `browser_runtime`
+- `ui_application_stack`
 - `xr_runtime`
+- `auth_security_service`
+- `hardware_device_integration`
+- `data_pipeline_orchestration`
 - `deployment`
 - `deploy_ios`
 - `deploy_android`

@@ -126,8 +126,8 @@ Strict/full profile runtime reports:
     via `scripts/lib/profile_runtime_budget.py` using:
     - `GENESIS_HEALTH_RELEASE_FULL_HISTORY`
     - `GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY`
-    - `GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY`
-    - `GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY`
+    - `GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY` (default `1`, fail-closed)
+    - `GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY` (default `policies/perf/upgrade_plan_health_release_full_seed_history.jsonl`)
     - `GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY`
   - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
     fail closed on low-disk preflight by default

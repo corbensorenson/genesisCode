@@ -130,10 +130,21 @@ def load_gauntlet(path: pathlib.Path) -> dict:
             }
     if not by_name:
         raise SystemExit(f"agent-generative-workloads: no successful workflows available in {path}")
+    required_domains = doc.get("required_domains")
+    if not isinstance(required_domains, list):
+        required_domains = []
+    required_domains = sorted(
+        {
+            domain
+            for domain in required_domains
+            if isinstance(domain, str) and domain
+        }
+    )
     return {
         "runtime_profile": str(doc.get("runtime_profile", "native")),
         "workflows": by_name,
         "elapsed_ms": int(doc.get("elapsed_ms", 0)),
+        "required_domains": required_domains,
     }
 
 primary = load_gauntlet(primary_path)
@@ -208,13 +219,15 @@ def evaluate_case(case: dict, wf_map: dict) -> dict:
 primary_cases = [evaluate_case(case, primary["workflows"]) for case in cases]
 secondary_cases = [evaluate_case(case, secondary["workflows"]) for case in cases] if secondary else []
 secondary_by_id = {case["id"]: case for case in secondary_cases}
-required_domains = sorted(
-    {
-        domain
-        for name in workflow_names
-        for domain in primary["workflows"][name]["domains"]
-    }
-)
+required_domains = sorted(primary.get("required_domains") or [])
+if not required_domains:
+    required_domains = sorted(
+        {
+            domain
+            for name in workflow_names
+            for domain in primary["workflows"][name]["domains"]
+        }
+    )
 
 baseline_history_rows = []
 history_rows = []

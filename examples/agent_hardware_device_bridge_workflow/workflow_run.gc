@@ -1,0 +1,13 @@
+(def prog
+  ((core/effect::bind (((core/plugin::command "demo") "run") {:input "work"}))
+    (fn (host-resp)
+      ((core/effect::bind (((core/plugin::editor-command "demo") "format") {:path "module.gc"}))
+        (fn (editor-resp)
+          (core/effect::pure
+            {
+              :editor-status ((core/map::get editor-resp) (quote :status))
+              :host-status ((core/map::get host-resp) (quote :status))
+              :ok true
+            }))))))
+
+prog

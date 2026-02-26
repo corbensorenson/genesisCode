@@ -26,6 +26,8 @@ Default history floor:
 - `elapsed_ms`, `budget_ms`, `history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`
 - `p95_min_samples`
 - `fail_reasons` (string list)
+  - canonical closure token: `unresolved-upgrade-plan-ids`
+  - backward-compatible legacy token accepted by cutover gates: `open-upgrade-plan-ids`
 - `unresolved_upgrade_plan_ids` (string list), `closure_ok`
 - `dimensions` object with scored dimensions:
   - `runtime_routing_coverage`

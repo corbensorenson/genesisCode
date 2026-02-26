@@ -602,7 +602,7 @@ def dim_runtime_quality_truth() -> dict[str, Any]:
         "reports": reports,
     }
 
-open_upgrade_ids = sorted(
+unresolved_upgrade_ids = sorted(
     set(
         re.findall(
             r"^- \[ \] (P\d+\.\d+)\b",
@@ -651,13 +651,14 @@ history_p95_ms = sorted(elapsed_samples)[p95_idx]
 history_p95_enforced = history_samples >= p95_min_samples
 history_p95_ok = (not history_p95_enforced) or (history_p95_ms <= budget_ms)
 elapsed_budget_ok = elapsed_ms <= budget_ms
-closure_ok = len(open_upgrade_ids) == 0
+closure_ok = len(unresolved_upgrade_ids) == 0
 
 fail_reasons: list[str] = []
 if not dimension_ok:
     fail_reasons.append("dimension-failure")
 if not closure_ok:
-    fail_reasons.append("open-upgrade-plan-ids")
+    # Canonical token for unresolved-plan closure failure.
+    fail_reasons.append("unresolved-upgrade-plan-ids")
 if not elapsed_budget_ok:
     fail_reasons.append("elapsed-budget")
 if not history_p95_ok:
@@ -690,7 +691,7 @@ report = {
     "dashboard_kind": dashboard_doc.get("kind"),
     "dashboard_ok": bool(dashboard_doc.get("ok", False)),
     "dashboard_markdown": dashboard_doc.get("data", {}).get("markdown"),
-    "unresolved_upgrade_plan_ids": open_upgrade_ids,
+    "unresolved_upgrade_plan_ids": unresolved_upgrade_ids,
     "closure_ok": closure_ok,
     "dimensions": dimensions,
     "timestamp_utc": now_utc,
@@ -706,7 +707,7 @@ history_entry = {
     "elapsed_ms": report["elapsed_ms"],
     "budget_ms": report["budget_ms"],
     "timestamp_utc": report["timestamp_utc"],
-    "unresolved_upgrade_plan_ids": len(open_upgrade_ids),
+    "unresolved_upgrade_plan_ids": len(unresolved_upgrade_ids),
 }
 
 report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -722,7 +723,7 @@ finally:
 print(
     "selfhost-readiness: "
     f"report={report_path} score={score} ok={ok} "
-    f"open_upgrade_ids={len(open_upgrade_ids)}"
+    f"unresolved_upgrade_ids={len(unresolved_upgrade_ids)}"
 )
 
 if not ok:

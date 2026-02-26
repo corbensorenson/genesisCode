@@ -134,7 +134,12 @@ workflows = [
     {
         "name": "agent_browser_runtime_workflow",
         "path": "examples/agent_browser_runtime_workflow/workflow.sh",
-        "domains": ["browser_runtime"],
+        "domains": ["browser_runtime", "ui_application_stack"],
+    },
+    {
+        "name": "agent_ui_app_stack_workflow",
+        "path": "examples/agent_ui_app_stack_workflow/workflow.sh",
+        "domains": ["ui_application_stack", "browser_runtime"],
     },
     {
         "name": "agent_xr_runtime_workflow",
@@ -169,7 +174,7 @@ workflows = [
     {
         "name": "agent_service_workflow",
         "path": "examples/agent_service_workflow/workflow.sh",
-        "domains": ["service", "package_publish_sync"],
+        "domains": ["service", "package_publish_sync", "auth_security_service"],
     },
     {
         "name": "agent_network_process_workflow",
@@ -189,7 +194,7 @@ workflows = [
     {
         "name": "agent_durable_data_workflow",
         "path": "examples/agent_durable_data_workflow/workflow.sh",
-        "domains": ["durable_data"],
+        "domains": ["durable_data", "data_pipeline_orchestration"],
     },
     {
         "name": "agent_process_lifecycle_workflow",
@@ -199,7 +204,12 @@ workflows = [
     {
         "name": "agent_plugin_runtime_workflow",
         "path": "examples/agent_plugin_runtime_workflow/workflow.sh",
-        "domains": ["plugin_runtime"],
+        "domains": ["plugin_runtime", "hardware_device_integration"],
+    },
+    {
+        "name": "agent_hardware_device_bridge_workflow",
+        "path": "examples/agent_hardware_device_bridge_workflow/workflow.sh",
+        "domains": ["hardware_device_integration", "plugin_runtime"],
     },
     {
         "name": "agent_time_control_workflow",
@@ -224,7 +234,7 @@ workflows = [
     {
         "name": "agent_ml_pipeline_variant_workflow",
         "path": "examples/agent_ml_pipeline_variant_workflow/workflow.sh",
-        "domains": ["ml_pipeline_variant"],
+        "domains": ["ml_pipeline_variant", "data_pipeline_orchestration"],
     },
     {
         "name": "agent_backend_topology_workflow",
@@ -247,7 +257,11 @@ required_domains = {
     "plugin_runtime": 1,
     "time_control": 1,
     "browser_runtime": 1,
+    "ui_application_stack": 1,
     "xr_runtime": 1,
+    "auth_security_service": 1,
+    "hardware_device_integration": 1,
+    "data_pipeline_orchestration": 1,
     "deployment": 1,
     "deploy_ios": 1,
     "deploy_android": 1,
@@ -561,6 +575,8 @@ report = {
     "score_percent": score_percent,
     "domain_count": len(domain_reports),
     "domain_successes": sum(1 for d in domain_reports if d["ok"]),
+    "required_domains": sorted(required_domains.keys()),
+    "required_domain_thresholds": required_domains,
     "elapsed_ms": elapsed_ms,
     "budget_ms": budget_ms,
     "history_samples": history_samples,

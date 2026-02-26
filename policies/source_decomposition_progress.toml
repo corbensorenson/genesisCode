@@ -193,3 +193,77 @@ target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/36_
 parity_gate = "cargo test -p gc_cli_driver --quiet"
 phase = "phase-2"
 status = "migrated"
+
+# Explicit closure-plan tracking for currently over-budget production Rust modules that
+# are not yet fully decomposed into GC-first boundaries.
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_cli_driver/src/cmd_debug.rs"
+target_gc_modules = ["selfhost/cli_coreform_v1.gc", "prelude/modules/36_semantic_workspace.gc"]
+parity_gate = "cargo test -p gc_cli --test cli_smoke --quiet"
+phase = "phase-0"
+status = "planned"
+notes = "Split debug command orchestration into shared CLI dispatch + diagnostics adapters."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_cli_driver/src/cmd_selfhost_artifact.rs"
+target_gc_modules = ["selfhost/toolchain.gc", "selfhost/toolchain_manifest.gc"]
+parity_gate = "bash scripts/check_selfhost_artifact_fresh.sh"
+phase = "phase-0"
+status = "planned"
+notes = "Decompose artifact emit/verify/refresh flows into distinct module handlers."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_cli_driver/src/host_bridge_runtime.rs"
+target_gc_modules = ["prelude/modules/10_browser_host.gc", "prelude/modules/10_xr_host.gc", "prelude/modules/32_network_workflow.gc"]
+parity_gate = "bash scripts/check_host_bridge_fault_injection.sh"
+phase = "phase-0"
+status = "planned"
+notes = "Split runtime bridge dispatch into domain-scoped routers and policy envelopes."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_cli_driver/src/host_bridge_runtime_net_http_ws.rs"
+target_gc_modules = ["prelude/modules/32_network_workflow.gc", "prelude/modules/30_service_orchestration.gc"]
+parity_gate = "bash scripts/check_agent_workflow_runtime_parity.sh"
+phase = "phase-0"
+status = "planned"
+notes = "Extract HTTP/WS bridge path resolution and transport contracts into bounded adapters."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_cli_driver/src/pkg_reports.rs"
+target_gc_modules = ["selfhost/cli_pkg_ops_v1.gc", "prelude/modules/31_data_pipeline.gc"]
+parity_gate = "cargo test -p gc_cli --test cli_pkg_workspace --quiet"
+phase = "phase-0"
+status = "planned"
+notes = "Separate package report rendering from result aggregation and schema normalization."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs"
+target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/32_network_workflow.gc"]
+parity_gate = "bash scripts/check_gcpm_operation_contract_pack.sh"
+phase = "phase-0"
+status = "planned"
+notes = "Split publish orchestration by lock/build/export/push/ref-update stages."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
+target_gc_modules = ["prelude/modules/00_core.gc", "prelude/modules/10_browser_host.gc", "prelude/modules/32_network_workflow.gc"]
+parity_gate = "cargo test -p gc_effects --lib --quiet"
+phase = "phase-0"
+status = "planned"
+notes = "Partition top-level capability dispatch into family-scoped dispatch modules."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_opt/src/stage2_wasm/pipeline_exec.rs"
+target_gc_modules = ["selfhost/stage1_closure_v1.gc", "selfhost/stage1_specialization_v1.gc", "prelude/modules/31_data_pipeline.gc"]
+parity_gate = "cargo test -p gc_opt --lib --quiet"
+phase = "phase-0"
+status = "planned"
+notes = "Split planner/executor/reporting into separate lowering pipeline components."
+
+[[tracked_over_budget_rows]]
+module_path = "crates/gc_effects/src/runner_gpu_device_backend.rs"
+target_gc_modules = ["prelude/modules/10_gpu_compute.gc", "prelude/modules/33_game_loop.gc"]
+parity_gate = "bash scripts/check_gpu_compute_runtime_profile.sh"
+phase = "phase-0"
+status = "planned"
+notes = "Separate queue setup, kernel dispatch, buffer lifecycle, and telemetry reporting paths."

@@ -179,7 +179,11 @@ if not isinstance(fail_reasons, list):
         "full-selfhost-cutover-profile: readiness fail_reasons must be a list"
     )
 invalid_fail_reasons = sorted(
-    {str(x) for x in fail_reasons if str(x) != "open-upgrade-plan-ids"}
+    {
+        str(x)
+        for x in fail_reasons
+        if str(x) not in {"open-upgrade-plan-ids", "unresolved-upgrade-plan-ids"}
+    }
 )
 if invalid_fail_reasons:
     raise SystemExit(

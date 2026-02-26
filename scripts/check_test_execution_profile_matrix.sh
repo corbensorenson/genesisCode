@@ -298,6 +298,16 @@ if ! grep -Fq 'enforce_release_full_history_budget' scripts/check_upgrade_plan_h
   exit 1
 fi
 
+if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY:-policies/perf/upgrade_plan_health_release_full_seed_history.jsonl' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must default baseline seed history path" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY:-1' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must fail-closed on insufficient history by default" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'GENESIS_HEALTH_STRICT_DISK_POLICY:-fail' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: strict disk preflight policy default must remain fail-closed" >&2
   exit 1

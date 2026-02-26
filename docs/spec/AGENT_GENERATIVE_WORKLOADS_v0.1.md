@@ -23,6 +23,9 @@ Purpose:
   - when required, generated workload replay digests must match across both runtime reports.
 
 Only successful workflows with deterministic replay hashes are included in the mutation pool.
+When present, required-domain expectations are loaded from the primary gauntlet
+report `required_domains` field (not inferred from only the successful-workflow subset),
+so coverage policy remains stable across runtime profiles.
 
 ## Mutation Model
 

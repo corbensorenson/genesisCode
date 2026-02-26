@@ -48,6 +48,21 @@ Current policy tracks:
 - generated-artifact exclusions
 - explicit target-debt allowlist (`gc_target_exclude_paths`)
 
+For high-churn Rust files still above decomposition target, policy now requires
+explicit closure-plan rows in `tracked_over_budget_rows` (in
+`policies/source_decomposition_progress.toml`) with:
+
+- `module_path`
+- `target_gc_modules`
+- `parity_gate`
+- `phase`
+- `status`
+- optional `notes`
+
+`scripts/check_source_decomposition_progress.sh` fails closed when any over-budget
+production file is neither decomposed nor represented by one of these explicit
+closure-plan rows.
+
 ## AI-First Rationale
 
 - Smaller, domain-scoped modules improve agent planning and reduce edit conflicts.

@@ -46,6 +46,63 @@ if not isinstance(coverage_paths, list) or not coverage_paths:
         "source-decomposition-progress: coverage_module_paths must be a non-empty list"
     )
 
+tracked_rows_raw = policy.get("tracked_over_budget_rows", [])
+if not isinstance(tracked_rows_raw, list):
+    raise SystemExit(
+        "source-decomposition-progress: tracked_over_budget_rows must be a list"
+    )
+
+tracked_rows: dict[str, dict] = {}
+for row in tracked_rows_raw:
+    if not isinstance(row, dict):
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows entries must be tables"
+        )
+    module_path = row.get("module_path")
+    target_gc_modules = row.get("target_gc_modules")
+    parity_gate = row.get("parity_gate")
+    phase = row.get("phase")
+    status = row.get("status")
+    notes = row.get("notes")
+
+    if not isinstance(module_path, str) or not module_path:
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.module_path must be a non-empty string"
+        )
+    if not isinstance(target_gc_modules, list) or not target_gc_modules or not all(
+        isinstance(x, str) and x for x in target_gc_modules
+    ):
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.target_gc_modules must be a non-empty string list"
+        )
+    if not isinstance(parity_gate, str) or not parity_gate:
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.parity_gate must be a non-empty string"
+        )
+    if not isinstance(phase, str) or not phase.startswith("phase-"):
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.phase must use phase-<n> format"
+        )
+    if not isinstance(status, str) or status not in {"planned", "in-progress", "migrated", "blocked"}:
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.status must be one of planned|in-progress|migrated|blocked"
+        )
+    if notes is not None and not isinstance(notes, str):
+        raise SystemExit(
+            "source-decomposition-progress: tracked_over_budget_rows.notes must be a string when provided"
+        )
+    if module_path in tracked_rows:
+        raise SystemExit(
+            f"source-decomposition-progress: duplicate tracked_over_budget_rows.module_path: {module_path}"
+        )
+    tracked_rows[module_path] = {
+        "target_gc_modules": sorted(set(target_gc_modules)),
+        "parity_gate": parity_gate,
+        "phase": phase,
+        "status": status,
+        "notes": notes or "",
+    }
+
 coverage_rows = []
 coverage_errors = []
 coverage_set = set()
@@ -82,6 +139,7 @@ for rel in paths:
     rows.append({"path": rel, "exists": True, "lines": lines, "ok": ok})
 
 untracked_over_budget = []
+tracked_over_budget = []
 for abs_path in sorted((root / "crates").rglob("src/**/*.rs")):
     rel = abs_path.relative_to(root).as_posix()
     name = abs_path.name
@@ -96,8 +154,31 @@ for abs_path in sorted((root / "crates").rglob("src/**/*.rs")):
     if lines <= target:
         continue
     if rel not in coverage_set:
-        untracked_over_budget.append({"path": rel, "lines": lines})
-        errors.append(f"untracked-over-budget:{rel}:{lines}>{target}")
+        tracked = tracked_rows.get(rel)
+        if tracked is None:
+            untracked_over_budget.append({"path": rel, "lines": lines})
+            errors.append(f"untracked-over-budget:{rel}:{lines}>{target}")
+        else:
+            tracked_over_budget.append(
+                {
+                    "path": rel,
+                    "lines": lines,
+                    "target_gc_modules": tracked["target_gc_modules"],
+                    "parity_gate": tracked["parity_gate"],
+                    "phase": tracked["phase"],
+                    "status": tracked["status"],
+                    "notes": tracked["notes"],
+                }
+            )
+
+for rel, tracked in sorted(tracked_rows.items()):
+    abs_path = root / rel
+    if not abs_path.is_file():
+        errors.append(f"tracked-over-budget-missing:{rel}")
+        continue
+    lines = sum(1 for _ in abs_path.open("r", encoding="utf-8"))
+    if lines <= target:
+        errors.append(f"tracked-over-budget-stale:{rel}:{lines}<={target}")
 
 errors.extend(coverage_errors)
 
@@ -111,6 +192,7 @@ report = {
     "errors": errors,
     "modules": rows,
     "coverage_modules": coverage_rows,
+    "tracked_over_budget_modules": tracked_over_budget,
     "untracked_over_budget_modules": untracked_over_budget,
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)

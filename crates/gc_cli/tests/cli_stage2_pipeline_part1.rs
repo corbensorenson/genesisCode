@@ -77,12 +77,11 @@ fn eval_stage2_gate_matches_baseline_for_scalar_pure_module() {
 #[test]
 fn eval_stage2_gate_rejects_unsupported_module() {
     let dir = tempdir().unwrap();
-    let file = dir.path().join("recursive_unsupported.gc");
+    let file = dir.path().join("unsupported_call.gc");
     std::fs::write(
         &file,
         r#"
-          (def f (fn (x) (f x)))
-          (f 1)
+          (foo 1)
         "#,
     )
     .unwrap();

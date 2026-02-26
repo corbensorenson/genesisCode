@@ -8,4 +8,7 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.1 - Close Stage2 coverage gaps that still reject valid CoreForm programs required by deploy targets.
+- P0.2 - Close remote-registry parity gaps for `core/store`, `core/sync`, and `core/pkg-low` across native and WASI runtimes.
+- P0.3 - Retire remaining GPU placeholder semantics and enforce real device-backed compute contracts.
+- P0.4 - Ship production-real browser/gfx/xr capability families (window/input/audio/time/storage/xr), not just planned surface.
+- P0.5 - Introduce a safe, policy-audited FFI escalation path for advanced agent workloads while preserving deny-by-default defaults.
