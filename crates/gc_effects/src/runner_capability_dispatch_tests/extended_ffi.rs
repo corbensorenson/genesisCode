@@ -218,3 +218,101 @@ wasi_bridge_response = "{:ok true :handle \"buf-1\"}"
     .expect("call capability");
     assert_eq!(code_from_error(out), "core/caps/resource-limit");
 }
+
+#[test]
+fn host_ffi_signed_policy_profile_requires_policy_artifact_fields() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/ffi::call"]
+
+[op."host/ffi::call"]
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
+allow_abi_ids = ["abi.math.v1"]
+allow_libraries = ["libmath.so"]
+allow_symbols = ["sum_f64"]
+max_call_payload_bytes = 1024
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :result {:sum 3}}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (
+            Term::symbol(":abi-id"),
+            Term::Str("abi.math.v1".to_string()),
+        ),
+        (
+            Term::symbol(":library"),
+            Term::Str("libmath.so".to_string()),
+        ),
+        (Term::symbol(":symbol"), Term::Str("sum_f64".to_string())),
+        (Term::symbol(":payload"), Term::Map(Default::default())),
+    ]);
+    let out = call_capability(
+        "host/ffi::call",
+        &payload,
+        policy.op_policy("host/ffi::call"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(74),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/policy-error");
+}
+
+#[test]
+fn host_ffi_signed_policy_profile_enforces_call_payload_budget() {
+    let policy = CapsPolicy::from_toml_str(
+        r#"
+allow = ["host/ffi::call"]
+
+[op."host/ffi::call"]
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
+allow_abi_ids = ["abi.math.v1"]
+allow_libraries = ["libmath.so"]
+allow_symbols = ["sum_f64"]
+max_call_payload_bytes = 8
+wasi_bridge_profile = true
+wasi_bridge_response = "{:ok true :result {:sum 3}}"
+"#,
+    )
+    .expect("caps");
+    let mut budget = ArtifactBudgetState::default();
+    let payload = term_map([
+        (
+            Term::symbol(":abi-id"),
+            Term::Str("abi.math.v1".to_string()),
+        ),
+        (
+            Term::symbol(":library"),
+            Term::Str("libmath.so".to_string()),
+        ),
+        (Term::symbol(":symbol"), Term::Str("sum_f64".to_string())),
+        (
+            Term::symbol(":payload"),
+            term_map([(Term::symbol(":args"), Term::Str("0123456789".to_string()))]),
+        ),
+    ]);
+    let out = call_capability(
+        "host/ffi::call",
+        &payload,
+        policy.op_policy("host/ffi::call"),
+        &policy,
+        None,
+        None,
+        &mut budget,
+        SealId(75),
+    )
+    .expect("call capability");
+    assert_eq!(code_from_error(out), "core/caps/resource-limit");
+}

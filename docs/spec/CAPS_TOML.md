@@ -217,6 +217,12 @@ Supported keys:
 - `allow_libraries` (array<string>): required allowlist for `host/ffi::call` library names.
 - `allow_symbols` (array<string>): required allowlist for `host/ffi::call` symbols.
 - `max_buffer_bytes` (int): required positive payload bound for `host/ffi::buffer-pin`.
+- `signed_policy_required` (bool): when true, FFI op requires release signed-policy metadata fields.
+- `policy_artifact_h` (string): 64-hex immutable policy artifact hash required when `signed_policy_required = true`.
+- `policy_signature_h` (string): 64-hex signature envelope hash required when `signed_policy_required = true`.
+- `policy_key_id` (string): non-empty signing key identity required when `signed_policy_required = true`.
+- `evidence_mode` (string): must be `"deterministic"` when `signed_policy_required = true`.
+- `max_call_payload_bytes` (int): required positive payload bound for `host/ffi::call` when `signed_policy_required = true`.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
@@ -257,9 +263,15 @@ allow_schema_ids = [
 base_dir = "./workspace"
 bridge_cmd = "./tools/native_ffi_bridge.sh"
 bridge_cmd_sha256 = "sha256:4f85c19e5f0f7e3fef58e31e0f4bb3ad73df0b1b2e27fe8f79c2fbe4f6f4cfd2"
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
 allow_abi_ids = ["abi.math.v1"]
 allow_libraries = ["libmath.so"]
 allow_symbols = ["sum_f64"]
+max_call_payload_bytes = 131072
 allow_schema_ids = [
   "genesis/ffi.request.call.v1",
   "genesis/ffi.response.call.v1",

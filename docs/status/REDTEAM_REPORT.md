@@ -1,6 +1,6 @@
 # GenesisCode Red-Team Report (P0/P1 Active Risk Summary)
 
-Last updated: 2026-02-25
+Last updated: 2026-02-26
 
 Scope:
 - Track unresolved `P0`/`P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
@@ -8,7 +8,9 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.2 - Close remote-registry parity gaps for `core/store`, `core/sync`, and `core/pkg-low` across native and WASI runtimes.
-- P0.3 - Retire remaining GPU placeholder semantics and enforce real device-backed compute contracts.
-- P0.4 - Ship production-real browser/gfx/xr capability families (window/input/audio/time/storage/xr), not just planned surface.
-- P0.5 - Introduce a safe, policy-audited FFI escalation path for advanced agent workloads while preserving deny-by-default defaults.
+- P0.1 - Make critical readiness artifacts self-refreshing and non-stale by default.
+- P0.2 - Bound agent workflow parity refresh latency so freshness checks stay reliable.
+- P1.1 - Upgrade GPU/GFX headroom conformance from fallback-only to mixed device-required coverage.
+- P1.2 - Productize a safe FFI escalation path (while keeping default deny-by-default).
+- P1.3 - Burn down source decomposition debt on tracked over-budget modules.
+- P1.4 - Add non-synthetic deployment runtime validation for target pipelines.

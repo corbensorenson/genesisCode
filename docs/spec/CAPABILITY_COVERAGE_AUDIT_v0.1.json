@@ -4,53 +4,57 @@
       "family": "browser/audio",
       "host_only_ops": [],
       "host_ops_count": 2,
-      "notes": "Production browser runtime realism still tracks P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production browser/gfx/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 2,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "browser/input",
       "host_only_ops": [],
       "host_ops_count": 1,
-      "notes": "Production browser runtime realism still tracks P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production browser/gfx/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 1,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "browser/storage",
       "host_only_ops": [],
       "host_ops_count": 3,
-      "notes": "Production browser runtime realism still tracks P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production browser/gfx/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 3,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "browser/window",
       "host_only_ops": [],
       "host_ops_count": 3,
-      "notes": "Production browser runtime realism still tracks P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production browser/gfx/xr runtime realism is enforced by webxr conformance and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 3,
       "release_gates": [
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_webxr_browser_conformance_lane.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "core/crypto",
@@ -99,14 +103,16 @@
       "family": "core/pkg-low",
       "host_only_ops": [],
       "host_ops_count": 13,
-      "notes": "Full WASI remote-registry parity still tracks P0.2.",
-      "plan_id": "P0.2",
+      "notes": "Native and WASI-flavor remote registry publish/install/export/import parity is enforced by runtime parity and contract-pack gates.",
+      "plan_id": null,
       "prelude_ops_count": 13,
       "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
         "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_remote_registry_runtime_parity.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "core/refs",
@@ -122,27 +128,31 @@
       "family": "core/store",
       "host_only_ops": [],
       "host_ops_count": 4,
-      "notes": "Full WASI remote-registry parity still tracks P0.2.",
-      "plan_id": "P0.2",
+      "notes": "Remote store parity for native and WASI-flavor lanes is enforced through explicit runtime parity scenarios.",
+      "plan_id": null,
       "prelude_ops_count": 4,
       "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
         "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_remote_registry_runtime_parity.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "core/sync",
       "host_only_ops": [],
       "host_ops_count": 2,
-      "notes": "Full WASI remote-registry parity still tracks P0.2.",
-      "plan_id": "P0.2",
+      "notes": "Push/pull/ref-update parity and chunk-upload coverage are enforced in runtime parity and sync registry conformance tests.",
+      "plan_id": null,
       "prelude_ops_count": 2,
       "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
         "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_remote_registry_runtime_parity.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "core/task",
@@ -221,92 +231,106 @@
       "family": "gfx/audio",
       "host_only_ops": [],
       "host_ops_count": 2,
-      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production gfx/browser/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 2,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gfx/gpu",
       "host_only_ops": [],
       "host_ops_count": 16,
-      "notes": "GPU placeholder semantics retirement remains open in P0.3.",
-      "plan_id": "P0.3",
+      "notes": "Device-backed gpu contracts are enforced by runtime profile, lane conformance matrix, and stack decoupling gates.",
+      "plan_id": null,
       "prelude_ops_count": 16,
       "release_gates": [
         "scripts/check_agent_reference_workflows.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh"
+        "scripts/check_gpu_compute_device_conformance.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_device_conformance_matrix.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gfx/input",
       "host_only_ops": [],
       "host_ops_count": 2,
-      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production gfx/browser/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 2,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gfx/time",
       "host_only_ops": [],
       "host_ops_count": 1,
-      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production gfx/browser/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 1,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gfx/window",
       "host_only_ops": [],
       "host_ops_count": 5,
-      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production gfx/browser/xr runtime realism is enforced by gfx runtime profile and xr productization release gates.",
+      "plan_id": null,
       "prelude_ops_count": 5,
       "release_gates": [
         "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_gpu_xr_productization_kits.sh",
         "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gfx/xr",
       "host_only_ops": [],
       "host_ops_count": 15,
-      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
-      "plan_id": "P0.4",
+      "notes": "Production gfx/browser/xr runtime realism is enforced by gfx runtime profile, webxr lane conformance, and xr productization gates.",
+      "plan_id": null,
       "prelude_ops_count": 15,
       "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
         "scripts/check_gpu_xr_productization_kits.sh",
+        "scripts/check_upgrade_plan_health.sh",
         "scripts/check_webxr_browser_conformance_lane.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "gpu/compute",
       "host_only_ops": [],
       "host_ops_count": 13,
-      "notes": "GPU placeholder semantics retirement remains open in P0.3.",
-      "plan_id": "P0.3",
+      "notes": "Device-backed gpu compute contracts are enforced by runtime profile, lane conformance matrix, and stack decoupling gates.",
+      "plan_id": null,
       "prelude_ops_count": 13,
       "release_gates": [
         "scripts/check_agent_reference_workflows.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh"
+        "scripts/check_gpu_compute_device_conformance.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_gpu_device_conformance_matrix.sh",
+        "scripts/check_gpu_stack_decoupling.sh",
+        "scripts/check_upgrade_plan_health.sh"
       ],
-      "status": "planned"
+      "status": "implemented"
     },
     {
       "family": "host/ffi",
@@ -396,13 +420,9 @@
   "summary": {
     "family_count": 33,
     "host_operation_count": 187,
-    "implemented_families": 18,
-    "planned_families": 14,
-    "planned_upgrade_ids": [
-      "P0.2",
-      "P0.3",
-      "P0.4"
-    ],
+    "implemented_families": 32,
+    "planned_families": 0,
+    "planned_upgrade_ids": [],
     "policy_disabled_families": 1,
     "prelude_operation_count": 184
   }

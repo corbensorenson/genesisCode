@@ -36,6 +36,10 @@ if [[ ! -x "$GENESIS_BIN" ]]; then
   esac
 fi
 
+if [[ "${GENESIS_AGENT_REFERENCE_WORKFLOWS_SKIP_REMOTE_REGISTRY_PARITY:-0}" != "1" ]]; then
+  bash "$ROOT_DIR/scripts/check_remote_registry_runtime_parity.sh"
+fi
+
 GAUNTLET_REPORT="${GENESIS_AGENT_GAUNTLET_REPORT:-.genesis/perf/agent_capability_gauntlet_report.json}"
 GAUNTLET_HISTORY="${GENESIS_AGENT_GAUNTLET_HISTORY:-.genesis/perf/agent_capability_gauntlet_history.jsonl}"
 GAUNTLET_BASELINE_HISTORY="${GENESIS_AGENT_GAUNTLET_BASELINE_HISTORY:-policies/perf/agent_capability_gauntlet_seed_history.jsonl}"

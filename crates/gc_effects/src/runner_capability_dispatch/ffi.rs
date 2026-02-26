@@ -1,5 +1,93 @@
 use super::*;
 
+fn ffi_signed_policy_required(pol: Option<&OpPolicy>) -> bool {
+    pol.and_then(|p| p.extra.get("signed_policy_required"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+fn ffi_required_nonempty_string(
+    pol: Option<&OpPolicy>,
+    key: &str,
+    op: &str,
+) -> Result<String, String> {
+    let Some(pol) = pol else {
+        return Err(format!(
+            "{op} requires per-op {key} when signed_policy_required=true"
+        ));
+    };
+    let Some(raw) = pol.extra.get(key).and_then(|v| v.as_str()) else {
+        return Err(format!(
+            "{op} requires per-op {key} when signed_policy_required=true"
+        ));
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "{op} requires non-empty {key} when signed_policy_required=true"
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn ffi_enforce_signed_policy_opt_in(
+    op: &str,
+    pol: Option<&OpPolicy>,
+    error_tok: SealId,
+) -> Result<(), Value> {
+    if !ffi_signed_policy_required(pol) {
+        return Ok(());
+    }
+    let policy_artifact_h =
+        ffi_required_nonempty_string(pol, "policy_artifact_h", op).map_err(|msg| {
+            mk_error(error_tok, "core/caps/policy-error", msg, Some(op))
+        })?;
+    if !is_hex64(&policy_artifact_h) {
+        return Err(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} policy_artifact_h must be 64-hex"),
+            Some(op),
+        ));
+    }
+    let policy_signature_h =
+        ffi_required_nonempty_string(pol, "policy_signature_h", op).map_err(|msg| {
+            mk_error(error_tok, "core/caps/policy-error", msg, Some(op))
+        })?;
+    if !is_hex64(&policy_signature_h) {
+        return Err(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} policy_signature_h must be 64-hex"),
+            Some(op),
+        ));
+    }
+    let _policy_key_id = ffi_required_nonempty_string(pol, "policy_key_id", op)
+        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
+    let evidence_mode = ffi_required_nonempty_string(pol, "evidence_mode", op)
+        .map_err(|msg| mk_error(error_tok, "core/caps/policy-error", msg, Some(op)))?;
+    if evidence_mode != "deterministic" {
+        return Err(mk_error(
+            error_tok,
+            "core/caps/policy-error",
+            format!("{op} evidence_mode must be `deterministic`"),
+            Some(op),
+        ));
+    }
+    Ok(())
+}
+
+fn ffi_call_payload_len(payload: &Term) -> usize {
+    match payload_required_field(payload, "host/ffi::call", ":payload") {
+        Ok(term) => print_term(&term).len(),
+        Err(_) => 0,
+    }
+}
+
 fn ffi_allowlist_from_policy(
     pol: Option<&OpPolicy>,
     key: &str,
@@ -205,6 +293,7 @@ fn ffi_common_preflight(
     pol: Option<&OpPolicy>,
     error_tok: SealId,
 ) -> Result<crate::runner_ffi_schema::FfiSchemaIds, Value> {
+    ffi_enforce_signed_policy_opt_in(op, pol, error_tok)?;
     if ffi_bridge_digest_pin_is_required(pol) && ffi_bridge_digest_pin_from_policy(pol).is_none() {
         return Err(mk_error(
             error_tok,
@@ -327,6 +416,31 @@ fn capability_host_ffi_call(
         ffi_policy_allowlist_check(op, &symbol, &allow_symbols, "allow_symbols", error_tok)
     {
         return err;
+    }
+    if ffi_signed_policy_required(pol) {
+        let max_call_payload_bytes = match op_extra_positive_usize(pol, "max_call_payload_bytes") {
+            Ok(Some(v)) => v,
+            Ok(None) => {
+                return mk_error(
+                    error_tok,
+                    "core/caps/policy-error",
+                    format!("{op} requires max_call_payload_bytes when signed_policy_required=true"),
+                    Some(op),
+                );
+            }
+            Err(err) => return mk_error(error_tok, "core/caps/policy-error", err, Some(op)),
+        };
+        let observed = ffi_call_payload_len(payload);
+        if observed > max_call_payload_bytes {
+            return mk_error(
+                error_tok,
+                "core/caps/resource-limit",
+                format!(
+                    "{op} payload bytes exceed max_call_payload_bytes ({observed} > {max_call_payload_bytes})"
+                ),
+                Some(op),
+            );
+        }
     }
 
     ffi_common_bridge_call(op, payload, pol, &schema_ids, error_tok)

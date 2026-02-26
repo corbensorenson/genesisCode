@@ -85,3 +85,12 @@ if ! diff -u "$DOC_SORTED" "$IMPL_SORTED" >/dev/null; then
 fi
 
 echo "host-abi-conformance: ok"
+
+if [[ "${GENESIS_HOST_ABI_SKIP_POLICY_TESTS:-0}" != "1" ]]; then
+  echo "host-abi-conformance: running ffi policy profile checks"
+  cargo test -p gc_effects --lib extended_ffi --quiet
+  echo "host-abi-conformance: running deny-by-default abuse guard checks"
+  cargo test -p gc_effects --test untrusted_agent_safety --quiet
+fi
+
+echo "host-abi-conformance: runtime policy checks ok"

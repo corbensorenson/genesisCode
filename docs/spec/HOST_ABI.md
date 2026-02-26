@@ -757,6 +757,30 @@ Determinism:
   - Replay never re-executes host native code; it consumes logged deterministic envelopes.
   - Boundary hashes (`:request-h`, `:result-h`) make cross-layer bisecting stable.
 
+### Signed FFI Escalation Profile (Release Opt-In)
+
+Default remains deny-by-default: if `host/ffi::*` ops are not allowlisted, they are rejected as
+`core/caps/denied`.
+
+For release lanes that enable FFI, the runner supports an explicit signed-policy opt-in profile.
+Set per-op `signed_policy_required = true` and include:
+
+- `policy_artifact_h` (64-hex): immutable policy artifact hash.
+- `policy_signature_h` (64-hex): signature envelope hash bound to `policy_artifact_h`.
+- `policy_key_id` (non-empty string): signing key identity.
+- `evidence_mode = "deterministic"`: enforce replay-stable effect/evidence handling.
+- `max_call_payload_bytes` (positive int, `host/ffi::call`): required payload quota.
+- `max_buffer_bytes` (positive int, `host/ffi::buffer-pin`): required pinned-buffer quota.
+
+Syscall/native boundary constraints remain explicit and mandatory:
+
+- `allow_abi_ids`
+- `allow_libraries`
+- `allow_symbols`
+
+Together these form a fail-closed release contract: no signed-policy artifact metadata, missing
+quotas, or non-deterministic evidence mode means deterministic `core/caps/policy-error`.
+
 ## Host Extension Capability Contract
 
 - `host/plugin::command`

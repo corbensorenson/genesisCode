@@ -17,6 +17,10 @@ for required in "$PKG_CONTRACT_FILE" "$CLI_DRIVER_FILE" "$SCHEMAS_DOC" "$PACK_FI
   }
 done
 
+if [[ "${GENESIS_GCPM_SKIP_REMOTE_REGISTRY_PARITY:-0}" != "1" ]]; then
+  bash "$ROOT_DIR/scripts/check_remote_registry_runtime_parity.sh"
+fi
+
 python3 - "$PKG_CONTRACT_FILE" "$CLI_DRIVER_FILE" "$SCHEMAS_DOC" "$PACK_FILE" "$REPORT_OUT" <<'PY'
 import hashlib
 import json
