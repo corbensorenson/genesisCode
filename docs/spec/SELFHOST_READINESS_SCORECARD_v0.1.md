@@ -52,7 +52,25 @@ Default history floor:
 - `.genesis/perf/production_cli_help_surface_report.json`
 - `.genesis/perf/gpu_gfx_headroom_conformance_report.json`
 - `.genesis/perf/domain_starter_registry_bootstrap_report.json`
-- `scripts/check_gcpm_target_runtime_pipelines.sh` result
+- `.genesis/perf/gcpm_target_runtime_evidence_report.json`
+
+Target runtime evidence report contract:
+
+- producer: `scripts/check_gcpm_target_runtime_pipelines.sh`
+- `kind = "genesis/gcpm-target-runtime-evidence-v0.1"`
+- per-target runtime evidence payload includes:
+  - runtime mode (`synthetic-adapter` or `non-synthetic`)
+  - runtime class (`emulator|device|container|host-runtime|synthetic-adapter`)
+  - replay artifact directory + stdout/stderr hashes
+- strict policy:
+  - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires non-synthetic evidence per target and fails closed
+  - default strictness follows CI context (`CI=true` => strict)
+
+GPU/GFX headroom conformance must include lane backend metadata consumed by readiness:
+
+- `require_device_lane_mode`, `require_device_lane_active`, `device_runtime_available`
+- `lanes.normal.backend_policy = "require-device"` and `lanes.normal.expected_backend = "device-runtime"` whenever device runtime is available
+- `lanes.low-headroom.fallback_policy = "allow-fallback-under-headroom"` with observed backend evidence
 
 Readiness refresh runs the gauntlet in strict release-confidence mode:
 

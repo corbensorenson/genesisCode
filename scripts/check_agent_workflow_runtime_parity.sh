@@ -24,8 +24,11 @@ WASI_HISTORY="${GENESIS_AGENT_PARITY_WASI_HISTORY:-.genesis/perf/agent_capabilit
 GENERATIVE_REPORT="${GENESIS_AGENT_PARITY_GENERATIVE_REPORT:-.genesis/perf/agent_generative_workloads_parity_report.json}"
 GENERATIVE_HISTORY="${GENESIS_AGENT_PARITY_GENERATIVE_HISTORY:-.genesis/perf/agent_generative_workloads_parity_history.jsonl}"
 GENERATIVE_SEED="${GENESIS_AGENT_PARITY_GENERATIVE_SEED:-genesis-agent-generative-parity-v1}"
+GENERATIVE_CASE_COUNT="${GENESIS_AGENT_PARITY_GENERATIVE_CASE_COUNT:-40}"
 BUDGET_MS="${GENESIS_AGENT_PARITY_BUDGET_MS:-900000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_PARITY_P95_MIN_SAMPLES:-8}"
+INPUT_MAX_AGE_SEC="${GENESIS_AGENT_PARITY_INPUT_MAX_AGE_SEC:-21600}"
+REUSE_REPORTS="${GENESIS_AGENT_PARITY_REUSE_REPORTS:-1}"
 
 if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
   echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_BUDGET_MS must be a positive integer" >&2
@@ -33,6 +36,18 @@ if [[ ! "$BUDGET_MS" =~ ^[0-9]+$ || "$BUDGET_MS" -le 0 ]]; then
 fi
 if [[ ! "$P95_MIN_SAMPLES" =~ ^[0-9]+$ || "$P95_MIN_SAMPLES" -le 0 ]]; then
   echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_P95_MIN_SAMPLES must be a positive integer" >&2
+  exit 2
+fi
+if [[ ! "$INPUT_MAX_AGE_SEC" =~ ^[0-9]+$ ]]; then
+  echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_INPUT_MAX_AGE_SEC must be a non-negative integer" >&2
+  exit 2
+fi
+if [[ "$REUSE_REPORTS" != "0" && "$REUSE_REPORTS" != "1" ]]; then
+  echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_REUSE_REPORTS must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$GENERATIVE_CASE_COUNT" =~ ^[0-9]+$ || "$GENERATIVE_CASE_COUNT" -le 0 ]]; then
+  echo "agent-workflow-runtime-parity: GENESIS_AGENT_PARITY_GENERATIVE_CASE_COUNT must be a positive integer" >&2
   exit 2
 fi
 
@@ -62,27 +77,94 @@ run_gauntlet_lane() {
   bash scripts/check_agent_reference_workflows.sh
 }
 
-run_gauntlet_lane "$NATIVE_BIN" "native" "$NATIVE_REPORT" "$NATIVE_HISTORY" &
-native_pid=$!
-run_gauntlet_lane "$WASI_BIN" "wasi-wasm-host-bridge" "$WASI_REPORT" "$WASI_HISTORY" &
-wasi_pid=$!
+lane_source="fresh-run"
+reuse_detail=""
+can_reuse_reports=0
+if [[ "$REUSE_REPORTS" == "1" ]]; then
+  if reuse_detail="$(python3 - "$NATIVE_REPORT" "$WASI_REPORT" "$GAUNTLET_PROFILE" "$INPUT_MAX_AGE_SEC" <<'PY'
+import json
+import pathlib
+import sys
+import time
 
-lane_failures=0
-if ! wait "$native_pid"; then
-  echo "agent-workflow-runtime-parity: native lane failed" >&2
-  lane_failures=1
+native_path = pathlib.Path(sys.argv[1])
+wasi_path = pathlib.Path(sys.argv[2])
+expected_profile = sys.argv[3]
+max_age_sec = int(sys.argv[4])
+
+expected_kind = "genesis/agent-capability-gauntlet-v0.1"
+expected_native_runtime = "native"
+expected_wasi_runtime = "wasi-wasm-host-bridge"
+
+def read_doc(path: pathlib.Path, label: str, expected_runtime: str) -> dict:
+    if not path.is_file():
+        raise SystemExit(f"{label}:missing")
+    age = max(0, int(time.time() - path.stat().st_mtime))
+    if max_age_sec > 0 and age > max_age_sec:
+        raise SystemExit(f"{label}:stale age={age}s max={max_age_sec}s")
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("kind") != expected_kind:
+        raise SystemExit(f"{label}:kind={doc.get('kind')!r}")
+    if doc.get("profile") != expected_profile:
+        raise SystemExit(
+            f"{label}:profile={doc.get('profile')!r} expected={expected_profile!r}"
+        )
+    if doc.get("runtime_profile") != expected_runtime:
+        raise SystemExit(
+            f"{label}:runtime_profile={doc.get('runtime_profile')!r} expected={expected_runtime!r}"
+        )
+    if doc.get("ok") is not True:
+        raise SystemExit(f"{label}:ok=false")
+    workflow_count = int(doc.get("workflow_count", 0))
+    if workflow_count <= 0:
+        raise SystemExit(f"{label}:workflow_count={workflow_count}")
+    return {"age_sec": age, "workflow_count": workflow_count}
+
+native = read_doc(native_path, "native-report", expected_native_runtime)
+wasi = read_doc(wasi_path, "wasi-report", expected_wasi_runtime)
+print(
+    "reuse-native-wasi "
+    f"native_age_sec={native['age_sec']} "
+    f"wasi_age_sec={wasi['age_sec']} "
+    f"native_workflows={native['workflow_count']} "
+    f"wasi_workflows={wasi['workflow_count']}"
+)
+PY
+  )"; then
+    can_reuse_reports=1
+  else
+    echo "agent-workflow-runtime-parity: report reuse disabled ($reuse_detail); running fresh lanes" >&2
+  fi
 fi
-if ! wait "$wasi_pid"; then
-  echo "agent-workflow-runtime-parity: wasi lane failed" >&2
-  lane_failures=1
-fi
-if [[ "$lane_failures" -ne 0 ]]; then
-  exit 1
+
+if [[ "$can_reuse_reports" -eq 1 ]]; then
+  lane_source="reused-reports"
+  echo "agent-workflow-runtime-parity: reusing existing native+wasi gauntlet reports ($reuse_detail)"
+else
+  run_gauntlet_lane "$NATIVE_BIN" "native" "$NATIVE_REPORT" "$NATIVE_HISTORY" &
+  native_pid=$!
+  run_gauntlet_lane "$WASI_BIN" "wasi-wasm-host-bridge" "$WASI_REPORT" "$WASI_HISTORY" &
+  wasi_pid=$!
+
+  lane_failures=0
+  if ! wait "$native_pid"; then
+    echo "agent-workflow-runtime-parity: native lane failed" >&2
+    lane_failures=1
+  fi
+  if ! wait "$wasi_pid"; then
+    echo "agent-workflow-runtime-parity: wasi lane failed" >&2
+    lane_failures=1
+  fi
+  if [[ "$lane_failures" -ne 0 ]]; then
+    exit 1
+  fi
 fi
 
 GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT="$NATIVE_REPORT" \
 GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT="$WASI_REPORT" \
 GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY=1 \
+GENESIS_AGENT_GENERATIVE_REQUIRE_MIN_HISTORY=0 \
+GENESIS_AGENT_GENERATIVE_CASE_COUNT="$GENERATIVE_CASE_COUNT" \
 GENESIS_AGENT_GENERATIVE_REPORT="$GENERATIVE_REPORT" \
 GENESIS_AGENT_GENERATIVE_HISTORY="$GENERATIVE_HISTORY" \
 GENESIS_AGENT_GENERATIVE_SEED="$GENERATIVE_SEED" \
@@ -95,7 +177,7 @@ PY
 )"
 elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
 
-python3 - "$NATIVE_REPORT" "$WASI_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$GAUNTLET_PROFILE" "$NATIVE_BIN" "$WASI_BIN" "$P95_MIN_SAMPLES" <<'PY'
+python3 - "$NATIVE_REPORT" "$WASI_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$elapsed_ms" "$BUDGET_MS" "$GAUNTLET_PROFILE" "$NATIVE_BIN" "$WASI_BIN" "$P95_MIN_SAMPLES" "$lane_source" <<'PY'
 import datetime as dt
 import json
 import math
@@ -112,6 +194,7 @@ gauntlet_profile = sys.argv[7]
 native_bin = sys.argv[8]
 wasi_bin = sys.argv[9]
 p95_min_samples = int(sys.argv[10])
+lane_source = sys.argv[11]
 
 native = json.loads(native_report_path.read_text(encoding="utf-8"))
 wasi = json.loads(wasi_report_path.read_text(encoding="utf-8"))
@@ -250,6 +333,7 @@ report = {
     "kind": "genesis/agent-workflow-runtime-parity-v0.1",
     "ok": ok,
     "gauntlet_profile": gauntlet_profile,
+    "lane_source": lane_source,
     "native_bin": native_bin,
     "wasi_bin": wasi_bin,
     "native_report": str(native_report_path),

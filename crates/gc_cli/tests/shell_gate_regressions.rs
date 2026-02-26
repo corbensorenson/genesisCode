@@ -41,6 +41,12 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
         .expect("read check_runtime_microbench_budgets.sh");
     let gpu_profile = fs::read_to_string(root.join("scripts/check_gpu_compute_runtime_profile.sh"))
         .expect("read check_gpu_compute_runtime_profile.sh");
+    let gpu_headroom = fs::read_to_string(root.join("scripts/check_gpu_gfx_headroom_conformance.sh"))
+        .expect("read check_gpu_gfx_headroom_conformance.sh");
+    let readiness = fs::read_to_string(root.join("scripts/check_selfhost_readiness_scorecard.sh"))
+        .expect("read check_selfhost_readiness_scorecard.sh");
+    let host_abi = fs::read_to_string(root.join("scripts/check_host_abi_conformance.sh"))
+        .expect("read check_host_abi_conformance.sh");
     let strict_golden = fs::read_to_string(root.join("scripts/selfhost_strict_golden.sh"))
         .expect("read selfhost_strict_golden.sh");
     let wasm_cross = fs::read_to_string(root.join("scripts/wasm_cross_host_determinism.mjs"))
@@ -140,6 +146,27 @@ fn perf_scripts_use_shared_fail_closed_primitives() {
     assert!(
         gpu_profile.contains("MICROBENCH_FEATURES=\"device-bridge\""),
         "gpu runtime profile script must enable device-bridge features in strict policy mode"
+    );
+    assert!(
+        gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_REQUIRE_DEVICE_LANE")
+            && gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_DEVICE_CONFORMANCE_REPORT")
+            && gpu_headroom.contains("GENESIS_GPU_GFX_HEADROOM_DEVICE_CONFORMANCE_CMD"),
+        "gpu headroom conformance script must expose device-lane conformance controls"
+    );
+    assert!(
+        gpu_headroom.contains("GENESIS_AGENT_GPU_REQUIRE_DEVICE=\"$require_device\""),
+        "gpu headroom conformance script must run workflows with explicit require-device lane control"
+    );
+    assert!(
+        readiness.contains("gpu-gfx-headroom-conformance:missing-lane-backend-modes")
+            && readiness.contains("gpu-gfx-headroom-conformance:normal-lane-not-require-device"),
+        "selfhost readiness scorecard must consume gpu headroom lane backend mode contract"
+    );
+    assert!(
+        host_abi.contains("docs/policies/ffi_signed_runtime_caps_v0.1.toml")
+            && host_abi.contains("extended_ffi")
+            && host_abi.contains("untrusted_agent_safety"),
+        "host abi conformance must validate signed ffi profile template and enforce abuse-case test lanes"
     );
     assert!(
         perf.contains("check_disk_headroom.sh")

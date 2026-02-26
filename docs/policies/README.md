@@ -12,5 +12,7 @@ This folder contains reference capability policy profiles used by specs/tests.
   - Runtime microbench device bridge profile (reports canonical backend `device-runtime`; build lane uses `device-bridge` feature naming).
 - `gpu_compute_bridge_fallback_caps_v0.1.toml`
   - Runtime microbench deterministic fallback profile.
+- `ffi_signed_runtime_caps_v0.1.toml`
+  - Signed FFI escalation template with explicit ABI/library/symbol allowlists, quotas, bridge digest pinning, and deterministic evidence requirements.
 
 Use these as templates; production deployments should pin and version project-specific policies.

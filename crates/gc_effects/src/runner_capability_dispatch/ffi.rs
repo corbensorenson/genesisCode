@@ -148,7 +148,7 @@ fn term_bytes_or_string_len(value: &Term) -> Result<usize, String> {
     }
 }
 
-fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term) -> Value {
+fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term, pol: Option<&OpPolicy>) -> Value {
     let request_envelope = Term::Map(
         [
             (
@@ -167,20 +167,82 @@ fn ffi_boundary_envelope(op: &str, payload: &Term, response: Term) -> Value {
         .to_hex()
         .to_string();
 
-    Value::Data(Term::Map(
-        [
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
-            (
-                TermOrdKey(Term::symbol(":ffi-op")),
-                Term::Symbol(op.to_string()),
-            ),
-            (TermOrdKey(Term::symbol(":request-h")), Term::Str(request_h)),
-            (TermOrdKey(Term::symbol(":result-h")), Term::Str(result_h)),
-            (TermOrdKey(Term::symbol(":result")), response),
-        ]
-        .into_iter()
-        .collect(),
-    ))
+    let mut envelope = std::collections::BTreeMap::new();
+    envelope.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    envelope.insert(
+        TermOrdKey(Term::symbol(":ffi-op")),
+        Term::Symbol(op.to_string()),
+    );
+    envelope.insert(
+        TermOrdKey(Term::symbol(":request-h")),
+        Term::Str(request_h.clone()),
+    );
+    envelope.insert(
+        TermOrdKey(Term::symbol(":result-h")),
+        Term::Str(result_h.clone()),
+    );
+    envelope.insert(TermOrdKey(Term::symbol(":result")), response);
+
+    if ffi_signed_policy_required(pol) {
+        let policy_artifact_h = pol
+            .and_then(|p| p.extra.get("policy_artifact_h"))
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or("");
+        let policy_signature_h = pol
+            .and_then(|p| p.extra.get("policy_signature_h"))
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or("");
+        let policy_key_id = pol
+            .and_then(|p| p.extra.get("policy_key_id"))
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or("");
+        let evidence_mode = pol
+            .and_then(|p| p.extra.get("evidence_mode"))
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or("deterministic");
+
+        let provenance = Term::Map(
+            [
+                (
+                    TermOrdKey(Term::symbol(":policy-artifact-h")),
+                    Term::Str(policy_artifact_h.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":policy-signature-h")),
+                    Term::Str(policy_signature_h.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":policy-key-id")),
+                    Term::Str(policy_key_id.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":evidence-mode")),
+                    Term::Str(evidence_mode.to_string()),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":request-h")),
+                    Term::Str(request_h),
+                ),
+                (
+                    TermOrdKey(Term::symbol(":result-h")),
+                    Term::Str(result_h),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        envelope.insert(TermOrdKey(Term::symbol(":ffi-provenance")), provenance);
+    }
+
+    Value::Data(Term::Map(envelope))
 }
 
 fn ffi_check_schema_ids(
@@ -340,7 +402,7 @@ fn ffi_common_bridge_call(
             if let Err(err) = ffi_validate_response_schema(op, &response, schema_ids, error_tok) {
                 return err;
             }
-            ffi_boundary_envelope(op, payload, response)
+            ffi_boundary_envelope(op, payload, response, pol)
         }
         Err(err) => mk_bridge_error(error_tok, &err, Some(op)),
     }

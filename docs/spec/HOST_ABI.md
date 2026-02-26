@@ -756,6 +756,9 @@ Determinism:
   - FFI calls must execute only through capability runner boundaries.
   - Replay never re-executes host native code; it consumes logged deterministic envelopes.
   - Boundary hashes (`:request-h`, `:result-h`) make cross-layer bisecting stable.
+  - Signed-policy lanes attach `:ffi-provenance` envelope metadata (`:policy-artifact-h`,
+    `:policy-signature-h`, `:policy-key-id`, `:evidence-mode`, `:request-h`, `:result-h`)
+    so effect/evidence logs remain provenance-linked and replay-verifiable.
 
 ### Signed FFI Escalation Profile (Release Opt-In)
 

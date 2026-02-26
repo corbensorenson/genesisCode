@@ -23,6 +23,8 @@ This is the canonical entrypoint for project documentation.
 - `docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.json` - canonical machine-readable closure registry.
 - `.genesis/perf/doc_complexity_report.json` - machine-readable docs complexity budget report.
 - `.genesis/perf/selfhost_gc_migration_plan_report.json` - machine-readable migration-plan drift report for high-churn selfhost surfaces.
+- `.genesis/perf/source_decomposition_tracked_parity_report.json` - tracked over-budget module parity + waiver-contract evidence report.
+- `.genesis/perf/gcpm_target_runtime_evidence_report.json` - target runtime evidence report (including non-synthetic runtime classes and replay artifacts).
 - `feature_matrix.md` - capability comparison vs common languages.
 - `docs/spec/DOC_TOPOLOGY_v0.1.md` - canonical documentation topology and drift contract.
 - `docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md` - numeric docs complexity targets.

@@ -156,7 +156,11 @@ Strict/full profile runtime reports:
   - release/full deployment target runtime lanes are fail-closed via:
     - `scripts/check_gcpm_target_runtime_pipelines.sh`
       (requires deterministic runtime runner bundle artifacts + `contract/boot/smoke` lane outputs
-      for `ios|android|edge|service-runtime` targets).
+      and emits `.genesis/perf/gcpm_target_runtime_evidence_report.json` for
+      `ios|android|edge|service-runtime` targets).
+    - strict non-synthetic policy:
+      - `GENESIS_GCPM_TARGET_RUNTIME_REQUIRE_NON_SYNTHETIC=1` requires non-synthetic runtime evidence for every target.
+      - default strictness follows CI context (`CI=true` => strict).
   - release-full profile also enforces production WASM surface isolation:
     - `scripts/check_wasm_production_surface.sh` (forbids parity-only Rust frontend exports in default-feature wasm-bindgen artifacts).
   - release-full profile also enforces large-workspace SLO coverage:
@@ -164,6 +168,8 @@ Strict/full profile runtime reports:
   - high-churn Rust decomposition progress is fail-closed via:
     - `scripts/check_source_decomposition_progress.sh`
       (enforces target line budgets for tracked production modules).
+    - `scripts/check_source_decomposition_tracked_parity.sh`
+      (executes every tracked-row parity gate and enforces waiver contract metadata for over-budget modules).
 - Agent authoring inner-loop: `scripts/check_upgrade_plan_health.sh --profile agent-inner-loop`
   - runs a narrowed deterministic contract set plus `cli_smoke` and changed-fast loop checks to reduce repeated process startup overhead.
   - enforces warm-cache budget `GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS` (default `300000`) with history p95/min-history controls:

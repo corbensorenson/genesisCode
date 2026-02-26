@@ -20,6 +20,7 @@ pub(crate) fn materialize_backend_env_bundle(
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .to_path_buf();
+    let workspace_root = absolutize(&workspace_root)?;
     let bridge_cmd = resolve_backend_bridge_cmd(&workspace_root)?;
     let bridge_sha256 = bridge_cmd
         .as_deref()
@@ -40,6 +41,15 @@ pub(crate) fn materialize_backend_env_bundle(
         bridge_sha256,
         bridge_ready,
     })
+}
+
+fn absolutize(path: &Path) -> Result<PathBuf, String> {
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+    std::env::current_dir()
+        .map(|cwd| cwd.join(path))
+        .map_err(|e| format!("resolve absolute workspace root from `{}`: {e}", path.display()))
 }
 
 fn resolve_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>, String> {

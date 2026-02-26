@@ -1385,6 +1385,7 @@ case "$PROFILE" in
     ;;
   prepush-standard)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
+    PROFILE_GATES+=("bash scripts/check_source_decomposition_tracked_parity.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")
@@ -1411,6 +1412,7 @@ case "$PROFILE" in
     ;;
   release-full)
     PROFILE_GATES+=("cargo clippy --workspace --all-targets -- -D warnings")
+    PROFILE_GATES+=("bash scripts/check_source_decomposition_tracked_parity.sh")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_smoke --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_gcpm_selfhost_acceptance --quiet")
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_target_is_reproducible_and_emits_provenance_bundle --quiet")

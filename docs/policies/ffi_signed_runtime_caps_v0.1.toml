@@ -1,0 +1,67 @@
+# Signed FFI escalation policy profile (release opt-in).
+# Default GenesisCode posture remains deny-by-default for `host/ffi::*`.
+#
+# This profile demonstrates the minimum fail-closed controls for enabling FFI:
+# - explicit ABI/library/symbol allowlists
+# - payload/buffer quotas
+# - signed policy metadata
+# - deterministic evidence mode
+# - bridge digest pinning (+ optional command allowlist)
+
+allow = [
+  "host/ffi::call",
+  "host/ffi::buffer-pin",
+  "host/ffi::buffer-unpin",
+]
+
+[op."host/ffi::call"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_allowlist = ["./tools/native_ffi_bridge.sh"]
+bridge_cmd_sha256 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
+allow_abi_ids = ["abi.math.v1"]
+allow_libraries = ["libmath.so"]
+allow_symbols = ["sum_f64"]
+allow_schema_ids = [
+  "genesis/ffi.request.call.v1",
+  "genesis/ffi.response.call.v1",
+]
+max_call_payload_bytes = 131072
+
+[op."host/ffi::buffer-pin"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_allowlist = ["./tools/native_ffi_bridge.sh"]
+bridge_cmd_sha256 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
+allow_abi_ids = ["abi.math.v1"]
+allow_schema_ids = [
+  "genesis/ffi.request.buffer-pin.v1",
+  "genesis/ffi.response.buffer-handle.v1",
+]
+max_buffer_bytes = 1048576
+
+[op."host/ffi::buffer-unpin"]
+base_dir = "./workspace"
+bridge_cmd = "./tools/native_ffi_bridge.sh"
+bridge_cmd_allowlist = ["./tools/native_ffi_bridge.sh"]
+bridge_cmd_sha256 = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+signed_policy_required = true
+policy_artifact_h = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+policy_signature_h = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+policy_key_id = "ops-root-ed25519"
+evidence_mode = "deterministic"
+allow_abi_ids = ["abi.math.v1"]
+allow_schema_ids = [
+  "genesis/ffi.request.buffer-unpin.v1",
+  "genesis/ffi.response.status.v1",
+]

@@ -58,6 +58,11 @@ explicit closure-plan rows in `tracked_over_budget_rows` (in
 - `phase`
 - `status`
 - optional `notes`
+- required waiver metadata when `status = "waived"`:
+  - `waiver_owner`
+  - `waiver_scope` (bounded ownership surface)
+  - `waiver_rationale`
+  - `waiver_review_by` (`YYYY-MM-DD`)
 
 `scripts/check_source_decomposition_progress.sh` fails closed when any over-budget
 production file is neither decomposed nor represented by one of these explicit

@@ -23,21 +23,21 @@ Legend:
 | Obligation/evidence/attestation-gated publish + ref updates | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Native + WASI + wasm-host runtime surfaces | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ |
 | Selfhost frontend default in production CLIs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Full selfhost cutover profile + readiness scorecard | ⚠️ (critical readiness freshness blockers remain) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Full selfhost cutover profile + readiness scorecard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Strict no-production Rust semantic fallback guard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | CLI + GCPM JSON schema contracts for agent automation | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ❌ |
 | Agent index + skill-pack conformance contracts | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Domain starter registry for agent workflows | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Agent generative workload parity gates (native vs WASI) | ⚠️ (parity artifact freshness/refresh latency remains a release blocker) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Agent generative workload parity gates (native vs WASI) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Large-workspace agent iteration perf lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Concurrency/task replay stress lane | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
-| GPU compute (device-backed, deterministic lane) | ⚠️ (headroom conformance is still fallback-dominant) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Graphics/window/input/audio runtime families | ⚠️ (runtime lanes pass, but readiness freshness + headroom realism are incomplete) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Browser + XR runtime families | ⚠️ (runtime families are implemented, but freshness + headroom trust gates remain open) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Host plugin + FFI schemas/contracts | ⚠️ (host/ffi remains policy-disabled by default) | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| GPU compute (device-backed, deterministic lane) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Graphics/window/input/audio runtime families | ⚠️ (runtime lanes pass with mixed device/fallback headroom coverage and still depend on host/headroom availability) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Browser + XR runtime families | ⚠️ (runtime families are implemented but remain host/runtime-availability constrained) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Host plugin + FFI schemas/contracts | ✅ (deny-by-default default, signed policy opt-in profile enforced for escalation) | ✅ | ⚠️ | ✅ | ✅ | ✅ |
 | First-party bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Stage2 CoreForm->WASM translation-validation | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
-| Deployment target pipeline in core toolchain | ⚠️ (deterministic adapter validation exists; non-synthetic runtime evidence is incomplete) | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Deployment target pipeline in core toolchain | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
 | Assurance profile packs + standards crosswalk | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Tool qualification lineage + evidence closures | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | AI-first modular decomposition + boundary guards | ⚠️ (decomposition/ownership automation is enforced but not yet comprehensive across every module family) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -77,12 +77,7 @@ Implemented capability families (32):
 Known GenesisCode gaps
 
 These are the remaining blockers reflected in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`:
-- `P0.1` Critical readiness freshness closure (stale critical artifacts currently break trust in cutover state).
-- `P0.2` Parity freshness latency closure (parity artifact refresh is too heavy/fragile for reliable default readiness loops).
-- `P1.1` GPU/GFX headroom realism (fallback-dominant headroom evidence needs device-required coverage).
-- `P1.2` Safe FFI escalation path (default deny remains correct, but audited opt-in path is not productized).
-- `P1.3` Source decomposition debt (9 tracked over-budget modules still planned).
-- `P1.4` Non-synthetic deployment runtime validation for target pipelines.
+- none
 
 Primary evidence paths
 
@@ -97,4 +92,6 @@ Primary evidence paths
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gpu_device_conformance_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gfx_runtime_profile_runtime_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/webxr_browser_conformance_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gcpm_target_runtime_evidence_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/source_decomposition_progress_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/source_decomposition_tracked_parity_report.json`

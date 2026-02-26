@@ -377,6 +377,42 @@ def read_critical_report(
         detail["require_gpu_device_backend"] = bool(doc.get("require_gpu_device_backend"))
     if isinstance(doc.get("confidence_lane"), str):
         detail["confidence_lane"] = doc.get("confidence_lane")
+    if isinstance(doc.get("require_device_lane_mode"), str):
+        detail["require_device_lane_mode"] = doc.get("require_device_lane_mode")
+    if isinstance(doc.get("require_device_lane_active"), bool):
+        detail["require_device_lane_active"] = bool(doc.get("require_device_lane_active"))
+    if isinstance(doc.get("device_runtime_available"), bool):
+        detail["device_runtime_available"] = bool(doc.get("device_runtime_available"))
+    device_runtime_conformance = doc.get("device_runtime_conformance")
+    if isinstance(device_runtime_conformance, dict):
+        detail["device_runtime_conformance"] = {
+            "report_path": device_runtime_conformance.get("report_path"),
+            "refresh_exit_code": device_runtime_conformance.get("refresh_exit_code"),
+            "availability_reason": device_runtime_conformance.get("availability_reason"),
+            "adapter": device_runtime_conformance.get("adapter"),
+            "lane_id": device_runtime_conformance.get("lane_id"),
+            "gpu_vendor": device_runtime_conformance.get("gpu_vendor"),
+            "os_family": device_runtime_conformance.get("os_family"),
+        }
+    lanes = doc.get("lanes")
+    if isinstance(lanes, dict):
+        lane_backend_modes: dict[str, Any] = {}
+        for lane_name, lane_doc in lanes.items():
+            if not isinstance(lane_doc, dict):
+                continue
+            lane_backend_modes[str(lane_name)] = {
+                "backend_policy": lane_doc.get("backend_policy"),
+                "expected_backend": lane_doc.get("expected_backend"),
+                "require_device": lane_doc.get("require_device"),
+                "observed_backends": lane_doc.get("observed_backends"),
+                "fallback_observed": lane_doc.get("fallback_observed"),
+                "fallback_policy": lane_doc.get("fallback_policy"),
+                "workflow_count": lane_doc.get("workflow_count"),
+                "workflow_successes": lane_doc.get("workflow_successes"),
+                "ok": lane_doc.get("ok"),
+            }
+        if lane_backend_modes:
+            detail["lane_backend_modes"] = lane_backend_modes
     if not report_ok:
         detail["fail_reasons"] = doc.get("fail_reasons")
         return False, detail, f"{label}:report-not-ok"
@@ -444,6 +480,13 @@ def dim_critical_gate_truth() -> dict[str, Any]:
             "domain-starter-registry-bootstrap",
             ["bash", str(root / "scripts/check_domain_starter_registry_bootstrap.sh")],
         ),
+        (
+            "gcpm_target_runtime_evidence",
+            ".genesis/perf/gcpm_target_runtime_evidence_report.json",
+            "genesis/gcpm-target-runtime-evidence-v0.1",
+            "gcpm-target-runtime-evidence",
+            ["bash", str(root / "scripts/check_gcpm_target_runtime_pipelines.sh")],
+        ),
     ]
     for key, report_rel, expected_kind, label, producer_cmd in critical_specs:
         checks.append(label)
@@ -462,27 +505,26 @@ def dim_critical_gate_truth() -> dict[str, Any]:
                 errors.append("agent-capability-gauntlet:non-strict-gpu-lane")
             if detail.get("confidence_lane") != "release-confidence-device":
                 errors.append("agent-capability-gauntlet:confidence-lane-mismatch")
-
-    runtime_pipeline_cmd = [
-        "bash",
-        str(root / "scripts/check_gcpm_target_runtime_pipelines.sh"),
-    ]
-    checks.append("gcpm-target-runtime-pipelines")
-    runtime_proc = subprocess.run(
-        runtime_pipeline_cmd,
-        cwd=root,
-        capture_output=True,
-        text=True,
-    )
-    runtime_ok = runtime_proc.returncode == 0
-    reports["gcpm_target_runtime_pipelines"] = {
-        "ok": runtime_ok,
-        "exit_code": runtime_proc.returncode,
-        "stdout_tail": tail_text(runtime_proc.stdout),
-        "stderr_tail": tail_text(runtime_proc.stderr),
-    }
-    if not runtime_ok:
-        errors.append("gcpm-target-runtime-pipelines:check-failed")
+        if key == "gpu_gfx_headroom_conformance":
+            lane_modes = detail.get("lane_backend_modes")
+            if not isinstance(lane_modes, dict):
+                errors.append("gpu-gfx-headroom-conformance:missing-lane-backend-modes")
+                continue
+            normal_lane = lane_modes.get("normal")
+            low_headroom_lane = lane_modes.get("low-headroom")
+            if not isinstance(normal_lane, dict):
+                errors.append("gpu-gfx-headroom-conformance:missing-normal-lane")
+            if not isinstance(low_headroom_lane, dict):
+                errors.append("gpu-gfx-headroom-conformance:missing-low-headroom-lane")
+            elif low_headroom_lane.get("fallback_policy") != "allow-fallback-under-headroom":
+                errors.append("gpu-gfx-headroom-conformance:low-headroom-fallback-policy-missing")
+            if detail.get("device_runtime_available") is True and detail.get("require_device_lane_active") is not True:
+                errors.append("gpu-gfx-headroom-conformance:device-runtime-lane-not-active")
+            if detail.get("require_device_lane_active") is True:
+                if not isinstance(normal_lane, dict) or normal_lane.get("backend_policy") != "require-device":
+                    errors.append("gpu-gfx-headroom-conformance:normal-lane-not-require-device")
+                if not isinstance(normal_lane, dict) or normal_lane.get("expected_backend") != "device-runtime":
+                    errors.append("gpu-gfx-headroom-conformance:normal-lane-expected-backend-mismatch")
 
     ok = not errors
     return {

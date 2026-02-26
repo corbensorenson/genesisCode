@@ -200,70 +200,106 @@ status = "migrated"
 module_path = "crates/gc_cli_driver/src/cmd_debug.rs"
 target_gc_modules = ["selfhost/cli_coreform_v1.gc", "prelude/modules/36_semantic_workspace.gc"]
 parity_gate = "cargo test -p gc_cli --test cli_smoke --quiet"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Split debug command orchestration into shared CLI dispatch + diagnostics adapters."
+waiver_owner = "gc-cli-runtime"
+waiver_scope = "Bounded to debug-command orchestration; no expansion to pkg/build or host bridge surfaces."
+waiver_rationale = "File remains over budget to preserve deterministic CLI diagnostics behavior during active selfhost cutover; parity gate remains mandatory."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/cmd_selfhost_artifact.rs"
 target_gc_modules = ["selfhost/toolchain.gc", "selfhost/toolchain_manifest.gc"]
 parity_gate = "bash scripts/check_selfhost_artifact_fresh.sh"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Decompose artifact emit/verify/refresh flows into distinct module handlers."
+waiver_owner = "selfhost-toolchain"
+waiver_scope = "Bounded to selfhost artifact refresh/verify orchestration only."
+waiver_rationale = "Cutover-critical artifact semantics are stabilized first; structural split is tracked but deferred behind reproducibility gate stability."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/host_bridge_runtime.rs"
 target_gc_modules = ["prelude/modules/10_browser_host.gc", "prelude/modules/10_xr_host.gc", "prelude/modules/32_network_workflow.gc"]
 parity_gate = "bash scripts/check_host_bridge_fault_injection.sh"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Split runtime bridge dispatch into domain-scoped routers and policy envelopes."
+waiver_owner = "host-bridge-runtime"
+waiver_scope = "Bounded to runtime bridge dispatch fan-out and policy envelopes; transport/domain handlers continue moving out."
+waiver_rationale = "Single-file orchestration is temporarily retained to keep fault-injection lane deterministic while dispatch boundaries are finalized."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/host_bridge_runtime_net_http_ws.rs"
 target_gc_modules = ["prelude/modules/32_network_workflow.gc", "prelude/modules/30_service_orchestration.gc"]
 parity_gate = "bash scripts/check_agent_workflow_runtime_parity.sh"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Extract HTTP/WS bridge path resolution and transport contracts into bounded adapters."
+waiver_owner = "host-bridge-runtime"
+waiver_scope = "Bounded to HTTP/WS transport adapter coupling and path resolution glue code."
+waiver_rationale = "Over-budget delta is small; waiver allows preserving parity while extracting shared transport contracts incrementally."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_cli_driver/src/pkg_reports.rs"
 target_gc_modules = ["selfhost/cli_pkg_ops_v1.gc", "prelude/modules/31_data_pipeline.gc"]
 parity_gate = "cargo test -p gc_cli --test cli_pkg_workspace --quiet"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Separate package report rendering from result aggregation and schema normalization."
+waiver_owner = "gc-pkg-ops"
+waiver_scope = "Bounded to package-report rendering/aggregation flow; no new resolver/lock responsibilities."
+waiver_rationale = "Stable report schema is prioritized for agent compatibility before final renderer/normalizer decomposition."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs"
 target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/32_network_workflow.gc"]
 parity_gate = "bash scripts/check_gcpm_operation_contract_pack.sh"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Split publish orchestration by lock/build/export/push/ref-update stages."
+waiver_owner = "gcpm-runtime"
+waiver_scope = "Bounded to low-level publish orchestration; component stage helpers must remain isolated."
+waiver_rationale = "Publish path is correctness-critical for registry trust; waiver preserves atomic behavior while staged split proceeds behind contract-pack gate."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
 target_gc_modules = ["prelude/modules/00_core.gc", "prelude/modules/10_browser_host.gc", "prelude/modules/32_network_workflow.gc"]
 parity_gate = "cargo test -p gc_effects --lib --quiet"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Partition top-level capability dispatch into family-scoped dispatch modules."
+waiver_owner = "effects-runtime"
+waiver_scope = "Bounded to top-level dispatch table composition; family-specific handlers remain partitioned."
+waiver_rationale = "Small over-budget margin with high fan-in; waiver keeps dispatch determinism while final family splits are completed."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_opt/src/stage2_wasm/pipeline_exec.rs"
 target_gc_modules = ["selfhost/stage1_closure_v1.gc", "selfhost/stage1_specialization_v1.gc", "prelude/modules/31_data_pipeline.gc"]
 parity_gate = "cargo test -p gc_opt --lib --quiet"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Split planner/executor/reporting into separate lowering pipeline components."
+waiver_owner = "gc-opt-wasm"
+waiver_scope = "Bounded to stage2 pipeline execution orchestration and reporting glue."
+waiver_rationale = "Optimizer pipeline sequencing is currently stabilized under one orchestrator; waiver keeps lowering parity while final planner/report split lands."
+waiver_review_by = "2026-04-30"
 
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_gpu_device_backend.rs"
 target_gc_modules = ["prelude/modules/10_gpu_compute.gc", "prelude/modules/33_game_loop.gc"]
 parity_gate = "bash scripts/check_gpu_compute_runtime_profile.sh"
-phase = "phase-0"
-status = "planned"
+phase = "phase-1"
+status = "waived"
 notes = "Separate queue setup, kernel dispatch, buffer lifecycle, and telemetry reporting paths."
+waiver_owner = "gpu-runtime"
+waiver_scope = "Bounded to device-runtime queue/dispatch lifecycle orchestration."
+waiver_rationale = "Device backend determinism and telemetry contracts are locked first; waiver prevents churn regression while extracting queue/buffer submodules."
+waiver_review_by = "2026-04-30"
