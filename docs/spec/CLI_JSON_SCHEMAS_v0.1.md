@@ -18,6 +18,12 @@ All commands use the global envelope from `docs/spec/CLI.md`:
 - `diagnostics_schema = "genesis/diagnostics-schema-v1"`
 - `diagnostics` array (empty on success, non-empty on failure)
 
+Failure diagnostics (`diagnostics[*]`) include stable machine-actionable routing fields:
+- `error_class` (string)
+- `candidate_fix` (string)
+- `blocking_capability` (string or `null`)
+- `next_safe_action` (string)
+
 Failure envelopes always use:
 
 - `kind = "genesis/error-v0.2"`

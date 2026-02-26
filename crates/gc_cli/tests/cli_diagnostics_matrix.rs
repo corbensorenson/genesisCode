@@ -121,6 +121,41 @@ fn run_case(case: &Case) {
                 "family {} diagnostics must include positive exit_code",
                 case.family
             );
+            assert!(
+                diag.get("error_class")
+                    .and_then(Value::as_str)
+                    .is_some_and(|class| !class.trim().is_empty()),
+                "family {} diagnostics must include non-empty error_class",
+                case.family
+            );
+            assert!(
+                diag.get("candidate_fix")
+                    .and_then(Value::as_str)
+                    .is_some_and(|fix| !fix.trim().is_empty()),
+                "family {} diagnostics must include candidate_fix",
+                case.family
+            );
+            assert!(
+                diag.get("next_safe_action")
+                    .and_then(Value::as_str)
+                    .is_some_and(|action| !action.trim().is_empty()),
+                "family {} diagnostics must include next_safe_action",
+                case.family
+            );
+            assert!(
+                diag.get("blocking_capability").is_some(),
+                "family {} diagnostics must include blocking_capability (nullable)",
+                case.family
+            );
+            if code.starts_with("caps/") {
+                assert!(
+                    diag.get("blocking_capability")
+                        .and_then(Value::as_str)
+                        .is_some_and(|cap| !cap.trim().is_empty()),
+                    "family {} caps errors must include a concrete blocking_capability",
+                    case.family
+                );
+            }
             assert_eq!(
                 value
                     .get("error")

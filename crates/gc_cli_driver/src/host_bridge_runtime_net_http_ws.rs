@@ -62,7 +62,7 @@ fn read_http_request_from_stream(
             Err(e) => return Err(format!("http request read: {e}")),
         }
     }
-    let hdr_end = hdr_end.expect("header end set");
+    let hdr_end = hdr_end.ok_or_else(|| "missing http header terminator".to_string())?;
     let head_bytes = &buf[..hdr_end];
     let head_src = String::from_utf8(head_bytes.to_vec()).map_err(|e| format!("http utf8: {e}"))?;
     let mut lines = head_src.split("\r\n").filter(|line| !line.is_empty());

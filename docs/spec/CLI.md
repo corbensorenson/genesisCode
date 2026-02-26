@@ -297,8 +297,12 @@ On failure:
       "version": "v1",
       "severity": "error",
       "code": "parse/coreform",
+      "error_class": "parse",
       "message": "…",
       "exit_code": 10,
+      "candidate_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`.",
+      "blocking_capability": null,
+      "next_safe_action": "run `genesis fmt --check <file>` and retry once syntax/canonicalization issues are resolved.",
       "suggested_fix": "verify syntax and canonicalize with `genesis fmt --check <file>`."
     }
   ]
@@ -309,6 +313,11 @@ On failure:
 `diagnostics` is always present in JSON output:
 - success cases: `[]`
 - failure cases: at least one typed diagnostic entry with stable `code` and `exit_code`
+- failure diagnostics always include machine-routeable remediation fields:
+  - `error_class` (stable routing bucket)
+  - `candidate_fix` (deterministic repair hint)
+  - `blocking_capability` (string or `null`)
+  - `next_safe_action` (safe retry/action instruction)
 
 Conformance guard:
 - `crates/gc_cli/tests/cli_diagnostics_matrix.rs` enforces:

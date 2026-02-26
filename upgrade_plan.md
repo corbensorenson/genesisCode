@@ -7,7 +7,7 @@ Scope:
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json`, `docs/status/REDTEAM_REPORT.md`, and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 11
+Open checklist items: 10
 
 ## Critical Path
 
@@ -54,10 +54,6 @@ Open checklist items: 11
 
 ## Agent Productization
 
-- [ ] P2.1 Add explicit autonomous-repair diagnostics contract across compiler/runtime/pkg errors.
-  - Done when:
-  - CLI/runtime errors emit stable machine-readable remediation fields (`error class`, `candidate fix`, `blocking capability`, `next safe action`) across major subsystems.
-  - Agent workflows can auto-route failures without regex/parsing brittle human strings.
 - [ ] P2.2 Complete capability-family coverage audit and remove silent partial implementations.
   - Done when:
   - Every capability family has an explicit coverage table (`implemented`, `policy-disabled`, `planned`) backed by tests.
