@@ -20,10 +20,7 @@ pub(crate) fn materialize_backend_env_bundle(
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .to_path_buf();
-    let bridge_cmd = match detect_backend_bridge_cmd(&workspace_root) {
-        Some(path) => Some(path),
-        None => provision_backend_bridge_cmd(&workspace_root)?,
-    };
+    let bridge_cmd = resolve_backend_bridge_cmd(&workspace_root)?;
     let bridge_sha256 = bridge_cmd
         .as_deref()
         .map(sha256_hex_file)
@@ -43,6 +40,13 @@ pub(crate) fn materialize_backend_env_bundle(
         bridge_sha256,
         bridge_ready,
     })
+}
+
+fn resolve_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>, String> {
+    if let Some(path) = detect_backend_bridge_cmd(workspace_root) {
+        return Ok(Some(path));
+    }
+    provision_backend_bridge_cmd(workspace_root).map(Some)
 }
 
 fn detect_backend_bridge_cmd(workspace_root: &Path) -> Option<PathBuf> {
@@ -73,9 +77,16 @@ fn detect_backend_bridge_cmd(workspace_root: &Path) -> Option<PathBuf> {
     candidates.into_iter().find(|p| p.is_file())
 }
 
-fn provision_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>, String> {
-    let src =
-        std::env::current_exe().map_err(|e| format!("resolve current genesis binary: {e}"))?;
+fn provision_backend_bridge_cmd(workspace_root: &Path) -> Result<PathBuf, String> {
+    let current = std::env::current_exe()
+        .map_err(|e| format!("resolve current genesis binary for backend bridge: {e}"))?;
+    if !current.is_file() {
+        return Err(format!(
+            "current genesis binary not found at {}",
+            current.display()
+        ));
+    }
+
     let runtime_dir = workspace_root
         .join(".genesis")
         .join("runtime")
@@ -86,33 +97,42 @@ fn provision_backend_bridge_cmd(workspace_root: &Path) -> Result<Option<PathBuf>
             runtime_dir.display()
         )
     })?;
-    let dst_name = if cfg!(windows) {
-        "host_bridge.exe"
-    } else {
-        "host_bridge"
-    };
-    let dst = runtime_dir.join(dst_name);
-    let src_bytes = std::fs::read(&src)
-        .map_err(|e| format!("read current genesis binary `{}`: {e}", src.display()))?;
-    let rewrite = match std::fs::read(&dst) {
-        Ok(existing) => existing != src_bytes,
+
+    if cfg!(windows) {
+        let launcher = runtime_dir.join("host_bridge.cmd");
+        let body = format!("@echo off\r\n\"{}\" %*\r\n", current.display());
+        write_text_if_changed(&launcher, body.as_bytes())?;
+        return Ok(launcher);
+    }
+
+    let launcher = runtime_dir.join("host_bridge.sh");
+    let body = format!(
+        "#!/usr/bin/env bash\nset -euo pipefail\nexec \"{}\" \"$@\"\n",
+        current.display()
+    );
+    write_text_if_changed(&launcher, body.as_bytes())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&launcher)
+            .map_err(|e| format!("read permissions `{}`: {e}", launcher.display()))?
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&launcher, perms)
+            .map_err(|e| format!("set executable permissions `{}`: {e}", launcher.display()))?;
+    }
+    Ok(launcher)
+}
+
+fn write_text_if_changed(path: &Path, body: &[u8]) -> Result<(), String> {
+    let rewrite = match std::fs::read(path) {
+        Ok(existing) => existing != body,
         Err(_) => true,
     };
     if rewrite {
-        std::fs::write(&dst, &src_bytes)
-            .map_err(|e| format!("write backend bridge bundle `{}`: {e}", dst.display()))?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&dst)
-                .map_err(|e| format!("read permissions `{}`: {e}", dst.display()))?
-                .permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&dst, perms)
-                .map_err(|e| format!("set executable permissions `{}`: {e}", dst.display()))?;
-        }
+        std::fs::write(path, body).map_err(|e| format!("write `{}`: {e}", path.display()))?;
     }
-    Ok(Some(dst))
+    Ok(())
 }
 
 fn sha256_hex_file(path: &Path) -> std::io::Result<String> {

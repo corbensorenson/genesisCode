@@ -16,6 +16,14 @@ fn is_hex_64(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+fn is_zip_bytes(bytes: &[u8]) -> bool {
+    bytes.len() >= 4 && &bytes[..4] == b"PK\x03\x04"
+}
+
+fn is_wasm_bytes(bytes: &[u8]) -> bool {
+    bytes.len() >= 8 && &bytes[..4] == b"\0asm" && &bytes[4..8] == b"\x01\x00\x00\x00"
+}
+
 #[test]
 fn gcpm_new_creates_workspace_descriptor_and_lock() {
     let td = tempfile::tempdir().unwrap();
@@ -247,28 +255,44 @@ path = "lib.gc"
         .success();
 
     let targets = [
-        ("ios", "native", "mobile-ios", "ios-app-bundle-v1"),
+        (
+            "ios",
+            "native",
+            "mobile-ios",
+            "ios-app-bundle-v1",
+            "ios-ipa-zip-v1",
+        ),
         (
             "android",
             "native",
             "mobile-android",
             "android-app-bundle-v1",
+            "android-aab-zip-v1",
         ),
         (
             "edge",
             "wasm32-wasi-preview2",
             "edge-runtime",
             "edge-wasi-bundle-v1",
+            "edge-wasm-module-v1",
         ),
         (
             "service-runtime",
             "wasm32-wasi-preview2",
             "service-runtime",
             "service-runtime-bundle-v1",
+            "service-runtime-wasm-module-v1",
         ),
     ];
 
-    for (target, expected_runtime, expected_host, expected_artifact_format) in targets {
+    for (
+        target,
+        expected_runtime,
+        expected_host,
+        expected_artifact_format,
+        expected_payload_kind,
+    ) in targets
+    {
         let out = cargo_bin_cmd!("genesis")
             .current_dir(dir)
             .args(["--json", "gcpm", "--caps"])
@@ -394,6 +418,40 @@ path = "lib.gc"
             entrypoint_path.is_file(),
             "target {target} missing bundled entrypoint"
         );
+        let package_bytes = fs::read(&package_path).expect("read package bytes");
+        match target {
+            "ios" => {
+                assert!(
+                    is_zip_bytes(&package_bytes),
+                    "ios package must be a zip archive"
+                );
+                assert!(
+                    package_bytes
+                        .windows("Payload/Genesis.app/Info.plist".len())
+                        .any(|w| w == b"Payload/Genesis.app/Info.plist"),
+                    "ios package missing Info.plist entry"
+                );
+            }
+            "android" => {
+                assert!(
+                    is_zip_bytes(&package_bytes),
+                    "android package must be a zip archive"
+                );
+                assert!(
+                    package_bytes
+                        .windows("base/manifest/AndroidManifest.xml".len())
+                        .any(|w| w == b"base/manifest/AndroidManifest.xml"),
+                    "android package missing AndroidManifest entry"
+                );
+            }
+            "edge" | "service-runtime" => {
+                assert!(
+                    is_wasm_bytes(&package_bytes),
+                    "target {target} package must be wasm"
+                );
+            }
+            _ => {}
+        }
 
         let launch_src = fs::read_to_string(&launch_adapter).unwrap();
         let launch_term = gc_coreform::parse_term(&launch_src).expect("parse launch adapter");
@@ -407,6 +465,10 @@ path = "lib.gc"
         assert_eq!(
             launch_map.get(&TermOrdKey(Term::symbol(":target"))),
             Some(&Term::Str(target.to_string()))
+        );
+        assert_eq!(
+            launch_map.get(&TermOrdKey(Term::symbol(":payload-kind"))),
+            Some(&Term::Str(expected_payload_kind.to_string()))
         );
         let launch_verify = map_map(&launch_map, ":verify");
         let launch_sha256 = map_map(launch_verify, ":sha256");
@@ -1057,9 +1119,22 @@ fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
     let effective_caps = map_string(&map, ":caps-policy-effective");
     assert!(effective_caps.ends_with("caps-policy.backend.effective.toml"));
     let bridge_cmd = map_string(&map, ":backend-bridge-cmd");
+    let bridge_cmd_path = PathBuf::from(&bridge_cmd);
+    assert!(
+        bridge_cmd_path.is_file(),
+        "bridge cmd must exist: {bridge_cmd}"
+    );
+    let bridge_cmd_name = bridge_cmd_path
+        .file_name()
+        .map(|s| s.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
     assert!(
         bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge")
             || bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge.exe")
+            || bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge.sh")
+            || bridge_cmd.ends_with(".genesis/runtime/backend/host_bridge.cmd")
+            || bridge_cmd_name.starts_with("genesis"),
+        "unexpected backend bridge cmd path: {bridge_cmd}"
     );
     let bridge_sha = map_string(&map, ":backend-bridge-sha256");
     assert!(bridge_sha.starts_with("sha256:"));

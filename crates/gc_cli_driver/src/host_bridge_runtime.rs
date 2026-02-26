@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use aes_gcm::Aes256Gcm;
@@ -16,14 +17,67 @@ use num_traits::cast::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 struct ProcessRecord {
-    exit: i64,
+    #[serde(default)]
+    exit: Option<i64>,
+    #[serde(default)]
     stdout: String,
+    #[serde(default)]
     stderr: String,
+    #[serde(default)]
     killed: bool,
+    #[serde(default)]
     stdin_writes: Vec<String>,
+    #[serde(default)]
+    child_pid: Option<u32>,
+    #[serde(default)]
+    supervisor_pid: Option<u32>,
+    #[serde(default)]
+    stdin_fifo: Option<String>,
+    #[serde(default)]
+    stdout_path: Option<String>,
+    #[serde(default)]
+    stderr_path: Option<String>,
+    #[serde(default)]
+    exit_path: Option<String>,
+    #[serde(default)]
+    pid_path: Option<String>,
 }
+
+#[derive(Default)]
+struct NetBridgeState {
+    tcp_streams: BTreeMap<String, TcpStream>,
+    tcp_listeners: BTreeMap<String, TcpListener>,
+    udp_sockets: BTreeMap<String, UdpSocket>,
+    http_listeners: BTreeMap<String, TcpListener>,
+    http_listener_by_local: BTreeMap<String, String>,
+    http_requests: BTreeMap<String, HttpPendingRequest>,
+    ws_streams: BTreeMap<String, WsStream>,
+}
+
+struct HttpPendingRequest {
+    listener_id: String,
+    stream: TcpStream,
+    headers: Vec<String>,
+}
+
+struct WsStream {
+    stream: TcpStream,
+    mask_outgoing: bool,
+}
+
+fn net_bridge_state() -> &'static Mutex<NetBridgeState> {
+    static STATE: OnceLock<Mutex<NetBridgeState>> = OnceLock::new();
+    STATE.get_or_init(|| Mutex::new(NetBridgeState::default()))
+}
+
+#[path = "host_bridge_runtime_net_http_ws.rs"]
+mod net_http_ws;
+use net_http_ws::*;
+#[path = "host_bridge_runtime_host_abi.rs"]
+mod host_abi;
+use host_abi::*;
 
 pub(crate) fn maybe_run_host_bridge_mode() -> Option<std::process::ExitCode> {
     let op = std::env::var("GENESIS_HOST_BRIDGE_OP").ok()?;
@@ -107,25 +161,23 @@ fn dispatch_host_bridge_impl(op: &str, payload: &Term) -> Result<Term, String> {
     match op {
         "io/net::http-request" => net_http_request(payload),
         "io/net::dns-resolve" => net_dns_resolve(payload),
+        "io/net::tcp-listen" => net_tcp_listen(payload),
+        "io/net::tcp-accept" => net_tcp_accept(payload),
         "io/net::tcp-open" => net_tcp_open(payload),
-        "io/net::tcp-send"
-        | "io/net::tcp-recv"
-        | "io/net::tcp-close"
-        | "io/net::tcp-listen"
-        | "io/net::tcp-accept"
-        | "io/net::udp-bind"
-        | "io/net::udp-send"
-        | "io/net::udp-recv"
-        | "io/net::udp-close"
-        | "io/net::ws-open"
-        | "io/net::ws-send"
-        | "io/net::ws-recv"
-        | "io/net::ws-close"
-        | "io/net::http-listen"
-        | "io/net::http-respond"
-        | "io/net::ws-accept" => Err(format!(
-            "op `{op}` is not supported by first-party backend bridge"
-        )),
+        "io/net::tcp-send" => net_tcp_send(payload),
+        "io/net::tcp-recv" => net_tcp_recv(payload),
+        "io/net::tcp-close" => net_tcp_close(payload),
+        "io/net::udp-bind" => net_udp_bind(payload),
+        "io/net::udp-send" => net_udp_send(payload),
+        "io/net::udp-recv" => net_udp_recv(payload),
+        "io/net::udp-close" => net_udp_close(payload),
+        "io/net::http-listen" => net_http_listen(payload),
+        "io/net::http-respond" => net_http_respond(payload),
+        "io/net::ws-accept" => net_ws_accept(payload),
+        "io/net::ws-open" => net_ws_open(payload),
+        "io/net::ws-send" => net_ws_send(payload),
+        "io/net::ws-recv" => net_ws_recv(payload),
+        "io/net::ws-close" => net_ws_close(payload),
         "io/db::connect" => db_connect(payload),
         "io/db::tx-begin" => db_tx_begin(payload),
         "io/db::tx-commit" | "io/db::tx-rollback" => db_tx_finish(op, payload),
@@ -196,6 +248,21 @@ fn req_int(payload: &Term, key: &str) -> Result<i64, String> {
     value
         .to_i64()
         .ok_or_else(|| format!("`{key}` exceeds i64 range"))
+}
+
+fn opt_int(payload: &Term, key: &str) -> Result<Option<i64>, String> {
+    let mm = as_map(payload)?;
+    let Some(value) = mm.get(&map_key(key)) else {
+        return Ok(None);
+    };
+    match value {
+        Term::Nil => Ok(None),
+        Term::Int(value) => value
+            .to_i64()
+            .ok_or_else(|| format!("`{key}` exceeds i64 range"))
+            .map(Some),
+        _ => Err(format!("`{key}` must be int")),
+    }
 }
 
 fn req_bytes(payload: &Term, key: &str) -> Result<Vec<u8>, String> {
@@ -381,14 +448,308 @@ fn net_tcp_open(payload: &Term) -> Result<Term, String> {
     let addr = parse_tcp_remote(&remote)?;
     let stream =
         TcpStream::connect_timeout(&addr, Duration::from_secs(5)).map_err(|e| e.to_string())?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| e.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| e.to_string())?;
     let local = stream.local_addr().map_err(|e| e.to_string())?;
-    drop(stream);
     let stream_id = format!("tcp-{}", next_counter("net_stream")?);
+    net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .tcp_streams
+        .insert(stream_id.clone(), stream);
     Ok(ok_term(vec![
         (":stream-id", Term::Str(stream_id)),
         (":remote", Term::Str(addr.to_string())),
         (":local", Term::Str(local.to_string())),
     ]))
+}
+
+fn parse_bound_socket_addr(uri: &str, scheme: &str) -> Result<SocketAddr, String> {
+    let prefix = format!("{scheme}://");
+    if !uri.starts_with(&prefix) {
+        return Err(format!(
+            "{scheme} uri must start with {prefix} (got `{uri}`)"
+        ));
+    }
+    let rest = &uri[prefix.len()..];
+    let mut addrs = rest
+        .to_socket_addrs()
+        .map_err(|e| format!("resolve `{rest}`: {e}"))?;
+    addrs
+        .next()
+        .ok_or_else(|| format!("resolve `{rest}` produced no address"))
+}
+
+fn net_tcp_listen(payload: &Term) -> Result<Term, String> {
+    let local = req_string(payload, ":local")?;
+    let addr = parse_bound_socket_addr(&local, "tcp")?;
+    let listener = TcpListener::bind(addr).map_err(|e| format!("tcp bind `{addr}`: {e}"))?;
+    let bound_local = listener.local_addr().map_err(|e| e.to_string())?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| format!("tcp listener nonblocking `{addr}`: {e}"))?;
+    let listener_id = format!("tcpl-{}", next_counter("net_listener")?);
+    net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .tcp_listeners
+        .insert(listener_id.clone(), listener);
+    Ok(ok_term(vec![
+        (":listener-id", Term::Str(listener_id)),
+        (":local", Term::Str(bound_local.to_string())),
+    ]))
+}
+
+fn net_tcp_accept(payload: &Term) -> Result<Term, String> {
+    let listener_id = req_string(payload, ":listener-id")?;
+    let timeout_ms = opt_int(payload, ":timeout-ms")?.unwrap_or(5000);
+    if timeout_ms < 0 {
+        return Err("`:timeout-ms` must be >= 0".to_string());
+    }
+    let deadline = std::time::Instant::now()
+        .checked_add(Duration::from_millis(timeout_ms as u64))
+        .ok_or_else(|| "timeout overflow".to_string())?;
+    let mut accepted: Option<(TcpStream, SocketAddr, SocketAddr)> = None;
+    while std::time::Instant::now() <= deadline {
+        let maybe_accept = {
+            let guard = net_bridge_state()
+                .lock()
+                .map_err(|_| "net bridge state lock poisoned".to_string())?;
+            let Some(listener) = guard.tcp_listeners.get(&listener_id) else {
+                return Err(
+                    "unknown `:listener-id`; use persistent-stdio bridge transport for listener lifecycle"
+                        .to_string(),
+                );
+            };
+            match listener.accept() {
+                Ok((stream, remote)) => {
+                    let local = stream.local_addr().map_err(|e| e.to_string())?;
+                    Some((stream, remote, local))
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => None,
+                Err(e) => return Err(format!("tcp accept `{listener_id}`: {e}")),
+            }
+        };
+        if let Some(tuple) = maybe_accept {
+            accepted = Some(tuple);
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let Some((stream, remote, local)) = accepted else {
+        return Ok(ok_term(vec![
+            (":accepted", Term::Bool(false)),
+            (":eof", Term::Bool(false)),
+        ]));
+    };
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| e.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| e.to_string())?;
+    let stream_id = format!("tcp-{}", next_counter("net_stream")?);
+    net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .tcp_streams
+        .insert(stream_id.clone(), stream);
+    Ok(ok_term(vec![
+        (":accepted", Term::Bool(true)),
+        (":stream-id", Term::Str(stream_id)),
+        (":remote", Term::Str(remote.to_string())),
+        (":local", Term::Str(local.to_string())),
+    ]))
+}
+
+fn net_tcp_send(payload: &Term) -> Result<Term, String> {
+    let stream_id = req_string(payload, ":stream-id")?;
+    let data = req_bytes(payload, ":data")?;
+    let sent = {
+        let mut guard = net_bridge_state()
+            .lock()
+            .map_err(|_| "net bridge state lock poisoned".to_string())?;
+        let Some(stream) = guard.tcp_streams.get_mut(&stream_id) else {
+            return Err(
+                "unknown `:stream-id`; use persistent-stdio bridge transport for stream lifecycle"
+                    .to_string(),
+            );
+        };
+        stream
+            .write(&data)
+            .map_err(|e| format!("tcp send `{stream_id}`: {e}"))?
+    };
+    Ok(ok_term(vec![(
+        ":sent-bytes",
+        Term::Int((sent as i64).into()),
+    )]))
+}
+
+fn net_tcp_recv(payload: &Term) -> Result<Term, String> {
+    let stream_id = req_string(payload, ":stream-id")?;
+    let max_bytes = opt_int(payload, ":max-bytes")?.unwrap_or(65536);
+    if max_bytes <= 0 {
+        return Err("`:max-bytes` must be > 0".to_string());
+    }
+    let timeout_ms = opt_int(payload, ":timeout-ms")?.unwrap_or(1000);
+    if timeout_ms < 0 {
+        return Err("`:timeout-ms` must be >= 0".to_string());
+    }
+    let mut buf = vec![0u8; max_bytes as usize];
+    let (read_n, eof) = {
+        let mut guard = net_bridge_state()
+            .lock()
+            .map_err(|_| "net bridge state lock poisoned".to_string())?;
+        let Some(stream) = guard.tcp_streams.get_mut(&stream_id) else {
+            return Err(
+                "unknown `:stream-id`; use persistent-stdio bridge transport for stream lifecycle"
+                    .to_string(),
+            );
+        };
+        stream
+            .set_read_timeout(Some(Duration::from_millis(timeout_ms as u64)))
+            .map_err(|e| format!("tcp recv timeout `{stream_id}`: {e}"))?;
+        match stream.read(&mut buf) {
+            Ok(0) => (0usize, true),
+            Ok(n) => (n, false),
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ) =>
+            {
+                (0usize, false)
+            }
+            Err(e) => return Err(format!("tcp recv `{stream_id}`: {e}")),
+        }
+    };
+    buf.truncate(read_n);
+    Ok(ok_term(vec![
+        (":data", Term::Bytes(buf.into())),
+        (":eof", Term::Bool(eof)),
+    ]))
+}
+
+fn net_tcp_close(payload: &Term) -> Result<Term, String> {
+    let stream_id = req_string(payload, ":stream-id")?;
+    let stream = net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .tcp_streams
+        .remove(&stream_id);
+    if let Some(stream) = stream {
+        let _ = stream.shutdown(Shutdown::Both);
+    }
+    Ok(ok_term(vec![(":closed", Term::Bool(true))]))
+}
+
+fn net_udp_bind(payload: &Term) -> Result<Term, String> {
+    let local = req_string(payload, ":local")?;
+    let addr = parse_bound_socket_addr(&local, "udp")?;
+    let socket = UdpSocket::bind(addr).map_err(|e| format!("udp bind `{addr}`: {e}"))?;
+    let bound_local = socket.local_addr().map_err(|e| e.to_string())?;
+    let socket_id = format!("udp-{}", next_counter("net_udp_socket")?);
+    net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .udp_sockets
+        .insert(socket_id.clone(), socket);
+    Ok(ok_term(vec![
+        (":socket-id", Term::Str(socket_id)),
+        (":local", Term::Str(bound_local.to_string())),
+    ]))
+}
+
+fn parse_udp_remote(uri: &str) -> Result<SocketAddr, String> {
+    parse_bound_socket_addr(uri, "udp")
+}
+
+fn net_udp_send(payload: &Term) -> Result<Term, String> {
+    let socket_id = req_string(payload, ":socket-id")?;
+    let remote = req_string(payload, ":remote")?;
+    let remote_addr = parse_udp_remote(&remote)?;
+    let data = req_bytes(payload, ":data")?;
+    let sent = {
+        let mut guard = net_bridge_state()
+            .lock()
+            .map_err(|_| "net bridge state lock poisoned".to_string())?;
+        let Some(socket) = guard.udp_sockets.get_mut(&socket_id) else {
+            return Err(
+                "unknown `:socket-id`; use persistent-stdio bridge transport for socket lifecycle"
+                    .to_string(),
+            );
+        };
+        socket
+            .send_to(&data, remote_addr)
+            .map_err(|e| format!("udp send `{socket_id}`: {e}"))?
+    };
+    Ok(ok_term(vec![(
+        ":sent-bytes",
+        Term::Int((sent as i64).into()),
+    )]))
+}
+
+fn net_udp_recv(payload: &Term) -> Result<Term, String> {
+    let socket_id = req_string(payload, ":socket-id")?;
+    let max_bytes = opt_int(payload, ":max-bytes")?.unwrap_or(65536);
+    if max_bytes <= 0 {
+        return Err("`:max-bytes` must be > 0".to_string());
+    }
+    let timeout_ms = opt_int(payload, ":timeout-ms")?.unwrap_or(1000);
+    if timeout_ms < 0 {
+        return Err("`:timeout-ms` must be >= 0".to_string());
+    }
+    let mut buf = vec![0u8; max_bytes as usize];
+    let recv_res = {
+        let mut guard = net_bridge_state()
+            .lock()
+            .map_err(|_| "net bridge state lock poisoned".to_string())?;
+        let Some(socket) = guard.udp_sockets.get_mut(&socket_id) else {
+            return Err(
+                "unknown `:socket-id`; use persistent-stdio bridge transport for socket lifecycle"
+                    .to_string(),
+            );
+        };
+        socket
+            .set_read_timeout(Some(Duration::from_millis(timeout_ms as u64)))
+            .map_err(|e| format!("udp recv timeout `{socket_id}`: {e}"))?;
+        socket.recv_from(&mut buf)
+    };
+    match recv_res {
+        Ok((n, from)) => {
+            buf.truncate(n);
+            Ok(ok_term(vec![
+                (":data", Term::Bytes(buf.into())),
+                (":from", Term::Str(from.to_string())),
+            ]))
+        }
+        Err(e)
+            if matches!(
+                e.kind(),
+                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+            ) =>
+        {
+            Ok(ok_term(vec![
+                (":data", Term::Bytes(Vec::<u8>::new().into())),
+                (":from", Term::Nil),
+            ]))
+        }
+        Err(e) => Err(format!("udp recv `{socket_id}`: {e}")),
+    }
+}
+
+fn net_udp_close(payload: &Term) -> Result<Term, String> {
+    let socket_id = req_string(payload, ":socket-id")?;
+    net_bridge_state()
+        .lock()
+        .map_err(|_| "net bridge state lock poisoned".to_string())?
+        .udp_sockets
+        .remove(&socket_id);
+    Ok(ok_term(vec![(":closed", Term::Bool(true))]))
 }
 
 fn db_connection_dir() -> Result<PathBuf, String> {
@@ -631,6 +992,12 @@ fn process_record_path(id: &str) -> Result<PathBuf, String> {
     Ok(process_record_dir()?.join(format!("{id}.json")))
 }
 
+fn process_runtime_dir(id: &str) -> Result<PathBuf, String> {
+    let dir = process_record_dir()?.join("runtime").join(id);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
 fn save_process_record(id: &str, rec: &ProcessRecord) -> Result<(), String> {
     let path = process_record_path(id)?;
     let body = serde_json::to_vec_pretty(rec).map_err(|e| e.to_string())?;
@@ -674,6 +1041,196 @@ fn run_process(program: &str, args: &[String]) -> Result<(i64, String, String), 
     Ok((exit, stdout, stderr))
 }
 
+#[cfg(unix)]
+fn spawn_process_record(
+    process_id: &str,
+    program: &str,
+    args: &[String],
+) -> Result<ProcessRecord, String> {
+    let runtime_dir = process_runtime_dir(process_id)?;
+    let stdout_path = runtime_dir.join("stdout.log");
+    let stderr_path = runtime_dir.join("stderr.log");
+    let exit_path = runtime_dir.join("exit.code");
+    let pid_path = runtime_dir.join("child.pid");
+    let stdin_fifo = runtime_dir.join("stdin.fifo");
+    let _ = std::fs::remove_file(&stdin_fifo);
+    let status = std::process::Command::new("mkfifo")
+        .arg(&stdin_fifo)
+        .status()
+        .map_err(|e| format!("create stdin fifo: {e}"))?;
+    if !status.success() {
+        return Err("create stdin fifo failed".to_string());
+    }
+
+    let shell = r#"child_pid_file="$1"
+exit_file="$2"
+stdout_file="$3"
+stderr_file="$4"
+stdin_fifo="$5"
+shift 5
+exec 3<>"$stdin_fifo"
+"$@" <&3 >"$stdout_file" 2>"$stderr_file" &
+child="$!"
+printf '%s\n' "$child" >"$child_pid_file"
+wait "$child"
+code="$?"
+printf '%s\n' "$code" >"$exit_file"
+"#;
+
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg("-c")
+        .arg(shell)
+        .arg("genesis-bridge-process-wrapper")
+        .arg(pid_path.to_string_lossy().to_string())
+        .arg(exit_path.to_string_lossy().to_string())
+        .arg(stdout_path.to_string_lossy().to_string())
+        .arg(stderr_path.to_string_lossy().to_string())
+        .arg(stdin_fifo.to_string_lossy().to_string())
+        .arg(program);
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::null());
+    cmd.stderr(std::process::Stdio::null());
+    let supervisor = cmd
+        .spawn()
+        .map_err(|e| format!("spawn process supervisor for `{program}`: {e}"))?;
+
+    Ok(ProcessRecord {
+        exit: None,
+        stdout: String::new(),
+        stderr: String::new(),
+        killed: false,
+        stdin_writes: Vec::new(),
+        child_pid: None,
+        supervisor_pid: Some(supervisor.id()),
+        stdin_fifo: Some(stdin_fifo.to_string_lossy().to_string()),
+        stdout_path: Some(stdout_path.to_string_lossy().to_string()),
+        stderr_path: Some(stderr_path.to_string_lossy().to_string()),
+        exit_path: Some(exit_path.to_string_lossy().to_string()),
+        pid_path: Some(pid_path.to_string_lossy().to_string()),
+    })
+}
+
+#[cfg(not(unix))]
+fn spawn_process_record(
+    _process_id: &str,
+    program: &str,
+    args: &[String],
+) -> Result<ProcessRecord, String> {
+    let (exit, stdout, stderr) = run_process(program, args)?;
+    Ok(ProcessRecord {
+        exit: Some(exit),
+        stdout,
+        stderr,
+        ..ProcessRecord::default()
+    })
+}
+
+fn read_process_exit_code(rec: &ProcessRecord) -> Result<Option<i64>, String> {
+    let Some(path) = rec.exit_path.as_ref() else {
+        return Ok(rec.exit);
+    };
+    if !Path::new(path).is_file() {
+        return Ok(rec.exit);
+    }
+    let src = std::fs::read_to_string(path).map_err(|e| format!("read process exit code: {e}"))?;
+    let parsed = src
+        .trim()
+        .parse::<i64>()
+        .map_err(|e| format!("parse process exit code `{}`: {e}", src.trim()))?;
+    Ok(Some(parsed))
+}
+
+fn read_child_pid_from_file(rec: &ProcessRecord) -> Result<Option<u32>, String> {
+    let Some(path) = rec.pid_path.as_ref() else {
+        return Ok(rec.child_pid);
+    };
+    if !Path::new(path).is_file() {
+        return Ok(rec.child_pid);
+    }
+    let src = std::fs::read_to_string(path).map_err(|e| format!("read process pid file: {e}"))?;
+    let pid = src
+        .trim()
+        .parse::<u32>()
+        .map_err(|e| format!("parse process pid `{}`: {e}", src.trim()))?;
+    Ok(Some(pid))
+}
+
+#[cfg(unix)]
+fn pid_is_alive(pid: u32) -> bool {
+    std::process::Command::new("kill")
+        .arg("-0")
+        .arg(pid.to_string())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+#[cfg(not(unix))]
+fn pid_is_alive(_pid: u32) -> bool {
+    false
+}
+
+#[cfg(unix)]
+fn send_term_signal(pid: u32) -> Result<bool, String> {
+    let status = std::process::Command::new("kill")
+        .arg("-TERM")
+        .arg(pid.to_string())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map_err(|e| format!("kill -TERM {pid}: {e}"))?;
+    Ok(status.success())
+}
+
+#[cfg(not(unix))]
+fn send_term_signal(_pid: u32) -> Result<bool, String> {
+    Ok(false)
+}
+
+fn refresh_process_runtime_state(rec: &mut ProcessRecord) -> Result<(), String> {
+    if rec.child_pid.is_none() {
+        rec.child_pid = read_child_pid_from_file(rec)?;
+    }
+    if rec.exit.is_none() {
+        rec.exit = read_process_exit_code(rec)?;
+    }
+    if rec.exit.is_none()
+        && let Some(pid) = rec.child_pid
+        && !pid_is_alive(pid)
+    {
+        rec.exit = read_process_exit_code(rec)?;
+        if rec.exit.is_none() && rec.supervisor_pid.is_none_or(|spid| !pid_is_alive(spid)) {
+            rec.exit = Some(if rec.killed { 137 } else { 1 });
+        }
+    }
+    Ok(())
+}
+
+fn read_process_stream_output(rec: &ProcessRecord, stdout_stream: bool) -> Result<String, String> {
+    let path = if stdout_stream {
+        rec.stdout_path.as_ref()
+    } else {
+        rec.stderr_path.as_ref()
+    };
+    let fallback = if stdout_stream {
+        rec.stdout.clone()
+    } else {
+        rec.stderr.clone()
+    };
+    let Some(path) = path else {
+        return Ok(fallback);
+    };
+    if !Path::new(path).exists() {
+        return Ok(fallback);
+    }
+    let bytes = std::fs::read(path).map_err(|e| format!("read process stream `{path}`: {e}"))?;
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
 fn process_exec(payload: &Term) -> Result<Term, String> {
     let (program, args) = process_program_and_args(payload)?;
     let (exit, stdout, stderr) = run_process(&program, &args)?;
@@ -686,44 +1243,59 @@ fn process_exec(payload: &Term) -> Result<Term, String> {
 
 fn process_spawn(payload: &Term) -> Result<Term, String> {
     let (program, args) = process_program_and_args(payload)?;
-    let (exit, stdout, stderr) = run_process(&program, &args)?;
     let process_id = format!("proc-{}", next_counter("process_id")?);
-    let record = ProcessRecord {
-        exit,
-        stdout,
-        stderr,
-        killed: false,
-        stdin_writes: Vec::new(),
-    };
+    let record = spawn_process_record(&process_id, &program, &args)?;
     save_process_record(&process_id, &record)?;
     Ok(ok_term(vec![(":process-id", Term::Str(process_id))]))
 }
 
 fn process_wait(payload: &Term) -> Result<Term, String> {
     let process_id = req_string(payload, ":process-id")?;
-    let rec = load_process_record(&process_id)?;
+    let mut rec = load_process_record(&process_id)?;
+    while rec.exit.is_none() {
+        refresh_process_runtime_state(&mut rec)?;
+        if rec.exit.is_some() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let exit = rec.exit.unwrap_or(1);
+    save_process_record(&process_id, &rec)?;
     Ok(ok_term(vec![
-        (":exit", Term::Int(rec.exit.into())),
+        (":exit", Term::Int(exit.into())),
         (":killed", Term::Bool(rec.killed)),
+        (":running", Term::Bool(false)),
     ]))
 }
 
 fn process_kill(payload: &Term) -> Result<Term, String> {
     let process_id = req_string(payload, ":process-id")?;
     let mut rec = load_process_record(&process_id)?;
+    refresh_process_runtime_state(&mut rec)?;
+    let mut signalled = false;
+    if let Some(pid) = rec.child_pid {
+        signalled |= send_term_signal(pid)?;
+    }
+    if let Some(pid) = rec.supervisor_pid {
+        signalled |= send_term_signal(pid)?;
+    }
     rec.killed = true;
+    if rec.exit.is_none() {
+        rec.exit = Some(137);
+    }
     save_process_record(&process_id, &rec)?;
-    Ok(ok_term(vec![(":killed", Term::Bool(true))]))
+    Ok(ok_term(vec![
+        (":killed", Term::Bool(true)),
+        (":signalled", Term::Bool(signalled)),
+    ]))
 }
 
 fn process_read_stream(payload: &Term, stdout_stream: bool) -> Result<Term, String> {
     let process_id = req_string(payload, ":process-id")?;
-    let rec = load_process_record(&process_id)?;
-    let data = if stdout_stream {
-        rec.stdout
-    } else {
-        rec.stderr
-    };
+    let mut rec = load_process_record(&process_id)?;
+    refresh_process_runtime_state(&mut rec)?;
+    let data = read_process_stream_output(&rec, stdout_stream)?;
+    save_process_record(&process_id, &rec)?;
     Ok(ok_term(vec![(
         if stdout_stream { ":stdout" } else { ":stderr" },
         Term::Str(data),
@@ -734,12 +1306,32 @@ fn process_stdin_write(payload: &Term) -> Result<Term, String> {
     let process_id = req_string(payload, ":process-id")?;
     let data = req_bytes(payload, ":data")?;
     let mut rec = load_process_record(&process_id)?;
+    refresh_process_runtime_state(&mut rec)?;
+    if rec.exit.is_some() {
+        return Err("process already exited".to_string());
+    }
+    let mut wrote = false;
+    if let Some(path) = rec.stdin_fifo.as_ref() {
+        let fifo_path = Path::new(path);
+        if fifo_path.exists() {
+            let mut fifo = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(fifo_path)
+                .map_err(|e| format!("open process stdin fifo `{path}`: {e}"))?;
+            fifo.write_all(&data)
+                .map_err(|e| format!("write process stdin fifo `{path}`: {e}"))?;
+            fifo.flush()
+                .map_err(|e| format!("flush process stdin fifo `{path}`: {e}"))?;
+            wrote = true;
+        }
+    }
     rec.stdin_writes
         .push(String::from_utf8_lossy(&data).to_string());
     save_process_record(&process_id, &rec)?;
     Ok(ok_term(vec![
         (":written-bytes", Term::Int((data.len() as i64).into())),
-        (":ok", Term::Bool(true)),
+        (":ok", Term::Bool(wrote)),
     ]))
 }
 
@@ -1142,126 +1734,6 @@ fn crypto_aead_open(payload: &Term) -> Result<Term, String> {
         ));
     }
     Ok(ok_term(vec![(":plaintext", Term::Bytes(plaintext.into()))]))
-}
-
-fn plugin_command(op: &str, payload: &Term) -> Result<Term, String> {
-    let plugin = req_string(payload, ":plugin")?;
-    let command = req_string(payload, ":command")?;
-    if plugin == "demo" {
-        let status = if op.starts_with("editor/") {
-            "editor-ok"
-        } else {
-            "host-ok"
-        };
-        return Ok(ok_term(vec![
-            (":plugin", Term::Str(plugin)),
-            (":command", Term::Str(command)),
-            (":status", Term::Str(status.to_string())),
-        ]));
-    }
-    let payload_term = as_map(payload)?
-        .get(&map_key(":payload"))
-        .cloned()
-        .unwrap_or(Term::Nil);
-    let payload_src = print_term(&payload_term);
-    let output = std::process::Command::new(&plugin)
-        .arg(&command)
-        .arg(payload_src)
-        .output()
-        .map_err(|e| format!("spawn plugin `{plugin}` failed: {e}"))?;
-    let status = output.status.code().unwrap_or(1);
-    Ok(ok_term(vec![
-        (":plugin", Term::Str(plugin)),
-        (":command", Term::Str(command)),
-        (":status-code", Term::Int((status as i64).into())),
-        (
-            ":stdout",
-            Term::Str(String::from_utf8_lossy(&output.stdout).to_string()),
-        ),
-        (
-            ":stderr",
-            Term::Str(String::from_utf8_lossy(&output.stderr).to_string()),
-        ),
-    ]))
-}
-
-fn ffi_buffer_dir() -> Result<PathBuf, String> {
-    let dir = state_root()?.join("ffi").join("buffers");
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    Ok(dir)
-}
-
-fn ffi_buffer_pin(payload: &Term) -> Result<Term, String> {
-    let _abi_id = req_string(payload, ":abi-id")?;
-    let bytes = req_bytes(payload, ":bytes")?;
-    let digest = format!("{:x}", Sha256::digest(&bytes));
-    let handle = format!(
-        "ffi-buffer-{}-{}",
-        &digest[..12],
-        next_counter("ffi_buffer")?
-    );
-    let path = ffi_buffer_dir()?.join(format!("{handle}.bin"));
-    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
-    Ok(ok_term(vec![(":handle", Term::Str(handle))]))
-}
-
-fn ffi_buffer_unpin(payload: &Term) -> Result<Term, String> {
-    let _abi_id = req_string(payload, ":abi-id")?;
-    let handle = req_string(payload, ":handle")?;
-    let path = ffi_buffer_dir()?.join(format!("{handle}.bin"));
-    if path.exists() {
-        std::fs::remove_file(path).map_err(|e| e.to_string())?;
-    }
-    Ok(ok_term(vec![(
-        ":status",
-        Term::Str("unpinned".to_string()),
-    )]))
-}
-
-fn ffi_call(payload: &Term) -> Result<Term, String> {
-    let abi_id = req_string(payload, ":abi-id")?;
-    let _library = req_string(payload, ":library")?;
-    let symbol = req_string(payload, ":symbol")?;
-    let mm = as_map(payload)?;
-    let args = match mm.get(&map_key(":args")) {
-        Some(Term::Vector(values)) => values.clone(),
-        Some(Term::Nil) | None => Vec::new(),
-        _ => return Err("`:args` must be vector|nil".to_string()),
-    };
-
-    if abi_id == "libc.v1" && symbol == "strlen" {
-        let Some(arg0) = args.first() else {
-            return Err("ffi strlen requires one argument".to_string());
-        };
-        let len = match arg0 {
-            Term::Bytes(bytes) => bytes.len() as i64,
-            Term::Str(s) => s.len() as i64,
-            _ => return Err("ffi strlen arg must be bytes|string".to_string()),
-        };
-        return Ok(ok_term(vec![(":result", Term::Int(len.into()))]));
-    }
-
-    if abi_id == "genesis/ffi.memory.v1" && symbol == "buffer-len" {
-        let Some(Term::Str(handle)) = args.first() else {
-            return Err("ffi buffer-len requires handle string arg".to_string());
-        };
-        let path = ffi_buffer_dir()?.join(format!("{handle}.bin"));
-        let len = std::fs::metadata(path).map_err(|e| e.to_string())?.len() as i64;
-        return Ok(ok_term(vec![(":result", Term::Int(len.into()))]));
-    }
-
-    if abi_id == "genesis/ffi.memory.v1" && symbol == "buffer-read" {
-        let Some(Term::Str(handle)) = args.first() else {
-            return Err("ffi buffer-read requires handle string arg".to_string());
-        };
-        let path = ffi_buffer_dir()?.join(format!("{handle}.bin"));
-        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-        return Ok(ok_term(vec![(":result", Term::Bytes(bytes.into()))]));
-    }
-
-    Err(format!(
-        "unsupported ffi call for abi `{abi_id}` symbol `{symbol}`"
-    ))
 }
 
 #[cfg(test)]

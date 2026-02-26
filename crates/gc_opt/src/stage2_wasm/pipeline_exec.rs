@@ -3,6 +3,10 @@ use super::*;
 pub(super) fn eval_original_data(
     forms: &[Term],
 ) -> Result<(Stage2ValueKind, Term, [u8; 32]), Stage2CompileError> {
+    fn hex32(bytes: [u8; 32]) -> String {
+        blake3::Hash::from_bytes(bytes).to_hex().to_string()
+    }
+
     let mut ctx = EvalCtx::with_step_limit(Some(STAGE2_BASELINE_STEP_LIMIT));
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
@@ -34,9 +38,23 @@ pub(super) fn eval_original_data(
             let h = value_hash(&Value::Data(term.clone()));
             Ok((Stage2ValueKind::Term, term, h))
         }
-        Value::EffectProgram(_) => Err(Stage2CompileError::Unsupported(
-            "effect program produced (stage2 supports pure results only)".to_string(),
-        )),
+        Value::EffectProgram(program) => {
+            // Stage2 cannot execute effects; for translation validation we compare a deterministic
+            // projection that preserves effect-program identity across kernel/wasm boundaries.
+            let effect_hash = value_hash(&Value::EffectProgram(program.clone()));
+            let mut mm = BTreeMap::new();
+            mm.insert(
+                TermOrdKey(Term::symbol(":stage2/value-kind")),
+                Term::Str("effect-program".to_string()),
+            );
+            mm.insert(
+                TermOrdKey(Term::symbol(":effect-program-h")),
+                Term::Str(hex32(effect_hash)),
+            );
+            let projected = Term::Map(mm);
+            let h = value_hash(&Value::Data(projected.clone()));
+            Ok((Stage2ValueKind::Term, projected, h))
+        }
         other => Err(Stage2CompileError::Unsupported(format!(
             "unsupported result for stage2: {}",
             other.debug_repr()

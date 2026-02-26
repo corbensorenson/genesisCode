@@ -149,18 +149,34 @@ fn mk_eval_ctx(limits: KernelLimits) -> EvalCtx {
 }
 
 pub fn pack(pkg_toml: &Path) -> Result<String, ObligationError> {
-    pack_with_frontend(pkg_toml, default_coreform_frontend())
+    pack_with_limits_and_frontend(
+        pkg_toml,
+        StepLimit::Default,
+        MemLimits::default(),
+        default_coreform_frontend(),
+    )
 }
 
 pub fn pack_with_frontend(
     pkg_toml: &Path,
     frontend: CoreformFrontend,
 ) -> Result<String, ObligationError> {
+    pack_with_limits_and_frontend(pkg_toml, StepLimit::Default, MemLimits::default(), frontend)
+}
+
+pub fn pack_with_limits_and_frontend(
+    pkg_toml: &Path,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+    frontend: CoreformFrontend,
+) -> Result<String, ObligationError> {
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let step_limit = effective_step_limit(&manifest, step_limit)?;
+    let mem_limits = effective_mem_limits(&manifest, mem_limits);
     let limits = KernelLimits {
-        step_limit: StepLimit::Default,
-        mem_limits: MemLimits::default(),
+        step_limit,
+        mem_limits,
     };
     let modules = load_modules(&pkg_dir, &manifest.modules, &frontend, limits)?;
 
@@ -180,16 +196,30 @@ pub fn pack_with_frontend(
 ///
 /// This requires pinned module hashes and pinned dependency hashes to match.
 pub fn package_artifact_hash(pkg_toml: &Path) -> Result<String, ObligationError> {
+    package_artifact_hash_with_limits_and_frontend(
+        pkg_toml,
+        StepLimit::Default,
+        MemLimits::default(),
+        default_coreform_frontend(),
+    )
+}
+
+pub fn package_artifact_hash_with_limits_and_frontend(
+    pkg_toml: &Path,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
+    frontend: CoreformFrontend,
+) -> Result<String, ObligationError> {
     let mut visited = std::collections::BTreeSet::new();
     let limits = KernelLimits {
-        step_limit: StepLimit::Default,
-        mem_limits: MemLimits::default(),
+        step_limit,
+        mem_limits,
     };
     compute_package_artifact_hash(
         pkg_toml,
         true,
         &mut visited,
-        &default_coreform_frontend(),
+        &frontend,
         limits,
     )
 }

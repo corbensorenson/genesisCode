@@ -26,7 +26,7 @@ fn discover_workspace_runtime_wasi_bridge_root() -> Option<PathBuf> {
             .join(".genesis")
             .join("runtime")
             .join("wasi-http-bridge");
-        if candidate.is_dir() {
+        if candidate.is_dir() && candidate.join("runtime.gc").is_file() {
             return Some(candidate);
         }
         if !cur.pop() {

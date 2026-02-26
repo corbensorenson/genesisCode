@@ -875,7 +875,7 @@ fn stage2_rejects_defs_only_module_with_non_trivial_rhs() {
 }
 
 #[test]
-fn stage2_reports_unsupported_for_effect_program() {
+fn stage2_validates_effect_program_via_deterministic_projection() {
     let src = r#"
           (core/effect::perform
             'sys/time::now
@@ -884,6 +884,7 @@ fn stage2_reports_unsupported_for_effect_program() {
         "#;
     let forms = canonicalize_module(parse_module(src).unwrap()).unwrap();
     let r = stage2_validation_report(&forms);
-    assert!(!r.supported, "{r:?}");
-    assert!(!r.ok, "{r:?}");
+    assert!(r.supported, "{r:?}");
+    assert!(r.ok, "{r:?}");
+    assert_eq!(r.value_kind, Some(Stage2ValueKind::Term));
 }

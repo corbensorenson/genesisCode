@@ -297,7 +297,16 @@ fn wasi_pkg_publish_local_profile_http_bridge_autodiscovery_roundtrip() {
         .join("wasi-http-bridge")
         .join("http")
         .join("bridge.test_80");
+    let bridge_root = dir
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge");
     fs::create_dir_all(remote_dir.join("v1")).unwrap();
+    fs::write(
+        bridge_root.join("runtime.gc"),
+        "{:type :gcpm/wasi-http-bridge-runtime :v 1 :profile \"test\"}\n",
+    )
+    .unwrap();
     let caps = write_caps(dir, &remote_allow, true);
 
     let policy_hex = cli_store_put(

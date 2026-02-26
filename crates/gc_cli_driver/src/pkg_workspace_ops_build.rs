@@ -1,6 +1,9 @@
 use super::*;
+use gc_kernel::{MemLimits, StepLimit};
 #[path = "pkg_workspace_ops_build_artifacts.rs"]
 mod build_artifacts;
+#[path = "pkg_workspace_ops_build_packagers.rs"]
+mod build_packagers;
 
 #[derive(Clone, Copy)]
 pub(super) struct BuildTargetProfile {
@@ -13,7 +16,9 @@ pub(super) fn handle_build(
     pkg: &Path,
     target: &str,
     out_dir: &Path,
-    _frontend: gc_obligations::CoreformFrontend,
+    frontend: gc_obligations::CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
 ) -> Result<LocalPkgResult, String> {
     let target_label = normalize_build_target(target)?;
     let target_profile = build_target_profile(target_label)?;
@@ -21,7 +26,10 @@ pub(super) fn handle_build(
     let (manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
     let package_src = std::fs::read(pkg).map_err(|e| e.to_string())?;
     let package_h = blake3::hash(&package_src).to_hex().to_string();
-    let package_artifact = gc_obligations::package_artifact_hash(pkg).map_err(|e| e.to_string())?;
+    let package_artifact = gc_obligations::package_artifact_hash_with_limits_and_frontend(
+        pkg, step_limit, mem_limits, frontend,
+    )
+    .map_err(|e| e.to_string())?;
     let entrypoint_src = build_target_entrypoint_source(&pkg_dir, &manifest)?;
 
     let build_manifest = Term::Map(

@@ -8,8 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P0.1 - Expand stage2 translation-validation coverage so selfhost/agent modules stop hitting `Stage2CompileError::Unsupported` for valid CoreForm programs.
-- P0.2 - Complete first-party backend bridge semantics for `io/net::*` + `sys/process::*` lifecycle ops (listen/accept/send/recv/close and real spawn/wait/kill behavior).
-- P1.1 - Replace deterministic target wrapper artifacts with real deployment packagers for `ios`, `android`, `edge`, and `service-runtime` targets.
-- P1.2 - Remove remaining manual backend bootstrap debt outside workspace-scaffolded flows, including WASI remote registry/sync paths.
-- P1.3 - Expand first-party plugin/ffi bridge coverage from demo/limited ABI helpers to schema-driven general host ABI execution.
+- P1.4 - Restore `agent-capability-gauntlet` release-confidence lane to `ok=true` by closing workflow/domain coverage failures.

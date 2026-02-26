@@ -240,8 +240,15 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             target,
             out_dir,
         } => Some(
-            pkg_workspace_ops::handle_build(pkg, target, out_dir, frontend.clone())
-                .map_err(|e| cli_err(EX_PARSE, "pkg/build", e))?,
+            pkg_workspace_ops::handle_build(
+                pkg,
+                target,
+                out_dir,
+                frontend.clone(),
+                resolved_step_limit(cli),
+                resolved_mem_limits(cli),
+            )
+            .map_err(|e| cli_err(EX_PARSE, "pkg/build", e))?,
         ),
         PkgCmd::Remove { name, lock } => Some(
             pkg_workspace_ops::handle_remove(name, lock)

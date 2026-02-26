@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
+use gc_kernel::{MemLimits, StepLimit};
 use gc_pkg::{
     PackageManifest, RUNTIME_BACKEND_HEADLESS, UpdatePolicy, WorkspaceConfig, WorkspaceMember,
     WorkspaceTask, normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
@@ -262,8 +263,10 @@ pub(crate) fn handle_build(
     target: &str,
     out_dir: &Path,
     frontend: gc_obligations::CoreformFrontend,
+    step_limit: StepLimit,
+    mem_limits: MemLimits,
 ) -> Result<LocalPkgResult, String> {
-    pkg_workspace_ops_build::handle_build(pkg, target, out_dir, frontend)
+    pkg_workspace_ops_build::handle_build(pkg, target, out_dir, frontend, step_limit, mem_limits)
 }
 
 pub(crate) fn handle_env(

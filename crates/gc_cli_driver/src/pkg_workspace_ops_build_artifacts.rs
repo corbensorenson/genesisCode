@@ -104,68 +104,18 @@ pub(super) fn write_target_executable_bundle(
         entrypoint_src,
     } = input;
     let entrypoint_h = blake3::hash(entrypoint_src.as_bytes()).to_hex().to_string();
-    let package_term = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":type")),
-                Term::symbol(":gcpm/target-package"),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (
-                TermOrdKey(Term::symbol(":target")),
-                Term::Str(target_label.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":artifact-format")),
-                Term::Str(target_profile.artifact_format.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime")),
-                Term::Str(target_profile.runtime.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":host-profile")),
-                Term::Str(target_profile.host_profile.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":bundle-h")),
-                Term::Str(bundle_h.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package-h")),
-                Term::Str(package_h.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package-artifact")),
-                Term::Str(package_artifact.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":execution-lanes")),
-                proper_list(vec![Term::symbol(":boot"), Term::symbol(":smoke")]),
-            ),
-            (
-                TermOrdKey(Term::symbol(":entrypoint")),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":path")),
-                            Term::Str(relative_name(layout.entrypoint_rel)),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":hash")),
-                            Term::Str(entrypoint_h.clone()),
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    let package_src = gc_coreform::print_term(&package_term) + "\n";
-    let package_sha256 = sha256_hex(package_src.as_bytes());
+    let package_payload = super::build_packagers::build_target_package_payload(
+        &super::build_packagers::TargetPackagePayloadInput {
+            target_label,
+            bundle_h,
+            target_profile,
+            package_h,
+            package_artifact,
+            entrypoint_src,
+            entrypoint_h: &entrypoint_h,
+        },
+    )?;
+    let package_sha256 = sha256_hex(&package_payload.bytes);
 
     let package_path = bundle_root.join(layout.package_rel);
     let signature_path = bundle_root.join(layout.signature_rel);
@@ -173,7 +123,7 @@ pub(super) fn write_target_executable_bundle(
     let launcher_path = bundle_root.join(layout.launcher_rel);
     let entrypoint_path = bundle_root.join(layout.entrypoint_rel);
 
-    write_if_same_or_new(&package_path, package_src.as_bytes()).map_err(|e| e.to_string())?;
+    write_if_same_or_new(&package_path, &package_payload.bytes).map_err(|e| e.to_string())?;
     write_if_same_or_new(&signature_path, format!("{package_sha256}\n").as_bytes())
         .map_err(|e| e.to_string())?;
     write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes()).map_err(|e| e.to_string())?;
@@ -249,6 +199,10 @@ pub(super) fn write_target_executable_bundle(
             (
                 TermOrdKey(Term::symbol(":artifact-format")),
                 Term::Str(target_profile.artifact_format.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":payload-kind")),
+                Term::Str(package_payload.payload_kind.to_string()),
             ),
         ]
         .into_iter()

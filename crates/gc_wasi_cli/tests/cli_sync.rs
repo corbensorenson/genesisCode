@@ -542,11 +542,20 @@ fn wasi_sync_local_profile_http_bridge_roundtrip_and_log_determinism() {
         .join("wasi-http-bridge")
         .join("http")
         .join("bridge.test_80");
+    let bridge_root = root
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge");
     let remote_v1 = remote_dir.join("v1");
     fs::create_dir_all(&src).unwrap();
     fs::create_dir_all(&dst_a).unwrap();
     fs::create_dir_all(&dst_b).unwrap();
     fs::create_dir_all(&remote_v1).unwrap();
+    fs::write(
+        bridge_root.join("runtime.gc"),
+        "{:type :gcpm/wasi-http-bridge-runtime :v 1 :profile \"test\"}\n",
+    )
+    .unwrap();
 
     let remote = "http://bridge.test/".to_string();
     let remote_allow = "http://bridge.test/v1/".to_string();

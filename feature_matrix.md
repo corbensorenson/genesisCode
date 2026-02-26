@@ -1,6 +1,6 @@
-# GenesisCode Feature Matrix (Audit Date: 2026-02-25)
+# GenesisCode Feature Matrix (Audit Date: 2026-02-26)
 
-Last updated: 2026-02-25  
+Last updated: 2026-02-26  
 Scope: capabilities that matter for AI-agent autonomy, selfhost closure, and production-grade runtime trust.
 
 Legend:
@@ -33,10 +33,10 @@ Legend:
 | Graphics/window/input/audio capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | XR and browser runtime capability families | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | GPU/XR productization conformance lane | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Host plugin + FFI capability schemas | ⚠️ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
-| First-party backend bridge for network/process/db/crypto/plugin/ffi | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Stage2 CoreForm->WASM translation-validation path | ⚠️ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
-| Deployment target pipeline in core toolchain | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| Host plugin + FFI capability schemas | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| First-party backend bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Stage2 CoreForm->WASM translation-validation path | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| Deployment target pipeline in core toolchain | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
 | Assurance profile packs + standards crosswalk (DO-178C/NASA/IEC) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Tool qualification lineage + evidence closures | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | AI-first modular decomposition + boundary guards | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -48,11 +48,7 @@ Legend:
 - It is weaker today on some “build anything immediately” host/runtime edges where first-party backends still expose partial or placeholder semantics (tracked below).
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- `P0.1` - stage2 translation-validation still rejects valid CoreForm shapes and effectful result classes.
-- `P0.2` - first-party backend bridge does not yet implement full `io/net::*` and `sys/process::*` lifecycle semantics.
-- `P1.1` - deployment target bundles are deterministic wrappers, not full platform-native packagers.
-- `P1.2` - backend bootstrap remains partially manual outside workspace-scaffolded runtime flows.
-- `P1.3` - first-party plugin/ffi bridge support is still narrow relative to general ABI execution needs.
+- `P1.4` - agent-capability-gauntlet release-confidence lane is still `ok=false` (`workflow-failures`, `domain-coverage`).
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

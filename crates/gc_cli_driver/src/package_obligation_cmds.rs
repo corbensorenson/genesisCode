@@ -70,7 +70,13 @@ pub(crate) fn cmd_pack(cli: &Cli, pkg: &Path) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
 
-    let h = gc_obligations::pack_with_frontend(pkg, frontend).map_err(obligation_err)?;
+    let h = gc_obligations::pack_with_limits_and_frontend(
+        pkg,
+        resolved_step_limit(cli),
+        resolved_mem_limits(cli),
+        frontend,
+    )
+    .map_err(obligation_err)?;
     let env = JsonEnvelope {
         ok: true,
         kind: "genesis/pack-v0.2",
