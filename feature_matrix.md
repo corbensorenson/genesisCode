@@ -48,7 +48,7 @@ Legend:
 - It is weaker today on some “build anything immediately” host/runtime edges where first-party backends still expose partial or placeholder semantics (tracked below).
 
 Known GenesisCode gaps identified in this audit (tracked in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`):
-- `P1.4` - agent-capability-gauntlet release-confidence lane is still `ok=false` (`workflow-failures`, `domain-coverage`).
+- No active `P0`/`P1` gaps.
 
 Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`

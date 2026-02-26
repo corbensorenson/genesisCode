@@ -7,7 +7,7 @@ Scope:
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Critical Path
 
@@ -31,7 +31,9 @@ Open checklist items: 1
   - [x] Backend profile env materialization no longer copies/mirrors runtime binaries; it now resolves an existing bridge command or provisions an in-workspace launcher shim only.
   - [x] Backend bridge command policy remains path-contained within workspace runtime roots, preserving capability sandbox guarantees without manual bridge setup.
   - [x] WASI remote bridge autodiscovery now requires a generated runtime descriptor (`runtime.gc`) under `.genesis/runtime/wasi-http-bridge`, eliminating ad-hoc directory-only discovery paths.
-- [ ] P1.4 Restore `agent-capability-gauntlet` release-confidence lane to `ok=true` by closing workflow/domain coverage failures.
+- [x] P1.4 Restore `agent-capability-gauntlet` release-confidence lane to `ok=true` by closing workflow/domain coverage failures.
+  - [x] Release-confidence gauntlet now completes with `workflow_successes=25/25`, `domain_successes=23/23`, `score_percent=100.0`, and `ok=true`.
+  - [x] Durable data workflow regression root cause fixed (`gc_cli_driver_parity` missing `sha1` dependency in release-confidence compile path).
 - [x] P1.3 Expand first-party plugin/ffi bridge coverage from demo/limited ABI helpers to schema-driven general host ABI execution.
   - [x] `host/plugin::command` first-party runtime now supports schema-driven execution paths (`genesis/plugin.request.exec.v1`, `genesis/plugin.request.jsonrpc.v1`) and typed bytes/result responses instead of demo-only semantics.
   - [x] `host/ffi::call` first-party runtime now supports schema-driven general ABI execution via external command-backed libraries (including structured `:ok false/:error` envelopes), replacing hard `unsupported ffi call` fallthrough for non-builtin ABI symbols.

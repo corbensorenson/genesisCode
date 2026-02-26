@@ -8,4 +8,4 @@ Scope:
 
 ## Active Risks (P0/P1)
 
-- P1.4 - Restore `agent-capability-gauntlet` release-confidence lane to `ok=true` by closing workflow/domain coverage failures.
+No active P0/P1 risks.
