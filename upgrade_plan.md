@@ -3,61 +3,90 @@
 Last updated: 2026-02-25
 
 Scope:
-- Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and productization trust.
-- Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json` and `feature_matrix.md`.
+- Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
+- Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json`, `docs/status/REDTEAM_REPORT.md`, and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 0
+Open checklist items: 11
 
 ## Critical Path
 
-- [x] P0.1 Expand stage2 translation-validation coverage so selfhost/agent modules stop hitting `Stage2CompileError::Unsupported` for valid CoreForm programs.
-  - [x] Stage2 `eval_original_data` now handles `Value::EffectProgram` via deterministic projection (`:stage2/value-kind "effect-program"` + stable effect-program hash) instead of hard unsupported failure.
-  - [x] Translation-validation for effectful top-level modules now passes through constant fallback paths with replay-stable term/value-hash comparisons.
-  - [x] Added stage2 regression test coverage for effect-program projection and validation (`stage2_validates_effect_program_via_deterministic_projection`).
-- [x] P0.2 Complete first-party backend bridge semantics for `io/net::*` + `sys/process::*` lifecycle ops (listen/accept/send/recv/close and real spawn/wait/kill behavior).
-  - [x] `sys/process::*` bridge path now runs real async process lifecycle with persisted runtime state (`spawn`/`wait`/`kill`/`stdin-write`/`stdout-read`/`stderr-read`) instead of synchronous snapshot simulation.
-  - [x] `io/net::tcp-*` + `io/net::udp-*` first-party bridge handlers now implement runtime lifecycle semantics (`listen`/`accept`/`open`/`send`/`recv`/`close`) instead of hard `unsupported` errors.
-  - [x] `io/net::http-listen|http-respond|ws-accept|ws-open|ws-send|ws-recv|ws-close` now execute through first-party runtime semantics with listener/request and ws stream lifecycle state.
-- [x] P0.3 Replace non-production first-party crypto bridge primitives with production-grade algorithms/key-provider integration while preserving deterministic logs/replay contracts.
+- [ ] P0.1 Close Stage2 coverage gaps that still reject valid CoreForm programs required by deploy targets.
+  - Done when:
+  - `crates/gc_opt/src/stage2_wasm/**/*.rs` no longer emits `Stage2CompileError::Unsupported` for recursive function calls, non-trivial collection pipelines, and supported higher-order patterns used by shipped domain workflows.
+  - `genesis build --target edge|service-runtime` passes on expanded real-workload corpus without fallback-only lowering for semantically supported programs.
+  - Translation-validation remains deterministic and replay-stable for all newly supported forms.
+- [ ] P0.2 Deliver full WASI remote registry parity (http/https remotes) without `wasi_http_unsupported` hard failures.
+  - Done when:
+  - `crates/gc_registry/src/registry/client_impl/{ping_and_store,refs}.rs` support `ping`, `store/*`, and `refs/*` in WASI through deterministic bridge transport.
+  - Auth, chunk upload, and body/resource limits remain policy-gated and replay-safe.
+  - `gcpm add/install/lock/publish/sync` behave equivalently across native and WASI for networked registries.
+- [ ] P0.3 Replace first-party GPU placeholder semantics with production-capable device-runtime parity.
+  - Done when:
+  - `crates/gc_effects/src/runner_gpu_device_backend.rs` supports resource lifecycle ops (`create-*`, `write-*`, `read-*`, `destroy-resource`) and not only submit/limits/features.
+  - `crates/gc_effects/src/runner_gpu_host.rs` no longer relies on opaque-hash placeholders for pipelines in production profiles.
+  - Deterministic replay evidence exists for GPU compute + gfx interop flows, not just synthetic hashes.
+- [ ] P0.4 Close host runtime realism gap for gfx/browser/xr in production profiles.
+  - Done when:
+  - `crates/gc_effects/src/runner_gfx_host.rs`, `runner_browser_host.rs`, and `runner_xr_host.rs` default production profile paths exercise real adapters (not headless/noop simulation) for lifecycle-critical ops.
+  - Unsupported-op surfaces are either implemented or explicitly policy-disabled with schema-level declarations and conformance tests.
+  - Browser/XR/GFX productization kits pass with device-backed evidence artifacts.
 
-## Unresolved Backlog
+## High Priority
 
-- [x] P1.1 Replace deterministic target wrapper artifacts with real deployment packagers for `ios`, `android`, `edge`, and `service-runtime` targets.
-  - [x] `ios` and `android` build targets now emit deterministic platform-style zip bundles (`.ipa`/`.aab`) with target runtime descriptors and packaged entrypoints, replacing CoreForm wrapper payloads.
-  - [x] `edge` and `service-runtime` build targets now emit real wasm modules (magic/version + exported entry) with deterministic metadata custom sections, replacing wrapper map payloads.
-  - [x] Build/test contracts now assert payload-kind semantics (`ios-ipa-zip-v1`, `android-aab-zip-v1`, `edge-wasm-module-v1`, `service-runtime-wasm-module-v1`) and validate artifact bytes accordingly.
-- [x] P1.2 Remove remaining manual backend bootstrap debt outside workspace-scaffolded flows, including WASI remote registry/sync paths.
-  - [x] Backend profile env materialization no longer copies/mirrors runtime binaries; it now resolves an existing bridge command or provisions an in-workspace launcher shim only.
-  - [x] Backend bridge command policy remains path-contained within workspace runtime roots, preserving capability sandbox guarantees without manual bridge setup.
-  - [x] WASI remote bridge autodiscovery now requires a generated runtime descriptor (`runtime.gc`) under `.genesis/runtime/wasi-http-bridge`, eliminating ad-hoc directory-only discovery paths.
-- [x] P1.4 Restore `agent-capability-gauntlet` release-confidence lane to `ok=true` by closing workflow/domain coverage failures.
-  - [x] Release-confidence gauntlet now completes with `workflow_successes=25/25`, `domain_successes=23/23`, `score_percent=100.0`, and `ok=true`.
-  - [x] Durable data workflow regression root cause fixed (`gc_cli_driver_parity` missing `sha1` dependency in release-confidence compile path).
-- [x] P1.3 Expand first-party plugin/ffi bridge coverage from demo/limited ABI helpers to schema-driven general host ABI execution.
-  - [x] `host/plugin::command` first-party runtime now supports schema-driven execution paths (`genesis/plugin.request.exec.v1`, `genesis/plugin.request.jsonrpc.v1`) and typed bytes/result responses instead of demo-only semantics.
-  - [x] `host/ffi::call` first-party runtime now supports schema-driven general ABI execution via external command-backed libraries (including structured `:ok false/:error` envelopes), replacing hard `unsupported ffi call` fallthrough for non-builtin ABI symbols.
-  - [x] Added first-party runtime tests covering typed plugin exec-bytes flow, schema-driven external FFI execution, and structured FFI spawn-failure envelopes.
-- [x] P2.1 Add a large-workspace agent-performance lane (>=10k module corpus) with enforced SLOs for `gcpm lock/build/test` and selfhost artifact refresh.
+- [ ] P1.1 Expand media capability coverage beyond current narrow conversion matrix.
+  - Done when:
+  - `crates/gc_effects/src/runner_capability_dispatch/media.rs` supports policy-gated mainstream image/audio format families and explicit deterministic conversion pipelines.
+  - Unsupported conversion failures are reduced to truly out-of-scope formats, not common production pathways.
+- [ ] P1.2 Expand first-party editor task runtime from fixed task set to extensible AI workflow orchestration.
+  - Done when:
+  - `crates/gc_effects/src/runner_editor_tasks.rs` supports schema-driven task kinds with stable contracts for build/run/debug/refactor/index operations.
+  - Task spawn/poll/cancel semantics support long-running incremental workflows and structured partial outputs.
+- [ ] P1.3 Harden dependency resolution for large agent-generated workspaces.
+  - Done when:
+  - `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs` supports richer deterministic selector resolution (range constraints + conflict explanation + lock rationale artifacts).
+  - Resolver output includes machine-actionable diagnostics for automatic repair strategies.
+- [ ] P1.4 Cut full test/gate iteration time to agent-inner-loop targets without losing coverage.
+  - Done when:
+  - Baseline full validation runtime is reduced from current multi-minute profile to an enforced SLO with sharded execution and cache reuse.
+  - Reports in `.genesis/perf/` include stable `score_percent` and wall-time trend data for all major lanes (`large_workspace`, `health_profile`, `gauntlet`).
+
+## Agent Productization
+
+- [ ] P2.1 Add explicit autonomous-repair diagnostics contract across compiler/runtime/pkg errors.
+  - Done when:
+  - CLI/runtime errors emit stable machine-readable remediation fields (`error class`, `candidate fix`, `blocking capability`, `next safe action`) across major subsystems.
+  - Agent workflows can auto-route failures without regex/parsing brittle human strings.
+- [ ] P2.2 Complete capability-family coverage audit and remove silent partial implementations.
+  - Done when:
+  - Every capability family has an explicit coverage table (`implemented`, `policy-disabled`, `planned`) backed by tests.
+  - Remaining unsupported ops are either removed from public surface or promoted to tracked plan IDs with release gates.
+- [ ] P2.3 Strengthen untrusted-agent execution safety for “build anything” operation mode.
+  - Done when:
+  - Resource quotas, sandbox boundaries, and effect-policy defaults are enforced for generated code execution in local/dev/CI profiles.
+  - Security posture is validated by repeatable abuse-case tests (resource exhaustion, host escape attempts, capability abuse).
 
 ## Evidence Anchors
 
+- `upgrade_plan.md`
+- `feature_matrix.md`
+- `docs/status/REDTEAM_REPORT.md`
 - `.genesis/perf/selfhost_readiness_report.json`
 - `.genesis/perf/full_selfhost_cutover_profile_report.json`
 - `.genesis/perf/agent_capability_gauntlet_release_confidence_report.json`
 - `.genesis/perf/agent_generative_workloads_report.json`
-- `.genesis/perf/agent_workflow_runtime_parity_report.json`
-- `.genesis/perf/backend_starter_workflows_report.json`
-- `.genesis/perf/domain_starter_registry_bootstrap_report.json`
-- `.genesis/perf/gcpm_operation_contract_pack_report.json`
 - `.genesis/perf/large_workspace_agent_perf_report.json`
-- `.genesis/perf/large_workspace_agent_runtime_report.json`
-- `.genesis/perf/hot_path_runtime_report.json`
 - `.genesis/perf/upgrade_plan_health_profile_report.json`
 - `crates/gc_opt/src/stage2_wasm.rs`
 - `crates/gc_opt/src/stage2_wasm/pipeline_exec.rs`
-- `crates/gc_cli_driver/src/host_bridge_runtime.rs`
-- `crates/gc_cli_driver/src/host_bridge_runtime_host_abi.rs`
-- `crates/gc_cli_driver/src/host_bridge_runtime_tests.rs`
-- `crates/gc_cli_driver/src/pkg_workspace_ops_build_artifacts.rs`
+- `crates/gc_registry/src/registry/client_impl/ping_and_store.rs`
+- `crates/gc_registry/src/registry/client_impl/refs.rs`
+- `crates/gc_effects/src/runner_gpu_host.rs`
+- `crates/gc_effects/src/runner_gpu_device_backend.rs`
+- `crates/gc_effects/src/runner_gfx_host.rs`
+- `crates/gc_effects/src/runner_browser_host.rs`
+- `crates/gc_effects/src/runner_xr_host.rs`
+- `crates/gc_effects/src/runner_editor_tasks.rs`
+- `crates/gc_effects/src/runner_capability_dispatch/media.rs`
+- `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs`
 - `docs/spec/HOST_ABI.md`
