@@ -2,6 +2,13 @@ use super::*;
 
 #[path = "dispatch_resolution/install_verify.rs"]
 mod install_verify;
+#[path = "dispatch_resolution/rationale_diagnostics.rs"]
+mod rationale_diagnostics;
+
+use rationale_diagnostics::{
+    annotate_requirement_resolution_error, build_lock_resolution_rationale,
+    persist_resolution_rationale_artifact, update_rationale_term,
+};
 
 #[expect(
     clippy::too_many_arguments,
@@ -205,6 +212,21 @@ pub(super) fn dispatch_resolution(
                 return Ok(v);
             }
             l.locked = out_locked;
+            let lock_rationale = build_lock_resolution_rationale(&l.requirements, &l.locked);
+            let lock_rationale_artifact = match persist_resolution_rationale_artifact(
+                store,
+                "lock",
+                &lock_rationale,
+                error_tok,
+                op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+            l.artifacts.insert(
+                "lock_resolution_rationale".to_string(),
+                lock_rationale_artifact.clone(),
+            );
             let workspace_root = match persist_workspace_root_snapshot(store, &l, error_tok, op) {
                 Ok(h) => h,
                 Err(v) => return Ok(v),
@@ -252,6 +274,18 @@ pub(super) fn dispatch_resolution(
                 TermOrdKey(Term::symbol(":locked-count")),
                 Term::Int((l.locked.len() as i64).into()),
             );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale-count")),
+                Term::Int((lock_rationale.len() as i64).into()),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale")),
+                Term::Vector(lock_rationale),
+            );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale-artifact")),
+                Term::Str(lock_rationale_artifact.clone()),
+            );
             m.insert(TermOrdKey(Term::symbol(":strict")), Term::Bool(strict));
             m.insert(
                 TermOrdKey(Term::symbol(":workspace-root")),
@@ -268,6 +302,10 @@ pub(super) fn dispatch_resolution(
                         (
                             TermOrdKey(Term::symbol(":lock-h")),
                             Term::Str(lock_h.clone()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":rationale-artifact")),
+                            Term::Str(lock_rationale_artifact),
                         ),
                         (
                             TermOrdKey(Term::symbol(":deps")),
@@ -331,8 +369,10 @@ pub(super) fn dispatch_resolution(
                 if !only_filter.is_empty() && !only_filter.contains(name) {
                     rationale.push(update_rationale_term(
                         name,
+                        Some(req),
                         ":skipped-unselected",
                         "not selected by --only filter",
+                        l.locked.get(name),
                     ));
                     continue;
                 }
@@ -347,8 +387,10 @@ pub(super) fn dispatch_resolution(
                 if !should_update && has_existing {
                     rationale.push(update_rationale_term(
                         name,
+                        Some(req),
                         ":kept-existing",
                         "update_policy=manual and locked entry already present",
+                        l.locked.get(name),
                     ));
                     continue;
                 }
@@ -376,18 +418,22 @@ pub(super) fn dispatch_resolution(
                             updated = updated.saturating_add(1);
                             rationale.push(update_rationale_term(
                                 name,
+                                Some(req),
                                 ":updated",
                                 if has_existing {
                                     "resolved new lock entry for selected dependency"
                                 } else {
                                     "resolved missing locked entry"
                                 },
+                                l.locked.get(name),
                             ));
                         } else {
                             rationale.push(update_rationale_term(
                                 name,
+                                Some(req),
                                 ":no-change",
                                 "resolved dependency equals existing lock entry",
+                                l.locked.get(name),
                             ));
                         }
                     }
@@ -401,8 +447,10 @@ pub(super) fn dispatch_resolution(
                     if !l.requirements.contains_key(selected) {
                         rationale.push(update_rationale_term(
                             selected,
+                            None,
                             ":missing-requirement",
                             "selected dependency is not present in lock requirements",
+                            None,
                         ));
                     }
                 }
@@ -419,6 +467,16 @@ pub(super) fn dispatch_resolution(
             {
                 return Ok(v);
             }
+            let update_rationale_artifact = match persist_resolution_rationale_artifact(
+                store, "update", &rationale, error_tok, op,
+            ) {
+                Ok(h) => h,
+                Err(v) => return Ok(v),
+            };
+            l.artifacts.insert(
+                "update_resolution_rationale".to_string(),
+                update_rationale_artifact.clone(),
+            );
             let workspace_root = match persist_workspace_root_snapshot(store, &l, error_tok, op) {
                 Ok(h) => h,
                 Err(v) => return Ok(v),
@@ -477,6 +535,10 @@ pub(super) fn dispatch_resolution(
                 TermOrdKey(Term::symbol(":rationale")),
                 Term::Vector(rationale),
             );
+            m.insert(
+                TermOrdKey(Term::symbol(":rationale-artifact")),
+                Term::Str(update_rationale_artifact.clone()),
+            );
             m.insert(TermOrdKey(Term::symbol(":strict")), Term::Bool(strict));
             m.insert(
                 TermOrdKey(Term::symbol(":workspace-root")),
@@ -493,6 +555,10 @@ pub(super) fn dispatch_resolution(
                         (
                             TermOrdKey(Term::symbol(":lock-h")),
                             Term::Str(lock_h.clone()),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":rationale-artifact")),
+                            Term::Str(update_rationale_artifact),
                         ),
                         (
                             TermOrdKey(Term::symbol(":deps")),
@@ -546,27 +612,6 @@ fn locked_entry_eq(a: &gc_pkg::LockedEntry, b: &gc_pkg::LockedEntry) -> bool {
         && a.environment_fingerprint == b.environment_fingerprint
 }
 
-fn update_rationale_term(name: &str, action_sym: &str, reason: &str) -> Term {
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":name")),
-                Term::Str(name.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":action")),
-                Term::symbol(action_sym),
-            ),
-            (
-                TermOrdKey(Term::symbol(":reason")),
-                Term::Str(reason.to_string()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
 fn validate_requirement_registry_alias(
     lock: &gc_pkg::GenesisLock,
     name: &str,
@@ -617,46 +662,6 @@ fn validate_requirement_registry_alias(
             .collect(),
         ),
     ))
-}
-
-fn annotate_requirement_resolution_error(
-    err: Value,
-    name: &str,
-    req: &gc_pkg::Requirement,
-) -> Value {
-    let Value::Sealed { token, payload } = err else {
-        return err;
-    };
-    let Value::Data(Term::Map(mut mm)) = *payload else {
-        return Value::Sealed { token, payload };
-    };
-    let existing_ctx = mm
-        .get(&TermOrdKey(Term::symbol(":error/context")))
-        .cloned()
-        .unwrap_or(Term::Nil);
-    let mut ctx = BTreeMap::new();
-    ctx.insert(
-        TermOrdKey(Term::symbol(":name")),
-        Term::Str(name.to_string()),
-    );
-    ctx.insert(
-        TermOrdKey(Term::symbol(":selector")),
-        Term::Str(req.selector.clone()),
-    );
-    ctx.insert(
-        TermOrdKey(Term::symbol(":strategy")),
-        Term::symbol(format!(":{}", req.strategy.as_str())),
-    );
-    ctx.insert(
-        TermOrdKey(Term::symbol(":registry")),
-        req.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-    );
-    ctx.insert(TermOrdKey(Term::symbol(":inner")), existing_ctx);
-    mm.insert(TermOrdKey(Term::symbol(":error/context")), Term::Map(ctx));
-    Value::Sealed {
-        token,
-        payload: Box::new(Value::Data(Term::Map(mm))),
-    }
 }
 
 #[cfg(test)]

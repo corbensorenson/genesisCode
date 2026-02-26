@@ -1,6 +1,6 @@
 # GenesisCode Red-Team Report (P0/P1 Active Risk Summary)
 
-Last updated: 2026-02-26
+Last updated: 2026-02-25
 
 Scope:
 - Track unresolved `P0`/`P1` risks from `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`.
@@ -14,5 +14,3 @@ Scope:
 - P0.4 - Close host runtime realism gap for gfx/browser/xr in production profiles.
 - P1.1 - Expand media capability coverage beyond current narrow conversion matrix.
 - P1.2 - Expand first-party editor task runtime from fixed task set to extensible AI workflow orchestration.
-- P1.3 - Harden dependency resolution for large agent-generated workspaces.
-- P1.4 - Cut full test/gate iteration time to agent-inner-loop targets without losing coverage.

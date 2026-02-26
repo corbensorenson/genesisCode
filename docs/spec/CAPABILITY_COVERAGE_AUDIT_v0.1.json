@@ -1,0 +1,411 @@
+{
+  "families": [
+    {
+      "family": "browser/audio",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "Production browser runtime realism still tracks P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 2,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "browser/input",
+      "host_only_ops": [],
+      "host_ops_count": 1,
+      "notes": "Production browser runtime realism still tracks P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 1,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "browser/storage",
+      "host_only_ops": [],
+      "host_ops_count": 3,
+      "notes": "Production browser runtime realism still tracks P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 3,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "browser/window",
+      "host_only_ops": [],
+      "host_ops_count": 3,
+      "notes": "Production browser runtime realism still tracks P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 3,
+      "release_gates": [
+        "scripts/check_upgrade_plan_health.sh",
+        "scripts/check_webxr_browser_conformance_lane.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "core/crypto",
+      "host_only_ops": [],
+      "host_ops_count": 6,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 6,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "core/gc-low",
+      "host_only_ops": [],
+      "host_ops_count": 5,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 5,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "core/gpk-low",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 2,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "core/media",
+      "host_only_ops": [],
+      "host_ops_count": 3,
+      "notes": "Mainstream media conversion parity remains open in P1.1.",
+      "plan_id": "P1.1",
+      "prelude_ops_count": 3,
+      "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "core/pkg-low",
+      "host_only_ops": [],
+      "host_ops_count": 13,
+      "notes": "Full WASI remote-registry parity still tracks P0.2.",
+      "plan_id": "P0.2",
+      "prelude_ops_count": 13,
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "core/refs",
+      "host_only_ops": [],
+      "host_ops_count": 4,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 4,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "core/store",
+      "host_only_ops": [],
+      "host_ops_count": 4,
+      "notes": "Full WASI remote-registry parity still tracks P0.2.",
+      "plan_id": "P0.2",
+      "prelude_ops_count": 4,
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "core/sync",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "Full WASI remote-registry parity still tracks P0.2.",
+      "plan_id": "P0.2",
+      "prelude_ops_count": 2,
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "core/task",
+      "host_only_ops": [],
+      "host_ops_count": 10,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 10,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "core/vcs-low",
+      "host_only_ops": [],
+      "host_ops_count": 10,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 10,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "editor/clipboard",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 2,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "editor/dialog",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 2,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "editor/plugin",
+      "host_only_ops": [],
+      "host_ops_count": 1,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 1,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "editor/task",
+      "host_only_ops": [],
+      "host_ops_count": 9,
+      "notes": "Extensible editor task orchestration remains open in P1.2.",
+      "plan_id": "P1.2",
+      "prelude_ops_count": 9,
+      "release_gates": [
+        "scripts/check_task_concurrency_stress.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "editor/watch",
+      "host_only_ops": [],
+      "host_ops_count": 3,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 3,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "gfx/audio",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 2,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gfx/gpu",
+      "host_only_ops": [],
+      "host_ops_count": 16,
+      "notes": "GPU placeholder semantics retirement remains open in P0.3.",
+      "plan_id": "P0.3",
+      "prelude_ops_count": 16,
+      "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gfx/input",
+      "host_only_ops": [],
+      "host_ops_count": 2,
+      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 2,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gfx/time",
+      "host_only_ops": [],
+      "host_ops_count": 1,
+      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 1,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gfx/window",
+      "host_only_ops": [],
+      "host_ops_count": 5,
+      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 5,
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gfx/xr",
+      "host_only_ops": [],
+      "host_ops_count": 15,
+      "notes": "Production gfx/browser/xr realism remains open in P0.4.",
+      "plan_id": "P0.4",
+      "prelude_ops_count": 15,
+      "release_gates": [
+        "scripts/check_gpu_xr_productization_kits.sh",
+        "scripts/check_webxr_browser_conformance_lane.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "gpu/compute",
+      "host_only_ops": [],
+      "host_ops_count": 13,
+      "notes": "GPU placeholder semantics retirement remains open in P0.3.",
+      "plan_id": "P0.3",
+      "prelude_ops_count": 13,
+      "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_gpu_compute_runtime_profile.sh"
+      ],
+      "status": "planned"
+    },
+    {
+      "family": "host/ffi",
+      "host_only_ops": [
+        "host/ffi::buffer-pin",
+        "host/ffi::buffer-unpin",
+        "host/ffi::call"
+      ],
+      "host_ops_count": 3,
+      "notes": "FFI operations are intentionally deny-by-default and excluded from prelude surface until explicit policy enablement.",
+      "plan_id": null,
+      "prelude_ops_count": 0,
+      "release_gates": [
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "status": "policy-disabled"
+    },
+    {
+      "family": "host/plugin",
+      "host_only_ops": [],
+      "host_ops_count": 1,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 1,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "io/db",
+      "host_only_ops": [],
+      "host_ops_count": 10,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 10,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "io/fs",
+      "host_only_ops": [],
+      "host_ops_count": 7,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 7,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "io/net",
+      "host_only_ops": [],
+      "host_ops_count": 19,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 19,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "sys/process",
+      "host_only_ops": [],
+      "host_ops_count": 7,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 7,
+      "release_gates": [],
+      "status": "implemented"
+    },
+    {
+      "family": "sys/time",
+      "host_only_ops": [],
+      "host_ops_count": 1,
+      "notes": "",
+      "plan_id": null,
+      "prelude_ops_count": 1,
+      "release_gates": [],
+      "status": "implemented"
+    }
+  ],
+  "generated_from": {
+    "host_index": "docs/spec/HOST_ABI_INDEX_v0.1.json",
+    "prelude_index": "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
+    "status_overrides": "docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json",
+    "upgrade_plan": "upgrade_plan.md"
+  },
+  "kind": "genesis/capability-coverage-audit-v0.1",
+  "summary": {
+    "family_count": 33,
+    "host_operation_count": 187,
+    "implemented_families": 16,
+    "planned_families": 16,
+    "planned_upgrade_ids": [
+      "P0.2",
+      "P0.3",
+      "P0.4",
+      "P1.1",
+      "P1.2"
+    ],
+    "policy_disabled_families": 1,
+    "prelude_operation_count": 184
+  }
+}

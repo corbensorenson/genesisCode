@@ -38,6 +38,12 @@ PREPUSH_BASELINE_HISTORY="${GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY:-}"
 PREPUSH_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_MIN_HISTORY:-3}"
 PREPUSH_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY:-0}"
 PREPUSH_HISTORY_SCOPE_KEY="${GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY:-prepush-standard-v1}"
+RELEASE_FULL_WALL_BUDGET_MS="${GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS:-1800000}"
+RELEASE_FULL_HISTORY="${GENESIS_HEALTH_RELEASE_FULL_HISTORY:-.genesis/perf/upgrade_plan_health_release_full_history.jsonl}"
+RELEASE_FULL_BASELINE_HISTORY="${GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY:-}"
+RELEASE_FULL_MIN_HISTORY="${GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY:-3}"
+RELEASE_FULL_REQUIRE_MIN_HISTORY="${GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY:-0}"
+RELEASE_FULL_HISTORY_SCOPE_KEY="${GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY:-release-full-v1}"
 HEALTH_CARGO_TARGET_DIR="${GENESIS_HEALTH_CARGO_TARGET_DIR:-$ROOT_DIR/.genesis/build/health/$PROFILE}"
 HEALTH_CARGO_GATE_SHARDS="${GENESIS_HEALTH_CARGO_GATE_SHARDS:-}"
 HEALTH_WARM_CARGO_CACHE="${GENESIS_HEALTH_WARM_CARGO_CACHE:-auto}"
@@ -429,6 +435,14 @@ apply_profile_gate_cache_policy() {
 enforce_inner_loop_history_budget() {
   local elapsed_ms="$1"
   local gate_count="$2"
+  local profile_gate_cache_enabled=0
+  local warm_cargo_cache_enabled=0
+  if [[ "$HEALTH_PROFILE_GATE_CACHE" == "1" ]]; then
+    profile_gate_cache_enabled=1
+  fi
+  if [[ "$HEALTH_WARM_CARGO_CACHE" == "1" ]]; then
+    warm_cargo_cache_enabled=1
+  fi
   local -a args=(
     scripts/lib/profile_runtime_budget.py
     --profile "$PROFILE"
@@ -439,7 +453,7 @@ enforce_inner_loop_history_budget() {
     --budget-ms "$AGENT_INNER_LOOP_BUDGET_MS"
     --min-history "$AGENT_INNER_LOOP_MIN_HISTORY"
     --baseline-history "$AGENT_INNER_LOOP_BASELINE_HISTORY"
-    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"gate_count\":$gate_count,\"wall_budget_ms\":$AGENT_INNER_LOOP_BUDGET_MS}"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$AGENT_INNER_LOOP_BUDGET_MS}"
   )
   if [[ "$AGENT_INNER_LOOP_REQUIRE_MIN_HISTORY" == "1" ]]; then
     args+=(--require-min-history)
@@ -450,6 +464,14 @@ enforce_inner_loop_history_budget() {
 enforce_prepush_history_budget() {
   local elapsed_ms="$1"
   local gate_count="$2"
+  local profile_gate_cache_enabled=0
+  local warm_cargo_cache_enabled=0
+  if [[ "$HEALTH_PROFILE_GATE_CACHE" == "1" ]]; then
+    profile_gate_cache_enabled=1
+  fi
+  if [[ "$HEALTH_WARM_CARGO_CACHE" == "1" ]]; then
+    warm_cargo_cache_enabled=1
+  fi
   local -a args=(
     scripts/lib/profile_runtime_budget.py
     --profile "$PROFILE"
@@ -460,12 +482,44 @@ enforce_prepush_history_budget() {
     --budget-ms "$PREPUSH_WALL_BUDGET_MS"
     --min-history "$PREPUSH_MIN_HISTORY"
     --baseline-history "$PREPUSH_BASELINE_HISTORY"
-    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"wall_budget_ms\":$PREPUSH_WALL_BUDGET_MS}"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$PREPUSH_WALL_BUDGET_MS}"
   )
   if [[ -n "$PREPUSH_HISTORY_SCOPE_KEY" ]]; then
     args+=(--history-scope-key "$PREPUSH_HISTORY_SCOPE_KEY")
   fi
   if [[ "$PREPUSH_REQUIRE_MIN_HISTORY" == "1" ]]; then
+    args+=(--require-min-history)
+  fi
+  python3 "${args[@]}"
+}
+
+enforce_release_full_history_budget() {
+  local elapsed_ms="$1"
+  local gate_count="$2"
+  local profile_gate_cache_enabled=0
+  local warm_cargo_cache_enabled=0
+  if [[ "$HEALTH_PROFILE_GATE_CACHE" == "1" ]]; then
+    profile_gate_cache_enabled=1
+  fi
+  if [[ "$HEALTH_WARM_CARGO_CACHE" == "1" ]]; then
+    warm_cargo_cache_enabled=1
+  fi
+  local -a args=(
+    scripts/lib/profile_runtime_budget.py
+    --profile "$PROFILE"
+    --kind "genesis/upgrade-plan-health-profile-v0.1"
+    --report "$HEALTH_PROFILE_REPORT"
+    --history "$RELEASE_FULL_HISTORY"
+    --elapsed-ms "$elapsed_ms"
+    --budget-ms "$RELEASE_FULL_WALL_BUDGET_MS"
+    --min-history "$RELEASE_FULL_MIN_HISTORY"
+    --baseline-history "$RELEASE_FULL_BASELINE_HISTORY"
+    --extra-json "{\"configured_shards\":$HEALTH_SHARDS,\"profile_shards\":$PROFILE_SHARDS,\"cargo_gate_shards\":$HEALTH_CARGO_GATE_SHARDS,\"gate_count\":$gate_count,\"profile_non_cargo_gate_count\":$profile_non_cargo_gate_count,\"profile_cargo_gate_count\":$profile_cargo_gate_count,\"profile_gate_cache_enabled\":$profile_gate_cache_enabled,\"warm_cargo_cache_enabled\":$warm_cargo_cache_enabled,\"wall_budget_ms\":$RELEASE_FULL_WALL_BUDGET_MS}"
+  )
+  if [[ -n "$RELEASE_FULL_HISTORY_SCOPE_KEY" ]]; then
+    args+=(--history-scope-key "$RELEASE_FULL_HISTORY_SCOPE_KEY")
+  fi
+  if [[ "$RELEASE_FULL_REQUIRE_MIN_HISTORY" == "1" ]]; then
     args+=(--require-min-history)
   fi
   python3 "${args[@]}"
@@ -1035,6 +1089,18 @@ if [[ "$PREPUSH_REQUIRE_MIN_HISTORY" != "0" && "$PREPUSH_REQUIRE_MIN_HISTORY" !=
   echo "upgrade-plan-health: GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
   exit 2
 fi
+if [[ ! "$RELEASE_FULL_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$RELEASE_FULL_WALL_BUDGET_MS" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS must be a positive integer (ms)" >&2
+  exit 2
+fi
+if [[ ! "$RELEASE_FULL_MIN_HISTORY" =~ ^[0-9]+$ || "$RELEASE_FULL_MIN_HISTORY" -le 0 ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY must be a positive integer" >&2
+  exit 2
+fi
+if [[ "$RELEASE_FULL_REQUIRE_MIN_HISTORY" != "0" && "$RELEASE_FULL_REQUIRE_MIN_HISTORY" != "1" ]]; then
+  echo "upgrade-plan-health: GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY must be 0 or 1" >&2
+  exit 2
+fi
 if [[ ! "$DEV_FAST_PROFILE_WALL_BUDGET_MS" =~ ^[0-9]+$ || "$DEV_FAST_PROFILE_WALL_BUDGET_MS" -le 0 ]]; then
   echo "upgrade-plan-health: GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS must be a positive integer (ms)" >&2
   exit 2
@@ -1232,6 +1298,7 @@ COMMON_GATES=(
   "bash scripts/check_prelude_capability_coverage.sh"
   "bash scripts/check_foundation_stdlib_conformance.sh"
   "bash scripts/check_capability_indices.sh"
+  "bash scripts/check_capability_coverage_audit.sh"
   "bash scripts/check_host_api_evolution_contracts.sh"
   "bash scripts/check_gcpm_operation_contract_pack.sh"
   "bash scripts/check_assurance_profile_packs.sh"
@@ -1478,12 +1545,19 @@ elif [[ "$PROFILE" == "prepush-standard" ]]; then
   if (( elapsed_ms > PREPUSH_WALL_BUDGET_MS )); then
     profile_ok=0
   fi
+elif [[ "$PROFILE" == "release-full" ]]; then
+  profile_budget="$RELEASE_FULL_WALL_BUDGET_MS"
+  if (( elapsed_ms > RELEASE_FULL_WALL_BUDGET_MS )); then
+    profile_ok=0
+  fi
 fi
 
 if [[ "$PROFILE" == "agent-inner-loop" ]]; then
   enforce_inner_loop_history_budget "$elapsed_ms" "$gate_count"
 elif [[ "$PROFILE" == "prepush-standard" ]]; then
   enforce_prepush_history_budget "$elapsed_ms" "$gate_count"
+elif [[ "$PROFILE" == "release-full" ]]; then
+  enforce_release_full_history_budget "$elapsed_ms" "$gate_count"
 else
   write_health_profile_report \
     "$PROFILE" \
@@ -1504,6 +1578,8 @@ if (( profile_ok == 0 )); then
     echo "upgrade-plan-health: agent-inner-loop wall-time exceeded budget (${elapsed_ms}ms > ${AGENT_INNER_LOOP_BUDGET_MS}ms)" >&2
   elif [[ "$PROFILE" == "prepush-standard" ]]; then
     echo "upgrade-plan-health: prepush wall-time exceeded budget (${elapsed_ms}ms > ${PREPUSH_WALL_BUDGET_MS}ms)" >&2
+  elif [[ "$PROFILE" == "release-full" ]]; then
+    echo "upgrade-plan-health: release-full wall-time exceeded budget (${elapsed_ms}ms > ${RELEASE_FULL_WALL_BUDGET_MS}ms)" >&2
   else
     echo "upgrade-plan-health: profile wall-time exceeded budget (${elapsed_ms}ms > ${profile_budget}ms)" >&2
   fi

@@ -1,0 +1,157 @@
+{
+  "kind": "genesis/capability-coverage-status-v0.1",
+  "families": {
+    "browser/audio": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production browser runtime realism still tracks P0.4."
+    },
+    "browser/input": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production browser runtime realism still tracks P0.4."
+    },
+    "browser/storage": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production browser runtime realism still tracks P0.4."
+    },
+    "browser/window": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_webxr_browser_conformance_lane.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production browser runtime realism still tracks P0.4."
+    },
+    "core/media": {
+      "status": "planned",
+      "plan_id": "P1.1",
+      "release_gates": [
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Mainstream media conversion parity remains open in P1.1."
+    },
+    "core/pkg-low": {
+      "status": "planned",
+      "plan_id": "P0.2",
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Full WASI remote-registry parity still tracks P0.2."
+    },
+    "core/store": {
+      "status": "planned",
+      "plan_id": "P0.2",
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Full WASI remote-registry parity still tracks P0.2."
+    },
+    "core/sync": {
+      "status": "planned",
+      "plan_id": "P0.2",
+      "release_gates": [
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Full WASI remote-registry parity still tracks P0.2."
+    },
+    "editor/task": {
+      "status": "planned",
+      "plan_id": "P1.2",
+      "release_gates": [
+        "scripts/check_task_concurrency_stress.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Extensible editor task orchestration remains open in P1.2."
+    },
+    "gfx/audio": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production gfx/browser/xr realism remains open in P0.4."
+    },
+    "gfx/gpu": {
+      "status": "planned",
+      "plan_id": "P0.3",
+      "release_gates": [
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "notes": "GPU placeholder semantics retirement remains open in P0.3."
+    },
+    "gfx/input": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production gfx/browser/xr realism remains open in P0.4."
+    },
+    "gfx/time": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production gfx/browser/xr realism remains open in P0.4."
+    },
+    "gfx/window": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gfx_runtime_profile.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "Production gfx/browser/xr realism remains open in P0.4."
+    },
+    "gfx/xr": {
+      "status": "planned",
+      "plan_id": "P0.4",
+      "release_gates": [
+        "scripts/check_gpu_xr_productization_kits.sh",
+        "scripts/check_webxr_browser_conformance_lane.sh"
+      ],
+      "notes": "Production gfx/browser/xr realism remains open in P0.4."
+    },
+    "gpu/compute": {
+      "status": "planned",
+      "plan_id": "P0.3",
+      "release_gates": [
+        "scripts/check_gpu_compute_runtime_profile.sh",
+        "scripts/check_agent_reference_workflows.sh"
+      ],
+      "notes": "GPU placeholder semantics retirement remains open in P0.3."
+    },
+    "host/ffi": {
+      "status": "policy-disabled",
+      "release_gates": [
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_upgrade_plan_health.sh"
+      ],
+      "notes": "FFI operations are intentionally deny-by-default and excluded from prelude surface until explicit policy enablement."
+    }
+  }
+}

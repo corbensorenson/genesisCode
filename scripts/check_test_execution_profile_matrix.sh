@@ -55,10 +55,12 @@ require_ci_pattern() {
 require_doc_pattern '| `smoke` |'
 require_doc_pattern '| `changed-fast` |'
 require_doc_pattern '| `agent-inner-loop` |'
+require_doc_pattern '| `release-full` |'
 require_doc_pattern '| `strict-golden` |'
 require_doc_pattern '| `full-cross-host` |'
 require_doc_pattern '`<= 2m`'
 require_doc_pattern '`<= 5m`'
+require_doc_pattern '`<= 30m`'
 require_doc_pattern '`<= 3m`'
 require_doc_pattern '`<= 8m`'
 require_doc_pattern '`<= 12m`'
@@ -77,6 +79,12 @@ require_doc_pattern 'GENESIS_HEALTH_PREPUSH_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY'
 require_doc_pattern 'GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY'
+require_doc_pattern 'GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY'
 require_doc_pattern 'GENESIS_HEALTH_SHARDS'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_TARGET_DIR'
 require_doc_pattern 'GENESIS_HEALTH_CARGO_GATE_SHARDS'
@@ -142,6 +150,11 @@ fi
 
 if ! grep -Fq 'GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: prepush strict loop budget must remain pinned at default 900000ms (15m)" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS:-1800000' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full strict loop budget must remain pinned at default 1800000ms (30m)" >&2
   exit 1
 fi
 
@@ -275,6 +288,13 @@ if ! grep -Fq 'enforce_prepush_history_budget' scripts/check_upgrade_plan_health
    ! grep -Fq 'GENESIS_HEALTH_PREPUSH_MIN_HISTORY' scripts/check_upgrade_plan_health.sh || \
    ! grep -Fq 'GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY' scripts/check_upgrade_plan_health.sh; then
   echo "test-execution-profile-matrix: prepush profile must enforce history-aware runtime budget controls" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'enforce_release_full_history_budget' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY' scripts/check_upgrade_plan_health.sh || \
+   ! grep -Fq 'GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY' scripts/check_upgrade_plan_health.sh; then
+  echo "test-execution-profile-matrix: release-full profile must enforce history-aware runtime budget controls" >&2
   exit 1
 fi
 

@@ -55,10 +55,6 @@ Known GenesisCode gaps (tracked in `/Users/corbensorenson/Documents/genesisCode/
 - `P0.4` GFX/browser/XR production runtime paths still include simulation/unsupported-op gaps.
 - `P1.1` Media conversion support is narrower than production “build anything” needs.
 - `P1.2` Editor task runtime remains fixed-task and not fully extensible for agent orchestration.
-- `P1.3` Dependency resolver diagnostics/selection depth is insufficient for complex ecosystems.
-- `P1.4` Full validation/test iteration time still needs tighter AI inner-loop SLOs.
-- `P2.1` Autonomous-repair diagnostics contract is not yet complete across subsystems.
-- `P2.2` Capability-family coverage audit and unsupported-op closure is incomplete.
 - `P2.3` Untrusted-agent execution safety hardening needs additional enforcement depth.
 
 Primary evidence paths:
@@ -68,6 +64,7 @@ Primary evidence paths:
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/agent_generative_workloads_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/large_workspace_agent_perf_report.json`
 - `/Users/corbensorenson/Documents/genesisCode/.genesis/perf/gcpm_operation_contract_pack_report.json`
+- `/Users/corbensorenson/Documents/genesisCode/docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm.rs`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_opt/src/stage2_wasm/pipeline_exec.rs`
 - `/Users/corbensorenson/Documents/genesisCode/crates/gc_registry/src/registry/client_impl/ping_and_store.rs`

@@ -42,6 +42,8 @@ All report objects include:
 - `lock`
 - `lock_hash`
 - `locked_count`
+- `rationale_count`
+- `rationale_artifact`
 - `strict`
 
 ## Update Report
@@ -49,6 +51,9 @@ All report objects include:
 - `lock`
 - `lock_hash`
 - `updated_count`
+- `selected_count`
+- `rationale_count`
+- `rationale_artifact`
 
 ## Publish Report
 

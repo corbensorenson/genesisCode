@@ -1,13 +1,13 @@
 # GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only)
 
-Last updated: 2026-02-26
+Last updated: 2026-02-25
 
 Scope:
 - Track only unresolved upgrades required for AI-first authoring reliability, selfhost closure, and production runtime trust.
 - Keep this file machine-syncable with `.genesis/perf/selfhost_readiness_report.json`, `docs/status/REDTEAM_REPORT.md`, and `feature_matrix.md`.
 - Keep completed work out of this file (git history + perf artifacts are closure evidence).
 
-Open checklist items: 10
+Open checklist items: 7
 
 ## Critical Path
 
@@ -42,22 +42,9 @@ Open checklist items: 10
   - Done when:
   - `crates/gc_effects/src/runner_editor_tasks.rs` supports schema-driven task kinds with stable contracts for build/run/debug/refactor/index operations.
   - Task spawn/poll/cancel semantics support long-running incremental workflows and structured partial outputs.
-- [ ] P1.3 Harden dependency resolution for large agent-generated workspaces.
-  - Done when:
-  - `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs` supports richer deterministic selector resolution (range constraints + conflict explanation + lock rationale artifacts).
-  - Resolver output includes machine-actionable diagnostics for automatic repair strategies.
-- [ ] P1.4 Cut full test/gate iteration time to agent-inner-loop targets without losing coverage.
-  - Done when:
-  - Baseline full validation runtime is reduced from current multi-minute profile to an enforced SLO with sharded execution and cache reuse.
-  - [x] Reports in `.genesis/perf/` include stable `score_percent` and wall-time trend data for all major lanes (`large_workspace`, `health_profile`, `gauntlet`).
-  - [x] `scripts/lib/profile_runtime_budget.py`, `scripts/check_upgrade_plan_health.sh`, and `scripts/check_large_workspace_agent_perf.sh` now emit history-backed trend + p95 metadata (`history_samples`, `history_p95_ms`, `history_p95_enforced`, `history_p95_ok`, delta/trend fields) for agent iteration analysis.
 
 ## Agent Productization
 
-- [ ] P2.2 Complete capability-family coverage audit and remove silent partial implementations.
-  - Done when:
-  - Every capability family has an explicit coverage table (`implemented`, `policy-disabled`, `planned`) backed by tests.
-  - Remaining unsupported ops are either removed from public surface or promoted to tracked plan IDs with release gates.
 - [ ] P2.3 Strengthen untrusted-agent execution safety for “build anything” operation mode.
   - Done when:
   - Resource quotas, sandbox boundaries, and effect-policy defaults are enforced for generated code execution in local/dev/CI profiles.
@@ -74,6 +61,7 @@ Open checklist items: 10
 - `.genesis/perf/agent_generative_workloads_report.json`
 - `.genesis/perf/large_workspace_agent_perf_report.json`
 - `.genesis/perf/upgrade_plan_health_profile_report.json`
+- `.genesis/perf/upgrade_plan_health_release_full_history.jsonl`
 - `crates/gc_opt/src/stage2_wasm.rs`
 - `crates/gc_opt/src/stage2_wasm/pipeline_exec.rs`
 - `crates/gc_registry/src/registry/client_impl/ping_and_store.rs`
@@ -87,3 +75,7 @@ Open checklist items: 10
 - `crates/gc_effects/src/runner_capability_dispatch/media.rs`
 - `crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs`
 - `docs/spec/HOST_ABI.md`
+- `docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json`
+- `docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json`
+- `docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md`
+- `scripts/check_capability_coverage_audit.sh`

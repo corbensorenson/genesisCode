@@ -251,6 +251,8 @@ fn build_build_report(
 fn build_lock_report(value: &Value, caps: &Path, lock: &Path, strict: bool) -> serde_json::Value {
     let lock_hash = map_get_str(value, ":lock-h");
     let locked_count = map_get_int(value, ":locked-count").unwrap_or(0);
+    let rationale_count = map_get_int(value, ":rationale-count").unwrap_or(0);
+    let rationale_artifact = map_get_str(value, ":rationale-artifact");
     let changed = locked_count > 0;
 
     serde_json::json!({
@@ -260,6 +262,8 @@ fn build_lock_report(value: &Value, caps: &Path, lock: &Path, strict: bool) -> s
         "lock": lock.display().to_string(),
         "lock_hash": lock_hash,
         "locked_count": locked_count,
+        "rationale_count": rationale_count,
+        "rationale_artifact": rationale_artifact,
         "strict": strict,
         "why": "resolved requirements into deterministic locked commit/snapshot entries",
         "fix_options": [
@@ -287,6 +291,7 @@ fn build_update_report(
     let updated_count = map_get_int(value, ":updated").unwrap_or(0);
     let selected_count = map_get_int(value, ":selected-count").unwrap_or(0);
     let rationale_count = map_get_int(value, ":rationale-count").unwrap_or(0);
+    let rationale_artifact = map_get_str(value, ":rationale-artifact");
     let changed = updated_count > 0;
 
     serde_json::json!({
@@ -298,6 +303,7 @@ fn build_update_report(
         "updated_count": updated_count,
         "selected_count": selected_count,
         "rationale_count": rationale_count,
+        "rationale_artifact": rationale_artifact,
         "only": only,
         "why": if changed {
             "advanced tracked dependencies and rewrote lock deterministically"
@@ -632,6 +638,10 @@ mod tests {
             gc_coreform::TermOrdKey(Term::symbol(":rationale-count")),
             Term::Int(1.into()),
         );
+        m.insert(
+            gc_coreform::TermOrdKey(Term::symbol(":rationale-artifact")),
+            Term::Str("e".repeat(64)),
+        );
         let value = Value::Data(Term::Map(m));
         let cmd = PkgCmd::Update {
             lock: PathBuf::from("genesis.lock"),
@@ -649,6 +659,10 @@ mod tests {
         assert_eq!(
             report.get("rationale_count").and_then(|v| v.as_i64()),
             Some(1)
+        );
+        assert_eq!(
+            report.get("rationale_artifact").and_then(|v| v.as_str()),
+            Some("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
         );
         assert_eq!(
             report.pointer("/only/0").and_then(|v| v.as_str()),

@@ -89,6 +89,18 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
             .and_then(|x| x.as_str()),
         Some("lock")
     );
+    assert!(
+        lock_v
+            .pointer("/data/report/rationale_count")
+            .and_then(|x| x.as_i64())
+            .is_some_and(|n| n >= 0)
+    );
+    assert!(
+        lock_v
+            .pointer("/data/report/rationale_artifact")
+            .and_then(|x| x.as_str())
+            .is_some_and(|s| s.len() == 64)
+    );
     let lock_value_t = parse_term(
         lock_v
             .pointer("/data/value")
@@ -101,6 +113,8 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     };
     assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
     assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
+    assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":rationale"))));
+    assert!(lock_mm.contains_key(&TermOrdKey(Term::symbol(":rationale-artifact"))));
 
     let update_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
@@ -129,6 +143,12 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
             .and_then(|x| x.as_str()),
         Some("update")
     );
+    assert!(
+        update_v
+            .pointer("/data/report/rationale_artifact")
+            .and_then(|x| x.as_str())
+            .is_some_and(|s| s.len() == 64)
+    );
     let update_value_t = parse_term(
         update_v
             .pointer("/data/value")
@@ -141,6 +161,8 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
     };
     assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":provenance"))));
     assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":workspace-root"))));
+    assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":rationale"))));
+    assert!(update_mm.contains_key(&TermOrdKey(Term::symbol(":rationale-artifact"))));
 
     let update_only_out = cargo_bin_cmd!("genesis_parity")
         .current_dir(dir)
@@ -164,6 +186,12 @@ fn gcpm_lock_and_update_emit_ai_report_artifacts() {
             .pointer("/data/report/rationale_count")
             .and_then(|x| x.as_i64()),
         Some(1)
+    );
+    assert!(
+        update_only_v
+            .pointer("/data/report/rationale_artifact")
+            .and_then(|x| x.as_str())
+            .is_some_and(|s| s.len() == 64)
     );
 }
 

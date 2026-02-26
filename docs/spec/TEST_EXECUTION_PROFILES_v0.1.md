@@ -17,6 +17,7 @@ Deterministic test execution policy for local iteration and CI.
 | `smoke` | `bash scripts/selfhost_strict_smoke.sh` | `<= 3m` |
 | `changed-fast` | `bash scripts/test_changed_fast.sh --budget-ms 120000` | `<= 2m` |
 | `agent-inner-loop` | `bash scripts/check_upgrade_plan_health.sh --profile agent-inner-loop` | `<= 5m` |
+| `release-full` | `bash scripts/check_upgrade_plan_health.sh --profile release-full` | `<= 30m` |
 | `strict-golden` | `bash scripts/selfhost_strict_golden.sh` | `<= 8m` |
 | `full-cross-host` | strict golden + `node scripts/wasm_cross_host_determinism.mjs` + `bash scripts/check_full_cross_host_profile_budget.sh` | `<= 12m` |
 
@@ -120,6 +121,14 @@ Strict/full profile runtime reports:
     - `GENESIS_HEALTH_PREPUSH_REQUIRE_MIN_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY`
     - `GENESIS_HEALTH_PREPUSH_HISTORY_SCOPE_KEY`
+  - enforces release-full wall-time + history p95 budget
+    `GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS` (default `1800000`)
+    via `scripts/lib/profile_runtime_budget.py` using:
+    - `GENESIS_HEALTH_RELEASE_FULL_HISTORY`
+    - `GENESIS_HEALTH_RELEASE_FULL_MIN_HISTORY`
+    - `GENESIS_HEALTH_RELEASE_FULL_REQUIRE_MIN_HISTORY`
+    - `GENESIS_HEALTH_RELEASE_FULL_BASELINE_HISTORY`
+    - `GENESIS_HEALTH_RELEASE_FULL_HISTORY_SCOPE_KEY`
   - strict profiles (`prepush-standard`, `release-full`, `full-selfhost-cutover`)
     fail closed on low-disk preflight by default
     (`GENESIS_HEALTH_STRICT_DISK_POLICY=fail`)
@@ -254,6 +263,8 @@ This guard enforces:
 - 120000ms default budget pin for local high-signal workflows
 - prepush strict loop budget/shard defaults (`GENESIS_HEALTH_PREPUSH_BUDGET_MS`,
   `GENESIS_HEALTH_SHARDS`) and profile runtime history controls
+- release-full strict loop wall-time budget default (`GENESIS_HEALTH_RELEASE_FULL_BUDGET_MS`)
+  and profile runtime history controls
 - strict/full measured runtime gate wiring:
   - strict-golden profile runtime report + p95 budget helper
   - wasm cross-host runtime report + p95 budget helper
