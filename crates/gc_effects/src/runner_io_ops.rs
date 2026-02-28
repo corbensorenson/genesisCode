@@ -68,11 +68,11 @@ pub(crate) fn io_error_payload(op: &str, base_dir: &Path, path: &Path, e: &std::
             ),
             (
                 TermOrdKey(Term::symbol(":base-dir")),
-                Term::Str(path_to_slash(base_dir)),
+                Term::Str(".".to_string()),
             ),
             (
                 TermOrdKey(Term::symbol(":path")),
-                Term::Str(path_to_slash(path)),
+                Term::Str(base_relative_error_path(base_dir, path)),
             ),
             (
                 TermOrdKey(Term::symbol(":io-kind")),
@@ -82,6 +82,20 @@ pub(crate) fn io_error_payload(op: &str, base_dir: &Path, path: &Path, e: &std::
         .into_iter()
         .collect(),
     )
+}
+
+fn base_relative_error_path(base_dir: &Path, path: &Path) -> String {
+    match path.strip_prefix(base_dir) {
+        Ok(rel) => {
+            let rel_s = path_to_slash(rel);
+            if rel_s.is_empty() {
+                ".".to_string()
+            } else {
+                rel_s
+            }
+        }
+        Err(_) => "<outside-base>".to_string(),
+    }
 }
 
 pub(crate) fn path_to_slash(p: &Path) -> String {
@@ -248,4 +262,39 @@ pub(crate) fn sandbox_path_allow_missing(
         }
     }
     Ok(full)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn map_value_str<'a>(payload: &'a Term, key: &str) -> Option<&'a str> {
+        let Term::Map(m) = payload else {
+            return None;
+        };
+        match m.get(&TermOrdKey(Term::symbol(key))) {
+            Some(Term::Str(s)) => Some(s.as_str()),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn io_error_payload_uses_base_relative_path() {
+        let base_dir = PathBuf::from("workspace");
+        let path = base_dir.join("nested/file.txt");
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "missing");
+        let payload = io_error_payload("io/fs::read", &base_dir, &path, &io_err);
+        assert_eq!(map_value_str(&payload, ":base-dir"), Some("."));
+        assert_eq!(map_value_str(&payload, ":path"), Some("nested/file.txt"));
+    }
+
+    #[test]
+    fn io_error_payload_sanitizes_outside_path() {
+        let base_dir = PathBuf::from("workspace");
+        let path = PathBuf::from("other/place.txt");
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let payload = io_error_payload("io/fs::read", &base_dir, &path, &io_err);
+        assert_eq!(map_value_str(&payload, ":base-dir"), Some("."));
+        assert_eq!(map_value_str(&payload, ":path"), Some("<outside-base>"));
+    }
 }

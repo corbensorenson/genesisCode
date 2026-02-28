@@ -137,6 +137,44 @@ done
     }
 }
 
+#[cfg(all(not(target_os = "wasi"), unix))]
+fn write_timeout_bridge_script(path: &std::path::Path) {
+    let src = r#"#!/usr/bin/env sh
+set -eu
+pid_file="${1:-}"
+mode="${2:-fast}"
+op="${3:-unknown}"
+if [ -n "$pid_file" ]; then
+  echo "$$" >> "$pid_file"
+fi
+if [ "$mode" = "hang" ]; then
+  sleep 5
+fi
+resp="{:ok true :mode \"$mode\" :op \"$op\"}"
+resp_len="$(printf '%s' "$resp" | wc -c | tr -d '[:space:]')"
+printf '%s\n%s' "$resp_len" "$resp"
+"#;
+    std::fs::write(path, src).expect("write timeout bridge script");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(path)
+            .expect("bridge metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(path, perms).expect("bridge chmod");
+    }
+}
+
+#[cfg(all(not(target_os = "wasi"), unix))]
+fn pid_is_alive(pid: i32) -> bool {
+    let rc = unsafe { libc::kill(pid, 0) };
+    if rc == 0 {
+        return true;
+    }
+    std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
 #[cfg(not(target_os = "wasi"))]
 fn p95_ms(samples: &[u128]) -> u128 {
     let mut s = samples.to_vec();
@@ -242,4 +280,120 @@ max_bytes = 4096
     .expect_err("invalid bridge_transport must fail");
     assert_eq!(err.code, "gpu/bridge-policy");
     assert!(err.message.contains("bridge_transport must be one of"));
+}
+
+#[cfg(all(not(target_os = "wasi"), unix))]
+#[test]
+fn spawn_per_op_timeout_kills_bridge_processes_and_recovers() {
+    let td = tempfile::tempdir().expect("tempdir");
+    let bridge = td.path().join("timeout_bridge.sh");
+    write_timeout_bridge_script(&bridge);
+    let base_dir = td.path().display().to_string();
+    let pid_log = td.path().join("bridge_pids.txt");
+    let pid_log_s = pid_log.display().to_string();
+
+    let timeout_policy = CapsPolicy::from_toml_str(&format!(
+        r#"
+allow = ["gpu/compute::limits"]
+[op."gpu/compute::limits"]
+base_dir = "{base_dir}"
+bridge_cmd = "timeout_bridge.sh"
+bridge_transport = "spawn-per-op"
+bridge_args = ["{pid_log_s}", "hang"]
+timeout_ms = 100
+max_bytes = 4096
+"#
+    ))
+    .expect("timeout policy");
+
+    for _ in 0..8 {
+        let err = call_host_bridge(
+            "gpu",
+            "gpu/compute::limits",
+            &Term::Nil,
+            timeout_policy.op_policy("gpu/compute::limits"),
+        )
+        .expect_err("hung bridge call must timeout");
+        assert_eq!(err.code, "gpu/bridge-timeout");
+    }
+
+    let pid_src = std::fs::read_to_string(&pid_log).expect("read bridge pid log");
+    let pids: Vec<i32> = pid_src
+        .lines()
+        .filter_map(|line| line.trim().parse::<i32>().ok())
+        .collect();
+    assert!(
+        !pids.is_empty(),
+        "expected timeout bridge script to log pids"
+    );
+    for pid in pids {
+        for _ in 0..100 {
+            if !pid_is_alive(pid) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            !pid_is_alive(pid),
+            "timed-out bridge pid {pid} remained alive after timeout"
+        );
+    }
+
+    let fast_policy = CapsPolicy::from_toml_str(&format!(
+        r#"
+allow = ["gpu/compute::limits"]
+[op."gpu/compute::limits"]
+base_dir = "{base_dir}"
+bridge_cmd = "timeout_bridge.sh"
+bridge_transport = "spawn-per-op"
+bridge_args = ["{pid_log_s}", "fast"]
+timeout_ms = 200
+max_bytes = 4096
+"#
+    ))
+    .expect("fast policy");
+    let resp = call_host_bridge(
+        "gpu",
+        "gpu/compute::limits",
+        &Term::Nil,
+        fast_policy.op_policy("gpu/compute::limits"),
+    )
+    .expect("fast bridge call");
+    let Term::Map(mm) = resp else {
+        panic!("fast response should be map");
+    };
+    assert_eq!(
+        mm.get(&TermOrdKey(Term::symbol(":mode"))),
+        Some(&Term::Str("fast".to_string()))
+    );
+}
+
+#[cfg(not(target_os = "wasi"))]
+#[test]
+fn persistent_stdio_transport_rejects_timeout_policy() {
+    let td = tempfile::tempdir().expect("tempdir");
+    let bridge = td.path().join("persistent_bridge.sh");
+    write_persistent_bridge_script(&bridge);
+    let base_dir = td.path().display().to_string();
+    let policy = CapsPolicy::from_toml_str(&format!(
+        r#"
+allow = ["gpu/compute::limits"]
+[op."gpu/compute::limits"]
+base_dir = "{base_dir}"
+bridge_cmd = "persistent_bridge.sh"
+bridge_transport = "persistent-stdio"
+timeout_ms = 25
+max_bytes = 4096
+"#
+    ))
+    .expect("policy");
+    let err = call_host_bridge(
+        "gpu",
+        "gpu/compute::limits",
+        &Term::Nil,
+        policy.op_policy("gpu/compute::limits"),
+    )
+    .expect_err("persistent timeout policy must fail closed");
+    assert_eq!(err.code, "gpu/bridge-policy");
+    assert!(err.message.contains("timeout_ms is not supported"));
 }

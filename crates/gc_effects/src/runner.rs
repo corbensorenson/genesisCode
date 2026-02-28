@@ -418,6 +418,7 @@ pub fn replay_with_store(
                         "request hash mismatch at {idx}"
                     )));
                 }
+                replay_validate_decision_cap(idx, &req.op, entry, log.version)?;
 
                 let resp_val = resp_from_log(&entry.resp, store, proto.error)?;
 
@@ -465,6 +466,45 @@ pub fn replay_with_store(
 
                 idx += 1;
             }
+        }
+    }
+}
+
+fn replay_validate_decision_cap(
+    idx: usize,
+    op: &str,
+    entry: &EffectLogEntry,
+    log_version: u64,
+) -> Result<(), EffectsError> {
+    match entry.decision {
+        Decision::Allow => {
+            // Legacy v2 logs may not carry :cap; preserve replay compatibility there.
+            if log_version < 3 && entry.cap == Term::Nil {
+                return Ok(());
+            }
+            let Term::Map(cap_map) = &entry.cap else {
+                return Err(EffectsError::ReplayMismatch(format!(
+                    ":cap mismatch at {idx}: allow decisions must carry a cap map"
+                )));
+            };
+            match cap_map.get(&TermOrdKey(Term::symbol(":op"))) {
+                Some(Term::Symbol(cap_op)) if cap_op == op => Ok(()),
+                Some(other) => Err(EffectsError::ReplayMismatch(format!(
+                    ":cap mismatch at {idx}: expected :op `{op}`, got {}",
+                    print_term(other)
+                ))),
+                None => Err(EffectsError::ReplayMismatch(format!(
+                    ":cap mismatch at {idx}: allow cap map missing :op descriptor"
+                ))),
+            }
+        }
+        Decision::Deny => {
+            if entry.cap != Term::Nil {
+                return Err(EffectsError::ReplayMismatch(format!(
+                    ":cap mismatch at {idx}: deny decisions must carry nil cap"
+                )));
+            }
+            Ok(())
         }
     }
 }

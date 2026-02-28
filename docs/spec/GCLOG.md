@@ -11,7 +11,7 @@ This document is **normative** for the on-disk effect log format used by `genesi
 
 Top-level keys:
 
-- `:version` (int): log schema version (v0.2 uses `2`).
+- `:version` (int): log schema version (v0.2 uses `3`; parser accepts legacy `2`).
 - `:program-hash` (bytes32): CoreForm module hash of the executed program/module.
 - `:toolchain` (string): toolchain identifier (e.g. `genesis 0.1.0`).
 - `:entries` (vector): ordered list of entries.
@@ -25,6 +25,10 @@ Each entry is a map with keys:
 - `:payload-h` (bytes32): `hash_term(payload)`.
 - `:cont-h` (bytes32): `value_hash(continuation)`.
 - `:req-h` (bytes32): request hash (see `docs/spec/VALUE_EFFECT_HASH.md`).
+- `:task-id` (string, optional): deterministic task id for task lifecycle events.
+- `:parent-task` (string, optional): deterministic parent task id.
+- `:schedule-step` (int, optional): deterministic global schedule counter for task lifecycle events.
+- `:await-edge` (string, optional): deterministic awaited task id for `core/task::await`.
 - `:decision` (symbol): `:allow` or `:deny`.
 - `:cap` (term): stable policy descriptor (may be `nil` on deny).
 - `:resp` (map): response descriptor (inline or artifact reference).
@@ -32,6 +36,7 @@ Each entry is a map with keys:
 
 Notes:
 - `:cap` is intended for stable, non-secret configuration metadata. The v0.2 toolchain does not record filesystem paths (such as `base_dir`) in logs to avoid nondeterminism and path leakage.
+- Replay validates request/response hashes and deterministic scheduler metadata, and enforces `:decision`/`:cap` structural consistency (`allow` => cap map with `:op`, `deny` => `nil` cap).
 
 ## Response Schema (`:resp`)
 

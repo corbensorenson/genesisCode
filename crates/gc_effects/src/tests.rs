@@ -296,6 +296,64 @@ fn replay_detects_tampered_request_hash() {
 }
 
 #[test]
+fn replay_detects_tampered_decision_metadata() {
+    let (forms, h) = mk_prog();
+
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+    let pol = CapsPolicy::from_toml_str(r#"allow = ["sys/time::now"]"#).unwrap();
+    let mut r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    r1.log.entries[0].decision = Decision::Deny;
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+
+    let err = replay(&mut ctx2, prog2, &r1.log).unwrap_err();
+    assert!(
+        matches!(err, EffectsError::ReplayMismatch(_)),
+        "expected replay mismatch, got {err}"
+    );
+}
+
+#[test]
+fn replay_detects_tampered_cap_descriptor() {
+    let (forms, h) = mk_prog();
+
+    let mut ctx1 = EvalCtx::new();
+    let prelude1 = build_prelude(&mut ctx1);
+    let mut env1 = prelude1.env;
+    let prog1 = eval_module(&mut ctx1, &mut env1, &forms).expect("eval1");
+
+    let pol = CapsPolicy::from_toml_str(r#"allow = ["sys/time::now"]"#).unwrap();
+    let mut r1 = run(&mut ctx1, &pol, prog1, h, "gc_effects-test".to_string()).expect("run");
+
+    let Term::Map(cap_map) = &mut r1.log.entries[0].cap else {
+        panic!("expected cap map");
+    };
+    cap_map.insert(
+        TermOrdKey(Term::symbol(":op")),
+        Term::Symbol("sys/time::forged".to_string()),
+    );
+
+    let mut ctx2 = EvalCtx::new();
+    let prelude2 = build_prelude(&mut ctx2);
+    let mut env2 = prelude2.env;
+    let prog2 = eval_module(&mut ctx2, &mut env2, &forms).expect("eval2");
+
+    let err = replay(&mut ctx2, prog2, &r1.log).unwrap_err();
+    assert!(
+        matches!(err, EffectsError::ReplayMismatch(_)),
+        "expected replay mismatch, got {err}"
+    );
+}
+
+#[test]
 fn task_log_includes_schedule_and_await_metadata() {
     let (forms, h) = mk_prog_for("core/task::await", "{:task-id \"task-1\"}");
 

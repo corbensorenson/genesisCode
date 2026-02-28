@@ -21,4 +21,4 @@ This directory is the *normative* behavior surface. If code changes semantics, u
 - Effect programs are represented as `Pure(v)` or `Perform(op, payload, k)`.
 - Runner is deny-by-default per capability policy.
 - Every performed effect appends a deterministic log entry.
-- `replay(program, log)` must consume entries in order and fail on any mismatch.
+- `replay(program, log)` must consume entries in order and fail on executable mismatches (index/op/hash/scheduler metadata) and on `:decision`/`:cap` structural mismatches.

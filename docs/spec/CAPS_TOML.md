@@ -139,7 +139,7 @@ Some ops may accept a per-op policy object. This is represented as a TOML table 
 Supported keys:
 - `base_dir` (string): base directory sandbox for `io/fs::*` ops. Paths must remain under this directory after canonicalization.
 - `create_dirs` (bool): if true, `io/fs::write` and `io/fs::rename` may create parent directories.
-- `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops.
+- `timeout_ms` (int): optional runner-side timeout (milliseconds). Only supported for non-mutating ops and `bridge_transport = "spawn-per-op"`.
 - `log_inline_max_bytes` (int): optional per-op override for log inlining.
 - `bridge_cmd` (string): optional host-bridge executable path under `base_dir`.
   - used by host-integrated ops such as `host/plugin::command`,
@@ -156,6 +156,7 @@ Supported keys:
     - `spawn-per-op` (default): spawn a new bridge process for each op request.
     - `persistent-stdio`: keep a per-op bridge process/session alive and exchange framed request/response payloads over persistent stdio.
   - `persistent-stdio` requires the bridge executable to support repeated framed request processing in a single process lifetime.
+  - `timeout_ms` is rejected when `bridge_transport = "persistent-stdio"` (policy error, fail-closed).
 - `first_party_profile` (string): optional profile selector for first-party host backends.
   - currently used by `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`.
   - supported values:
@@ -451,13 +452,14 @@ These payload paths must remain under `base_dir` after canonicalization, using t
 For `core/gc-low::*`, paths may refer to files/directories that do not exist yet (e.g. `.genesis/pins.toml` or `.genesis/quarantine/`). The runner validates the longest existing ancestor is within `base_dir`, rejects `..`, and then uses the resulting under-base path.
 
 Notes on `timeout_ms`:
-- Timeouts are enforced by running the capability in a background thread and waiting for a result.
+- Timeouts are enforced via cancellable worker jobs for in-process capabilities and hard process supervision for bridge `spawn-per-op` commands.
 - If the timeout elapses, the runner returns a sealed ERROR response with code `core/caps/timeout` and records it in the log.
 - Timeouts are rejected for mutating ops such as `io/fs::write`, `io/fs::mkdir`,
   `io/fs::remove`, `io/fs::rename`, `sys/process::exec`, `sys/process::spawn`,
   `sys/process::kill`, and `sys/process::stdin-write` (policy error), to avoid
   "timed out but side-effect happened" ambiguity.
-- Bridge-backed ops also honor `timeout_ms`; timeout yields deterministic `<family>/bridge-timeout`.
+- Bridge-backed ops honor `timeout_ms` only under `bridge_transport = "spawn-per-op"`; timeout yields deterministic `<family>/bridge-timeout`.
+- `bridge_transport = "persistent-stdio"` with `timeout_ms` is rejected with deterministic `<family>/bridge-policy`.
 
 Bridge protocol:
 - Bridge-backed ops use framed stdin/stdout payloads as defined in

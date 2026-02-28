@@ -27,7 +27,7 @@ fn parse_http_local_target(local: &str) -> Result<SocketAddr, String> {
     parse_bound_socket_addr(local, "http")
 }
 
-fn read_http_request_from_stream(
+pub(super) fn read_http_request_from_stream(
     stream: &mut TcpStream,
     max_request_bytes: usize,
 ) -> Result<(String, String, Vec<String>, Vec<u8>), String> {
@@ -50,7 +50,11 @@ fn read_http_request_from_stream(
                     hdr_end = Some(buf.len());
                 }
             }
-            Ok(_) => unreachable!(),
+            Ok(n) => {
+                return Err(format!(
+                    "http request read produced invalid byte-count {n} for 1-byte read buffer"
+                ));
+            }
             Err(e)
                 if matches!(
                     e.kind(),
@@ -113,7 +117,9 @@ fn read_http_request_from_stream(
     Ok((method, path, headers, body))
 }
 
-fn parse_http_response_headers(stream: &mut TcpStream) -> Result<(i64, Vec<String>), String> {
+pub(super) fn parse_http_response_headers(
+    stream: &mut TcpStream,
+) -> Result<(i64, Vec<String>), String> {
     let mut buf = Vec::<u8>::new();
     let mut hdr_end = None;
     while hdr_end.is_none() {
@@ -129,7 +135,11 @@ fn parse_http_response_headers(stream: &mut TcpStream) -> Result<(i64, Vec<Strin
                     hdr_end = Some(buf.len());
                 }
             }
-            Ok(_) => unreachable!(),
+            Ok(n) => {
+                return Err(format!(
+                    "http response read produced invalid byte-count {n} for 1-byte read buffer"
+                ));
+            }
             Err(e)
                 if matches!(
                     e.kind(),

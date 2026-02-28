@@ -263,26 +263,12 @@ pub(super) fn run_bridge_process_persistent(
         cmd_path: cmd_path.to_path_buf(),
         args: args.to_vec(),
     };
-    if let Some(ms) = timeout_ms {
-        let key2 = key.clone();
-        let payload_frame2 = payload_frame.clone();
-        let family_s = family.to_string();
-        let op_s = op.to_string();
-        match with_timeout(ms, move || {
-            run_persistent_bridge_process_once(&key2, &family_s, &op_s, &payload_frame2, max_bytes)
-                .map_err(|e| EffectsError::Log(format!("{}: {}", e.code, e.message)))
-        })
-        .map_err(|e| BridgeError {
-            code: format!("{family}/bridge-timeout-runtime"),
-            message: e.to_string(),
-        })? {
-            Some(resp) => Ok(resp),
-            None => Err(BridgeError {
-                code: format!("{family}/bridge-timeout"),
-                message: format!("persistent bridge command timed out after {ms}ms"),
-            }),
-        }
-    } else {
-        run_persistent_bridge_process_once(&key, family, op, &payload_frame, max_bytes)
+    if timeout_ms.is_some() {
+        return Err(BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message:
+                "timeout_ms is not supported for bridge_transport `persistent-stdio`; use `spawn-per-op` for hard timeout enforcement".to_string(),
+        });
     }
+    run_persistent_bridge_process_once(&key, family, op, &payload_frame, max_bytes)
 }

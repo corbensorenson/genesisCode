@@ -53,6 +53,16 @@ where
     }
 }
 
+fn tcp_stream_pair() -> (std::net::TcpStream, std::net::TcpStream) {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind loopback listener");
+    let addr = listener.local_addr().expect("listener addr");
+    let client_thread =
+        std::thread::spawn(move || std::net::TcpStream::connect(addr).expect("connect"));
+    let (server, _) = listener.accept().expect("accept loopback connection");
+    let client = client_thread.join().expect("join client connector");
+    (server, client)
+}
+
 fn write_key_file(root: &Path, key_id: &str, body: &str) {
     let keys_dir = root
         .join(".genesis")
@@ -115,6 +125,34 @@ fn map_get_map<'a>(
         Some(Term::Map(inner)) => Some(inner),
         _ => None,
     }
+}
+
+#[test]
+fn http_request_reader_returns_error_when_peer_closes_before_headers() {
+    let (mut server, client) = tcp_stream_pair();
+    server
+        .set_read_timeout(Some(std::time::Duration::from_millis(200)))
+        .expect("set read timeout");
+    drop(client);
+    let err = read_http_request_from_stream(&mut server, 1024).expect_err("request read must fail");
+    assert!(
+        err.contains("closed before headers"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn http_response_reader_returns_error_when_peer_closes_before_headers() {
+    let (mut server, client) = tcp_stream_pair();
+    server
+        .set_read_timeout(Some(std::time::Duration::from_millis(200)))
+        .expect("set read timeout");
+    drop(client);
+    let err = parse_http_response_headers(&mut server).expect_err("response read must fail");
+    assert!(
+        err.contains("closed before headers"),
+        "unexpected error: {err}"
+    );
 }
 
 #[cfg(unix)]

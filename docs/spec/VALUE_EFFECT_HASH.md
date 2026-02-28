@@ -84,4 +84,4 @@ This hash is recorded in logs and must match during replay.
 
 ## Log Version Note
 
-GenesisCode v0.2 uses `.gclog :version = 2` for the current `value_hash` encoding.
+GenesisCode v0.2 uses `.gclog :version = 3` for the current `value_hash` encoding (parser remains backward-compatible with legacy `:version = 2` logs).
