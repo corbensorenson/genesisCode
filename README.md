@@ -1,91 +1,107 @@
 # GenesisCode (v0.2)
 
-GenesisCode is a research language/runtime with:
-- a canonical surface syntax (CoreForm) with stable formatting and hashing
-- a pure kernel evaluator (Gλ-style) with deterministic seals
-- hardened protocol values (UNHANDLED/EFFECT/ERROR) and contract dispatch
-- capability-based effects with deterministic logs + replay checking
-- packages, obligations, evidence store, and semantic patches
+GenesisCode is an AI-first language/runtime project focused on deterministic evaluation, sealed error/effect boundaries, capability-gated host effects, and reproducible execution evidence.
 
-This repo is a Rust workspace. The CLI binary is `genesis`.
+The workspace builds a CLI binary named `genesis`.
+
+## Design goals
+
+- Pure, deterministic kernel evaluator (`Gλ` style)
+- Unforgeable `UNHANDLED` / `EFFECT` / `ERROR` protocol values via seals
+- Deny-by-default effect runner with deterministic logs and replay checks
+- Package/obligation/evidence workflows designed for agent-driven iteration
+- Strict hardening gates (panic guards, capability conformance, replay integrity)
+
+## Repository layout
+
+- `crates/`: Rust workspace crates (kernel, CLI, effects, obligations, patches, etc.)
+- `prelude/`: Prelude modules and language surface helpers
+- `selfhost/`: Selfhost artifact/toolchain material
+- `docs/`: Specs, handoff, policy, and status docs
+- `scripts/`: test/health/profile gates and CI-style contract checks
 
 ## Quickstart
 
-Build:
+Build everything:
+
 ```sh
 cargo build --workspace
 ```
 
-Format a CoreForm file:
+Run the CLI:
+
+```sh
+cargo run -p gc_cli -- --help
+```
+
+Format CoreForm:
+
 ```sh
 cargo run -p gc_cli -- fmt path/to/file.gc
 cargo run -p gc_cli -- fmt --check path/to/file.gc
 ```
 
-Evaluate a pure program/module:
+Evaluate pure code:
+
 ```sh
 cargo run -p gc_cli -- eval path/to/file.gc
 ```
 
-Run effects (deny-by-default unless allowed in `caps.toml`) and produce a deterministic `.gclog`:
+Run effects with capability policy and deterministic log:
+
 ```sh
 cargo run -p gc_cli -- run path/to/file.gc --caps caps.toml --log out.gclog
 cargo run -p gc_cli -- replay path/to/file.gc --log out.gclog
 ```
 
-Run package obligations (writes artifacts into `.genesis/store/` under the package directory):
+Package/testing flow:
+
 ```sh
 cargo run -p gc_cli -- test --pkg path/to/package.toml --caps path/to/caps.toml
 cargo run -p gc_cli -- pack --pkg path/to/package.toml
 ```
 
-Apply a semantic patch:
+Apply semantic patch:
+
 ```sh
 cargo run -p gc_cli -- apply-patch path/to/change.gcpatch --pkg path/to/package.toml --caps path/to/caps.toml
 ```
 
-## Test Iteration Loops
+## Local development gates
 
-Default fast local loop (changed-aware, hard budgeted):
+Fast changed-aware loop:
+
 ```sh
 bash scripts/test_changed_fast.sh
 ```
 
-Alias for the default fast loop:
+Alias / broader loop:
+
 ```sh
 bash scripts/test_fast.sh
-```
-
-Full fast fallback suite (broader, slower):
-```sh
 bash scripts/test_fast.sh --full
 ```
 
-Deterministic sharded workspace tests (for parallel local/CI execution):
+Strict profile used for release-quality agent readiness:
+
 ```sh
-bash scripts/test_shard_workspace.sh --total 4 --index 0 --runner nextest --exclude-crate gc_wasi_cli
+bash scripts/check_upgrade_plan_health.sh --profile prepush-standard
 ```
 
-`scripts/test_shard_workspace.sh` supports `--runner auto|cargo|nextest` and writes shard reports to `.genesis/ci-shards/`.
+## Specs and core docs
 
-## Normative Spec
-
-Canonical docs entrypoint:
-- `docs/INDEX.md`
-
-Normative “lock-in” behavior lives in:
-- `docs/spec/SEALS_DISPATCH_REPLAY.md`
-- `docs/spec/PATCH_SCHEMA.md`
-
-Additional schemas:
-- `docs/spec/CAPS_TOML.md`
-- `docs/spec/PACKAGE_TOML.md`
-- `docs/spec/GCLOG_SCHEMA.md`
-- `docs/spec/TEST_EXECUTION_PROFILES_v0.1.md`
-
-Capability comparison:
-- `feature_matrix.md`
+- Docs index: `docs/INDEX.md`
+- Primary design/paper: `docs/PAPER_v0.2.md`
+- Technical handoff: `docs/TECH_HANDOFF.md`
+- Seals/dispatch/replay spec: `docs/spec/SEALS_DISPATCH_REPLAY.md`
+- Patch schema spec: `docs/spec/PATCH_SCHEMA.md`
+- Capability surface matrix: `feature_matrix.md`
 
 ## License
 
-Dual-licensed under Apache-2.0 OR MIT.
+Dual licensed under either:
+
+- Apache-2.0 (`LICENSE-APACHE`)
+- MIT (`LICENSE-MIT`)
+
+See `LICENSE` for the dual-license notice.
