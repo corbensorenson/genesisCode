@@ -4,9 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "backend-starter-workflows" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_BACKEND_STARTER_WORKFLOWS_CARGO_TARGET_DIR"
+
 REPORT_PATH="${GENESIS_BACKEND_STARTER_REPORT:-.genesis/perf/backend_starter_workflows_report.json}"
 HISTORY_PATH="${GENESIS_BACKEND_STARTER_HISTORY:-.genesis/perf/backend_starter_workflows_history.jsonl}"
-DEFAULT_DEBUG_DIR="${CARGO_TARGET_DIR:-$ROOT_DIR/target}/debug"
+DEFAULT_DEBUG_DIR="$CARGO_TARGET_DIR/debug"
 GENESIS_BIN="${GENESIS_BIN:-$DEFAULT_DEBUG_DIR/genesis}"
 
 if [[ ! -x "$GENESIS_BIN" ]]; then

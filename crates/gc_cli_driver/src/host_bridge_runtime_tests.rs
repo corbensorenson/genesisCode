@@ -182,7 +182,7 @@ fn plugin_command_exec_schema_supports_external_plugin_bytes_response() {
                 ":payload",
                 term_map(vec![(
                     ":args",
-                    Term::Vector(vec![Term::Str("--fast".to_string())].into()),
+                    Term::Vector(vec![Term::Str("--fast".to_string())]),
                 )]),
             ),
         ]);
@@ -213,7 +213,7 @@ fn ffi_call_schema_driven_external_command_executes_without_unsupported() {
             (":symbol", Term::Str("sum".to_string())),
             (
                 ":args",
-                Term::Vector(vec![Term::Int(3_i64.into()), Term::Int(4_i64.into())].into()),
+                Term::Vector(vec![Term::Int(3_i64.into()), Term::Int(4_i64.into())]),
             ),
             (
                 ":request-schema-id",
@@ -325,7 +325,7 @@ fn net_http_listen_and_respond_roundtrip() {
             (":status", Term::Int(200_i64.into())),
             (
                 ":headers",
-                Term::Vector(vec![Term::Str("Content-Type: text/plain".to_string())].into()),
+                Term::Vector(vec![Term::Str("Content-Type: text/plain".to_string())]),
             ),
             (":body", Term::Bytes(b"ok".to_vec().into())),
         ]))
@@ -601,8 +601,7 @@ fn process_spawn_wait_and_stdout_read_use_real_lifecycle() {
                     vec![
                         Term::Str("-c".to_string()),
                         Term::Str("printf ready; sleep 0.1; printf done".to_string()),
-                    ]
-                    .into(),
+                    ],
                 ),
             ),
         ]);
@@ -648,8 +647,7 @@ fn process_kill_sets_killed_flag_and_wait_returns_terminated_exit() {
                     vec![
                         Term::Str("-c".to_string()),
                         Term::Str("sleep 5".to_string()),
-                    ]
-                    .into(),
+                    ],
                 ),
             ),
         ]);

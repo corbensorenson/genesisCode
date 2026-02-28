@@ -172,7 +172,7 @@
       ]
     },
     {
-      "capability": "Domain starter registry for agent workflows (27 domains)",
+      "capability": "Domain starter registry for agent workflows",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_agent_reference_workflows.sh"
@@ -196,18 +196,20 @@
       ]
     },
     {
-      "capability": "Large-workspace agent iteration SLO lane (>=10k modules)",
+      "capability": "Large-workspace agent iteration perf lane",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_foundation_stdlib_conformance.sh",
-        "scripts/check_agent_reference_workflows.sh"
+        "scripts/check_agent_reference_workflows.sh",
+        "scripts/check_perf_budgets.sh"
       ],
       "evidence_paths": [
         "docs/spec/CLI.md",
         "docs/spec/GCPM_BUNDLE_v0.1.md",
         "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
         "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
-        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md"
+        "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
+        "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md"
       ]
     },
     {
@@ -252,7 +254,7 @@
       ]
     },
     {
-      "capability": "XR and browser runtime capability families",
+      "capability": "Browser + XR runtime families",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_webxr_browser_conformance_lane.sh"
@@ -264,23 +266,7 @@
       ]
     },
     {
-      "capability": "GPU/XR productization conformance lane",
-      "check_paths": [
-        "scripts/check_upgrade_plan_health.sh",
-        "scripts/check_gpu_compute_runtime_profile.sh",
-        "scripts/check_gpu_stack_decoupling.sh",
-        "scripts/check_gfx_runtime_profile.sh",
-        "scripts/check_webxr_browser_conformance_lane.sh"
-      ],
-      "evidence_paths": [
-        "docs/spec/CLI.md",
-        "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
-        "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
-        "docs/spec/XR_HOST_RUNTIME_v0.1.md"
-      ]
-    },
-    {
-      "capability": "Host plugin + FFI capability schemas",
+      "capability": "Host plugin + FFI schemas/contracts",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_host_abi_conformance.sh",
@@ -294,7 +280,7 @@
       ]
     },
     {
-      "capability": "First-party backend bridge for network/process/db/crypto/plugin/ffi",
+      "capability": "First-party bridge for network/process/db/crypto/plugin/ffi",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_host_abi_conformance.sh"
@@ -306,7 +292,7 @@
       ]
     },
     {
-      "capability": "Stage2 CoreForm->WASM translation-validation path",
+      "capability": "Stage2 CoreForm->WASM translation-validation",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh"
       ],
@@ -329,7 +315,7 @@
       ]
     },
     {
-      "capability": "Assurance profile packs + standards crosswalk (DO-178C/NASA/IEC)",
+      "capability": "Assurance profile packs + standards crosswalk",
       "check_paths": [
         "scripts/check_upgrade_plan_health.sh",
         "scripts/check_assurance_profile_packs.sh",
@@ -362,7 +348,7 @@
       ]
     }
   ],
-  "entry_count": 30,
+  "entry_count": 29,
   "kind": "genesis/feature-matrix-evidence-v0.1",
   "source_feature_matrix": "feature_matrix.md",
   "version": "0.1"

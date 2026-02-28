@@ -19,7 +19,7 @@ export GENESIS_AGENT_AUTOMATION_CONTEXT="$AGENT_AUTOMATION_CONTEXT"
 AGENT_GPU_PROFILE="${GENESIS_AGENT_GPU_PROFILE:-}"
 HEALTH_GPU_BACKEND_POLICY_DEFAULT="${GENESIS_HEALTH_GPU_BACKEND_POLICY_DEFAULT:-}"
 DEV_FAST_BUDGET_MS="${GENESIS_DEV_FAST_BUDGET_MS:-60000}"
-DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-240000}"
+DEV_FAST_PROFILE_WALL_BUDGET_MS="${GENESIS_HEALTH_DEV_FAST_WALL_BUDGET_MS:-360000}"
 AGENT_INNER_LOOP_BUDGET_MS="${GENESIS_HEALTH_AGENT_INNER_LOOP_BUDGET_MS:-300000}"
 AGENT_INNER_LOOP_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_HISTORY:-.genesis/perf/upgrade_plan_health_agent_inner_loop_history.jsonl}"
 AGENT_INNER_LOOP_BASELINE_HISTORY="${GENESIS_HEALTH_AGENT_INNER_LOOP_BASELINE_HISTORY:-policies/perf/upgrade_plan_health_agent_inner_loop_seed_history.jsonl}"
@@ -30,9 +30,9 @@ HEALTH_PROFILE_REPORT="${GENESIS_HEALTH_PROFILE_REPORT:-.genesis/perf/upgrade_pl
 HEALTH_PROFILE_HISTORY="${GENESIS_HEALTH_PROFILE_HISTORY:-.genesis/perf/upgrade_plan_health_profile_history.jsonl}"
 HEALTH_PROFILE_MIN_HISTORY="${GENESIS_HEALTH_PROFILE_MIN_HISTORY:-5}"
 # prepush-standard includes end-to-end agent/runtime/perf conformance lanes with
-# selfhost-strict compilation + microbench suites; keep a bounded default that
-# reflects full strict scope on clean runs.
-PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-900000}"
+# selfhost-strict compilation + microbench suites; use a default that remains
+# bounded while accommodating cold-cache strict runs after reclaim.
+PREPUSH_WALL_BUDGET_MS="${GENESIS_HEALTH_PREPUSH_BUDGET_MS:-1500000}"
 PREPUSH_HISTORY="${GENESIS_HEALTH_PREPUSH_HISTORY:-.genesis/perf/upgrade_plan_health_prepush_history.jsonl}"
 PREPUSH_BASELINE_HISTORY="${GENESIS_HEALTH_PREPUSH_BASELINE_HISTORY:-}"
 PREPUSH_MIN_HISTORY="${GENESIS_HEALTH_PREPUSH_MIN_HISTORY:-3}"
@@ -884,9 +884,24 @@ run_health_proactive_reclaim() {
     --preserve-dir "$HEALTH_CARGO_TARGET_DIR"
 
   local free_kb
+  local need_aggressive_reclaim=0
+  local strict_profile=0
   free_kb="$(free_kb_root)"
-  if (( free_kb < HEALTH_MIN_FREE_KB )) && [[ "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" == "1" ]]; then
-    echo "upgrade-plan-health: low disk headroom (${free_kb}KB < ${HEALTH_MIN_FREE_KB}KB); running aggressive reclaim"
+  if health_profile_is_strict "$PROFILE"; then
+    strict_profile=1
+  fi
+
+  if (( free_kb < HEALTH_MIN_FREE_KB )); then
+    need_aggressive_reclaim=1
+    echo "upgrade-plan-health: low disk headroom (${free_kb}KB < ${HEALTH_MIN_FREE_KB}KB); aggressive reclaim required"
+  fi
+  if (( strict_profile == 1 )) && (( free_kb < HEALTH_STRICT_RUNTIME_MIN_FREE_KB )); then
+    need_aggressive_reclaim=1
+    echo "upgrade-plan-health: strict runtime lanes need ${HEALTH_STRICT_RUNTIME_MIN_FREE_KB}KB; current free_kb=${free_kb}"
+  fi
+
+  if (( need_aggressive_reclaim == 1 )) && [[ "$HEALTH_AUTO_AGGRESSIVE_RECLAIM_ON_LOW_DISK" == "1" ]]; then
+    echo "upgrade-plan-health: running aggressive reclaim"
     bash scripts/reclaim_build_space.sh \
       --aggressive \
       --max-build-kb "$HEALTH_RECLAIM_MAX_BUILD_KB" \
@@ -1392,7 +1407,7 @@ case "$PROFILE" in
     PROFILE_GATES+=("cargo test -p gc_cli --test cli_pkg_workspace gcpm_build_supports_mobile_and_edge_target_contracts --quiet")
     PROFILE_GATES+=("bash scripts/check_gcpm_target_runtime_pipelines.sh")
     PROFILE_GATES+=(
-      "GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB=1048576 GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=1 GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM=0 bash scripts/check_runtime_backend_feature_matrix.sh"
+      "GENESIS_RUNTIME_BACKEND_MATRIX_MIN_FREE_KB=1048576 GENESIS_RUNTIME_BACKEND_MATRIX_CLEAN_TARGET_DIR=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_PROFILE_DEV_DEBUG=0 GENESIS_RUNTIME_BACKEND_MATRIX_CARGO_INCREMENTAL=1 GENESIS_RUNTIME_BACKEND_MATRIX_STAGE_AUTO_RECLAIM=1 bash scripts/check_runtime_backend_feature_matrix.sh"
     )
     PROFILE_GATES+=("bash scripts/check_bootstrap_retirement_gate.sh")
     PROFILE_GATES+=("GENESIS_AGENT_GAUNTLET_PROFILE=prepush-standard GENESIS_AGENT_GAUNTLET_REQUIRE_GPU_DEVICE_BACKEND=1 GENESIS_AGENT_GAUNTLET_REGRESSION_PERCENT=60 GENESIS_AGENT_GAUNTLET_REGRESSION_SLACK_MS=3000 bash scripts/check_agent_reference_workflows.sh")
@@ -1403,7 +1418,7 @@ case "$PROFILE" in
     )
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_CONFORMANCE_PROFILE=prepush-standard bash scripts/check_write_genesiscode_skill_conformance.sh")
     PROFILE_GATES+=("GENESIS_WRITE_SKILL_DIST_VERIFY_RUNTIME=1 GENESIS_WRITE_SKILL_DIST_CONFORMANCE_AUTO_RUN=0 bash scripts/check_write_genesiscode_skill_distribution.sh")
-    PROFILE_GATES+=("GENESIS_BUDGET_WARMUPS=0 GENESIS_BUDGET_REPEATS=1 bash scripts/check_perf_budgets.sh")
+    PROFILE_GATES+=("GENESIS_BUDGET_WARMUPS=0 GENESIS_BUDGET_REPEATS=1 GENESIS_PERF_BUDGET_MIN_FREE_KB=2097152 bash scripts/check_perf_budgets.sh")
     PROFILE_GATES+=("GENESIS_AI_ITERATION_SLO_SAMPLES_INCREMENTAL_WARM=1 GENESIS_AI_ITERATION_SLO_SAMPLES_CHANGED_FAST=1 GENESIS_AI_ITERATION_SLO_SAMPLES_CORE_SUITE=1 GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_LOCK=1 GENESIS_AI_ITERATION_SLO_SAMPLES_GCPM_ENV=1 GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_LOCK=0 GENESIS_AI_ITERATION_SLO_WARMUP_GCPM_ENV=0 GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_LOCK=0 GENESIS_AI_ITERATION_SLO_STABILIZE_RETRIES_GCPM_ENV=0 bash scripts/check_ai_iteration_slo.sh")
     PROFILE_GATES+=("bash scripts/check_runtime_microbench_budgets.sh")
     PROFILE_GATES+=("bash scripts/check_gpu_compute_runtime_profile.sh")

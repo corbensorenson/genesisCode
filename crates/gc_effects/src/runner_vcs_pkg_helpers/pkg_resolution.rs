@@ -124,6 +124,10 @@ fn collect_available_semver_tags(refs: &[RefEntry]) -> Vec<Term> {
     tags.into_iter().map(Term::Str).collect()
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "requirement resolution carries explicit store/ref/policy context for deterministic lock hydration"
+)]
 pub(crate) fn resolve_requirement(
     store: &ArtifactStore,
     refs: &RefsDb,
@@ -500,6 +504,10 @@ fn registry_client_for_requirement(
     Ok(Some((client, base)))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "artifact hydration requires explicit registry/policy/budget handles to keep sealing and budgeting local"
+)]
 pub(crate) fn ensure_artifact_hash_available(
     store: &ArtifactStore,
     registries: &BTreeMap<String, String>,

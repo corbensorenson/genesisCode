@@ -103,11 +103,11 @@ fn parse_nonempty_u16_array(
             out.push(raw as u16);
             continue;
         }
-        if let Some(raw) = x.as_str() {
-            if raw.trim() == "*" {
-                any = true;
-                continue;
-            }
+        if let Some(raw) = x.as_str()
+            && raw.trim() == "*"
+        {
+            any = true;
+            continue;
         }
         return Err(format!("{key} entries must be integers or \"*\""));
     }

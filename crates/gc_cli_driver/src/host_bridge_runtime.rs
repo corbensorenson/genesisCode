@@ -860,8 +860,8 @@ fn db_query(payload: &Term) -> Result<Term, String> {
     let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
     while let Some(row) = rows.next().map_err(|e| e.to_string())? {
         let mut mm = BTreeMap::new();
-        for idx in 0..col_count {
-            let key = format!(":{}", col_names[idx].clone());
+        for (idx, col_name) in col_names.iter().enumerate().take(col_count) {
+            let key = format!(":{}", col_name);
             let value = match row.get_ref(idx).map_err(|e| e.to_string())? {
                 rusqlite::types::ValueRef::Null => Term::Nil,
                 rusqlite::types::ValueRef::Integer(v) => Term::Int(v.into()),

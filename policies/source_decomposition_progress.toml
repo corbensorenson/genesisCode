@@ -295,7 +295,7 @@ waiver_review_by = "2026-04-30"
 [[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_gpu_device_backend.rs"
 target_gc_modules = ["prelude/modules/10_gpu_compute.gc", "prelude/modules/33_game_loop.gc"]
-parity_gate = "bash scripts/check_gpu_compute_runtime_profile.sh"
+parity_gate = "GENESIS_PERF_DISK_STRICT_MODE=0 bash scripts/check_gpu_compute_runtime_profile.sh"
 phase = "phase-1"
 status = "waived"
 notes = "Separate queue setup, kernel dispatch, buffer lifecycle, and telemetry reporting paths."

@@ -750,7 +750,7 @@ pub(super) fn dispatch_publish(
                 Err(v) => return Ok(v),
             };
 
-            let obligations = vec![
+            let obligations = [
                 "core/obligation::external-provenance".to_string(),
                 "core/obligation::replayable-conversion".to_string(),
             ];

@@ -31,8 +31,8 @@ Legend:
 | Agent generative workload parity gates (native vs WASI) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Large-workspace agent iteration perf lane | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Concurrency/task replay stress lane | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
-| GPU compute (device-backed, deterministic lane) | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Graphics/window/input/audio runtime families | ⚠️ (runtime lanes pass with mixed device/fallback headroom coverage and still depend on host/headroom availability) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| GPU compute capability independent of graphics surface | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
+| Graphics/window/input/audio capability families | ⚠️ (runtime lanes pass with mixed device/fallback headroom coverage and still depend on host/headroom availability) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Browser + XR runtime families | ⚠️ (runtime families are implemented but remain host/runtime-availability constrained) | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
 | Host plugin + FFI schemas/contracts | ✅ (deny-by-default default, signed policy opt-in profile enforced for escalation) | ✅ | ⚠️ | ✅ | ✅ | ✅ |
 | First-party bridge for network/process/db/crypto/plugin/ffi | ✅ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
@@ -50,7 +50,7 @@ Source: `docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json`
 - Implemented families: `32`
 - Planned families: `0`
 - Policy-disabled families: `1` (`host/ffi`, deny-by-default)
-- Host operations tracked: `187`
+- Host operations tracked: `188`
 - Prelude operations tracked: `184`
 - Planned upgrade IDs still open in capability coverage: `none` (all remaining blockers are operational/perf/assurance, not missing capability-family wiring)
 
@@ -79,7 +79,7 @@ Known GenesisCode gaps
 These are the remaining blockers reflected in `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`:
 - none
 
-Primary evidence paths
+Primary evidence paths:
 
 - `/Users/corbensorenson/Documents/genesisCode/upgrade_plan.md`
 - `/Users/corbensorenson/Documents/genesisCode/docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json`

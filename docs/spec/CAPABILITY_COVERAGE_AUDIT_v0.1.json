@@ -101,8 +101,10 @@
     },
     {
       "family": "core/pkg-low",
-      "host_only_ops": [],
-      "host_ops_count": 13,
+      "host_only_ops": [
+        "core/pkg-low::bridge"
+      ],
+      "host_ops_count": 14,
       "notes": "Native and WASI-flavor remote registry publish/install/export/import parity is enforced by runtime parity and contract-pack gates.",
       "plan_id": null,
       "prelude_ops_count": 13,
@@ -419,7 +421,7 @@
   "kind": "genesis/capability-coverage-audit-v0.1",
   "summary": {
     "family_count": 33,
-    "host_operation_count": 187,
+    "host_operation_count": 188,
     "implemented_families": 32,
     "planned_families": 0,
     "planned_upgrade_ids": [],

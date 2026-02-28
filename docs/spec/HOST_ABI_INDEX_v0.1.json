@@ -43,6 +43,7 @@
     ],
     "core/pkg-low": [
       "core/pkg-low::add",
+      "core/pkg-low::bridge",
       "core/pkg-low::info",
       "core/pkg-low::init",
       "core/pkg-low::install",
@@ -395,6 +396,7 @@
     "core/media::audio-transcode",
     "core/media::image-transcode",
     "core/pkg-low::add",
+    "core/pkg-low::bridge",
     "core/pkg-low::info",
     "core/pkg-low::init",
     "core/pkg-low::install",

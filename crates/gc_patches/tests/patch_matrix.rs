@@ -6,6 +6,7 @@ use gc_coreform::{
 };
 use gc_kernel::{MemLimits, StepLimit};
 
+#[path = "patch_matrix/patch_matrix_migrate_contract_signature.rs"]
 mod patch_matrix_migrate_contract_signature;
 
 fn write_pkg(dir: &Path) -> PathBuf {

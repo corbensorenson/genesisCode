@@ -119,12 +119,28 @@ run_stage() {
   local start_ms
   local end_ms
   local elapsed_ms
-  bash scripts/check_disk_headroom.sh \
+  if ! bash scripts/check_disk_headroom.sh \
     --path "$ROOT_DIR" \
     --context "runtime-backend-feature-matrix:${label}" \
     --min-kb "$DISK_MIN_FREE_KB" \
     --auto-reclaim "$STAGE_AUTO_RECLAIM" \
-    --strict "$DISK_STRICT_MODE"
+    --strict "$DISK_STRICT_MODE"; then
+    if [[ "$STAGE_AUTO_RECLAIM" == "1" ]]; then
+      echo "runtime-backend-feature-matrix:${label}: escalating to aggressive reclaim fallback"
+      bash scripts/reclaim_build_space.sh \
+        --aggressive \
+        --max-build-kb "$RECLAIM_MAX_BUILD_KB" \
+        --max-age-days "$RECLAIM_MAX_AGE_DAYS"
+      bash scripts/check_disk_headroom.sh \
+        --path "$ROOT_DIR" \
+        --context "runtime-backend-feature-matrix:${label}" \
+        --min-kb "$DISK_MIN_FREE_KB" \
+        --auto-reclaim "0" \
+        --strict "$DISK_STRICT_MODE"
+    else
+      return 1
+    fi
+  fi
   start_ms="$(now_ms)"
   "$@"
   end_ms="$(now_ms)"

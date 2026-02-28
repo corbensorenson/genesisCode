@@ -924,6 +924,29 @@
         }
       }
     },
+    "core/pkg-low::bridge": {
+      "operation": "core/pkg-low::bridge",
+      "payload": {
+        "constraints": [
+          "deny-by-default policy gate applies",
+          "payload is a CoreForm map unless otherwise documented"
+        ],
+        "optional_fields": [],
+        "required_fields": [],
+        "type": "map"
+      },
+      "response_envelope": {
+        "error": {
+          "code_field": ":error/code",
+          "code_prefix": "core/caps/",
+          "sealed": true
+        },
+        "success": {
+          "shape": "op-specific data term (or nil) on success",
+          "value_kind": "term"
+        }
+      }
+    },
     "core/pkg-low::info": {
       "operation": "core/pkg-low::info",
       "payload": {

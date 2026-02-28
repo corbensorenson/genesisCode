@@ -8,7 +8,7 @@ Generated from:
 
 Summary:
 - Families: 33 (implemented=32, policy-disabled=1, planned=0)
-- Operations: host=187 prelude=184
+- Operations: host=188 prelude=184
 - Planned upgrade IDs: none
 
 ## Coverage Table
@@ -23,7 +23,7 @@ Summary:
 | `core/gc-low` | `implemented` | `-` | 5 | 5 | 0 | - |
 | `core/gpk-low` | `implemented` | `-` | 2 | 2 | 0 | - |
 | `core/media` | `implemented` | `-` | 3 | 3 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_upgrade_plan_health.sh |
-| `core/pkg-low` | `implemented` | `-` | 13 | 13 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_remote_registry_runtime_parity.sh<br>scripts/check_upgrade_plan_health.sh |
+| `core/pkg-low` | `implemented` | `-` | 14 | 13 | 1 | scripts/check_agent_reference_workflows.sh<br>scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_remote_registry_runtime_parity.sh<br>scripts/check_upgrade_plan_health.sh |
 | `core/refs` | `implemented` | `-` | 4 | 4 | 0 | - |
 | `core/store` | `implemented` | `-` | 4 | 4 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_remote_registry_runtime_parity.sh<br>scripts/check_upgrade_plan_health.sh |
 | `core/sync` | `implemented` | `-` | 2 | 2 | 0 | scripts/check_agent_reference_workflows.sh<br>scripts/check_gcpm_operation_contract_pack.sh<br>scripts/check_remote_registry_runtime_parity.sh<br>scripts/check_upgrade_plan_health.sh |

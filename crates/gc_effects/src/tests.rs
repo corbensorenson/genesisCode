@@ -55,9 +55,24 @@ fn write_bridge_script(dir: &tempfile::TempDir) -> std::path::PathBuf {
     let bridge = dir.path().join("host_bridge.sh");
     std::fs::write(
             &bridge,
-            r#"#!/bin/sh
+            r#"#!/usr/bin/env sh
+set -eu
 resp='{:ok true :surface "surface-bridge-0" :id "gpu-bridge-0" :width 800 :height 600 :title "bridge" :events [{:kind :create :path "new.gc"}] :data b"" :features [] :queued 0 :pending-redraws 0 :watch-id "watch-bridge-0" :task-id "task-bridge-0" :state :done}'
-printf '%s\n%s' "${#resp}" "$resp"
+if [ "${GENESIS_HOST_BRIDGE_TRANSPORT:-}" = "persistent-stdio" ]; then
+  persistent=1
+else
+  persistent=0
+fi
+while IFS= read -r req_len; do
+  if [ -z "${req_len:-}" ]; then
+    exit 0
+  fi
+  dd bs=1 count="$req_len" status=none >/dev/null 2>/dev/null || true
+  printf '%s\n%s' "${#resp}" "$resp"
+  if [ "$persistent" != "1" ]; then
+    exit 0
+  fi
+done
 "#,
         )
         .expect("write host bridge script");

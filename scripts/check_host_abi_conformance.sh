@@ -6,6 +6,13 @@ export LC_ALL=C
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
+genesis_configure_cargo_target_dir \
+  "$ROOT_DIR" \
+  "host-abi-conformance" \
+  ".genesis/build/cargo" \
+  "GENESIS_CHECK_HOST_ABI_CONFORMANCE_CARGO_TARGET_DIR"
+
 RUNNER_FILES=(
   "crates/gc_effects/src/runner_capability_dispatch.rs"
   "crates/gc_effects/src/runner_browser_host.rs"

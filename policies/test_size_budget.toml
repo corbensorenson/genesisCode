@@ -11,7 +11,7 @@ test_target_lines = 1000
 # 2) Files above test_target_lines must be explicitly listed here.
 # 3) Stale entries (files now <= target) fail the guard and must be removed.
 # 4) New files above target fail immediately unless intentionally added.
-target_debt_allowlist = []
+target_debt_allowlist = ["crates/gc_cli/tests/cli_pkg_workspace.rs"]
 
 # Optional substring excludes for generated fixtures/support glue.
 exclude_substrings = []

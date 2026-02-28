@@ -5,8 +5,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `2fe60d3b4890789794fefc1eb56b3bbcdf9211992ffc4d8cf12501dbd34d4851`
-- Freshness artifact hash: `2fe60d3b4890789794fefc1eb56b3bbcdf9211992ffc4d8cf12501dbd34d4851`
+- Artifact sha256: `716c8c8c4b8547cb5b39f1248db8b05f43966d3d9564c648b42da34e842f2550`
+- Freshness artifact hash: `716c8c8c4b8547cb5b39f1248db8b05f43966d3d9564c648b42da34e842f2550`
 - Freshness source hash: `d9c34d162f0856cbf68f94b039e85f18e20c3e6f716d7c6e64accbf6030f75c6`
 - Source aggregate hash (module path + module sha256): `baac85d67cae860be87e784d3cacc89f7fad528f5f8f5a69f6a4c4767a2843c5`
 - Manifest path: `selfhost/toolchain_manifest.gc`

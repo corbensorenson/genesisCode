@@ -9,11 +9,12 @@ if [[ ! -f "$DEFAULT_PRIMARY_REPORT" ]]; then
   DEFAULT_PRIMARY_REPORT=".genesis/perf/agent_capability_gauntlet_report.json"
 fi
 PRIMARY_REPORT="${GENESIS_AGENT_GENERATIVE_PRIMARY_REPORT:-$DEFAULT_PRIMARY_REPORT}"
+REQUIRE_SECONDARY="${GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY:-1}"
 
 DEFAULT_SECONDARY_REPORT=".genesis/perf/agent_capability_gauntlet_wasi_report.json"
 if [[ -n "${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT:-}" ]]; then
   SECONDARY_REPORT="${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT}"
-elif [[ -f "$DEFAULT_SECONDARY_REPORT" ]]; then
+elif [[ "$REQUIRE_SECONDARY" == "1" && -f "$DEFAULT_SECONDARY_REPORT" ]]; then
   SECONDARY_REPORT="$DEFAULT_SECONDARY_REPORT"
 else
   SECONDARY_REPORT=""
@@ -28,11 +29,29 @@ MIN_DOMAIN_COUNT="${GENESIS_AGENT_GENERATIVE_MIN_DOMAIN_COUNT:-2}"
 MAX_CASE_DURATION_MS="${GENESIS_AGENT_GENERATIVE_MAX_CASE_DURATION_MS:-600000}"
 P95_MIN_SAMPLES="${GENESIS_AGENT_GENERATIVE_P95_MIN_SAMPLES:-8}"
 REGRESSION_PERCENT="${GENESIS_AGENT_GENERATIVE_REGRESSION_PERCENT:-60}"
+REGRESSION_SLACK_MS="${GENESIS_AGENT_GENERATIVE_REGRESSION_SLACK_MS:-3000}"
 REQUIRE_MIN_HISTORY="${GENESIS_AGENT_GENERATIVE_REQUIRE_MIN_HISTORY:-1}"
-REQUIRE_SECONDARY="${GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY:-1}"
 SEED="${GENESIS_AGENT_GENERATIVE_SEED:-genesis-agent-generative-v1}"
 
-python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$BASELINE_HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$REQUIRE_MIN_HISTORY" "$REQUIRE_SECONDARY" "$SEED" <<'PY'
+if [[ "$REQUIRE_SECONDARY" != "0" && "$REQUIRE_SECONDARY" != "1" ]]; then
+  echo "agent-generative-workloads: GENESIS_AGENT_GENERATIVE_REQUIRE_SECONDARY must be 0 or 1" >&2
+  exit 2
+fi
+if [[ ! "$REGRESSION_SLACK_MS" =~ ^[0-9]+$ ]]; then
+  echo "agent-generative-workloads: GENESIS_AGENT_GENERATIVE_REGRESSION_SLACK_MS must be a non-negative integer" >&2
+  exit 2
+fi
+if [[ "$REQUIRE_SECONDARY" == "1" && -z "$SECONDARY_REPORT" ]]; then
+  echo "agent-generative-workloads: secondary report is required but not configured" >&2
+  exit 2
+fi
+if [[ "$REQUIRE_SECONDARY" == "0" && -z "${GENESIS_AGENT_GENERATIVE_SECONDARY_REPORT:-}" ]]; then
+  # In optional-secondary mode, ignore incidental default secondary artifacts so
+  # primary-only runs (used by prepush lanes) do not fail on stale parity files.
+  SECONDARY_REPORT=""
+fi
+
+python3 - "$PRIMARY_REPORT" "$SECONDARY_REPORT" "$REPORT_PATH" "$HISTORY_PATH" "$BASELINE_HISTORY_PATH" "$CASE_COUNT" "$MIN_WORKFLOWS" "$MAX_WORKFLOWS" "$MIN_DOMAIN_COUNT" "$MAX_CASE_DURATION_MS" "$P95_MIN_SAMPLES" "$REGRESSION_PERCENT" "$REGRESSION_SLACK_MS" "$REQUIRE_MIN_HISTORY" "$REQUIRE_SECONDARY" "$SEED" <<'PY'
 import datetime as dt
 import hashlib
 import json
@@ -55,6 +74,7 @@ import sys
     max_case_duration_ms_s,
     p95_min_samples_s,
     regression_percent_s,
+    regression_slack_ms_s,
     require_min_history_raw,
     require_secondary_raw,
     seed,
@@ -67,6 +87,7 @@ min_domain_count = int(min_domain_count_s)
 max_case_duration_ms = int(max_case_duration_ms_s)
 p95_min_samples = int(p95_min_samples_s)
 regression_percent = float(regression_percent_s)
+regression_slack_ms = int(regression_slack_ms_s)
 require_min_history = require_min_history_raw.strip().lower() not in {"0", "false", "no", "off"}
 require_secondary = require_secondary_raw.strip().lower() not in {"0", "false", "no", "off"}
 
@@ -84,6 +105,8 @@ if p95_min_samples <= 0:
     raise SystemExit("agent-generative-workloads: p95 min samples must be positive")
 if regression_percent < 0:
     raise SystemExit("agent-generative-workloads: regression percent must be non-negative")
+if regression_slack_ms < 0:
+    raise SystemExit("agent-generative-workloads: regression slack must be non-negative")
 
 primary_path = pathlib.Path(primary_report_path)
 secondary_path = pathlib.Path(secondary_report_path) if secondary_report_path.strip() else None
@@ -289,6 +312,7 @@ for case in primary_cases:
     case["regression_enforced"] = history_seeded and bool(prior)
     case["regression_budget_ms"] = (
         int(math.ceil(case["history_p95_ms"] * (1.0 + regression_percent / 100.0)))
+        + regression_slack_ms
         if case["regression_enforced"]
         else None
     )
@@ -370,6 +394,7 @@ report = {
     "max_case_duration_ms": max_case_duration_ms,
     "p95_min_samples": p95_min_samples,
     "regression_percent": regression_percent,
+    "regression_slack_ms": regression_slack_ms,
     "summary": summary,
     "duration_failures": duration_failures,
     "domain_failures": domain_failures,

@@ -249,9 +249,10 @@ mod tests {
     #[test]
     fn gpu_backend_policy_ignores_legacy_backend_policy_key_alias() {
         let op = op_with_extra(&[("backend_policy", "require-device")]);
+        let canonical_missing = op_with_extra(&[]);
         assert_eq!(
             super::gpu_backend_fallback_policy(Some(&op)),
-            GpuBackendFallbackPolicy::AllowFallback,
+            super::gpu_backend_fallback_policy(Some(&canonical_missing)),
             "legacy `backend_policy` key alias must not be accepted"
         );
     }

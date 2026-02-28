@@ -290,6 +290,10 @@ pub(super) fn emit_wasm_module(
     Ok(module.finish())
 }
 
+#[expect(
+    clippy::type_complexity,
+    reason = "constant fallback returns parallel tables for deterministic wasm replay envelopes"
+)]
 fn emit_wasm_constant_scalar(
     kind: Stage2ValueKind,
     term: &Term,

@@ -338,7 +338,7 @@ pub(super) fn audio_transcode(
         .checked_mul(channels)
         .ok_or_else(|| "input frame-size overflow".to_string())?;
 
-    if data.len() % input_frame_bytes != 0 {
+    if !data.len().is_multiple_of(input_frame_bytes) {
         return Err(format!(
             "input bytes ({}) not aligned to frame size {}",
             data.len(),

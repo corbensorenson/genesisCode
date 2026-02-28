@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "pkg install dispatcher threads explicit capability/context handles for deterministic hydration and sealing"
+)]
 pub(super) fn handle_pkg_install(
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -273,6 +277,10 @@ fn dependency_registry_alias<'a>(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "locked hash hydration needs explicit policy/budget/timeout handles to preserve bounded network behavior"
+)]
 fn try_hydrate_locked_hash(
     store: &ArtifactStore,
     registries: &BTreeMap<String, String>,
@@ -303,6 +311,10 @@ fn try_hydrate_locked_hash(
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "commit closure hydration intentionally carries explicit policy and budgeting context through recursion"
+)]
 fn hydrate_commit_closure(
     store: &ArtifactStore,
     registries: &BTreeMap<String, String>,

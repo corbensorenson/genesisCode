@@ -419,15 +419,15 @@ fn cmd_debug_timeline(
 
 fn cmd_debug_bisect(
     cli: &Cli,
-    baseline: &PathBuf,
-    candidate: &PathBuf,
+    baseline: &Path,
+    candidate: &Path,
 ) -> Result<CmdOut, CliError> {
     let baseline_term = read_timeline_artifact(baseline, "debug/bisect")?;
     let candidate_term = read_timeline_artifact(candidate, "debug/bisect")?;
     let baseline_frames = extract_timeline_frames(&baseline_term, "debug/bisect baseline")?;
     let candidate_frames = extract_timeline_frames(&candidate_term, "debug/bisect candidate")?;
 
-    let (mismatch_index, reason) = first_timeline_mismatch(&baseline_frames, &candidate_frames);
+    let (mismatch_index, reason) = first_timeline_mismatch(baseline_frames, candidate_frames);
     let baseline_frame = mismatch_index
         .and_then(|idx| baseline_frames.get(idx))
         .cloned();

@@ -77,6 +77,10 @@ fn plugin_error_term(
     Term::Map(mm)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "ffi error payload keeps full host diagnostics fields explicit for sealed boundary reporting"
+)]
 fn ffi_error_term(
     abi_id: String,
     library: String,
@@ -109,6 +113,13 @@ fn ffi_error_term(
     Term::Map(mm)
 }
 
+type PluginExecPayload = (
+    Vec<String>,
+    Option<String>,
+    Vec<(String, String)>,
+    Option<Vec<u8>>,
+);
+
 fn term_to_cli_arg(value: &Term) -> String {
     match value {
         Term::Str(s) | Term::Symbol(s) => s.clone(),
@@ -116,17 +127,7 @@ fn term_to_cli_arg(value: &Term) -> String {
     }
 }
 
-fn plugin_exec_payload(
-    payload_term: &Term,
-) -> Result<
-    (
-        Vec<String>,
-        Option<String>,
-        Vec<(String, String)>,
-        Option<Vec<u8>>,
-    ),
-    String,
-> {
+fn plugin_exec_payload(payload_term: &Term) -> Result<PluginExecPayload, String> {
     let Term::Map(mm) = payload_term else {
         return Err(format!(
             "`:payload` must be map for schema `{PLUGIN_REQUEST_EXEC_V1}`"
