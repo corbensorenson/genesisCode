@@ -1,0 +1,44 @@
+**Stable routed families**
+
+`fmt`, `eval`, `explain`, `debug/*`, `run`, `replay`, `optimize`, `typecheck`, `test`, `apply-patch`, `semantic-edit`, `pack`, `verify`, `selfhost-artifact`, `selfhost-dashboard`, `cli-schema`, `agent-index`, `agent-plan`, `keygen`, `sign`, `transparency-verify`, `store/*`, `refs/*`, `commit/*`, `pkg/* (gcpm/* alias)`, `policy/*`, `sync/*`, `gc/*`, `vcs/*`
+
+**Command forms explicitly frozen in the CLI specification**
+
+- `genesis`
+- `genesis agent-index`
+- `genesis agent-plan --intent <agent-intent.json|-> --caps <caps.toml> [--max-workflows <n>]`
+- `genesis cli-schema`
+- `genesis commit show <commit-hash>`
+- `genesis debug bisect --baseline <timeline.gc> --candidate <timeline.gc>`
+- `genesis eval <file> [--engine rust|selfhost] [--stage1-pipeline] [--stage1-gate] [--stage2-gate]`
+- `genesis explain <file> --contract <expr-or-symbol> --msg <coreform> [--engine rust|selfhost]`
+- `genesis fmt --check <file>`
+- `genesis fmt <file> [--check] [--engine rust|selfhost]`
+- `genesis gcpm `
+- `genesis gcpm --json`
+- `genesis gcpm abi --pkg <package.toml>`
+- `genesis gcpm add <name>@<selector>`
+- `genesis gcpm add|remove|lock|update|run|build|install|verify|doctor|env|publish|bridge|self-optimize --json`
+- `genesis gcpm doctor --caps <caps.toml> [--lock genesis.lock]`
+- `genesis gcpm env --profile <dev|ci|release> [--runtime-backend <headless|gpu|gfx|backend|profile-*>] [--hydrate]`
+- `genesis gcpm migrate --pkg package.toml`
+- `genesis gcpm new`
+- `genesis gcpm remove <dep>`
+- `genesis gcpm run <task>`
+- `genesis gcpm self-optimize --pkg <package.toml> [--dry-run]`
+- `genesis gcpm test --pkg <package.toml>`
+- `genesis gcpm update [--only <dep> ...]`
+- `genesis keygen --out <key.toml>`
+- `genesis optimize <file> [--engine rust|selfhost] `
+- `genesis pkg `
+- `genesis replay <file> --log <log.gclog> [--store <dir>] [--engine rust|selfhost]`
+- `genesis run <file> --caps <policy.toml> [--log <out.gclog>] [--engine rust|selfhost]`
+- `genesis selfhost-artifact --out <file> [--min-stage2-supported-modules <N>] [--min-stage2-validated-modules <N>]`
+- `genesis selfhost-dashboard`
+- `genesis selfhost-dashboard [--markdown <file>] [--store <dir>]`
+- `genesis semantic-edit index --pkg <package.toml> --module-path <path>`
+- `genesis semantic-edit workspace-graph --pkg <package.toml>`
+- `genesis sign --pkg <package.toml> --key <key.toml> [--acceptance <hex>] [--signatures <file>]`
+- `genesis transparency-verify --pkg <package.toml>`
+- `genesis vcs hash --in <file> [--engine rust|selfhost]`
+- `genesis verify --pkg <package.toml> [--policy <policy.toml>] [--signatures <file>]`

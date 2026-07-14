@@ -1,0 +1,119 @@
+# GenesisCode documentation index for language models
+
+> GenesisCode v0.2 is pre-1.0. The pure kernel is deterministic; all host work is an explicit deny-by-default effect. EFFECT, ERROR, and UNHANDLED are trusted only through seals.
+
+## Start
+- https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_CORE_CARD_v0.3.html
+- https://corbensorenson.github.io/genesisCode/docs/AGENT_ONBOARDING_v0.1.html
+- https://corbensorenson.github.io/genesisCode/learn/agent-loop.html
+- https://corbensorenson.github.io/genesisCode/reference/index.html
+
+## Machine authorities
+- Symbol index (168): https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json
+- Host ABI index (188): https://corbensorenson.github.io/genesisCode/docs/spec/HOST_ABI_INDEX_v0.1.json
+- Diagnostic catalog (180): https://corbensorenson.github.io/genesisCode/docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json
+- Agent profile: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_PROFILE_v0.3.json
+- Reference index: https://corbensorenson.github.io/genesisCode/reference/generated/reference-index.json
+
+## Retrieval protocol
+1. Load the compact core card.
+2. Select exactly one task card.
+3. Resolve exact symbols, diagnostics, and CLI options through machine indexes.
+4. Retrieve one domain recipe and canonical spec only as needed.
+5. Preserve policy and obligations; abstain when repair preconditions drift.
+
+## Canonical source roots
+- Agent Onboarding Path v0.1: https://corbensorenson.github.io/genesisCode/docs/AGENT_ONBOARDING_v0.1.html
+- Documentation Deprecation Map v0.1: https://corbensorenson.github.io/genesisCode/docs/DEPRECATION_MAP_v0.1.html
+- Foundation Standard Library (Level 1) v0.2: https://corbensorenson.github.io/genesisCode/docs/FOUNDATION_STDLIB_v0.2.html
+- Getting Started (GenesisCode v0.2): https://corbensorenson.github.io/genesisCode/docs/GETTING_STARTED.html
+- GenesisCode Docs Index: https://corbensorenson.github.io/genesisCode/docs/INDEX.html
+- **GenesisCode v0.2**: https://corbensorenson.github.io/genesisCode/docs/PAPER_v0.2.html
+- Policy Defaults v0.1: https://corbensorenson.github.io/genesisCode/docs/POLICY_DEFAULTS_v0.1.html
+- GenesisCode Stacks (Levels 0–2) v0.2: https://corbensorenson.github.io/genesisCode/docs/STACKS_v0.2.html
+- GenesisCode Style Guide v0.2: https://corbensorenson.github.io/genesisCode/docs/STYLE_GUIDE_v0.2.html
+- **GenesisCode v0.2 Implementation Guide**: https://corbensorenson.github.io/genesisCode/docs/TECH_HANDOFF.html
+- Agent Authoring Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.html
+- Agent Capability Gauntlet v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.html
+- Agent Generative Workloads v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.html
+- Agent Index v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/AGENT_INDEX_v0.1.html
+- Agent Workflow Runtime Parity v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.html
+- AI Style Obligation (core/obligation::ai-style): https://corbensorenson.github.io/genesisCode/docs/spec/AI_STYLE.html
+- Assurance Artifacts v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/ASSURANCE_ARTIFACTS_v0.1.html
+- Assurance Profile Packs v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.html
+- Assurance Standards Crosswalk v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.html
+- Bootstrap Archive And Active Tooling (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/BOOTSTRAP_OLD.html
+- Browser Host Runtime v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/BROWSER_HOST_RUNTIME_v0.1.html
+- Capability Coverage Audit v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.html
+- caps.toml (Capability Policy) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/CAPS_TOML.html
+- Check/Update Boundary v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.html
+- Genesis CLI v0.2 (Exit Codes + JSON): https://corbensorenson.github.io/genesisCode/docs/spec/CLI.html
+- CLI JSON Schemas v0.1 (Non-GCPM): https://corbensorenson.github.io/genesisCode/docs/spec/CLI_JSON_SCHEMAS_v0.1.html
+- CLI Tooling Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/CLI_TOOLING_BUNDLE_v0.1.html
+- Concurrency + GPU SLO Contract v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/CONCURRENCY_GPU_SLO_v0.1.html
+- Concurrency Spec (v0.1): https://corbensorenson.github.io/genesisCode/docs/spec/CONCURRENCY_v0.1.html
+- CoreForm Canonicalization + Hashing v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/COREFORM_CANON_HASH.html
+- GenesisCode Dependency Mirror Contract v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/DEPENDENCY_MIRROR_v0.1.html
+- Determinism and Portability (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/DETERMINISM.html
+- Documentation Complexity Targets v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.html
+- Documentation Leaf Ownership v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/DOC_LEAF_OWNERSHIP_v0.1.html
+- Documentation Topology v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/DOC_TOPOLOGY_v0.1.html
+- Domain Kits v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/DOMAIN_KITS_v0.1.html
+- Genesis Editor Architecture (Draft v0.1): https://corbensorenson.github.io/genesisCode/docs/spec/EDITOR_ARCH.html
+- Genesis Editor Capability Surface (v0.1): https://corbensorenson.github.io/genesisCode/docs/spec/EDITOR_CAPS.html
+- Evidence Store v0.2 (Durability + Integrity): https://corbensorenson.github.io/genesisCode/docs/spec/EVIDENCE_STORE.html
+- Feature Matrix Evidence Ledger v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.html
+- Filesystem Capability Sandbox v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/FS_SANDBOX.html
+- Full-Selfhost Cutover Profile v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.html
+- Effect Log (.gclog) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/GCLOG.html
+- Deprecated GCLOG Schema Split: https://corbensorenson.github.io/genesisCode/docs/spec/GCLOG_SCHEMA.html
+- GCPM Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GCPM_BUNDLE_v0.1.html
+- GCPM JSON Schemas v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GCPM_JSON_SCHEMAS_v0.1.html
+- GCPM Workflow Reports v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.html
+- GC-AGENT-v0.3 Core Card: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_CORE_CARD_v0.3.html
+- GC-AGENT-v0.3 Task Cards: https://corbensorenson.github.io/genesisCode/docs/spec/GC_AGENT_TASK_CARDS_v0.3.html
+- GenesisCode .gc Module Boundaries v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GC_MODULE_BOUNDARIES_v0.1.html
+- Genesis Graphics Capability Surface (Draft v0.1): https://corbensorenson.github.io/genesisCode/docs/spec/GFX_CAPS.html
+- GFX Runtime Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GFX_RUNTIME_BUNDLE_v0.1.html
+- GPU Compute Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GPU_COMPUTE_BUNDLE_v0.1.html
+- GPU Compute Runtime Profile v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.html
+- GPU/GFX Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/GPU_GFX_BUNDLE_v0.1.html
+- Host ABI (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/HOST_ABI.html
+- Host Bridge Protocol v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/HOST_BRIDGE_PROTOCOL.html
+- Host Runtime Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/HOST_RUNTIME_BUNDLE_v0.1.html
+- Large Workspace Agent Perf v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.html
+- Module Scope + def Semantics v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/MODULE_SCOPE.html
+- Optimizer (gc_opt) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/OPTIMIZER.html
+- package.toml (Package Manifest) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/PACKAGE_TOML.html
+- GenesisCode v0.2 Patch Schema (Normative): https://corbensorenson.github.io/genesisCode/docs/spec/PATCH_SCHEMA.html
+- Plugin + FFI ABI Schemas v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.html
+- Prelude Capability Index v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.html
+- GenesisCode Prerequisite Contract v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/PREREQUISITES_v0.1.html
+- Registry Policy (Local) (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/REGISTRY_POLICY.html
+- Release Smoke Contract v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/RELEASE_SMOKE_v0.1.html
+- Runtime Backend Profiles v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.html
+- GenesisCode v0.2 Normative Spec (Lock-In): https://corbensorenson.github.io/genesisCode/docs/spec/SEALS_DISPATCH_REPLAY.html
+- Selfhost Readiness Scorecard v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.html
+- Selfhost Refactor Pipeline v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/SELFHOST_REFACTOR_PIPELINE_v0.1.html
+- Selfhost Symbol Ownership Index v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.html
+- Self-Host Bootstrap API (CoreForm) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/SELF_HOST_BOOTSTRAP_API.html
+- Self-Host Boundary (WASM-First) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/SELF_HOST_BOUNDARY.html
+- Acceptance Signing (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/SIGNING.html
+- Source Size Budget v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/SOURCE_SIZE_BUDGET_v0.1.html
+- Testing Bundle v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/TESTING_BUNDLE_v0.1.html
+- Test Execution Profiles v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/TEST_EXECUTION_PROFILES_v0.1.html
+- Translation Validation Obligation v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/TRANSLATION_VALIDATION.html
+- Transparency Log (Local) (v0.2): https://corbensorenson.github.io/genesisCode/docs/spec/TRANSPARENCY_LOG.html
+- Type Terms and Typechecking v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/TYPES.html
+- Value Hashing + Effect Request Hashing v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/VALUE_EFFECT_HASH.html
+- Versioning Policy v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/VERSIONING_v0.1.html
+- Version Surfaces v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/VERSION_SURFACES_v0.1.html
+- WASI Tooling Build v0.2 (Rust Bootstrap -> genesis.wasm): https://corbensorenson.github.io/genesisCode/docs/spec/WASI.html
+- WASM Build (Pure Kernel) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/WASM.html
+- WASM Host Bridge (Effectful Stepping) v0.2: https://corbensorenson.github.io/genesisCode/docs/spec/WASM_HOST_BRIDGE.html
+- Write GenesisCode Skill Conformance v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.html
+- Write GenesisCode Skill Distribution Kit v1: https://corbensorenson.github.io/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.html
+- Write GenesisCode Skill Pack v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.html
+- Write GenesisCode Skill Contract v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/WRITE_GENESISCODE_SKILL_v0.1.html
+- XR Host Runtime v0.1: https://corbensorenson.github.io/genesisCode/docs/spec/XR_HOST_RUNTIME_v0.1.html
+- write_genesisCode_skill: https://corbensorenson.github.io/genesisCode/docs/write_genesisCode_skill.html

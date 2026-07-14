@@ -1,0 +1,49 @@
+---
+title: "Packages, tests, and evidence"
+description: "Turn modules into bounded, reproducible units accepted by obligations."
+---
+
+# Package the proof with the program
+
+## Manifest anatomy
+
+A `package.toml` declares schema version, package identity, modules, dependencies, obligations, and evaluation limits. Paths are repository-relative and cannot contain traversal components.
+
+```toml
+schema = 1
+name = "hello"
+version = "0.1.0"
+dependencies = []
+
+[[modules]]
+path = "hello.gc"
+
+[[obligations]]
+kind = "core/obligation::tests"
+
+[limits]
+step_limit = 1000000
+allow_unlimited = false
+```
+
+Use the exact schema in [Package TOML](../docs/spec/PACKAGE_TOML.md); do not infer fields from examples.
+
+## The acceptance loop
+
+```bash
+./target/debug/genesis fmt . --check
+./target/debug/genesis typecheck package.toml --engine selfhost
+./target/debug/genesis test package.toml --engine selfhost --json
+./target/debug/genesis pack package.toml --engine selfhost
+./target/debug/genesis verify <artifact>
+```
+
+Obligations can cover tests, types, determinism, AI style, resource limits, translation validation, signatures, and policy. Each completed claim needs durable evidence bound to exact inputs.
+
+## Content-addressed package state
+
+GenesisGraph snapshots, refs, commits, `.gpk` bundles, lockfiles, and registry synchronization replace an ambient Git/Pip-style trust assumption with explicit content identities and verification.
+
+## Test what matters
+
+Prefer semantic goldens, replay adversarial tests, property tests, differential tests, and resource budgets. A test that depends on absolute host paths, cache warmth, scheduler luck, or wall-clock noise is not deterministic evidence.

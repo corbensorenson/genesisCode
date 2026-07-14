@@ -62,6 +62,7 @@ for header in (
     "## Authoring",
     "## Runtime",
     "## Assurance",
+    "## Published Presentation",
     "## Operations",
     "## Update Workflow",
 ):
@@ -73,6 +74,9 @@ for required_ref in (
     "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
     "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
     "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
+    "scripts/render_quarto_reference.py",
+    "scripts/check_quarto_site.py",
+    ".github/workflows/docs-site.yml",
     "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
     "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
     "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
@@ -175,3 +179,5 @@ print(
     f"(open_ids={len(open_ids)} matrix_ids={len(matrix_ids)} open_p0_p1={len(open_p0_p1)})"
 )
 PY
+
+python3 scripts/render_quarto_reference.py --check

@@ -1,0 +1,43 @@
+---
+title: "Agent authoring"
+description: "The production protocol for agents that write, test, and repair GenesisCode."
+---
+
+# Agent-first does not mean prompt-first
+
+An effective GenesisCode agent uses typed retrieval and executable evidence, not a giant prose prompt.
+
+## Retrieval ladder
+
+1. Load the compact core card.
+2. Select one task card by exact intent.
+3. Resolve symbols, diagnostics, and CLI options through machine indexes.
+4. Retrieve one domain recipe only when the task crosses that domain.
+5. Escalate to canonical specifications for ambiguity or contract changes.
+
+The [write skill contract](../docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md), [skill pack](../docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md), and [distribution contract](../docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md) freeze this order.
+
+## Mutation protocol
+
+- Inspect repository and active policy before proposing edits.
+- State invariant, input identity, expected effect set, and acceptance evidence.
+- Keep kernel changes rarer than library/tooling changes.
+- Use canonical formatting and semantic patches.
+- Add a semantic regression for every language rule.
+- Run the smallest valid gate first, then the authority's complete gate.
+- Return structured diagnostics and exact command vectors.
+
+## Failure protocol
+
+Classify failure before repair: parse, canonicalization, type, capability, runtime, replay, obligation, package, evidence, compatibility, or infrastructure. Use cataloged safe actions. Abstain when identity, policy, or preconditions no longer match.
+
+## Context assembly examples
+
+- Pure language edit: core card + language task card + exact symbols + relevant semantic spec.
+- Filesystem workflow: core card + filesystem recipe + `io/fs::*` capability records + `caps.toml` fields.
+- Package release: package recipe + assurance profile + release smoke + compatibility registry.
+- Compiler change: selfhost cutover task card + translation validation + hash/versioning specs.
+
+## Evaluate the agent, not only its output
+
+Use the capability gauntlet, generative workloads, repair utility benchmark, runtime parity, and context-budget gates. Measure safe abstention as well as successful repair.

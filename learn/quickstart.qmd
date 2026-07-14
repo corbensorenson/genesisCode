@@ -1,0 +1,75 @@
+---
+title: "Quickstart: first verified program"
+description: "Build GenesisCode, format and evaluate CoreForm, then run a package obligation."
+---
+
+# From checkout to verified output
+
+## 1. Verify prerequisites
+
+```bash
+rustup show
+cargo --version
+bash scripts/check_prerequisite_manifest.sh
+```
+
+The pinned Rust toolchain is in `rust-toolchain.toml`. The prerequisite manifest is the machine authority for required and optional host tools.
+
+## 2. Build the CLI
+
+```bash
+cargo build -p gc_cli --locked
+./target/debug/genesis --help
+```
+
+For release behavior use the repository's selfhost-strict profile:
+
+```bash
+cargo build -p gc_cli --profile selfhost-strict --locked
+```
+
+## 3. Write a pure module
+
+Create `hello.gc`:
+
+```lisp
+(def greet
+  (fn (name)
+    (prim str/concat "hello, " name)))
+
+(greet "agent")
+```
+
+Format and evaluate it:
+
+```bash
+./target/debug/genesis fmt hello.gc
+./target/debug/genesis eval hello.gc --engine selfhost
+```
+
+Expected value: `"hello, agent"`.
+
+## 4. Observe canonical identity
+
+Formatting is semantic normalization, not cosmetic preference. Canonical CoreForm has one stable printed representation and content hash.
+
+```bash
+./target/debug/genesis fmt hello.gc --check
+./target/debug/genesis eval hello.gc --engine selfhost --json
+```
+
+Prefer `--json` in automation. The CLI writes exactly one structured object to stdout and diagnostics to the defined channel.
+
+## 5. Run a packaged example
+
+```bash
+./target/debug/genesis test examples/hello_pkg/package.toml --engine selfhost
+```
+
+A package binds module hashes, dependencies, capability policy, limits, and obligations. A passing process exit alone is not equivalent to an accepted package; inspect the returned obligation evidence.
+
+## 6. Continue
+
+- Read the [language tour](language-tour.qmd).
+- Add host interaction with [effects and replay](effects-replay.qmd).
+- Use the repository's executable [Getting Started](../docs/GETTING_STARTED.md) for WASI, browser WASM, snapshots, and graphics.

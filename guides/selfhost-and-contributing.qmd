@@ -1,0 +1,28 @@
+---
+title: "Selfhost and contributing"
+description: "Change GenesisCode without weakening its semantic identity or trust boundaries."
+---
+
+# Preserve the language while replacing the implementation
+
+## Read before changing
+
+- [`AGENTS.md`](../AGENTS.md) for non-negotiable invariants.
+- [Selfhost boundary](../docs/spec/SELF_HOST_BOUNDARY.md) for authority ownership.
+- [Translation validation](../docs/spec/TRANSLATION_VALIDATION.md) for tier equivalence.
+- [Value/effect hashing](../docs/spec/VALUE_EFFECT_HASH.md) before any hash-visible change.
+- [Versioning](../docs/spec/VERSIONING_v0.1.md) before modifying a serialized contract.
+
+## Change protocol
+
+1. Identify the normative authority and compatibility surface.
+2. Add or update executable semantic evidence first.
+3. Implement in libraries rather than adding kernel special forms.
+4. Prove native, WASI, WASM, compiled, and selfhost parity where applicable.
+5. Keep generated artifacts behind explicit update commands; checks must be read-only.
+6. Run no-panic, determinism, topology, and source-size controls.
+7. Record migration and rollback when identity changes are unavoidable.
+
+## Selfhost principle
+
+Rust stage0 remains a bootstrap and host boundary, not semantic authority for migrated domains. Demotion requires differential parity, bootstrap fixpoint, target portability, and a clear deletion/rollback gate.

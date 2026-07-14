@@ -4,6 +4,32 @@ GenesisCode is an AI-first language/runtime project focused on deterministic eva
 
 The workspace builds a CLI binary named `genesis`.
 
+## Documentation site
+
+The combined tutorial and exhaustive reference is published at
+[corbensorenson.github.io/genesisCode](https://corbensorenson.github.io/genesisCode/).
+It includes guided human and agent learning paths plus generated indexes for every
+frozen symbol, host operation, structured diagnostic, schema, example, and tracked
+documentation authority. Keyboard navigation, mobile and print layouts, stable 404
+recovery, canonical discovery metadata, and an agent-oriented `llms.txt` entrypoint
+are part of the published contract. The site is a presentation of repository sources,
+not a second semantic authority; `docs/INDEX.md` defines the canonical documentation
+roots.
+
+Render and validate the complete site locally with:
+
+```sh
+python3 scripts/render_quarto_reference.py --check
+rm -rf _site
+quarto render
+python3 scripts/check_quarto_site.py
+```
+
+The render writes `build-metadata.json` with the source commit, source-tree state,
+reference-index hash, and whole-artifact hash. GitHub Pages deploys only the validated
+artifact and then crawls the public tutorial, reference, agent index, sitemap,
+provenance, and custom-404 surfaces against that commit.
+
 ## Design goals
 
 - Pure, deterministic kernel evaluator (`Gλ` style)
@@ -18,6 +44,8 @@ The workspace builds a CLI binary named `genesis`.
 - `prelude/`: Prelude modules and language surface helpers
 - `selfhost/`: Selfhost artifact/toolchain material
 - `docs/`: Specs, handoff, policy, and status docs
+- `learn/`, `guides/`, `reference/`: Quarto learning paths and generated reference views
+- `_quarto.yml`: exhaustive documentation-site render and navigation contract
 - `scripts/`: test/health/profile gates and CI-style contract checks
 - `ROADMAP.md`: canonical v0.2-to-v1 roadmap (truthful evidence, agent SDK, bounded runtime, semantic selfhost authority, platform delivery, and post-v1 research; strategic plan, not release evidence)
 - `docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`: generated machine-readable roadmap DAG with exact readiness, risk, ownership, guards, negative controls, rollback, and evidence requirements

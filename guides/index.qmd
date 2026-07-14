@@ -1,0 +1,16 @@
+---
+title: "Task guides"
+description: "Production workflows organized by what you are trying to build or verify."
+---
+
+# Build by intent
+
+| Goal | Start here | Canonical authority |
+|---|---|---|
+| Write or repair GenesisCode with an agent | [Agent authoring](agent-authoring.qmd) | [Authoring bundle](../docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md) |
+| Build services, storage, networking, or data pipelines | [Services and data](services-and-data.qmd) | [Host runtime bundle](../docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md) |
+| Build GPU compute, graphics, browser, or XR workflows | [GPU, graphics, and XR](gpu-graphics-xr.qmd) | [GPU/GFX bundle](../docs/spec/GPU_GFX_BUNDLE_v0.1.md) |
+| Harden policy, evidence, release, and replay | [Security and assurance](security-assurance.qmd) | [Assurance artifacts](../docs/spec/ASSURANCE_ARTIFACTS_v0.1.md) |
+| Change the compiler, selfhost toolchain, or project | [Selfhost and contributing](selfhost-and-contributing.qmd) | [Selfhost boundary](../docs/spec/SELF_HOST_BOUNDARY.md) |
+
+Every guide distinguishes stable contract, current maturity, and unresolved roadmap work. A documented operation is not automatically production-ready; check the capability ledger and feature matrix.

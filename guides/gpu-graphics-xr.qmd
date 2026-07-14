@@ -1,0 +1,32 @@
+---
+title: "GPU, graphics, browser, and XR"
+description: "Choose runtime profiles and build deterministic plans around host-rendered work."
+---
+
+# Keep plans deterministic, execute at the edge
+
+GenesisCode treats compute dispatch, windows, input, audio, frame graphs, browser APIs, and XR sessions as host capabilities. Pure code constructs descriptors, scenes, command plans, and state transitions; a backend performs device work.
+
+## Choose an explicit backend profile
+
+- **First-party runtime** for supported native host implementations.
+- **Device runtime** when real GPU execution is required and proven by hardware evidence.
+- **Bridge profile** for pinned external host adapters.
+- **WASI/browser profile** for deterministic host-provided responses.
+- **Headless/fallback profile** only when the acceptance contract permits it.
+
+Never let a fallback satisfy a device-required release claim. Read [runtime backend profiles](../docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md).
+
+## Graphics loop
+
+1. Build immutable scene/UI state.
+2. Derive a frame graph and bounded draw/compute command set.
+3. Perform input, surface, audio, GPU, and present effects.
+4. Record deterministic response facts and frame metadata.
+5. Replay state transitions against the recorded host boundary.
+
+## Evidence
+
+Capture adapter/backend identity, fallback mode, workload identity, output hashes, timing distribution, warmup policy, and negative controls. Hardware microbench evidence belongs on the declared device runner, not on a generic CI fallback.
+
+Start with the [GPU compute](../docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md), [game loop](../docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md), [browser](../docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md), and [XR](../docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md) recipes.

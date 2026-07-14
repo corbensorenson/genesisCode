@@ -1,0 +1,22 @@
+---
+title: "Language reference map"
+description: "A compact map to normative GenesisCode language semantics."
+---
+
+# Semantic map
+
+| Area | Normative source | Key contract |
+|---|---|---|
+| Reader, printer, canonical hash | [CoreForm canon/hash](../docs/spec/COREFORM_CANON_HASH.md) | Equivalent forms print and hash identically |
+| Evaluation and module scope | [Module scope](../docs/spec/MODULE_SCOPE.md) | Pure lexical evaluation; top-level recursive `def` |
+| Runtime values and effect hashes | [Value/effect hash](../docs/spec/VALUE_EFFECT_HASH.md) | Total, stable hashes for replay |
+| Seals and dispatch | [Seals/dispatch/replay](../docs/spec/SEALS_DISPATCH_REPLAY.md) | Protocol values cannot be forged |
+| Types | [Types](../docs/spec/TYPES.md) | Typechecking remains outside TCB-A |
+| Standard library | [Foundation stdlib](../docs/FOUNDATION_STDLIB_v0.2.md) | Behavior in libraries, not kernel forms |
+| Effects and concurrency | [Concurrency](../docs/spec/CONCURRENCY_v0.1.md) | Deterministic scheduling facts and explicit host work |
+| Optimization | [Optimizer](../docs/spec/OPTIMIZER.md) | Semantics preserved by validation |
+| Translation tiers | [Translation validation](../docs/spec/TRANSLATION_VALIDATION.md) | Same canonical behavior across tiers |
+
+## Exact inventory
+
+The generated [symbol reference](symbols.qmd) is the closed, searchable inventory for the current agent profile. Unsupported classes are explicit; absence is not permission to invent syntax or behavior.

@@ -1,0 +1,61 @@
+---
+title: "Effects, capabilities, and replay"
+description: "Perform host work without putting nondeterminism in the kernel."
+---
+
+# Make every host interaction explicit
+
+## Construct an effect program
+
+```lisp
+(def read-config
+  (core/effect::perform
+    'io/fs::read
+    {:path "config.gc"}
+    (fn (bytes)
+      (core/effect::pure bytes))))
+
+read-config
+```
+
+The kernel evaluates this to a sealed request. It does not open a file.
+
+## Authorize the minimum operation
+
+```toml
+allow = ["io/fs::read"]
+
+[op."io/fs::read"]
+base_dir = "."
+max_bytes = 1048576
+```
+
+Anything absent from `allow` is denied. Per-operation policy narrows paths, remotes, programs, plugins, schemas, timeouts, and budgets. The exhaustive policy surface is in [`caps.toml`](../docs/spec/CAPS_TOML.md).
+
+## Run and record
+
+```bash
+./target/debug/genesis run read_config.gc \
+  --caps caps.toml \
+  --log-out read_config.gclog \
+  --engine selfhost
+```
+
+Each entry records operation, payload hash, continuation hash, request hash, response hash, decision, capability descriptor, and scheduler facts where applicable.
+
+## Replay without repeating the effect
+
+```bash
+./target/debug/genesis replay read_config.gc read_config.gclog \
+  --engine selfhost
+```
+
+Replay consumes entries in order and fails on any mismatch. It reproduces the terminal value without reading the host file again.
+
+## Handle failure as data
+
+Capability denial, timeout, malformed bridge output, budget exhaustion, and unavailable backends become trusted sealed `ERROR` values at the boundary. Use `core/effect::catch` for recoverable branches; do not pattern-match a forged error-shaped map.
+
+::: {.callout-note}
+The log is provenance, not permission. Replay validates what happened; `caps.toml` decides what may happen during a live run.
+:::

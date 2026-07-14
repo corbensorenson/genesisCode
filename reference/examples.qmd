@@ -1,0 +1,366 @@
+---
+title: "Example catalog"
+description: "Every tracked GenesisCode example and agent workflow."
+toc: true
+toc-depth: 2
+---
+
+# Examples by workflow
+
+**33 workflows** · **125 files**. Examples demonstrate composition; normative behavior comes from linked specifications.
+
+## `agent_backend_topology_workflow`
+
+Agent Backend Topology Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_backend_topology_workflow/workflow_run.gc) |
+
+## `agent_browser_runtime_workflow`
+
+Agent Browser Runtime Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_browser_runtime_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_browser_runtime_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_browser_runtime_workflow/workflow_run.gc) |
+
+## `agent_compute_workflow`
+
+Agent Compute Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/README.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/caps.toml) |
+| `gpu_parallel.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/gpu_parallel.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/package.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_compute_workflow/workflow_run.gc) |
+
+## `agent_deploy_android_workflow`
+
+Agent Deploy Android Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_android_workflow/workflow.sh) |
+
+## `agent_deploy_bundle_workflow`
+
+Agent Deploy Bundle Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_bundle_workflow/caps.toml) |
+| `lib.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_bundle_workflow/lib.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_bundle_workflow/package.toml) |
+| `target_workflow_lib.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_bundle_workflow/target_workflow_lib.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_bundle_workflow/workflow.sh) |
+
+## `agent_deploy_edge_workflow`
+
+Agent Deploy Edge Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_edge_workflow/workflow.sh) |
+
+## `agent_deploy_ios_workflow`
+
+Agent Deploy Ios Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_ios_workflow/workflow.sh) |
+
+## `agent_deploy_service_runtime_workflow`
+
+Agent Deploy Service Runtime Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_deploy_service_runtime_workflow/workflow.sh) |
+
+## `agent_durable_data_workflow`
+
+Agent Durable Data Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_durable_data_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_durable_data_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_durable_data_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_durable_data_workflow/workflow_run.gc) |
+
+## `agent_filesystem_workflow`
+
+Agent Filesystem Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_filesystem_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_filesystem_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_filesystem_workflow/workflow_run.gc) |
+
+## `agent_gpu_compute_workflow`
+
+Agent GPU Compute Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/README.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/caps.toml) |
+| `compute_parallel.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/compute_parallel.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/package.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_gpu_compute_workflow/workflow_run.gc) |
+
+## `agent_hardware_device_bridge_workflow`
+
+Agent Hardware Device Bridge Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_hardware_device_bridge_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_hardware_device_bridge_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_hardware_device_bridge_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_hardware_device_bridge_workflow/workflow_run.gc) |
+
+## `agent_inbound_server_workflow`
+
+Agent Inbound Server Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_inbound_server_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_inbound_server_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_inbound_server_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_inbound_server_workflow/workflow_run.gc) |
+
+## `agent_interactive_gfx_compute_workflow`
+
+Agent Interactive GFX + Compute Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/README.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/caps.toml) |
+| `interactive.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/interactive.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/package.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_interactive_gfx_compute_workflow/workflow_run.gc) |
+
+## `agent_long_running_gfx_loop_workflow`
+
+Agent Long-Running GFX Loop Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/README.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/caps.toml) |
+| `loop.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/loop.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/package.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_long_running_gfx_loop_workflow/workflow_run.gc) |
+
+## `agent_media_asset_workflow`
+
+Agent Media Asset Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_media_asset_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_media_asset_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_media_asset_workflow/workflow_run.gc) |
+| `workflow_run.gclog` | gclog | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_media_asset_workflow/workflow_run.gclog) |
+
+## `agent_ml_pipeline_variant_workflow`
+
+Agent Ml Pipeline Variant Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ml_pipeline_variant_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ml_pipeline_variant_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ml_pipeline_variant_workflow/workflow_run.gc) |
+
+## `agent_multi_agent_orchestration_workflow`
+
+Agent Multi Agent Orchestration Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_agent_orchestration_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_agent_orchestration_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_agent_orchestration_workflow/workflow_run.gc) |
+
+## `agent_multi_package_publish_workflow`
+
+Agent Multi-Package Publish Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/README.md) |
+| `app.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/app/app.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/app/package.toml) |
+| `lib.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/lib/lib.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/lib/package.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_multi_package_publish_workflow/workflow.sh) |
+
+## `agent_network_process_workflow`
+
+Agent Network + Process Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/README.md) |
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/caps.toml) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/package.toml) |
+| `service.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/service.gc) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/workflow_run.gc) |
+| `workflow_run.gclog` | gclog | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_network_process_workflow/workflow_run.gclog) |
+
+## `agent_plugin_runtime_workflow`
+
+Agent Plugin Runtime Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_plugin_runtime_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_plugin_runtime_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_plugin_runtime_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_plugin_runtime_workflow/workflow_run.gc) |
+
+## `agent_process_lifecycle_workflow`
+
+Agent Process Lifecycle Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_process_lifecycle_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_process_lifecycle_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_process_lifecycle_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_process_lifecycle_workflow/workflow_run.gc) |
+
+## `agent_raw_network_sockets_workflow`
+
+Agent Raw Network Sockets Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_raw_network_sockets_workflow/caps.toml) |
+| `host_bridge.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_raw_network_sockets_workflow/tools/host_bridge.sh) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_raw_network_sockets_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_raw_network_sockets_workflow/workflow_run.gc) |
+
+## `agent_realtime_collaboration_workflow`
+
+Agent Realtime Collaboration Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_realtime_collaboration_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_realtime_collaboration_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_realtime_collaboration_workflow/workflow_run.gc) |
+
+## `agent_semantic_refactor_apply_workflow`
+
+Agent Semantic Refactor Apply Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_semantic_refactor_apply_workflow/workflow.sh) |
+
+## `agent_service_workflow`
+
+Agent Service Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_service_workflow/README.md) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_service_workflow/package.toml) |
+| `service.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_service_workflow/service.gc) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_service_workflow/workflow.sh) |
+
+## `agent_time_control_workflow`
+
+Agent Time Control Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_time_control_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_time_control_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_time_control_workflow/workflow_run.gc) |
+
+## `agent_ui_app_stack_workflow`
+
+Agent Ui App Stack Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ui_app_stack_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ui_app_stack_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_ui_app_stack_workflow/workflow_run.gc) |
+
+## `agent_xr_runtime_workflow`
+
+Agent Xr Runtime Workflow
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/caps.toml) |
+| `workflow.sh` | sh | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/workflow.sh) |
+| `workflow_run.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/agent_xr_runtime_workflow/workflow_run.gc) |
+
+## `effects_demo`
+
+Effects Demo
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/effects_demo/caps.toml) |
+| `data.txt` | txt | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/effects_demo/data.txt) |
+| `read.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/effects_demo/read.gc) |
+
+## `gfx_demos`
+
+Graphics Demos (.gc only)
+
+| File | Kind | Source |
+|---|---|---|
+| `README.md` | md | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/gfx_demos/README.md) |
+| `hybrid_web.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/gfx_demos/hybrid_web.gc) |
+| `scene3d.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/gfx_demos/scene3d.gc) |
+| `ui_app.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/gfx_demos/ui_app.gc) |
+
+## `hello_pkg`
+
+Hello Pkg
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/hello_pkg/caps.toml) |
+| `hello.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/hello_pkg/hello.gc) |
+| `package.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/hello_pkg/package.toml) |
+| `toolcaps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/hello_pkg/toolcaps.toml) |
+
+## `selfhost_tools`
+
+Selfhost Tools
+
+| File | Kind | Source |
+|---|---|---|
+| `caps.toml` | toml | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/selfhost_tools/caps.toml) |
+| `fmt_file.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/selfhost_tools/fmt_file.gc) |
+| `input.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/selfhost_tools/input.gc) |
+| `output.gc` | gc | [open](https://github.com/corbensorenson/genesisCode/blob/master/examples/selfhost_tools/output.gc) |

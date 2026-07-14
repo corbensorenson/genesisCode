@@ -1,0 +1,169 @@
+project:
+  type: website
+  output-dir: _site
+  pre-render: python3 scripts/render_quarto_reference.py --check
+  post-render: python3 scripts/stamp_quarto_site.py
+  render:
+    - index.qmd
+    - 404.qmd
+    - learn/**/*.qmd
+    - guides/**/*.qmd
+    - reference/**/*.qmd
+    - docs/**/*.md
+    - docs/policies/README.md
+    - README.md
+    - CHANGELOG.md
+    - ROADMAP.md
+    - feature_matrix.md
+    - upgrade_plan.md
+    - genesisCode.md
+    - AGENTS.md
+  resources:
+    - .nojekyll
+    - llms.txt
+    - reference/generated/reference-index.json
+    - docs/**/*.json
+    - docs/**/*.schema.json
+    - docs/**/*.toml
+    - docs/**/*.txt
+    - docs/**/*.pub
+    - docs/**/*.bin
+    - docs/policies/*.toml
+    - policies/**
+    - examples/**
+    - genesis.*
+    - package.json
+    - package-lock.json
+    - rust-toolchain.toml
+
+website:
+  title: "GenesisCode"
+  description: "The exhaustive reference and learning system for the AI-first GenesisCode language."
+  site-url: "https://corbensorenson.github.io/genesisCode/"
+  repo-url: "https://github.com/corbensorenson/genesisCode"
+  repo-branch: master
+  repo-actions: [edit, source, issue]
+  favicon: site_assets/genesis-mark.svg
+  open-graph: true
+  twitter-card: true
+  page-navigation: true
+  bread-crumbs: true
+  reader-mode: true
+  search:
+    location: navbar
+    type: overlay
+    limit: 50
+    copy-button: true
+  announcement:
+    icon: cone-striped
+    dismissable: true
+    content: "GenesisCode v0.2 is pre-1.0. Treat compatibility and maturity labels as part of every API contract."
+    type: warning
+    position: below-navbar
+  navbar:
+    logo: site_assets/genesis-mark.svg
+    logo-alt: "GenesisCode lambda mark"
+    background: dark
+    foreground: light
+    pinned: true
+    left:
+      - text: Learn
+        href: learn/index.qmd
+      - text: Guides
+        href: guides/index.qmd
+      - text: Reference
+        href: reference/index.qmd
+      - text: Canonical specs
+        href: docs/INDEX.md
+    right:
+      - icon: github
+        href: "https://github.com/corbensorenson/genesisCode"
+        aria-label: GenesisCode on GitHub
+  sidebar:
+    style: docked
+    collapse-level: 1
+    search: true
+    contents:
+      - section: "Learn GenesisCode"
+        href: learn/index.qmd
+        contents:
+          - learn/quickstart.qmd
+          - learn/language-tour.qmd
+          - learn/effects-replay.qmd
+          - learn/packages-testing.qmd
+          - learn/agent-loop.qmd
+      - section: "Build with it"
+        href: guides/index.qmd
+        contents:
+          - guides/agent-authoring.qmd
+          - guides/services-and-data.qmd
+          - guides/gpu-graphics-xr.qmd
+          - guides/security-assurance.qmd
+          - guides/selfhost-and-contributing.qmd
+      - section: "Exhaustive reference"
+        href: reference/index.qmd
+        contents:
+          - reference/language.qmd
+          - reference/symbols.qmd
+          - reference/capabilities.qmd
+          - reference/diagnostics.qmd
+          - reference/cli.qmd
+          - reference/formats.qmd
+          - reference/examples.qmd
+          - reference/source-catalog.qmd
+      - section: "Normative roots"
+        contents:
+          - docs/PAPER_v0.2.md
+          - docs/spec/COREFORM_CANON_HASH.md
+          - docs/spec/MODULE_SCOPE.md
+          - docs/spec/TYPES.md
+          - docs/spec/SEALS_DISPATCH_REPLAY.md
+          - docs/spec/CAPS_TOML.md
+          - docs/spec/PACKAGE_TOML.md
+          - docs/spec/CLI.md
+          - docs/spec/HOST_ABI.md
+          - docs/spec/ASSURANCE_ARTIFACTS_v0.1.md
+  page-footer:
+    left: "GenesisCode v0.2 · deterministic by construction · AI-first by contract"
+    center:
+      - text: Docs index
+        href: docs/INDEX.md
+      - text: llms.txt
+        href: llms.txt
+      - text: Roadmap
+        href: ROADMAP.md
+    right:
+      - icon: github
+        href: "https://github.com/corbensorenson/genesisCode"
+
+format:
+  html:
+    theme:
+      - cosmo
+      - site_assets/genesis.scss
+    css: site_assets/site.css
+    include-in-header: site_assets/head.html
+    include-before-body: site_assets/skip-link.html
+    toc: true
+    toc-depth: 3
+    toc-location: right
+    code-copy: true
+    code-link: true
+    code-overflow: wrap
+    code-line-numbers: false
+    anchor-sections: true
+    smooth-scroll: true
+    link-external-newwindow: true
+    grid:
+      sidebar-width: 285px
+      body-width: 920px
+      margin-width: 300px
+      gutter-width: 2rem
+
+execute:
+  enabled: false
+
+lang: en-US
+
+language:
+  search-box-placeholder: "Search symbols, effects, diagnostics, and guides"

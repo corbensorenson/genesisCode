@@ -1,0 +1,939 @@
+{
+  "authorities": {
+    "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json": "8cfdbd6ac1953babd0abd430ada67e377624d88617f4b3982e4f3ae1c1e4c805",
+    "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json": "d550ff4cf9ca2d4aef784ce61e0cafcfc767ddad61dfa11b071240ba50847ae9",
+    "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
+  },
+  "counts": {
+    "canonicalSources": 230,
+    "diagnostics": 180,
+    "exampleFiles": 125,
+    "hostOperations": 188,
+    "schemas": 43,
+    "symbols": 168
+  },
+  "kind": "genesis/quarto-reference-index-v0.1",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "f1dbd457caf7c06cfbca4d6b24b37ab03f58b2e5401def812253d5c823b7ea5a"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "7ce45a3a0372763f1a16d81678540b7579dfc8e4f1bf2bb99f0ef99f412f96d6"
+    },
+    {
+      "path": "README.md",
+      "sha256": "0a9541a9b18bfe23abaea0d1db829ae838d24ebd7d5e5afea0d0d8c83d0ec90f"
+    },
+    {
+      "path": "ROADMAP.md",
+      "sha256": "9c54b09cbfe387fe5265c19d09ee8fa0c5c5fe571dde1e762ad3ade7a2be3f79"
+    },
+    {
+      "path": "docs/AGENT_ONBOARDING_v0.1.md",
+      "sha256": "4adcea51aefe77198fa5276d3b51db4cd5b38cced768f79bc770b8bef771c515"
+    },
+    {
+      "path": "docs/DEPRECATION_MAP_v0.1.md",
+      "sha256": "961d8acb5a56e8ff86a9e911fb3299c1e7d6ba1849f14e62ea695ffe15b89088"
+    },
+    {
+      "path": "docs/FOUNDATION_STDLIB_v0.2.md",
+      "sha256": "3a6c7f25a4757b98f86d8acf9ea82b037a8b90ede16bdfacf2922b9659be1b71"
+    },
+    {
+      "path": "docs/GETTING_STARTED.md",
+      "sha256": "8a34a02cc2b99b18e840863e1283b9043628312954b53148e6ec19354559abc4"
+    },
+    {
+      "path": "docs/INDEX.md",
+      "sha256": "a215440b7b24cc5e5b16b702091d1a9315eeb4f9bad01b4f40c9df9416c0d98b"
+    },
+    {
+      "path": "docs/PAPER_v0.2.md",
+      "sha256": "53c93937e42c032753763a817cc0d372362734803909cff1a7db43bf220ab7f6"
+    },
+    {
+      "path": "docs/POLICY_DEFAULTS_v0.1.md",
+      "sha256": "3cd6800f37c20066431554d742a2fa3c11f8642ee9f0d6b9f42eddf9127b45e2"
+    },
+    {
+      "path": "docs/STACKS_v0.2.md",
+      "sha256": "8c0df911adebc7655bc0447891f9f31db521d0be96d8db221d3a77229eca72f1"
+    },
+    {
+      "path": "docs/STYLE_GUIDE_v0.2.md",
+      "sha256": "9a7b0fd16ea1240301100f85b6dcdc0eb1f2c6d00b8445c5b50f398ce5319341"
+    },
+    {
+      "path": "docs/TECH_HANDOFF.md",
+      "sha256": "98a2886c6339757c184bf28042afb06e94f3dc82ad0eca172086af230a455095"
+    },
+    {
+      "path": "docs/policies/README.md",
+      "sha256": "c977ed72913ea2b45a4d8bb82aba679b4a263e10ce0f57001e48b088274be398"
+    },
+    {
+      "path": "docs/policies/ffi_signed_runtime_caps_v0.1.toml",
+      "sha256": "c04eb721fd7e25f981000fdc55b86224bfb7b02259d7b2e7936c2df295a342f5"
+    },
+    {
+      "path": "docs/policies/gfx_desktop_first_party_caps_v0.1.toml",
+      "sha256": "45f97b184b49f848f93c553d18bce4eb61f9a84ed1f99943260ef0d6d099d58d"
+    },
+    {
+      "path": "docs/policies/gpu_compute_bridge_device_caps_v0.1.toml",
+      "sha256": "eee459f39a8a364b9f8719e88bd776659b22ee06919327e845e484aa08cb795f"
+    },
+    {
+      "path": "docs/policies/gpu_compute_bridge_fallback_caps_v0.1.toml",
+      "sha256": "7ae1745051d098b4c1c1babf1b96276f13622895fd0d86bee35a27fc742f3ced"
+    },
+    {
+      "path": "docs/policies/gpu_device_runtime_caps_v0.1.toml",
+      "sha256": "a21993ee69dd8dc8c5499aa0175678fede431d3fe51770856b2caf004244e639"
+    },
+    {
+      "path": "docs/policies/xr_webxr_device_caps_v0.1.toml",
+      "sha256": "cd573dc3d8d78f38bbfca2c647a429d0246c008ca43eca2e9bf660ee72649e32"
+    },
+    {
+      "path": "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.json",
+      "sha256": "ea214aaf6481ecbee97cc96a3090c364c7d6a120132d1ba00ba275ba97c58ac6"
+    },
+    {
+      "path": "docs/program/ASSURANCE_CONTROL_CLOSURES_v0.1.md",
+      "sha256": "d32cbb596593d9ce20a4539131cda5962391e1599e15e5846a671095d73a6e37"
+    },
+    {
+      "path": "docs/program/ASSURANCE_PROGRAM_BACKLOG_v0.1.md",
+      "sha256": "6fda8dcd71f2158abc345b2690b5662ee43f6b4aefa34abed51dd1412463080d"
+    },
+    {
+      "path": "docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json",
+      "sha256": "f9f281eb2bf7a70148f98f5df3a226c63240803f41a0b59b705afb177d93e842"
+    },
+    {
+      "path": "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json",
+      "sha256": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173"
+    },
+    {
+      "path": "docs/program/RELEASE_NOTES_v0.2.0.json",
+      "sha256": "c82cf48cb9dc2d78849e27cc0b7a8e8d61b04776fe8ffa946d22f6fb045d2469"
+    },
+    {
+      "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
+      "sha256": "5f79e42bc1a51eb754ca5a1e4a6ed6fdaccda1e40b3b828daac58b3b85504a59"
+    },
+    {
+      "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
+      "sha256": "4d821d2aba3430d11cd72dd96e95a1f6a61e79b0eb2bf2502061dc228d225e46"
+    },
+    {
+      "path": "docs/program/assurance_closures/do178c-b-authority-signoff.closure.json",
+      "sha256": "31533ffae41beeb44b2eb184a4d0d6fd1a2e74597146f4f02d4d5377e2a89a82"
+    },
+    {
+      "path": "docs/program/assurance_closures/iec62304-c-qms-integration.closure.json",
+      "sha256": "68a9f4ee61eeeebbf4b6e1b6acc7be0469af5299e899566f500ea12852a4ee69"
+    },
+    {
+      "path": "docs/program/assurance_closures/nasa-a-ivv-governance.closure.json",
+      "sha256": "8ecc14af7289b5a90a9b7291813b0306beea29b3fbe6f8d5f410e17d33059e48"
+    },
+    {
+      "path": "docs/program/assurance_closures/nasa-b-ivv-org-scope.closure.json",
+      "sha256": "5907452a148c32d9ae54574e16b145f5400f214193d31ddb066a40f5d0b98c85"
+    },
+    {
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json",
+      "sha256": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546"
+    },
+    {
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json",
+      "sha256": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81"
+    },
+    {
+      "path": "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json",
+      "sha256": "5595e59ffce6727ad73987bac84fb2bc993cc0c113377d7d4fc18c443d168491"
+    },
+    {
+      "path": "docs/program/evidence/artifact/genesis-example.bin",
+      "sha256": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d"
+    },
+    {
+      "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json",
+      "sha256": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280"
+    },
+    {
+      "path": "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub",
+      "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/manifest.json",
+      "sha256": "08aacd230b0765844e4508db9d85d4558f3db61f9130d91bf167bfb147649d37"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/assurance_release.md",
+      "sha256": "6fd8ff49a7ebb4a39b141e24d1caf9b6e05c58a94c51fe98a13391a060de4901"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/backlog_slice.md",
+      "sha256": "52700efcd0ef8fbecfab97065d887144553467d04a416073ea0117c7d1307f5e"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/capability_addition.md",
+      "sha256": "2a3fa62c803520b52abd39e93bd186ce4c225e1e196616eba1c02964c944b8b3"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/complex_ui_app_stacks.md",
+      "sha256": "1a696b50aae5c811bfd7d615e9ee0a0eb93f11839fb8411a062e60aaf5e7a21c"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/data_pipeline.md",
+      "sha256": "e7d9ff4e3019724a94fb5e68106eae5489bf35154d71e68ddd12405c9c96f973"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/deployment_targets.md",
+      "sha256": "db5f2bf50d411b68c73076e7ad459b885060f518c7bb3d844c31400f65464ced"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/failure_recovery.md",
+      "sha256": "21561f37cb551899dc358a335601246d634080d43352a9925e547443c883bd80"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/hardware_device_integration.md",
+      "sha256": "90cdf3c103a90b2992c2e9e461fd4644bbdc9471131046f3761c2edddb2ee4e5"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/ml_data_engineering.md",
+      "sha256": "9493cad663982e8a7255430d91ed298c8a453231da10fa7b2712a6858a45b4a1"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/performance_triage.md",
+      "sha256": "650f095e80b032978e726f0e15c4a9ca7b7a63bb106299abb7152ac3e7c8245a"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/plugin_ffi.md",
+      "sha256": "7ecf1a726e9bdbe7d3bb3d0848d68a6900cea94350b8e00b70e24915e7010e22"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/security_auth_services.md",
+      "sha256": "f1bb3a751eda34ef40df54a76d52c31ad911b1488a98a88b916a1b16f3c4a88e"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/selfhost_cutover.md",
+      "sha256": "5ee1e85ac5434ce66e125a0622b0d0b590e70e0e8a6ac78a50a5bb889a44833b"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/prompts/xr_experience.md",
+      "sha256": "b44f123d1a0a1c4cc8d443a51e2c27466e12f2c94b00504f2500ef9fab7911c2"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/assurance_workflow.md",
+      "sha256": "73258daea44644bf0a1794eb84cd50d41557e97cc703b4dff13ddffb472bc7ff"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/backend_topology_workflow.md",
+      "sha256": "a41192cb3224e02c3dc6d1be6b8481a766d5f94814404d7e9a38b42d891f824e"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/browser_runtime_workflow.md",
+      "sha256": "8a5d762dd884158ce13c34307a4740d48e0252cbf17c45e73f3f572419e3983a"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/complex_ui_app_stacks_workflow.md",
+      "sha256": "04bb67d7a4019c0fdcbf4a53d977c016b3f181528c1e3aef7ac3f6b184eed427"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md",
+      "sha256": "a292456d4d3030d67651f72a1d7f5c40bb11162924fb3653852a64f43072f259"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/deployment_targets_workflow.md",
+      "sha256": "84ef342af314827e4bc3ffaef207542a01bb1fe20ed0551c3bb39c3f82bb1bb7"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/failure_recovery_workflow.md",
+      "sha256": "8e44ef07f4bbb02d87d2869512d9ec608216baf71375b21fb1f1009cfd7020fe"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/filesystem_workflow.md",
+      "sha256": "c57685abbb118d0460ce632396fde5c7cdeb6144c0c8c467d625f75525898a37"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/game_loop_workflow.md",
+      "sha256": "ec232b8edcca410d1430dac0d0dcfb4caa0a2c2aebfaa3496a5a218ca3b53258"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/gpu_compute_workflow.md",
+      "sha256": "2be32061731d56e1bf01ac4b01d7b707ac415a6f95c4f917c41abb8ad132fd52"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/hardware_device_integration_workflow.md",
+      "sha256": "5eeedd20220bddcccae2f212f833b17a9f00f94c2fd20ef42ee435216f0aa644"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/inbound_server_workflow.md",
+      "sha256": "27685c81f6e9996fbd0742d311e9105db9fff829e9802da333557afdd22034fc"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/ml_data_engineering_workflow.md",
+      "sha256": "84e2de917d9a9dd396f417b87eb45bd3cf226ca7470014fb16f2453d662f7419"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/multi_agent_orchestration_workflow.md",
+      "sha256": "4a002779090b05747b079be3a1f8eee2e88443a69bc2bb1e56a424708c649416"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/network_process_workflow.md",
+      "sha256": "5a25c34b7fdc89d9075208dedf4f425c67320b2396c6f895fc892afeeda3043c"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/package_workflow.md",
+      "sha256": "733bfab457fe72c2a40f26a760ef19ff6a5bb27e33de32d66cda8a06e339100a"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/performance_triage_workflow.md",
+      "sha256": "eafca6f6aa3d6add869429f4ce8d96d7ef8760c9d0532c7fd92dbdcfd43aa3c8"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/plugin_ffi_workflow.md",
+      "sha256": "92ccf4de79e49c24b91665488e92b4cb83fb47fc1158372060082b3789f0992c"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/process_lifecycle_workflow.md",
+      "sha256": "67fd7c500a0d408beb25cf66e9a302a7959415b7943813d32effe02d4401c87e"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/raw_network_sockets_workflow.md",
+      "sha256": "029e7467fc8d28c85598e7199f28b0f9d213d1719b28526c80f231dc5631dcec"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/realtime_collaboration_workflow.md",
+      "sha256": "1fc2fa67d7eb3c25b16852e0e392b9fea719d68ce8621d90993bd2e7d7525c68"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/security_auth_services_workflow.md",
+      "sha256": "80662133c8ffcaf2a3684de9e8dd40d3134abf2b6bf848df895e43ba6d109cc1"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md",
+      "sha256": "8552c3bffb983b595fc2cd2644394ab06e40599ab4e7d828433f71cb375ddb71"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/time_control_workflow.md",
+      "sha256": "5f0104194fa3787ba7770e2db20053b20b0aef0af3fec1e982a92f72d18e5d4e"
+    },
+    {
+      "path": "docs/skill_pack/write_genesiscode_v1/recipes/xr_workflow.md",
+      "sha256": "7d5b0c4d710ca0542ed3bb8e8cea0bc7c815b9e2893164362354b5f38d2ba8f1"
+    },
+    {
+      "path": "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
+      "sha256": "8e288990afd14a48479d2e50e6af7f8de48edd15b7f67c5f50549270f9c88955"
+    },
+    {
+      "path": "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
+      "sha256": "0c52e5595d37bbed4a593c69f5f0e64061e6564afa967de28933b0dbc990add0"
+    },
+    {
+      "path": "docs/spec/AGENT_GENERATIVE_WORKLOADS_v0.1.md",
+      "sha256": "c3693b1a3d2011118685a5d8d7d063edfd98952616b92c380196b73385b53d36"
+    },
+    {
+      "path": "docs/spec/AGENT_INDEX_v0.1.md",
+      "sha256": "115add9a6b8323c248ffab216322e700a02918b0ca8a5bbc67e9850e68237c08"
+    },
+    {
+      "path": "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
+      "sha256": "07abf0b5118dcd5d5eef890d0fe37bbb84c5aed02fed78aaa40533617cce1edb"
+    },
+    {
+      "path": "docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md",
+      "sha256": "70fb21c867924922b91041a13ffce5849c0590761ead2da8c3adee1da24e1e80"
+    },
+    {
+      "path": "docs/spec/AI_STYLE.md",
+      "sha256": "7b79fef136fd2c7ed4426dee4e9eeb673d129eae12861136794f1d7da8b6d17f"
+    },
+    {
+      "path": "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
+      "sha256": "11a19a3b711d21c8a188ab8a66379d5fedbc3a3033dfee9bb26e9c9eb4c118d9"
+    },
+    {
+      "path": "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
+      "sha256": "9f0d0b7aa98af94b1fa6e28b4ceeaacb52eed2f65380038a8f52fd7a4680d9cf"
+    },
+    {
+      "path": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
+      "sha256": "009f508d2c2dc86a3485756002f035d31c2bc1b28de779cc0848497bf2e96048"
+    },
+    {
+      "path": "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md",
+      "sha256": "98644f5264ffaecff3b01f4222177148dc56c817e18e2ddc0f863dc91112d766"
+    },
+    {
+      "path": "docs/spec/BOOTSTRAP_OLD.md",
+      "sha256": "f6bf7d5770485634b2c313e39aa27a2d58c4517d78605c7f477865ce41ca4073"
+    },
+    {
+      "path": "docs/spec/BROWSER_HOST_RUNTIME_v0.1.md",
+      "sha256": "db8622afbfec56fc5fde1f53f605f5fabb90194df4f9ae781a488f9934d2a75c"
+    },
+    {
+      "path": "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.json",
+      "sha256": "b1263e60750ffc032036ebbb3f3ef9f2fbff8c22ba94f7f2f2dc08ed70966e5c"
+    },
+    {
+      "path": "docs/spec/CAPABILITY_COVERAGE_AUDIT_v0.1.md",
+      "sha256": "765dcf81841f00d11b087566ad703b780722077748b60c99886b15952c215c10"
+    },
+    {
+      "path": "docs/spec/CAPABILITY_COVERAGE_STATUS_v0.1.json",
+      "sha256": "f69150c81e83c9230f8909b8939290dcf32c4cc5bb2683db67a214bb4463a507"
+    },
+    {
+      "path": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+      "sha256": "96d63a1b9f32278929115e6baa69d3cc7d98285eed2c6aa2bf88e53f692fca9f"
+    },
+    {
+      "path": "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.schema.json",
+      "sha256": "2c3c10ba24e4efb49ab0cd6fdaa7b15f553fe72e9c7a2629e6c1a9089e4d4a5b"
+    },
+    {
+      "path": "docs/spec/CAPS_TOML.md",
+      "sha256": "e718c78fd6defc7fb946ce1f0374b6711e8cb66c0865bf4a12e7a1d66c15b3f4"
+    },
+    {
+      "path": "docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json",
+      "sha256": "10c82a4c531b03374e0e5c97bd10bcd612762f53edab4261cc9fe33dac94dba4"
+    },
+    {
+      "path": "docs/spec/CHANGED_IMPACT_POLICY_v0.1.schema.json",
+      "sha256": "dd72983c147a85269b176d3beae5ad5feb6a5b5b31a41eaf7506cc454339dcbd"
+    },
+    {
+      "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
+      "sha256": "94bef39674d8a829d2a9ddeba619b2f7042a04b8d35820670182e258932067b6"
+    },
+    {
+      "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
+      "sha256": "2f34c7dda77d7bf495669a5db6df4281ca7d6698829f17b38fbe71a4dd33e8be"
+    },
+    {
+      "path": "docs/spec/CLI.md",
+      "sha256": "62bdef99ec09e2ce566a48593bbbb61e835a620da8c6881fc304a8e5a77017de"
+    },
+    {
+      "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
+      "sha256": "98f254426fe3c7d4e3e27352b5ad396f011b0197c0c2ae07b4658fe465772141"
+    },
+    {
+      "path": "docs/spec/CLI_TOOLING_BUNDLE_v0.1.md",
+      "sha256": "aad9743416b9ec62f96e995b3dd162f262843e8a016541ab2edb386d10c48866"
+    },
+    {
+      "path": "docs/spec/CONCURRENCY_GPU_SLO_v0.1.md",
+      "sha256": "75224d329c939507cf57bae6c0c4a37e9172dd88ef5ad0701fd1190da0a41e7c"
+    },
+    {
+      "path": "docs/spec/CONCURRENCY_v0.1.md",
+      "sha256": "f03c605523b4b856c37df96ace3d961a62216f122bb0b1c51030793de5aeeb47"
+    },
+    {
+      "path": "docs/spec/COREFORM_CANON_HASH.md",
+      "sha256": "3c766978c3da644dcba698cfd32674fba732d91b46fe06a7762bf9f3c77b8782"
+    },
+    {
+      "path": "docs/spec/DEPENDENCY_MIRROR_MANIFEST_v0.1.schema.json",
+      "sha256": "a4649e327e6ffcfe507376891ebc034a38eda405de97043c34a57f490e12cc86"
+    },
+    {
+      "path": "docs/spec/DEPENDENCY_MIRROR_v0.1.md",
+      "sha256": "7a78c8335a4f1fd7491e0f5898dec4323390fad9ef537f78cb7b59e8c75e5f47"
+    },
+    {
+      "path": "docs/spec/DEPENDENCY_MIRROR_v0.1.schema.json",
+      "sha256": "d4b26b9e9235fcffbe58a06c925fedf24a70e1ac50c54c015ca2c011cde1ef6c"
+    },
+    {
+      "path": "docs/spec/DETERMINISM.md",
+      "sha256": "06a049429e8c84f56ddaa56d403c4d09ab56ab38a0ce498e1ca0171ef609cd87"
+    },
+    {
+      "path": "docs/spec/DETERMINISTIC_CLEANUP_MARKER_v0.1.schema.json",
+      "sha256": "26efedc7a6c11d5afbba172418e87c0898888e36c4591cc84dff06958fa863c3"
+    },
+    {
+      "path": "docs/spec/DETERMINISTIC_CLEANUP_PLAN_v0.1.schema.json",
+      "sha256": "67417d9cd0a80e9a28ef515a756ca682d6618fcb77d797d1bd8a7543d07cd107"
+    },
+    {
+      "path": "docs/spec/DETERMINISTIC_CLEANUP_POLICY_v0.1.schema.json",
+      "sha256": "4a1d1132b2a53b925a3e002d87210eeeb95e5d29cfd2cabb52e3d344574fc3ee"
+    },
+    {
+      "path": "docs/spec/DETERMINISTIC_CLEANUP_RESULT_v0.1.schema.json",
+      "sha256": "d806dd7f2166b2930ed1c1cf92c8d3a0e249578db0bc846b241f8688632d296b"
+    },
+    {
+      "path": "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
+      "sha256": "bff243daf4c9ea99b77b6922fe07958718b072133ef8294b0defe931197127fc"
+    },
+    {
+      "path": "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
+      "sha256": "eaa08a47cefd15db4f3b08da1979e8537ed6718593f9755abcde2d11106a0012"
+    },
+    {
+      "path": "docs/spec/DOC_TOPOLOGY_v0.1.md",
+      "sha256": "e4235115c531d3fbc6ac8bb97f85360afc6feff3afe51ede4cdcc50b866a2324"
+    },
+    {
+      "path": "docs/spec/DOMAIN_KITS_v0.1.md",
+      "sha256": "41fa199b57c014e81a69405913858661dc0c1af85d3820ae5e8543059e61617d"
+    },
+    {
+      "path": "docs/spec/EDITOR_ARCH.md",
+      "sha256": "037c939ef9a604c5e83d2d10109b16a976a06254c7b8f932145161b2a2e00891"
+    },
+    {
+      "path": "docs/spec/EDITOR_CAPS.md",
+      "sha256": "feb3221299bb8f1bbb9be231950a8fee1c9dd9d4e4041e294beb6808efd58ba0"
+    },
+    {
+      "path": "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json",
+      "sha256": "f5545b0b370f71808a1eb8d5d4101a91bd0c58d94eb00b6b8a718b37950485c7"
+    },
+    {
+      "path": "docs/spec/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.schema.json",
+      "sha256": "a0a3dce54f641acf24c86d7f657a41381c6cea39e344e53a6b2505e343ff555d"
+    },
+    {
+      "path": "docs/spec/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.schema.json",
+      "sha256": "84818f18c09b1f2fc77eb65107d2426957821aef1d6cfd90b11923ae248773f4"
+    },
+    {
+      "path": "docs/spec/EVIDENCE_STORAGE_CLASSES_v0.1.schema.json",
+      "sha256": "c70de6a31aa64ee7347747aec15df27e91230e5646868ae57de18ff0cc763aeb"
+    },
+    {
+      "path": "docs/spec/EVIDENCE_STORE.md",
+      "sha256": "dafe99c27e72fa92501fc2b28b7f72d08c4f615d809b4ed86cbec56eae24da22"
+    },
+    {
+      "path": "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.json",
+      "sha256": "12887bd910cd3ffe7cd12c5efee9ee5367da4177aec0185f870f03481266313b"
+    },
+    {
+      "path": "docs/spec/FEATURE_MATRIX_EVIDENCE_v0.1.md",
+      "sha256": "c9115a2898cf1969805d8627368b8735a7471a6557e440dd18212d7aac7425e5"
+    },
+    {
+      "path": "docs/spec/FS_SANDBOX.md",
+      "sha256": "16da75a804bc30ac0f6b6f907a1e96fab6e8097fc51d48b38f2997a7137872e5"
+    },
+    {
+      "path": "docs/spec/FULL_SELFHOST_CUTOVER_PROFILE_v0.1.md",
+      "sha256": "1958bfd732676092040d0320ce3700d149cf27f7e8f42a110edd074b78662950"
+    },
+    {
+      "path": "docs/spec/GATE_MANIFEST_v0.1.schema.json",
+      "sha256": "835ab09b1767f85a7bfa38fc9c006b23ea8094d4343d722d736d315e72aa7b17"
+    },
+    {
+      "path": "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",
+      "sha256": "5013f7c44e82b8930fe12adef28c272eb589ca646ce7eb97309e053e6fc44897"
+    },
+    {
+      "path": "docs/spec/GCLOG.md",
+      "sha256": "1087cbaf2cb758999b31bb9a8ad4bea05c00e13e8cf3b5ad67c75e81c4ba6461"
+    },
+    {
+      "path": "docs/spec/GCLOG_SCHEMA.md",
+      "sha256": "39aed8f6fd61319285043cd2a1009a4e67c1ed0037ea3f911c7c19ae1ffdc03d"
+    },
+    {
+      "path": "docs/spec/GCPM_BUNDLE_v0.1.md",
+      "sha256": "c51b17450ef078a0b709464f2d701549f8e9cc7056762a31fe4769765256474a"
+    },
+    {
+      "path": "docs/spec/GCPM_JSON_SCHEMAS_v0.1.md",
+      "sha256": "8e55bef10ce668648bbdecf781bb0c0ca123b417c1c6adda17166691d04a3bdf"
+    },
+    {
+      "path": "docs/spec/GCPM_OPERATION_CONTRACT_PACK_v0.1.json",
+      "sha256": "47783d49db6d4ad10a298550b6f9ce86f26e958a16eb2987b6094219d9c56396"
+    },
+    {
+      "path": "docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md",
+      "sha256": "dcf47308a16af2bb90eeacd6f3a9b140f3334ea0c4c089878717d1479783483b"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.json",
+      "sha256": "644a53eba87d91cc6bfdb919bb9eba6a0438d2dd500260c77538ac2cda54cee8"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
+      "sha256": "acccf60e4a1456cbc1c3153a96ddf153689a06b7e77a94d80a31aa8d8d9556e9"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+      "sha256": "04ddc23c91d47e6fb2a95cc73e6acbf94e3526223ac31e2349c54c4bd85f65eb"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_PROFILE_v0.3.schema.json",
+      "sha256": "559ffafe661d3d95696107717acb159a38c60d7735bbc940ef2ac19f18be6314"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+      "sha256": "8cfdbd6ac1953babd0abd430ada67e377624d88617f4b3982e4f3ae1c1e4c805"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.schema.json",
+      "sha256": "0f27aabe83fc3d0e721e2a98f0e7db8f1e9b19022c3c0d763cd096bf6cbc765a"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.json",
+      "sha256": "cd610a658b333569b6d69e232d5835a5fc6c552ecec8c79d663417b8bd50a70d"
+    },
+    {
+      "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
+      "sha256": "5f976c76da686aa08c09d7488a3c379939b67ab81ab8acca6bf34a59529d93e6"
+    },
+    {
+      "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+      "sha256": "d550ff4cf9ca2d4aef784ce61e0cafcfc767ddad61dfa11b071240ba50847ae9"
+    },
+    {
+      "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.schema.json",
+      "sha256": "d4009ae238f2fb8f6a596f214768e9858e3d944e87ad910998a5ae2a2881ec7c"
+    },
+    {
+      "path": "docs/spec/GC_DIAGNOSTIC_REPAIR_PLAN_v0.1.schema.json",
+      "sha256": "30f034b294788c99691bdf2ddeff7afabbf9c9a4ab1cf7844f66eb544863d206"
+    },
+    {
+      "path": "docs/spec/GC_FAILURE_CONTEXT_v0.1.schema.json",
+      "sha256": "2fb670a4dbc5bac701127adf77f63265932a1f2da6ac1bc02bd27a6bb168d285"
+    },
+    {
+      "path": "docs/spec/GC_MODULE_BOUNDARIES_v0.1.md",
+      "sha256": "5cdb3b73fa4f4265405399e55f3ebf56610a37a7fe1e926776de675b0c56853a"
+    },
+    {
+      "path": "docs/spec/GC_REPAIR_UTILITY_REPORT_v0.1.schema.json",
+      "sha256": "b165da9d97eee0388277fb0f847154c66d69435ef49ec7cf9cad53134fd147a3"
+    },
+    {
+      "path": "docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json",
+      "sha256": "471235ac2265553776df90c41c8c0c09f71c9cbdedef8ca6a3f55c60a2e135ef"
+    },
+    {
+      "path": "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
+      "sha256": "27b693eed1662ccc738a5dab74b2ec6973a734fd45847a1e4bd84fd6302b524a"
+    },
+    {
+      "path": "docs/spec/GENESIS_ARTIFACT_HASH_TREE_v0.1.schema.json",
+      "sha256": "3375bfebd4e3ee4444ddfd9dad94b7a407c42889b46901660eacc0b1184a7059"
+    },
+    {
+      "path": "docs/spec/GENESIS_EVIDENCE_BUNDLE_v0.1.schema.json",
+      "sha256": "1cf39f293a6bbc2abb7987590c1476d5dfc08c7cf19c4796b3a58bff40cb0883"
+    },
+    {
+      "path": "docs/spec/GENESIS_EVIDENCE_PREDICATE_v0.1.schema.json",
+      "sha256": "3549115bf6907fb0058bd058a6aca59b9d4d0ecf65158bd4abdc33275354b378"
+    },
+    {
+      "path": "docs/spec/GENESIS_EVIDENCE_STATEMENT_v0.1.schema.json",
+      "sha256": "b53b113535c292c734c71d2cedaebf86250eb13f3872c8e279f4421f9c1f236f"
+    },
+    {
+      "path": "docs/spec/GENESIS_EVIDENCE_TRUST_POLICY_v0.1.schema.json",
+      "sha256": "cdfe3474df3daa927d99226e0740e6528bd77e272c791e03345ed1aa3bb53990"
+    },
+    {
+      "path": "docs/spec/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.schema.json",
+      "sha256": "f92c89d6ae0e5386ef227866d20718189256473ddd60c44ed6f30e6a14d0c72f"
+    },
+    {
+      "path": "docs/spec/GENESIS_SLSA_BUILD_v1.schema.json",
+      "sha256": "8b8b92de0391114470c482c9dd70942bccc60142fded4babe304dca4e3fc664d"
+    },
+    {
+      "path": "docs/spec/GFX_CAPS.md",
+      "sha256": "22983321313de9e9552402407fa717a2c941b2388f8f73ddf79f047c91786cde"
+    },
+    {
+      "path": "docs/spec/GFX_RUNTIME_BUNDLE_v0.1.md",
+      "sha256": "2690d438d48e1994c5934d2e19ee5cdbd86d878e304da9d65cadc26d1e7e7458"
+    },
+    {
+      "path": "docs/spec/GPU_COMPUTE_BUNDLE_v0.1.md",
+      "sha256": "7207bf996009c748b2b000c96f5f9bf86d70c874e71cc2ac1d88b5479767b556"
+    },
+    {
+      "path": "docs/spec/GPU_COMPUTE_RUNTIME_PROFILE_v0.1.md",
+      "sha256": "a68c3b654c1a327038a2adcf5c1f2b36dd83806ca47b11b630f1ccc42a775433"
+    },
+    {
+      "path": "docs/spec/GPU_GFX_BUNDLE_v0.1.md",
+      "sha256": "0940fd587b808032783479357fafed91469c4b4a4b81c1c619268a4d8ffd2b7e"
+    },
+    {
+      "path": "docs/spec/HOST_ABI.md",
+      "sha256": "40b948de01a5f566ab6a6f97e775817e6f90cf58eefd148d0c1f398d4638a301"
+    },
+    {
+      "path": "docs/spec/HOST_ABI_INDEX_v0.1.json",
+      "sha256": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
+    },
+    {
+      "path": "docs/spec/HOST_ABI_SCHEMA_INDEX_v0.1.json",
+      "sha256": "fac75aafb77f2c637a559cb81ddc3fe5f01209da28c22c718e8c6a6ce5899d75"
+    },
+    {
+      "path": "docs/spec/HOST_BRIDGE_PROTOCOL.md",
+      "sha256": "92fb05de3f7df97d136cbac991daaa4548fc5dfa8d701f4576c59d931ed4cc36"
+    },
+    {
+      "path": "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
+      "sha256": "1f1090afac76590ef84ae412548e5a033ffdc12e07cd6fe832fb415fc0efecbf"
+    },
+    {
+      "path": "docs/spec/LARGE_WORKSPACE_AGENT_PERF_v0.1.md",
+      "sha256": "97abcd034ee72cf7216e45bd4b97ef2cfadd828c2c6eaa8190c5053996329be7"
+    },
+    {
+      "path": "docs/spec/MODULE_SCOPE.md",
+      "sha256": "e042607f7d78d09f9519463934351c6cef5bc73f285893cff6bba98aa3b42727"
+    },
+    {
+      "path": "docs/spec/OPTIMIZER.md",
+      "sha256": "7c7d0377f16cf3ed69206c69d3aef83b4148678ab1bb60a0e937730a17d87585"
+    },
+    {
+      "path": "docs/spec/PACKAGE_TOML.md",
+      "sha256": "4eeb8b8647885fdd09204458e10ac4df3691f8325a6d4af0b7ed37cb2e36f349"
+    },
+    {
+      "path": "docs/spec/PATCH_SCHEMA.md",
+      "sha256": "2888afbd6af5c28d44136e4f2aebb9441d861fb280ea20acbd4237d2c16691ce"
+    },
+    {
+      "path": "docs/spec/PLUGIN_ABI_SCHEMAS_v0.1.md",
+      "sha256": "ba43db12facb405b196399f739ce3f1086ba99aa7f1e75aec8c8d35fc5bf78d5"
+    },
+    {
+      "path": "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.json",
+      "sha256": "34eb570715c0947a7b3fccf15ba4fbf7d182badfa5ae8fe771e902b2d9026fe3"
+    },
+    {
+      "path": "docs/spec/PRELUDE_CAPABILITY_INDEX_v0.1.md",
+      "sha256": "9457b17b79a7d5ea114140b9885efaf977eb7cb05d875bdff7cce5f29d856448"
+    },
+    {
+      "path": "docs/spec/PREREQUISITES_v0.1.md",
+      "sha256": "3eaff7e57832475b9c9845a321e8607745ce59173cc0c9796537848672b18723"
+    },
+    {
+      "path": "docs/spec/PREREQUISITES_v0.1.schema.json",
+      "sha256": "181f708c951af2afb37fb5549014797be92c99a6a017a99fc358f457ad6f950c"
+    },
+    {
+      "path": "docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json",
+      "sha256": "8a94e816ed67cdb913a66b5729e687f078ea3dd256d7684c50ea68100810721a"
+    },
+    {
+      "path": "docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json",
+      "sha256": "6c5999814fa05f794c2eea0152a30fe41c7b76bcf826ce640a06fe0f29d2a630"
+    },
+    {
+      "path": "docs/spec/REGISTRY_POLICY.md",
+      "sha256": "30c1e4d1d4d4f0330525c9dc4fa5288fd54155dd2b55857ffe641219b173a8b3"
+    },
+    {
+      "path": "docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json",
+      "sha256": "9f667b84bf7ea463552c76faec1812d13c02210ee74403bce2614825fdac7372"
+    },
+    {
+      "path": "docs/spec/RELEASE_NOTES_v0.1.schema.json",
+      "sha256": "ef488f890e6800e47c8a620d988c682406c1dc0ea41253b56d507caad047175b"
+    },
+    {
+      "path": "docs/spec/RELEASE_SMOKE_v0.1.md",
+      "sha256": "c4140e56926ea3f0a9dddae99c1c8d13fbcff5c7eb07a685064538a3900dd901"
+    },
+    {
+      "path": "docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json",
+      "sha256": "02034af7dd6e61d3c47d2245b4604e19414e53b65d546c69b4bcd64f0bb54817"
+    },
+    {
+      "path": "docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json",
+      "sha256": "ba9f4a058c20aa8c40e555c35914848b0bc707393fd8404ae42d82a5ff39929f"
+    },
+    {
+      "path": "docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json",
+      "sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
+    },
+    {
+      "path": "docs/spec/ROADMAP_WORKLOADS_v0.1.schema.json",
+      "sha256": "0a87b4ebf926be3da796831677c50c196147cd154086d1a4d3f8904e70e611b4"
+    },
+    {
+      "path": "docs/spec/RUNNER_HIGH_LEVEL_OPS_ALLOWLIST_v0.2.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/spec/RUNTIME_BACKEND_PROFILES_v0.1.md",
+      "sha256": "2491157afa41fddfaad2df3c24eebf50f95515574a6cb8ceb285c72da5b07796"
+    },
+    {
+      "path": "docs/spec/SEALS_DISPATCH_REPLAY.md",
+      "sha256": "a8d7f31e993ec06b2e35fa5cc4c8e05e3a316a6a651442e161e894f76a4c6877"
+    },
+    {
+      "path": "docs/spec/SELFHOST_READINESS_SCORECARD_v0.1.md",
+      "sha256": "ccef6f40b8eaa6ec69cb67c51098e3e6a87b092102fe68e8fd754acbd5db80bd"
+    },
+    {
+      "path": "docs/spec/SELFHOST_REFACTOR_PIPELINE_v0.1.md",
+      "sha256": "62b53c440629b6a9d545f24d3a35425571e5d9d602154d1181904d6299b87d3f"
+    },
+    {
+      "path": "docs/spec/SELFHOST_SYMBOL_OWNERSHIP_INDEX_v0.1.md",
+      "sha256": "26d53c6a8324520ecb2e3012e54a6fee1d3600233d07fefae4ccd0447623c328"
+    },
+    {
+      "path": "docs/spec/SELF_HOST_BOOTSTRAP_API.md",
+      "sha256": "166103b6bfba00e5eda78960f3036d5baa398a1d5d1c8a9700d0af66bee7dd1a"
+    },
+    {
+      "path": "docs/spec/SELF_HOST_BOUNDARY.md",
+      "sha256": "add5116dc52a58e1ccce5629e3a030d4cd8b0e08caeff23711f07db4e17f96d5"
+    },
+    {
+      "path": "docs/spec/SIGNING.md",
+      "sha256": "6c71d3c677203c8e3ae5a6eb69abc737dd90fa4d0de364780553eff5585e974b"
+    },
+    {
+      "path": "docs/spec/SOURCE_SIZE_BUDGET_v0.1.md",
+      "sha256": "f31895d3ca194f14095f8a51fffb2286da7dae28c733a6886d90488b4fdd982a"
+    },
+    {
+      "path": "docs/spec/TESTING_BUNDLE_v0.1.md",
+      "sha256": "61533a883593e5f3031a5be4f62ce4cfa4286af8e019c82a54f871778f9643ff"
+    },
+    {
+      "path": "docs/spec/TEST_EXECUTION_PROFILES_v0.1.md",
+      "sha256": "6654ca5fb205559da8ba2ff802359ce44ce1d6e45a773a8f24aa624733dff8e3"
+    },
+    {
+      "path": "docs/spec/TRANSLATION_VALIDATION.md",
+      "sha256": "66e5e55bfa9ed380f528f4929d74841f335799dbed97cbb4140eea8b25c8ad33"
+    },
+    {
+      "path": "docs/spec/TRANSPARENCY_LOG.md",
+      "sha256": "5a9fb6200962f0503baccc6ffe30dce2b05464e1b1bfca9f5ad608a50c469a55"
+    },
+    {
+      "path": "docs/spec/TYPES.md",
+      "sha256": "77a4be2f2f3e5cf1ec35b255d1bce9b4547f4fec08852ceb8ce5ec4ad76b5e7c"
+    },
+    {
+      "path": "docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json",
+      "sha256": "2b3762c7a737b02770fd5212a4362ed142a92d7f4bccb926cd42b3bc551df5a0"
+    },
+    {
+      "path": "docs/spec/VALUE_EFFECT_HASH.md",
+      "sha256": "4405259b794107b29a7b67a5639c390a4a6520f5d6c4cb614c91e8f503794742"
+    },
+    {
+      "path": "docs/spec/VERSIONING_v0.1.md",
+      "sha256": "ee885103b45d09d7103b6bcbbd4b4710b78ac4bfbf7559f32663aed934365b2d"
+    },
+    {
+      "path": "docs/spec/VERSION_SURFACES_v0.1.md",
+      "sha256": "e93a5e1d332a36bb3fa0e4c9327f973e3b8a09524646f6e793124dd87f207398"
+    },
+    {
+      "path": "docs/spec/VERSION_SURFACES_v0.1.schema.json",
+      "sha256": "16e7df06c8245c9cd676ae2d45c6944b5774f9224d12ae3e13fc11fa7bfdde9a"
+    },
+    {
+      "path": "docs/spec/WARM_PROTOCOL_v0.2.schema.json",
+      "sha256": "565590f7e495f8c374a5ff1ca7a5e5f4bfdbdbfb026204a469e6381184d7d5df"
+    },
+    {
+      "path": "docs/spec/WASI.md",
+      "sha256": "702fbcfe86135ecefdb9877eaac945ddf9ee56d7a40c74182a82af4013137968"
+    },
+    {
+      "path": "docs/spec/WASM.md",
+      "sha256": "5137977e42477047a9e403a2c9a2d88755ce2f74f20ba6af9c5b01d12fc7fd0b"
+    },
+    {
+      "path": "docs/spec/WASM_HOST_BRIDGE.md",
+      "sha256": "93f5a2acfa16a67a9a8f2a2f3a7e2b493300f443a2fc89d89d4463c82f5ab6ad"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
+      "sha256": "3aacc5e0ce56ac5ad42d66f28b793c16a0d10901f471b55c9179ef08d7177771"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_DISTRIBUTION_v1.md",
+      "sha256": "66982a54f2e441865c6bf0935d2e106317f366b7f112abd4913ce5193fcbe14a"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.json",
+      "sha256": "9957ace0506f0d883324ec66b2a31e5b75d8e2e2639008c0082ae838e712a0e1"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_PACK_v0.1.md",
+      "sha256": "aec8b2dcbc0d790aaa0f25106cc25fd5777725012dfb433504c68288a1761daa"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.json",
+      "sha256": "f00a8fe48426c104cd05ad27cd8faf140d0d347b5433c36677b3ad1437ce0ee2"
+    },
+    {
+      "path": "docs/spec/WRITE_GENESISCODE_SKILL_v0.1.md",
+      "sha256": "49315bffae0c27446a47420582fed34eb32ad5219d38c4a4601137fe6764169f"
+    },
+    {
+      "path": "docs/spec/XR_HOST_RUNTIME_v0.1.md",
+      "sha256": "2576e2d7938439fec50b0bac39c013e55d49caa5083daa068ebf4f1b55d88f36"
+    },
+    {
+      "path": "docs/status/REDTEAM_REPORT.md",
+      "sha256": "47732bd52a56a82c537d0033118b778aa37931782537130a35a7ac8b47fa8f90"
+    },
+    {
+      "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
+      "sha256": "085ffaa5efd9a53fabac77c6fe17db138ad13e7f28e03426797663b72ee94c60"
+    },
+    {
+      "path": "docs/status/SELFHOST_CUTOVER.md",
+      "sha256": "6f41dd2f338012c7484d3dab0837aa8f28ee6d8f7e43cade0cb8576acea95255"
+    },
+    {
+      "path": "docs/write_genesisCode_skill.md",
+      "sha256": "689ba9f6493e2794fdec9a91b0bbf5ec5365872c0213398b7bac248f3e1ae978"
+    },
+    {
+      "path": "feature_matrix.md",
+      "sha256": "91f1ced125878b0ba0c9b9260d0ee4b1d1dc66a854a70bf3e71d571e76d1a6b0"
+    },
+    {
+      "path": "genesisCode.md",
+      "sha256": "9564337ad0552fccd2120b9113997319b491b7d00b683ce302a49b1fdf916ef8"
+    },
+    {
+      "path": "upgrade_plan.md",
+      "sha256": "5d9503486758e8703596af28157a751db8edb3122cef7082a72658358c766ea2"
+    }
+  ],
+  "version": 1
+}

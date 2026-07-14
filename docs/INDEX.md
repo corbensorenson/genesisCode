@@ -4,6 +4,12 @@ Last updated: 2026-07-14
 
 This is the canonical entrypoint for project documentation.
 
+The published [GenesisCode documentation site](https://corbensorenson.github.io/genesisCode/)
+combines tutorials, task guides, this complete source corpus, and generated symbol,
+capability, diagnostic, CLI, format, schema, example, and provenance indexes. It is a
+deterministic presentation layer; authority remains with the repository sources named
+in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
+
 ## Start Here
 
 - `docs/AGENT_ONBOARDING_v0.1.md` - single agent-first onboarding spine (semantics, runtime, packaging, assurance, deployment).
@@ -12,6 +18,10 @@ This is the canonical entrypoint for project documentation.
 - `docs/TECH_HANDOFF.md` - implementation handoff details.
 - `CHANGELOG.md` - release notes, migration notes, and pre-1.0 compatibility record.
 - `README.md` - workspace build/test quickstart.
+- `learn/index.qmd` - ordered human and agent learning path rendered by Quarto.
+- `reference/index.qmd` - exhaustive generated-reference entrypoint.
+- `llms.txt` - bounded machine-readable site map for agent retrieval.
+- `build-metadata.json` - published commit, source-tree state, reference digest, and whole-site artifact identity.
 
 ## Live Status and Planning
 

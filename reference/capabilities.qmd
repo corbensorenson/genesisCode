@@ -1,0 +1,504 @@
+---
+title: "Capability reference"
+description: "Every GenesisCode host ABI operation, grouped by capability family."
+toc: true
+toc-depth: 2
+---
+
+# Host operation inventory
+
+**188 operations** across **33 families**. The runner is deny-by-default: listing an operation does not authorize it.
+
+Policy fields and payload/response contracts remain normative in [Host ABI](../docs/spec/HOST_ABI.md) and [Caps TOML](../docs/spec/CAPS_TOML.md).
+
+## `browser/audio`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `browser/audio::enqueue` | See family policy |
+| `browser/audio::set-master` | See family policy |
+
+## `browser/input`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `browser/input::poll` | See family policy |
+
+## `browser/storage`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `browser/storage::delete` | See family policy |
+| `browser/storage::get` | See family policy |
+| `browser/storage::set` | See family policy |
+
+## `browser/window`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `browser/window::close` | See family policy |
+| `browser/window::info` | See family policy |
+| `browser/window::open` | See family policy |
+
+## `core/crypto`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/crypto::aead-open` | See family policy |
+| `core/crypto::aead-seal` | See family policy |
+| `core/crypto::hash` | See family policy |
+| `core/crypto::kdf` | See family policy |
+| `core/crypto::sign` | See family policy |
+| `core/crypto::verify` | See family policy |
+
+## `core/gc-low`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/gc-low::pin` | See family policy |
+| `core/gc-low::plan` | See family policy |
+| `core/gc-low::purge` | See family policy |
+| `core/gc-low::run` | See family policy |
+| `core/gc-low::unpin` | See family policy |
+
+## `core/gpk-low`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/gpk-low::export` | See family policy |
+| `core/gpk-low::import` | See family policy |
+
+## `core/media`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/media::asset-hash` | See family policy |
+| `core/media::audio-transcode` | See family policy |
+| `core/media::image-transcode` | See family policy |
+
+## `core/pkg-low`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/pkg-low::add` | See family policy |
+| `core/pkg-low::bridge` | See family policy |
+| `core/pkg-low::info` | See family policy |
+| `core/pkg-low::init` | See family policy |
+| `core/pkg-low::install` | See family policy |
+| `core/pkg-low::list` | See family policy |
+| `core/pkg-low::load-lock` | See family policy |
+| `core/pkg-low::load-package` | See family policy |
+| `core/pkg-low::lock` | See family policy |
+| `core/pkg-low::publish` | See family policy |
+| `core/pkg-low::save-lock` | See family policy |
+| `core/pkg-low::snapshot` | See family policy |
+| `core/pkg-low::update` | See family policy |
+| `core/pkg-low::verify` | See family policy |
+
+## `core/refs`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/refs::delete` | See family policy |
+| `core/refs::get` | See family policy |
+| `core/refs::list` | See family policy |
+| `core/refs::set` | See family policy |
+
+## `core/store`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/store::get` | See family policy |
+| `core/store::has` | See family policy |
+| `core/store::put` | See family policy |
+| `core/store::verify` | See family policy |
+
+## `core/sync`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/sync::pull` | See family policy |
+| `core/sync::push` | See family policy |
+
+## `core/task`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/task::await` | See family policy |
+| `core/task::cancel` | See family policy |
+| `core/task::channel-close` | See family policy |
+| `core/task::channel-open` | See family policy |
+| `core/task::channel-recv` | See family policy |
+| `core/task::channel-send` | See family policy |
+| `core/task::channel-status` | See family policy |
+| `core/task::scope` | See family policy |
+| `core/task::spawn` | See family policy |
+| `core/task::status` | See family policy |
+
+## `core/vcs-low`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `core/vcs-low::apply` | See family policy |
+| `core/vcs-low::apply-patch` | See family policy |
+| `core/vcs-low::blame` | See family policy |
+| `core/vcs-low::diff` | See family policy |
+| `core/vcs-low::diff-terms` | See family policy |
+| `core/vcs-low::log` | See family policy |
+| `core/vcs-low::merge3` | See family policy |
+| `core/vcs-low::merge3-contract-snapshots` | See family policy |
+| `core/vcs-low::resolve-conflict` | See family policy |
+| `core/vcs-low::why` | See family policy |
+
+## `editor/clipboard`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `editor/clipboard::get` | See family policy |
+| `editor/clipboard::set` | See family policy |
+
+## `editor/dialog`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `editor/dialog::open` | See family policy |
+| `editor/dialog::save` | See family policy |
+
+## `editor/plugin`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `editor/plugin::command` | allow_plugins; allow_commands; allow_schema_ids (required when schema ids are present); bridge_cmd_sha256 (required when bridge_cmd transport is configured) |
+
+<details><summary>editor/plugin::command typed contract</summary>
+
+```json
+{
+  "policy_gates": [
+    "allow_plugins",
+    "allow_commands",
+    "allow_schema_ids (required when schema ids are present)",
+    "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+  ],
+  "schema_fields": {
+    "request": ":request-schema-id",
+    "response": ":response-schema-id"
+  },
+  "schema_ids": {
+    "request": [
+      "genesis/plugin.request.exec.v1",
+      "genesis/plugin.request.jsonrpc.v1"
+    ],
+    "response": [
+      "genesis/plugin.response.result.v1",
+      "genesis/plugin.response.bytes.v1"
+    ]
+  }
+}
+```
+
+</details>
+
+## `editor/task`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `editor/task::cancel` | See family policy |
+| `editor/task::fmt-coreform` | See family policy |
+| `editor/task::lint-module` | See family policy |
+| `editor/task::optimize-module` | See family policy |
+| `editor/task::parse-module` | See family policy |
+| `editor/task::poll` | See family policy |
+| `editor/task::spawn` | See family policy |
+| `editor/task::test-pkg` | See family policy |
+| `editor/task::typecheck-pkg` | See family policy |
+
+## `editor/watch`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `editor/watch::poll` | See family policy |
+| `editor/watch::subscribe` | See family policy |
+| `editor/watch::unsubscribe` | See family policy |
+
+## `gfx/audio`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/audio::enqueue` | See family policy |
+| `gfx/audio::set-master` | See family policy |
+
+## `gfx/gpu`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/gpu::create-bind-group` | See family policy |
+| `gfx/gpu::create-bind-group-layout` | See family policy |
+| `gfx/gpu::create-buffer` | See family policy |
+| `gfx/gpu::create-pipeline-layout` | See family policy |
+| `gfx/gpu::create-render-pipeline` | See family policy |
+| `gfx/gpu::create-sampler` | See family policy |
+| `gfx/gpu::create-shader-module` | See family policy |
+| `gfx/gpu::create-texture` | See family policy |
+| `gfx/gpu::destroy-resource` | See family policy |
+| `gfx/gpu::features` | See family policy |
+| `gfx/gpu::limits` | See family policy |
+| `gfx/gpu::read-buffer` | See family policy |
+| `gfx/gpu::read-texture` | See family policy |
+| `gfx/gpu::submit-frame-graph` | See family policy |
+| `gfx/gpu::write-buffer` | See family policy |
+| `gfx/gpu::write-texture` | See family policy |
+
+## `gfx/input`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/input::poll-events` | See family policy |
+| `gfx/input::set-cursor-mode` | See family policy |
+
+## `gfx/time`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/time::frame-tick` | See family policy |
+
+## `gfx/window`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/window::create-surface` | See family policy |
+| `gfx/window::request-redraw` | See family policy |
+| `gfx/window::resize-surface` | See family policy |
+| `gfx/window::set-title` | See family policy |
+| `gfx/window::surface-info` | See family policy |
+
+## `gfx/xr`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gfx/xr::anchor-create` | See family policy |
+| `gfx/xr::anchor-destroy` | See family policy |
+| `gfx/xr::anchor-update` | See family policy |
+| `gfx/xr::frame-poll` | See family policy |
+| `gfx/xr::hands-poll` | See family policy |
+| `gfx/xr::haptics-pulse` | See family policy |
+| `gfx/xr::hit-test` | See family policy |
+| `gfx/xr::input-poll` | See family policy |
+| `gfx/xr::layer-create` | See family policy |
+| `gfx/xr::layer-destroy` | See family policy |
+| `gfx/xr::layer-update` | See family policy |
+| `gfx/xr::session-close` | See family policy |
+| `gfx/xr::session-open` | See family policy |
+| `gfx/xr::spatial-mesh-poll` | See family policy |
+| `gfx/xr::submit-frame` | See family policy |
+
+## `gpu/compute`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `gpu/compute::create-bind-group` | See family policy |
+| `gpu/compute::create-bind-group-layout` | See family policy |
+| `gpu/compute::create-buffer` | See family policy |
+| `gpu/compute::create-compute-pipeline` | See family policy |
+| `gpu/compute::create-kernel` | See family policy |
+| `gpu/compute::create-pipeline-layout` | See family policy |
+| `gpu/compute::create-shader-module` | See family policy |
+| `gpu/compute::destroy-resource` | See family policy |
+| `gpu/compute::features` | See family policy |
+| `gpu/compute::limits` | See family policy |
+| `gpu/compute::read-buffer` | See family policy |
+| `gpu/compute::submit` | See family policy |
+| `gpu/compute::write-buffer` | See family policy |
+
+## `host/ffi`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `host/ffi::buffer-pin` | allow_abi_ids; max_buffer_bytes; allow_schema_ids (required when schema ids are present); bridge_cmd_sha256 (required when bridge_cmd transport is configured) |
+
+<details><summary>host/ffi::buffer-pin typed contract</summary>
+
+```json
+{
+  "policy_gates": [
+    "allow_abi_ids",
+    "max_buffer_bytes",
+    "allow_schema_ids (required when schema ids are present)",
+    "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+  ],
+  "schema_fields": {
+    "request": ":request-schema-id",
+    "response": ":response-schema-id"
+  },
+  "schema_ids": {
+    "request": [
+      "genesis/ffi.request.buffer-pin.v1"
+    ],
+    "response": [
+      "genesis/ffi.response.buffer-handle.v1"
+    ]
+  }
+}
+```
+
+</details>
+| `host/ffi::buffer-unpin` | allow_abi_ids; allow_schema_ids (required when schema ids are present); bridge_cmd_sha256 (required when bridge_cmd transport is configured) |
+
+<details><summary>host/ffi::buffer-unpin typed contract</summary>
+
+```json
+{
+  "policy_gates": [
+    "allow_abi_ids",
+    "allow_schema_ids (required when schema ids are present)",
+    "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+  ],
+  "schema_fields": {
+    "request": ":request-schema-id",
+    "response": ":response-schema-id"
+  },
+  "schema_ids": {
+    "request": [
+      "genesis/ffi.request.buffer-unpin.v1"
+    ],
+    "response": [
+      "genesis/ffi.response.status.v1"
+    ]
+  }
+}
+```
+
+</details>
+| `host/ffi::call` | allow_abi_ids; allow_libraries; allow_symbols; allow_schema_ids (required when schema ids are present); bridge_cmd_sha256 (required when bridge_cmd transport is configured) |
+
+<details><summary>host/ffi::call typed contract</summary>
+
+```json
+{
+  "policy_gates": [
+    "allow_abi_ids",
+    "allow_libraries",
+    "allow_symbols",
+    "allow_schema_ids (required when schema ids are present)",
+    "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+  ],
+  "schema_fields": {
+    "request": ":request-schema-id",
+    "response": ":response-schema-id"
+  },
+  "schema_ids": {
+    "request": [
+      "genesis/ffi.request.call.v1"
+    ],
+    "response": [
+      "genesis/ffi.response.call.v1"
+    ]
+  }
+}
+```
+
+</details>
+
+## `host/plugin`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `host/plugin::command` | allow_plugins; allow_commands; allow_schema_ids (required when schema ids are present); bridge_cmd_sha256 (required when bridge_cmd transport is configured) |
+
+<details><summary>host/plugin::command typed contract</summary>
+
+```json
+{
+  "policy_gates": [
+    "allow_plugins",
+    "allow_commands",
+    "allow_schema_ids (required when schema ids are present)",
+    "bridge_cmd_sha256 (required when bridge_cmd transport is configured)"
+  ],
+  "schema_fields": {
+    "request": ":request-schema-id",
+    "response": ":response-schema-id"
+  },
+  "schema_ids": {
+    "request": [
+      "genesis/plugin.request.exec.v1",
+      "genesis/plugin.request.jsonrpc.v1"
+    ],
+    "response": [
+      "genesis/plugin.response.result.v1",
+      "genesis/plugin.response.bytes.v1"
+    ]
+  }
+}
+```
+
+</details>
+
+## `io/db`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `io/db::connect` | See family policy |
+| `io/db::exec` | See family policy |
+| `io/db::kv-delete` | See family policy |
+| `io/db::kv-get` | See family policy |
+| `io/db::kv-open` | See family policy |
+| `io/db::kv-put` | See family policy |
+| `io/db::query` | See family policy |
+| `io/db::tx-begin` | See family policy |
+| `io/db::tx-commit` | See family policy |
+| `io/db::tx-rollback` | See family policy |
+
+## `io/fs`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `io/fs::list` | See family policy |
+| `io/fs::mkdir` | See family policy |
+| `io/fs::read` | See family policy |
+| `io/fs::remove` | See family policy |
+| `io/fs::rename` | See family policy |
+| `io/fs::stat` | See family policy |
+| `io/fs::write` | See family policy |
+
+## `io/net`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `io/net::dns-resolve` | See family policy |
+| `io/net::http-listen` | See family policy |
+| `io/net::http-request` | See family policy |
+| `io/net::http-respond` | See family policy |
+| `io/net::tcp-accept` | See family policy |
+| `io/net::tcp-close` | See family policy |
+| `io/net::tcp-listen` | See family policy |
+| `io/net::tcp-open` | See family policy |
+| `io/net::tcp-recv` | See family policy |
+| `io/net::tcp-send` | See family policy |
+| `io/net::udp-bind` | See family policy |
+| `io/net::udp-close` | See family policy |
+| `io/net::udp-recv` | See family policy |
+| `io/net::udp-send` | See family policy |
+| `io/net::ws-accept` | See family policy |
+| `io/net::ws-close` | See family policy |
+| `io/net::ws-open` | See family policy |
+| `io/net::ws-recv` | See family policy |
+| `io/net::ws-send` | See family policy |
+
+## `sys/process`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `sys/process::exec` | See family policy |
+| `sys/process::kill` | See family policy |
+| `sys/process::spawn` | See family policy |
+| `sys/process::stderr-read` | See family policy |
+| `sys/process::stdin-write` | See family policy |
+| `sys/process::stdout-read` | See family policy |
+| `sys/process::wait` | See family policy |
+
+## `sys/time`
+
+| Operation | Operation-specific gates |
+|---|---|
+| `sys/time::now` | See family policy |

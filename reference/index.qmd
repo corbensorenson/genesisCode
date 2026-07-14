@@ -1,0 +1,47 @@
+---
+title: "Exhaustive reference"
+description: "Every frozen symbol, capability, diagnostic, command, format, example, specification, and schema."
+---
+
+# Look up anything
+
+{{< include generated/reference-stats.mdinc >}}
+
+::: {.reference-grid}
+::: {.reference-card}
+### [Language](language.qmd)
+Reader forms, evaluator forms, values, scope, contracts, types, effects, and hashes.
+:::
+::: {.reference-card}
+### [Symbols](symbols.qmd)
+Every symbol in the compact agent profile, with signature, domain, effects, diagnostics, examples, and source anchors.
+:::
+::: {.reference-card}
+### [Capabilities](capabilities.qmd)
+Every host ABI operation grouped by family, including policy fields and maturity metadata.
+:::
+::: {.reference-card}
+### [Diagnostics](diagnostics.qmd)
+Every stable diagnostic code, phase, severity, likely causes, and safe repair action.
+:::
+::: {.reference-card}
+### [CLI](cli.qmd)
+Commands, flags, exit codes, JSON envelopes, and machine schema entrypoints.
+:::
+::: {.reference-card}
+### [Formats](formats.qmd)
+CoreForm, packages, policies, logs, patches, evidence, registries, locks, bundles, and generated manifests.
+:::
+::: {.reference-card}
+### [Examples](examples.qmd)
+Every tracked example workflow and its source files.
+:::
+::: {.reference-card}
+### [Source catalog](source-catalog.qmd)
+Every canonical document, JSON authority, schema, policy, status report, and planning source.
+:::
+:::
+
+## Authority rule
+
+Generated pages are indexes, not new specifications. When prose conflicts, follow the canonical source linked on the record and file an issue against the stale presentation.

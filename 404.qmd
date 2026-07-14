@@ -1,0 +1,26 @@
+---
+title: "Page not found"
+description: "Stable recovery paths into the GenesisCode documentation and canonical source corpus."
+page-layout: full
+toc: false
+body-classes: gc-not-found
+---
+
+::: {.not-found-panel}
+<div class="eyebrow">HTTP 404 / unresolved reference</div>
+
+# This path is not part of the current language map.
+
+GenesisCode documentation is generated from a versioned source corpus. A page may move when a specification is superseded, but the canonical indexes remain stable.
+
+<div class="hero-actions"><a href="index.html">Return to the documentation</a><a href="reference/index.html">Search the full reference</a><a href="docs/INDEX.html">Open canonical sources</a></div>
+:::
+
+## Recover by intent
+
+- **Learn the language:** start with the [quickstart](learn/quickstart.qmd) or [language tour](learn/language-tour.qmd).
+- **Find an exact contract:** search the [symbol](reference/symbols.qmd), [host operation](reference/capabilities.qmd), or [diagnostic](reference/diagnostics.qmd) inventories.
+- **Resolve an agent task:** open the [agent authoring guide](guides/agent-authoring.qmd) and [agent context index](llms.txt).
+- **Audit authority:** use the [canonical documentation index](docs/INDEX.md), [source catalog](reference/source-catalog.qmd), or [repository](https://github.com/corbensorenson/genesisCode).
+
+If an internal link led here, [report the broken reference](https://github.com/corbensorenson/genesisCode/issues/new) with the source page and target path. CI checks internal links before every deployment, so a live failure may indicate an outdated external link or cached page.

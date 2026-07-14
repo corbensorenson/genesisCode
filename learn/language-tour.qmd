@@ -1,0 +1,60 @@
+---
+title: "Language tour"
+description: "CoreForm syntax, immutable values, closures, module scope, contracts, and types."
+---
+
+# The language in one pass
+
+## CoreForm is the interchange language
+
+GenesisCode source is canonicalizable symbolic data. The reader supports:
+
+```lisp
+nil true false
+42 -7
+"utf-8 string"
+b"raw bytes"
+symbol :keyword
+(a proper list)
+["a" "vector"]
+{:ordered "map" :answer 42}
+'quoted-datum
+```
+
+Semicolon comments continue to line end. Strings and bytes support the escapes frozen in the [canonical syntax specification](../docs/spec/COREFORM_CANON_HASH.md).
+
+## Evaluation is small on purpose
+
+```lisp
+(def sum-of-squares
+  (fn (x y)
+    (let ((xx (prim int/mul x x))
+          (yy (prim int/mul y y)))
+      (prim int/add xx yy))))
+
+(if (prim int/lt 0 1)
+  (sum-of-squares 3 4)
+  0)
+```
+
+Source-level n-ary functions and calls desugar to unary currying. The kernel understands `quote`, `fn`, `if`, `begin`, `let`, `prim`, `seal`, `unseal`, top-level `def`, and application. Higher-level behavior belongs in libraries.
+
+## Values are immutable
+
+Vectors, maps, strings, bytes, symbols, integers, booleans, pairs, and `nil` are data. Updates return new persistent values. Closures, contracts, seals, native functions, and effect programs are opaque runtime values with stable hashing rules.
+
+## Scope is lexical and modules are recursive
+
+`def` is valid only at module top level. Top-level closures share a recursive module scope, so later definitions are visible to earlier closures and mutual recursion is possible. `let` creates lexical bindings and never mutates an outer scope.
+
+## Contracts are behavior as data
+
+Contracts provide message dispatch, delegation through a prototype, immutable extension, and explainability. `UNHANDLED` is a sealed protocol result: dispatch delegates only when trusted unsealing succeeds. User data that merely resembles it cannot redirect control flow.
+
+## Types live outside the kernel
+
+Type terms and inference are toolchain obligations, not extra evaluator special forms. This keeps TCB-A small while still allowing packages to require typechecking. Read [Types](../docs/spec/TYPES.md) for the accepted grammar and current inference coverage.
+
+## Pure first, effects second
+
+A pure function returns a value. A host-aware program returns an effect program assembled from `core/effect::pure`, `core/effect::perform`, `core/effect::bind`, and `core/effect::catch`. Continue with [effects and replay](effects-replay.qmd).

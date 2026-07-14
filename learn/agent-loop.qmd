@@ -1,0 +1,42 @@
+---
+title: "The agent authoring loop"
+description: "Bounded retrieval, exact intent selection, structured diagnostics, and evidence-backed repair."
+---
+
+# Use authority without flooding context
+
+## 1. Load the compact card
+
+Start with [`GC_AGENT_CORE_CARD_v0.3`](../docs/spec/GC_AGENT_CORE_CARD_v0.3.md). It is generated, token-bounded, parser-checked, and intentionally smaller than the full documentation corpus.
+
+## 2. Select exactly one task card
+
+Use the [task-card set](../docs/spec/GC_AGENT_TASK_CARDS_v0.3.md) for the current intent. If no task matches, fail closed and retrieve the authoring bundle rather than inventing a workflow.
+
+## 3. Resolve exact symbols and diagnostics
+
+```bash
+./target/debug/genesis agent-index lookup --symbol core/effect::perform --json
+./target/debug/genesis agent-index diagnostic --code caps/denied --json
+./target/debug/genesis cli-schema --json
+```
+
+The generated [symbol reference](../reference/symbols.qmd) and [diagnostic reference](../reference/diagnostics.qmd) are browsing views of the same machine authorities.
+
+## 4. Plan before mutation
+
+```bash
+./target/debug/genesis agent-plan <intent-and-inputs> --json
+```
+
+Record expected files, capabilities, obligations, validation commands, rollback, and acceptance evidence. Prefer semantic patches over textual edits when the toolchain supports them.
+
+## 5. Repair narrowly
+
+A safe repair must preserve policy and obligations, target the exact failing identity, rerun the original command, and abstain when preconditions changed. Never disable a gate to make its diagnostic disappear.
+
+## 6. Return evidence
+
+Report command vectors, input identities, output hashes, diagnostics, and unresolved gaps. “It passed for me” is not an acceptance artifact.
+
+[Open the full agent-authoring guide](../guides/agent-authoring.qmd)

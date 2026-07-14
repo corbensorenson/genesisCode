@@ -30,6 +30,34 @@ Owner: Runtime/effects maintainers.
 
 Owner: Assurance + release maintainers.
 
+## Published Presentation
+
+- Public site: `https://corbensorenson.github.io/genesisCode/`
+- Site manifest and navigation: `_quarto.yml`
+- Curated learning sources: `index.qmd`, `learn/`, and `guides/`
+- Generated reference sources: `reference/` and `llms.txt`
+- Deterministic generator: `scripts/render_quarto_reference.py`
+- Generated-reference freshness gate: `scripts/check_doc_topology_drift.sh`
+- Rendered completeness, link, fragment, accessibility, sitemap, and provenance validator: `scripts/check_quarto_site.py`
+- Commit-bound artifact stamper: `scripts/stamp_quarto_site.py`
+- Post-deploy public attestor: `scripts/check_quarto_deployment.py`
+- Pages workflow: `.github/workflows/docs-site.yml`
+
+The website is a non-normative projection of topology-owned repository sources. A
+generated page, search result, card, index record, or `llms.txt` entry cannot override
+the specification, policy, schema, ledger, or executable conformance source it links.
+The generator records source identities, enumerates the complete frozen symbol,
+host-operation, diagnostic, schema, example, and documentation inventories, and fails
+closed on stale output. The site renders every tracked Markdown authority under
+`docs/` in addition to the curated learning spine, so discoverability does not create
+a competing abbreviated manual. Every rendered artifact carries a source commit,
+clean/dirty source state, reference-index digest, and whole-artifact digest. The Pages
+workflow pins third-party actions, publishes only the artifact that passed the offline
+validator, and then checks the live learning, reference, agent, sitemap, provenance,
+and custom-404 surfaces against the deployed commit.
+
+Owner: Documentation + release maintainers.
+
 ## Operations
 
 - Live backlog: `upgrade_plan.md`
@@ -144,9 +172,11 @@ Owner: Release ops maintainers.
 
 1. Edit canonical topology-owned docs first.
 2. Run `bash scripts/update_capability_status_views.sh` for ledger-derived views, then update any other derived docs or skill pointers in the same change.
-3. Run drift checks:
+3. Run `python3 scripts/render_quarto_reference.py` to update site indexes after an authority or inventory changes.
+4. Run drift checks:
    - `bash scripts/check_doc_topology_drift.sh`
    - `bash scripts/check_doc_complexity_budget.sh`
    - `bash scripts/check_feature_matrix_gap_hygiene.sh`
    - `bash scripts/check_redteam_report.sh`
-4. Only then mark backlog items complete in `upgrade_plan.md`.
+   - `quarto render && python3 scripts/check_quarto_site.py`
+5. Only then mark backlog items complete in `upgrade_plan.md`.

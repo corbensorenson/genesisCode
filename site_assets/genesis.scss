@@ -1,0 +1,28 @@
+/*-- scss:defaults --*/
+$body-bg: #f5f0e6;
+$body-color: #17211d;
+$link-color: #006f5f;
+$selection-bg: #ffcf5a;
+$selection-color: #17211d;
+$font-family-sans-serif: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+$font-family-monospace: "Berkeley Mono", "IBM Plex Mono", Menlo, monospace;
+$headings-font-family: Charter, "Iowan Old Style", Georgia, serif;
+$headings-font-weight: 650;
+$navbar-bg: #11251f;
+$navbar-fg: #f7f1e5;
+$sidebar-bg: #ede5d6;
+$code-bg: #ece4d4;
+$code-color: #173a31;
+$border-color: #cfc4b1;
+$border-radius: 0.25rem;
+
+/*-- scss:rules --*/
+:root {
+  --gc-ink: #17211d;
+  --gc-forest: #123e32;
+  --gc-mint: #30b48c;
+  --gc-sun: #ffbd36;
+  --gc-coral: #ef6b4a;
+  --gc-paper: #f5f0e6;
+  --gc-rule: #cfc4b1;
+}

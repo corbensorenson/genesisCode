@@ -1,0 +1,2992 @@
+---
+title: "Diagnostic and repair reference"
+description: "Every stable diagnostic code and its policy-preserving repair actions."
+toc: true
+toc-depth: 2
+---
+
+# Structured failures
+
+**180 diagnostics** · catalog identity `12014848710f1d392489f2a9ff1b5068f46ea273ff5125cc7a728e0e0bff895f`
+
+Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
+
+## `canonicalization`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`canon/coreform`](#canon-coreform-c65113b7) | error | `canonicalize-input` |
+| [`fmt/not-canonical`](#fmt-not-canonical-386dcf2b) | error | `canonicalize-input` |
+
+### `canon/coreform` {#canon-coreform-c65113b7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/canon/coreform`
+
+**Likely causes**
+
+- Input is not valid canonical CoreForm.
+- Formatting would change the checked artifact.
+
+**Safe repairs**
+
+- **`canonicalize-input`** (not automatic; review required): Run the formatter on the reported source, review the deterministic diff, and retry the same check.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `fmt/not-canonical` {#fmt-not-canonical-386dcf2b}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/fmt/not-canonical`
+
+**Likely causes**
+
+- Input is not valid canonical CoreForm.
+- Formatting would change the checked artifact.
+
+**Safe repairs**
+
+- **`canonicalize-input`** (not automatic; review required): Run the formatter on the reported source, review the deterministic diff, and retry the same check.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `debugging`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`debug/bisect`](#debug-bisect-ac2443f5) | error | `regenerate-debug-artifact` |
+| [`debug/break`](#debug-break-4c9d5a05) | error | `regenerate-debug-artifact` |
+| [`debug/continue`](#debug-continue-9c055956) | error | `regenerate-debug-artifact` |
+| [`debug/frames`](#debug-frames-8e576fe9) | error | `regenerate-debug-artifact` |
+| [`debug/inspect`](#debug-inspect-5752abdb) | error | `regenerate-debug-artifact` |
+| [`debug/match`](#debug-match-0d68a714) | error | `regenerate-debug-artifact` |
+| [`debug/step`](#debug-step-7b1c7354) | error | `regenerate-debug-artifact` |
+| [`debug/timeline`](#debug-timeline-80c7a606) | error | `regenerate-debug-artifact` |
+| [`debug/trace`](#debug-trace-15c53a73) | error | `regenerate-debug-artifact` |
+
+### `debug/bisect` {#debug-bisect-ac2443f5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/bisect`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/break` {#debug-break-4c9d5a05}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/break`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/continue` {#debug-continue-9c055956}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/continue`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/frames` {#debug-frames-8e576fe9}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/frames`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/inspect` {#debug-inspect-5752abdb}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/inspect`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/match` {#debug-match-0d68a714}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/match`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/step` {#debug-step-7b1c7354}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/step`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/timeline` {#debug-timeline-80c7a606}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/timeline`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `debug/trace` {#debug-trace-15c53a73}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/debug/trace`
+
+**Likely causes**
+
+- A trace, timeline, cursor, frame, breakpoint, or matcher does not satisfy the debugger contract.
+- The inspected artifact is stale, malformed, or outside its valid bounds.
+
+**Safe repairs**
+
+- **`regenerate-debug-artifact`** (automatic eligible; review not required by catalog): Regenerate the bounded trace or timeline from the current program, then retry the exact debugger operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `effects`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`effects/run`](#effects-run-88f4c729) | error | `inspect-effect-boundary` |
+
+### `effects/run` {#effects-run-88f4c729}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/effects/run`
+
+**Likely causes**
+
+- An effect program failed at the deny-by-default runner boundary.
+- The effect payload or response violated its contract.
+
+**Safe repairs**
+
+- **`inspect-effect-boundary`** (not automatic; review required): Inspect the operation, capability decision, and sealed error; preserve the policy unless a separate review authorizes change.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `evaluation`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`eval/error`](#eval-error-2e165dfe) | error | `inspect-evaluation-trace` |
+
+### `eval/error` {#eval-error-2e165dfe}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/eval/error`
+
+**Likely causes**
+
+- Evaluation reached an invalid form, value, call, or resource boundary.
+- A runtime precondition was not established by the program.
+
+**Safe repairs**
+
+- **`inspect-evaluation-trace`** (automatic eligible; review not required by catalog): Inspect structured context and a bounded debug trace, repair the smallest failing expression, and rerun.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `internal`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`diagnostic/catalog-miss`](#diagnostic-catalog-miss-54804dc3) | error | `report-catalog-violation` |
+| [`error/unknown`](#error-unknown-5afe3253) | error | `report-catalog-violation` |
+
+### `diagnostic/catalog-miss` {#diagnostic-catalog-miss-54804dc3}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/diagnostic/catalog-miss`
+
+**Likely causes**
+
+- Production emitted an uncataloged diagnostic or could not identify a structured failure.
+- An internal invariant failed before a more specific diagnostic was available.
+
+**Safe repairs**
+
+- **`report-catalog-violation`** (automatic eligible; review not required by catalog): Preserve the original code and context, run the diagnostic catalog gate, and report this as an implementation defect.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `error/unknown` {#error-unknown-5afe3253}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/error/unknown`
+
+**Likely causes**
+
+- Production emitted an uncataloged diagnostic or could not identify a structured failure.
+- An internal invariant failed before a more specific diagnostic was available.
+
+**Safe repairs**
+
+- **`report-catalog-violation`** (automatic eligible; review not required by catalog): Preserve the original code and context, run the diagnostic catalog gate, and report this as an implementation defect.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `invocation`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`agent-index/card-invalid`](#agent-index-card-invalid-bb93df11) | error | `inspect-invocation-contract` |
+| [`agent-index/diagnostic-catalog-invalid`](#agent-index-diagnostic-catalog-invalid-5581d8ab) | error | `inspect-invocation-contract` |
+| [`agent-index/diagnostic-invalid`](#agent-index-diagnostic-invalid-7cd98c5d) | error | `inspect-invocation-contract` |
+| [`agent-index/diagnostic-not-found`](#agent-index-diagnostic-not-found-b648db4e) | error | `inspect-invocation-contract` |
+| [`agent-index/search-invalid`](#agent-index-search-invalid-72410570) | error | `inspect-invocation-contract` |
+| [`agent-index/symbol-index-invalid`](#agent-index-symbol-index-invalid-9e850eb0) | error | `inspect-invocation-contract` |
+| [`agent-index/symbol-invalid`](#agent-index-symbol-invalid-47b0ac2e) | error | `inspect-invocation-contract` |
+| [`agent-index/symbol-not-found`](#agent-index-symbol-not-found-37eac89c) | error | `inspect-invocation-contract` |
+| [`agent-plan/task-cards`](#agent-plan-task-cards-3ffeb48d) | error | `inspect-invocation-contract` |
+| [`compat/rust-engine-disabled`](#compat-rust-engine-disabled-47d8b10a) | error | `inspect-invocation-contract` |
+| [`engine/rust-disabled`](#engine-rust-disabled-5bcb9ffb) | error | `inspect-invocation-contract` |
+| [`mcp/input`](#mcp-input-f537d05c) | error | `inspect-invocation-contract` |
+| [`mcp/interface-invalid`](#mcp-interface-invalid-07940c97) | error | `inspect-invocation-contract` |
+| [`mcp/limit-invalid`](#mcp-limit-invalid-c639d8a7) | error | `inspect-invocation-contract` |
+| [`mcp/output`](#mcp-output-9525a9c7) | error | `inspect-invocation-contract` |
+| [`mcp/workspace-root`](#mcp-workspace-root-cfe4ae98) | error | `inspect-invocation-contract` |
+| [`prelude/missing`](#prelude-missing-94720305) | error | `inspect-invocation-contract` |
+| [`warm/argv-parse`](#warm-argv-parse-f654d90a) | error | `inspect-invocation-contract` |
+| [`warm/max-frame-bytes`](#warm-max-frame-bytes-830b3a6c) | error | `inspect-invocation-contract` |
+| [`warm/max-queue`](#warm-max-queue-ad6c9940) | error | `inspect-invocation-contract` |
+| [`warm/max-workspaces`](#warm-max-workspaces-1886f913) | error | `inspect-invocation-contract` |
+| [`warm/nested`](#warm-nested-0a1c0509) | error | `inspect-invocation-contract` |
+| [`warm/reader-launch`](#warm-reader-launch-b78c9065) | error | `inspect-invocation-contract` |
+| [`warm/workspace-escape`](#warm-workspace-escape-63fccc6e) | error | `inspect-invocation-contract` |
+| [`warm/workspace-limit`](#warm-workspace-limit-4ae5a7b8) | error | `inspect-invocation-contract` |
+| [`warm/workspace-path`](#warm-workspace-path-553426c6) | error | `inspect-invocation-contract` |
+| [`warm/workspace-path-escape`](#warm-workspace-path-escape-ab058274) | error | `inspect-invocation-contract` |
+| [`warm/workspace-rebind`](#warm-workspace-rebind-7a1e24a1) | error | `inspect-invocation-contract` |
+| [`warm/workspace-root`](#warm-workspace-root-856efee1) | error | `inspect-invocation-contract` |
+| [`warm/workspace-unavailable`](#warm-workspace-unavailable-0ae425f5) | error | `inspect-invocation-contract` |
+
+### `agent-index/card-invalid` {#agent-index-card-invalid-bb93df11}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/card-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/diagnostic-catalog-invalid` {#agent-index-diagnostic-catalog-invalid-5581d8ab}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/diagnostic-catalog-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/diagnostic-invalid` {#agent-index-diagnostic-invalid-7cd98c5d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/diagnostic-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/diagnostic-not-found` {#agent-index-diagnostic-not-found-b648db4e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/diagnostic-not-found`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/search-invalid` {#agent-index-search-invalid-72410570}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/search-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/symbol-index-invalid` {#agent-index-symbol-index-invalid-9e850eb0}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/symbol-index-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/symbol-invalid` {#agent-index-symbol-invalid-47b0ac2e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/symbol-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-index/symbol-not-found` {#agent-index-symbol-not-found-37eac89c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-index/symbol-not-found`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `agent-plan/task-cards` {#agent-plan-task-cards-3ffeb48d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/agent-plan/task-cards`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `compat/rust-engine-disabled` {#compat-rust-engine-disabled-47d8b10a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/compat/rust-engine-disabled`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `engine/rust-disabled` {#engine-rust-disabled-5bcb9ffb}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/engine/rust-disabled`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `mcp/input` {#mcp-input-f537d05c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/input`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `mcp/interface-invalid` {#mcp-interface-invalid-07940c97}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/interface-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `mcp/limit-invalid` {#mcp-limit-invalid-c639d8a7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/limit-invalid`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `mcp/output` {#mcp-output-9525a9c7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/output`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `mcp/workspace-root` {#mcp-workspace-root-cfe4ae98}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/mcp/workspace-root`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `prelude/missing` {#prelude-missing-94720305}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/prelude/missing`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/argv-parse` {#warm-argv-parse-f654d90a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/argv-parse`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/max-frame-bytes` {#warm-max-frame-bytes-830b3a6c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/max-frame-bytes`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/max-queue` {#warm-max-queue-ad6c9940}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/max-queue`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/max-workspaces` {#warm-max-workspaces-1886f913}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/max-workspaces`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/nested` {#warm-nested-0a1c0509}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/nested`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/reader-launch` {#warm-reader-launch-b78c9065}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/reader-launch`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-escape` {#warm-workspace-escape-63fccc6e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-escape`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-limit` {#warm-workspace-limit-4ae5a7b8}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-limit`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-path` {#warm-workspace-path-553426c6}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-path`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-path-escape` {#warm-workspace-path-escape-ab058274}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-path-escape`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-rebind` {#warm-workspace-rebind-7a1e24a1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-rebind`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-root` {#warm-workspace-root-856efee1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-root`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `warm/workspace-unavailable` {#warm-workspace-unavailable-0ae425f5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/warm/workspace-unavailable`
+
+**Likely causes**
+
+- The requested command, profile, or embedded agent authority is unavailable or inconsistent.
+- An exact lookup or invocation precondition was not satisfied.
+
+**Safe repairs**
+
+- **`inspect-invocation-contract`** (automatic eligible; review not required by catalog): Inspect the exact command schema or agent index record, correct only the rejected input, and retry.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `io`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`io/cwd`](#io-cwd-9b05975a) | error | `verify-io-preconditions` |
+| [`io/error`](#io-error-dd474ba1) | error | `verify-io-preconditions` |
+| [`io/mkdir`](#io-mkdir-b34f5e35) | error | `verify-io-preconditions` |
+| [`io/read`](#io-read-1d9f02f3) | error | `verify-io-preconditions` |
+| [`io/store`](#io-store-fb16a900) | error | `verify-io-preconditions` |
+| [`io/write`](#io-write-86bd4c02) | error | `verify-io-preconditions` |
+
+### `io/cwd` {#io-cwd-9b05975a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/cwd`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `io/error` {#io-error-dd474ba1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/error`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `io/mkdir` {#io-mkdir-b34f5e35}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/mkdir`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `io/read` {#io-read-1d9f02f3}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/read`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `io/store` {#io-store-fb16a900}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/store`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `io/write` {#io-write-86bd4c02}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/io/write`
+
+**Likely causes**
+
+- A base-relative path is missing, inaccessible, or outside the active sandbox.
+- A deterministic filesystem operation failed.
+
+**Safe repairs**
+
+- **`verify-io-preconditions`** (automatic eligible; review not required by catalog): Verify the reported base-relative path, permissions, and sandbox boundary, then retry without widening access.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `obligation`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`obligation/stage1-validation`](#obligation-stage1-validation-61a603fa) | error | `resolve-obligation` |
+| [`obligation/translation-validation`](#obligation-translation-validation-fb0cdeaf) | error | `resolve-obligation` |
+| [`opt/error`](#opt-error-c854610b) | error | `resolve-obligation` |
+| [`test/error`](#test-error-159e0b82) | error | `resolve-obligation` |
+| [`typecheck/error`](#typecheck-error-d03a56d7) | error | `resolve-obligation` |
+
+### `obligation/stage1-validation` {#obligation-stage1-validation-61a603fa}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/obligation/stage1-validation`
+
+**Likely causes**
+
+- A type, proof, test, optimization, or translation obligation did not hold.
+- Required evidence is missing, stale, or mismatched.
+
+**Safe repairs**
+
+- **`resolve-obligation`** (automatic eligible; review not required by catalog): Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `obligation/translation-validation` {#obligation-translation-validation-fb0cdeaf}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/obligation/translation-validation`
+
+**Likely causes**
+
+- A type, proof, test, optimization, or translation obligation did not hold.
+- Required evidence is missing, stale, or mismatched.
+
+**Safe repairs**
+
+- **`resolve-obligation`** (automatic eligible; review not required by catalog): Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `opt/error` {#opt-error-c854610b}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/opt/error`
+
+**Likely causes**
+
+- A type, proof, test, optimization, or translation obligation did not hold.
+- Required evidence is missing, stale, or mismatched.
+
+**Safe repairs**
+
+- **`resolve-obligation`** (automatic eligible; review not required by catalog): Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `test/error` {#test-error-159e0b82}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/test/error`
+
+**Likely causes**
+
+- A type, proof, test, optimization, or translation obligation did not hold.
+- Required evidence is missing, stale, or mismatched.
+
+**Safe repairs**
+
+- **`resolve-obligation`** (automatic eligible; review not required by catalog): Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `typecheck/error` {#typecheck-error-d03a56d7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/typecheck/error`
+
+**Likely causes**
+
+- A type, proof, test, optimization, or translation obligation did not hold.
+- Required evidence is missing, stale, or mismatched.
+
+**Safe repairs**
+
+- **`resolve-obligation`** (automatic eligible; review not required by catalog): Inspect the named obligation artifact, repair the source or proof, and rerun the exact verification command.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `package`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`pkg/abi`](#pkg-abi-9f567737) | error | `verify-package-state` |
+| [`pkg/assurance-pack`](#pkg-assurance-pack-b45a78db) | error | `verify-package-state` |
+| [`pkg/build`](#pkg-build-696e18eb) | error | `verify-package-state` |
+| [`pkg/dispatch-drift`](#pkg-dispatch-drift-24be6246) | error | `verify-package-state` |
+| [`pkg/env`](#pkg-env-3e359315) | error | `verify-package-state` |
+| [`pkg/env-hydrate`](#pkg-env-hydrate-6ee59edd) | error | `verify-package-state` |
+| [`pkg/error`](#pkg-error-c40f25cf) | error | `verify-package-state` |
+| [`pkg/import`](#pkg-import-a686a679) | error | `verify-package-state` |
+| [`pkg/migrate`](#pkg-migrate-6194e1c1) | error | `verify-package-state` |
+| [`pkg/new`](#pkg-new-266597da) | error | `verify-package-state` |
+| [`pkg/profile-runtime`](#pkg-profile-runtime-f4c2d3c6) | error | `verify-package-state` |
+| [`pkg/qualify`](#pkg-qualify-3da1a9ef) | error | `verify-package-state` |
+| [`pkg/remove`](#pkg-remove-4f0c9611) | error | `verify-package-state` |
+| [`pkg/run`](#pkg-run-f1b6acf5) | error | `verify-package-state` |
+| [`pkg/run-contract`](#pkg-run-contract-6acadf16) | error | `verify-package-state` |
+| [`pkg/scaffold`](#pkg-scaffold-b97e0f07) | error | `verify-package-state` |
+| [`pkg/self-optimize`](#pkg-self-optimize-a3e11c63) | error | `verify-package-state` |
+| [`pkg/spec`](#pkg-spec-23a2cfff) | error | `verify-package-state` |
+| [`pkg/trace`](#pkg-trace-e66dcfbc) | error | `verify-package-state` |
+
+### `pkg/abi` {#pkg-abi-9f567737}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/abi`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/assurance-pack` {#pkg-assurance-pack-b45a78db}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/assurance-pack`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/build` {#pkg-build-696e18eb}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/build`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/dispatch-drift` {#pkg-dispatch-drift-24be6246}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/dispatch-drift`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/env` {#pkg-env-3e359315}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/env`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/env-hydrate` {#pkg-env-hydrate-6ee59edd}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/env-hydrate`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/error` {#pkg-error-c40f25cf}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/error`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/import` {#pkg-import-a686a679}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/import`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/migrate` {#pkg-migrate-6194e1c1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/migrate`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/new` {#pkg-new-266597da}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/new`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/profile-runtime` {#pkg-profile-runtime-f4c2d3c6}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/profile-runtime`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/qualify` {#pkg-qualify-3da1a9ef}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/qualify`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/remove` {#pkg-remove-4f0c9611}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/remove`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/run` {#pkg-run-f1b6acf5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/run`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/run-contract` {#pkg-run-contract-6acadf16}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/run-contract`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/scaffold` {#pkg-scaffold-b97e0f07}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/scaffold`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/self-optimize` {#pkg-self-optimize-a3e11c63}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/self-optimize`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/spec` {#pkg-spec-23a2cfff}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/spec`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `pkg/trace` {#pkg-trace-e66dcfbc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/pkg/trace`
+
+**Likely causes**
+
+- Package metadata, lock state, dependency evidence, or frontend dispatch is invalid.
+- The requested package lifecycle transition cannot be verified.
+
+**Safe repairs**
+
+- **`verify-package-state`** (automatic eligible; review not required by catalog): Inspect package and lock diagnostics, repair the declared input, and regenerate only derived package artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `parse`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`manifest/error`](#manifest-error-847f5c1e) | error | `repair-parse-input` |
+| [`manifest/parse`](#manifest-parse-8b1ca96d) | error | `repair-parse-input` |
+| [`module/error`](#module-error-a0af5c89) | error | `repair-parse-input` |
+| [`package/invalid`](#package-invalid-e3d51064) | error | `repair-parse-input` |
+| [`parse/coreform`](#parse-coreform-9152527d) | error | `repair-parse-input` |
+| [`parse/log`](#parse-log-a023ced7) | error | `repair-parse-input` |
+| [`parse/term`](#parse-term-742c4c1d) | error | `repair-parse-input` |
+
+### `manifest/error` {#manifest-error-847f5c1e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/manifest/error`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `manifest/parse` {#manifest-parse-8b1ca96d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/manifest/parse`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `module/error` {#module-error-a0af5c89}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/module/error`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `package/invalid` {#package-invalid-e3d51064}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/package/invalid`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `parse/coreform` {#parse-coreform-9152527d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/parse/coreform`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `parse/log` {#parse-log-a023ced7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/parse/log`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `parse/term` {#parse-term-742c4c1d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/parse/term`
+
+**Likely causes**
+
+- Source or metadata does not satisfy its declared grammar or schema.
+- A required field or canonical representation is missing.
+
+**Safe repairs**
+
+- **`repair-parse-input`** (automatic eligible; review not required by catalog): Repair the localized syntax or schema violation without changing capability policy, then parse or format again.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `policy`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`caps/denied`](#caps-denied-aa658bb1) | error | `review-policy-denial` |
+| [`caps/missing`](#caps-missing-ddc72762) | error | `review-policy-denial` |
+| [`caps/parse`](#caps-parse-13627f19) | error | `review-policy-denial` |
+| [`policy/parse`](#policy-parse-ff2cc7ca) | error | `review-policy-denial` |
+| [`policy/resolve`](#policy-resolve-1a0d5ed4) | error | `review-policy-denial` |
+| [`policy/schema`](#policy-schema-0f564da3) | error | `review-policy-denial` |
+| [`policy/set-default`](#policy-set-default-3f8fe130) | error | `review-policy-denial` |
+
+### `caps/denied` {#caps-denied-aa658bb1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/caps/denied`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `caps/missing` {#caps-missing-ddc72762}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/caps/missing`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `caps/parse` {#caps-parse-13627f19}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/caps/parse`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `policy/parse` {#policy-parse-ff2cc7ca}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/policy/parse`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `policy/resolve` {#policy-resolve-1a0d5ed4}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/policy/resolve`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `policy/schema` {#policy-schema-0f564da3}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/policy/schema`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `policy/set-default` {#policy-set-default-3f8fe130}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/policy/set-default`
+
+**Likely causes**
+
+- The requested operation is absent from the active deny-by-default policy.
+- Policy syntax, schema, or selected profile is invalid.
+
+**Safe repairs**
+
+- **`review-policy-denial`** (not automatic; review required): Inspect the required capability and policy decision; do not broaden policy unless a separate reviewed policy change is intended.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `registry`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`registry/config`](#registry-config-0a4fa301) | error | `verify-registry-input` |
+| [`registry/io`](#registry-io-fb438fdc) | error | `verify-registry-input` |
+| [`registry/serve`](#registry-serve-d3da922e) | error | `verify-registry-input` |
+
+### `registry/config` {#registry-config-0a4fa301}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/registry/config`
+
+**Likely causes**
+
+- Registry configuration, storage, or serving preconditions are invalid.
+- A registry artifact could not be read or verified.
+
+**Safe repairs**
+
+- **`verify-registry-input`** (automatic eligible; review not required by catalog): Validate registry configuration and artifact identities before retrying the same operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `registry/io` {#registry-io-fb438fdc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/registry/io`
+
+**Likely causes**
+
+- Registry configuration, storage, or serving preconditions are invalid.
+- A registry artifact could not be read or verified.
+
+**Safe repairs**
+
+- **`verify-registry-input`** (automatic eligible; review not required by catalog): Validate registry configuration and artifact identities before retrying the same operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `registry/serve` {#registry-serve-d3da922e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/registry/serve`
+
+**Likely causes**
+
+- Registry configuration, storage, or serving preconditions are invalid.
+- A registry artifact could not be read or verified.
+
+**Safe repairs**
+
+- **`verify-registry-input`** (automatic eligible; review not required by catalog): Validate registry configuration and artifact identities before retrying the same operation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `replay`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`replay/error`](#replay-error-128f6e66) | error | `regenerate-replay-log` |
+| [`replay/mismatch`](#replay-mismatch-6d88865d) | error | `regenerate-replay-log` |
+| [`replay/program-hash-mismatch`](#replay-program-hash-mismatch-400ec69d) | error | `regenerate-replay-log` |
+
+### `replay/error` {#replay-error-128f6e66}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/replay/error`
+
+**Likely causes**
+
+- Program, request, response, policy, or scheduler facts differ from the recorded log.
+- The log belongs to another execution identity or is corrupted.
+
+**Safe repairs**
+
+- **`regenerate-replay-log`** (not automatic; review required): Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `replay/mismatch` {#replay-mismatch-6d88865d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/replay/mismatch`
+
+**Likely causes**
+
+- Program, request, response, policy, or scheduler facts differ from the recorded log.
+- The log belongs to another execution identity or is corrupted.
+
+**Safe repairs**
+
+- **`regenerate-replay-log`** (not automatic; review required): Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `replay/program-hash-mismatch` {#replay-program-hash-mismatch-400ec69d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/replay/program-hash-mismatch`
+
+**Likely causes**
+
+- Program, request, response, policy, or scheduler facts differ from the recorded log.
+- The log belongs to another execution identity or is corrupted.
+
+**Safe repairs**
+
+- **`regenerate-replay-log`** (not automatic; review required): Preserve the mismatched log for investigation, then generate a new log from the exact current program and policy.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `runtime-stage`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`stage1/error`](#stage1-error-547edc43) | error | `inspect-stage-evidence` |
+| [`stage2/error`](#stage2-error-35d228dc) | error | `inspect-stage-evidence` |
+| [`stage2/unsupported`](#stage2-unsupported-3bb65258) | error | `inspect-stage-evidence` |
+
+### `stage1/error` {#stage1-error-547edc43}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/stage1/error`
+
+**Likely causes**
+
+- A staged translation or execution boundary returned an error or unsupported result.
+- Cross-stage validation rejected the produced artifact.
+
+**Safe repairs**
+
+- **`inspect-stage-evidence`** (automatic eligible; review not required by catalog): Inspect the stage result and translation-validation evidence; repair the producer rather than suppressing validation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `stage2/error` {#stage2-error-35d228dc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/stage2/error`
+
+**Likely causes**
+
+- A staged translation or execution boundary returned an error or unsupported result.
+- Cross-stage validation rejected the produced artifact.
+
+**Safe repairs**
+
+- **`inspect-stage-evidence`** (automatic eligible; review not required by catalog): Inspect the stage result and translation-validation evidence; repair the producer rather than suppressing validation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `stage2/unsupported` {#stage2-unsupported-3bb65258}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/stage2/unsupported`
+
+**Likely causes**
+
+- A staged translation or execution boundary returned an error or unsupported result.
+- Cross-stage validation rejected the produced artifact.
+
+**Safe repairs**
+
+- **`inspect-stage-evidence`** (automatic eligible; review not required by catalog): Inspect the stage result and translation-validation evidence; repair the producer rather than suppressing validation.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `security`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`sign/acceptance`](#sign-acceptance-c2ba49e1) | error | `verify-security-evidence` |
+| [`sign/error`](#sign-error-dbeb28f9) | error | `verify-security-evidence` |
+| [`sign/key`](#sign-key-205c9acd) | error | `verify-security-evidence` |
+| [`transparency/error`](#transparency-error-a13723b5) | error | `verify-security-evidence` |
+
+### `sign/acceptance` {#sign-acceptance-c2ba49e1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/acceptance`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sign/error` {#sign-error-dbeb28f9}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/error`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sign/key` {#sign-key-205c9acd}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/key`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `transparency/error` {#transparency-error-a13723b5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/transparency/error`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `selfhost`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`selfhost-only/bootstrap`](#selfhost-only-bootstrap-ae3e7424) | error | `verify-selfhost-artifact` |
+| [`selfhost-only/engine`](#selfhost-only-engine-9d85c6d8) | error | `verify-selfhost-artifact` |
+| [`selfhost-only/frontend`](#selfhost-only-frontend-ba1bebc1) | error | `verify-selfhost-artifact` |
+| [`selfhost-only/legacy-semantic-fallback`](#selfhost-only-legacy-semantic-fallback-346570e8) | error | `verify-selfhost-artifact` |
+| [`selfhost/artifact-missing`](#selfhost-artifact-missing-e929f695) | error | `verify-selfhost-artifact` |
+| [`selfhost/artifact-required`](#selfhost-artifact-required-f527b616) | error | `verify-selfhost-artifact` |
+| [`selfhost/bad-return`](#selfhost-bad-return-801deb5f) | error | `verify-selfhost-artifact` |
+| [`selfhost/bootstrap`](#selfhost-bootstrap-73f336ba) | error | `verify-selfhost-artifact` |
+| [`selfhost/bootstrap-mode`](#selfhost-bootstrap-mode-8cf1ae7d) | error | `verify-selfhost-artifact` |
+| [`selfhost/canon`](#selfhost-canon-6e490ad1) | error | `verify-selfhost-artifact` |
+| [`selfhost/dashboard`](#selfhost-dashboard-86b8f695) | error | `verify-selfhost-artifact` |
+| [`selfhost/error`](#selfhost-error-8f88bd1b) | error | `verify-selfhost-artifact` |
+| [`selfhost/freshness`](#selfhost-freshness-1c88bbc7) | error | `verify-selfhost-artifact` |
+| [`selfhost/hash`](#selfhost-hash-8f00bfcc) | error | `verify-selfhost-artifact` |
+| [`selfhost/init`](#selfhost-init-8f07a2fe) | error | `verify-selfhost-artifact` |
+| [`selfhost/missing`](#selfhost-missing-5935532e) | error | `verify-selfhost-artifact` |
+| [`selfhost/parse`](#selfhost-parse-dcc7fc30) | error | `verify-selfhost-artifact` |
+| [`selfhost/plan`](#selfhost-plan-7000bc2f) | error | `verify-selfhost-artifact` |
+| [`selfhost/recovery`](#selfhost-recovery-b99a0db4) | error | `verify-selfhost-artifact` |
+| [`selfhost/seed`](#selfhost-seed-f6eb55af) | error | `verify-selfhost-artifact` |
+| [`selfhost/sources`](#selfhost-sources-732ec475) | error | `verify-selfhost-artifact` |
+| [`selfhost/stage1`](#selfhost-stage1-f429e4a0) | error | `verify-selfhost-artifact` |
+
+### `selfhost-only/bootstrap` {#selfhost-only-bootstrap-ae3e7424}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost-only/bootstrap`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost-only/engine` {#selfhost-only-engine-9d85c6d8}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost-only/engine`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost-only/frontend` {#selfhost-only-frontend-ba1bebc1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost-only/frontend`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost-only/legacy-semantic-fallback` {#selfhost-only-legacy-semantic-fallback-346570e8}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost-only/legacy-semantic-fallback`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/artifact-missing` {#selfhost-artifact-missing-e929f695}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/artifact-missing`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/artifact-required` {#selfhost-artifact-required-f527b616}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/artifact-required`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/bad-return` {#selfhost-bad-return-801deb5f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/bad-return`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/bootstrap` {#selfhost-bootstrap-73f336ba}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/bootstrap`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/bootstrap-mode` {#selfhost-bootstrap-mode-8cf1ae7d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/bootstrap-mode`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/canon` {#selfhost-canon-6e490ad1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/canon`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/dashboard` {#selfhost-dashboard-86b8f695}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/dashboard`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/error` {#selfhost-error-8f88bd1b}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/error`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/freshness` {#selfhost-freshness-1c88bbc7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/freshness`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/hash` {#selfhost-hash-8f00bfcc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/hash`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/init` {#selfhost-init-8f07a2fe}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/init`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/missing` {#selfhost-missing-5935532e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/missing`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/parse` {#selfhost-parse-dcc7fc30}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/parse`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/plan` {#selfhost-plan-7000bc2f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/plan`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/recovery` {#selfhost-recovery-b99a0db4}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/recovery`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/seed` {#selfhost-seed-f6eb55af}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/seed`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/sources` {#selfhost-sources-732ec475}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/sources`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `selfhost/stage1` {#selfhost-stage1-f429e4a0}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/selfhost/stage1`
+
+**Likely causes**
+
+- A self-hosted artifact, bootstrap stage, source identity, or frontend result is missing or stale.
+- The selected execution profile forbids a Rust fallback.
+
+**Safe repairs**
+
+- **`verify-selfhost-artifact`** (automatic eligible; review not required by catalog): Verify bootstrap inputs and artifact identity, rebuild through the declared self-host path, and rerun parity checks.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `semantic-edit`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`patch/invalid`](#patch-invalid-bdb4bd5e) | error | `replan-semantic-edit` |
+| [`patch/obligation`](#patch-obligation-e59cdf27) | error | `replan-semantic-edit` |
+| [`refactor/duplicate-edit-target`](#refactor-duplicate-edit-target-ea93ecfb) | error | `replan-semantic-edit` |
+| [`semantic-edit/invalid`](#semantic-edit-invalid-632a21a6) | error | `replan-semantic-edit` |
+| [`semantic-edit/path`](#semantic-edit-path-619d239c) | error | `replan-semantic-edit` |
+| [`semantic-edit/refactor`](#semantic-edit-refactor-872bce32) | error | `replan-semantic-edit` |
+| [`semantic-edit/workspace-graph`](#semantic-edit-workspace-graph-76f6a4dd) | error | `replan-semantic-edit` |
+| [`session/already-exists`](#session-already-exists-e343226e) | error | `replan-semantic-edit` |
+| [`session/apply-busy`](#session-apply-busy-e8030f0d) | error | `replan-semantic-edit` |
+| [`session/apply-failed`](#session-apply-failed-d23ec7c8) | error | `replan-semantic-edit` |
+| [`session/apply-mismatch`](#session-apply-mismatch-c13ef5b7) | error | `replan-semantic-edit` |
+| [`session/caps-outside-snapshot`](#session-caps-outside-snapshot-2f3f69ca) | error | `replan-semantic-edit` |
+| [`session/caps-unavailable`](#session-caps-unavailable-5bf3d25e) | error | `replan-semantic-edit` |
+| [`session/invalid-id`](#session-invalid-id-40e99c91) | error | `replan-semantic-edit` |
+| [`session/lock-failed`](#session-lock-failed-78342dd2) | error | `replan-semantic-edit` |
+| [`session/not-found`](#session-not-found-efb79236) | error | `replan-semantic-edit` |
+| [`session/not-open`](#session-not-open-4bb479b5) | error | `replan-semantic-edit` |
+| [`session/obligation-error`](#session-obligation-error-44b79a75) | error | `replan-semantic-edit` |
+| [`session/obligations-failed`](#session-obligations-failed-c83b63e4) | error | `replan-semantic-edit` |
+| [`session/package-invalid`](#session-package-invalid-9a421778) | error | `replan-semantic-edit` |
+| [`session/package-path`](#session-package-path-5e4b67c5) | error | `replan-semantic-edit` |
+| [`session/package-unavailable`](#session-package-unavailable-0f386120) | error | `replan-semantic-edit` |
+| [`session/patch-invalid`](#session-patch-invalid-b9161a0f) | error | `replan-semantic-edit` |
+| [`session/patch-io`](#session-patch-io-a2d5d4ed) | error | `replan-semantic-edit` |
+| [`session/patch-obligation`](#session-patch-obligation-a249bca1) | error | `replan-semantic-edit` |
+| [`session/patch-store`](#session-patch-store-5155a43a) | error | `replan-semantic-edit` |
+| [`session/patch-unavailable`](#session-patch-unavailable-72af130c) | error | `replan-semantic-edit` |
+| [`session/rollback-failed`](#session-rollback-failed-3c73d681) | error | `replan-semantic-edit` |
+| [`session/snapshot-escape`](#session-snapshot-escape-d95498a4) | error | `replan-semantic-edit` |
+| [`session/snapshot-file`](#session-snapshot-file-c83a419a) | error | `replan-semantic-edit` |
+| [`session/snapshot-limit`](#session-snapshot-limit-ad52dc38) | error | `replan-semantic-edit` |
+| [`session/snapshot-mismatch`](#session-snapshot-mismatch-433fb6d4) | error | `replan-semantic-edit` |
+| [`session/snapshot-missing`](#session-snapshot-missing-814281a8) | error | `replan-semantic-edit` |
+| [`session/snapshot-path`](#session-snapshot-path-7ec396bd) | error | `replan-semantic-edit` |
+| [`session/snapshot-read`](#session-snapshot-read-db6a287f) | error | `replan-semantic-edit` |
+| [`session/stale-base`](#session-stale-base-692bb3b5) | error | `replan-semantic-edit` |
+| [`session/state-invalid`](#session-state-invalid-50c71d1f) | error | `replan-semantic-edit` |
+| [`session/state-write`](#session-state-write-0f32426e) | error | `replan-semantic-edit` |
+| [`session/store-write`](#session-store-write-730b6d18) | error | `replan-semantic-edit` |
+| [`session/unverified`](#session-unverified-e824f336) | error | `replan-semantic-edit` |
+| [`session/workspace-tampered`](#session-workspace-tampered-a9833c7a) | error | `replan-semantic-edit` |
+| [`session/workspace-write`](#session-workspace-write-a731879b) | error | `replan-semantic-edit` |
+
+### `patch/invalid` {#patch-invalid-bdb4bd5e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/patch/invalid`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `patch/obligation` {#patch-obligation-e59cdf27}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/patch/obligation`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `refactor/duplicate-edit-target` {#refactor-duplicate-edit-target-ea93ecfb}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/refactor/duplicate-edit-target`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `semantic-edit/invalid` {#semantic-edit-invalid-632a21a6}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/invalid`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `semantic-edit/path` {#semantic-edit-path-619d239c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/path`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `semantic-edit/refactor` {#semantic-edit-refactor-872bce32}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/refactor`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `semantic-edit/workspace-graph` {#semantic-edit-workspace-graph-76f6a4dd}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/semantic-edit/workspace-graph`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/already-exists` {#session-already-exists-e343226e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/already-exists`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/apply-busy` {#session-apply-busy-e8030f0d}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/apply-busy`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/apply-failed` {#session-apply-failed-d23ec7c8}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/apply-failed`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/apply-mismatch` {#session-apply-mismatch-c13ef5b7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/apply-mismatch`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/caps-outside-snapshot` {#session-caps-outside-snapshot-2f3f69ca}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/caps-outside-snapshot`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/caps-unavailable` {#session-caps-unavailable-5bf3d25e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/caps-unavailable`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/invalid-id` {#session-invalid-id-40e99c91}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/invalid-id`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/lock-failed` {#session-lock-failed-78342dd2}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/lock-failed`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/not-found` {#session-not-found-efb79236}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/not-found`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/not-open` {#session-not-open-4bb479b5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/not-open`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/obligation-error` {#session-obligation-error-44b79a75}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/obligation-error`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/obligations-failed` {#session-obligations-failed-c83b63e4}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/obligations-failed`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/package-invalid` {#session-package-invalid-9a421778}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/package-invalid`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/package-path` {#session-package-path-5e4b67c5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/package-path`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/package-unavailable` {#session-package-unavailable-0f386120}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/package-unavailable`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/patch-invalid` {#session-patch-invalid-b9161a0f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/patch-invalid`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/patch-io` {#session-patch-io-a2d5d4ed}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/patch-io`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/patch-obligation` {#session-patch-obligation-a249bca1}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/patch-obligation`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/patch-store` {#session-patch-store-5155a43a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/patch-store`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/patch-unavailable` {#session-patch-unavailable-72af130c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/patch-unavailable`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/rollback-failed` {#session-rollback-failed-3c73d681}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/rollback-failed`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-escape` {#session-snapshot-escape-d95498a4}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-escape`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-file` {#session-snapshot-file-c83a419a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-file`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-limit` {#session-snapshot-limit-ad52dc38}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-limit`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-mismatch` {#session-snapshot-mismatch-433fb6d4}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-mismatch`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-missing` {#session-snapshot-missing-814281a8}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-missing`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-path` {#session-snapshot-path-7ec396bd}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-path`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/snapshot-read` {#session-snapshot-read-db6a287f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/snapshot-read`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/stale-base` {#session-stale-base-692bb3b5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/stale-base`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/state-invalid` {#session-state-invalid-50c71d1f}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/state-invalid`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/state-write` {#session-state-write-0f32426e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/state-write`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/store-write` {#session-store-write-730b6d18}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/store-write`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/unverified` {#session-unverified-e824f336}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/unverified`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/workspace-tampered` {#session-workspace-tampered-a9833c7a}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/workspace-tampered`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `session/workspace-write` {#session-workspace-write-a731879b}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/session/workspace-write`
+
+**Likely causes**
+
+- A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.
+- The source graph no longer matches the plan preconditions.
+
+**Safe repairs**
+
+- **`replan-semantic-edit`** (automatic eligible; review not required by catalog): Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `serialization`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`json/serialize`](#json-serialize-eb371257) | error | `report-serialization-contract` |
+
+### `json/serialize` {#json-serialize-eb371257}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/json/serialize`
+
+**Likely causes**
+
+- A command result could not be represented by the versioned JSON envelope.
+- An internal value violated the serializer contract.
+
+**Safe repairs**
+
+- **`report-serialization-contract`** (automatic eligible; review not required by catalog): Preserve the failing structured context and report the catalog ID as an implementation defect.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `storage`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`commit/new`](#commit-new-74bd19ed) | error | `verify-storage-identity` |
+| [`commit/show`](#commit-show-1e696e54) | error | `verify-storage-identity` |
+| [`gc/error`](#gc-error-6364936c) | error | `verify-storage-identity` |
+| [`refs/error`](#refs-error-2ad73d78) | error | `verify-storage-identity` |
+| [`store/dispatch-drift`](#store-dispatch-drift-712a6e1e) | error | `verify-storage-identity` |
+| [`store/error`](#store-error-d414e080) | error | `verify-storage-identity` |
+| [`sync/error`](#sync-error-0df0f3c7) | error | `verify-storage-identity` |
+| [`sync/set-ref`](#sync-set-ref-b68ff4fb) | error | `verify-storage-identity` |
+
+### `commit/new` {#commit-new-74bd19ed}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/commit/new`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `commit/show` {#commit-show-1e696e54}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/commit/show`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `gc/error` {#gc-error-6364936c}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/gc/error`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `refs/error` {#refs-error-2ad73d78}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/refs/error`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `store/dispatch-drift` {#store-dispatch-drift-712a6e1e}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/store/dispatch-drift`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `store/error` {#store-error-d414e080}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/store/error`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sync/error` {#sync-error-0df0f3c7}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sync/error`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sync/set-ref` {#sync-set-ref-b68ff4fb}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sync/set-ref`
+
+**Likely causes**
+
+- Content-addressed storage, references, commits, synchronization, or garbage-collection state is invalid.
+- A requested identity is missing or does not verify.
+
+**Safe repairs**
+
+- **`verify-storage-identity`** (automatic eligible; review not required by catalog): Verify content identities and references before retrying; never delete or rewrite reachable data as an automatic repair.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+## `vcs`
+
+| Code | Severity | Safe action |
+|---|---|---|
+| [`vcs/blame`](#vcs-blame-a20503cc) | error | `inspect-vcs-precondition` |
+| [`vcs/dispatch-drift`](#vcs-dispatch-drift-e69263d5) | error | `inspect-vcs-precondition` |
+| [`vcs/error`](#vcs-error-dbae2afc) | error | `inspect-vcs-precondition` |
+| [`vcs/resolve-conflict`](#vcs-resolve-conflict-701e2f8b) | error | `inspect-vcs-precondition` |
+| [`vcs/why`](#vcs-why-f9352751) | error | `inspect-vcs-precondition` |
+
+### `vcs/blame` {#vcs-blame-a20503cc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/vcs/blame`
+
+**Likely causes**
+
+- A version-control artifact, conflict resolution, or self-host dispatch result is invalid.
+- The requested snapshot or symbol does not exist in the selected history.
+
+**Safe repairs**
+
+- **`inspect-vcs-precondition`** (automatic eligible; review not required by catalog): Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `vcs/dispatch-drift` {#vcs-dispatch-drift-e69263d5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/vcs/dispatch-drift`
+
+**Likely causes**
+
+- A version-control artifact, conflict resolution, or self-host dispatch result is invalid.
+- The requested snapshot or symbol does not exist in the selected history.
+
+**Safe repairs**
+
+- **`inspect-vcs-precondition`** (automatic eligible; review not required by catalog): Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `vcs/error` {#vcs-error-dbae2afc}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/vcs/error`
+
+**Likely causes**
+
+- A version-control artifact, conflict resolution, or self-host dispatch result is invalid.
+- The requested snapshot or symbol does not exist in the selected history.
+
+**Safe repairs**
+
+- **`inspect-vcs-precondition`** (automatic eligible; review not required by catalog): Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `vcs/resolve-conflict` {#vcs-resolve-conflict-701e2f8b}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/vcs/resolve-conflict`
+
+**Likely causes**
+
+- A version-control artifact, conflict resolution, or self-host dispatch result is invalid.
+- The requested snapshot or symbol does not exist in the selected history.
+
+**Safe repairs**
+
+- **`inspect-vcs-precondition`** (automatic eligible; review not required by catalog): Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `vcs/why` {#vcs-why-f9352751}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/vcs/why`
+
+**Likely causes**
+
+- A version-control artifact, conflict resolution, or self-host dispatch result is invalid.
+- The requested snapshot or symbol does not exist in the selected history.
+
+**Safe repairs**
+
+- **`inspect-vcs-precondition`** (automatic eligible; review not required by catalog): Verify snapshot identities and conflict preconditions, regenerate the plan if stale, and preserve unresolved data.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`

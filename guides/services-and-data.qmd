@@ -1,0 +1,33 @@
+---
+title: "Services, networking, and data"
+description: "Compose deny-by-default host operations into replayable backend workflows."
+---
+
+# Design from the capability boundary inward
+
+## Service architecture
+
+1. Keep request parsing, validation, routing, and response construction pure where possible.
+2. Wrap listening, accepting, reading, writing, DNS, HTTP, WebSocket, TCP, UDP, process, database, and storage work in explicit effect programs.
+3. Put bind addresses, remote origins, byte limits, query classes, process allowlists, and timeouts in policy.
+4. Record live effects and replay application logic without repeating external work.
+
+Use the [inbound server](../docs/skill_pack/write_genesiscode_v1/recipes/inbound_server_workflow.md), [service](../docs/skill_pack/write_genesiscode_v1/recipes/service_workflow.md), [raw sockets](../docs/skill_pack/write_genesiscode_v1/recipes/raw_network_sockets_workflow.md), and [data](../docs/skill_pack/write_genesiscode_v1/recipes/data_workflow.md) recipes.
+
+## Data architecture
+
+- Content-address immutable artifacts when identity matters.
+- Use refs with compare-and-set semantics for mutable names.
+- Bound artifact, request, response, queue, and run totals.
+- Keep host paths base-relative in deterministic errors and logs.
+- Pin remote origins, authentication mode, and transport policy.
+- Treat database query class as a capability, not a string convention.
+
+## Production checklist
+
+- Every host op appears in the [capability reference](../reference/capabilities.qmd).
+- Every allowed op has least-privilege policy.
+- Timeouts hard-cancel bridge processes and reap descendants.
+- Live run and replay terminal hashes match.
+- Negative controls cover denied remote, path escape, oversized response, unavailable backend, and tampered log.
+- Package obligations include the relevant host/runtime profile.

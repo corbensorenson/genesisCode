@@ -1,0 +1,67 @@
+---
+title: "GenesisCode"
+body-classes: gc-home
+page-layout: full
+toc: false
+---
+
+::: {.hero}
+<div class="eyebrow">AI-first · pure kernel · <span>explicit effects</span></div>
+
+# A language agents can reason about.
+
+<div class="lede">GenesisCode is a deterministic, self-hosting programming system designed for software written, reviewed, and iterated by AI agents. This site is the learning path, exhaustive reference, and direct window into every normative authority.</div>
+
+<div class="hero-actions"><a href="learn/quickstart.html">Run your first program</a><a href="reference/index.html">Open the full reference</a><a href="docs/AGENT_ONBOARDING_v0.1.html">Load agent context</a></div>
+:::
+
+{{< include reference/generated/home-stats.mdinc >}}
+
+## Choose your path
+
+::: {.path-grid}
+::: {.path-card data-step="01 · NEW TO THE LANGUAGE"}
+### Learn the mental model
+Start with CoreForm, immutable data, functions, modules, and the boundary between pure evaluation and host effects.
+
+[Take the language tour](learn/language-tour.qmd)
+:::
+::: {.path-card data-step="02 · READY TO BUILD"}
+### Ship a real workflow
+Use packages, capability policies, deterministic logs, replay, tests, and evidence-backed acceptance.
+
+[Follow the practical tutorial](learn/quickstart.qmd)
+:::
+::: {.path-card data-step="03 · AI AGENT"}
+### Retrieve compact authority
+Use the agent card, task cards, exact symbol lookup, and safe repair protocol without flooding context.
+
+[Enter the agent loop](learn/agent-loop.qmd)
+:::
+::: {.path-card data-step="04 · REFERENCE MODE"}
+### Look up anything
+Search every symbol, host operation, diagnostic, CLI surface, format, example, specification, and schema.
+
+[Browse exhaustive reference](reference/index.qmd)
+:::
+:::
+
+## What makes it different
+
+::: {.truth-box}
+**The kernel never performs filesystem, time, network, process, graphics, GPU, or LLM work.** Programs describe effects; a deny-by-default host runner decides, records, and can replay them. Seals make protocol values unforgeable. Canonical forms and hashes make artifacts comparable. Obligations make acceptance evidence explicit.
+:::
+
+| Layer | Responsibility | Trust posture |
+|---|---|---|
+| **Gλ kernel** | Evaluate immutable CoreForm, closures, primitives, and seals | Pure, deterministic, minimal TCB |
+| **Prelude** | Contracts, effect programs, standard helpers, protocol constructors | Trusted language layer |
+| **Effect runner** | Enforce capabilities, execute hosts, log facts, replay | Deny by default |
+| **Toolchain** | Format, typecheck, test, patch, package, optimize, build | Selfhost-first and evidence-gated |
+| **Agent layer** | Compact cards, exact lookup, plans, safe repair | Machine-readable and bounded |
+
+## Documentation is part of the product
+
+This site does not replace the repository specifications. Curated pages teach; generated references enumerate; canonical Markdown and JSON remain authoritative. Every page links back to source, and CI rejects stale generated catalogs or a broken render.
+
+[Read the documentation topology](docs/spec/DOC_TOPOLOGY_v0.1.md) · [Inspect compatibility](feature_matrix.md) · [Follow the roadmap](ROADMAP.md)

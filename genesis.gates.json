@@ -523,7 +523,7 @@
       "executionIdentitySha256": "7a8994fd70c67fc163413b205303c3ffc81882335d503684dca47385ffe5898c",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "2451bf423b2d45dbfb7ddc1356c819e1f4c827b0c96ba0b33da5543cc8523499",
+      "inputIdentitySha256": "191fd36324e34942896363514b161bc48caef6c4da792781efaa84d34f599031",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1030,7 +1030,7 @@
       "executionIdentitySha256": "51bd189a94d51d160cca2dd6fb9e028e2ce792242363aac0ae40683d37525545",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1496,6 +1496,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -1637,6 +1638,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -1934,7 +1936,7 @@
       "executionIdentitySha256": "2b171eb0b91ebcc93bb6e3fe4d6edf45fda3280e4d1f44009e6e06dc96af7040",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "145164d402ad65cc6c2c61cdd530cc78f912b7f28bbb114d050aa7452d3b4cf1",
+      "inputIdentitySha256": "32480c88b3f26bc1ed5867aaf7e224eaab11f68932f0e4c166accaca059213d9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2032,7 +2034,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2498,6 +2500,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -2639,6 +2642,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -2891,7 +2895,7 @@
       "executionIdentitySha256": "d8b333666af65270de1b68cfb31b8614b4651f73a01fdb224f7d30f430e167cc",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "76919d4ea1a741496ad393ed5e286dc18083147b71de37a043d9804adb9cf638",
+      "inputIdentitySha256": "f236d417e0464256b89f5b942b6056e61f43c0bfaa07c8f28aa662f5c8f2fce9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3265,26 +3269,38 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_doc_topology_drift.sh",
-      "executionIdentitySha256": "15515607d927416221ab9f6ebce137ec8cf67c5c60d2fb8a392d7b95021004d8",
+      "executionIdentitySha256": "ff924202b8a8dde9faea2b0b2e927ee4a6fa81e42a60176174fe3f7788b47175",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "fdde1bf46e56974fc6c4cd9fd0a3c663e87b544bebb8236f0b33928ab8fa7ccb",
+      "inputIdentitySha256": "4ecee837a65eaf4ddeab1658dd5850cd3e912839c58d9d1b604162fc58b9cf40",
       "inputs": {
         "paths": [
+          "CHANGELOG.md",
+          "README.md",
+          "ROADMAP.md",
           "docs/INDEX.md",
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json",
+          "docs/spec/CAPS_TOML.md",
           "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
+          "docs/spec/CLI.md",
           "docs/spec/DOC_COMPLEXITY_TARGETS_v0.1.md",
           "docs/spec/DOC_LEAF_OWNERSHIP_v0.1.md",
           "docs/spec/DOC_TOPOLOGY_v0.1.md",
+          "docs/spec/GC_AGENT_PROFILE_v0.3.json",
+          "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
+          "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
+          "docs/spec/HOST_ABI.md",
+          "docs/spec/HOST_ABI_INDEX_v0.1.json",
           "docs/spec/HOST_RUNTIME_BUNDLE_v0.1.md",
           "docs/spec/WRITE_GENESISCODE_SKILL_CONFORMANCE_v0.1.md",
           "docs/status/REDTEAM_REPORT.md",
           "docs/status/SELFHOST_AUTHORITY_v0.1.md",
           "policies/check_update_boundary_v0.1.json",
-          "scripts/check_doc_topology_drift.sh"
+          "scripts/check_doc_topology_drift.sh",
+          "scripts/check_quarto_site.py",
+          "scripts/render_quarto_reference.py"
         ],
         "sets": [
           "governance"
@@ -3313,7 +3329,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "5d67ba9fc30010b8f65924994f8b01f25fbfc403686d97d8c5a30ca38362ec05",
+      "sourceSha256": "14958fc63503e3a7a00a895ca6b8e3160291122bf1798442fcfe817d620649f6",
       "tools": [
         "bash",
         "git",
@@ -3329,7 +3345,7 @@
       "executionIdentitySha256": "ce4c6313be2f26d3addc15e5fbb0ce37605521bda7ec6d29252bebdd9e689a9c",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "78d2c180acf4edd93ec10002e4ed66717128e57113420dc6992b7a70d16ed3e6",
+      "inputIdentitySha256": "47a1a4bb8ddc5ade9d26510456dea4366d6293aeadc797bb4e253a8db1df269f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3522,7 +3538,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3988,6 +4004,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -4129,6 +4146,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -4869,7 +4887,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "eac0fd72dc87142f10bdb7d60d73aa1d3dc1e2f9dee084881a548fcce2784224",
+      "inputIdentitySha256": "f1bbe6529286d901d7ae9071a4c9f127181a5b749996ddd2992ca28dbb45fa50",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6196,7 +6214,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6662,6 +6680,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -6803,6 +6822,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -7116,7 +7136,7 @@
       "executionIdentitySha256": "abdc70b5c30c694e08950d14f7bf6396a884a4b871ffe9dc6f4e7be505ac68c4",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7582,6 +7602,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -7723,6 +7744,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -8369,7 +8391,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8835,6 +8857,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -8976,6 +8999,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -9373,7 +9397,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "d3ff880eeeeb778835a09e492e634debf59f59c49b50c0e5bf6b22f0f6897387",
+      "inputIdentitySha256": "1a77e669f18a84abc5d889f9b57d87ffa3c0fb9c7caff2a1616c1725dc76e469",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -11543,7 +11567,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12009,6 +12033,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -12150,6 +12175,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -12423,7 +12449,7 @@
       "executionIdentitySha256": "7bb13c6f4d1a0b6a549695fbbde47016acb68563b1b2dad720fb99f1ca95ede0",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "e0c67904f2898191fe5600a253e8a3f895215779987cac92ed2d66b5746a6435",
+      "inputIdentitySha256": "1e19e668257ed6d5a94bb8666db80b5aff1494597072f8ac766083ea952b6d6f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12889,6 +12915,7 @@
           "scripts/check_prerequisite_manifest.sh",
           "scripts/check_production_cli_help_surface.sh",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/check_quarto_site.py",
           "scripts/check_redteam_report.sh",
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
@@ -13030,6 +13057,7 @@
           "scripts/render_perf_budgets_report.sh",
           "scripts/render_production_cli_help_surface_report.sh",
           "scripts/render_production_cli_parse_surface_report.sh",
+          "scripts/render_quarto_reference.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "scripts/render_runtime_backend_feature_matrix_report.sh",
@@ -13311,7 +13339,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "47bb284c0fac724356d20535befd91bb54afd69fc0c5c09cb412980b606b068c",
+      "inputIdentitySha256": "2286908ae87af074181d57b930aaa376808e246323be433b86b9777264eacffc",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -13382,7 +13410,7 @@
       "executionIdentitySha256": "c74373b5e6e6db24a8903fe75df4a51d6b1df25332bd20813f76d43f505f6234",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "219957a82f422fc430ffc0ef5095653383bef5f6551a9d8e5634d2d952eddd7f",
+      "inputIdentitySha256": "dc5817a4425f3e86398fe6561c7596a358951a6e84e164e330d5f36c0c341fda",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -14035,7 +14063,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "4a036c46a799c57741ce2cf26c833dda5f7f8dfb2e29d28e5591a20c867a58bf",
+      "inputIdentitySha256": "d349340507b43ba4b8526881fe04b086d5c5f28f8e58f51d29f31a9d1921d78d",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14126,7 +14154,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "e7734150f3dd0647eaf3946c138de6493212abbc821424c4d33134acb72580f4"
+        "sha256": "94bef39674d8a829d2a9ddeba619b2f7042a04b8d35820670182e258932067b6"
       },
       {
         "path": "genesis.prerequisites.json",

@@ -1,0 +1,35 @@
+---
+title: "CLI reference"
+description: "Stable command contracts, automation rules, and schema discovery."
+---
+
+# `genesis` command surface
+
+## Rules for automation
+
+- Use `--json`; expect exactly one JSON object on stdout.
+- Treat exit codes as stable categories, not generic success/failure.
+- Use `--engine selfhost` on routed frontend commands.
+- Pin the selfhost artifact identity in production paths.
+- Retrieve recursive command/option definitions from `genesis cli-schema`.
+- Never scrape human help when a JSON contract exists.
+
+## Machine discovery
+
+```bash
+./target/debug/genesis cli-schema --json
+./target/debug/genesis agent-index --help
+./target/debug/genesis agent-plan --help
+```
+
+## Command families
+
+{{< include generated/cli-commands.mdinc >}}
+
+## Normative details
+
+- [CLI flags, commands, exits, and JSON](../docs/spec/CLI.md)
+- [CLI JSON schema IDs](../docs/spec/CLI_JSON_SCHEMAS_v0.1.md)
+- [GCPM JSON schema IDs](../docs/spec/GCPM_JSON_SCHEMAS_v0.1.md)
+- [GCPM workflow reports](../docs/spec/GCPM_WORKFLOW_REPORTS_v0.1.md)
+- [WASI command parity](../docs/spec/WASI.md)

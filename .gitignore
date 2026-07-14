@@ -7,3 +7,7 @@ target/
 node_modules/
 __pycache__/
 *.py[cod]
+
+/.quarto/
+**/*.quarto_ipynb
+_site/

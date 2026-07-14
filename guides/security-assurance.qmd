@@ -1,0 +1,33 @@
+---
+title: "Security and assurance"
+description: "Threat-model seals, policy, replay, evidence, signatures, and release claims."
+---
+
+# Trust is an explicit graph
+
+## Security boundaries
+
+- The evaluator is pure and deterministic.
+- Protocol tokens are unforgeable and never accepted by structural resemblance.
+- The runner denies operations absent from policy.
+- Host bridges are path-confined, identity-pinned where required, bounded, supervised, and fail closed.
+- Replay validates every logged fact defined by the current log version.
+- User input never reaches an unguarded panic path.
+
+## Evidence boundaries
+
+An evidence statement binds subject, predicate, exact commands, environment, materials, outputs, signatures, and verifier policy. Independent verification must reject malformed JSON, unknown fields, unsupported versions, identity drift, signature threshold failure, artifact mismatch, and incomplete hash-tree coverage.
+
+## Claim discipline
+
+Use the [capability/evidence ledger](../docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json) and generated [feature matrix](../feature_matrix.md). Distinguish implemented, tested, qualified, release-supported, experimental, and unavailable. Never turn a local E0 observation into a release claim.
+
+## Release sequence
+
+1. Freeze compatibility and version surfaces.
+2. Run supply-chain and offline-build controls.
+3. Run semantic, replay, adversarial, fuzz, and resource gates.
+4. Produce signed evidence and independent verification results.
+5. Generate release notes from authorities.
+6. Run clean release smoke on supported targets.
+7. Publish immutable assets and transparency records.

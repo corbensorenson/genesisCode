@@ -1,0 +1,25 @@
+---
+title: "Learn GenesisCode"
+description: "A dependency-ordered path from first expression to evidence-backed agent workflows."
+---
+
+# Learn in semantic order
+
+Do not begin by memorizing APIs. GenesisCode becomes predictable when you learn its boundaries in order.
+
+1. [Install and run](quickstart.qmd): verify the exact toolchain and execute a pure module.
+2. [Language tour](language-tour.qmd): understand data, functions, scope, contracts, and types.
+3. [Effects and replay](effects-replay.qmd): move nondeterminism outside the kernel.
+4. [Packages and testing](packages-testing.qmd): bind modules, limits, obligations, and evidence.
+5. [Agent loop](agent-loop.qmd): retrieve the smallest authoritative context and repair safely.
+
+::: {.callout-important}
+## The invariant to carry everywhere
+If an operation observes or changes the host, it is an effect. If a value claims to be an `EFFECT`, `ERROR`, or `UNHANDLED`, it must be recognized through a trusted seal, never by matching a lookalike data structure.
+:::
+
+## Two reading modes
+
+**Human mode** uses these tutorials, search, cross-links, examples, and task guides.
+
+**Agent mode** starts with [`GC_AGENT_CORE_CARD_v0.3`](../docs/spec/GC_AGENT_CORE_CARD_v0.3.md), selects one task card, then performs exact lookup through `genesis agent-index`. The full [agent onboarding spine](../docs/AGENT_ONBOARDING_v0.1.md) defines retrieval order.

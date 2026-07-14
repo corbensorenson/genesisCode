@@ -1,0 +1,27 @@
+---
+title: "Formats and protocols"
+description: "Serialized and operational contracts that GenesisCode tools read or write."
+---
+
+# Contract inventory
+
+| Format | Purpose | Authority |
+|---|---|---|
+| `.gc` CoreForm | Source and canonical semantic data | [CoreForm canon/hash](../docs/spec/COREFORM_CANON_HASH.md) |
+| `package.toml` | Package modules, dependencies, obligations, limits | [Package TOML](../docs/spec/PACKAGE_TOML.md) |
+| `caps.toml` | Deny-by-default capability policy | [Caps TOML](../docs/spec/CAPS_TOML.md) |
+| `.gclog` | Deterministic effect run/replay trace | [GCLOG](../docs/spec/GCLOG.md) |
+| Patch artifact | Semantic change representation | [Patch schema](../docs/spec/PATCH_SCHEMA.md) |
+| `genesis.lock` | Resolved package identity graph | [Package TOML](../docs/spec/PACKAGE_TOML.md) |
+| `.gpk` | Portable package bundle | [GPK/GCPM bundle](../docs/spec/GCPM_BUNDLE_v0.1.md) |
+| Evidence statement/bundle | Signed acceptance and provenance | [Assurance artifacts](../docs/spec/ASSURANCE_ARTIFACTS_v0.1.md) |
+| Transparency record | Append-only publication proof | [Transparency log](../docs/spec/TRANSPARENCY_LOG.md) |
+| Agent transaction | Bounded machine authoring state | [Agent transaction schema](../docs/spec/AGENT_TRANSACTION_v0.1.schema.json) |
+| Gate manifest | Closed execution contract for CI gates | [Check/update boundary](../docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md) |
+| Roadmap execution manifest | Generated dependency/readiness graph | [Roadmap schema](../docs/spec/ROADMAP_EXECUTION_MANIFEST_v0.1.schema.json) |
+
+## All schemas
+
+{{< include generated/schema-catalog.mdinc >}}
+
+Changes to hash-visible or serialized fields require compatibility analysis, version handling, migration notes, and adversarial tests.
