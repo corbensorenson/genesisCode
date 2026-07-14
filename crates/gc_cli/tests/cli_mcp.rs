@@ -123,7 +123,7 @@ fn mcp_lists_generated_tools_and_resources_without_stdout_pollution() {
     let tools = server.read();
     assert_eq!(tools["id"], 2);
     let tools = tools["result"]["tools"].as_array().expect("tools");
-    assert_eq!(tools.len(), 14);
+    assert_eq!(tools.len(), 20);
     let names = tools
         .iter()
         .map(|tool| tool["name"].as_str().expect("name"))
@@ -143,6 +143,12 @@ fn mcp_lists_generated_tools_and_resources_without_stdout_pollution() {
             "replay",
             "run",
             "search-symbol",
+            "session-abort",
+            "session-apply",
+            "session-begin",
+            "session-stage",
+            "session-status",
+            "session-test",
             "test",
             "verify"
         ]
@@ -163,7 +169,7 @@ fn mcp_lists_generated_tools_and_resources_without_stdout_pollution() {
         .expect("profile text");
     let profile: Value = serde_json::from_str(profile_text).expect("profile JSON");
     assert_eq!(profile["protocolVersion"], PROTOCOL);
-    assert_eq!(profile["tools"].as_array().map(Vec::len), Some(14));
+    assert_eq!(profile["tools"].as_array().map(Vec::len), Some(20));
     assert_eq!(server.finish(), "");
 }
 
@@ -204,6 +210,59 @@ fn mcp_negotiates_roots_and_executes_parse_with_strict_progress() {
     assert_eq!(
         response["result"]["structuredContent"]["kind"],
         "genesis/parse-v0.1"
+    );
+    assert_eq!(server.finish(), "");
+}
+
+#[test]
+fn mcp_executes_transactional_session_through_generated_cli_routes() {
+    let td = tempfile::tempdir().expect("tempdir");
+    fs::write(
+        td.path().join("package.toml"),
+        "name = \"mcp-session\"\nversion = \"0.0.1\"\nmodules = []\ndependencies = []\nobligations = []\n",
+    )
+    .expect("package");
+    let root_uri = format!(
+        "file://{}",
+        td.path().canonicalize().expect("root").display()
+    );
+    let mut server = McpChild::spawn(td.path(), &[]);
+    complete_handshake(&mut server, true);
+    let roots_request = server.read();
+    server.send(&json!({
+        "jsonrpc":"2.0","id":roots_request["id"],
+        "result":{"roots":[{"uri":root_uri,"name":"transaction-root"}]}
+    }));
+    server.send(&json!({
+        "jsonrpc":"2.0","id":"begin-1","method":"tools/call",
+        "params":{"name":"session-begin","arguments":{
+            "root":root_uri,"pkg":"package.toml","session":"candidate"
+        }}
+    }));
+    let begin = server.read();
+    assert_eq!(begin["id"], "begin-1");
+    assert_eq!(begin["result"]["isError"], false);
+    assert_eq!(
+        begin["result"]["structuredContent"]["kind"],
+        "genesis/agent-session-begin-v0.1"
+    );
+    let snapshot = begin["result"]["structuredContent"]["data"]["base_snapshot"]
+        .as_str()
+        .expect("snapshot");
+    assert_eq!(snapshot.len(), 64);
+
+    server.send(&json!({
+        "jsonrpc":"2.0","id":"status-1","method":"tools/call",
+        "params":{"name":"session-status","arguments":{
+            "root":root_uri,"pkg":"package.toml","session":"candidate"
+        }}
+    }));
+    let status = server.read();
+    assert_eq!(status["id"], "status-1");
+    assert_eq!(status["result"]["isError"], false);
+    assert_eq!(
+        status["result"]["structuredContent"]["data"]["current_snapshot"],
+        snapshot
     );
     assert_eq!(server.finish(), "");
 }

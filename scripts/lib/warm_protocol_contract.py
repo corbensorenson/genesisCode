@@ -14,6 +14,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "docs/spec/WARM_PROTOCOL_v0.2.schema.json"
+TRANSACTION_SCHEMA_PATH = ROOT / "docs/spec/AGENT_TRANSACTION_v0.1.schema.json"
 DOC_PATH = ROOT / "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"
 SOURCE_PATHS = (
     ROOT / "crates/gc_cli_driver/src/warm_protocol.rs",
@@ -35,6 +36,15 @@ MCP_SOURCE_PATHS = (
     ROOT / "crates/gc_cli_driver/src/cli_schema.rs",
 )
 MCP_TEST_PATH = ROOT / "crates/gc_cli/tests/cli_mcp.rs"
+TRANSACTION_SOURCE_PATHS = (
+    ROOT / "crates/gc_cli_driver/src/agent_session.rs",
+    ROOT / "crates/gc_cli_driver/src/agent_session/model.rs",
+    ROOT / "crates/gc_cli_driver/src/agent_session/storage.rs",
+    ROOT / "crates/gc_cli_driver/src/cli_args.rs",
+    ROOT / "crates/gc_cli_driver/src/cli_args/command_groups.rs",
+    ROOT / "crates/gc_cli_driver/src/mcp/catalog.rs",
+)
+TRANSACTION_TEST_PATH = ROOT / "crates/gc_cli/tests/cli_agent_session.rs"
 
 PROTOCOL = "genesis/warm-protocol-v0.2"
 RESPONSE = "genesis/warm-response-v0.2"
@@ -80,6 +90,12 @@ MCP_TOOLS = {
     "test",
     "explain",
     "search-symbol",
+    "session-abort",
+    "session-apply",
+    "session-begin",
+    "session-stage",
+    "session-status",
+    "session-test",
     "get-card",
     "diff",
     "apply-patch",
@@ -91,7 +107,15 @@ MCP_TOOLS = {
 MCP_REQUIRED_TESTS = {
     "mcp_lists_generated_tools_and_resources_without_stdout_pollution",
     "mcp_negotiates_roots_and_executes_parse_with_strict_progress",
+    "mcp_executes_transactional_session_through_generated_cli_routes",
     "mcp_rejects_batches_tasks_and_escaped_roots_without_panicking",
+}
+TRANSACTION = "genesis/agent-transaction-v0.1"
+WORKSPACE_SNAPSHOT = "genesis/workspace-snapshot-v0.1"
+TRANSACTION_REQUIRED_TESTS = {
+    "agent_session_stages_tests_and_explicitly_applies_a_verified_snapshot",
+    "agent_session_rejects_stale_live_state_without_overwriting_it",
+    "agent_session_rejects_unverified_and_tampered_transactions",
 }
 
 
@@ -195,6 +219,101 @@ def validate_schema(schema: Any) -> None:
     require(key.get("pattern") == "^[0-9a-f]{64}$", "cache-key shape drift")
 
 
+def validate_transaction_schema(schema: Any) -> None:
+    require(isinstance(schema, dict), "transaction schema root must be an object")
+    require(schema.get("$id") == TRANSACTION, "transaction schema identity drift")
+    require(
+        schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema",
+        "transaction schema dialect drift",
+    )
+    defs = schema.get("$defs")
+    expected_defs = {
+        "hash",
+        "sessionId",
+        "relativePath",
+        "patch",
+        "verification",
+        "session",
+        "snapshotFile",
+        "snapshot",
+    }
+    require(isinstance(defs, dict) and set(defs) == expected_defs, "transaction defs drift")
+    required = {
+        "patch": {
+            "patch",
+            "before_snapshot",
+            "after_snapshot",
+            "obligations_ok",
+            "acceptance",
+        },
+        "verification": {"snapshot", "acceptance", "obligations_ok"},
+        "session": {
+            "schema",
+            "session",
+            "package_manifest",
+            "base_snapshot",
+            "current_snapshot",
+            "status",
+            "patches",
+            "verification",
+        },
+        "snapshotFile": {"path", "blob", "bytes"},
+        "snapshot": {"schema", "identity", "files"},
+    }
+    for name, fields in required.items():
+        definition = defs[name]
+        require(definition.get("additionalProperties") is False, f"{name} must be closed")
+        require(set(definition.get("required", [])) == fields, f"{name} required fields drift")
+        require(set(definition.get("properties", {})) == fields, f"{name} property closure drift")
+    require(
+        defs["session"]["properties"]["schema"].get("const") == TRANSACTION,
+        "transaction state identity drift",
+    )
+    require(
+        defs["snapshot"]["properties"]["schema"].get("const") == WORKSPACE_SNAPSHOT,
+        "workspace snapshot identity drift",
+    )
+    require(
+        set(defs["session"]["properties"]["status"].get("enum", []))
+        == {"open", "applied", "aborted"},
+        "transaction status set drift",
+    )
+    require(
+        defs["session"]["properties"]["patches"].get("maxItems") == 4096,
+        "transaction patch bound drift",
+    )
+    require(
+        defs["snapshot"]["properties"]["files"].get("maxItems") == 4096,
+        "snapshot file bound drift",
+    )
+    require(
+        defs["snapshotFile"]["properties"]["bytes"].get("maximum") == 268_435_456,
+        "snapshot byte bound drift",
+    )
+
+
+def validate_transaction_authorities() -> None:
+    source = "\n".join(path.read_text(encoding="utf-8") for path in TRANSACTION_SOURCE_PATHS)
+    docs = DOC_PATH.read_text(encoding="utf-8")
+    tests = TRANSACTION_TEST_PATH.read_text(encoding="utf-8")
+    for identity in (TRANSACTION, WORKSPACE_SNAPSHOT):
+        require(identity in source, f"transaction production source missing {identity}")
+        require(identity in docs, f"transaction docs missing {identity}")
+    for token in (
+        "session/stale-base",
+        "session/unverified",
+        "session/workspace-tampered",
+        "session/snapshot-mismatch",
+        "MAX_SNAPSHOT_FILES",
+        "MAX_SNAPSHOT_BYTES",
+        "agent-session-patch-v0.1",
+    ):
+        require(token in source, f"transaction source missing {token}")
+    observed = set(re.findall(r"fn (agent_session_[a-z0-9_]+)\(", tests))
+    missing = sorted(TRANSACTION_REQUIRED_TESTS - observed)
+    require(not missing, f"transaction integration controls missing: {missing}")
+
+
 def validate_authorities() -> None:
     source = "\n".join(path.read_text(encoding="utf-8") for path in SOURCE_PATHS)
     docs = DOC_PATH.read_text(encoding="utf-8")
@@ -232,7 +351,9 @@ def validate_authorities() -> None:
 
 def validate() -> None:
     validate_schema(load_json(SCHEMA_PATH))
+    validate_transaction_schema(load_json(TRANSACTION_SCHEMA_PATH))
     validate_authorities()
+    validate_transaction_authorities()
 
 
 def self_test() -> None:
@@ -261,6 +382,27 @@ def self_test() -> None:
             controls += 1
         else:
             raise ContractError("negative schema mutation was accepted")
+    transaction_schema = load_json(TRANSACTION_SCHEMA_PATH)
+    transaction_mutations = []
+    open_state = copy.deepcopy(transaction_schema)
+    open_state["$defs"]["session"]["additionalProperties"] = True
+    transaction_mutations.append(open_state)
+    stale_status = copy.deepcopy(transaction_schema)
+    stale_status["$defs"]["session"]["properties"]["status"]["enum"].append("committed")
+    transaction_mutations.append(stale_status)
+    unbounded_files = copy.deepcopy(transaction_schema)
+    del unbounded_files["$defs"]["snapshot"]["properties"]["files"]["maxItems"]
+    transaction_mutations.append(unbounded_files)
+    missing_verification = copy.deepcopy(transaction_schema)
+    missing_verification["$defs"]["session"]["required"].remove("verification")
+    transaction_mutations.append(missing_verification)
+    for mutation in transaction_mutations:
+        try:
+            validate_transaction_schema(mutation)
+        except ContractError:
+            controls += 1
+        else:
+            raise ContractError("negative transaction schema mutation was accepted")
     print(f"warm-protocol-contract: self-test ok (negative_controls={controls})")
 
 

@@ -514,6 +514,19 @@ fn diagnostics_contract_covers_all_cli_command_families() {
             ],
         },
         Case {
+            family: "session",
+            expect: Expect::Failure,
+            argv: vec![
+                "--json".into(),
+                "session".into(),
+                "status".into(),
+                "--pkg".into(),
+                missing_pkg.display().to_string(),
+                "--session".into(),
+                "invalid/id".into(),
+            ],
+        },
+        Case {
             family: "verify",
             expect: Expect::Failure,
             argv: vec![

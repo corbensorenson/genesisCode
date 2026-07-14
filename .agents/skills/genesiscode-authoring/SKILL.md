@@ -54,6 +54,8 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 - Implement the smallest complete vertical slice.
 - Prefer `.gc` prelude/editor/tooling layers when behavior belongs in language space.
 - Keep modules narrow; split by domain when files exceed maintainable size.
+- For agent-authored package changes, use `genesis session begin`, `session stage`, `session test`, and explicit `session apply`; do not mutate the live package before exact-snapshot verification.
+- Stop on stale base, unverified state, snapshot mismatch, workspace tampering, or rollback failure. Never recover by applying the patch directly or widening capability policy.
 
 3. Evidence
 - Run focused tests first, then broader gates.
@@ -92,7 +94,8 @@ Deliver deterministic, obligation-gated changes that move GenesisCode toward pra
 ## GenesisGraph / GenesisPkg expectations
 - Patch-first workflow:
   - generate structural patch artifacts
-  - apply patches and re-evaluate obligations
+  - stage patches in a content-addressed transaction and re-evaluate obligations against that isolated snapshot
+  - apply only the exact verified snapshot through the explicit session boundary
   - attach evidence artifacts for policy-gated refs/publish flows
 - Package workflow invariants:
   - lock/install/verify behavior must stay deterministic

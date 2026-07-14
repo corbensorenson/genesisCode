@@ -174,6 +174,12 @@ verify it read-only. Intentional corpus, agent, or diagnostic changes require
 - `semantic-edit refactor-plan` -> `genesis/semantic-edit-refactor-plan-v0.1`
 - `semantic-edit apply-plan` -> `genesis/semantic-edit-apply-plan-v0.1`
 - `apply-patch` -> `genesis/apply-patch-v0.2`
+- `session begin` -> `genesis/agent-session-begin-v0.1`
+- `session status` -> `genesis/agent-session-status-v0.1`
+- `session stage` -> `genesis/agent-session-stage-v0.1`
+- `session test` -> `genesis/agent-session-test-v0.1`
+- `session apply` -> `genesis/agent-session-apply-v0.1`
+- `session abort` -> `genesis/agent-session-abort-v0.1`
 - `verify` -> `genesis/verify-v0.2`
 
 ### Selfhost lifecycle
@@ -397,7 +403,8 @@ private semantics.
 
 The exact core tools are `parse`, `format`, `check`, `run`, `test`, `explain`,
 `search-symbol`, `get-card`, `diff`, `apply-patch`, `verify`, `replay`, `package`,
-and `build`. Each returns the canonical CLI JSON envelope as both text content
+`build`, `session-begin`, `session-status`, `session-stage`, `session-test`,
+`session-apply`, and `session-abort`. Each returns the canonical CLI JSON envelope as both text content
 and `structuredContent`; command failures use `isError = true`. Unknown fields,
 wrong JSON types, missing required fields, nested server commands, and unsupported
 pagination fail with JSON-RPC errors.
@@ -437,3 +444,54 @@ The implementation authorities are `crates/gc_cli_driver/src/mcp/`,
 `scripts/check_warm_protocol_contract.sh` verifies schema generation, lifecycle,
 roots, resources, progress, cancellation controls, task rejection, malformed
 frames, output purity, and production CLI execution.
+
+## Transactional Agent Sessions v0.1
+
+`genesis session` is the mutating agent boundary. Its durable state uses
+`genesis/agent-transaction-v0.1`, snapshots use
+`genesis/workspace-snapshot-v0.1`, and both are closed by
+`docs/spec/AGENT_TRANSACTION_v0.1.schema.json`; command results use the six
+stable kinds listed above. A transaction has one client-selected 1..64 byte
+ASCII identifier, one immutable base snapshot, one current snapshot, an ordered
+semantic-patch chain, one exact-snapshot verification record, and one of the
+states `open`, `applied`, or `aborted`.
+
+### Snapshot and isolation contract
+
+1. `session begin` recursively captures the selected package manifest, declared
+   modules, declared capability policy, and base-relative local dependency
+   closure. Inputs must be regular files beneath the package root, and no path
+   component may be a symlink. Retained path material is valid UTF-8 with
+   nonempty `/`-separated segments; absolute, `.`, `..`, empty, backslash, and
+   control-character forms are rejected both on capture and on load.
+2. File blobs and sorted snapshot manifests use domain-separated BLAKE3
+   identities. Every new or reused object is rehashed and length-checked before
+   materialization and again before a live write. State, responses, and errors
+   contain only relative names, client IDs, counts, and content identities,
+   never absolute host paths.
+3. The current snapshot is materialized below `.genesis/agent-sessions/`.
+   `session stage` accepts one canonical Genesis semantic patch, applies it to a
+   fresh candidate materialization, and runs package obligations there. The live
+   package is not mutated. Failed patch parsing or application never activates
+   the candidate.
+4. `session test` rehashes the isolated workspace before running obligations and
+   binds the acceptance artifact to that exact current snapshot. Capability
+   policies must already belong to the captured snapshot; external policy paths
+   cannot silently broaden authority.
+5. `session apply` is explicit and fail-closed. It acquires the package-local
+   apply lock, requires a successful verification for the exact current
+   snapshot, rehashes both isolated and live inputs, rejects any stale live base,
+   writes only snapshot-managed files, verifies the result, and retains the
+   transaction record as `applied`. A failed managed-file write, post-write
+   identity check, or state commit restores and rehashes the captured base or
+   reports a distinct rollback failure.
+6. `session abort` closes an open transaction without modifying the live
+   package. Closed transactions cannot be staged, tested, applied, or aborted
+   again, but remain inspectable through `session status`.
+
+Snapshot admission is bounded to 4096 files and 256 MiB. Session IDs, object
+locations, snapshot membership, stale-base comparison, verification identity,
+and lifecycle state all fail closed. Arbitrary byte editing is intentionally not
+a session authority: writes enter through semantic patches. O(1)-logical
+copy-on-write forks and multi-candidate ranking remain the separately measured
+R1.6 contract.

@@ -24,7 +24,10 @@
     "diagnostic/catalog-miss",
     "error/unknown",
     "replay/error",
-    "replay/mismatch"
+    "replay/mismatch",
+    "session/patch-invalid",
+    "session/patch-io",
+    "session/patch-obligation"
   ],
   "commonParameters": [
     {
@@ -120,7 +123,7 @@
     },
     {
       "id": "semantic-edit",
-      "families": ["patch", "refactor", "semantic-edit"],
+      "families": ["patch", "refactor", "semantic-edit", "session"],
       "likelyCauses": ["A patch or semantic edit is stale, ambiguous, invalid, or escapes its workspace boundary.", "The source graph no longer matches the plan preconditions."],
       "safeRepairActions": [{"id": "replan-semantic-edit", "description": "Regenerate the semantic plan against the current content hash, review the diff, and apply transactionally.", "policyEffect": "none"}],
       "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]

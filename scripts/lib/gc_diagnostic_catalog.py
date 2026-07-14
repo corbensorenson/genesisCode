@@ -20,7 +20,7 @@ OUTPUT = ROOT / "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json"
 CODE_RE = re.compile(r"^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 CALL_RE = re.compile(
-    r'cli_err(?:_anyhow|_with_context)?\(\s*[^,\n]+,\s*"([^"]+)"',
+    r'(?:cli_err(?:_anyhow|_with_context)?\(\s*[^,\n]+,\s*|session_error\(\s*)"([^"]+)"',
     re.MULTILINE,
 )
 FIELD_RE = re.compile(r'\bcode:\s*"([^"]+)"')
@@ -344,13 +344,14 @@ def self_test() -> None:
         cli_err(EX_PARSE, "scan/plain", message);
         cli_err_anyhow(EX_PARSE, "scan/anyhow", error);
         cli_err_with_context(EX_PARSE, "scan/structured", message, context);
+        session_error("scan/session", message, session);
     """
     scanned = {match.group(1) for match in CALL_RE.finditer(scanner_fixture)}
     require(
-        scanned == {"scan/plain", "scan/anyhow", "scan/structured"},
+        scanned == {"scan/plain", "scan/anyhow", "scan/structured", "scan/session"},
         "diagnostic constructor scanner drift",
     )
-    print("gc-diagnostic-catalog: self-test ok (negative_controls=15 lookup_controls=2 scanner_controls=3)")
+    print("gc-diagnostic-catalog: self-test ok (negative_controls=15 lookup_controls=2 scanner_controls=4)")
 
 
 def main(argv: Sequence[str]) -> int:

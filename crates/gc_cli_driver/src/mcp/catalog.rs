@@ -155,6 +155,48 @@ const ROUTES: &[RoutePolicy] = &[
         &[],
         READ_ONLY,
     ),
+    route(
+        "session-abort",
+        &["session", "abort"],
+        &["pkg", "session"],
+        &[],
+        IDEMPOTENT_WRITE,
+    ),
+    route(
+        "session-apply",
+        &["session", "apply"],
+        &["pkg", "session"],
+        &[],
+        NON_IDEMPOTENT_WRITE,
+    ),
+    route(
+        "session-begin",
+        &["session", "begin"],
+        &["pkg", "session"],
+        &[],
+        NON_IDEMPOTENT_WRITE,
+    ),
+    route(
+        "session-stage",
+        &["session", "stage"],
+        &["pkg", "session", "patch", "caps"],
+        &[],
+        NON_IDEMPOTENT_WRITE,
+    ),
+    route(
+        "session-status",
+        &["session", "status"],
+        &["pkg", "session"],
+        &[],
+        READ_ONLY,
+    ),
+    route(
+        "session-test",
+        &["session", "test"],
+        &["pkg", "session", "caps"],
+        &[],
+        IDEMPOTENT_WRITE,
+    ),
     route("package", &["pack"], &["pkg"], &[], IDEMPOTENT_WRITE),
     route(
         "build",
@@ -602,7 +644,7 @@ mod tests {
     #[test]
     fn all_routes_are_clap_derived_and_tasks_are_forbidden() {
         let tools = bindings(RuntimeProfile::Production).expect("catalog");
-        assert_eq!(tools.len(), 14);
+        assert_eq!(tools.len(), 20);
         for tool in tools {
             assert_eq!(tool.definition["execution"]["taskSupport"], "forbidden");
             assert_eq!(

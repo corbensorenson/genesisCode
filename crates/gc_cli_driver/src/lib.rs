@@ -45,6 +45,7 @@ compile_error!(
     "gc_cli_driver runtime profile conflict: `profile-gfx` cannot be combined with `profile-backend`"
 );
 
+mod agent_session;
 mod cli_json;
 mod cli_schema;
 mod cmd_agent_index;
@@ -105,6 +106,7 @@ mod warm_state;
 mod warm_worker;
 mod warm_workspace;
 
+use agent_session::cmd_agent_session;
 use cli_json::*;
 use cli_schema::cmd_cli_schema;
 use cmd_agent_index::cmd_agent_index;
@@ -461,6 +463,7 @@ fn dispatch(cli: &Cli, flavor: Flavor) -> Result<CmdOut, CliError> {
             *stage2_gate,
         ),
         Cmd::ApplyPatch { patch, pkg, caps } => cmd_apply_patch(cli, patch, pkg, caps.as_deref()),
+        Cmd::Session { cmd } => cmd_agent_session(cli, cmd),
         Cmd::SemanticEdit { cmd } => cmd_semantic_edit(cli, cmd),
         Cmd::Verify {
             pkg,

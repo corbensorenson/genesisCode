@@ -57,5 +57,6 @@ fn selfhost_dashboard_writes_store_artifact_and_markdown_mirror() {
     assert!(md.contains("docs/status/SELFHOST_AUTHORITY_v0.1.md"));
     assert!(md.contains("`policy/*`"));
     assert!(md.contains("`policy/*` | false | true | true"));
+    assert!(md.contains("`session/*` | false | true | true"));
     assert!(md.contains("`store/*` | true | true | true"));
 }

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "genesis/agent-transaction-v0.1",
+  "title": "GenesisCode transactional agent session v0.1",
+  "oneOf": [
+    {"$ref": "#/$defs/session"},
+    {"$ref": "#/$defs/snapshot"}
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000-\\u001F\\u007F]+$"
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "patch",
+        "before_snapshot",
+        "after_snapshot",
+        "obligations_ok",
+        "acceptance"
+      ],
+      "properties": {
+        "patch": {"$ref": "#/$defs/hash"},
+        "before_snapshot": {"$ref": "#/$defs/hash"},
+        "after_snapshot": {"$ref": "#/$defs/hash"},
+        "obligations_ok": {"type": "boolean"},
+        "acceptance": {
+          "oneOf": [
+            {"$ref": "#/$defs/hash"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot", "acceptance", "obligations_ok"],
+      "properties": {
+        "snapshot": {"$ref": "#/$defs/hash"},
+        "acceptance": {"$ref": "#/$defs/hash"},
+        "obligations_ok": {"type": "boolean"}
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "session",
+        "package_manifest",
+        "base_snapshot",
+        "current_snapshot",
+        "status",
+        "patches",
+        "verification"
+      ],
+      "properties": {
+        "schema": {"const": "genesis/agent-transaction-v0.1"},
+        "session": {"$ref": "#/$defs/sessionId"},
+        "package_manifest": {"$ref": "#/$defs/relativePath"},
+        "base_snapshot": {"$ref": "#/$defs/hash"},
+        "current_snapshot": {"$ref": "#/$defs/hash"},
+        "status": {"enum": ["open", "applied", "aborted"]},
+        "patches": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {"$ref": "#/$defs/patch"}
+        },
+        "verification": {
+          "oneOf": [
+            {"$ref": "#/$defs/verification"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "snapshotFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "blob", "bytes"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "blob": {"$ref": "#/$defs/hash"},
+        "bytes": {"type": "integer", "minimum": 0, "maximum": 268435456}
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "identity", "files"],
+      "properties": {
+        "schema": {"const": "genesis/workspace-snapshot-v0.1"},
+        "identity": {"$ref": "#/$defs/hash"},
+        "files": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {"$ref": "#/$defs/snapshotFile"}
+        }
+      }
+    }
+  }
+}

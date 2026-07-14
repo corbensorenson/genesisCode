@@ -335,9 +335,17 @@ fn cmd_agent_symbol(cli: &Cli, symbol: &str) -> Result<CmdOut, CliError> {
         ));
     }
     let index = embedded_agent_symbol_index()?;
-    let matches: Vec<&serde_json::Value> = index["symbols"]
-        .as_array()
-        .expect("validated symbols array")
+    let symbols = index
+        .get("symbols")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "agent-index/symbol-index-invalid",
+                "embedded GC-AGENT-v0.3 symbol index has no symbols array",
+            )
+        })?;
+    let matches: Vec<&serde_json::Value> = symbols
         .iter()
         .filter(|entry| entry.get("symbol").and_then(serde_json::Value::as_str) == Some(symbol))
         .collect();
@@ -392,9 +400,17 @@ fn cmd_agent_diagnostic(cli: &Cli, code: &str) -> Result<CmdOut, CliError> {
         ));
     }
     let catalog = embedded_agent_diagnostic_catalog()?;
-    let matches: Vec<&serde_json::Value> = catalog["diagnostics"]
-        .as_array()
-        .expect("validated diagnostics array")
+    let diagnostics = catalog
+        .get("diagnostics")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            cli_err(
+                EX_INTERNAL,
+                "agent-index/diagnostic-catalog-invalid",
+                "embedded diagnostic catalog has no diagnostics array",
+            )
+        })?;
+    let matches: Vec<&serde_json::Value> = diagnostics
         .iter()
         .filter(|entry| entry.get("code").and_then(serde_json::Value::as_str) == Some(code))
         .collect();

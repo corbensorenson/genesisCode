@@ -98,6 +98,13 @@ Make GenesisCode the default language substrate for autonomous coding agents. Au
 - Replay artifacts must be canonicalized before hashing.
 - Runtime backends must expose explicit backend identifiers in evidence payloads.
 
+## Transactional Editing Pattern
+
+- Agent package writes must use `genesis session begin`, `session stage`, `session test`, and explicit `session apply`.
+- Stage only canonical semantic patches; never substitute textual replacement or direct live-package mutation.
+- Bind capability policy to the captured snapshot and stop on stale base, failed obligations, snapshot mismatch, workspace tampering, or rollback failure.
+- Use `session abort` when a candidate is rejected; preserve its patch, snapshot, verification, and failure identities for review.
+
 ## Package and Deployment Pattern
 
 - Use `gcpm` as canonical workflow surface for build/package/deploy operations.

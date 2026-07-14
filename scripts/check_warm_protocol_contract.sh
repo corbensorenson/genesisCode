@@ -19,5 +19,6 @@ cargo test -p gc_cli_driver warm_ --lib --quiet
 cargo test -p gc_cli_driver 'mcp::' --lib --quiet
 cargo test -p gc_cli --test cli_warm --quiet
 cargo test -p gc_cli --test cli_mcp --quiet
+cargo test -p gc_cli --test cli_agent_session --quiet
 
 echo "warm-mcp-protocol-contract: runtime ok"

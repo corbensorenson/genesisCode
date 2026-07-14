@@ -9,7 +9,7 @@
       "executionIdentitySha256": "c303126a06e8d1379e48250be5c9132835ec00c172bce432c29a5713fd6e579a",
       "expectedDurationSeconds": 15,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "fd6f7a8ab52f773752586fbbb92146ae9f794a653dd2f333b8c99a4a333257f0",
+      "inputIdentitySha256": "953b6449009a2f3d835125d3643f5313959bd5210ccfae4b4af50dd5872a38a0",
       "inputs": {
         "paths": [
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -1027,10 +1027,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_capability_evidence_ledger_contract.sh",
-      "executionIdentitySha256": "ee03c5aafb684d5a7fabfbdb2b1522abbf22a514928b67396e64b5f879e38d76",
+      "executionIdentitySha256": "51bd189a94d51d160cca2dd6fb9e028e2ce792242363aac0ae40683d37525545",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -1054,6 +1054,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -1077,7 +1078,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -1216,6 +1221,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -1774,7 +1780,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "130e2381873847cb5223bcf9c3c14ddc53765e38329a2787b6f089eece897980",
+      "sourceSha256": "5d7c19fc07ddc7eb906e514633ff18abf43590b30a96876a2a278c472dfa692e",
       "tools": [
         "bash",
         "git",
@@ -2026,7 +2032,7 @@
       "executionIdentitySha256": "876a8029266491c97e1184c321da90fe2da233739c62e31f0d7123ddc2621671",
       "expectedDurationSeconds": 600,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -2050,6 +2056,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -2073,7 +2080,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -2212,6 +2223,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -2790,7 +2802,7 @@
       "executionIdentitySha256": "c5d908a60df8463927ec8b32953239fc2b5ca175e32881d0d3d93c12100833d2",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "2c1cdc3bab65dc15864b7d4706c670106601f431a045e2b18dc1311ab43c4584",
+      "inputIdentitySha256": "c11f74db2c0b8de7600fb708f6b3528a91e3bb7408f1ff883cd1d43b0a3cdfea",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -3256,7 +3268,7 @@
       "executionIdentitySha256": "15515607d927416221ab9f6ebce137ec8cf67c5c60d2fb8a392d7b95021004d8",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "ec7da4e3a3bc5f354d7da68411c82d344f57e069d9b61e1a9ee13c9a3fab11c8",
+      "inputIdentitySha256": "608e93ac3812ebd857ed9bdf4f8d2d277b8a14ba2aff8b1b44789dddd41e5bb1",
       "inputs": {
         "paths": [
           "docs/INDEX.md",
@@ -3510,7 +3522,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -3534,6 +3546,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -3557,7 +3570,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -3696,6 +3713,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -4618,7 +4636,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "a1fab1a9a6c6da1af23cbff3003feaa0ad508a041d2e58cd1a62c6b6c107f5e7",
+      "inputIdentitySha256": "313082b702240463b619db465953ad6bd76e5002129ca69fdb9dd89f6c8f3376",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -4851,7 +4869,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "b5eaa37cfbc5206149ad148ef20650b0a56cce95d45bf8bfea21dda94155a970",
+      "inputIdentitySha256": "e59502247c1890cab4dfc0d7d8043e9703859f2439e3044e1d927a187cab759f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -4980,7 +4998,7 @@
       "executionIdentitySha256": "b8cab6fefe70fea9302db52f3487c007bd0506868702ebca5690b58ad506fd2a",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "e792f69ce5259df6c643af198a9ee8b5b14a5b9b88d416c7876fc2ddad8b9e34",
+      "inputIdentitySha256": "72401664c69d4e2a8ea1e94d80d2d6b1d41afdf75af851d6bdc8db757aeff7d0",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5059,7 +5077,7 @@
       "executionIdentitySha256": "28314d93fd6ccf5b67a25850763df88bbb5d2729abd6ad374d714b84a714777a",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "1f0e48b39468765712f38dddf3cd1fe61492f5c0bd3fbcaa1c020720abbab3ed",
+      "inputIdentitySha256": "d9d4a62f9c5ec65803633abcd01b49eba3b7fb5d4b8545b808fe3b05d2e4acf4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5132,7 +5150,7 @@
       "executionIdentitySha256": "2e9db1f778131d30de35f5144bf171d9e5389836e1a51d7b64365439fe351816",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "5486cd02b885bc9d4549d1f227da978ce6f82c0af64998cb1d3c9fad7567c873",
+      "inputIdentitySha256": "a084fd5674a9e898ae8016301368764f1ebc46379d1ae0f0a376fa2bb8a95df1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5211,7 +5229,7 @@
       "executionIdentitySha256": "198bc02e1540b19514ee83c6e3da2ac2d7908e9986dad7c36a0a8d65046233de",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "598ac7d214f600be1c6a63c011ea82b2cf04ac503b2e3d0f3fd53f00f6d85fcc",
+      "inputIdentitySha256": "90880ad01d0de109d4d56dbb7a0ed73fa63e2f9466522b25d8ab1ca0da556daf",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5350,7 +5368,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "4dc4a223b006d52f5fd8cbae037397445da007c8d2f8fa853da1529f7ab7e2f1",
+      "inputIdentitySha256": "4d06e578e19c870bb3bf5b5343db22d8d64cfd124133731ce883df59f79df21b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -5663,7 +5681,7 @@
       "executionIdentitySha256": "f527e7ad04cab2c4e4f4a5e317e2d183b1368fedf2ccc84a03f6815721e0df25",
       "expectedDurationSeconds": 15,
       "id": "gate/genesiscode-authoring-skill",
-      "inputIdentitySha256": "6c80342bf819141a200f5d9b30781a2576c927405f7d32c8e799ef877ab936fe",
+      "inputIdentitySha256": "60d9b4b49d20101c21454f05a1652c6c3664ddf337bf296e74cbe05cd957aac3",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -6178,7 +6196,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -6202,6 +6220,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -6225,7 +6244,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -6364,6 +6387,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -7092,7 +7116,7 @@
       "executionIdentitySha256": "ca6ede1d1ea76a00415f52d636fcf748b93b64414ab07f8b6656e28a884e3945",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -7116,6 +7140,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -7139,7 +7164,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -7278,6 +7307,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -8339,7 +8369,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8363,6 +8393,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -8386,7 +8417,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -8525,6 +8560,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -9337,7 +9373,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "6de2bde2fe822290a2868dde223ccfa8d6f3586b0658439989e295c226f31afc",
+      "inputIdentitySha256": "d3ff880eeeeb778835a09e492e634debf59f59c49b50c0e5bf6b22f0f6897387",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -11507,7 +11543,7 @@
       "executionIdentitySha256": "90e216718daf9f07073da4755f2613ab35bdfa08c80fee4019f3416c091421a3",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11531,6 +11567,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -11554,7 +11591,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -11693,6 +11734,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -12381,7 +12423,7 @@
       "executionIdentitySha256": "440f539ffb4d9e69ea2a27156d2636809ee0c20ce99ea6efa4bd5d892d66522c",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "645529ec417da1a41ed7ecb2c28bf3a415b485adc8f0df1e41b8b3fedbd9c392",
+      "inputIdentitySha256": "3f680739356bc5036eaa8e41178d191947ac2c89d894cb91b2dcec2fd8af37fd",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12405,6 +12447,7 @@
           "crates/gc_cli/tests/ai_stress_suite_fault_inject.rs",
           "crates/gc_cli/tests/cli_agent_index.rs",
           "crates/gc_cli/tests/cli_agent_plan.rs",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_cli_schema.rs",
           "crates/gc_cli/tests/cli_diagnostic_goldens.rs",
           "crates/gc_cli/tests/cli_diagnostics_matrix.rs",
@@ -12428,7 +12471,11 @@
           "crates/gc_cli/tests/shell_gate_regressions.rs",
           "crates/gc_cli/tests/upgrade_plan_health.rs",
           "crates/gc_cli_driver/Cargo.toml",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
           "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/cmd_agent_index.rs",
@@ -12567,6 +12614,7 @@
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
           "docs/spec/AGENT_CAPABILITY_GAUNTLET_v0.1.md",
           "docs/spec/AGENT_INDEX_v0.1.md",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
           "docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md",
           "docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json",
@@ -13263,7 +13311,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "4a0417f6f569bee01d27cd29978c55089a88cf305e08cd436decc7d7781a5f11",
+      "inputIdentitySha256": "47bb284c0fac724356d20535befd91bb54afd69fc0c5c09cb412980b606b068c",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -13334,7 +13382,7 @@
       "executionIdentitySha256": "120ff12fae7c4a83585c5f57c97208f4fb0fe3a405ecd378e49ce023e0eee94b",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "df73a54e295e27ba0d10068bc3dfa857021f8a1f90331827d6a4837a047e996b",
+      "inputIdentitySha256": "b737d248f2e5f8bbd27e3efa1a674edfa9655c6d6eb871eec2cf6bdbe8b871e6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -13422,16 +13470,22 @@
       "dependencies": [],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_warm_protocol_contract.sh",
-      "executionIdentitySha256": "7067faf5b417c1b77d88ac9b8b224a0083585162c474c8c7a06bb97a3a5d6977",
+      "executionIdentitySha256": "5090ceb5f4b69e93db0d8a1e1646cb71d87ba18e3ed039c7339e9a25826904b1",
       "expectedDurationSeconds": 600,
       "id": "gate/warm-protocol-contract",
-      "inputIdentitySha256": "96418506a2e180109b0058513b082414ad7c48d080ac2a404ef06df608cce37a",
+      "inputIdentitySha256": "e430926fe05d46acfdb930cc4a8f5fc16e77e9e8ba922664cbbd3a297672af35",
       "inputs": {
         "paths": [
           "Cargo.lock",
           "Cargo.toml",
+          "crates/gc_cli/tests/cli_agent_session.rs",
           "crates/gc_cli/tests/cli_mcp.rs",
           "crates/gc_cli/tests/cli_warm.rs",
+          "crates/gc_cli_driver/src/agent_session.rs",
+          "crates/gc_cli_driver/src/agent_session/model.rs",
+          "crates/gc_cli_driver/src/agent_session/storage.rs",
+          "crates/gc_cli_driver/src/cli_args.rs",
+          "crates/gc_cli_driver/src/cli_args/command_groups.rs",
           "crates/gc_cli_driver/src/cli_schema.rs",
           "crates/gc_cli_driver/src/mcp/catalog.rs",
           "crates/gc_cli_driver/src/mcp/resources.rs",
@@ -13446,6 +13500,7 @@
           "crates/gc_cli_driver/src/warm_state.rs",
           "crates/gc_cli_driver/src/warm_worker.rs",
           "crates/gc_cli_driver/src/warm_workspace.rs",
+          "docs/spec/AGENT_TRANSACTION_v0.1.schema.json",
           "docs/spec/CARGO_CACHE_POLICY_v0.1.schema.json",
           "docs/spec/CLI_JSON_SCHEMAS_v0.1.md",
           "docs/spec/WARM_PROTOCOL_v0.2.schema.json",
@@ -13488,7 +13543,7 @@
         "maxShards": 1,
         "mode": "none"
       },
-      "sourceSha256": "918d98ebdf428f8bc7fd8ae16dd0ff73c55ed0c17a0c0cc208c81e6b6940a631",
+      "sourceSha256": "9da437edd676ca1f14ad9df3a8d0396f3e04cb925c78417eb57926a83a189ab6",
       "tools": [
         "bash",
         "cargo",
@@ -13923,7 +13978,7 @@
       "executionIdentitySha256": "2ad1ef1c03b6a716e8da8486969497061ec37ca99f4e119edb9d0ffe1c69cf5e",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "f4239d813ac2df9d50d7241ca0e52b679da249689fb499b4c5d359f38aef446f",
+      "inputIdentitySha256": "901675b8edc3775abaaaffac860c426053f21b5377011f7bbfe9c4a4466f64c4",
       "inputs": {
         "paths": [
           "docs/spec/AGENT_AUTHORING_BUNDLE_v0.1.md",
@@ -13980,7 +14035,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "a976fa4e16e4e90d34ac6330237b7a7a7d9ac9f8e5ed81ab42cff6ba342eff0e",
+      "inputIdentitySha256": "4a036c46a799c57741ce2cf26c833dda5f7f8dfb2e29d28e5591a20c867a58bf",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -14071,7 +14126,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "722abbe966a5e1ef0d1f46fd0fd8a54d12916b53b1ddeefa2f146e50a14e2df8"
+        "sha256": "2b56a6b2928d41fa12c24b217d50e0f4168ff3d3786773f6d634aa68d480c653"
       },
       {
         "path": "genesis.prerequisites.json",

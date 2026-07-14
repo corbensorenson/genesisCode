@@ -1,4 +1,76 @@
 #[derive(Subcommand)]
+enum AgentSessionCmd {
+    /// Capture an immutable package snapshot and create an isolated transaction workspace.
+    Begin {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Stable client-selected transaction identifier.
+        #[arg(long)]
+        session: String,
+    },
+
+    /// Report the transaction state and content identities.
+    Status {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Transaction identifier returned by `session begin`.
+        #[arg(long)]
+        session: String,
+    },
+
+    /// Apply one canonical semantic patch to the isolated snapshot and run obligations.
+    Stage {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Transaction identifier returned by `session begin`.
+        #[arg(long)]
+        session: String,
+        /// Canonical semantic patch file.
+        #[arg(long)]
+        patch: PathBuf,
+        /// Optional capability policy for effectful obligations.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+    },
+
+    /// Run package obligations against the isolated current snapshot.
+    Test {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Transaction identifier returned by `session begin`.
+        #[arg(long)]
+        session: String,
+        /// Optional capability policy for effectful obligations.
+        #[arg(long)]
+        caps: Option<PathBuf>,
+    },
+
+    /// Conflict-check and apply the verified snapshot to the live package explicitly.
+    Apply {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Transaction identifier returned by `session begin`.
+        #[arg(long)]
+        session: String,
+    },
+
+    /// Close a transaction without modifying the live package.
+    Abort {
+        /// Path to the live package manifest.
+        #[arg(long)]
+        pkg: PathBuf,
+        /// Transaction identifier returned by `session begin`.
+        #[arg(long)]
+        session: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum SemanticEditCmd {
     /// Index canonical AST nodes with stable semantic node IDs.
     Index {

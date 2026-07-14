@@ -596,6 +596,7 @@ pub(super) fn enforce_selfhost_only_cmd(cli: &Cli, _flavor: Flavor) -> Result<()
         Cmd::Typecheck { .. } => Ok(()),
         Cmd::Test { .. } => Ok(()),
         Cmd::ApplyPatch { .. } => Ok(()),
+        Cmd::Session { .. } => Ok(()),
         Cmd::SemanticEdit { .. } => Ok(()),
         Cmd::Pack { .. } => Ok(()),
         Cmd::Store { .. } => Ok(()),

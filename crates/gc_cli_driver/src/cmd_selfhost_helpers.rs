@@ -95,6 +95,11 @@ const SELFHOST_CUTOVER_METADATA: &[SelfhostCutoverMetadata] = &[
         fast_path_required: false,
     },
     SelfhostCutoverMetadata {
+        cli_name: "session",
+        dashboard_cmd: "session/*",
+        fast_path_required: false,
+    },
+    SelfhostCutoverMetadata {
         cli_name: "cli-schema",
         dashboard_cmd: "cli-schema",
         fast_path_required: false,

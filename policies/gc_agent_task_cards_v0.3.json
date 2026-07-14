@@ -32,10 +32,11 @@
       "authorities": [
         {"anchors": [":version", ":intent", ":provenance", ":ops"], "path": "docs/spec/PATCH_SCHEMA.md"},
         {"anchors": ["SEMANTIC_PATCH_VERSION", "pub enum PatchError"], "path": "crates/gc_patches/src/lib.rs"},
-        {"anchors": ["patch-intent metadata", "genesis/patch-intent-v1"], "path": "docs/spec/AI_STYLE.md"}
+        {"anchors": ["patch-intent metadata", "genesis/patch-intent-v1"], "path": "docs/spec/AI_STYLE.md"},
+        {"anchors": ["genesis/agent-transaction-v0.1", "session apply"], "path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md"}
       ],
-      "commands": ["genesis semantic-edit index --pkg package.toml", "genesis apply-patch change.gcpatch --pkg package.toml --caps caps.toml"],
-      "guidance": ["Emit versioned structural patches with intent, provenance, and deterministic operation order.", "Prefer semantic node IDs and symbol-aware operations over textual replacement.", "Apply through the patch boundary, then rerun all affected obligations.", "Preserve conflict and failure artifacts; never silently fall back to an unverified edit path."],
+      "commands": ["genesis semantic-edit index --pkg package.toml", "genesis session begin --pkg package.toml --session candidate", "genesis session stage --pkg package.toml --session candidate --patch change.gcpatch --caps caps.toml", "genesis session test --pkg package.toml --session candidate --caps caps.toml", "genesis session apply --pkg package.toml --session candidate"],
+      "guidance": ["Emit versioned structural patches with intent, provenance, and deterministic operation order.", "Prefer semantic node IDs and symbol-aware operations over textual replacement.", "For agent writes, begin a content-addressed transaction, stage semantic patches, test the exact isolated snapshot, and apply explicitly.", "Treat stale-base, unverified, snapshot-mismatch, and workspace-tampered failures as hard stops; never fall back to direct or textual edits.", "Preserve conflict and failure artifacts; abort rather than broadening policy or bypassing obligations."],
       "id": "patch",
       "maxAsciiBytes": 1400,
       "selectors": {"anyRequiredOp": false, "domains": ["edit", "editor", "patch", "refactor", "semantic"], "goalTokens": ["edit", "migrate", "patch", "refactor", "rename", "rewrite"], "workflowTokens": ["refactor", "semantic"]},

@@ -476,6 +476,12 @@ enum Cmd {
         caps: Option<PathBuf>,
     },
 
+    /// Isolated, content-addressed agent transaction sessions.
+    Session {
+        #[command(subcommand)]
+        cmd: AgentSessionCmd,
+    },
+
     /// Semantic edit tooling for agentic patch planning.
     #[command(visible_alias = "semedit")]
     SemanticEdit {
