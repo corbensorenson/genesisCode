@@ -22,6 +22,7 @@ PREREQUISITES_REL = "genesis.prerequisites.json"
 SCHEMA_REL = "docs/spec/GATE_MANIFEST_v0.1.schema.json"
 INPUT_IDENTITY_EXCLUSIONS = {
     MANIFEST_REL: "generated-self-excluded",
+    "CHANGELOG.md": "release-derived-excluded",
     "ROADMAP.md": "evidence-citation-excluded",
     "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json": "roadmap-derived-excluded",
 }

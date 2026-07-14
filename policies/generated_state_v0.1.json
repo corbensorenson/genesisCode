@@ -1,0 +1,173 @@
+{
+  "kind": "genesis/generated-state-policy-v0.1",
+  "limits": {
+    "hardBytes": 8589934592,
+    "lockTimeoutMs": 30000,
+    "maxEntries": 256,
+    "maxLeases": 1024,
+    "minFreeBytes": 2147483648,
+    "softBytes": 6442450944
+  },
+  "producers": [
+    {
+      "contentKey": "cargo-cache-key-sha256",
+      "leaseMode": "process",
+      "owner": "cargo-cache",
+      "reclaimOrder": 200,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        ".genesis/build/cargo-cache/v1"
+      ],
+      "sizeClasses": [
+        "cargo-host",
+        "cargo-verifier",
+        "cargo-wasm"
+      ]
+    },
+    {
+      "contentKey": "dependency-mirror-sha256",
+      "leaseMode": "protected",
+      "owner": "dependency-mirror",
+      "reclaimOrder": 1000,
+      "retentionClass": "dependency-mirror",
+      "roots": [
+        ".genesis/dependency-mirrors"
+      ],
+      "sizeClasses": [
+        "protected"
+      ]
+    },
+    {
+      "contentKey": "repository-path-sha256",
+      "leaseMode": "process",
+      "owner": "legacy-build-island",
+      "reclaimOrder": 10,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        ".genesis/build"
+      ],
+      "sizeClasses": [
+        "observed"
+      ]
+    },
+    {
+      "contentKey": "package-lock-sha256",
+      "leaseMode": "process",
+      "owner": "node-install",
+      "reclaimOrder": 80,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        "node_modules"
+      ],
+      "sizeClasses": [
+        "node-install"
+      ]
+    },
+    {
+      "contentKey": "retained-path-sha256",
+      "leaseMode": "protected",
+      "owner": "retained-evidence-updater",
+      "reclaimOrder": 1000,
+      "retentionClass": "retained-evidence",
+      "roots": [
+        ".genesis/logs",
+        ".genesis/perf",
+        ".genesis/selfhost"
+      ],
+      "sizeClasses": [
+        "protected"
+      ]
+    },
+    {
+      "contentKey": "transaction-sha256",
+      "leaseMode": "protected",
+      "owner": "rollback-quarantine",
+      "reclaimOrder": 1000,
+      "retentionClass": "rollback-quarantine",
+      "roots": [
+        ".genesis/cleanup-quarantine"
+      ],
+      "sizeClasses": [
+        "protected"
+      ]
+    },
+    {
+      "contentKey": "artifact-profile-sha256",
+      "leaseMode": "process",
+      "owner": "root-cargo-target",
+      "reclaimOrder": 20,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        ".cargo-install-target",
+        "target"
+      ],
+      "sizeClasses": [
+        "cargo-host"
+      ]
+    },
+    {
+      "contentKey": "selfhost-toolchain-sha256",
+      "leaseMode": "process",
+      "owner": "selfhost-cache",
+      "reclaimOrder": 120,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        ".genesis/cache"
+      ],
+      "sizeClasses": [
+        "selfhost-cache"
+      ]
+    },
+    {
+      "contentKey": "invocation-sha256",
+      "leaseMode": "process",
+      "owner": "temporary-output",
+      "reclaimOrder": 0,
+      "retentionClass": "rebuildable-output",
+      "roots": [
+        ".genesis/tmp",
+        ".tmp"
+      ],
+      "sizeClasses": [
+        "temporary"
+      ]
+    }
+  ],
+  "registryFile": "registry.json",
+  "sizeClasses": [
+    {
+      "id": "cargo-host",
+      "reservationBytes": 8589934592
+    },
+    {
+      "id": "cargo-verifier",
+      "reservationBytes": 2147483648
+    },
+    {
+      "id": "cargo-wasm",
+      "reservationBytes": 4294967296
+    },
+    {
+      "id": "node-install",
+      "reservationBytes": 2147483648
+    },
+    {
+      "id": "observed",
+      "reservationBytes": 0
+    },
+    {
+      "id": "protected",
+      "reservationBytes": 0
+    },
+    {
+      "id": "selfhost-cache",
+      "reservationBytes": 1073741824
+    },
+    {
+      "id": "temporary",
+      "reservationBytes": 536870912
+    }
+  ],
+  "stateRoot": ".genesis/build/.generated-state-v0.1",
+  "version": "0.1"
+}

@@ -7,11 +7,11 @@ Scope:
 - This file is the canonical active P0/P1 defect-ID source. The capability ledger mirrors the exact IDs, and generated status views must match it.
 - Keep completed work out of this file. Durable source history and E1-E4 evidence establish closure; mutable `.genesis/perf/` observations do not.
 
-Open checklist items: 1
+Open checklist items: 0
 
 ## Critical Path
 
-- [ ] P1.3 Bound generated-state growth. Enforce concurrency-safe cache ownership, leases, soft/hard quotas, admission failure, and automatic reclamation while preserving user data and retained evidence; close only after R0.4.g proves GB-5 steady state across repeated full profiles and low-disk recovery.
+No active P0/P1 defects. Roadmap work remains governed by `ROADMAP.md`.
 
 ## Evidence Anchors
 

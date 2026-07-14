@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/generated-state-policy-v0.1.json",
+  "title": "GenesisCode Generated State Policy v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "stateRoot", "registryFile", "limits", "sizeClasses", "producers"],
+  "properties": {
+    "kind": {"const": "genesis/generated-state-policy-v0.1"},
+    "version": {"const": "0.1"},
+    "stateRoot": {"const": ".genesis/build/.generated-state-v0.1"},
+    "registryFile": {"const": "registry.json"},
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["softBytes", "hardBytes", "minFreeBytes", "maxEntries", "maxLeases", "lockTimeoutMs"],
+      "properties": {
+        "softBytes": {"type": "integer", "minimum": 1},
+        "hardBytes": {"type": "integer", "minimum": 1, "maximum": 8589934592},
+        "minFreeBytes": {"type": "integer", "minimum": 0},
+        "maxEntries": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "maxLeases": {"type": "integer", "minimum": 1, "maximum": 16384},
+        "lockTimeoutMs": {"type": "integer", "minimum": 1, "maximum": 300000}
+      }
+    },
+    "sizeClasses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reservationBytes"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "reservationBytes": {"type": "integer", "minimum": 0, "maximum": 8589934592}
+        }
+      }
+    },
+    "producers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["owner", "roots", "contentKey", "sizeClasses", "retentionClass", "leaseMode", "reclaimOrder"],
+        "properties": {
+          "owner": {"$ref": "#/$defs/id"},
+          "roots": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/repoPath"}},
+          "contentKey": {"$ref": "#/$defs/id"},
+          "sizeClasses": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+          "retentionClass": {"enum": ["rebuildable-output", "dependency-mirror", "retained-evidence", "rollback-quarantine"]},
+          "leaseMode": {"enum": ["process", "protected"]},
+          "reclaimOrder": {"type": "integer", "minimum": 0, "maximum": 1000}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "repoPath": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"}
+  }
+}

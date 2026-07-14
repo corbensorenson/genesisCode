@@ -100,7 +100,6 @@ Authorized unqualified claims:
 
 Known GenesisCode gaps
 
-- `P1.3`: Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement. Affected claims: `CAP-AGENT-WORKSPACE-PERF`, `CAP-ASSURANCE-PROFILES`
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`
 - `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`
@@ -141,6 +140,7 @@ Known GenesisCode gaps
 - `R8.2.h`: Prove the GPU or numeric agent archetype with deterministic backend evidence. Affected claims: `CAP-GPU-COMPUTE`
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`
+- Active `upgrade_plan.md` P0/P1 defects: none. Roadmap maturity gaps above remain open and are not erased by an empty defect queue.
 
 Primary evidence paths:
 

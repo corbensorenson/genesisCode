@@ -88,6 +88,7 @@ configuration_paths = {
     root / "scripts/lib/cargo_cache.py",
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/deterministic_cleanup.py",
+    root / "scripts/lib/generated_state.py",
 }
 for scope in policy["scopes"]:
     for pattern in scope["manifestGlobs"]:
@@ -284,6 +285,7 @@ authority_paths = {
     root / cache.SCHEMA_REL,
     root / "scripts/lib/cargo_cache.py",
     root / "scripts/lib/cargo_target_dir.sh",
+    root / "scripts/lib/generated_state.py",
     root / "scripts/check_cargo_target_dir_policy.sh",
     root / "scripts/render_cargo_target_dir_policy_report.sh",
     root / ".github/workflows/ci.yml",

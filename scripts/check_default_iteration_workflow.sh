@@ -39,7 +39,9 @@ if report.get("kind") != "genesis/test-changed-fast-metrics-v0.1":
 if report.get("elapsed_ms", 0) <= 0:
     raise SystemExit("default-iteration-workflow: changed-fast elapsed_ms must be > 0")
 mode = report.get("mode")
-if mode not in {"clean-tree", "targeted", "full-threshold", "full-global-change"}:
+if mode not in {
+    "clean-tree", "targeted", "full-threshold", "full-global-change", "profile-fallback"
+}:
     raise SystemExit(f"default-iteration-workflow: unexpected changed-fast mode: {mode}")
 PY
 

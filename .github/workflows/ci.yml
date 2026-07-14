@@ -88,8 +88,9 @@ jobs:
         with:
           tool: cargo-deny@0.19.0
 
-      - name: Fetch Standalone Evidence Dependencies
+      - name: Fetch Offline Gate Dependencies
         run: |
+          cargo fetch --locked
           cargo fetch --manifest-path tools/genesis-evidence-producer/Cargo.toml --locked
           cargo fetch --manifest-path tools/genesis-evidence-verifier/Cargo.toml --locked
 

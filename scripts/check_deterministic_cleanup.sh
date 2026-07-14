@@ -24,6 +24,7 @@ source_root = Path(sys.argv[1]).resolve()
 temp = Path(sys.argv[2]).resolve()
 sys.path.insert(0, str(source_root / "scripts/lib"))
 import deterministic_cleanup as cleanup
+import generated_state as state
 
 controls = []
 
@@ -37,6 +38,16 @@ def rejected(name, function):
     try:
         function()
     except cleanup.CleanupError:
+        controls.append(name)
+        return
+    raise SystemExit(f"deterministic-cleanup-contract: accepted invalid control: {name}")
+
+
+def state_rejected(name, function, diagnostic=None):
+    try:
+        function()
+    except state.GeneratedStateError as exc:
+        require(diagnostic is None or diagnostic in str(exc), f"wrong {name} diagnostic: {exc}")
         controls.append(name)
         return
     raise SystemExit(f"deterministic-cleanup-contract: accepted invalid control: {name}")
@@ -264,6 +275,271 @@ quarantine.mkdir(parents=True)
 rejected("unresolved-quarantine-rejection", lambda: cleanup.render_plan(repo, "dev-clean"))
 shutil.rmtree(quarantine)
 
+# Generated-state lifecycle: every producer is declared, quota accounting is bounded,
+# leases serialize cleanup, and interrupted reclamation recovers deterministically.
+state_policy, _, _ = state.load_policy(source_root)
+generated_schema_paths = [
+    "docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json",
+    "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
+]
+for relative in generated_schema_paths:
+    schema = cleanup.load_json(source_root / relative)
+    require(
+        schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema"
+        and schema.get("additionalProperties") is False,
+        f"generated-state schema is not closed: {relative}",
+    )
+declared_state_roots = {
+    relative for producer in state_policy["producers"] for relative in producer["roots"]
+}
+require(
+    {
+        relative
+        for relative, class_id in cleanup.root_classes(policy).items()
+        if class_id in cleanup.DELETABLE_CLASSES
+    }.issubset(declared_state_roots),
+    "generated-state policy does not cover every cleanup root",
+)
+require(
+    [producer["owner"] for producer in state_policy["producers"]]
+    == sorted({producer["owner"] for producer in state_policy["producers"]}),
+    "generated-state producers are not a closed sorted registry",
+)
+controls.append("generated-state-closed-authority")
+
+lifecycle = temp / "lifecycle"
+(lifecycle / "policies").mkdir(parents=True)
+shutil.copyfile(source_root / cleanup.POLICY_REL, lifecycle / cleanup.POLICY_REL)
+bounded_policy = copy.deepcopy(state_policy)
+bounded_policy["limits"].update({
+    "softBytes": 8192,
+    "hardBytes": 16384,
+    "minFreeBytes": 4096,
+    "maxEntries": 32,
+    "maxLeases": 8,
+})
+reservations = {
+    "cargo-host": 8192,
+    "cargo-verifier": 4096,
+    "cargo-wasm": 8192,
+    "node-install": 8192,
+    "observed": 0,
+    "protected": 0,
+    "selfhost-cache": 4096,
+    "temporary": 4096,
+}
+for size_class in bounded_policy["sizeClasses"]:
+    size_class["reservationBytes"] = reservations[size_class["id"]]
+(lifecycle / state.POLICY_REL).write_bytes(state.pretty_bytes(bounded_policy))
+(lifecycle / ".gitignore").write_text(".genesis/\n.tmp/\n.cargo-install-target/\nnode_modules/\ntarget/\n", encoding="utf-8")
+(lifecycle / "source.gc").write_text("fixture\n", encoding="utf-8")
+subprocess.run(["git", "init", "-q"], cwd=lifecycle, check=True)
+subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=lifecycle, check=True)
+(lifecycle / ".genesis/build/legacy").mkdir(parents=True)
+(lifecycle / ".genesis/build/legacy/payload.bin").write_bytes(b"legacy")
+cleanup.initialize_root_marker(lifecycle, ".genesis/build", "lifecycle-fixture")
+
+alpha_path = ".genesis/build/cargo-cache/v1/root/host/alpha"
+alpha = state.admit(
+    lifecycle, "cargo-cache", "a" * 64, alpha_path, "cargo-host",
+    free_bytes_override=1 << 30,
+)
+require(not (lifecycle / ".genesis/build/legacy").exists(), "legacy build island was not reclaimed first")
+controls.append("generated-state-legacy-reclamation")
+
+beta = state.admit(
+    lifecycle, "cargo-cache", "b" * 64,
+    ".genesis/build/cargo-cache/v1/root/host/beta", "cargo-host",
+    free_bytes_override=1 << 30,
+)
+state_rejected(
+    "generated-state-hard-quota-denial",
+    lambda: state.admit(
+        lifecycle, "cargo-cache", "c" * 64,
+        ".genesis/build/cargo-cache/v1/root/host/gamma", "cargo-host",
+        free_bytes_override=1 << 30,
+    ),
+    "hard quota admission denied",
+)
+state.release(lifecycle, alpha["leaseToken"])
+gamma = state.admit(
+    lifecycle, "cargo-cache", "c" * 64,
+    ".genesis/build/cargo-cache/v1/root/host/gamma", "cargo-host",
+    free_bytes_override=1 << 30,
+)
+require(alpha["entryId"] in gamma["reclaimedEntryIds"], "least-recent inactive entry was not reclaimed")
+controls.append("generated-state-lru-active-protection")
+
+(lifecycle / ".genesis/dependency-mirrors/sha256-fixture").mkdir(parents=True)
+protected = state.register_protected(
+    lifecycle, "dependency-mirror", "d" * 64,
+    ".genesis/dependency-mirrors/sha256-fixture",
+)
+require(protected["protected"], "dependency mirror was not registered as protected")
+state.release(lifecycle, beta["leaseToken"])
+state.release(lifecycle, gamma["leaseToken"])
+state_rejected(
+    "generated-state-low-disk-denial",
+    lambda: state.admit(
+        lifecycle, "cargo-cache", "e" * 64,
+        ".genesis/build/cargo-cache/v1/root/host/low-disk", "cargo-host",
+        free_bytes_override=0,
+    ),
+    "low-disk admission denied",
+)
+require(state.status(lifecycle)["protectedEntries"] == 1, "protected state entered quota accounting")
+controls.append("generated-state-protected-retention")
+
+stale = state.admit(
+    lifecycle, "cargo-cache", "f" * 64,
+    ".genesis/build/cargo-cache/v1/root/host/stale", "cargo-host",
+    identity_fn=lambda _pid: "f" * 64,
+    free_bytes_override=1 << 30,
+)
+recovered = state.status(lifecycle)
+require(recovered["recoveredStaleLeases"] == 1 and recovered["activeLeases"] == 0, "stale lease was not recovered")
+controls.append("generated-state-stale-lease-recovery")
+
+crash_path = ".genesis/build/cargo-cache/v1/root/host/crash"
+(lifecycle / crash_path).mkdir(parents=True)
+(lifecycle / crash_path / "payload.bin").write_bytes(b"crash")
+crash = state.admit(
+    lifecycle, "cargo-cache", "1" * 64, crash_path, "cargo-host",
+    free_bytes_override=1 << 30,
+)
+state.release(lifecycle, crash["leaseToken"])
+loaded_policy, _, loaded_sha = state.load_policy(lifecycle)
+with state.state_lock(lifecycle, loaded_policy) as state_root:
+    require(state_root is not None, "generated-state registry disappeared")
+    registry = state._load_registry(state_root, loaded_policy, loaded_sha)
+    entry = next(item for item in registry["entries"] if item["id"] == crash["entryId"])
+    registry["sequence"] += 1
+    transaction_id = state._transaction_id(entry, registry["sequence"])
+    quarantine_rel = f"{loaded_policy['stateRoot']}/quarantine/{transaction_id}"
+    quarantine_path = lifecycle / quarantine_rel
+    quarantine_path.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(lifecycle / crash_path, quarantine_path)
+    registry["transaction"] = {
+        "entryId": entry["id"],
+        "id": transaction_id,
+        "phase": "quarantined",
+        "quarantinePath": quarantine_rel,
+        "sourcePath": crash_path,
+    }
+    state._write_registry(state_root, loaded_policy, registry)
+post_crash = state.status(lifecycle)
+require(not quarantine_path.exists() and post_crash["entryCount"] >= 1, "quarantined transaction did not recover")
+controls.append("generated-state-crash-recovery")
+
+concurrent_path = ".genesis/build/cargo-cache/v1/root/host/concurrent"
+command = [
+    sys.executable, str(source_root / "scripts/lib/generated_state.py"),
+    "--root", str(lifecycle), "acquire", "--owner", "cargo-cache",
+    "--content-key", "2" * 64, "--path", concurrent_path,
+    "--size-class", "cargo-host", "--pid", str(os.getpid()),
+]
+processes = [subprocess.Popen(command, cwd=lifecycle, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(8)]
+tokens = []
+for process in processes:
+    stdout, stderr = process.communicate(timeout=30)
+    require(process.returncode == 0, f"concurrent admission failed: {stderr}")
+    tokens.append(stdout.strip())
+require(len(set(tokens)) == 8 and state.status(lifecycle)["activeLeases"] == 8, "concurrent leases were lost")
+state_rejected(
+    "generated-state-lease-bound-rejection",
+    lambda: state.admit(
+        lifecycle, "cargo-cache", "2" * 64, concurrent_path, "cargo-host",
+        free_bytes_override=1 << 30,
+    ),
+    "lease bound exceeded",
+)
+try:
+    with state.cleanup_guard(lifecycle, [".genesis/build"]):
+        pass
+except state.GeneratedStateError as exc:
+    require("active generated-state lease" in str(exc), f"wrong cleanup race diagnostic: {exc}")
+    controls.append("generated-state-cleanup-lease-race")
+else:
+    raise SystemExit("deterministic-cleanup-contract: active lease did not block cleanup")
+for token in tokens:
+    state.release(lifecycle, token)
+require(state.status(lifecycle)["activeLeases"] == 0, "concurrent leases did not release")
+controls.append("generated-state-concurrent-admission")
+
+for index in range(20):
+    target_family = "wasm32-wasip1" if index % 2 else "host"
+    size_class = "cargo-wasm" if index % 2 else "cargo-host"
+    result = state.admit(
+        lifecycle, "cargo-cache", f"{index + 100:064x}",
+        f".genesis/build/cargo-cache/v1/root/{target_family}/cycle-{index}", size_class,
+        free_bytes_override=1 << 30,
+    )
+    state.release(lifecycle, result["leaseToken"])
+steady = state.status(lifecycle)
+require(steady["rebuildableEntries"] <= 1 and steady["accountingBytes"] <= 8192, "profile cycles did not reach bounded steady state")
+controls.append("generated-state-bounded-steady-state")
+
+state_rejected(
+    "generated-state-unknown-owner-rejection",
+    lambda: state.admit(lifecycle, "unknown", "3" * 64, ".genesis/build/unknown", "cargo-host"),
+    "undeclared generated-state producer",
+)
+state_rejected(
+    "generated-state-ceiling-override-rejection",
+    lambda: state.admit(
+        lifecycle, "cargo-cache", "4" * 64,
+        ".genesis/build/cargo-cache/v1/root/host/override", "cargo-host",
+        environ={"GENESIS_GENERATED_STATE_HARD_BYTES": "16385"},
+    ),
+    "cannot exceed policy",
+)
+
+unbounded_policy = copy.deepcopy(bounded_policy)
+unbounded_policy["limits"]["maxEntries"] = state.MAX_POLICY_ENTRIES + 1
+unbounded_path = temp / "unbounded-generated-state-policy.json"
+unbounded_path.write_bytes(state.pretty_bytes(unbounded_policy))
+state_rejected(
+    "generated-state-cardinality-policy-rejection",
+    lambda: state.load_policy(lifecycle, unbounded_path),
+    "cardinality is unbounded",
+)
+
+registry_path = lifecycle / bounded_policy["stateRoot"] / bounded_policy["registryFile"]
+valid_registry = registry_path.read_bytes()
+registry_path.write_text('{"kind":"a","kind":"b"}\n', encoding="utf-8")
+state_rejected(
+    "generated-state-duplicate-registry-rejection",
+    lambda: state.status(lifecycle),
+    "duplicate JSON key",
+)
+registry_path.write_bytes(valid_registry)
+
+oversized_json = temp / "oversized-generated-state.json"
+oversized_json.write_bytes(b" " * (state.MAX_JSON_BYTES + 1))
+state_rejected(
+    "generated-state-oversized-json-rejection",
+    lambda: state.load_json(oversized_json),
+    "JSON input exceeds",
+)
+
+unauthorized = temp / "unauthorized-state"
+(unauthorized / "policies").mkdir(parents=True)
+shutil.copyfile(source_root / cleanup.POLICY_REL, unauthorized / cleanup.POLICY_REL)
+shutil.copyfile(lifecycle / state.POLICY_REL, unauthorized / state.POLICY_REL)
+(unauthorized / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+(unauthorized / "source.gc").write_text("fixture\n", encoding="utf-8")
+subprocess.run(["git", "init", "-q"], cwd=unauthorized, check=True)
+subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=unauthorized, check=True)
+(unauthorized / ".genesis/build").mkdir(parents=True)
+state_rejected(
+    "generated-state-marker-authority-rejection",
+    lambda: state.admit(
+        unauthorized, "cargo-cache", "5" * 64,
+        ".genesis/build/cargo-cache/v1/root/host/unmarked", "cargo-host",
+    ),
+    "cleanup authority marker",
+)
+
 legacy = (source_root / "scripts/reclaim_build_space.sh").read_text(encoding="utf-8")
 forbidden = ["rm " + "-rf", "cargo" + " clean", "max-age-days", "--build-root", "--aggressive"]
 require(not any(value in legacy for value in forbidden), "legacy destructive cleanup behavior remains")
@@ -284,11 +560,14 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 22 and len(set(controls)) == 22, f"control coverage drift: {controls}")
+require(len(controls) == 40 and len(set(controls)) == 40, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
+    "policies/generated_state_v0.1.json",
     *schema_paths,
+    *generated_schema_paths,
     "scripts/lib/deterministic_cleanup.py",
+    "scripts/lib/generated_state.py",
     "scripts/reclaim_build_space.sh",
     "scripts/lib/cargo_cache.py",
     "scripts/lib/dependency_mirror.py",

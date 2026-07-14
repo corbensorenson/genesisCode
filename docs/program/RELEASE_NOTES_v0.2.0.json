@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "db20e16af9a2037d619813a7e3ed6f0ab93783f1a5a88cd9157c7b0b5a4e700f",
+  "contentIdentitySha256": "a294c27317c52752cdb4834e44cad181db2ab5abf16f2d85870f271000c71f4e",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -403,7 +403,6 @@
             "E1:cap-agent-workspace-perf/check-4"
           ],
           "gapIds": [
-            "P1.3",
             "R2.3.e"
           ],
           "id": "CAP-AGENT-WORKSPACE-PERF",
@@ -613,7 +612,6 @@
             "E1:cap-assurance-profiles/check-3"
           ],
           "gapIds": [
-            "P1.3",
             "R7.1.a",
             "R7.3.a"
           ],
@@ -1207,18 +1205,8 @@
       ]
     },
     "knownGaps": {
-      "activeDefectIds": [
-        "P1.3"
-      ],
+      "activeDefectIds": [],
       "roadmapGaps": [
-        {
-          "affectedClaims": [
-            "CAP-AGENT-WORKSPACE-PERF",
-            "CAP-ASSURANCE-PROFILES"
-          ],
-          "id": "P1.3",
-          "summary": "Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement."
-        },
         {
           "affectedClaims": [
             "CAP-AGENT-JSON-CONTRACTS"
@@ -1571,9 +1559,7 @@
       ]
     },
     "security": {
-      "activeDefectIds": [
-        "P1.3"
-      ],
+      "activeDefectIds": [],
       "claimState": "requirements-only-unverified",
       "mandatoryChecks": [
         {
@@ -1588,7 +1574,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
-          "executionIdentitySha256": "4429c02ff3cdfe0e4f216ad13c69226705e44bc5aa07fda0d91ffb34a721592b",
+          "executionIdentitySha256": "deb83f5110c9f41a7ecfb581c8fdaec208759514a3495d9fa6d4f350dac82a0b",
           "gateId": "gate/evidence-adversarial-matrix",
           "kind": "test",
           "networkMode": "deny",
@@ -1597,7 +1583,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_genesis_evidence_verifier.sh",
-          "executionIdentitySha256": "fa34c8eae2803ff7aaa5026d08e5bb11d3e520e836bc4adce13ea3ce65dd50b8",
+          "executionIdentitySha256": "178a9286d04be40e77164318891fff6ae400911a8e4030752c2e4686c3d68dca",
           "gateId": "gate/genesis-evidence-verifier",
           "kind": "test",
           "networkMode": "deny",
@@ -1615,7 +1601,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_no_user_panics_compiler.sh",
-          "executionIdentitySha256": "754141f4f09fab4c01e05b14ce77193952b8dfd27d3e1cf7d8b1077889577004",
+          "executionIdentitySha256": "056619ac55e61dbc177c3db2b49c7654f874acfe200248d4a824f47e0b156120",
           "gateId": "gate/no-user-panics-compiler",
           "kind": "test",
           "networkMode": "deny",
@@ -1624,7 +1610,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_release_smoke.sh",
-          "executionIdentitySha256": "774a53bf2abd54b76ed40ef06bbb28c87c0bf1c6e1a7b3c65fa3cf422730b8f2",
+          "executionIdentitySha256": "8ff52526dffab67eeffe3acee4a41cb2478a4c1d40a6938d49ebc59adb66efe8",
           "gateId": "gate/release-smoke",
           "kind": "release-only",
           "networkMode": "deny",
@@ -1642,7 +1628,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_supply_chain.sh",
-          "executionIdentitySha256": "a5521633615c50e22ba847ce17cc18f4a92bc68311b3572369a6261739f2cb6e",
+          "executionIdentitySha256": "0ab4789e05ff7a20bdfca99617960e9fa9e376e79dd63725ea1bb54900afca70",
           "gateId": "gate/supply-chain",
           "kind": "release-only",
           "networkMode": "deny",
@@ -1651,7 +1637,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_versioning_release_hygiene.sh",
-          "executionIdentitySha256": "582c2b6719015a2d732678c96bc3204120f3ce41130c85658076f15c82829818",
+          "executionIdentitySha256": "120ff12fae7c4a83585c5f57c97208f4fb0fe3a405ecd378e49ce023e0eee94b",
           "gateId": "gate/versioning-release-hygiene",
           "kind": "release-only",
           "networkMode": "deny",
@@ -1673,7 +1659,7 @@
     "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "287e8a1101728a6aa7155c04d3cc1c111ad9ad847d10db48cff48ee599f58ed4",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "96d63a1b9f32278929115e6baa69d3cc7d98285eed2c6aa2bf88e53f692fca9f",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

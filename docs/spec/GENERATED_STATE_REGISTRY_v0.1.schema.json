@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/generated-state-registry-v0.1.json",
+  "title": "GenesisCode Generated State Registry v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "version", "policySha256", "sequence", "entries", "leases", "transaction"],
+  "properties": {
+    "kind": {"const": "genesis/generated-state-registry-v0.1"},
+    "version": {"const": "0.1"},
+    "policySha256": {"$ref": "#/$defs/sha256"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "entries": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/entry"}},
+    "leases": {"type": "array", "maxItems": 16384, "items": {"$ref": "#/$defs/lease"}},
+    "transaction": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/transaction"}]}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "repoPath": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "path", "contentKey", "sizeClass", "retentionClass", "reclaimOrder", "reservationBytes", "observedAllocatedBytes", "lastUseSequence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/sha256"},
+        "owner": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/repoPath"},
+        "contentKey": {"type": "string", "minLength": 1, "maxLength": 256},
+        "sizeClass": {"$ref": "#/$defs/id"},
+        "retentionClass": {"enum": ["rebuildable-output", "dependency-mirror", "retained-evidence", "rollback-quarantine"]},
+        "reclaimOrder": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "reservationBytes": {"type": "integer", "minimum": 0},
+        "observedAllocatedBytes": {"type": "integer", "minimum": 0},
+        "lastUseSequence": {"type": "integer", "minimum": 0}
+      }
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "entryId", "pid", "processIdentity"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "entryId": {"$ref": "#/$defs/sha256"},
+        "pid": {"type": "integer", "minimum": 1},
+        "processIdentity": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "entryId", "sourcePath", "quarantinePath", "phase"],
+      "properties": {
+        "id": {"$ref": "#/$defs/sha256"},
+        "entryId": {"$ref": "#/$defs/sha256"},
+        "sourcePath": {"$ref": "#/$defs/repoPath"},
+        "quarantinePath": {"$ref": "#/$defs/repoPath"},
+        "phase": {"enum": ["planned", "quarantined"]}
+      }
+    }
+  }
+}

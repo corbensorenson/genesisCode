@@ -35,7 +35,6 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
-- `P1.3`: Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement. Affected claims: `CAP-AGENT-WORKSPACE-PERF`, `CAP-ASSURANCE-PROFILES`.
 - `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
 - `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`.
@@ -76,7 +75,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.h`: Prove the GPU or numeric agent archetype with deterministic backend evidence. Affected claims: `CAP-GPU-COMPUTE`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P1.3`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: none. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -108,7 +107,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `db20e16af9a2037d619813a7e3ed6f0ab93783f1a5a88cd9157c7b0b5a4e700f`.
+Machine-readable identity: `a294c27317c52752cdb4834e44cad181db2ab5abf16f2d85870f271000c71f4e`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

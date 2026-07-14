@@ -521,6 +521,59 @@ binding, transactional rollback, selective execution, unresolved-quarantine
 rejection, producer integration, and retirement of the legacy destructive
 interface in isolated fixture repositories.
 
+### Bounded generated state
+
+`policies/generated_state_v0.1.json`, closed by
+`docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json`, is the admission and
+retention authority for generated state. Its producer registry declares the
+owner, allowed roots, content-key strategy, size classes, retention class,
+lease mode, and deterministic reclamation order for Cargo caches, root Cargo
+targets, self-host caches, temporary outputs, package installs, retained
+evidence, dependency mirrors, and rollback quarantine. Unknown producers,
+paths outside an owner's declared roots, undeclared size classes, duplicate
+keys, and hard-quota overrides above GB-5 fail closed.
+
+Rebuildable producers MUST acquire a process-bound random lease before
+materializing repository-local state. Admission accounts for the larger of a
+size-class reservation and observed allocated bytes, reclaims inactive entries
+in `(reclaim-order, last-use-sequence, entry-id)` order at the soft quota, and
+denies admission when active or requested state cannot fit under the hard quota
+or the minimum-free-space reserve. An inactive requested entry already above
+the hard quota may be transactionally evicted and recreated; an active entry
+is never reclaimed. Process identity includes operating-system boot/session
+and process-start identity so PID reuse cannot preserve a stale lease.
+
+The disposable registry conforms to
+`docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json`. Its mutex is resolved
+through the Git control directory, outside every cleanup root, so admission
+and whole-root quarantine serialize on Unix, macOS, Windows, and linked Git
+worktrees without holding an open file inside the tree being renamed. Registry
+writes are atomic and every reclamation journals `planned` then `quarantined`
+state before removal. A later admission or status operation deterministically
+finishes an interrupted quarantine. Recursive removal requires the platform's
+symlink-attack-resistant implementation and uses bounded retries only for
+transient metadata recreation; continuous mutation remains a fail-closed
+transaction for later recovery.
+
+Automatic reclamation never grants deletion authority. Every reclaimed path
+must still be inside a reviewed `rebuildable-output` root with a valid current
+cleanup marker. Retained evidence, dependency mirrors, rollback quarantine,
+user-authored roots, unknown `.genesis` children, and active leases are excluded
+from quota candidates. Whole-root cleanup takes the same external mutex and
+rejects a selected root when a live lease intersects it. Status and registry
+documents are timestamp-free and host-path-free; lease tokens and process
+identities are local coordination secrets and never enter semantic hashes,
+effect logs, packages, or release evidence.
+
+Repository-owned Cargo entrypoints acquire and release leases through
+`scripts/lib/cargo_cache.py` and `scripts/lib/cargo_target_dir.sh`. A normal
+producer transition releases its prior lease before changing semantic scope;
+abnormal process exit is recovered on the next lifecycle operation. The
+deterministic-cleanup gate additionally proves quota denial, low-disk denial,
+legacy-island reclamation, protected retention, stale-PID recovery, interrupted
+transaction recovery, concurrent same-entry builders, cleanup/admission race
+closure, and bounded repeated host/WASI profile cycles.
+
 ## Cargo Cache Policy
 
 Repository-owned Cargo invocations MUST resolve `CARGO_TARGET_DIR` through

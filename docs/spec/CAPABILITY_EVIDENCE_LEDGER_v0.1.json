@@ -1,7 +1,5 @@
 {
-  "active_defect_ids": [
-    "P1.3"
-  ],
+  "active_defect_ids": [],
   "audit_date": "2026-07-14",
   "claims": [
     {
@@ -652,7 +650,6 @@
         "E1:cap-agent-workspace-perf/check-4"
       ],
       "gap_ids": [
-        "P1.3",
         "R2.3.e"
       ],
       "host_binding_paths": [],
@@ -1018,7 +1015,6 @@
         "E1:cap-assurance-profiles/check-3"
       ],
       "gap_ids": [
-        "P1.3",
         "R7.1.a",
         "R7.3.a"
       ],
@@ -1118,7 +1114,6 @@
     }
   ],
   "gap_catalog": {
-    "P1.3": "Bound generated-state growth with safe automatic quota, lease, and reclamation enforcement.",
     "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
     "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
     "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",

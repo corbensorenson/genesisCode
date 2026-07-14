@@ -45,8 +45,10 @@ GWASI_PARITY="$DEFAULT_DEBUG_DIR/genesis_wasi_parity"
 
 TMP_DIR="$(mktemp -d)"
 pids=()
+worker_names=()
 cleanup() {
-  for pid in "${pids[@]}"; do
+  for pid in "${pids[@]-}"; do
+    [[ -n "$pid" ]] || continue
     kill "$pid" >/dev/null 2>&1 || true
   done
   wait >/dev/null 2>&1 || true
@@ -220,6 +222,7 @@ STRICT_GOLDEN_JOBS="${GENESIS_STRICT_GOLDEN_JOBS:-4}"
 if ! [[ "$STRICT_GOLDEN_JOBS" =~ ^[0-9]+$ ]] || [[ "$STRICT_GOLDEN_JOBS" -lt 1 ]]; then
   fail "GENESIS_STRICT_GOLDEN_JOBS must be a positive integer"
 fi
+worker_failed=0
 
 for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
   [[ -d "$src_dir" ]] || continue
@@ -232,6 +235,8 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
     if [[ "$name" == "pkg_gpu_parallel_obligations" ]]; then
       install_fixture_gpu_bridge "$dst_dir"
     fi
+    export GENESIS_SELFHOST_COMPILED_CACHE_DIR="$PKGS_TMP/compiled-cache/$name"
+    cd "$dst_dir"
     pkg_toml="$dst_dir/package.toml"
     check_typecheck_parity "$pkg_toml" "$name"
 
@@ -253,14 +258,25 @@ for src_dir in "$ROOT_DIR"/tests/spec/pkg_*; do
     fi
   ) &
   pids+=("$!")
+  worker_names+=("$name")
   if [[ "${#pids[@]}" -ge "$STRICT_GOLDEN_JOBS" ]]; then
-    wait "${pids[0]}" || fail "parallel package fixture worker failed"
+    if ! wait "${pids[0]}"; then
+      echo "selfhost-strict-golden: package fixture worker failed: ${worker_names[0]}" >&2
+      worker_failed=1
+    fi
     pids=("${pids[@]:1}")
+    worker_names=("${worker_names[@]:1}")
   fi
 done
-for pid in "${pids[@]}"; do
-  wait "$pid" || fail "parallel package fixture worker failed"
+for index in "${!pids[@]}"; do
+  if ! wait "${pids[$index]}"; then
+    echo "selfhost-strict-golden: package fixture worker failed: ${worker_names[$index]}" >&2
+    worker_failed=1
+  fi
 done
+[[ "$worker_failed" == "0" ]] || fail "one or more parallel package fixture workers failed"
+pids=()
+worker_names=()
 
 # Ensure strict selfhost package paths in WASI remain healthy on canonical baseline fixture.
 PKG_W="$TMP_DIR/pkg_wasi"

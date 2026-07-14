@@ -39,6 +39,11 @@ SUMMARY_FIELDS = {
 CLASS_IDS = ["dependency-mirror", "rebuildable-output", "retained-evidence", "user-authored"]
 PROFILE_IDS = ["dev-clean", "generated-clean", "mirror-clean", "observations-clean"]
 DELETABLE_CLASSES = set(CLASS_IDS) - {"user-authored"}
+REASON_IDS = {
+    "active-lease", "class-not-selected", "eligible", "invalid-marker", "missing",
+    "missing-marker", "policy-user-authored", "symlink-root", "tracked-content",
+    "unknown-untracked-root",
+}
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 PRODUCER_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -435,6 +440,7 @@ def render_plan(
     root: Path,
     profile: str,
     policy_override: Path | None = None,
+    check_generated_leases: bool = True,
 ) -> dict[str, Any]:
     root = root.resolve()
     policy, _, policy_sha = load_policy(root, policy_override)
@@ -462,6 +468,23 @@ def render_plan(
             action, reason = "preserve", "symlink-root"
         elif tracked_paths(root, rel):
             action, reason = "preserve", "tracked-content"
+        elif check_generated_leases and (root / "policies/generated_state_v0.1.json").is_file():
+            import generated_state
+
+            try:
+                active_lease = generated_state.active_leases_below(root, rel)
+            except generated_state.GeneratedStateError as exc:
+                raise CleanupError(f"generated-state lease check failed: {exc}") from exc
+            if active_lease:
+                action, reason = "preserve", "active-lease"
+            else:
+                marker_status, marker_sha = marker_state(
+                    absolute, rel, class_id, policy, policy_sha
+                )
+                if marker_status == "valid":
+                    action, reason = "delete", "eligible"
+                else:
+                    action, reason = "preserve", marker_status
         else:
             marker_status, marker_sha = marker_state(absolute, rel, class_id, policy, policy_sha)
             if marker_status == "valid":
@@ -530,6 +553,8 @@ def validate_plan_shape(plan: Any) -> None:
         paths.append(repo_path(item["path"], "cleanup plan path"))
         if item["class"] not in CLASS_IDS or item["action"] not in {"absent", "delete", "preserve"}:
             raise CleanupError("cleanup plan entry class or action is invalid")
+        if item["reason"] not in REASON_IDS:
+            raise CleanupError("cleanup plan entry reason is invalid")
         for field in ("allocatedBytes", "entries", "logicalBytes"):
             if not isinstance(item[field], int) or isinstance(item[field], bool) or item[field] < 0:
                 raise CleanupError(f"cleanup plan entry {field} is invalid")
@@ -557,7 +582,7 @@ def remove_tree(path: Path) -> None:
     shutil.rmtree(path, onerror=repair_and_retry)
 
 
-def execute_plan(
+def _execute_plan_impl(
     root: Path,
     plan_path: Path,
     confirm_sha: str,
@@ -574,7 +599,9 @@ def execute_plan(
     policy, _, policy_sha = load_policy(root, policy_override)
     if plan["policySha256"] != policy_sha:
         raise CleanupError("cleanup plan policy identity is stale")
-    current = render_plan(root, plan["profile"], policy_override)
+    current = render_plan(
+        root, plan["profile"], policy_override, check_generated_leases=False
+    )
     if current != plan:
         raise CleanupError("cleanup plan is stale; rerun dry-run and review the new plan")
     selected = [item for item in plan["entries"] if item["action"] == "delete"]
@@ -647,6 +674,27 @@ def execute_plan(
         "status": "executed",
         "version": "0.1",
     }
+
+
+def execute_plan(
+    root: Path,
+    plan_path: Path,
+    confirm_sha: str,
+    policy_override: Path | None = None,
+) -> dict[str, Any]:
+    root = root.resolve()
+    plan = load_json(plan_path)
+    validate_plan_shape(plan)
+    selected_paths = [item["path"] for item in plan["entries"] if item["action"] == "delete"]
+    if not (root / "policies/generated_state_v0.1.json").is_file():
+        return _execute_plan_impl(root, plan_path, confirm_sha, policy_override)
+    import generated_state
+
+    try:
+        with generated_state.cleanup_guard(root, selected_paths):
+            return _execute_plan_impl(root, plan_path, confirm_sha, policy_override)
+    except generated_state.GeneratedStateError as exc:
+        raise CleanupError(f"generated-state cleanup guard failed: {exc}") from exc
 
 
 def safe_output_path(root: Path, output: Path, policy: Mapping[str, Any]) -> Path:

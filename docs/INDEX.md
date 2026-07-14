@@ -73,6 +73,9 @@ This is the canonical entrypoint for project documentation.
 - `docs/spec/DETERMINISTIC_CLEANUP_MARKER_v0.1.schema.json` - closed producer-provenance marker schema.
 - `docs/spec/DETERMINISTIC_CLEANUP_PLAN_v0.1.schema.json` - closed portable cleanup plan schema.
 - `docs/spec/DETERMINISTIC_CLEANUP_RESULT_v0.1.schema.json` - closed execution-result schema binding the confirmed plan and deleted roots.
+- `docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md#bounded-generated-state` - normative generated-state admission, lease, quota, recovery, and retention contract.
+- `docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json` - closed producer, size-class, quota, lease-mode, and reclamation policy schema.
+- `docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json` - closed disposable entry, lease, and reclamation-transaction registry schema.
 - `docs/spec/GENESIS_EVIDENCE_PREDICATE_v0.1.schema.json` - closed Genesis execution-evidence predicate schema.
 - `docs/spec/GENESIS_EVIDENCE_STATEMENT_v0.1.schema.json` - in-toto Statement v1 producer profile for Genesis evidence.
 - `docs/spec/GENESIS_SLSA_BUILD_v1.schema.json` - strict SLSA Provenance v1 producer profile for Genesis builds.

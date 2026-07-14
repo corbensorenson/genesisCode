@@ -39,7 +39,7 @@
         "logicalBytes": {"type": "integer", "minimum": 0},
         "markerSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
         "path": {"$ref": "#/$defs/repoPath"},
-        "reason": {"enum": ["class-not-selected", "eligible", "invalid-marker", "missing", "missing-marker", "policy-user-authored", "symlink-root", "tracked-content", "unknown-untracked-root"]},
+        "reason": {"enum": ["active-lease", "class-not-selected", "eligible", "invalid-marker", "missing", "missing-marker", "policy-user-authored", "symlink-root", "tracked-content", "unknown-untracked-root"]},
         "treeIdentitySha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]}
       }
     }

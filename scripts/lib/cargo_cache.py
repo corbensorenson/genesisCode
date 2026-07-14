@@ -16,6 +16,7 @@ import tempfile
 from typing import Any, Mapping, Sequence
 
 import deterministic_cleanup
+import generated_state
 
 
 POLICY_REL = "policies/cargo_cache_v0.1.json"
@@ -287,6 +288,16 @@ def emit(result: Mapping[str, Any], output_format: str) -> None:
         print(f"export GENESIS_CARGO_CACHE_SCOPE={shlex.quote(scope)}")
         print(f"export GENESIS_CARGO_CACHE_KEY_SHA256={shlex.quote(digest)}")
         print(f"export GENESIS_CARGO_CACHE_HIT={1 if result.get('cache_hit') else 0}")
+        if result.get("generated_state"):
+            print(f"export GENESIS_GENERATED_STATE_ROOT={shlex.quote(str(result['root']))}")
+            print(
+                "export GENESIS_GENERATED_STATE_LEASE_TOKEN="
+                + shlex.quote(str(result["generated_state"]["leaseToken"]))
+            )
+            print(
+                "export GENESIS_GENERATED_STATE_LEASE_PID="
+                + shlex.quote(str(result["generated_state"]["leasePid"]))
+            )
     elif output_format == "github-env":
         print(f"CARGO_TARGET_DIR={target}")
         print("GENESIS_CARGO_CACHE_RESOLVED=1")
@@ -302,24 +313,50 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--scope", required=True)
     parser.add_argument("--format", choices=("path", "json", "shell", "github-env"), default="path")
     parser.add_argument("--no-materialize", action="store_true")
+    parser.add_argument("--lease-pid", type=int)
     args = parser.parse_args(argv)
     try:
         result = resolve(args.root, args.scope)
+        result["root"] = args.root.resolve()
         result["cache_hit"] = False
         if not args.no_materialize:
-            result["cache_hit"] = materialize(result)
             target = Path(result["target_dir"]).resolve()
             build_root = args.root.resolve() / ".genesis/build"
             try:
                 target.relative_to(build_root)
             except ValueError:
-                pass
+                relative_target = None
             else:
+                relative_target = target.relative_to(args.root.resolve()).as_posix()
                 deterministic_cleanup.initialize_root_marker(
                     args.root.resolve(), ".genesis/build", "cargo-cache"
                 )
+                scope = result["metadata"]["cacheKey"]["scope"]
+                size_class = (
+                    "cargo-verifier"
+                    if scope == "evidence-verifier-host"
+                    else "cargo-wasm"
+                    if scope in ("root-wasi", "root-wasm")
+                    else "cargo-host"
+                )
+                result["generated_state"] = generated_state.admit(
+                    args.root.resolve(),
+                    "cargo-cache",
+                    result["metadata"]["cacheKeySha256"],
+                    relative_target,
+                    size_class,
+                    pid=args.lease_pid,
+                )
+            try:
+                result["cache_hit"] = materialize(result)
+            except BaseException:
+                if result.get("generated_state"):
+                    generated_state.release(
+                        args.root.resolve(), result["generated_state"]["leaseToken"]
+                    )
+                raise
         emit(result, args.format)
-    except (CachePolicyError, OSError) as exc:
+    except (CachePolicyError, generated_state.GeneratedStateError, OSError) as exc:
         print(f"cargo-cache: {exc}", file=sys.stderr)
         return 2
     return 0
